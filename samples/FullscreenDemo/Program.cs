@@ -32,7 +32,7 @@ var table = new Table
 };
 
 var main = new VStack { Spacing = 1 };
-main.Add(new TextBlock("Fullscreen demo: Tab focus, mouse click, wheel scroll, Esc quit"));
+main.Add(new TextBlock("Fullscreen demo: Tab focus, mouse click, wheel scroll, F12 debug, Esc quit"));
 main.Add(name);
 main.Add(accept);
 main.Add(showModal);
@@ -58,7 +58,7 @@ main.SetEnvironmentValue(Theme.Key, new Theme
 
 var statusBar = new StatusBar
 {
-    LeftText = "Tab focus | Mouse click | Wheel scroll | Esc quit",
+    LeftText = "Tab focus | Mouse click | Wheel scroll | F12 debug | Esc quit",
     RightText = "XenoAtom.Terminal.UI",
 };
 

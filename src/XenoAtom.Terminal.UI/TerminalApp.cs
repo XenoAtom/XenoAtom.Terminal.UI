@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Text;
 using XenoAtom.Terminal;
 
 namespace XenoAtom.Terminal.UI;
@@ -22,6 +23,8 @@ public sealed class TerminalApp : IAsyncDisposable
     private int? _inlineLiveRegionTopRow;
     private bool _lastCursorVisible;
     private TerminalPosition _lastCursorPosition;
+    private bool _debugOverlayVisible;
+    private int _renderFrameIndex;
 
     public TerminalApp(Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
     {
@@ -225,6 +228,7 @@ public sealed class TerminalApp : IAsyncDisposable
     private void Render()
     {
         _inlineLiveRegionTopRow = null;
+        _renderFrameIndex++;
 
         if (_options.HostKind == TerminalHostKind.Fullscreen)
         {
@@ -236,6 +240,10 @@ public sealed class TerminalApp : IAsyncDisposable
 
             var buffer = new CellBuffer(width, height);
             Root.RenderTree(buffer);
+            if (_debugOverlayVisible)
+            {
+                RenderDebugOverlay(buffer);
+            }
 
             _fullscreenHost!.Render(buffer);
             UpdateCursor();
@@ -250,6 +258,10 @@ public sealed class TerminalApp : IAsyncDisposable
 
             var buffer = new CellBuffer(width, Math.Max(1, Root.DesiredSize.Height));
             Root.RenderTree(buffer);
+            if (_debugOverlayVisible)
+            {
+                RenderDebugOverlay(buffer);
+            }
 
             _inlineHost!.Render(buffer.ToMarkupLines());
 
@@ -263,6 +275,81 @@ public sealed class TerminalApp : IAsyncDisposable
             }
 
             UpdateCursor();
+        }
+    }
+
+    private void RenderDebugOverlay(CellBuffer buffer)
+    {
+        var maxWidth = buffer.Width;
+        var maxHeight = buffer.Height;
+        if (maxWidth <= 0 || maxHeight <= 0)
+        {
+            return;
+        }
+
+        var theme = Root.GetTheme();
+
+        var focus = FocusedElement;
+        var hover = _hoveredElement;
+
+        var lines = new[]
+        {
+            $"Frame: {_renderFrameIndex}",
+            $"Focus: {(focus is null ? "<none>" : focus.GetType().Name)}",
+            $"Hover: {(hover is null ? "<none>" : hover.GetType().Name)}",
+        };
+
+        var contentWidth = 0;
+        foreach (var line in lines)
+        {
+            contentWidth = Math.Max(contentWidth, TerminalTextUtility.GetWidth(line.AsSpan()));
+        }
+
+        var width = Math.Min(maxWidth, Math.Max(3, contentWidth + 2));
+        var height = Math.Min(maxHeight, Math.Max(3, lines.Length + 2));
+        if (width < 3 || height < 3)
+        {
+            return;
+        }
+
+        var borderStyle = theme.BorderStyle(focused: true) | CellStyle.Bold;
+        var backgroundStyle = CellStyle.Dim;
+        if (theme.Background is { } bg)
+        {
+            backgroundStyle = backgroundStyle.WithBackground(bg);
+        }
+
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                buffer.SetCell(x, y, new Rune(' '), backgroundStyle);
+            }
+        }
+
+        var right = width - 1;
+        var bottom = height - 1;
+
+        buffer.SetCell(0, 0, new Rune('+'), borderStyle);
+        buffer.SetCell(right, 0, new Rune('+'), borderStyle);
+        buffer.SetCell(0, bottom, new Rune('+'), borderStyle);
+        buffer.SetCell(right, bottom, new Rune('+'), borderStyle);
+
+        for (var x = 1; x < right; x++)
+        {
+            buffer.SetCell(x, 0, new Rune('-'), borderStyle);
+            buffer.SetCell(x, bottom, new Rune('-'), borderStyle);
+        }
+
+        for (var y = 1; y < bottom; y++)
+        {
+            buffer.SetCell(0, y, new Rune('|'), borderStyle);
+            buffer.SetCell(right, y, new Rune('|'), borderStyle);
+        }
+
+        for (var i = 0; i < lines.Length && i + 1 < bottom; i++)
+        {
+            buffer.WriteText(1, 1 + i, lines[i].AsSpan(), CellStyle.None);
         }
     }
 
@@ -424,6 +511,13 @@ public sealed class TerminalApp : IAsyncDisposable
 
         if (ev is not TerminalKeyEvent keyEvent)
         {
+            return;
+        }
+
+        if (_options.ToggleDebugOverlayGesture.Matches(keyEvent))
+        {
+            _debugOverlayVisible = !_debugOverlayVisible;
+            RequestRender();
             return;
         }
 

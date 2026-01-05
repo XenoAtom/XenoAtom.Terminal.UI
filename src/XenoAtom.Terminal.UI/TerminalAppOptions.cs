@@ -19,4 +19,6 @@ public sealed class TerminalAppOptions
     public TerminalMouseMode MouseMode { get; init; } = TerminalMouseMode.Move;
 
     public bool EnableBracketedPaste { get; init; } = true;
+
+    public TerminalKeyGesture ToggleDebugOverlayGesture { get; init; } = new(TerminalKey.F12);
 }
