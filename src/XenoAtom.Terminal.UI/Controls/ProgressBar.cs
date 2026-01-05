@@ -39,6 +39,7 @@ public sealed partial class ProgressBar : Visual
         }
 
         var theme = GetTheme();
+        var progressTheme = GetEnvironmentValue(ProgressBarTheme.Key);
 
         var value = Math.Clamp(Value, 0.0, 1.0);
         var percent = (int)Math.Round(value * 100.0);
@@ -51,14 +52,18 @@ public sealed partial class ProgressBar : Visual
         var filled = (int)Math.Round(barWidth * value);
 
         buffer.WriteText(rect.X, rect.Y, prefix.AsSpan(), CellStyle.None);
-        buffer.WriteText(rect.X + prefixWidth, rect.Y, "[".AsSpan(), theme.BorderStyle(focused: false) | CellStyle.Dim);
+        var borderStyle = progressTheme.ResolveBorder(theme);
+        var filledStyle = progressTheme.ResolveFilled(theme);
+        var unfilledStyle = progressTheme.ResolveUnfilled(theme);
+
+        buffer.WriteText(rect.X + prefixWidth, rect.Y, "[".AsSpan(), borderStyle);
 
         for (var i = 0; i < barWidth; i++)
         {
-            buffer.SetCell(rect.X + prefixWidth + 1 + i, rect.Y, new Rune(i < filled ? '#' : '-'), i < filled ? theme.SelectionStyle() : (theme.BorderStyle(focused: false) | CellStyle.Dim));
+            buffer.SetCell(rect.X + prefixWidth + 1 + i, rect.Y, new Rune(i < filled ? '#' : '-'), i < filled ? filledStyle : unfilledStyle);
         }
 
-        buffer.WriteText(rect.X + prefixWidth + 1 + barWidth, rect.Y, "]".AsSpan(), theme.BorderStyle(focused: false) | CellStyle.Dim);
+        buffer.WriteText(rect.X + prefixWidth + 1 + barWidth, rect.Y, "]".AsSpan(), borderStyle);
 
         var percentText = $"{percent,3}%";
         buffer.WriteText(rect.X + Math.Max(0, rect.Width - 4), rect.Y, percentText.AsSpan(), CellStyle.None);
