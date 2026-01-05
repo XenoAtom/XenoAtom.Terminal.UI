@@ -10,17 +10,28 @@ public sealed class TerminalApp : IAsyncDisposable
 {
     private readonly System.Collections.Concurrent.ConcurrentQueue<Action> _pendingActions = new();
     private readonly TerminalInstance _terminal;
-    private readonly InlineInteractiveHost _host;
+    private readonly TerminalAppOptions _options;
+    private readonly InlineInteractiveHost? _inlineHost;
+    private readonly FullscreenHost? _fullscreenHost;
     private readonly AsyncAutoResetEvent _wakeUp = new();
     private readonly CancellationTokenSource _cts = new();
 
     private bool _renderRequested = true;
 
-    public TerminalApp(Visual root, TerminalInstance? terminal = null)
+    public TerminalApp(Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
     {
         Root = root ?? throw new ArgumentNullException(nameof(root));
         _terminal = terminal ?? global::XenoAtom.Terminal.Terminal.Instance;
-        _host = new InlineInteractiveHost(_terminal);
+        _options = options ?? new TerminalAppOptions();
+
+        if (_options.HostKind == TerminalHostKind.Fullscreen)
+        {
+            _fullscreenHost = new FullscreenHost(_terminal);
+        }
+        else
+        {
+            _inlineHost = new InlineInteractiveHost(_terminal);
+        }
     }
 
     public TerminalInstance Terminal => _terminal;
@@ -41,14 +52,20 @@ public sealed class TerminalApp : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         Stop();
-        _host.Dispose();
+        _inlineHost?.Dispose();
+        _fullscreenHost?.Dispose();
         _cts.Dispose();
         await ValueTask.CompletedTask;
     }
 
     public void WriteMarkupLine(string markup)
     {
-        _host.WriteMarkupLine(markup);
+        if (_inlineHost is null)
+        {
+            throw new InvalidOperationException("Flow output is only supported in inline host mode.");
+        }
+
+        _inlineHost.WriteMarkupLine(markup);
         RequestRender();
     }
 
@@ -60,11 +77,41 @@ public sealed class TerminalApp : IAsyncDisposable
         Root.AttachToApp(this);
         BindingManager.Current.ValueChanged += OnValueChanged;
 
+        TerminalScope alternateScope = default;
+        TerminalScope rawScope = default;
+        TerminalScope echoScope = default;
+        TerminalScope mouseScope = default;
+        TerminalScope pasteScope = default;
+        TerminalScope cursorScope = default;
+
         try
         {
             if (!_terminal.IsInputRunning)
             {
-                _terminal.StartInput();
+                _terminal.StartInput(new TerminalInputOptions { TreatControlCAsInput = true });
+            }
+
+            if (_options.HostKind == TerminalHostKind.Fullscreen)
+            {
+                alternateScope = _terminal.UseAlternateScreen();
+            }
+
+            rawScope = _terminal.UseRawMode(_options.RawMode);
+            if (_options.DisableInputEcho)
+            {
+                echoScope = _terminal.SetInputEcho(false);
+            }
+
+            cursorScope = _terminal.HideCursor();
+
+            if (_options.EnableMouse)
+            {
+                mouseScope = _terminal.EnableMouseInput(_options.MouseMode);
+            }
+
+            if (_options.EnableBracketedPaste)
+            {
+                pasteScope = _terminal.EnableBracketedPasteInput();
             }
 
             EnsureInitialFocus();
@@ -110,6 +157,12 @@ public sealed class TerminalApp : IAsyncDisposable
         }
         finally
         {
+            pasteScope.Dispose();
+            mouseScope.Dispose();
+            cursorScope.Dispose();
+            echoScope.Dispose();
+            rawScope.Dispose();
+            alternateScope.Dispose();
             BindingManager.Current.ValueChanged -= OnValueChanged;
         }
     }
@@ -131,15 +184,32 @@ public sealed class TerminalApp : IAsyncDisposable
 
     private void Render()
     {
-        var width = Math.Max(1, _terminal.Size.Columns);
+        if (_options.HostKind == TerminalHostKind.Fullscreen)
+        {
+            var width = Math.Max(1, _terminal.Size.Columns);
+            var height = Math.Max(1, _terminal.Size.Rows);
 
-        Root.Measure(new CellSize(width, int.MaxValue / 4));
-        Root.Arrange(new CellRect(0, 0, width, Root.DesiredSize.Height));
+            Root.Measure(new CellSize(width, height));
+            Root.Arrange(new CellRect(0, 0, width, height));
 
-        var buffer = new CellBuffer(width, Math.Max(1, Root.DesiredSize.Height));
-        Root.RenderTree(buffer);
+            var buffer = new CellBuffer(width, height);
+            Root.RenderTree(buffer);
 
-        _host.Render(buffer.ToMarkupLines());
+            _fullscreenHost!.Render(buffer);
+            return;
+        }
+
+        {
+            var width = Math.Max(1, _terminal.Size.Columns);
+
+            Root.Measure(new CellSize(width, int.MaxValue / 4));
+            Root.Arrange(new CellRect(0, 0, width, Root.DesiredSize.Height));
+
+            var buffer = new CellBuffer(width, Math.Max(1, Root.DesiredSize.Height));
+            Root.RenderTree(buffer);
+
+            _inlineHost!.Render(buffer.ToMarkupLines());
+        }
     }
 
     private void DispatchKeyEvent(TerminalKeyEvent keyEvent)
@@ -191,6 +261,7 @@ public sealed class TerminalApp : IAsyncDisposable
     {
         if (ev is TerminalResizeEvent)
         {
+            _fullscreenHost?.Reset();
             RequestRender();
             return;
         }

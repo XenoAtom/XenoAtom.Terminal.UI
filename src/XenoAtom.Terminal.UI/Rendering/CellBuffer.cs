@@ -31,6 +31,10 @@ public sealed class CellBuffer
 
     public int Height { get; }
 
+    internal ReadOnlySpan<int> UnsafeScalars => _scalars;
+
+    internal ReadOnlySpan<CellStyle> UnsafeStyles => _styles;
+
     public void Clear()
     {
         Array.Fill(_scalars, ' ');
