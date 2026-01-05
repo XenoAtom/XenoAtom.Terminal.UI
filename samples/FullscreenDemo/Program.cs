@@ -83,12 +83,16 @@ var overlay = new ComputedVisual(() =>
     dialogContent.Add(new TextBlock("This is a wrapped paragraph demonstrating document-style text rendering.") { Wrap = true });
     dialogContent.Add(close);
 
-    var dialog = new Border { Padding = new Thickness(1), Child = dialogContent };
-
-    var center = new Center { Child = dialog };
+    var dialog = new Dialog
+    {
+        Title = "Modal dialog",
+        Padding = new Thickness(1),
+        Width = 60,
+        Child = dialogContent,
+    };
 
     var panel = new ZStack();
-    panel.Add(new Backdrop(), center);
+    panel.Add(new Backdrop(), dialog);
     return panel;
 });
 

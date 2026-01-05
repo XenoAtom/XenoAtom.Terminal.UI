@@ -202,6 +202,52 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task Dialog_Can_Be_Dragged_With_Mouse()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(20, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var dialog = new Dialog
+        {
+            Title = "T",
+            Width = 10,
+            Height = 5,
+            Child = new TextBlock("Hello"),
+        };
+
+        var root = new ZStack();
+        root.Add(dialog);
+
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunAsync();
+
+        await Task.Delay(10);
+
+        static async Task WaitUntil(Func<bool> condition)
+        {
+            var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+            while (!condition())
+            {
+                if (DateTime.UtcNow >= timeout)
+                {
+                    Assert.Fail("Timed out waiting for condition.");
+                }
+                await Task.Delay(10);
+            }
+        }
+
+        // Centered: left=5, top=2 for a 20x10 slot and 10x5 dialog.
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 6, Y = 2 });
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Drag, Button = TerminalMouseButton.Left, X = 9, Y = 4 });
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 9, Y = 4 });
+
+        await WaitUntil(() => dialog.Left == 8 && dialog.Top == 4);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    [TestMethod]
     public async Task KeyBinding_Executes_On_Ctrl_Gesture()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
