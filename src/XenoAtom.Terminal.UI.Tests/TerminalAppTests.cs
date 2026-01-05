@@ -248,6 +248,35 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task WindowLayer_Brings_Clicked_Window_To_Front()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(20, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var layer = new WindowLayer { Content = new TextBlock("Base") };
+
+        var a = new Dialog { Title = "A", Width = 8, Height = 4, Left = 1, Top = 1, Child = new TextBlock("A") };
+        var b = new Dialog { Title = "B", Width = 8, Height = 4, Left = 10, Top = 1, Child = new TextBlock("B") };
+        layer.AddWindow(a);
+        layer.AddWindow(b);
+
+        var app = new TerminalApp(layer, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunAsync();
+
+        await Task.Delay(20);
+
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 2, Y = 1 });
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 2, Y = 1 });
+
+        await Task.Delay(20);
+
+        Assert.AreSame(a, layer.Children[^1]);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    [TestMethod]
     public async Task TextBox_Shows_Cursor_And_Sets_Position()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(20, 5));

@@ -10,6 +10,16 @@ public sealed class PointerEventArgs : RoutedEventArgs
 {
     public required TerminalMouseEvent RawEvent { get; init; }
 
+    /// <summary>
+    /// Gets the pointer X in the root UI coordinate space (cells).
+    /// </summary>
+    public int UiX { get; init; }
+
+    /// <summary>
+    /// Gets the pointer Y in the root UI coordinate space (cells).
+    /// </summary>
+    public int UiY { get; init; }
+
     public TerminalMouseKind Kind => RawEvent.Kind;
 
     public TerminalMouseButton Button => RawEvent.Button;
@@ -28,4 +38,3 @@ public sealed class PointerEventArgs : RoutedEventArgs
 
     public int LocalY { get; init; }
 }
-

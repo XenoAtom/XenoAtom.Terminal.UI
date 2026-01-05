@@ -96,8 +96,8 @@ var overlay = new ComputedVisual(() =>
     return panel;
 });
 
-var root = new ZStack();
-root.Add(layout, overlay);
+var root = new WindowLayer { Content = layout };
+root.AddWindow(overlay);
 
 var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
 

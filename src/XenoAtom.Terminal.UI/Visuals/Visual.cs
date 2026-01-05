@@ -185,6 +185,22 @@ public abstract partial class Visual : BindableObject
         _children.Clear();
     }
 
+    protected bool BringChildToFront(Visual child)
+    {
+        ArgumentNullException.ThrowIfNull(child);
+
+        var index = _children.IndexOf(child);
+        if (index < 0 || index == _children.Count - 1)
+        {
+            return false;
+        }
+
+        _children.RemoveAt(index);
+        _children.Add(child);
+        App?.RequestRender();
+        return true;
+    }
+
     internal void AttachToApp(TerminalApp app)
     {
         App = app;

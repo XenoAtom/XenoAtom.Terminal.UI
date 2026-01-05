@@ -475,6 +475,7 @@ public sealed class TerminalApp : IAsyncDisposable
     {
         Visual? hitTarget;
         Visual? target;
+        var uiY = mouseEvent.Y;
         var localY = mouseEvent.Y;
 
         if (_options.HostKind == TerminalHostKind.Fullscreen)
@@ -499,6 +500,7 @@ public sealed class TerminalApp : IAsyncDisposable
                 return;
             }
 
+            uiY = translatedY;
             localY = translatedY;
             hitTarget = Root.HitTest(mouseEvent.X, translatedY);
             target = _pointerCapture ?? hitTarget;
@@ -534,6 +536,8 @@ public sealed class TerminalApp : IAsyncDisposable
         var args = new PointerEventArgs
         {
             RawEvent = mouseEvent,
+            UiX = mouseEvent.X,
+            UiY = uiY,
             ClickCount = mouseEvent.Kind == TerminalMouseKind.DoubleClick ? 2 : 1,
             LocalX = mouseEvent.X - target.Bounds.X,
             LocalY = localY - target.Bounds.Y,
