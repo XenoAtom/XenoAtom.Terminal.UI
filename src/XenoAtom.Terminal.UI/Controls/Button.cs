@@ -8,6 +8,8 @@ namespace XenoAtom.Terminal.UI;
 
 public partial class Button : Visual
 {
+    private bool _isPressed;
+
     public Button()
     {
         Focusable = true;
@@ -37,7 +39,7 @@ public partial class Button : Visual
     protected override void RenderOverride(CellBuffer buffer)
     {
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
-        var style = isFocused ? CellStyle.Invert : CellStyle.None;
+        var style = (isFocused || _isPressed) ? CellStyle.Invert : CellStyle.None;
 
         var rect = Bounds;
         var text = Text ?? string.Empty;
@@ -51,6 +53,34 @@ public partial class Button : Visual
     {
         if (e.Key is TerminalKey.Enter or TerminalKey.Space)
         {
+            RaiseEvent(ClickEvent, new ClickEventArgs());
+            e.Handled = true;
+        }
+    }
+
+    protected override void OnPointerPressed(PointerEventArgs e)
+    {
+        if (e.Button != TerminalMouseButton.Left)
+        {
+            return;
+        }
+
+        _isPressed = true;
+        App?.RequestRender();
+        e.Handled = true;
+    }
+
+    protected override void OnPointerReleased(PointerEventArgs e)
+    {
+        if (e.Button != TerminalMouseButton.Left)
+        {
+            return;
+        }
+
+        if (_isPressed)
+        {
+            _isPressed = false;
+            App?.RequestRender();
             RaiseEvent(ClickEvent, new ClickEventArgs());
             e.Handled = true;
         }

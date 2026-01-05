@@ -266,6 +266,12 @@ public sealed class TerminalApp : IAsyncDisposable
             return;
         }
 
+        if (ev is TerminalMouseEvent mouseEvent)
+        {
+            DispatchMouseEvent(mouseEvent);
+            return;
+        }
+
         if (ev is not TerminalKeyEvent keyEvent)
         {
             return;
@@ -284,6 +290,55 @@ public sealed class TerminalApp : IAsyncDisposable
         }
 
         DispatchKeyEvent(keyEvent);
+    }
+
+    private void DispatchMouseEvent(TerminalMouseEvent mouseEvent)
+    {
+        if (_options.HostKind != TerminalHostKind.Fullscreen)
+        {
+            return;
+        }
+
+        var target = Root.HitTest(mouseEvent.X, mouseEvent.Y);
+        if (target is null)
+        {
+            return;
+        }
+
+        if (mouseEvent.Kind is TerminalMouseKind.Down or TerminalMouseKind.DoubleClick)
+        {
+            if (target.Focusable && !ReferenceEquals(FocusedElement, target))
+            {
+                FocusedElement = target;
+                RequestRender();
+            }
+        }
+
+        var args = new PointerEventArgs
+        {
+            RawEvent = mouseEvent,
+            ClickCount = mouseEvent.Kind == TerminalMouseKind.DoubleClick ? 2 : 1,
+            LocalX = mouseEvent.X - target.Bounds.X,
+            LocalY = mouseEvent.Y - target.Bounds.Y,
+        };
+
+        switch (mouseEvent.Kind)
+        {
+            case TerminalMouseKind.Move:
+            case TerminalMouseKind.Drag:
+                target.RaiseEvent(Visual.PointerMovedEvent, args);
+                break;
+            case TerminalMouseKind.Down:
+            case TerminalMouseKind.DoubleClick:
+                target.RaiseEvent(Visual.PointerPressedEvent, args);
+                break;
+            case TerminalMouseKind.Up:
+                target.RaiseEvent(Visual.PointerReleasedEvent, args);
+                break;
+            case TerminalMouseKind.Wheel:
+                target.RaiseEvent(Visual.PointerWheelEvent, args);
+                break;
+        }
     }
 }
 

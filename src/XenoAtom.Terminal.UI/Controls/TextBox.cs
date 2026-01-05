@@ -186,6 +186,32 @@ public sealed partial class TextBox : Visual
         }
     }
 
+    protected override void OnPointerPressed(PointerEventArgs e)
+    {
+        if (e.Button != TerminalMouseButton.Left)
+        {
+            return;
+        }
+
+        var rect = Bounds;
+        var innerWidth = Math.Max(0, rect.Width - 2);
+        if (innerWidth <= 0)
+        {
+            return;
+        }
+
+        var cell = Math.Clamp(e.LocalX - 1, 0, innerWidth) + _scrollCellOffset;
+        var text = Text ?? string.Empty;
+
+        if (!TerminalTextUtility.TryGetIndexAtCell(text.AsSpan(), cell, out var index))
+        {
+            index = text.Length;
+        }
+
+        CaretIndex = index;
+        e.Handled = true;
+    }
+
     private void InsertText(string insert)
     {
         if (string.IsNullOrEmpty(insert))

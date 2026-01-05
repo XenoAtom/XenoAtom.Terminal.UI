@@ -57,5 +57,15 @@ public sealed partial class CheckBox : Visual
             e.Handled = true;
         }
     }
-}
 
+    protected override void OnPointerPressed(PointerEventArgs e)
+    {
+        if (e.Button != TerminalMouseButton.Left)
+        {
+            return;
+        }
+
+        IsChecked = !IsChecked;
+        e.Handled = true;
+    }
+}

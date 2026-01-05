@@ -111,6 +111,25 @@ public abstract partial class Visual : BindableObject
         }
     }
 
+    public Visual? HitTest(int x, int y)
+    {
+        if (!Bounds.Contains(x, y))
+        {
+            return null;
+        }
+
+        for (var i = _children.Count - 1; i >= 0; i--)
+        {
+            var hit = _children[i].HitTest(x, y);
+            if (hit is not null)
+            {
+                return hit;
+            }
+        }
+
+        return this;
+    }
+
     protected void AddHandler<TArgs>(RoutedEvent<TArgs> routedEvent, EventHandler<TArgs> handler)
         where TArgs : EventArgs
     {
@@ -218,4 +237,16 @@ public abstract partial class Visual : BindableObject
 
     [RoutedEvent(RoutingStrategy.Bubble)]
     protected virtual void OnTextInput(KeyEventArgs e) { }
+
+    [RoutedEvent(RoutingStrategy.Preview | RoutingStrategy.Bubble)]
+    protected virtual void OnPointerMoved(PointerEventArgs e) { }
+
+    [RoutedEvent(RoutingStrategy.Preview | RoutingStrategy.Bubble)]
+    protected virtual void OnPointerPressed(PointerEventArgs e) { }
+
+    [RoutedEvent(RoutingStrategy.Preview | RoutingStrategy.Bubble)]
+    protected virtual void OnPointerReleased(PointerEventArgs e) { }
+
+    [RoutedEvent(RoutingStrategy.Preview | RoutingStrategy.Bubble)]
+    protected virtual void OnPointerWheel(PointerEventArgs e) { }
 }

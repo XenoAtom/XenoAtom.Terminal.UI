@@ -121,5 +121,40 @@ public sealed partial class ListBox : Visual
                 return;
         }
     }
-}
 
+    protected override void OnPointerPressed(PointerEventArgs e)
+    {
+        if (e.Button != TerminalMouseButton.Left)
+        {
+            return;
+        }
+
+        var items = Items;
+        var count = items?.Count ?? 0;
+        if (count == 0)
+        {
+            return;
+        }
+
+        var index = _scrollOffset + Math.Clamp(e.LocalY, 0, Bounds.Height - 1);
+        if ((uint)index < (uint)count)
+        {
+            SelectedIndex = index;
+            e.Handled = true;
+        }
+    }
+
+    protected override void OnPointerWheel(PointerEventArgs e)
+    {
+        var items = Items;
+        var count = items?.Count ?? 0;
+        if (count == 0 || e.WheelDelta == 0)
+        {
+            return;
+        }
+
+        var selected = Math.Clamp(SelectedIndex, 0, count - 1);
+        SelectedIndex = e.WheelDelta > 0 ? Math.Max(0, selected - 1) : Math.Min(count - 1, selected + 1);
+        e.Handled = true;
+    }
+}

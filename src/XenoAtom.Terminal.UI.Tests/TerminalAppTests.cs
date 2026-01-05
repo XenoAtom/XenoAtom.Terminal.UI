@@ -70,6 +70,32 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task Button_Raises_Click_On_Mouse()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(20, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var button = new Button("OK");
+        var clicked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        button.Click += (_, _) => clicked.TrySetResult();
+
+        var root = new VStack();
+        root.Add(button);
+
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunAsync();
+
+        await Task.Delay(10);
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 1, Y = 0 });
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 1, Y = 0 });
+
+        await clicked.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    [TestMethod]
     public async Task CheckBox_Toggles_On_Space()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(20, 10));
