@@ -223,7 +223,7 @@ public sealed class TerminalApp : IAsyncDisposable
         FocusedElement.RaiseEvent(Visual.KeyDownEvent, args);
         if (!args.Handled && keyEvent.Char is { } ch && ch >= ' ')
         {
-            FocusedElement.RaiseEvent(Visual.TextInputEvent, args);
+            DispatchTextInput(ch.ToString());
         }
     }
 
@@ -272,6 +272,18 @@ public sealed class TerminalApp : IAsyncDisposable
             return;
         }
 
+        if (ev is TerminalTextEvent textEvent)
+        {
+            DispatchTextInput(textEvent.Text);
+            return;
+        }
+
+        if (ev is TerminalPasteEvent pasteEvent)
+        {
+            DispatchPaste(pasteEvent.Text);
+            return;
+        }
+
         if (ev is not TerminalKeyEvent keyEvent)
         {
             return;
@@ -290,6 +302,28 @@ public sealed class TerminalApp : IAsyncDisposable
         }
 
         DispatchKeyEvent(keyEvent);
+    }
+
+    private void DispatchTextInput(string text)
+    {
+        if (FocusedElement is null || string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        var args = new TextInputEventArgs { Text = text };
+        FocusedElement.RaiseEvent(Visual.TextInputEvent, args);
+    }
+
+    private void DispatchPaste(string text)
+    {
+        if (FocusedElement is null || string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        var args = new PasteEventArgs { Text = text };
+        FocusedElement.RaiseEvent(Visual.PasteEvent, args);
     }
 
     private void DispatchMouseEvent(TerminalMouseEvent mouseEvent)

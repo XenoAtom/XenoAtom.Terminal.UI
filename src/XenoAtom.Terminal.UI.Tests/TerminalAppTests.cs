@@ -213,6 +213,45 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task TextBox_Handles_TerminalPasteEvent()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var textBox = new TextBox();
+        var root = new VStack();
+        root.Add(textBox);
+
+        var app = new TerminalApp(root, session.Instance);
+        var runTask = app.RunAsync();
+
+        await Task.Delay(10);
+
+        var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        void Handler(object owner, string name)
+        {
+            if (ReferenceEquals(owner, textBox) && name == "Text" && textBox.Text == "hello")
+            {
+                reached.TrySetResult();
+            }
+        }
+
+        BindingManager.Current.ValueChanged += Handler;
+        try
+        {
+            backend.PushEvent(new TerminalPasteEvent { Text = "hello" });
+            await reached.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        }
+        finally
+        {
+            BindingManager.Current.ValueChanged -= Handler;
+        }
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    [TestMethod]
     public async Task ListBox_Changes_Selection_On_Down()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));

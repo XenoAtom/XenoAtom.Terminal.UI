@@ -236,7 +236,10 @@ public abstract partial class Visual : BindableObject
     protected virtual void OnKeyDown(KeyEventArgs e) { }
 
     [RoutedEvent(RoutingStrategy.Bubble)]
-    protected virtual void OnTextInput(KeyEventArgs e) { }
+    protected virtual void OnTextInput(TextInputEventArgs e) { }
+
+    [RoutedEvent(RoutingStrategy.Bubble)]
+    protected virtual void OnPaste(PasteEventArgs e) { }
 
     [RoutedEvent(RoutingStrategy.Preview | RoutingStrategy.Bubble)]
     protected virtual void OnPointerMoved(PointerEventArgs e) { }

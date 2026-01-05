@@ -141,15 +141,25 @@ public sealed partial class TextBox : Visual
         }
     }
 
-    protected override void OnTextInput(KeyEventArgs e)
+    protected override void OnTextInput(TextInputEventArgs e)
     {
-        var ch = e.Char;
-        if (ch is null || ch < ' ')
+        if (string.IsNullOrEmpty(e.Text))
         {
             return;
         }
 
-        InsertText(ch.Value.ToString());
+        InsertText(e.Text);
+        e.Handled = true;
+    }
+
+    protected override void OnPaste(PasteEventArgs e)
+    {
+        if (string.IsNullOrEmpty(e.Text))
+        {
+            return;
+        }
+
+        InsertText(e.Text);
         e.Handled = true;
     }
 
