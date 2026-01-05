@@ -1,0 +1,7 @@
+# configuration file for dotnet-releaser
+# Disable default packs - It will only publish NuGet and the Changelog
+[msbuild]
+project = "XenoAtom.Terminal.UI.slnx"
+[github]
+user = "XenoAtom"
+repo = "XenoAtom.Terminal.UI"
