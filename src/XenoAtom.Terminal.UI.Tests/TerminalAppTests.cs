@@ -281,6 +281,32 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task InlineApp_Can_Append_Flow_Visual()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var progress = new ProgressBar { Label = "Work", Value = 0.0 };
+        var root = new VStack();
+        root.Add(progress);
+
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Inline });
+
+        var runTask = app.RunAsync();
+        await Task.Delay(20);
+
+        app.Post(() => app.Append(new TextBlock("Flow: Hello")));
+        await Task.Delay(50);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var outText = backend.GetOutText();
+        StringAssert.Contains(outText, "Flow: Hello");
+        StringAssert.Contains(outText, "Work");
+    }
+
+    [TestMethod]
     public async Task ListBox_Changes_Selection_On_Down()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));

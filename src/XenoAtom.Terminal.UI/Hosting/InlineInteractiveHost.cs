@@ -39,6 +39,12 @@ public sealed class InlineInteractiveHost : IDisposable
         WriteFlowLines([markup]);
     }
 
+    public void WriteMarkupLines(IReadOnlyList<string> markupLines)
+    {
+        ArgumentNullException.ThrowIfNull(markupLines);
+        WriteFlowLines(markupLines);
+    }
+
     public void Render(IReadOnlyList<string> markupLines)
     {
         ArgumentNullException.ThrowIfNull(markupLines);

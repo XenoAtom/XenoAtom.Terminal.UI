@@ -69,6 +69,41 @@ public sealed class TerminalApp : IAsyncDisposable
         RequestRender();
     }
 
+    public void Append(Visual block)
+    {
+        ArgumentNullException.ThrowIfNull(block);
+
+        if (_inlineHost is null)
+        {
+            throw new InvalidOperationException("Flow output is only supported in inline host mode.");
+        }
+
+        if (block.Parent is not null)
+        {
+            throw new InvalidOperationException("A visual that is already in the UI tree cannot be appended as flow output.");
+        }
+
+        var width = Math.Max(1, _terminal.Size.Columns);
+
+        block.AttachToApp(this);
+        try
+        {
+            block.Measure(new CellSize(width, int.MaxValue / 4));
+            block.Arrange(new CellRect(0, 0, width, block.DesiredSize.Height));
+
+            var buffer = new CellBuffer(width, Math.Max(1, block.DesiredSize.Height));
+            block.RenderTree(buffer);
+
+            _inlineHost.WriteMarkupLines(buffer.ToMarkupLines());
+        }
+        finally
+        {
+            block.DetachFromApp();
+        }
+
+        RequestRender();
+    }
+
     public async Task RunAsync(CancellationToken cancellationToken = default)
     {
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
