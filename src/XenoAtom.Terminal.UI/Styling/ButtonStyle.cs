@@ -4,22 +4,28 @@
 
 namespace XenoAtom.Terminal.UI;
 
-public sealed class CheckBoxTheme
+public sealed class ButtonStyle
 {
-    public static CheckBoxTheme Default { get; } = new();
+    public static ButtonStyle Default { get; } = new();
 
-    public static EnvironmentKey<CheckBoxTheme> Key { get; } = new("CheckBoxTheme", Default);
+    public static EnvironmentKey<ButtonStyle> Key { get; } = new("ButtonStyle", Default);
 
     public CellStyle? Normal { get; init; }
     public CellStyle? Hovered { get; init; }
+    public CellStyle? Pressed { get; init; }
     public CellStyle? Focused { get; init; }
     public CellStyle? Disabled { get; init; }
 
-    public CellStyle Resolve(Theme theme, bool enabled, bool focused, bool hovered)
+    public CellStyle Resolve(Theme theme, bool enabled, bool focused, bool hovered, bool pressed)
     {
         if (!enabled)
         {
             return Disabled ?? CellStyle.Dim;
+        }
+
+        if (pressed)
+        {
+            return Pressed ?? theme.SelectionStyle();
         }
 
         if (focused)
@@ -45,4 +51,3 @@ public sealed class CheckBoxTheme
         return Normal ?? CellStyle.None;
     }
 }
-

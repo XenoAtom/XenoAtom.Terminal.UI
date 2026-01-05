@@ -41,8 +41,8 @@ public sealed partial class CheckBox : Visual
     {
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var checkBoxTheme = GetEnvironmentValue(CheckBoxTheme.Key);
-        var style = checkBoxTheme.Resolve(theme, IsEnabled, isFocused, IsHovered);
+        var checkBoxStyle = GetEnvironmentValue(CheckBoxStyle.Key);
+        var style = checkBoxStyle.Resolve(theme, IsEnabled, isFocused, IsHovered);
 
         var rect = Bounds;
         var text = Text ?? string.Empty;

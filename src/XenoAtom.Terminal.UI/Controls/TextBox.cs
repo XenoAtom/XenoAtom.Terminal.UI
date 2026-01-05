@@ -59,9 +59,9 @@ public sealed partial class TextBox : Visual, ICursorProvider
 
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var textBoxTheme = GetEnvironmentValue(TextBoxTheme.Key);
-        var borderStyle = textBoxTheme.BorderStyle(theme, isFocused);
-        var selectionStyle = textBoxTheme.SelectionStyle(theme);
+        var textBoxStyle = GetEnvironmentValue(TextBoxStyle.Key);
+        var borderStyle = textBoxStyle.BorderStyle(theme, isFocused);
+        var selectionStyle = textBoxStyle.SelectionStyle(theme);
 
         var text = Text ?? string.Empty;
         var innerWidth = Math.Max(0, rect.Width - 2);

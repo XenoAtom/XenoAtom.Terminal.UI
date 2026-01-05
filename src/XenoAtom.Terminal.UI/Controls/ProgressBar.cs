@@ -39,7 +39,7 @@ public sealed partial class ProgressBar : Visual
         }
 
         var theme = GetTheme();
-        var progressTheme = GetEnvironmentValue(ProgressBarTheme.Key);
+        var progressStyle = GetEnvironmentValue(ProgressBarStyle.Key);
 
         var value = Math.Clamp(Value, 0.0, 1.0);
         var percent = (int)Math.Round(value * 100.0);
@@ -52,9 +52,9 @@ public sealed partial class ProgressBar : Visual
         var filled = (int)Math.Round(barWidth * value);
 
         buffer.WriteText(rect.X, rect.Y, prefix.AsSpan(), CellStyle.None);
-        var borderStyle = progressTheme.ResolveBorder(theme);
-        var filledStyle = progressTheme.ResolveFilled(theme);
-        var unfilledStyle = progressTheme.ResolveUnfilled(theme);
+        var borderStyle = progressStyle.ResolveBorder(theme);
+        var filledStyle = progressStyle.ResolveFilled(theme);
+        var unfilledStyle = progressStyle.ResolveUnfilled(theme);
 
         buffer.WriteText(rect.X + prefixWidth, rect.Y, "[".AsSpan(), borderStyle);
 

@@ -40,8 +40,8 @@ public partial class Button : Visual
     {
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var buttonTheme = GetEnvironmentValue(ButtonTheme.Key);
-        var style = buttonTheme.Resolve(theme, IsEnabled, isFocused, hovered: IsHovered, pressed: _isPressed);
+        var buttonStyle = GetEnvironmentValue(ButtonStyle.Key);
+        var style = buttonStyle.Resolve(theme, IsEnabled, isFocused, hovered: IsHovered, pressed: _isPressed);
 
         var rect = Bounds;
         var text = Text ?? string.Empty;

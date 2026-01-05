@@ -4,11 +4,11 @@
 
 namespace XenoAtom.Terminal.UI;
 
-public sealed class ProgressBarTheme
+public sealed class ProgressBarStyle
 {
-    public static ProgressBarTheme Default { get; } = new();
+    public static ProgressBarStyle Default { get; } = new();
 
-    public static EnvironmentKey<ProgressBarTheme> Key { get; } = new("ProgressBarTheme", Default);
+    public static EnvironmentKey<ProgressBarStyle> Key { get; } = new("ProgressBarStyle", Default);
 
     public CellStyle? Filled { get; init; }
     public CellStyle? Unfilled { get; init; }
@@ -18,4 +18,3 @@ public sealed class ProgressBarTheme
     public CellStyle ResolveFilled(Theme theme) => Filled ?? theme.SelectionStyle();
     public CellStyle ResolveUnfilled(Theme theme) => Unfilled ?? (theme.BorderStyle(focused: false) | CellStyle.Dim);
 }
-

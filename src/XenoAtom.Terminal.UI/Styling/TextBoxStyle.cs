@@ -4,11 +4,11 @@
 
 namespace XenoAtom.Terminal.UI;
 
-public sealed class TextBoxTheme
+public sealed class TextBoxStyle
 {
-    public static TextBoxTheme Default { get; } = new();
+    public static TextBoxStyle Default { get; } = new();
 
-    public static EnvironmentKey<TextBoxTheme> Key { get; } = new("TextBoxTheme", Default);
+    public static EnvironmentKey<TextBoxStyle> Key { get; } = new("TextBoxStyle", Default);
 
     public Rgb24? Border { get; init; }
     public Rgb24? FocusBorder { get; init; }
@@ -37,4 +37,3 @@ public sealed class TextBoxTheme
         return style;
     }
 }
-

@@ -4,11 +4,11 @@
 
 namespace XenoAtom.Terminal.UI;
 
-public sealed class ListBoxTheme
+public sealed class ListBoxStyle
 {
-    public static ListBoxTheme Default { get; } = new();
+    public static ListBoxStyle Default { get; } = new();
 
-    public static EnvironmentKey<ListBoxTheme> Key { get; } = new("ListBoxTheme", Default);
+    public static EnvironmentKey<ListBoxStyle> Key { get; } = new("ListBoxStyle", Default);
 
     public CellStyle? Item { get; init; }
     public CellStyle? SelectedFocused { get; init; }
@@ -35,4 +35,3 @@ public sealed class ListBoxTheme
         return SelectedUnfocused ?? (CellStyle.Bold | theme.BorderStyle(focused: false));
     }
 }
-

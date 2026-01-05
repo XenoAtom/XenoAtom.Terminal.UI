@@ -71,7 +71,7 @@ public sealed partial class ListBox : Visual
 
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var listBoxTheme = GetEnvironmentValue(ListBoxTheme.Key);
+        var listBoxStyle = GetEnvironmentValue(ListBoxStyle.Key);
 
         for (var row = 0; row < rect.Height; row++)
         {
@@ -86,7 +86,7 @@ public sealed partial class ListBox : Visual
 
             var item = items![itemIndex];
             var isSelected = itemIndex == selected;
-            var style = listBoxTheme.ResolveItemStyle(theme, IsEnabled, isSelected, isFocused);
+            var style = listBoxStyle.ResolveItemStyle(theme, IsEnabled, isSelected, isFocused);
 
             buffer.WriteText(rect.X, y, (isSelected ? "> " : "  ").AsSpan(), style);
             buffer.WriteText(rect.X + 2, y, item.AsSpan(), style);
