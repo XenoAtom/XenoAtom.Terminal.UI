@@ -19,10 +19,17 @@ public sealed partial class TextBox : Visual, ICursorProvider
     public TextBox()
     {
         Focusable = true;
+        ShowBorder = true;
     }
 
     [Bindable]
     public partial string? Text { get; set; }
+
+    [Bindable]
+    public partial string? Placeholder { get; set; }
+
+    [Bindable]
+    public partial bool ShowBorder { get; set; }
 
     public int CaretIndex
     {
@@ -40,8 +47,9 @@ public sealed partial class TextBox : Visual, ICursorProvider
 
     protected override CellSize MeasureOverride(CellSize availableSize)
     {
-        var width = Math.Max(3, Math.Min(availableSize.Width, 12));
-        return new CellSize(width, 1);
+        var width = Math.Max(10, Math.Min(availableSize.Width, 24));
+        var height = ShowBorder ? 3 : 1;
+        return new CellSize(width, Math.Min(availableSize.Height, height));
     }
 
     protected override void ArrangeOverride(CellRect finalRect)
@@ -52,7 +60,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
-        if (rect.Width <= 0)
+        if (rect.Width <= 0 || rect.Height <= 0)
         {
             return;
         }
@@ -62,14 +70,60 @@ public sealed partial class TextBox : Visual, ICursorProvider
         var textBoxStyle = GetEnvironmentValue(TextBoxStyle.Key);
         var borderStyle = textBoxStyle.BorderStyle(theme, isFocused);
         var selectionStyle = textBoxStyle.SelectionStyle(theme);
+        var backgroundStyle = textBoxStyle.BackgroundStyle(theme);
+        var placeholderStyle = textBoxStyle.PlaceholderStyle(theme);
+        var padding = textBoxStyle.Padding;
+        var showBorder = ShowBorder;
+
+        // Fill background.
+        for (var y = rect.Y; y < rect.Y + rect.Height; y++)
+        {
+            for (var x = rect.X; x < rect.X + rect.Width; x++)
+            {
+                buffer.SetCell(x, y, new Rune(' '), backgroundStyle);
+            }
+        }
+
+        var textRowY = rect.Y;
+        var innerLeft = rect.X;
+        var innerWidth = rect.Width;
+        if (showBorder && rect.Width >= 2 && rect.Height >= 2)
+        {
+            var glyphs = theme.Lines;
+            var left = rect.X;
+            var top = rect.Y;
+            var right = rect.X + rect.Width - 1;
+            var bottom = rect.Y + rect.Height - 1;
+
+            buffer.SetCell(left, top, new Rune(glyphs.TopLeft), borderStyle);
+            buffer.SetCell(right, top, new Rune(glyphs.TopRight), borderStyle);
+            buffer.SetCell(left, bottom, new Rune(glyphs.BottomLeft), borderStyle);
+            buffer.SetCell(right, bottom, new Rune(glyphs.BottomRight), borderStyle);
+
+            for (var x = left + 1; x < right; x++)
+            {
+                buffer.SetCell(x, top, new Rune(glyphs.Horizontal), borderStyle);
+                buffer.SetCell(x, bottom, new Rune(glyphs.Horizontal), borderStyle);
+            }
+
+            for (var y = top + 1; y < bottom; y++)
+            {
+                buffer.SetCell(left, y, new Rune(glyphs.Vertical), borderStyle);
+                buffer.SetCell(right, y, new Rune(glyphs.Vertical), borderStyle);
+            }
+
+            textRowY = rect.Y + 1;
+            innerLeft = rect.X + 1;
+            innerWidth = Math.Max(0, rect.Width - 2);
+        }
+
+        var contentX = innerLeft + padding.Left;
+        var contentWidth = Math.Max(0, innerWidth - padding.Horizontal);
 
         var text = Text ?? string.Empty;
-        var innerWidth = Math.Max(0, rect.Width - 2);
 
-        if (innerWidth == 0)
+        if (contentWidth == 0)
         {
-            buffer.SetCell(rect.X, rect.Y, new Rune('['), borderStyle);
-            buffer.SetCell(rect.X + rect.Width - 1, rect.Y, new Rune(']'), borderStyle);
             return;
         }
 
@@ -79,17 +133,9 @@ public sealed partial class TextBox : Visual, ICursorProvider
         {
             _scrollCellOffset = caretCells;
         }
-        else if (caretCells >= _scrollCellOffset + innerWidth)
+        else if (caretCells >= _scrollCellOffset + contentWidth)
         {
-            _scrollCellOffset = Math.Max(0, caretCells - innerWidth + 1);
-        }
-
-        buffer.SetCell(rect.X, rect.Y, new Rune('['), borderStyle);
-        buffer.SetCell(rect.X + rect.Width - 1, rect.Y, new Rune(']'), borderStyle);
-
-        for (var i = 0; i < innerWidth; i++)
-        {
-            buffer.SetCell(rect.X + 1 + i, rect.Y, new Rune(' '), CellStyle.None);
+            _scrollCellOffset = Math.Max(0, caretCells - contentWidth + 1);
         }
 
         if (!TerminalTextUtility.TryGetIndexAtCell(text.AsSpan(), _scrollCellOffset, out var startIndex))
@@ -97,12 +143,19 @@ public sealed partial class TextBox : Visual, ICursorProvider
             startIndex = 0;
         }
 
-        TerminalTextUtility.TryGetIndexAtCell(text.AsSpan(), _scrollCellOffset + innerWidth, out var endIndex);
+        TerminalTextUtility.TryGetIndexAtCell(text.AsSpan(), _scrollCellOffset + contentWidth, out var endIndex);
         endIndex = Math.Clamp(endIndex, startIndex, text.Length);
 
         if (!HasSelection)
         {
-            buffer.WriteText(rect.X + 1, rect.Y, text.AsSpan(startIndex, endIndex - startIndex), CellStyle.None);
+            if (text.Length == 0 && !isFocused && !string.IsNullOrEmpty(Placeholder))
+            {
+                buffer.WriteText(contentX, textRowY, Placeholder.AsSpan(), placeholderStyle);
+            }
+            else
+            {
+                buffer.WriteText(contentX, textRowY, text.AsSpan(startIndex, endIndex - startIndex), backgroundStyle);
+            }
         }
         else
         {
@@ -112,35 +165,31 @@ public sealed partial class TextBox : Visual, ICursorProvider
 
             if (visSelStart > startIndex)
             {
-                buffer.WriteText(rect.X + 1, rect.Y, text.AsSpan(startIndex, visSelStart - startIndex), CellStyle.None);
+                buffer.WriteText(contentX, textRowY, text.AsSpan(startIndex, visSelStart - startIndex), backgroundStyle);
             }
 
             if (visSelEnd > visSelStart)
             {
                 var selStartCell = TerminalTextUtility.GetWidth(text.AsSpan(startIndex, visSelStart - startIndex));
-                buffer.WriteText(rect.X + 1 + selStartCell, rect.Y, text.AsSpan(visSelStart, visSelEnd - visSelStart), selectionStyle);
+                buffer.WriteText(contentX + selStartCell, textRowY, text.AsSpan(visSelStart, visSelEnd - visSelStart), selectionStyle);
             }
 
             if (endIndex > visSelEnd)
             {
                 var selEndCell = TerminalTextUtility.GetWidth(text.AsSpan(startIndex, visSelEnd - startIndex));
-                buffer.WriteText(rect.X + 1 + selEndCell, rect.Y, text.AsSpan(visSelEnd, endIndex - visSelEnd), CellStyle.None);
+                buffer.WriteText(contentX + selEndCell, textRowY, text.AsSpan(visSelEnd, endIndex - visSelEnd), backgroundStyle);
             }
         }
 
         if (isFocused)
         {
             var caretX = caretCells - _scrollCellOffset;
-            if (caretX >= 0 && caretX < innerWidth)
+            if (caretX >= 0 && caretX < contentWidth)
             {
                 if (!HasSelection)
                 {
-                    buffer.SetCell(rect.X + 1 + caretX, rect.Y, new Rune(' '), CellStyle.Invert);
+                    buffer.SetCell(contentX + caretX, textRowY, new Rune(' '), CellStyle.Invert);
                 }
-            }
-            else if (caretX == innerWidth)
-            {
-                buffer.SetCell(rect.X + rect.Width - 1, rect.Y, new Rune(']'), CellStyle.Invert);
             }
         }
     }
@@ -350,16 +399,36 @@ public sealed partial class TextBox : Visual, ICursorProvider
         }
 
         var rect = Bounds;
-        var innerWidth = Math.Max(0, rect.Width - 2);
-        if (innerWidth <= 0)
+        if (rect.Width <= 0 || rect.Height <= 0)
         {
             return;
         }
 
-        var cell = Math.Clamp(e.LocalX - 1, 0, innerWidth) + _scrollCellOffset;
+        var style = GetEnvironmentValue(TextBoxStyle.Key);
+        var padding = style.Padding;
+
+        var showBorder = ShowBorder;
+        var textRowY = showBorder ? 1 : 0;
+        if (e.LocalY != textRowY)
+        {
+            // Clicking border rows doesn't reposition the caret.
+            e.Handled = true;
+            return;
+        }
+
+        var innerLeft = showBorder ? 1 : 0;
+        var innerWidth = Math.Max(0, rect.Width - (showBorder ? 2 : 0));
+        var contentX = innerLeft + padding.Left;
+        var contentWidth = Math.Max(0, innerWidth - padding.Horizontal);
+        if (contentWidth <= 0)
+        {
+            return;
+        }
+
+        var localCell = Math.Clamp(e.LocalX - contentX, 0, contentWidth) + _scrollCellOffset;
         var text = Text ?? string.Empty;
 
-        if (!TerminalTextUtility.TryGetIndexAtCell(text.AsSpan(), cell, out var index))
+        if (!TerminalTextUtility.TryGetIndexAtCell(text.AsSpan(), localCell, out var index))
         {
             index = text.Length;
         }
@@ -612,8 +681,13 @@ public sealed partial class TextBox : Visual, ICursorProvider
             return false;
         }
 
-        var innerWidth = Math.Max(0, rect.Width - 2);
-        if (innerWidth == 0)
+        var style = GetEnvironmentValue(TextBoxStyle.Key);
+        var padding = style.Padding;
+        var showBorder = ShowBorder;
+
+        var innerWidth = Math.Max(0, rect.Width - (showBorder ? 2 : 0));
+        var contentWidth = Math.Max(0, innerWidth - padding.Horizontal);
+        if (contentWidth == 0)
         {
             return false;
         }
@@ -628,11 +702,11 @@ public sealed partial class TextBox : Visual, ICursorProvider
             caretX = 0;
         }
 
-        // Allow caretX == innerWidth (cursor on right border), matching the current visual indicator.
-        caretX = Math.Min(innerWidth, caretX);
+        caretX = Math.Min(contentWidth, caretX);
 
-        x = rect.X + 1 + caretX;
-        y = rect.Y;
+        var innerLeft = rect.X + (showBorder ? 1 : 0);
+        x = innerLeft + padding.Left + caretX;
+        y = rect.Y + (showBorder ? 1 : 0);
         return true;
     }
 }

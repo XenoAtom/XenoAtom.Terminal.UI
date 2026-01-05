@@ -344,7 +344,7 @@ public sealed class TerminalAppTests
         }
 
         await WaitUntil(() => session.Instance.GetCursorVisible());
-        await WaitUntil(() => session.Instance.Cursor.Position.Equals(new TerminalPosition(1, 0)));
+        await WaitUntil(() => session.Instance.Cursor.Position.Equals(new TerminalPosition(2, 1)));
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));
