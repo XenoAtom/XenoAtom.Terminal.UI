@@ -239,6 +239,7 @@ public sealed class TerminalApp : IAsyncDisposable
             Root.Arrange(new CellRect(0, 0, width, height));
 
             var buffer = new CellBuffer(width, height);
+            buffer.Clear(Root.GetTheme().BaseTextStyle());
             Root.RenderTree(buffer);
             if (_debugOverlayVisible)
             {

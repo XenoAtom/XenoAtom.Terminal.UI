@@ -74,12 +74,16 @@ public sealed partial class Table : Visual
             }
         }
 
-        // Border + separators: | c0 | c1 | => columns + 1 separators, plus 2 spaces per column.
+        // Full box:
+        // Top/bottom lines: ┌─┬─┐, inner separators: │ ... │
+        // For N columns: N content areas with 2 padding spaces, plus N+1 vertical separators.
+        // Also includes an outer border and optional header separator row.
         var required = 1 + columns + (columns * 2);
         for (var c = 0; c < columns; c++)
         {
             required += widths[c];
         }
+        required = Math.Min(width, Math.Max(0, required));
 
         if (required > width)
         {
@@ -93,10 +97,19 @@ public sealed partial class Table : Visual
 
         _columnWidths = widths;
 
-        var height = (headers is not null ? 1 : 0) + (rows?.Count ?? 0);
+        var height = 2; // top + bottom
+        if (headers is not null)
+        {
+            height += 1;
+            if (ShowHeaderSeparator)
+            {
+                height += 1;
+            }
+        }
+        height += rows?.Count ?? 0;
         if (headers is not null && ShowHeaderSeparator)
         {
-            height++;
+            // already included
         }
 
         return new CellSize(width, Math.Min(availableSize.Height, height));
@@ -122,38 +135,55 @@ public sealed partial class Table : Visual
         }
 
         var theme = GetTheme();
+        var glyphs = theme.Lines;
         var border = theme.BorderStyle(focused: false);
+        var surface = theme.SurfaceStyle();
+
+        // Fill background.
+        for (var yFill = rect.Y; yFill < rect.Y + rect.Height; yFill++)
+        {
+            for (var xFill = rect.X; xFill < rect.X + rect.Width; xFill++)
+            {
+                buffer.SetCell(xFill, yFill, new Rune(' '), surface);
+            }
+        }
 
         var y = rect.Y;
+        DrawLine(buffer, rect, y, widths, border, glyphs, glyphs.TopLeft, glyphs.TeeTop, glyphs.TopRight);
+        y++;
+
         var headers = Headers;
         if (headers is not null)
         {
-            WriteRow(buffer, rect, y, headers, widths, border, CellStyle.Bold);
+            WriteRow(buffer, rect, y, headers, widths, border, glyphs, theme.BaseTextStyle() | CellStyle.Bold);
             y++;
 
             if (ShowHeaderSeparator && y < rect.Y + rect.Height)
             {
-                DrawSeparator(buffer, rect, y, widths, border);
+                DrawLine(buffer, rect, y, widths, border, glyphs, glyphs.TeeLeft, glyphs.Cross, glyphs.TeeRight);
                 y++;
             }
         }
 
         var rows = Rows;
-        if (rows is null)
+        if (rows is not null)
         {
-            return;
+            for (var r = 0; r < rows.Count && y < rect.Y + rect.Height - 1; r++, y++)
+            {
+                WriteRow(buffer, rect, y, rows[r], widths, border, glyphs, theme.BaseTextStyle());
+            }
         }
 
-        for (var r = 0; r < rows.Count && y < rect.Y + rect.Height; r++, y++)
+        if (y < rect.Y + rect.Height)
         {
-            WriteRow(buffer, rect, y, rows[r], widths, border, CellStyle.None);
+            DrawLine(buffer, rect, rect.Y + rect.Height - 1, widths, border, glyphs, glyphs.BottomLeft, glyphs.TeeBottom, glyphs.BottomRight);
         }
     }
 
-    private static void DrawSeparator(CellBuffer buffer, CellRect rect, int y, IReadOnlyList<int> widths, CellStyle border)
+    private static void DrawLine(CellBuffer buffer, CellRect rect, int y, IReadOnlyList<int> widths, CellStyle border, LineGlyphs glyphs, char left, char middle, char right)
     {
         var x = rect.X;
-        buffer.SetCell(x, y, new Rune('+'), border);
+        buffer.SetCell(x, y, new Rune(left), border);
         x++;
 
         for (var c = 0; c < widths.Count; c++)
@@ -161,7 +191,7 @@ public sealed partial class Table : Visual
             var w = widths[c] + 2;
             for (var i = 0; i < w && x < rect.X + rect.Width; i++, x++)
             {
-                buffer.SetCell(x, y, new Rune('-'), border);
+                buffer.SetCell(x, y, new Rune(glyphs.Horizontal), border);
             }
 
             if (x >= rect.X + rect.Width)
@@ -169,16 +199,16 @@ public sealed partial class Table : Visual
                 break;
             }
 
-            buffer.SetCell(x, y, new Rune('+'), border);
+            buffer.SetCell(x, y, new Rune(c + 1 < widths.Count ? middle : right), border);
             x++;
         }
     }
 
-    private static void WriteRow(CellBuffer buffer, CellRect rect, int y, IReadOnlyList<string> row, IReadOnlyList<int> widths, CellStyle border, CellStyle cellStyle)
+    private static void WriteRow(CellBuffer buffer, CellRect rect, int y, IReadOnlyList<string> row, IReadOnlyList<int> widths, CellStyle border, LineGlyphs glyphs, CellStyle cellStyle)
     {
         var x = rect.X;
 
-        buffer.SetCell(x, y, new Rune('|'), border);
+        buffer.SetCell(x, y, new Rune(glyphs.Vertical), border);
         x++;
 
         for (var c = 0; c < widths.Count && x < rect.X + rect.Width; c++)
@@ -204,7 +234,7 @@ public sealed partial class Table : Visual
                 break;
             }
 
-            buffer.SetCell(x, y, new Rune('|'), border);
+            buffer.SetCell(x, y, new Rune(glyphs.Vertical), border);
             x++;
         }
     }

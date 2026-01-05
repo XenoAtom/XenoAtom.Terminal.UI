@@ -46,6 +46,12 @@ public sealed class CellBuffer
         Array.Fill(_styles, CellStyle.None);
     }
 
+    public void Clear(CellStyle style)
+    {
+        Array.Fill(_scalars, ' ');
+        Array.Fill(_styles, style);
+    }
+
     public void PushClip(CellRect rect)
     {
         var next = Intersect(_clipRect, rect);

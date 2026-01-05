@@ -133,28 +133,39 @@ public sealed partial class Dialog : Visual
         }
 
         var theme = GetTheme();
+        var glyphs = theme.Lines;
         var borderStyle = theme.BorderStyle(focused);
+        var surface = theme.SurfaceStyle();
 
         var left = rect.X;
         var top = rect.Y;
         var right = rect.X + rect.Width - 1;
         var bottom = rect.Y + rect.Height - 1;
 
-        buffer.SetCell(left, top, new Rune('+'), borderStyle);
-        buffer.SetCell(right, top, new Rune('+'), borderStyle);
-        buffer.SetCell(left, bottom, new Rune('+'), borderStyle);
-        buffer.SetCell(right, bottom, new Rune('+'), borderStyle);
+        // Fill background.
+        for (var y = top; y <= bottom; y++)
+        {
+            for (var x = left; x <= right; x++)
+            {
+                buffer.SetCell(x, y, new Rune(' '), surface);
+            }
+        }
+
+        buffer.SetCell(left, top, new Rune(glyphs.TopLeft), borderStyle);
+        buffer.SetCell(right, top, new Rune(glyphs.TopRight), borderStyle);
+        buffer.SetCell(left, bottom, new Rune(glyphs.BottomLeft), borderStyle);
+        buffer.SetCell(right, bottom, new Rune(glyphs.BottomRight), borderStyle);
 
         for (var x = left + 1; x < right; x++)
         {
-            buffer.SetCell(x, top, new Rune('-'), borderStyle);
-            buffer.SetCell(x, bottom, new Rune('-'), borderStyle);
+            buffer.SetCell(x, top, new Rune(glyphs.Horizontal), borderStyle);
+            buffer.SetCell(x, bottom, new Rune(glyphs.Horizontal), borderStyle);
         }
 
         for (var y = top + 1; y < bottom; y++)
         {
-            buffer.SetCell(left, y, new Rune('|'), borderStyle);
-            buffer.SetCell(right, y, new Rune('|'), borderStyle);
+            buffer.SetCell(left, y, new Rune(glyphs.Vertical), borderStyle);
+            buffer.SetCell(right, y, new Rune(glyphs.Vertical), borderStyle);
         }
 
         var title = Title;
