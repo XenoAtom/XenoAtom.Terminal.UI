@@ -12,15 +12,35 @@ var button = new Button("Click me (mouse or Enter)");
 var status = new TextBlock("Status: ready");
 button.Click += (_, _) => status.Text = "Status: click received";
 
+var scrollContent = new VStack();
+for (var i = 0; i < 20; i++)
+{
+    scrollContent.Add(new TextBlock($"Log line {i}"));
+}
+var scroll = new ScrollViewer { Child = scrollContent, Height = 5 };
+
 var root = new VStack { Spacing = 1 };
 root.Add(new TextBlock("Fullscreen demo: Tab focus, mouse click, wheel scroll, Esc quit"));
 root.Add(name);
 root.Add(accept);
 root.Add(new TextBlock("Pick one (mouse wheel supported):"));
 root.Add(list);
+root.Add(new TextBlock("ScrollViewer (focus + wheel):"));
+root.Add(scroll);
 root.Add(progress);
 root.Add(button);
 root.Add(status);
+
+root.SetEnvironmentValue(Theme.Key, new Theme
+{
+    Foreground = Theme.Default.Foreground,
+    Background = Theme.Default.Background,
+    Border = Theme.Default.Border,
+    FocusBorder = Theme.Default.FocusBorder,
+    Accent = Theme.Default.Accent,
+    Selection = 11, // bright green
+    Disabled = Theme.Default.Disabled,
+});
 
 var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
 

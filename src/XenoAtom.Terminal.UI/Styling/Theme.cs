@@ -10,11 +10,11 @@ public sealed class Theme
     {
         Foreground = 0, // default
         Background = 0, // default
-        Border = 8,     // gray
-        FocusBorder = 12, // bright blue
-        Accent = 12,      // bright blue
-        Selection = 12,   // bright blue
-        Disabled = 8,     // gray
+        Border = 9,        // gray (basic16 index 8)
+        FocusBorder = 13,  // bright blue (basic16 index 12)
+        Accent = 13,       // bright blue
+        Selection = 13,    // bright blue
+        Disabled = 9,      // gray
     };
 
     public static EnvironmentKey<Theme> Key { get; } = new("Theme", Default);

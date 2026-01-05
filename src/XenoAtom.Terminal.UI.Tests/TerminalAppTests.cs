@@ -452,4 +452,34 @@ public sealed class TerminalAppTests
             BindingManager.Current.ValueChanged -= Handler;
         }
     }
+
+    [TestMethod]
+    public async Task ScrollViewer_Scrolls_On_Wheel()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(20, 6));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var content = new VStack();
+        for (var i = 0; i < 10; i++)
+        {
+            content.Add(new TextBlock($"Item {i}"));
+        }
+
+        var scroll = new ScrollViewer { Child = content, Height = 4 };
+
+        var root = new VStack { Spacing = 1 };
+        root.Add(scroll);
+
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunAsync();
+
+        await Task.Delay(20);
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Wheel, Button = TerminalMouseButton.Wheel, WheelDelta = -1, X = 1, Y = 0 });
+        await Task.Delay(20);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.IsTrue(scroll.VerticalOffset > 0);
+    }
 }
