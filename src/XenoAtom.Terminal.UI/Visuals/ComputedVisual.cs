@@ -49,7 +49,8 @@ public sealed class ComputedVisual : Visual, IDisposable
         var child = EnsureChild();
         if (child is null)
         {
-            Bounds = finalRect;
+            // When there is no child, don't participate in hit-testing or rendering.
+            Bounds = default;
             return;
         }
 
@@ -81,4 +82,3 @@ public sealed class ComputedVisual : Visual, IDisposable
         App?.RequestRender();
     }
 }
-

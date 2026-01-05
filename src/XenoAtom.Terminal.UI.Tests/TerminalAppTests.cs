@@ -119,8 +119,8 @@ public sealed class TerminalAppTests
         var clicked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         button.Click += (_, _) => clicked.TrySetResult();
 
-        var root = new VStack();
-        root.Add(button);
+        var root = new ZStack();
+        root.Add(button, new ComputedVisual(static () => null));
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
         var runTask = app.RunAsync();
