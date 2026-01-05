@@ -380,6 +380,35 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task EnvironmentValue_Invalidates_ComputedVisual()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var key = new EnvironmentKey<string>("Title", "A");
+
+        ComputedVisual? view = null;
+        view = new ComputedVisual(() => new TextBlock($"Env:{view!.GetEnvironmentValue(key)}"));
+
+        var root = new VStack();
+        root.Add(view);
+
+        var app = new TerminalApp(root, session.Instance);
+        var runTask = app.RunAsync();
+
+        await Task.Delay(20);
+        app.Post(() => root.SetEnvironmentValue(key, "B"));
+        await Task.Delay(50);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var outText = backend.GetOutText();
+        StringAssert.Contains(outText, "Env:A");
+        StringAssert.Contains(outText, "Env:B");
+    }
+
+    [TestMethod]
     public async Task ListBox_Changes_Selection_On_Down()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));

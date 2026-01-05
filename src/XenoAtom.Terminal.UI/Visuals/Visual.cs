@@ -12,6 +12,7 @@ public abstract partial class Visual : BindableObject
     private readonly List<Visual> _children = new();
     private Dictionary<object, Delegate?>? _handlers;
     private List<KeyBinding>? _keyBindings;
+    private Dictionary<object, object?>? _environment;
 
     public Visual? Parent { get; private set; }
 
@@ -68,6 +69,34 @@ public abstract partial class Visual : BindableObject
         {
             child.AttachToApp(App);
         }
+    }
+
+    public void SetEnvironmentValue<T>(EnvironmentKey<T> key, T value)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        _environment ??= new Dictionary<object, object?>();
+        _environment[key] = value;
+        BindingManager.Current.NotifyValueChanged(this, key.DependencyName);
+    }
+
+    public T GetEnvironmentValue<T>(EnvironmentKey<T> key)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+
+        Visual? root = null;
+
+        for (var v = this; v is not null; v = v.Parent)
+        {
+            root = v;
+            if (v._environment is not null && v._environment.TryGetValue(key, out var boxed))
+            {
+                BindingManager.Current.RegisterRead(v, key.DependencyName);
+                return boxed is T typed ? typed : key.DefaultValue;
+            }
+        }
+
+        BindingManager.Current.RegisterRead(root ?? this, key.DependencyName);
+        return key.DefaultValue;
     }
 
     protected void ClearChildren()

@@ -44,6 +44,16 @@ public sealed class BindingManager
         return new TrackingSession(previous, current.Dependencies);
     }
 
+    public void RegisterRead(object owner, string name)
+    {
+        _tracking?.RegisterRead(owner, name);
+    }
+
+    public void NotifyValueChanged(object owner, string name)
+    {
+        ValueChanged?.Invoke(owner, name);
+    }
+
     public readonly struct TrackingSession : IDisposable
     {
         private readonly TrackingContext? _previous;
