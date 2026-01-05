@@ -8,7 +8,7 @@ using XenoAtom.Terminal;
 
 namespace XenoAtom.Terminal.UI;
 
-public sealed partial class TextBox : Visual
+public sealed partial class TextBox : Visual, ICursorProvider
 {
     private int _caretIndex;
     private int _scrollCellOffset;
@@ -532,5 +532,45 @@ public sealed partial class TextBox : Visual
         }
 
         return rune;
+    }
+
+    public bool TryGetCursorCell(out int x, out int y)
+    {
+        x = 0;
+        y = 0;
+
+        if (!ReferenceEquals(App?.FocusedElement, this) || !IsVisible || !IsEnabled)
+        {
+            return false;
+        }
+
+        var rect = Bounds;
+        if (rect.Width <= 0 || rect.Height <= 0)
+        {
+            return false;
+        }
+
+        var innerWidth = Math.Max(0, rect.Width - 2);
+        if (innerWidth == 0)
+        {
+            return false;
+        }
+
+        var text = Text ?? string.Empty;
+        var caretIndex = Math.Clamp(_caretIndex, 0, text.Length);
+        var caretCells = TerminalTextUtility.GetWidth(text.AsSpan(0, caretIndex));
+
+        var caretX = caretCells - _scrollCellOffset;
+        if (caretX < 0)
+        {
+            caretX = 0;
+        }
+
+        // Allow caretX == innerWidth (cursor on right border), matching the current visual indicator.
+        caretX = Math.Min(innerWidth, caretX);
+
+        x = rect.X + 1 + caretX;
+        y = rect.Y;
+        return true;
     }
 }

@@ -248,6 +248,39 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task TextBox_Shows_Cursor_And_Sets_Position()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(20, 5));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var textBox = new TextBox();
+        var root = new VStack();
+        root.Add(textBox);
+
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunAsync();
+
+        static async Task WaitUntil(Func<bool> condition)
+        {
+            var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+            while (!condition())
+            {
+                if (DateTime.UtcNow >= timeout)
+                {
+                    Assert.Fail("Timed out waiting for condition.");
+                }
+                await Task.Delay(10);
+            }
+        }
+
+        await WaitUntil(() => session.Instance.GetCursorVisible());
+        await WaitUntil(() => session.Instance.Cursor.Position.Equals(new TerminalPosition(1, 0)));
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    [TestMethod]
     public async Task KeyBinding_Executes_On_Ctrl_Gesture()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));

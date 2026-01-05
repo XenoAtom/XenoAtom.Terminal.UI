@@ -20,6 +20,8 @@ public sealed class TerminalApp : IAsyncDisposable
     private Visual? _pointerCapture;
     private Visual? _hoveredElement;
     private int? _inlineLiveRegionTopRow;
+    private bool _lastCursorVisible;
+    private TerminalPosition _lastCursorPosition;
 
     public TerminalApp(Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
     {
@@ -236,6 +238,7 @@ public sealed class TerminalApp : IAsyncDisposable
             Root.RenderTree(buffer);
 
             _fullscreenHost!.Render(buffer);
+            UpdateCursor();
             return;
         }
 
@@ -258,6 +261,67 @@ public sealed class TerminalApp : IAsyncDisposable
                     _inlineLiveRegionTopRow = position.Row - reserved;
                 }
             }
+
+            UpdateCursor();
+        }
+    }
+
+    private void UpdateCursor()
+    {
+        var focused = FocusedElement;
+        var x = 0;
+        var y = 0;
+        var wantsCursor = focused is ICursorProvider provider && provider.TryGetCursorCell(out x, out y);
+
+        TerminalPosition position = default;
+        if (wantsCursor)
+        {
+            if (_options.HostKind == TerminalHostKind.Inline)
+            {
+                var topRow = _inlineLiveRegionTopRow;
+                if (topRow is null)
+                {
+                    wantsCursor = false;
+                }
+                else
+                {
+                    position = new TerminalPosition(x, topRow.Value + y);
+                }
+            }
+            else
+            {
+                position = new TerminalPosition(x, y);
+            }
+        }
+
+        try
+        {
+            if (wantsCursor)
+            {
+                if (!_lastCursorVisible)
+                {
+                    _terminal.SetCursorVisible(true);
+                    _lastCursorVisible = true;
+                }
+
+                if (!_lastCursorPosition.Equals(position))
+                {
+                    _terminal.SetCursorPosition(position);
+                    _lastCursorPosition = position;
+                }
+            }
+            else
+            {
+                if (_lastCursorVisible)
+                {
+                    _terminal.SetCursorVisible(false);
+                    _lastCursorVisible = false;
+                }
+            }
+        }
+        catch
+        {
+            // Best effort.
         }
     }
 
