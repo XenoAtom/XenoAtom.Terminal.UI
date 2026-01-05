@@ -10,6 +10,8 @@ public sealed class ListBoxStyle
 
     public static EnvironmentKey<ListBoxStyle> Key { get; } = new("ListBoxStyle", Default);
 
+    public char MarkerGlyph { get; init; } = '▸';
+
     public CellStyle? Item { get; init; }
     public CellStyle? SelectedFocused { get; init; }
     public CellStyle? SelectedUnfocused { get; init; }
@@ -17,14 +19,16 @@ public sealed class ListBoxStyle
 
     public CellStyle ResolveItemStyle(Theme theme, bool enabled, bool selected, bool focused)
     {
+        var baseStyle = theme.SurfaceStyle();
+
         if (!enabled)
         {
-            return Disabled ?? CellStyle.Dim;
+            return Disabled ?? (baseStyle | CellStyle.Dim);
         }
 
         if (!selected)
         {
-            return Item ?? CellStyle.None;
+            return Item ?? baseStyle;
         }
 
         if (focused)

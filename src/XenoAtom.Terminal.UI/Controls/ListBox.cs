@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal;
+using System.Text;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -14,6 +15,7 @@ public sealed partial class ListBox : Visual
     {
         Focusable = true;
         Height = 6;
+        ShowBorder = true;
     }
 
     [Bindable]
@@ -24,6 +26,9 @@ public sealed partial class ListBox : Visual
 
     [Bindable]
     public partial int Height { get; set; }
+
+    [Bindable]
+    public partial bool ShowBorder { get; set; }
 
     protected override CellSize MeasureOverride(CellSize availableSize)
     {
@@ -39,8 +44,17 @@ public sealed partial class ListBox : Visual
             }
         }
 
-        width = Math.Min(availableSize.Width, width);
-        return new CellSize(width, Math.Min(height, availableSize.Height));
+        // Marker + space.
+        width = Math.Min(availableSize.Width, width + 2);
+
+        var desiredHeight = Math.Min(height, availableSize.Height);
+        if (ShowBorder)
+        {
+            width = Math.Min(availableSize.Width, width + 2);
+            desiredHeight = Math.Min(availableSize.Height, desiredHeight + 2);
+        }
+
+        return new CellSize(width, desiredHeight);
     }
 
     protected override void ArrangeOverride(CellRect finalRect)
@@ -57,6 +71,12 @@ public sealed partial class ListBox : Visual
             return;
         }
 
+        var showBorder = ShowBorder;
+        var innerLeft = rect.X + (showBorder ? 1 : 0);
+        var innerTop = rect.Y + (showBorder ? 1 : 0);
+        var innerWidth = Math.Max(0, rect.Width - (showBorder ? 2 : 0));
+        var innerHeight = Math.Max(0, rect.Height - (showBorder ? 2 : 0));
+
         var count = items?.Count ?? 0;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
 
@@ -64,23 +84,59 @@ public sealed partial class ListBox : Visual
         {
             _scrollOffset = selected;
         }
-        else if (selected >= _scrollOffset + rect.Height)
+        else if (selected >= _scrollOffset + Math.Max(1, innerHeight))
         {
-            _scrollOffset = Math.Max(0, selected - rect.Height + 1);
+            _scrollOffset = Math.Max(0, selected - Math.Max(1, innerHeight) + 1);
         }
 
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
         var listBoxStyle = GetEnvironmentValue(ListBoxStyle.Key);
+        var border = theme.BorderStyle(isFocused);
+        var glyphs = theme.Lines;
 
-        for (var row = 0; row < rect.Height; row++)
+        // Fill background.
+        var background = theme.SurfaceStyle();
+        for (var y = rect.Y; y < rect.Y + rect.Height; y++)
+        {
+            for (var x = rect.X; x < rect.X + rect.Width; x++)
+            {
+                buffer.SetCell(x, y, new Rune(' '), background);
+            }
+        }
+
+        if (showBorder && rect.Width >= 2 && rect.Height >= 2)
+        {
+            var left = rect.X;
+            var top = rect.Y;
+            var right = rect.X + rect.Width - 1;
+            var bottom = rect.Y + rect.Height - 1;
+
+            buffer.SetCell(left, top, new Rune(glyphs.TopLeft), border);
+            buffer.SetCell(right, top, new Rune(glyphs.TopRight), border);
+            buffer.SetCell(left, bottom, new Rune(glyphs.BottomLeft), border);
+            buffer.SetCell(right, bottom, new Rune(glyphs.BottomRight), border);
+
+            for (var x = left + 1; x < right; x++)
+            {
+                buffer.SetCell(x, top, new Rune(glyphs.Horizontal), border);
+                buffer.SetCell(x, bottom, new Rune(glyphs.Horizontal), border);
+            }
+
+            for (var y = top + 1; y < bottom; y++)
+            {
+                buffer.SetCell(left, y, new Rune(glyphs.Vertical), border);
+                buffer.SetCell(right, y, new Rune(glyphs.Vertical), border);
+            }
+        }
+
+        for (var row = 0; row < innerHeight; row++)
         {
             var itemIndex = _scrollOffset + row;
-            var y = rect.Y + row;
+            var y = innerTop + row;
 
             if ((uint)itemIndex >= (uint)count)
             {
-                buffer.WriteText(rect.X, y, new string(' ', rect.Width).AsSpan(), CellStyle.None);
                 continue;
             }
 
@@ -88,8 +144,19 @@ public sealed partial class ListBox : Visual
             var isSelected = itemIndex == selected;
             var style = listBoxStyle.ResolveItemStyle(theme, IsEnabled, isSelected, isFocused);
 
-            buffer.WriteText(rect.X, y, (isSelected ? "> " : "  ").AsSpan(), style);
-            buffer.WriteText(rect.X + 2, y, item.AsSpan(), style);
+            if (innerWidth >= 2)
+            {
+                buffer.SetCell(innerLeft, y, new Rune(isSelected ? listBoxStyle.MarkerGlyph : ' '), style);
+                buffer.SetCell(innerLeft + 1, y, new Rune(' '), style);
+
+                var span = item.AsSpan();
+                var maxCells = Math.Max(0, innerWidth - 2);
+                if (TerminalTextUtility.TryGetIndexAtCell(span, maxCells, out var endIndex))
+                {
+                    span = span[..endIndex];
+                }
+                buffer.WriteText(innerLeft + 2, y, span, style);
+            }
         }
     }
 
@@ -102,6 +169,7 @@ public sealed partial class ListBox : Visual
             return;
         }
 
+        var viewportHeight = Math.Max(1, Bounds.Height - (ShowBorder ? 2 : 0));
         var selected = Math.Clamp(SelectedIndex, 0, count - 1);
         switch (e.Key)
         {
@@ -121,6 +189,14 @@ public sealed partial class ListBox : Visual
                 SelectedIndex = count - 1;
                 e.Handled = true;
                 return;
+            case TerminalKey.PageUp:
+                SelectedIndex = Math.Max(0, selected - viewportHeight);
+                e.Handled = true;
+                return;
+            case TerminalKey.PageDown:
+                SelectedIndex = Math.Min(count - 1, selected + viewportHeight);
+                e.Handled = true;
+                return;
         }
     }
 
@@ -138,7 +214,14 @@ public sealed partial class ListBox : Visual
             return;
         }
 
-        var index = _scrollOffset + Math.Clamp(e.LocalY, 0, Bounds.Height - 1);
+        var innerY = e.LocalY - (ShowBorder ? 1 : 0);
+        var innerHeight = Math.Max(0, Bounds.Height - (ShowBorder ? 2 : 0));
+        if ((uint)innerY >= (uint)innerHeight)
+        {
+            return;
+        }
+
+        var index = _scrollOffset + innerY;
         if ((uint)index < (uint)count)
         {
             SelectedIndex = index;
