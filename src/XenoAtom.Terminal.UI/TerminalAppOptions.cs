@@ -16,8 +16,7 @@ public sealed class TerminalAppOptions
 
     public bool EnableMouse { get; init; } = true;
 
-    public TerminalMouseMode MouseMode { get; init; } = TerminalMouseMode.Drag;
+    public TerminalMouseMode MouseMode { get; init; } = TerminalMouseMode.Move;
 
     public bool EnableBracketedPaste { get; init; } = true;
 }
-

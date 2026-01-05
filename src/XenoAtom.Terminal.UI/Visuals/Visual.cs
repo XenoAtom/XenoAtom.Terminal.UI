@@ -28,6 +28,7 @@ public abstract partial class Visual : BindableObject
 
     private bool _isVisible = true;
     private bool _isEnabled = true;
+    private bool _isHovered;
 
     public bool IsVisible
     {
@@ -65,6 +66,26 @@ public abstract partial class Visual : BindableObject
 
             _isEnabled = value;
             BindingManager.Current.NotifyValueChanged(this, nameof(IsEnabled));
+            App?.RequestRender();
+        }
+    }
+
+    public bool IsHovered
+    {
+        get
+        {
+            BindingManager.Current.RegisterRead(this, nameof(IsHovered));
+            return _isHovered;
+        }
+        internal set
+        {
+            if (_isHovered == value)
+            {
+                return;
+            }
+
+            _isHovered = value;
+            BindingManager.Current.NotifyValueChanged(this, nameof(IsHovered));
             App?.RequestRender();
         }
     }

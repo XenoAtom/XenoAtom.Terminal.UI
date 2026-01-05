@@ -18,6 +18,7 @@ public sealed class TerminalApp : IAsyncDisposable
 
     private bool _renderRequested = true;
     private Visual? _pointerCapture;
+    private Visual? _hoveredElement;
     private int? _inlineLiveRegionTopRow;
 
     public TerminalApp(Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
@@ -408,12 +409,14 @@ public sealed class TerminalApp : IAsyncDisposable
 
     private void DispatchMouseEvent(TerminalMouseEvent mouseEvent)
     {
+        Visual? hitTarget;
         Visual? target;
         var localY = mouseEvent.Y;
 
         if (_options.HostKind == TerminalHostKind.Fullscreen)
         {
-            target = _pointerCapture ?? Root.HitTest(mouseEvent.X, mouseEvent.Y);
+            hitTarget = Root.HitTest(mouseEvent.X, mouseEvent.Y);
+            target = _pointerCapture ?? hitTarget;
         }
         else
         {
@@ -421,23 +424,29 @@ public sealed class TerminalApp : IAsyncDisposable
             var height = _inlineHost?.ReservedHeight ?? 0;
             if (topRow is null || height <= 0)
             {
+                UpdateHover(null);
                 return;
             }
 
             var translatedY = mouseEvent.Y - topRow.Value;
             if ((uint)translatedY >= (uint)height)
             {
+                UpdateHover(null);
                 return;
             }
 
             localY = translatedY;
-            target = _pointerCapture ?? Root.HitTest(mouseEvent.X, translatedY);
+            hitTarget = Root.HitTest(mouseEvent.X, translatedY);
+            target = _pointerCapture ?? hitTarget;
         }
 
         if (target is null)
         {
+            UpdateHover(null);
             return;
         }
+
+        UpdateHover(hitTarget);
 
         while (target is not null && (!target.IsVisible || !target.IsEnabled))
         {
@@ -484,6 +493,31 @@ public sealed class TerminalApp : IAsyncDisposable
             case TerminalMouseKind.Wheel:
                 target.RaiseEvent(Visual.PointerWheelEvent, args);
                 break;
+        }
+    }
+
+    private void UpdateHover(Visual? hitTarget)
+    {
+        var hovered = hitTarget;
+        while (hovered is not null && (!hovered.IsVisible || !hovered.IsEnabled))
+        {
+            hovered = hovered.Parent;
+        }
+
+        if (ReferenceEquals(_hoveredElement, hovered))
+        {
+            return;
+        }
+
+        if (_hoveredElement is not null)
+        {
+            _hoveredElement.IsHovered = false;
+        }
+
+        _hoveredElement = hovered;
+        if (_hoveredElement is not null)
+        {
+            _hoveredElement.IsHovered = true;
         }
     }
 }
