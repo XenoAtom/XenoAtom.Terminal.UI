@@ -128,12 +128,7 @@ public sealed class CellBuffer
                     currentStyle = style;
                     if (currentStyle != CellStyle.None)
                     {
-                        sb.Append('[');
-                        var first = true;
-                        AppendStyleToken(ref first, sb, currentStyle, CellStyle.Invert, "invert");
-                        AppendStyleToken(ref first, sb, currentStyle, CellStyle.Dim, "dim");
-                        AppendStyleToken(ref first, sb, currentStyle, CellStyle.Bold, "bold");
-                        sb.Append(']');
+                        AppendStyle(sb, currentStyle);
                         hasOpenStyle = true;
                     }
                 }
@@ -161,6 +156,29 @@ public sealed class CellBuffer
         return lines;
     }
 
+    private static void AppendStyle(StringBuilder sb, CellStyle style)
+    {
+        sb.Append('[');
+        var first = true;
+
+        AppendStyleToken(ref first, sb, style, CellStyle.Invert, "invert");
+        AppendStyleToken(ref first, sb, style, CellStyle.Dim, "dim");
+        AppendStyleToken(ref first, sb, style, CellStyle.Bold, "bold");
+
+        if (style.TryGetForegroundBasic16(out var fg))
+        {
+            AppendToken(ref first, sb, Basic16ToMarkup(fg));
+        }
+
+        if (style.TryGetBackgroundBasic16(out var bg))
+        {
+            AppendToken(ref first, sb, "on");
+            AppendToken(ref first, sb, Basic16ToMarkup(bg));
+        }
+
+        sb.Append(']');
+    }
+
     private static void AppendStyleToken(ref bool first, StringBuilder sb, CellStyle value, CellStyle flag, string token)
     {
         if ((value & flag) == 0)
@@ -168,6 +186,11 @@ public sealed class CellBuffer
             return;
         }
 
+        AppendToken(ref first, sb, token);
+    }
+
+    private static void AppendToken(ref bool first, StringBuilder sb, string token)
+    {
         if (!first)
         {
             sb.Append(' ');
@@ -176,4 +199,25 @@ public sealed class CellBuffer
         sb.Append(token);
         first = false;
     }
+
+    private static string Basic16ToMarkup(int index) => index switch
+    {
+        0 => "black",
+        1 => "red",
+        2 => "green",
+        3 => "yellow",
+        4 => "blue",
+        5 => "magenta",
+        6 => "cyan",
+        7 => "white",
+        8 => "gray",
+        9 => "brightred",
+        10 => "brightgreen",
+        11 => "brightyellow",
+        12 => "brightblue",
+        13 => "brightmagenta",
+        14 => "brightcyan",
+        15 => "brightwhite",
+        _ => "default",
+    };
 }

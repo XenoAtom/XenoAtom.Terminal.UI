@@ -205,7 +205,30 @@ public sealed class CellBufferDiffRenderer
         if ((style & CellStyle.Dim) != 0) deco |= AnsiDecorations.Dim;
         if ((style & CellStyle.Invert) != 0) deco |= AnsiDecorations.Invert;
 
-        return deco == AnsiDecorations.None ? AnsiStyle.Default : new AnsiStyle { Foreground = AnsiColor.Default, Background = AnsiColor.Default, Decorations = deco };
+        AnsiColor? fg = null;
+        AnsiColor? bg = null;
+
+        if (style.TryGetForegroundBasic16(out var fgIndex))
+        {
+            fg = AnsiColor.Basic16(fgIndex);
+        }
+
+        if (style.TryGetBackgroundBasic16(out var bgIndex))
+        {
+            bg = AnsiColor.Basic16(bgIndex);
+        }
+
+        if (deco == AnsiDecorations.None && fg is null && bg is null)
+        {
+            return AnsiStyle.Default;
+        }
+
+        return new AnsiStyle
+        {
+            Foreground = fg ?? AnsiColor.Default,
+            Background = bg ?? AnsiColor.Default,
+            Decorations = deco,
+        };
     }
 
     private static AnsiCapabilities CreateAnsiCapabilities(TerminalCapabilities caps)
