@@ -10,6 +10,26 @@ namespace XenoAtom.Terminal.UI.Tests;
 [TestClass]
 public sealed class TerminalAppTests
 {
+    private sealed class KeyBindingProbe : Visual
+    {
+        public int Count { get; private set; }
+
+        public KeyBindingProbe()
+        {
+            Focusable = true;
+            AddKeyBinding(new TerminalKeyGesture('k', TerminalModifiers.Ctrl), () => Count++);
+        }
+
+        protected override CellSize MeasureOverride(CellSize availableSize) => new(Math.Min(availableSize.Width, 10), 1);
+
+        protected override void ArrangeOverride(CellRect finalRect) => Bounds = finalRect;
+
+        protected override void RenderOverride(CellBuffer buffer)
+        {
+            buffer.WriteText(Bounds.X, Bounds.Y, $"Count:{Count}".AsSpan(), CellStyle.None);
+        }
+    }
+
     [TestMethod]
     public async Task Renders_TextBlock_In_InlineHost()
     {
@@ -121,6 +141,31 @@ public sealed class TerminalAppTests
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));
 
         Assert.IsFalse(clicked);
+    }
+
+    [TestMethod]
+    public async Task KeyBinding_Executes_On_Ctrl_Gesture()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var probe = new KeyBindingProbe();
+        var root = new VStack();
+        root.Add(probe);
+
+        var app = new TerminalApp(root, session.Instance);
+        var runTask = app.RunAsync();
+
+        await Task.Delay(10);
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'k', Modifiers = TerminalModifiers.Ctrl });
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'k', Modifiers = TerminalModifiers.Ctrl });
+
+        await Task.Delay(50);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.AreEqual(2, probe.Count);
     }
 
     [TestMethod]

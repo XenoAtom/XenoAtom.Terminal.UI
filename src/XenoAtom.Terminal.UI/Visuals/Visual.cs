@@ -11,6 +11,7 @@ public abstract partial class Visual : BindableObject
 {
     private readonly List<Visual> _children = new();
     private Dictionary<object, Delegate?>? _handlers;
+    private List<KeyBinding>? _keyBindings;
 
     public Visual? Parent { get; private set; }
 
@@ -23,6 +24,34 @@ public abstract partial class Visual : BindableObject
     public TerminalApp? App { get; private set; }
 
     public bool Focusable { get; protected init; }
+
+    public void AddKeyBinding(TerminalKeyGesture gesture, Action action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        _keyBindings ??= new List<KeyBinding>();
+        _keyBindings.Add(new KeyBinding { Gesture = gesture, Action = action });
+    }
+
+    internal bool TryHandleKeyBinding(KeyEventArgs e)
+    {
+        if (_keyBindings is null)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < _keyBindings.Count; i++)
+        {
+            var binding = _keyBindings[i];
+            if (binding.Gesture.Matches(e.RawEvent))
+            {
+                binding.Action();
+                e.Handled = true;
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     public void AddChild(Visual child)
     {

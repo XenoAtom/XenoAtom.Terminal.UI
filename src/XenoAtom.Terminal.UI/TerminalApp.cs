@@ -256,6 +256,15 @@ public sealed class TerminalApp : IAsyncDisposable
         }
 
         var args = new KeyEventArgs { RawEvent = keyEvent };
+
+        for (var v = FocusedElement; v is not null; v = v.Parent)
+        {
+            if (v.TryHandleKeyBinding(args))
+            {
+                return;
+            }
+        }
+
         FocusedElement.RaiseEvent(Visual.KeyDownEvent, args);
         if (!args.Handled && keyEvent.Char is { } ch && ch >= ' ')
         {
