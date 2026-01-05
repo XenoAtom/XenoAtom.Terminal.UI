@@ -18,9 +18,11 @@ public sealed class TerminalApp : IAsyncDisposable
     public TerminalApp(Visual root, TerminalInstance? terminal = null)
     {
         Root = root ?? throw new ArgumentNullException(nameof(root));
-        _terminal = terminal ?? Terminal.Instance;
+        _terminal = terminal ?? global::XenoAtom.Terminal.Terminal.Instance;
         _host = new InlineInteractiveHost(_terminal);
     }
+
+    public TerminalInstance Terminal => _terminal;
 
     public Visual Root { get; }
 

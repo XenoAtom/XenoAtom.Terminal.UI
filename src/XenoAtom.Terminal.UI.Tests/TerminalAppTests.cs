@@ -109,4 +109,52 @@ public sealed class TerminalAppTests
             BindingManager.Current.ValueChanged -= Handler;
         }
     }
+
+    [TestMethod]
+    public async Task TextBox_Edits_Text_And_Uses_Clipboard_Paste()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        session.Instance.Clipboard.Text = "xyz";
+
+        var textBox = new TextBox();
+        var root = new VStack();
+        root.Add(textBox);
+
+        var app = new TerminalApp(root, session.Instance);
+        var runTask = app.RunAsync();
+
+        await Task.Delay(10);
+
+        var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        void Handler(object owner, string name)
+        {
+            if (ReferenceEquals(owner, textBox) && name == "Text" && textBox.Text == "axyzc")
+            {
+                reached.TrySetResult();
+            }
+        }
+
+        BindingManager.Current.ValueChanged += Handler;
+        try
+        {
+            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'a' });
+            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'b' });
+            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'c' });
+            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left });
+            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Backspace });
+            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'v', Modifiers = TerminalModifiers.Ctrl });
+
+            await reached.Task.WaitAsync(TimeSpan.FromSeconds(2));
+            Assert.AreEqual("axyzc", textBox.Text);
+
+            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+            await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+        }
+        finally
+        {
+            BindingManager.Current.ValueChanged -= Handler;
+        }
+    }
 }
