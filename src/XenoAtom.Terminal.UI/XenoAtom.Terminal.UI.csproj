@@ -39,5 +39,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\XenoAtom.Terminal.UI.SourceGen\XenoAtom.Terminal.UI.SourceGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\..\XenoAtom.Terminal\src\XenoAtom.Terminal\XenoAtom.Terminal.csproj" />
   </ItemGroup>
 </Project>

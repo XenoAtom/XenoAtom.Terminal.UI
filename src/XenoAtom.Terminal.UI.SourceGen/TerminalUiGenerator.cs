@@ -127,7 +127,10 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             }
 
             var containingTypeDisplayName = containingType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
-            var propertyTypeFullyQualified = propertySymbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            var typeFormat = SymbolDisplayFormat.FullyQualifiedFormat.WithMiscellaneousOptions(
+                SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
+
+            var propertyTypeFullyQualified = propertySymbol.Type.ToDisplayString(typeFormat);
 
             var propertyName = propertySymbol.Name;
             var backingFieldName = "_" + ToLowerCamel(propertyName);
@@ -324,7 +327,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             // IBindings interface
             var baseBindings = FindBaseBindings(containingType);
             sb.Append(baseIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
-            sb.Append(baseIndent).Append("public interface IBindings : ").Append(baseBindings).AppendLine();
+            sb.Append(baseIndent).Append("public new interface IBindings : ").Append(baseBindings).AppendLine();
             sb.Append(baseIndent).AppendLine("{");
             foreach (var p in properties)
             {
@@ -466,7 +469,9 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 return new RoutedEventMethodResult(null, diagnostics.ToImmutable());
             }
 
-            var eventArgsType = methodSymbol.Parameters[0].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            var eventArgsType = methodSymbol.Parameters[0].Type.ToDisplayString(
+                SymbolDisplayFormat.FullyQualifiedFormat.WithMiscellaneousOptions(
+                    SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier));
             var methodName = methodSymbol.Name;
             var eventName = methodName.StartsWith("On", StringComparison.Ordinal) && methodName.Length > 2 ? methodName.Substring(2) : methodName;
 
