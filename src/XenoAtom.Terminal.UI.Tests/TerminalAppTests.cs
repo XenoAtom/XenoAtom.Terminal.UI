@@ -185,6 +185,34 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task TextBox_Can_Select_And_Copy()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var textBox = new TextBox();
+        var root = new VStack();
+        root.Add(textBox);
+
+        var app = new TerminalApp(root, session.Instance);
+        var runTask = app.RunAsync();
+
+        await Task.Delay(10);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'a' });
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'b' });
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'c' });
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left, Modifiers = TerminalModifiers.Shift });
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'c', Modifiers = TerminalModifiers.Ctrl });
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.AreEqual("c", session.Instance.Clipboard.Text);
+    }
+
+    [TestMethod]
     public async Task ListBox_Changes_Selection_On_Down()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
