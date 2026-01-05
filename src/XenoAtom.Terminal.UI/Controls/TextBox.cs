@@ -57,7 +57,8 @@ public sealed partial class TextBox : Visual
         }
 
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
-        var borderStyle = isFocused ? CellStyle.Invert : CellStyle.Dim;
+        var theme = GetTheme();
+        var borderStyle = theme.BorderStyle(isFocused);
 
         var text = Text ?? string.Empty;
         var innerWidth = Math.Max(0, rect.Width - 2);
@@ -114,7 +115,7 @@ public sealed partial class TextBox : Visual
             if (visSelEnd > visSelStart)
             {
                 var selStartCell = TerminalTextUtility.GetWidth(text.AsSpan(startIndex, visSelStart - startIndex));
-                buffer.WriteText(rect.X + 1 + selStartCell, rect.Y, text.AsSpan(visSelStart, visSelEnd - visSelStart), CellStyle.Invert);
+                buffer.WriteText(rect.X + 1 + selStartCell, rect.Y, text.AsSpan(visSelStart, visSelEnd - visSelStart), theme.SelectionStyle());
             }
 
             if (endIndex > visSelEnd)

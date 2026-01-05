@@ -39,7 +39,8 @@ public partial class Button : Visual
     protected override void RenderOverride(CellBuffer buffer)
     {
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
-        var style = (isFocused || _isPressed) ? CellStyle.Invert : CellStyle.None;
+        var theme = GetTheme();
+        var style = (isFocused || _isPressed) ? theme.SelectionStyle() : CellStyle.None;
 
         var rect = Bounds;
         var text = Text ?? string.Empty;

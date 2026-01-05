@@ -40,7 +40,8 @@ public sealed partial class CheckBox : Visual
     protected override void RenderOverride(CellBuffer buffer)
     {
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
-        var style = isFocused ? CellStyle.Invert : CellStyle.None;
+        var theme = GetTheme();
+        var style = isFocused ? theme.SelectionStyle() : CellStyle.None;
 
         var rect = Bounds;
         var text = Text ?? string.Empty;

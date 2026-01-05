@@ -99,6 +99,8 @@ public abstract partial class Visual : BindableObject
         return key.DefaultValue;
     }
 
+    public Theme GetTheme() => GetEnvironmentValue(Theme.Key);
+
     protected void ClearChildren()
     {
         if (_children.Count == 0)

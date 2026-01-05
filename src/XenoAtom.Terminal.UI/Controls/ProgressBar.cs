@@ -38,6 +38,8 @@ public sealed partial class ProgressBar : Visual
             return;
         }
 
+        var theme = GetTheme();
+
         var value = Math.Clamp(Value, 0.0, 1.0);
         var percent = (int)Math.Round(value * 100.0);
 
@@ -49,17 +51,16 @@ public sealed partial class ProgressBar : Visual
         var filled = (int)Math.Round(barWidth * value);
 
         buffer.WriteText(rect.X, rect.Y, prefix.AsSpan(), CellStyle.None);
-        buffer.WriteText(rect.X + prefixWidth, rect.Y, "[".AsSpan(), CellStyle.Dim);
+        buffer.WriteText(rect.X + prefixWidth, rect.Y, "[".AsSpan(), theme.BorderStyle(focused: false) | CellStyle.Dim);
 
         for (var i = 0; i < barWidth; i++)
         {
-            buffer.SetCell(rect.X + prefixWidth + 1 + i, rect.Y, new Rune(i < filled ? '#' : '-'), CellStyle.Dim);
+            buffer.SetCell(rect.X + prefixWidth + 1 + i, rect.Y, new Rune(i < filled ? '#' : '-'), i < filled ? theme.SelectionStyle() : (theme.BorderStyle(focused: false) | CellStyle.Dim));
         }
 
-        buffer.WriteText(rect.X + prefixWidth + 1 + barWidth, rect.Y, "]".AsSpan(), CellStyle.Dim);
+        buffer.WriteText(rect.X + prefixWidth + 1 + barWidth, rect.Y, "]".AsSpan(), theme.BorderStyle(focused: false) | CellStyle.Dim);
 
         var percentText = $"{percent,3}%";
         buffer.WriteText(rect.X + Math.Max(0, rect.Width - 4), rect.Y, percentText.AsSpan(), CellStyle.None);
     }
 }
-
