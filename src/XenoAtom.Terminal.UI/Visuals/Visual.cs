@@ -236,11 +236,13 @@ public abstract partial class Visual : BindableObject
             return;
         }
 
+        buffer.PushClip(Bounds);
         RenderOverride(buffer);
         foreach (var child in _children)
         {
             child.RenderTree(buffer);
         }
+        buffer.PopClip();
     }
 
     protected virtual void RenderOverride(CellBuffer buffer)

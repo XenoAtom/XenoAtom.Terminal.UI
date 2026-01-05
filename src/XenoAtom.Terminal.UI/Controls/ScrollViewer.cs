@@ -47,7 +47,8 @@ public sealed partial class ScrollViewer : Visual
         var child = Child;
         if (child is not null)
         {
-            child.Measure(new CellSize(availableSize.Width, int.MaxValue / 4));
+            var childWidth = Math.Max(0, availableSize.Width - 1);
+            child.Measure(new CellSize(childWidth, int.MaxValue / 4));
             _contentHeight = child.DesiredSize.Height;
         }
         else
@@ -77,7 +78,8 @@ public sealed partial class ScrollViewer : Visual
             VerticalOffset = offset;
         }
 
-        child.Arrange(new CellRect(finalRect.X, finalRect.Y - offset, finalRect.Width, _contentHeight));
+        var childWidth = Math.Max(0, finalRect.Width - 1);
+        child.Arrange(new CellRect(finalRect.X, finalRect.Y - offset, childWidth, _contentHeight));
     }
 
     protected override void RenderOverride(CellBuffer buffer)

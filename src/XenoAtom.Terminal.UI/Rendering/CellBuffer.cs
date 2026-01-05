@@ -14,6 +14,10 @@ public sealed class CellBuffer
     private readonly int[] _scalars;
     private readonly CellStyle[] _styles;
 
+    private CellRect _clipRect;
+    private CellRect[]? _clipStack;
+    private int _clipDepth;
+
     public CellBuffer(int width, int height)
     {
         if (width < 0) throw new ArgumentOutOfRangeException(nameof(width));
@@ -24,6 +28,7 @@ public sealed class CellBuffer
 
         _scalars = new int[width * height];
         _styles = new CellStyle[width * height];
+        _clipRect = new CellRect(0, 0, width, height);
         Clear();
     }
 
@@ -41,9 +46,33 @@ public sealed class CellBuffer
         Array.Fill(_styles, CellStyle.None);
     }
 
+    public void PushClip(CellRect rect)
+    {
+        var next = Intersect(_clipRect, rect);
+
+        _clipStack ??= new CellRect[8];
+        if (_clipDepth == _clipStack.Length)
+        {
+            Array.Resize(ref _clipStack, _clipStack.Length * 2);
+        }
+
+        _clipStack[_clipDepth++] = _clipRect;
+        _clipRect = next;
+    }
+
+    public void PopClip()
+    {
+        if (_clipDepth <= 0)
+        {
+            throw new InvalidOperationException("Clip stack underflow.");
+        }
+
+        _clipRect = _clipStack![--_clipDepth];
+    }
+
     public void SetCell(int x, int y, Rune rune, CellStyle style)
     {
-        if ((uint)x >= (uint)Width || (uint)y >= (uint)Height)
+        if ((uint)x >= (uint)Width || (uint)y >= (uint)Height || !_clipRect.Contains(x, y))
         {
             return;
         }
@@ -60,6 +89,10 @@ public sealed class CellBuffer
 
         if (width > 1 && x + 1 < Width)
         {
+            if (!_clipRect.Contains(x + 1, y))
+            {
+                return;
+            }
             _scalars[index + 1] = ' ';
             _styles[index + 1] = (style & ~CellStyle.Continuation) | CellStyle.Continuation;
         }
@@ -91,6 +124,18 @@ public sealed class CellBuffer
 
             index += consumed;
         }
+    }
+
+    private static CellRect Intersect(CellRect a, CellRect b)
+    {
+        var x0 = Math.Max(a.X, b.X);
+        var y0 = Math.Max(a.Y, b.Y);
+        var x1 = Math.Min(a.Right, b.Right);
+        var y1 = Math.Min(a.Bottom, b.Bottom);
+
+        var w = Math.Max(0, x1 - x0);
+        var h = Math.Max(0, y1 - y0);
+        return new CellRect(x0, y0, w, h);
     }
 
     public IReadOnlyList<string> ToMarkupLines()
