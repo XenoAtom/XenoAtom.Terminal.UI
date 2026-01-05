@@ -521,6 +521,44 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task TextBox_Supports_Ctrl_Kill_And_Yank()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var textBox = new TextBox { Text = "hello world", CaretIndex = 6 };
+        var root = new VStack();
+        root.Add(textBox);
+
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunAsync();
+
+        static async Task WaitUntil(Func<bool> condition)
+        {
+            var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+            while (!condition())
+            {
+                if (DateTime.UtcNow >= timeout)
+                {
+                    Assert.Fail("Timed out waiting for condition.");
+                }
+                await Task.Delay(10);
+            }
+        }
+
+        await WaitUntil(() => ReferenceEquals(app.FocusedElement, textBox));
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'k', Modifiers = TerminalModifiers.Ctrl });
+        await WaitUntil(() => textBox.Text == "hello ");
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'y', Modifiers = TerminalModifiers.Ctrl });
+        await WaitUntil(() => textBox.Text == "hello world");
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    [TestMethod]
     public async Task ComputedVisual_Rebuilds_On_BindingChange()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));

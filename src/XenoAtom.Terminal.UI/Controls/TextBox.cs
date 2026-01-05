@@ -14,6 +14,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
     private int _scrollCellOffset;
     private int _selectionAnchor = -1;
     private int _selectionEnd = -1;
+    private string? _killBuffer;
 
     public TextBox()
     {
@@ -220,6 +221,67 @@ public sealed partial class TextBox : Visual, ICursorProvider
                         App?.Terminal.Clipboard.TrySetText(span);
                     }
                     DeleteSelection();
+                }
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Char is 'k' or 'K')
+            {
+                if (HasSelection)
+                {
+                    _killBuffer = GetSelectedTextSpan(text.AsSpan()).ToString();
+                    DeleteSelection();
+                }
+                else if (_caretIndex < text.Length)
+                {
+                    _killBuffer = text[_caretIndex..];
+                    Text = text[.._caretIndex];
+                }
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Char is 'u' or 'U')
+            {
+                if (HasSelection)
+                {
+                    _killBuffer = GetSelectedTextSpan(text.AsSpan()).ToString();
+                    DeleteSelection();
+                }
+                else if (_caretIndex > 0)
+                {
+                    _killBuffer = text[.._caretIndex];
+                    Text = text[_caretIndex..];
+                    _caretIndex = 0;
+                }
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Char is 'w' or 'W')
+            {
+                if (HasSelection)
+                {
+                    _killBuffer = GetSelectedTextSpan(text.AsSpan()).ToString();
+                    DeleteSelection();
+                }
+                else if (_caretIndex > 0)
+                {
+                    var prev = GetPreviousWordIndex(text.AsSpan(), _caretIndex);
+                    _killBuffer = text[prev.._caretIndex];
+                    Text = string.Concat(text.AsSpan(0, prev), text.AsSpan(_caretIndex));
+                    _caretIndex = prev;
+                }
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Char is 'y' or 'Y')
+            {
+                if (!string.IsNullOrEmpty(_killBuffer))
+                {
+                    InsertText(_killBuffer);
                 }
                 e.Handled = true;
                 return;
