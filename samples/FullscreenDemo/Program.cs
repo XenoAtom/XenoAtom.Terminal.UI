@@ -20,11 +20,23 @@ for (var i = 0; i < 20; i++)
 }
 var scroll = new ScrollViewer { Child = scrollContent, Height = 5 };
 
+var table = new Table
+{
+    Headers = new[] { "Task", "Status" },
+    Rows = new[]
+    {
+        new[] { "Download", "Running" },
+        new[] { "Render", "OK" },
+        new[] { "Tests", "OK" },
+    },
+};
+
 var main = new VStack { Spacing = 1 };
 main.Add(new TextBlock("Fullscreen demo: Tab focus, mouse click, wheel scroll, Esc quit"));
 main.Add(name);
 main.Add(accept);
 main.Add(showModal);
+main.Add(table);
 main.Add(new TextBlock("Pick one (mouse wheel supported):"));
 main.Add(list);
 main.Add(new TextBlock("ScrollViewer (focus + wheel):"));

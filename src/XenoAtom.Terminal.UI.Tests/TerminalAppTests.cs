@@ -561,4 +561,33 @@ public sealed class TerminalAppTests
 
         Assert.IsTrue(scroll.VerticalOffset > 0);
     }
+
+    [TestMethod]
+    public async Task Table_Renders_Headers_And_Cells()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var table = new Table
+        {
+            Headers = new[] { "Name", "Value" },
+            Rows = new[] { new[] { "A", "1" }, new[] { "B", "2" } },
+        };
+
+        var root = new VStack();
+        root.Add(table);
+
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunAsync();
+
+        await Task.Delay(30);
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var outText = backend.GetOutText();
+        StringAssert.Contains(outText, "Name");
+        StringAssert.Contains(outText, "Value");
+        StringAssert.Contains(outText, "A");
+        StringAssert.Contains(outText, "2");
+    }
 }
