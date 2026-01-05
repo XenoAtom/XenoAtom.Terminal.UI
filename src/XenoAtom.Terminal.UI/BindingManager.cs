@@ -11,16 +11,24 @@ public sealed class BindingManager
 {
     public static BindingManager Current { get; } = new();
 
-    public T GetValue<T>(ref T backingField, BindingAccessor<T> accessor)
+    public event Action<object, string>? ValueChanged;
+
+    public T GetValue<T>(object owner, ref T backingField, BindingAccessor<T> accessor)
     {
+        _ = owner;
         _ = accessor;
         return backingField;
     }
 
-    public void SetValue<T>(ref T backingField, T value, BindingAccessor<T> accessor)
+    public void SetValue<T>(object owner, ref T backingField, T value, BindingAccessor<T> accessor)
     {
         _ = accessor;
+        if (EqualityComparer<T>.Default.Equals(backingField, value))
+        {
+            return;
+        }
+
         backingField = value;
+        ValueChanged?.Invoke(owner, accessor.Name);
     }
 }
-

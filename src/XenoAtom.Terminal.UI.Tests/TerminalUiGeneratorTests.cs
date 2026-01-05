@@ -62,7 +62,7 @@ public sealed class TerminalUiGeneratorTests
 
         Assert.IsTrue(generatedSources.Any(s => s.Contains("MyControl", StringComparison.Ordinal)), "Expected generated sources for MyControl.");
         Assert.IsTrue(generatedSources.Any(s => s.Contains("IBindings", StringComparison.Ordinal)), "Expected generated IBindings interface.");
-        Assert.IsTrue(generatedSources.Any(s => s.Contains("BindingManager.Current.GetValue", StringComparison.Ordinal)), "Expected generated binding accessors.");
+        Assert.IsTrue(generatedSources.Any(s => s.Contains("BindingManager.Current.GetValue(this", StringComparison.Ordinal)), "Expected generated binding accessors.");
         Assert.IsTrue(generatedSources.Any(s => s.Contains("PointerPressedEvent", StringComparison.Ordinal)), "Expected generated routed event field.");
     }
 

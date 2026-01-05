@@ -297,8 +297,8 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 sb.Append(baseIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                 sb.Append(baseIndent).Append(p.PropertyModifiers).Append(' ').Append(p.PropertyTypeFullyQualified).Append(' ').Append(p.PropertyName).AppendLine();
                 sb.Append(baseIndent).AppendLine("{");
-                sb.Append(baseIndent).Append("    get => global::XenoAtom.Terminal.UI.BindingManager.Current.GetValue(ref ").Append(p.BackingFieldName).Append(", ").Append(p.AccessorClassName).AppendLine(".Instance);");
-                sb.Append(baseIndent).Append("    set => global::XenoAtom.Terminal.UI.BindingManager.Current.SetValue(ref ").Append(p.BackingFieldName).Append(", value, ").Append(p.AccessorClassName).AppendLine(".Instance);");
+                sb.Append(baseIndent).Append("    get => global::XenoAtom.Terminal.UI.BindingManager.Current.GetValue(this, ref ").Append(p.BackingFieldName).Append(", ").Append(p.AccessorClassName).AppendLine(".Instance);");
+                sb.Append(baseIndent).Append("    set => global::XenoAtom.Terminal.UI.BindingManager.Current.SetValue(this, ref ").Append(p.BackingFieldName).Append(", value, ").Append(p.AccessorClassName).AppendLine(".Instance);");
                 sb.Append(baseIndent).AppendLine("}");
                 sb.AppendLine();
 
