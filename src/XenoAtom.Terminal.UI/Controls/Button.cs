@@ -81,7 +81,10 @@ public partial class Button : Visual
         {
             _isPressed = false;
             App?.RequestRender();
-            RaiseEvent(ClickEvent, new ClickEventArgs());
+            if (e.LocalX >= 0 && e.LocalX < Bounds.Width && e.LocalY >= 0 && e.LocalY < Bounds.Height)
+            {
+                RaiseEvent(ClickEvent, new ClickEventArgs());
+            }
             e.Handled = true;
         }
     }

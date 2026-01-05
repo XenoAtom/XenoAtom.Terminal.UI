@@ -17,6 +17,7 @@ public sealed class TerminalApp : IAsyncDisposable
     private readonly CancellationTokenSource _cts = new();
 
     private bool _renderRequested = true;
+    private Visual? _pointerCapture;
 
     public TerminalApp(Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
     {
@@ -292,6 +293,26 @@ public sealed class TerminalApp : IAsyncDisposable
         RequestRender();
     }
 
+    private void FocusPrevious()
+    {
+        var focusables = Root.EnumerateVisualsDepthFirst().Where(v => v.Focusable).ToList();
+        if (focusables.Count == 0)
+        {
+            return;
+        }
+
+        if (FocusedElement is null)
+        {
+            FocusedElement = focusables[^1];
+            RequestRender();
+            return;
+        }
+
+        var index = focusables.IndexOf(FocusedElement);
+        FocusedElement = focusables[(index - 1 + focusables.Count) % focusables.Count];
+        RequestRender();
+    }
+
     private void HandleTerminalEvent(TerminalEvent ev)
     {
         if (ev is TerminalResizeEvent)
@@ -332,7 +353,14 @@ public sealed class TerminalApp : IAsyncDisposable
 
         if (keyEvent.Key == TerminalKey.Tab)
         {
-            FocusNext();
+            if ((keyEvent.Modifiers & TerminalModifiers.Shift) != 0)
+            {
+                FocusPrevious();
+            }
+            else
+            {
+                FocusNext();
+            }
             return;
         }
 
@@ -368,7 +396,7 @@ public sealed class TerminalApp : IAsyncDisposable
             return;
         }
 
-        var target = Root.HitTest(mouseEvent.X, mouseEvent.Y);
+        var target = _pointerCapture ?? Root.HitTest(mouseEvent.X, mouseEvent.Y);
         if (target is null)
         {
             return;
@@ -399,10 +427,12 @@ public sealed class TerminalApp : IAsyncDisposable
                 break;
             case TerminalMouseKind.Down:
             case TerminalMouseKind.DoubleClick:
+                _pointerCapture = target;
                 target.RaiseEvent(Visual.PointerPressedEvent, args);
                 break;
             case TerminalMouseKind.Up:
                 target.RaiseEvent(Visual.PointerReleasedEvent, args);
+                _pointerCapture = null;
                 break;
             case TerminalMouseKind.Wheel:
                 target.RaiseEvent(Visual.PointerWheelEvent, args);
