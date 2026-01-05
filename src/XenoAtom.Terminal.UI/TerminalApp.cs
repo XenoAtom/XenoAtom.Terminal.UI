@@ -8,6 +8,7 @@ namespace XenoAtom.Terminal.UI;
 
 public sealed class TerminalApp : IAsyncDisposable
 {
+    private readonly System.Collections.Concurrent.ConcurrentQueue<Action> _pendingActions = new();
     private readonly TerminalInstance _terminal;
     private readonly InlineInteractiveHost _host;
     private readonly AsyncAutoResetEvent _wakeUp = new();
@@ -27,6 +28,13 @@ public sealed class TerminalApp : IAsyncDisposable
     public Visual Root { get; }
 
     public Visual? FocusedElement { get; private set; }
+
+    public void Post(Action action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        _pendingActions.Enqueue(action);
+        _wakeUp.Set();
+    }
 
     public void Stop() => _cts.Cancel();
 
@@ -64,6 +72,11 @@ public sealed class TerminalApp : IAsyncDisposable
 
             while (!token.IsCancellationRequested)
             {
+                while (_pendingActions.TryDequeue(out var action))
+                {
+                    action();
+                }
+
                 if (_renderRequested)
                 {
                     _renderRequested = false;

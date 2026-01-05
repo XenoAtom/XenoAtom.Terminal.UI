@@ -157,4 +157,49 @@ public sealed class TerminalAppTests
             BindingManager.Current.ValueChanged -= Handler;
         }
     }
+
+    [TestMethod]
+    public async Task ListBox_Changes_Selection_On_Down()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var listBox = new ListBox
+        {
+            Items = new[] { "A", "B", "C" },
+            SelectedIndex = 0,
+            Height = 3,
+        };
+
+        var selected = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        void Handler(object owner, string name)
+        {
+            if (ReferenceEquals(owner, listBox) && name == "SelectedIndex" && listBox.SelectedIndex == 1)
+            {
+                selected.TrySetResult();
+            }
+        }
+
+        BindingManager.Current.ValueChanged += Handler;
+        try
+        {
+            var root = new VStack();
+            root.Add(listBox);
+
+            var app = new TerminalApp(root, session.Instance);
+            var runTask = app.RunAsync();
+
+            await Task.Delay(10);
+            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
+
+            await selected.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+            await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+        }
+        finally
+        {
+            BindingManager.Current.ValueChanged -= Handler;
+        }
+    }
 }

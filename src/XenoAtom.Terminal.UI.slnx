@@ -14,4 +14,5 @@
   <Project Path="XenoAtom.Terminal.UI.Tests/XenoAtom.Terminal.UI.Tests.csproj" />
   <Project Path="XenoAtom.Terminal.UI.SourceGen/XenoAtom.Terminal.UI.SourceGen.csproj" />
   <Project Path="XenoAtom.Terminal.UI/XenoAtom.Terminal.UI.csproj" />
+  <Project Path="../samples/MvpDemo/MvpDemo.csproj" />
 </Solution>
