@@ -169,6 +169,36 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task InlineHost_Delivers_Mouse_To_LiveRegion()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(20, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var button = new Button("OK");
+        var clicked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        button.Click += (_, _) => clicked.TrySetResult();
+
+        var root = new VStack();
+        root.Add(button);
+
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Inline });
+        var runTask = app.RunAsync();
+
+        await Task.Delay(30);
+
+        var cursor = session.Instance.Cursor.Position;
+        var liveTop = cursor.Row - 1;
+
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 1, Y = liveTop });
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 1, Y = liveTop });
+
+        await clicked.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    [TestMethod]
     public async Task CheckBox_Toggles_On_Space()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(20, 10));

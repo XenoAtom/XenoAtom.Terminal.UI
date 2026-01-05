@@ -81,26 +81,29 @@ public sealed partial class Border : Visual
             return;
         }
 
+        var theme = GetTheme();
+        var style = theme.BorderStyle(focused: false);
+
         var left = rect.X;
         var top = rect.Y;
         var right = rect.X + rect.Width - 1;
         var bottom = rect.Y + rect.Height - 1;
 
-        buffer.SetCell(left, top, new Rune('+'), CellStyle.Dim);
-        buffer.SetCell(right, top, new Rune('+'), CellStyle.Dim);
-        buffer.SetCell(left, bottom, new Rune('+'), CellStyle.Dim);
-        buffer.SetCell(right, bottom, new Rune('+'), CellStyle.Dim);
+        buffer.SetCell(left, top, new Rune('+'), style);
+        buffer.SetCell(right, top, new Rune('+'), style);
+        buffer.SetCell(left, bottom, new Rune('+'), style);
+        buffer.SetCell(right, bottom, new Rune('+'), style);
 
         for (var x = left + 1; x < right; x++)
         {
-            buffer.SetCell(x, top, new Rune('-'), CellStyle.Dim);
-            buffer.SetCell(x, bottom, new Rune('-'), CellStyle.Dim);
+            buffer.SetCell(x, top, new Rune('-'), style);
+            buffer.SetCell(x, bottom, new Rune('-'), style);
         }
 
         for (var y = top + 1; y < bottom; y++)
         {
-            buffer.SetCell(left, y, new Rune('|'), CellStyle.Dim);
-            buffer.SetCell(right, y, new Rune('|'), CellStyle.Dim);
+            buffer.SetCell(left, y, new Rune('|'), style);
+            buffer.SetCell(right, y, new Rune('|'), style);
         }
     }
 }

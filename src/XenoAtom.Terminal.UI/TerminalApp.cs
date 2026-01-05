@@ -18,6 +18,7 @@ public sealed class TerminalApp : IAsyncDisposable
 
     private bool _renderRequested = true;
     private Visual? _pointerCapture;
+    private int? _inlineLiveRegionTopRow;
 
     public TerminalApp(Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
     {
@@ -220,6 +221,8 @@ public sealed class TerminalApp : IAsyncDisposable
 
     private void Render()
     {
+        _inlineLiveRegionTopRow = null;
+
         if (_options.HostKind == TerminalHostKind.Fullscreen)
         {
             var width = Math.Max(1, _terminal.Size.Columns);
@@ -245,6 +248,15 @@ public sealed class TerminalApp : IAsyncDisposable
             Root.RenderTree(buffer);
 
             _inlineHost!.Render(buffer.ToMarkupLines());
+
+            if (_terminal.Capabilities.SupportsCursorPositionGet && _terminal.TryGetCursorPosition(out var position))
+            {
+                var reserved = _inlineHost.ReservedHeight;
+                if (reserved > 0)
+                {
+                    _inlineLiveRegionTopRow = position.Row - reserved;
+                }
+            }
         }
     }
 
@@ -400,12 +412,32 @@ public sealed class TerminalApp : IAsyncDisposable
 
     private void DispatchMouseEvent(TerminalMouseEvent mouseEvent)
     {
-        if (_options.HostKind != TerminalHostKind.Fullscreen)
+        Visual? target;
+        var localY = mouseEvent.Y;
+
+        if (_options.HostKind == TerminalHostKind.Fullscreen)
         {
-            return;
+            target = _pointerCapture ?? Root.HitTest(mouseEvent.X, mouseEvent.Y);
+        }
+        else
+        {
+            var topRow = _inlineLiveRegionTopRow;
+            var height = _inlineHost?.ReservedHeight ?? 0;
+            if (topRow is null || height <= 0)
+            {
+                return;
+            }
+
+            var translatedY = mouseEvent.Y - topRow.Value;
+            if ((uint)translatedY >= (uint)height)
+            {
+                return;
+            }
+
+            localY = translatedY;
+            target = _pointerCapture ?? Root.HitTest(mouseEvent.X, translatedY);
         }
 
-        var target = _pointerCapture ?? Root.HitTest(mouseEvent.X, mouseEvent.Y);
         if (target is null)
         {
             return;
@@ -425,7 +457,7 @@ public sealed class TerminalApp : IAsyncDisposable
             RawEvent = mouseEvent,
             ClickCount = mouseEvent.Kind == TerminalMouseKind.DoubleClick ? 2 : 1,
             LocalX = mouseEvent.X - target.Bounds.X,
-            LocalY = mouseEvent.Y - target.Bounds.Y,
+            LocalY = localY - target.Bounds.Y,
         };
 
         switch (mouseEvent.Kind)

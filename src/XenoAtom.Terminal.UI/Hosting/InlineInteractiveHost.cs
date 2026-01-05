@@ -19,6 +19,8 @@ public sealed class InlineInteractiveHost : IDisposable
         _terminal = terminal ?? throw new ArgumentNullException(nameof(terminal));
     }
 
+    public int ReservedHeight => _reservedHeight;
+
     public void Dispose()
     {
         try
