@@ -10,13 +10,15 @@ public sealed class ButtonStyle
 
     public static EnvironmentKey<ButtonStyle> Key { get; } = new("ButtonStyle", Default);
 
+    public Thickness Padding { get; init; } = new(2, 0, 2, 0);
+
     public CellStyle? Normal { get; init; }
     public CellStyle? Hovered { get; init; }
     public CellStyle? Pressed { get; init; }
     public CellStyle? Focused { get; init; }
     public CellStyle? Disabled { get; init; }
 
-    public CellStyle Resolve(Theme theme, bool enabled, bool focused, bool hovered, bool pressed)
+    public CellStyle Resolve(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, ControlTone tone)
     {
         if (!enabled)
         {
@@ -48,6 +50,25 @@ public sealed class ButtonStyle
             return style;
         }
 
-        return Normal ?? CellStyle.None;
+        if (Normal is { } n)
+        {
+            return n;
+        }
+
+        var bg = tone switch
+        {
+            ControlTone.Primary => theme.Primary ?? theme.Accent,
+            ControlTone.Success => theme.Success,
+            ControlTone.Warning => theme.Warning,
+            ControlTone.Error => theme.Error,
+            _ => theme.SurfaceAlt ?? theme.Surface ?? theme.Background,
+        };
+
+        var fg = tone is ControlTone.Default ? theme.Foreground : (theme.Background ?? theme.Foreground);
+
+        var resolved = CellStyle.None;
+        if (fg is { } fgc) resolved = resolved.WithForeground(fgc);
+        if (bg is { } bgc) resolved = resolved.WithBackground(bgc);
+        return resolved;
     }
 }

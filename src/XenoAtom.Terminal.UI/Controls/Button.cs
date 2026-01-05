@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Text;
 using XenoAtom.Terminal;
 
 namespace XenoAtom.Terminal.UI;
@@ -13,6 +14,7 @@ public partial class Button : Visual
     public Button()
     {
         Focusable = true;
+        Tone = ControlTone.Default;
     }
 
     public Button(string text) : this()
@@ -23,12 +25,19 @@ public partial class Button : Visual
     [Bindable]
     public partial string? Text { get; set; }
 
+    [Bindable]
+    public partial ControlTone Tone { get; set; }
+
     protected override CellSize MeasureOverride(CellSize availableSize)
     {
         var text = Text ?? string.Empty;
         var innerWidth = TerminalTextUtility.GetWidth(text.AsSpan());
-        var width = Math.Min(availableSize.Width, innerWidth + 4);
-        return new CellSize(width, 1);
+        var style = GetEnvironmentValue(ButtonStyle.Key);
+        var padding = style.Padding;
+
+        var width = Math.Min(availableSize.Width, innerWidth + padding.Horizontal + 2);
+        var height = Math.Min(availableSize.Height, Math.Max(3, 1 + padding.Vertical + 2));
+        return new CellSize(width, height);
     }
 
     protected override void ArrangeOverride(CellRect finalRect)
@@ -41,14 +50,65 @@ public partial class Button : Visual
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
         var buttonStyle = GetEnvironmentValue(ButtonStyle.Key);
-        var style = buttonStyle.Resolve(theme, IsEnabled, isFocused, hovered: IsHovered, pressed: _isPressed);
+        var style = buttonStyle.Resolve(theme, IsEnabled, isFocused, hovered: IsHovered, pressed: _isPressed, Tone);
 
         var rect = Bounds;
         var text = Text ?? string.Empty;
 
-        buffer.WriteText(rect.X, rect.Y, "[ ".AsSpan(), style);
-        buffer.WriteText(rect.X + 2, rect.Y, text.AsSpan(), style);
-        buffer.WriteText(rect.X + Math.Max(0, rect.Width - 2), rect.Y, " ]".AsSpan(), style);
+        var glyphs = theme.Lines;
+
+        // Background fill.
+        for (var y = rect.Y; y < rect.Y + rect.Height; y++)
+        {
+            for (var x = rect.X; x < rect.X + rect.Width; x++)
+            {
+                buffer.SetCell(x, y, new Rune(' '), style);
+            }
+        }
+
+        var border = theme.BorderStyle(isFocused);
+
+        if (rect.Width >= 2 && rect.Height >= 2)
+        {
+            var left = rect.X;
+            var top = rect.Y;
+            var right = rect.X + rect.Width - 1;
+            var bottom = rect.Y + rect.Height - 1;
+
+            buffer.SetCell(left, top, new Rune(glyphs.TopLeft), border);
+            buffer.SetCell(right, top, new Rune(glyphs.TopRight), border);
+            buffer.SetCell(left, bottom, new Rune(glyphs.BottomLeft), border);
+            buffer.SetCell(right, bottom, new Rune(glyphs.BottomRight), border);
+
+            for (var x = left + 1; x < right; x++)
+            {
+                buffer.SetCell(x, top, new Rune(glyphs.Horizontal), border);
+                buffer.SetCell(x, bottom, new Rune(glyphs.Horizontal), border);
+            }
+
+            for (var y = top + 1; y < bottom; y++)
+            {
+                buffer.SetCell(left, y, new Rune(glyphs.Vertical), border);
+                buffer.SetCell(right, y, new Rune(glyphs.Vertical), border);
+            }
+        }
+
+        var padding = buttonStyle.Padding;
+        var contentX = rect.X + 1 + padding.Left;
+        var contentWidth = Math.Max(0, rect.Width - 2 - padding.Horizontal);
+        var contentY = rect.Y + (rect.Height / 2);
+        if (contentWidth > 0 && rect.Height > 0)
+        {
+            var span = text.AsSpan();
+            if (TerminalTextUtility.TryGetIndexAtCell(span, contentWidth, out var endIndex))
+            {
+                span = span[..endIndex];
+            }
+
+            var textCells = TerminalTextUtility.GetWidth(span);
+            var textX = contentX + Math.Max(0, (contentWidth - textCells) / 2);
+            buffer.WriteText(textX, contentY, span, style | CellStyle.Bold);
+        }
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
