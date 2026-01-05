@@ -277,6 +277,47 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task RoutedEventArgs_Sets_Source_And_OriginalSource()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(20, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var button = new Button("OK");
+        var root = new PointerProbe();
+        root.AddChild(button);
+
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunAsync();
+
+        await Task.Delay(20);
+
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 1, Y = 0 });
+        await Task.Delay(20);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.AreSame(button, root.SeenOriginal);
+        Assert.AreSame(root, root.SeenSource);
+    }
+
+    private sealed class PointerProbe : Visual
+    {
+        public Visual? SeenOriginal { get; private set; }
+
+        public Visual? SeenSource { get; private set; }
+
+        public PointerProbe()
+        {
+            AddHandler(Visual.PointerPressedEvent, (_, e) =>
+            {
+                SeenOriginal = e.OriginalSource;
+                SeenSource = e.Source;
+            });
+        }
+    }
+
+    [TestMethod]
     public async Task TextBox_Shows_Cursor_And_Sets_Position()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(20, 5));

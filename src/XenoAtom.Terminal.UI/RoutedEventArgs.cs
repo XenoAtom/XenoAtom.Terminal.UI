@@ -10,5 +10,8 @@ namespace XenoAtom.Terminal.UI;
 public abstract class RoutedEventArgs : EventArgs
 {
     public bool Handled { get; set; }
-}
 
+    public Visual? OriginalSource { get; internal set; }
+
+    public Visual? Source { get; internal set; }
+}

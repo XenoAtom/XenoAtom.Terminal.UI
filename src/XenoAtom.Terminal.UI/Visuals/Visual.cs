@@ -370,6 +370,11 @@ public abstract partial class Visual : BindableObject
         ArgumentNullException.ThrowIfNull(routedEvent);
         ArgumentNullException.ThrowIfNull(args);
 
+        if (args is RoutedEventArgs routedArgs)
+        {
+            routedArgs.OriginalSource ??= this;
+        }
+
         var chain = new List<Visual>();
         for (var v = this; v is not null; v = v.Parent)
         {
@@ -413,6 +418,11 @@ public abstract partial class Visual : BindableObject
     private void InvokeHandlers<TArgs>(RoutedEvent<TArgs> routedEvent, TArgs args)
         where TArgs : EventArgs
     {
+        if (args is RoutedEventArgs routedArgs)
+        {
+            routedArgs.Source = this;
+        }
+
         routedEvent.Dispatch(this, args);
 
         if (_handlers is not null && _handlers.TryGetValue(routedEvent, out var existing) && existing is EventHandler<TArgs> handler)
