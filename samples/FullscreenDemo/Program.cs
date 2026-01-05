@@ -56,6 +56,18 @@ main.SetEnvironmentValue(Theme.Key, new Theme
     Disabled = Theme.Default.Disabled,
 });
 
+var statusBar = new StatusBar
+{
+    LeftText = "Tab focus | Mouse click | Wheel scroll | Esc quit",
+    RightText = "XenoAtom.Terminal.UI",
+};
+
+var layout = new DockLayout
+{
+    Content = main,
+    Bottom = statusBar,
+};
+
 var overlay = new ComputedVisual(() =>
 {
     if (!showModal.IsChecked)
@@ -68,7 +80,7 @@ var overlay = new ComputedVisual(() =>
 
     var dialogContent = new VStack { Spacing = 1 };
     dialogContent.Add(new TextBlock("Modal dialog"));
-    dialogContent.Add(new TextBlock("Click Close or toggle the checkbox."));
+    dialogContent.Add(new TextBlock("This is a wrapped paragraph demonstrating document-style text rendering.") { Wrap = true });
     dialogContent.Add(close);
 
     var dialog = new Border { Padding = new Thickness(1), Child = dialogContent };
@@ -81,7 +93,7 @@ var overlay = new ComputedVisual(() =>
 });
 
 var root = new ZStack();
-root.Add(main, overlay);
+root.Add(layout, overlay);
 
 var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
 

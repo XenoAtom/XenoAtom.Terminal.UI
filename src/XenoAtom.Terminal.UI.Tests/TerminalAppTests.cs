@@ -590,4 +590,25 @@ public sealed class TerminalAppTests
         StringAssert.Contains(outText, "A");
         StringAssert.Contains(outText, "2");
     }
+
+    [TestMethod]
+    public async Task StatusBar_Renders_Left_And_Right()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(30, 5));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var status = new StatusBar { LeftText = "L", RightText = "R" };
+        var layout = new DockLayout { Content = new TextBlock("X"), Bottom = status };
+
+        var app = new TerminalApp(layout, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunAsync();
+
+        await Task.Delay(30);
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var outText = backend.GetOutText();
+        StringAssert.Contains(outText, "L");
+        StringAssert.Contains(outText, "R");
+    }
 }
