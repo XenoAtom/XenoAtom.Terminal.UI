@@ -208,14 +208,14 @@ public sealed class CellBufferDiffRenderer
         AnsiColor? fg = null;
         AnsiColor? bg = null;
 
-        if (style.TryGetForegroundBasic16(out var fgIndex))
+        if (style.TryGetForeground(out var fgRgb))
         {
-            fg = AnsiColor.Basic16(fgIndex);
+            fg = AnsiColor.Rgb(fgRgb.R, fgRgb.G, fgRgb.B);
         }
 
-        if (style.TryGetBackgroundBasic16(out var bgIndex))
+        if (style.TryGetBackground(out var bgRgb))
         {
-            bg = AnsiColor.Basic16(bgIndex);
+            bg = AnsiColor.Rgb(bgRgb.R, bgRgb.G, bgRgb.B);
         }
 
         if (deco == AnsiDecorations.None && fg is null && bg is null)

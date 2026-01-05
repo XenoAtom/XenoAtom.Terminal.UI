@@ -52,7 +52,7 @@ main.SetEnvironmentValue(Theme.Key, new Theme
     Border = Theme.Default.Border,
     FocusBorder = Theme.Default.FocusBorder,
     Accent = Theme.Default.Accent,
-    Selection = 11, // bright green
+    Selection = new Rgb24(0x00, 0xFF, 0x00),
     Disabled = Theme.Default.Disabled,
 });
 

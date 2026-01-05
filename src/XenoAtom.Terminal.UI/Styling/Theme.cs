@@ -8,45 +8,38 @@ public sealed class Theme
 {
     public static Theme Default { get; } = new Theme
     {
-        Foreground = 0, // default
-        Background = 0, // default
-        Border = 9,        // gray (basic16 index 8)
-        FocusBorder = 13,  // bright blue (basic16 index 12)
-        Accent = 13,       // bright blue
-        Selection = 13,    // bright blue
-        Disabled = 9,      // gray
+        Foreground = null, // terminal default
+        Background = null, // terminal default
+        Border = new Rgb24(0xA0, 0xA0, 0xA0),
+        FocusBorder = new Rgb24(0x2D, 0x7D, 0xFF),
+        Accent = new Rgb24(0x2D, 0x7D, 0xFF),
+        Selection = new Rgb24(0x2D, 0x7D, 0xFF),
+        Disabled = new Rgb24(0x80, 0x80, 0x80),
     };
 
     public static EnvironmentKey<Theme> Key { get; } = new("Theme", Default);
 
-    /// <summary>0 = default; otherwise basic16 index+1.</summary>
-    public int Foreground { get; init; }
+    public Rgb24? Foreground { get; init; }
 
-    /// <summary>0 = default; otherwise basic16 index+1.</summary>
-    public int Background { get; init; }
+    public Rgb24? Background { get; init; }
 
-    /// <summary>0 = default; otherwise basic16 index+1.</summary>
-    public int Border { get; init; }
+    public Rgb24? Border { get; init; }
 
-    /// <summary>0 = default; otherwise basic16 index+1.</summary>
-    public int FocusBorder { get; init; }
+    public Rgb24? FocusBorder { get; init; }
 
-    /// <summary>0 = default; otherwise basic16 index+1.</summary>
-    public int Accent { get; init; }
+    public Rgb24? Accent { get; init; }
 
-    /// <summary>0 = default; otherwise basic16 index+1.</summary>
-    public int Selection { get; init; }
+    public Rgb24? Selection { get; init; }
 
-    /// <summary>0 = default; otherwise basic16 index+1.</summary>
-    public int Disabled { get; init; }
+    public Rgb24? Disabled { get; init; }
 
     public CellStyle BorderStyle(bool focused)
     {
-        var idx = focused ? FocusBorder : Border;
+        var color = focused ? FocusBorder : Border;
         var style = CellStyle.None;
-        if (idx > 0)
+        if (color is { } c)
         {
-            style = style.WithForegroundBasic16(idx - 1);
+            style = style.WithForeground(c);
         }
         return style;
     }
@@ -54,9 +47,9 @@ public sealed class Theme
     public CellStyle SelectionStyle()
     {
         var style = CellStyle.None;
-        if (Selection > 0)
+        if (Selection is { } c)
         {
-            style = style.WithBackgroundBasic16(Selection - 1);
+            style = style.WithBackground(c);
         }
         style |= CellStyle.Bold;
         return style;

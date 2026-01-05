@@ -210,15 +210,15 @@ public sealed class CellBuffer
         AppendStyleToken(ref first, sb, style, CellStyle.Dim, "dim");
         AppendStyleToken(ref first, sb, style, CellStyle.Bold, "bold");
 
-        if (style.TryGetForegroundBasic16(out var fg))
+        if (style.TryGetForeground(out var fg))
         {
-            AppendToken(ref first, sb, Basic16ToMarkup(fg));
+            AppendToken(ref first, sb, fg.ToMarkup());
         }
 
-        if (style.TryGetBackgroundBasic16(out var bg))
+        if (style.TryGetBackground(out var bg))
         {
             AppendToken(ref first, sb, "on");
-            AppendToken(ref first, sb, Basic16ToMarkup(bg));
+            AppendToken(ref first, sb, bg.ToMarkup());
         }
 
         sb.Append(']');
@@ -245,24 +245,5 @@ public sealed class CellBuffer
         first = false;
     }
 
-    private static string Basic16ToMarkup(int index) => index switch
-    {
-        0 => "black",
-        1 => "red",
-        2 => "green",
-        3 => "yellow",
-        4 => "blue",
-        5 => "magenta",
-        6 => "cyan",
-        7 => "white",
-        8 => "gray",
-        9 => "brightred",
-        10 => "brightgreen",
-        11 => "brightyellow",
-        12 => "brightblue",
-        13 => "brightmagenta",
-        14 => "brightcyan",
-        15 => "brightwhite",
-        _ => "default",
-    };
+
 }

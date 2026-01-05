@@ -22,9 +22,9 @@ public sealed partial class Backdrop : Visual
 
         var theme = GetTheme();
         var style = CellStyle.Dim;
-        if (theme.Disabled > 0)
+        if (theme.Disabled is { } c)
         {
-            style = style.WithBackgroundBasic16(theme.Disabled - 1);
+            style = style.WithBackground(c);
         }
 
         for (var y = rect.Y; y < rect.Y + rect.Height; y++)
@@ -36,4 +36,3 @@ public sealed partial class Backdrop : Visual
         }
     }
 }
-

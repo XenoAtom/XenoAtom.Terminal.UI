@@ -5,12 +5,12 @@
 namespace XenoAtom.Terminal.UI;
 
 [Flags]
-public enum CellStyle : uint
+public enum CellStyle : ulong
 {
     None = 0,
-    Invert = 1u << 0,
-    Dim = 1u << 1,
-    Bold = 1u << 2,
+    Invert = 1ul << 0,
+    Dim = 1ul << 1,
+    Bold = 1ul << 2,
 
-    Continuation = 1u << 3,
+    Continuation = 1ul << 3,
 }
