@@ -26,6 +26,49 @@ public abstract partial class Visual : BindableObject
 
     public bool Focusable { get; protected init; }
 
+    private bool _isVisible = true;
+    private bool _isEnabled = true;
+
+    public bool IsVisible
+    {
+        get
+        {
+            BindingManager.Current.RegisterRead(this, nameof(IsVisible));
+            return _isVisible;
+        }
+        set
+        {
+            if (_isVisible == value)
+            {
+                return;
+            }
+
+            _isVisible = value;
+            BindingManager.Current.NotifyValueChanged(this, nameof(IsVisible));
+            App?.RequestRender();
+        }
+    }
+
+    public bool IsEnabled
+    {
+        get
+        {
+            BindingManager.Current.RegisterRead(this, nameof(IsEnabled));
+            return _isEnabled;
+        }
+        set
+        {
+            if (_isEnabled == value)
+            {
+                return;
+            }
+
+            _isEnabled = value;
+            BindingManager.Current.NotifyValueChanged(this, nameof(IsEnabled));
+            App?.RequestRender();
+        }
+    }
+
     public void AddKeyBinding(TerminalKeyGesture gesture, Action action)
     {
         ArgumentNullException.ThrowIfNull(action);
@@ -188,6 +231,11 @@ public abstract partial class Visual : BindableObject
 
     internal void RenderTree(CellBuffer buffer)
     {
+        if (!IsVisible)
+        {
+            return;
+        }
+
         RenderOverride(buffer);
         foreach (var child in _children)
         {
@@ -215,7 +263,7 @@ public abstract partial class Visual : BindableObject
 
     public Visual? HitTest(int x, int y)
     {
-        if (!Bounds.Contains(x, y))
+        if (!IsVisible || !Bounds.Contains(x, y))
         {
             return null;
         }

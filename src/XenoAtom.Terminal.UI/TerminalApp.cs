@@ -262,7 +262,7 @@ public sealed class TerminalApp : IAsyncDisposable
 
     private void DispatchKeyEvent(TerminalKeyEvent keyEvent)
     {
-        if (FocusedElement is null)
+        if (FocusedElement is null || !FocusedElement.IsEnabled || !FocusedElement.IsVisible)
         {
             return;
         }
@@ -291,12 +291,12 @@ public sealed class TerminalApp : IAsyncDisposable
             return;
         }
 
-        FocusedElement = Root.EnumerateVisualsDepthFirst().FirstOrDefault(v => v.Focusable);
+        FocusedElement = Root.EnumerateVisualsDepthFirst().FirstOrDefault(v => v.Focusable && v.IsVisible && v.IsEnabled);
     }
 
     private void FocusNext()
     {
-        var focusables = Root.EnumerateVisualsDepthFirst().Where(v => v.Focusable).ToList();
+        var focusables = Root.EnumerateVisualsDepthFirst().Where(v => v.Focusable && v.IsVisible && v.IsEnabled).ToList();
         if (focusables.Count == 0)
         {
             return;
@@ -316,7 +316,7 @@ public sealed class TerminalApp : IAsyncDisposable
 
     private void FocusPrevious()
     {
-        var focusables = Root.EnumerateVisualsDepthFirst().Where(v => v.Focusable).ToList();
+        var focusables = Root.EnumerateVisualsDepthFirst().Where(v => v.Focusable && v.IsVisible && v.IsEnabled).ToList();
         if (focusables.Count == 0)
         {
             return;
@@ -436,6 +436,16 @@ public sealed class TerminalApp : IAsyncDisposable
 
             localY = translatedY;
             target = _pointerCapture ?? Root.HitTest(mouseEvent.X, translatedY);
+        }
+
+        if (target is null)
+        {
+            return;
+        }
+
+        while (target is not null && (!target.IsVisible || !target.IsEnabled))
+        {
+            target = target.Parent;
         }
 
         if (target is null)

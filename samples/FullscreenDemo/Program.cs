@@ -5,6 +5,7 @@ using var session = Terminal.Open();
 
 var name = new TextBox { Text = "Type here (Ctrl+A, Shift+Arrows, Ctrl+Left/Right)" };
 var accept = new CheckBox("Accept terms");
+var showModal = new CheckBox("Show modal");
 var list = new ListBox { Items = new[] { "First", "Second", "Third", "Fourth", "Fifth", "Sixth" }, Height = 6 };
 var progress = new ProgressBar { Label = "Work", Value = 0.0 };
 
@@ -19,19 +20,20 @@ for (var i = 0; i < 20; i++)
 }
 var scroll = new ScrollViewer { Child = scrollContent, Height = 5 };
 
-var root = new VStack { Spacing = 1 };
-root.Add(new TextBlock("Fullscreen demo: Tab focus, mouse click, wheel scroll, Esc quit"));
-root.Add(name);
-root.Add(accept);
-root.Add(new TextBlock("Pick one (mouse wheel supported):"));
-root.Add(list);
-root.Add(new TextBlock("ScrollViewer (focus + wheel):"));
-root.Add(scroll);
-root.Add(progress);
-root.Add(button);
-root.Add(status);
+var main = new VStack { Spacing = 1 };
+main.Add(new TextBlock("Fullscreen demo: Tab focus, mouse click, wheel scroll, Esc quit"));
+main.Add(name);
+main.Add(accept);
+main.Add(showModal);
+main.Add(new TextBlock("Pick one (mouse wheel supported):"));
+main.Add(list);
+main.Add(new TextBlock("ScrollViewer (focus + wheel):"));
+main.Add(scroll);
+main.Add(progress);
+main.Add(button);
+main.Add(status);
 
-root.SetEnvironmentValue(Theme.Key, new Theme
+main.SetEnvironmentValue(Theme.Key, new Theme
 {
     Foreground = Theme.Default.Foreground,
     Background = Theme.Default.Background,
@@ -41,6 +43,33 @@ root.SetEnvironmentValue(Theme.Key, new Theme
     Selection = 11, // bright green
     Disabled = Theme.Default.Disabled,
 });
+
+var overlay = new ComputedVisual(() =>
+{
+    if (!showModal.IsChecked)
+    {
+        return null;
+    }
+
+    var close = new Button("Close");
+    close.Click += (_, _) => showModal.IsChecked = false;
+
+    var dialogContent = new VStack { Spacing = 1 };
+    dialogContent.Add(new TextBlock("Modal dialog"));
+    dialogContent.Add(new TextBlock("Click Close or toggle the checkbox."));
+    dialogContent.Add(close);
+
+    var dialog = new Border { Padding = new Thickness(1), Child = dialogContent };
+
+    var center = new Center { Child = dialog };
+
+    var panel = new ZStack();
+    panel.Add(new Backdrop(), center);
+    return panel;
+});
+
+var root = new ZStack();
+root.Add(main, overlay);
 
 var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
 

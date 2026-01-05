@@ -10,6 +10,26 @@ namespace XenoAtom.Terminal.UI.Tests;
 [TestClass]
 public sealed class TerminalAppTests
 {
+    private sealed class ProbeFocusable : Visual
+    {
+        public ProbeFocusable(string text)
+        {
+            Focusable = true;
+            Text = text;
+        }
+
+        public string Text { get; }
+
+        protected override CellSize MeasureOverride(CellSize availableSize) => new(Math.Min(availableSize.Width, 10), 1);
+
+        protected override void ArrangeOverride(CellRect finalRect) => Bounds = finalRect;
+
+        protected override void RenderOverride(CellBuffer buffer)
+        {
+            buffer.WriteText(Bounds.X, Bounds.Y, Text.AsSpan(), ReferenceEquals(App?.FocusedElement, this) ? CellStyle.Invert : CellStyle.None);
+        }
+    }
+
     private sealed class KeyBindingProbe : Visual
     {
         public int Count { get; private set; }
@@ -193,6 +213,35 @@ public sealed class TerminalAppTests
         backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 1, Y = liveTop });
 
         await clicked.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    [TestMethod]
+    public async Task Tab_Skips_Invisible_And_Disabled()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(20, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var a = new ProbeFocusable("A");
+        var b = new ProbeFocusable("B") { IsVisible = false };
+        var c = new ProbeFocusable("C") { IsEnabled = false };
+        var d = new ProbeFocusable("D");
+
+        var root = new VStack();
+        root.Add(a, b, c, d);
+
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunAsync();
+
+        await Task.Delay(30);
+        Assert.AreSame(a, app.FocusedElement);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
+        await Task.Delay(30);
+
+        Assert.AreSame(d, app.FocusedElement);
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));
