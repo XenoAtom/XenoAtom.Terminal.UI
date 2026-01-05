@@ -9,11 +9,13 @@
 
   <ItemGroup>
     <PackageReference Include="MSTest" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting"/>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\XenoAtom.Terminal.UI\XenoAtom.Terminal.UI.csproj" />
+    <ProjectReference Include="..\XenoAtom.Terminal.UI.SourceGen\XenoAtom.Terminal.UI.SourceGen.csproj" />
   </ItemGroup>
 
 </Project>

@@ -2,14 +2,13 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-namespace XenoAtom.Terminal.UI.Tests;
+namespace XenoAtom.Terminal.UI;
 
-[TestClass]
-public class Class1Test
+[Flags]
+public enum RoutingStrategy
 {
-    [TestMethod]
-    public void TestSimple()
-    {
-        // TODO
-    }
+    Direct = 0,
+    Bubble = 1,
+    Preview = 2,
 }
+

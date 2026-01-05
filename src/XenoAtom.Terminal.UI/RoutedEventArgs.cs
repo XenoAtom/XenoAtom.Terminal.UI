@@ -4,7 +4,11 @@
 
 namespace XenoAtom.Terminal.UI;
 
-public class Class1
+/// <summary>
+/// Base type for routed event args.
+/// </summary>
+public abstract class RoutedEventArgs : EventArgs
 {
-    // TODO
+    public bool Handled { get; set; }
 }
+
