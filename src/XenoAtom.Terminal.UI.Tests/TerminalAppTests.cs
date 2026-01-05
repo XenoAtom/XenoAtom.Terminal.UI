@@ -252,6 +252,35 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task ComputedVisual_Rebuilds_On_BindingChange()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var model = new TextBox { Text = "A" };
+        var computed = new ComputedVisual(() => new TextBlock($"Computed:{model.Text}"));
+
+        var root = new VStack { Spacing = 1 };
+        root.Add(model);
+        root.Add(computed);
+
+        var app = new TerminalApp(root, session.Instance);
+
+        var runTask = app.RunAsync();
+        await Task.Delay(20);
+
+        app.Post(() => model.Text = "B");
+        await Task.Delay(50);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var outText = backend.GetOutText();
+        StringAssert.Contains(outText, "Computed:A");
+        StringAssert.Contains(outText, "Computed:B");
+    }
+
+    [TestMethod]
     public async Task ListBox_Changes_Selection_On_Down()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));

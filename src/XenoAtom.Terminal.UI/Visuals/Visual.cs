@@ -41,14 +41,56 @@ public abstract partial class Visual : BindableObject
         }
     }
 
+    protected void ClearChildren()
+    {
+        if (_children.Count == 0)
+        {
+            return;
+        }
+
+        for (var i = 0; i < _children.Count; i++)
+        {
+            var child = _children[i];
+            if (App is not null)
+            {
+                child.DetachFromApp();
+            }
+            child.Parent = null;
+        }
+
+        _children.Clear();
+    }
+
     internal void AttachToApp(TerminalApp app)
     {
         App = app;
+        OnAttachedToApp(app);
         foreach (var child in _children)
         {
             child.AttachToApp(app);
         }
     }
+
+    internal void DetachFromApp()
+    {
+        var app = App;
+        if (app is null)
+        {
+            return;
+        }
+
+        foreach (var child in _children)
+        {
+            child.DetachFromApp();
+        }
+
+        App = null;
+        OnDetachedFromApp(app);
+    }
+
+    protected virtual void OnAttachedToApp(TerminalApp app) { }
+
+    protected virtual void OnDetachedFromApp(TerminalApp app) { }
 
     public void Measure(CellSize availableSize)
     {
