@@ -278,10 +278,6 @@ public sealed class TerminalApp : IAsyncDisposable
         }
 
         FocusedElement.RaiseEvent(Visual.KeyDownEvent, args);
-        if (!args.Handled && keyEvent.Char is { } ch && ch >= ' ')
-        {
-            DispatchTextInput(ch.ToString());
-        }
     }
 
     private void EnsureInitialFocus()

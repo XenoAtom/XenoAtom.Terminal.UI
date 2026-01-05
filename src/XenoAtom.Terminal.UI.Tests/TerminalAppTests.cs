@@ -317,9 +317,9 @@ public sealed class TerminalAppTests
         BindingManager.Current.ValueChanged += Handler;
         try
         {
-            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'a' });
-            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'b' });
-            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'c' });
+            backend.PushEvent(new TerminalTextEvent { Text = "a" });
+            backend.PushEvent(new TerminalTextEvent { Text = "b" });
+            backend.PushEvent(new TerminalTextEvent { Text = "c" });
             backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left });
             backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Backspace });
             backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'v', Modifiers = TerminalModifiers.Ctrl });
@@ -351,9 +351,9 @@ public sealed class TerminalAppTests
 
         await Task.Delay(10);
 
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'a' });
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'b' });
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'c' });
+        backend.PushEvent(new TerminalTextEvent { Text = "a" });
+        backend.PushEvent(new TerminalTextEvent { Text = "b" });
+        backend.PushEvent(new TerminalTextEvent { Text = "c" });
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left, Modifiers = TerminalModifiers.Shift });
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'c', Modifiers = TerminalModifiers.Ctrl });
