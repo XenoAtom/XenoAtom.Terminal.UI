@@ -40,7 +40,8 @@ public partial class Button : Visual
     {
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var style = (isFocused || _isPressed) ? theme.SelectionStyle() : CellStyle.None;
+        var buttonTheme = GetEnvironmentValue(ButtonTheme.Key);
+        var style = buttonTheme.Resolve(theme, IsEnabled, isFocused, hovered: false, pressed: _isPressed);
 
         var rect = Bounds;
         var text = Text ?? string.Empty;

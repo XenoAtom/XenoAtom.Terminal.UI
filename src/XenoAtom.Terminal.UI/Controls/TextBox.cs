@@ -58,7 +58,9 @@ public sealed partial class TextBox : Visual
 
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var borderStyle = theme.BorderStyle(isFocused);
+        var textBoxTheme = GetEnvironmentValue(TextBoxTheme.Key);
+        var borderStyle = textBoxTheme.BorderStyle(theme, isFocused);
+        var selectionStyle = textBoxTheme.SelectionStyle(theme);
 
         var text = Text ?? string.Empty;
         var innerWidth = Math.Max(0, rect.Width - 2);
@@ -115,7 +117,7 @@ public sealed partial class TextBox : Visual
             if (visSelEnd > visSelStart)
             {
                 var selStartCell = TerminalTextUtility.GetWidth(text.AsSpan(startIndex, visSelStart - startIndex));
-                buffer.WriteText(rect.X + 1 + selStartCell, rect.Y, text.AsSpan(visSelStart, visSelEnd - visSelStart), theme.SelectionStyle());
+                buffer.WriteText(rect.X + 1 + selStartCell, rect.Y, text.AsSpan(visSelStart, visSelEnd - visSelStart), selectionStyle);
             }
 
             if (endIndex > visSelEnd)
