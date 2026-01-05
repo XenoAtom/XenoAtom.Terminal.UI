@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Text;
 using XenoAtom.Terminal;
 
 namespace XenoAtom.Terminal.UI;
@@ -47,8 +48,14 @@ public sealed partial class CheckBox : Visual
         var rect = Bounds;
         var text = Text ?? string.Empty;
 
-        buffer.WriteText(rect.X, rect.Y, IsChecked ? "[x] " : "[ ] ", style);
-        buffer.WriteText(rect.X + 4, rect.Y, text.AsSpan(), style);
+        for (var x = rect.X; x < rect.X + rect.Width; x++)
+        {
+            buffer.SetCell(x, rect.Y, new Rune(' '), style);
+        }
+
+        var glyph = IsChecked ? checkBoxStyle.CheckedGlyph : checkBoxStyle.UncheckedGlyph;
+        buffer.SetCell(rect.X, rect.Y, new Rune(glyph), style | CellStyle.Bold);
+        buffer.WriteText(rect.X + 2, rect.Y, text.AsSpan(), style);
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

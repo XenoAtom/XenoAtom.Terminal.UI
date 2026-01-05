@@ -10,6 +10,9 @@ public sealed class CheckBoxStyle
 
     public static EnvironmentKey<CheckBoxStyle> Key { get; } = new("CheckBoxStyle", Default);
 
+    public char CheckedGlyph { get; init; } = '☑';
+    public char UncheckedGlyph { get; init; } = '☐';
+
     public CellStyle? Normal { get; init; }
     public CellStyle? Hovered { get; init; }
     public CellStyle? Focused { get; init; }
@@ -17,9 +20,11 @@ public sealed class CheckBoxStyle
 
     public CellStyle Resolve(Theme theme, bool enabled, bool focused, bool hovered)
     {
+        var baseStyle = theme.SurfaceStyle();
+
         if (!enabled)
         {
-            return Disabled ?? CellStyle.Dim;
+            return Disabled ?? (baseStyle | CellStyle.Dim);
         }
 
         if (focused)
@@ -34,7 +39,7 @@ public sealed class CheckBoxStyle
                 return h;
             }
 
-            var style = CellStyle.None;
+            var style = baseStyle;
             if (theme.Selection is { } selection)
             {
                 style = style.WithBackground(selection);
@@ -42,6 +47,6 @@ public sealed class CheckBoxStyle
             return style;
         }
 
-        return Normal ?? CellStyle.None;
+        return Normal ?? baseStyle;
     }
 }

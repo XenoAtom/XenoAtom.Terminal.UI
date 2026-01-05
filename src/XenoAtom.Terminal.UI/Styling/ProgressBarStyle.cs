@@ -10,6 +10,9 @@ public sealed class ProgressBarStyle
 
     public static EnvironmentKey<ProgressBarStyle> Key { get; } = new("ProgressBarStyle", Default);
 
+    public char FillGlyph { get; init; } = '█';
+    public char TrackGlyph { get; init; } = '░';
+
     public CellStyle? Filled { get; init; }
     public CellStyle? Unfilled { get; init; }
     public CellStyle? Border { get; init; }
