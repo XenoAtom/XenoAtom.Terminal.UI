@@ -17,7 +17,7 @@ public sealed partial class ScrollViewer : Visual
     private readonly HorizontalScrollBarVisual _horizontalBar;
     private readonly ScrollCornerVisual _corner;
 
-    private Visual? _child;
+    private Visual? _content;
     private int _contentWidth;
     private int _contentHeight;
 
@@ -60,27 +60,32 @@ public sealed partial class ScrollViewer : Visual
             _ => throw new ArgumentOutOfRangeException(nameof(index)),
         };
 
-    public Visual? Child
+    public Visual? Content
     {
-        get => _child;
+        get
+        {
+            BindingManager.Current.RegisterRead(this, nameof(Content));
+            return _content;
+        }
         set
         {
-            if (ReferenceEquals(_child, value))
+            if (ReferenceEquals(_content, value))
             {
                 return;
             }
 
-            if (_child is not null)
+            if (_content is not null)
             {
-                throw new InvalidOperationException("ScrollViewer currently only supports setting Child once.");
+                throw new InvalidOperationException("ScrollViewer currently only supports setting Content once.");
             }
 
-            _child = value;
+            _content = value;
             if (value is not null)
             {
                 _contentHost.SetContent(value);
             }
 
+            BindingManager.Current.NotifyValueChanged(this, nameof(Content));
             App?.RequestRender();
         }
     }
@@ -97,12 +102,12 @@ public sealed partial class ScrollViewer : Visual
     protected override Size MeasureOverride(Size availableSize)
     {
         var height = Math.Max(1, Height);
-        var child = _child;
-        if (child is not null)
+        var content = _content;
+        if (content is not null)
         {
-            child.Measure(new Size(int.MaxValue / 4, int.MaxValue / 4));
-            _contentWidth = child.DesiredSize.Width;
-            _contentHeight = child.DesiredSize.Height;
+            content.Measure(new Size(int.MaxValue / 4, int.MaxValue / 4));
+            _contentWidth = content.DesiredSize.Width;
+            _contentHeight = content.DesiredSize.Height;
         }
         else
         {
@@ -119,7 +124,7 @@ public sealed partial class ScrollViewer : Visual
     {
         Bounds = finalRect;
 
-        if (_child is null)
+        if (_content is null)
         {
             return;
         }

@@ -13,63 +13,41 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class Center : Visual
 {
-    private Visual? _child;
+    [Bindable]
+    public partial Visual? Content { get; set; }
 
-    public Visual? Child
-    {
-        get => _child;
-        set
-        {
-            if (ReferenceEquals(_child, value))
-            {
-                return;
-            }
-
-            if (_child is not null)
-            {
-                throw new InvalidOperationException("Center currently only supports setting Child once.");
-            }
-
-            _child = value;
-            if (value is not null)
-            {
-                AttachChild(value);
-            }
-
-            App?.RequestRender();
-        }
-    }
-
-    protected override int ChildrenCount => _child is null ? 0 : 1;
+    protected override int ChildrenCount => _content is null ? 0 : 1;
 
     protected override Visual GetChild(int index)
-        => index == 0 && _child is not null ? _child : throw new ArgumentOutOfRangeException(nameof(index));
+        => index == 0 && _content is not null ? _content : throw new ArgumentOutOfRangeException(nameof(index));
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        if (_child is null)
+        var content = Content;
+        if (content is null)
         {
             return default;
         }
 
-        _child.Measure(availableSize);
-        return _child.DesiredSize;
+        content.Measure(availableSize);
+        return content.DesiredSize;
     }
 
     protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
 
-        if (_child is null)
+        var content = Content;
+        if (content is null)
         {
             return;
         }
 
-        var w = Math.Min(finalRect.Width, _child.DesiredSize.Width);
-        var h = Math.Min(finalRect.Height, _child.DesiredSize.Height);
+        var w = Math.Min(finalRect.Width, content.DesiredSize.Width);
+        var h = Math.Min(finalRect.Height, content.DesiredSize.Height);
         var x = finalRect.X + Math.Max(0, (finalRect.Width - w) / 2);
         var y = finalRect.Y + Math.Max(0, (finalRect.Height - h) / 2);
 
-        _child.Arrange(new Rectangle(x, y, w, h));
+        content.Arrange(new Rectangle(x, y, w, h));
     }
 }

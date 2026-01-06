@@ -12,7 +12,6 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class Dialog : Visual, IModalVisual
 {
-    private Visual? _child;
     private Rectangle _layoutSlot;
 
     private bool _dragging;
@@ -42,35 +41,13 @@ public sealed partial class Dialog : Visual, IModalVisual
     [Bindable]
     public partial bool IsModal { get; set; }
 
-    public Visual? Child
-    {
-        get => _child;
-        set
-        {
-            if (ReferenceEquals(_child, value))
-            {
-                return;
-            }
+    [Bindable]
+    public partial Visual? Content { get; set; }
 
-            if (_child is not null)
-            {
-                throw new InvalidOperationException("Dialog currently only supports setting Child once.");
-            }
-
-            _child = value;
-            if (value is not null)
-            {
-                AttachChild(value);
-            }
-
-            App?.RequestRender();
-        }
-    }
-
-    protected override int ChildrenCount => _child is null ? 0 : 1;
+    protected override int ChildrenCount => _content is null ? 0 : 1;
 
     protected override Visual GetChild(int index)
-        => index == 0 && _child is not null ? _child : throw new ArgumentOutOfRangeException(nameof(index));
+        => index == 0 && _content is not null ? _content : throw new ArgumentOutOfRangeException(nameof(index));
 
     protected override Size MeasureOverride(Size availableSize)
     {
@@ -81,10 +58,11 @@ public sealed partial class Dialog : Visual, IModalVisual
         var innerWidth = Math.Max(0, availableWidth - 2 - padding.Horizontal);
         var innerHeight = Math.Max(0, availableHeight - 2 - padding.Vertical);
 
-        _child?.Measure(new Size(innerWidth, innerHeight));
+        var content = Content;
+        content?.Measure(new Size(innerWidth, innerHeight));
 
-        var desiredWidth = Width ?? Math.Min(availableSize.Width, Math.Max(3, 2 + padding.Horizontal + (_child?.DesiredSize.Width ?? 0)));
-        var desiredHeight = Height ?? Math.Min(availableSize.Height, Math.Max(3, 2 + padding.Vertical + (_child?.DesiredSize.Height ?? 0)));
+        var desiredWidth = Width ?? Math.Min(availableSize.Width, Math.Max(3, 2 + padding.Horizontal + (content?.DesiredSize.Width ?? 0)));
+        var desiredHeight = Height ?? Math.Min(availableSize.Height, Math.Max(3, 2 + padding.Vertical + (content?.DesiredSize.Height ?? 0)));
 
         var title = Title;
         if (!string.IsNullOrEmpty(title))
@@ -111,7 +89,8 @@ public sealed partial class Dialog : Visual, IModalVisual
 
         Bounds = new Rectangle(finalRect.X + left, finalRect.Y + top, width, height);
 
-        if (_child is not null)
+        var content = Content;
+        if (content is not null)
         {
             var padding = Padding;
             var inner = new Rectangle(
@@ -120,7 +99,7 @@ public sealed partial class Dialog : Visual, IModalVisual
                 Math.Max(0, Bounds.Width - 2 - padding.Horizontal),
                 Math.Max(0, Bounds.Height - 2 - padding.Vertical));
 
-            _child.Arrange(inner);
+            content.Arrange(inner);
         }
     }
 

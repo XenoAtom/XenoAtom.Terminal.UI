@@ -13,51 +13,41 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class DockLayout : Visual
 {
-    private Visual? _top;
-    private Visual? _bottom;
-    private Visual? _content;
+    [Bindable]
+    public partial Visual? Top { get; set; }
 
-    public Visual? Top
-    {
-        get => _top;
-        set => SetOnce(ref _top, value);
-    }
+    [Bindable]
+    public partial Visual? Bottom { get; set; }
 
-    public Visual? Bottom
-    {
-        get => _bottom;
-        set => SetOnce(ref _bottom, value);
-    }
-
-    public Visual? Content
-    {
-        get => _content;
-        set => SetOnce(ref _content, value);
-    }
+    [Bindable]
+    public partial Visual? Content { get; set; }
 
     protected override Size MeasureOverride(Size availableSize)
     {
         var topHeight = 0;
         var bottomHeight = 0;
 
-        if (_top is not null)
+        var top = Top;
+        if (top is not null)
         {
-            _top.Measure(new Size(availableSize.Width, availableSize.Height));
-            topHeight = _top.DesiredSize.Height;
+            top.Measure(new Size(availableSize.Width, availableSize.Height));
+            topHeight = top.DesiredSize.Height;
         }
 
-        if (_bottom is not null)
+        var bottom = Bottom;
+        if (bottom is not null)
         {
-            _bottom.Measure(new Size(availableSize.Width, Math.Max(0, availableSize.Height - topHeight)));
-            bottomHeight = _bottom.DesiredSize.Height;
+            bottom.Measure(new Size(availableSize.Width, Math.Max(0, availableSize.Height - topHeight)));
+            bottomHeight = bottom.DesiredSize.Height;
         }
 
-        if (_content is not null)
+        var content = Content;
+        if (content is not null)
         {
-            _content.Measure(new Size(availableSize.Width, Math.Max(0, availableSize.Height - topHeight - bottomHeight)));
+            content.Measure(new Size(availableSize.Width, Math.Max(0, availableSize.Height - topHeight - bottomHeight)));
         }
 
-        var height = Math.Min(availableSize.Height, topHeight + bottomHeight + (_content?.DesiredSize.Height ?? 0));
+        var height = Math.Min(availableSize.Height, topHeight + bottomHeight + (content?.DesiredSize.Height ?? 0));
         return new Size(availableSize.Width, height);
     }
 
@@ -68,47 +58,29 @@ public sealed partial class DockLayout : Visual
         var y = finalRect.Y;
         var remainingHeight = finalRect.Height;
 
-        if (_top is not null)
+        var top = Top;
+        if (top is not null)
         {
-            var h = Math.Min(remainingHeight, _top.DesiredSize.Height);
-            _top.Arrange(new Rectangle(finalRect.X, y, finalRect.Width, h));
+            var h = Math.Min(remainingHeight, top.DesiredSize.Height);
+            top.Arrange(new Rectangle(finalRect.X, y, finalRect.Width, h));
             y += h;
             remainingHeight -= h;
         }
 
         var bottomHeight = 0;
-        if (_bottom is not null)
+        var bottom = Bottom;
+        if (bottom is not null)
         {
-            bottomHeight = Math.Min(remainingHeight, _bottom.DesiredSize.Height);
-            _bottom.Arrange(new Rectangle(finalRect.X, finalRect.Y + finalRect.Height - bottomHeight, finalRect.Width, bottomHeight));
+            bottomHeight = Math.Min(remainingHeight, bottom.DesiredSize.Height);
+            bottom.Arrange(new Rectangle(finalRect.X, finalRect.Y + finalRect.Height - bottomHeight, finalRect.Width, bottomHeight));
             remainingHeight -= bottomHeight;
         }
 
-        if (_content is not null)
+        var content = Content;
+        if (content is not null)
         {
-            _content.Arrange(new Rectangle(finalRect.X, y, finalRect.Width, Math.Max(0, remainingHeight)));
+            content.Arrange(new Rectangle(finalRect.X, y, finalRect.Width, Math.Max(0, remainingHeight)));
         }
-    }
-
-    private void SetOnce(ref Visual? field, Visual? value)
-    {
-        if (ReferenceEquals(field, value))
-        {
-            return;
-        }
-
-        if (field is not null)
-        {
-            throw new InvalidOperationException("DockLayout currently only supports setting each slot once.");
-        }
-
-        field = value;
-        if (value is not null)
-        {
-            AttachChild(value);
-        }
-
-        App?.RequestRender();
     }
 
     protected override int ChildrenCount

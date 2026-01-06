@@ -211,7 +211,7 @@ public sealed class TerminalAppTests
             Title = "T",
             Width = 10,
             Height = 5,
-            Child = new TextBlock("Hello"),
+            Content = new TextBlock("Hello"),
         };
 
         var root = new ZStack();
@@ -254,8 +254,8 @@ public sealed class TerminalAppTests
 
         var layer = new WindowLayer { Content = new TextBlock("Base") };
 
-        var a = new Dialog { Title = "A", Width = 10, Height = 4, Left = 1, Top = 1, Child = new TextBlock("A") };
-        var b = new Dialog { Title = "B", Width = 10, Height = 4, Left = 3, Top = 2, Child = new TextBlock("B") };
+        var a = new Dialog { Title = "A", Width = 10, Height = 4, Left = 1, Top = 1, Content = new TextBlock("A") };
+        var b = new Dialog { Title = "B", Width = 10, Height = 4, Left = 3, Top = 2, Content = new TextBlock("B") };
         layer.AddWindow(a);
         layer.AddWindow(b);
 
@@ -315,7 +315,7 @@ public sealed class TerminalAppTests
             Height = 5,
             Left = 10,
             Top = 3,
-            Child = new TextBlock("Modal"),
+            Content = new TextBlock("Modal"),
         };
         layer.AddWindow(modal);
 
@@ -427,7 +427,7 @@ public sealed class TerminalAppTests
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
         var button = new Button("OK");
-        var root = new PointerProbe { Child = button };
+        var root = new PointerProbe { Content = button };
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
         var runTask = app.RunAsync();
@@ -452,7 +452,7 @@ public sealed class TerminalAppTests
 
         public Visual? SeenSource { get; private set; }
 
-        public Visual? Child
+        public Visual? Content
         {
             get => _child;
             init
@@ -975,7 +975,7 @@ public sealed class TerminalAppTests
             content.Add(new TextBlock($"Item {i}"));
         }
 
-        var scroll = new ScrollViewer { Child = content, Height = 4 };
+        var scroll = new ScrollViewer { Content = content, Height = 4 };
 
         var root = new VStack { Spacing = 1 };
         root.Add(scroll);
@@ -1034,7 +1034,7 @@ public sealed class TerminalAppTests
             TopRightText = "TR",
             BottomLeftText = "BL",
             BottomRightText = "BR",
-            Child = new TextBlock("X"),
+            Content = new TextBlock("X"),
         };
 
         var root = new VStack { group };

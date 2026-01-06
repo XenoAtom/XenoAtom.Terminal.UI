@@ -6,35 +6,12 @@ using XenoAtom.Terminal.UI.Input;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed class WindowLayer : Visual
+public sealed partial class WindowLayer : Visual
 {
-    private Visual? _content;
     private readonly List<Visual> _windows = new();
 
-    public Visual? Content
-    {
-        get => _content;
-        set
-        {
-            if (ReferenceEquals(_content, value))
-            {
-                return;
-            }
-
-            if (_content is not null)
-            {
-                throw new InvalidOperationException("WindowLayer currently only supports setting Content once.");
-            }
-
-            _content = value;
-            if (value is not null)
-            {
-                AttachChild(value);
-            }
-
-            App?.RequestRender();
-        }
-    }
+    [Bindable]
+    public partial Visual? Content { get; set; }
 
     public void AddWindow(Visual window)
     {

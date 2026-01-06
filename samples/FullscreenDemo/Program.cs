@@ -25,19 +25,19 @@ for (var i = 0; i < 20; i++)
 }
 var scroll = new ScrollViewer()
     .Height(5)
-    .With(x => x.Child = scrollContent);
+    .With(x => x.Content = scrollContent);
 
 var pickGroup = new Group()
     .TopLeftText("Pick one")
     .TopRightText("mouse wheel supported")
     .Padding(new Thickness(1))
-    .With(x => x.Child = list);
+    .Content(list);
 
 var scrollGroup = new Group()
     .TopLeftText("ScrollViewer")
     .TopRightText("focus + wheel")
     .Padding(new Thickness(1))
-    .With(x => x.Child = scroll);
+    .Content(scroll);
 
 var table = new Table().With(x =>
 {
@@ -79,11 +79,9 @@ var statusBar = new StatusBar()
     .LeftText("Tab focus | Mouse click | Wheel scroll | F12 debug | Esc quit")
     .RightText("XenoAtom.Terminal.UI");
 
-var layout = new DockLayout().With(x =>
-{
-    x.Content = main;
-    x.Bottom = statusBar;
-});
+var layout = new DockLayout()
+    .Content(main)
+    .Bottom(statusBar);
 
 var overlay = new ComputedVisual(() =>
 {
@@ -105,7 +103,7 @@ var overlay = new ComputedVisual(() =>
         .IsModal(true)
         .Padding(new Thickness(1))
         .Width(60)
-        .With(x => x.Child = dialogContent);
+        .Content(dialogContent);
 
     return new ZStack(new Backdrop(), dialog);
 });

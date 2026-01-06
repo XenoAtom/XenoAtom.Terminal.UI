@@ -34,7 +34,7 @@ var content = new VStack(
 var root = new VStack(
     new Border()
         .Padding(new Thickness(1))
-        .With(x => x.Child = content)).Spacing(1);
+        .Content(content)).Spacing(1);
 
 app = new TerminalApp(root, session.Instance);
 

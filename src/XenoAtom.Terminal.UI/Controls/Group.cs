@@ -11,8 +11,6 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class Group : Visual
 {
-    private Visual? _child;
-
     [Bindable]
     public partial Thickness Padding { get; set; }
 
@@ -28,35 +26,13 @@ public sealed partial class Group : Visual
     [Bindable]
     public partial string? BottomRightText { get; set; }
 
-    public Visual? Child
-    {
-        get => _child;
-        set
-        {
-            if (ReferenceEquals(_child, value))
-            {
-                return;
-            }
+    [Bindable]
+    public partial Visual? Content { get; set; }
 
-            if (_child is not null)
-            {
-                throw new InvalidOperationException("Group currently only supports setting Child once.");
-            }
-
-            _child = value;
-            if (value is not null)
-            {
-                AttachChild(value);
-            }
-
-            App?.RequestRender();
-        }
-    }
-
-    protected override int ChildrenCount => _child is null ? 0 : 1;
+    protected override int ChildrenCount => _content is null ? 0 : 1;
 
     protected override Visual GetChild(int index)
-        => index == 0 && _child is not null ? _child : throw new ArgumentOutOfRangeException(nameof(index));
+        => index == 0 && _content is not null ? _content : throw new ArgumentOutOfRangeException(nameof(index));
 
     protected override Size MeasureOverride(Size availableSize)
     {
@@ -64,10 +40,11 @@ public sealed partial class Group : Visual
         var innerWidth = Math.Max(0, availableSize.Width - 2 - padding.Horizontal);
         var innerHeight = Math.Max(0, availableSize.Height - 2 - padding.Vertical);
 
-        _child?.Measure(new Size(innerWidth, innerHeight));
+        var content = Content;
+        content?.Measure(new Size(innerWidth, innerHeight));
 
-        var desiredWidth = 2 + padding.Horizontal + (_child?.DesiredSize.Width ?? 0);
-        var desiredHeight = 2 + padding.Vertical + (_child?.DesiredSize.Height ?? 0);
+        var desiredWidth = 2 + padding.Horizontal + (content?.DesiredSize.Width ?? 0);
+        var desiredHeight = 2 + padding.Vertical + (content?.DesiredSize.Height ?? 0);
 
         return new Size(Math.Min(availableSize.Width, desiredWidth), Math.Min(availableSize.Height, desiredHeight));
     }
@@ -76,7 +53,8 @@ public sealed partial class Group : Visual
     {
         Bounds = finalRect;
 
-        if (_child is null)
+        var content = Content;
+        if (content is null)
         {
             return;
         }
@@ -88,7 +66,7 @@ public sealed partial class Group : Visual
             Math.Max(0, finalRect.Width - 2 - padding.Horizontal),
             Math.Max(0, finalRect.Height - 2 - padding.Vertical));
 
-        _child.Arrange(inner);
+        content.Arrange(inner);
     }
 
     protected override void RenderOverride(CellBuffer buffer)
