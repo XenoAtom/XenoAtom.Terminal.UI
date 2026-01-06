@@ -51,16 +51,18 @@ main.Add(progress);
 main.Add(button);
 main.Add(status);
 
-main.SetEnvironmentValue(Theme.Key, new Theme
-{
-    Foreground = Theme.Default.Foreground,
-    Background = Theme.Default.Background,
-    Border = Theme.Default.Border,
-    FocusBorder = Theme.Default.FocusBorder,
-    Accent = Theme.Default.Accent,
-    Selection = AnsiColor.Rgb(0x00, 0xFF, 0x00),
-    Disabled = Theme.Default.Disabled,
-});
+
+// Disabling this part for now, as the custom color on the selection is not nice with the default theme.
+//main.SetEnvironmentValue(Theme.Key, new Theme
+//{
+//    Foreground = Theme.Default.Foreground,
+//    Background = Theme.Default.Background,
+//    Border = Theme.Default.Border,
+//    FocusBorder = Theme.Default.FocusBorder,
+//    Accent = Theme.Default.Accent,
+//    Selection = AnsiColor.Rgb(0x00, 0xFF, 0x00),
+//    Disabled = Theme.Default.Disabled,
+//});
 
 var statusBar = new StatusBar
 {
