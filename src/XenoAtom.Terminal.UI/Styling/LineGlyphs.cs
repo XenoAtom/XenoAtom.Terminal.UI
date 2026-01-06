@@ -20,16 +20,15 @@ public readonly record struct LineGlyphs(
     Rune Cross)
 {
     public static LineGlyphs Single { get; } = new(
-        Horizontal: new Rune(0x00C4),
-        Vertical: new Rune(0x00B3),
-        TopLeft: new Rune(0x00DA),
-        TopRight: new Rune(0x00BF),
-        BottomLeft: new Rune(0x00C0),
-        BottomRight: new Rune(0x00D9),
-        TeeTop: new Rune(0x00C2),
-        TeeBottom: new Rune(0x00C1),
-        TeeLeft: new Rune(0x00C3),
-        TeeRight: new Rune(0x00B4),
-        Cross: new Rune(0x00C5));
+        Horizontal: new Rune(0x2500),   // ─
+        Vertical: new Rune(0x2502),     // │
+        TopLeft: new Rune(0x250C),      // ┌
+        TopRight: new Rune(0x2510),     // ┐
+        BottomLeft: new Rune(0x2514),   // └
+        BottomRight: new Rune(0x2518),  // ┘
+        TeeTop: new Rune(0x252C),       // ┬
+        TeeBottom: new Rune(0x2534),    // ┴
+        TeeLeft: new Rune(0x251C),      // ├
+        TeeRight: new Rune(0x2524),     // ┤
+        Cross: new Rune(0x253C));       // ┼
 }
-
