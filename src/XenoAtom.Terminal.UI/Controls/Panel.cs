@@ -2,9 +2,11 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Collections;
+
 namespace XenoAtom.Terminal.UI.Controls;
 
-public abstract partial class Panel : Visual
+public abstract partial class Panel : Visual, IEnumerable<Visual>
 {
     private readonly List<Visual> _children = new();
 
@@ -25,6 +27,10 @@ public abstract partial class Panel : Visual
 
         App?.RequestRender();
     }
+
+    IEnumerator<Visual> IEnumerable<Visual>.GetEnumerator() => _children.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => _children.GetEnumerator();
 
     protected override int ChildrenCount => _children.Count;
 

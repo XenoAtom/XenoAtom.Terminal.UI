@@ -34,19 +34,22 @@ var table = new Table
     },
 };
 
-var main = new VStack { Spacing = 1 };
-main.Add(new TextBlock("Fullscreen demo: Tab focus, mouse click, wheel scroll, F12 debug, Esc quit"));
-main.Add(name);
-main.Add(accept);
-main.Add(showModal);
-main.Add(table);
-main.Add(new TextBlock("Pick one (mouse wheel supported):"));
-main.Add(list);
-main.Add(new TextBlock("ScrollViewer (focus + wheel):"));
-main.Add(scroll);
-main.Add(progress);
-main.Add(button);
-main.Add(status);
+var main = new VStack
+{
+    Spacing = 1,
+    "Fullscreen demo: Tab focus, mouse click, wheel scroll, F12 debug, Esc quit",
+    name,
+    accept,
+    showModal,
+    table,
+    "Pick one (mouse wheel supported):",
+    list,
+    "ScrollViewer (focus + wheel):",
+    scroll,
+    progress,
+    button,
+    status,
+};
 
 
 // Disabling this part for now, as the custom color on the selection is not nice with the default theme.
@@ -84,9 +87,10 @@ var overlay = new ComputedVisual(() =>
     close.Click += (_, _) => showModal.IsChecked = false;
 
     var dialogContent = new VStack { Spacing = 1 };
-    dialogContent.Add(new TextBlock("Modal dialog"));
-    dialogContent.Add(new TextBlock("This is a wrapped paragraph demonstrating document-style text rendering.") { Wrap = true });
-    dialogContent.Add(close);
+    dialogContent.Add(
+        "Modal dialog",
+        new TextBlock("This is a wrapped paragraph demonstrating document-style text rendering.") { Wrap = true },
+        close);
 
     var dialog = new Dialog
     {

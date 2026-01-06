@@ -60,8 +60,7 @@ public sealed class TerminalAppTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(20, 10));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        var root = new VStack();
-        root.Add(new TextBlock("Hello"));
+        var root = new VStack { "Hello" };
 
         var app = new TerminalApp(root, session.Instance);
 
@@ -98,8 +97,7 @@ public sealed class TerminalAppTests
         var clicked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         button.Click += (_, _) => clicked.TrySetResult();
 
-        var root = new VStack();
-        root.Add(button);
+        var root = new VStack { button };
 
         var app = new TerminalApp(root, session.Instance);
         var runTask = app.RunAsync();
@@ -123,8 +121,7 @@ public sealed class TerminalAppTests
         var clicked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         button.Click += (_, _) => clicked.TrySetResult();
 
-        var root = new ZStack();
-        root.Add(button, new ComputedVisual(static () => null));
+        var root = new ZStack { button, new ComputedVisual(static () => null) };
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
         var runTask = app.RunAsync();
@@ -149,8 +146,7 @@ public sealed class TerminalAppTests
         var clicked = false;
         button.Click += (_, _) => clicked = true;
 
-        var root = new VStack();
-        root.Add(button);
+        var root = new VStack { button };
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
         var runTask = app.RunAsync();
@@ -174,8 +170,7 @@ public sealed class TerminalAppTests
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
         var button = new Button("OK");
-        var root = new VStack();
-        root.Add(button);
+        var root = new VStack { button };
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
         var runTask = app.RunAsync();
