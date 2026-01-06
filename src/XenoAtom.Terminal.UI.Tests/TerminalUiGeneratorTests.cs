@@ -20,7 +20,6 @@ public sealed class TerminalUiGeneratorTests
     {
         const string source = """
                               using XenoAtom.Terminal.UI;
-                              using XenoAtom.Terminal.UI.Visuals;
                               
                               namespace Demo;
                               

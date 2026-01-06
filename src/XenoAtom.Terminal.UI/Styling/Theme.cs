@@ -77,6 +77,16 @@ public sealed class Theme
         return style;
     }
 
+    public CellStyle ForegroundTextStyle()
+    {
+        var style = CellStyle.None;
+        if (Foreground is { } fg)
+        {
+            style = style.WithForeground(fg);
+        }
+        return style;
+    }
+
     public CellStyle SurfaceStyle()
     {
         var style = CellStyle.None;

@@ -88,12 +88,6 @@ public partial class Button : Visual
                 buffer.SetCell(x, top, new Rune(glyphs.Horizontal), border);
                 buffer.SetCell(x, bottom, new Rune(glyphs.Horizontal), border);
             }
-
-            for (var y = top + 1; y < bottom; y++)
-            {
-                buffer.SetCell(left, y, new Rune(glyphs.Vertical), border);
-                buffer.SetCell(right, y, new Rune(glyphs.Vertical), border);
-            }
         }
 
         var padding = buttonStyle.Padding;
