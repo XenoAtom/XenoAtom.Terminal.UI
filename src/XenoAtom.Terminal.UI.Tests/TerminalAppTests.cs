@@ -589,7 +589,10 @@ public sealed class TerminalAppTests
         var d = new ProbeFocusable("D");
 
         var root = new VStack();
-        root.Add(a, b, c, d);
+        root.Add(a);
+        root.Add(b);
+        root.Add(c);
+        root.Add(d);
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
         var runTask = app.RunAsync();

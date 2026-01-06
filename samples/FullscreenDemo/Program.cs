@@ -50,9 +50,7 @@ var table = new Table
     },
 };
 
-var main = new VStack
-{
-    Spacing = 1,
+var main = new VStack(
     "Fullscreen demo: Tab focus, mouse click, wheel scroll, F12 debug, Esc quit",
     name,
     accept,
@@ -62,7 +60,9 @@ var main = new VStack
     scrollGroup,
     progress,
     button,
-    status,
+    status)
+{
+    Spacing = 1,
 };
 
 
@@ -100,11 +100,13 @@ var overlay = new ComputedVisual(() =>
     var close = new Button("Close");
     close.Click += (_, _) => showModal.IsChecked = false;
 
-    var dialogContent = new VStack { Spacing = 1 };
-    dialogContent.Add(
+    var dialogContent = new VStack(
         "Modal dialog",
         new TextBlock("This is a wrapped paragraph demonstrating document-style text rendering.") { Wrap = true },
-        close);
+        close)
+    {
+        Spacing = 1,
+    };
 
     var dialog = new Dialog
     {
@@ -115,9 +117,7 @@ var overlay = new ComputedVisual(() =>
         Child = dialogContent,
     };
 
-    var panel = new ZStack();
-    panel.Add(new Backdrop(), dialog);
-    return panel;
+    return new ZStack(new Backdrop(), dialog);
 });
 
 var root = new WindowLayer { Content = layout };

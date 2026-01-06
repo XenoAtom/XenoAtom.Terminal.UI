@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Collections;
+using System.ComponentModel;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -16,7 +17,15 @@ public abstract partial class Panel : Visual, IEnumerable<Visual>
 
     protected IReadOnlyList<Visual> Children => _children;
 
-    public void Add(params Visual[] children)
+    public void Add(Visual child)
+    {
+        ArgumentNullException.ThrowIfNull(child);
+        AttachChild(child);
+        _children.Add(child);
+        App?.RequestRender();
+    }
+
+    public void AddRange(params Visual[] children)
     {
         ArgumentNullException.ThrowIfNull(children);
         foreach (var child in children)
@@ -27,6 +36,9 @@ public abstract partial class Panel : Visual, IEnumerable<Visual>
 
         App?.RequestRender();
     }
+
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public IEnumerator<Visual> GetEnumerator() => _children.GetEnumerator();
 
     IEnumerator<Visual> IEnumerable<Visual>.GetEnumerator() => _children.GetEnumerator();
 

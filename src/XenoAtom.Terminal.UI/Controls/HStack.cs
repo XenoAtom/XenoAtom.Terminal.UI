@@ -8,6 +8,15 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class HStack : Panel
 {
+    public HStack()
+    {
+    }
+
+    public HStack(params Visual[] children)
+    {
+        AddRange(children);
+    }
+
     [Bindable]
     public partial int Spacing { get; set; }
 

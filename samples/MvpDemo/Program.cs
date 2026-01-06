@@ -18,22 +18,21 @@ var button = new Button("Log line");
 TerminalApp? app = null;
 button.Click += (_, _) => app?.WriteMarkupLine("[dim]Click received[/]");
 
-var content = new VStack
-{
-    Spacing = 1,
+var content = new VStack(
     "Name:",
     name,
     accept,
     "Pick one:",
     list,
     progress,
-    button,
-};
-
-var root = new VStack
+    button)
 {
     Spacing = 1,
-    new Border { Padding = new Thickness(1), Child = content },
+};
+
+var root = new VStack(new Border { Padding = new Thickness(1), Child = content })
+{
+    Spacing = 1,
 };
 
 app = new TerminalApp(root, session.Instance);
