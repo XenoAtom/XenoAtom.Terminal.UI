@@ -181,6 +181,29 @@ public abstract partial class Visual
     private bool _isEnabled = true;
     private bool _isHovered;
 
+    private Thickness _margin;
+
+    [Bindable]
+    public Thickness Margin
+    {
+        get
+        {
+            BindingManager.Current.RegisterRead(this, __Margin__BindingAccessor.Instance);
+            return _margin;
+        }
+        set
+        {
+            if (_margin == value)
+            {
+                return;
+            }
+
+            _margin = value;
+            BindingManager.Current.NotifyValueChanged(this, __Margin__BindingAccessor.Instance);
+            App?.RequestRender();
+        }
+    }
+
     public bool IsVisible
     {
         get
@@ -399,10 +422,12 @@ public abstract partial class Visual
         EnsureInitialized();
 
         using var session = BindingManager.Current.StartTracking();
-        var innerAvailable = ApplyMeasureConstraints(availableSize);
+        var margin = Margin;
+        var availableWithoutMargin = Deflate(availableSize, margin);
+        var innerAvailable = ApplyMeasureConstraints(availableWithoutMargin);
         _desiredSizeWithoutMargin = MeasureOverride(innerAvailable);
         _desiredSizeWithoutMargin = ApplyMinMaxConstraints(_desiredSizeWithoutMargin);
-        DesiredSize = _desiredSizeWithoutMargin;
+        DesiredSize = Inflate(_desiredSizeWithoutMargin, margin);
         StoreDependencies(ref _measureDeps, session.Dependencies);
         _measureDirty = false;
     }
@@ -412,7 +437,9 @@ public abstract partial class Visual
         EnsureInitialized();
 
         using var session = BindingManager.Current.StartTracking();
-        var arrangedRect = ApplyArrangeConstraints(finalRect);
+        var margin = Margin;
+        var innerSlot = Deflate(finalRect, margin);
+        var arrangedRect = ApplyArrangeConstraints(innerSlot);
         Bounds = arrangedRect;
         ArrangeOverride(arrangedRect);
         StoreDependencies(ref _arrangeDeps, session.Dependencies);
@@ -517,6 +544,23 @@ public abstract partial class Visual
 
         return new Rectangle(x, y, w, h);
     }
+
+    private static Size Inflate(Size size, Thickness thickness)
+        => new(
+            Math.Max(0, size.Width + thickness.Horizontal),
+            Math.Max(0, size.Height + thickness.Vertical));
+
+    private static Size Deflate(Size size, Thickness thickness)
+        => new(
+            Math.Max(0, size.Width - thickness.Horizontal),
+            Math.Max(0, size.Height - thickness.Vertical));
+
+    private static Rectangle Deflate(Rectangle rect, Thickness thickness)
+        => new(
+            rect.X + thickness.Left,
+            rect.Y + thickness.Top,
+            Math.Max(0, rect.Width - thickness.Horizontal),
+            Math.Max(0, rect.Height - thickness.Vertical));
 
     internal void RenderTree(CellBuffer buffer)
     {

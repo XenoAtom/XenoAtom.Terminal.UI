@@ -67,6 +67,21 @@ public sealed class VisualLayoutTests
         Assert.AreEqual(new Rectangle(0, 0, 6, 3), v.Bounds);
     }
 
+    [TestMethod]
+    public void Margin_Is_Excluded_From_Bounds_And_Included_In_DesiredSize()
+    {
+        var v = new FixedSizeVisual(new Size(4, 2))
+        {
+            Margin = new Thickness(1, 2, 3, 4),
+        };
+
+        v.Measure(new Size(100, 100));
+        Assert.AreEqual(new Size(4 + 4, 2 + 6), v.DesiredSize);
+
+        v.Arrange(new Rectangle(0, 0, 20, 20));
+        Assert.AreEqual(new Rectangle(1, 2, 4, 2), v.Bounds);
+    }
+
     private sealed class FixedSizeVisual : Visual
     {
         private readonly Size _size;
@@ -85,4 +100,3 @@ public sealed class VisualLayoutTests
         }
     }
 }
-
