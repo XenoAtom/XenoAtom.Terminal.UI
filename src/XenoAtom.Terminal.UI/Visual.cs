@@ -17,6 +17,9 @@ public abstract partial class Visual : BindableObject
     private List<Action<Visual>>? _initializers;
 
     private bool _initializersDirty;
+    private bool _measureDirty = true;
+    private bool _arrangeDirty = true;
+    private bool _renderDirty = true;
     private HashSet<BindingDependency>? _initializerDeps;
     private HashSet<BindingDependency>? _measureDeps;
     private HashSet<BindingDependency>? _arrangeDeps;
@@ -259,6 +262,7 @@ public abstract partial class Visual : BindableObject
         using var session = BindingManager.Current.StartTracking();
         DesiredSize = MeasureOverride(availableSize);
         StoreDependencies(ref _measureDeps, session.Dependencies);
+        _measureDirty = false;
     }
 
     public void Arrange(Rectangle finalRect)
@@ -270,6 +274,7 @@ public abstract partial class Visual : BindableObject
         using var session = BindingManager.Current.StartTracking();
         ArrangeOverride(finalRect);
         StoreDependencies(ref _arrangeDeps, session.Dependencies);
+        _arrangeDirty = false;
     }
 
     protected virtual Size MeasureOverride(Size availableSize)
@@ -313,6 +318,7 @@ public abstract partial class Visual : BindableObject
             }
 
             StoreDependencies(ref _renderDeps, session.Dependencies);
+            _renderDirty = false;
         }
 
         if (!visible)
@@ -382,6 +388,21 @@ public abstract partial class Visual : BindableObject
                 v._initializersDirty = true;
             }
 
+            if (!v._measureDirty && v._measureDeps is not null && v._measureDeps.Contains(dep))
+            {
+                v._measureDirty = true;
+            }
+
+            if (!v._arrangeDirty && v._arrangeDeps is not null && v._arrangeDeps.Contains(dep))
+            {
+                v._arrangeDirty = true;
+            }
+
+            if (!v._renderDirty && v._renderDeps is not null && v._renderDeps.Contains(dep))
+            {
+                v._renderDirty = true;
+            }
+
             for (var i = v.ChildrenCount - 1; i >= 0; i--)
             {
                 stack.Push(v.GetChild(i));
@@ -397,6 +418,9 @@ public abstract partial class Visual : BindableObject
         }
 
         _initializersDirty = false;
+        _measureDirty = true;
+        _arrangeDirty = true;
+        _renderDirty = true;
 
         using var session = BindingManager.Current.StartTracking();
         for (var i = 0; i < _initializers.Count; i++)
