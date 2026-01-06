@@ -9,7 +9,7 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI;
 
-public abstract partial class Visual : BindableObject
+public abstract partial class Visual
 {
     private Dictionary<object, Delegate?>? _handlers;
     private List<KeyBinding>? _keyBindings;
