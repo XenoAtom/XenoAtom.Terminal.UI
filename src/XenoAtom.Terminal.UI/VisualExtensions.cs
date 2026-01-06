@@ -2,6 +2,8 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Terminal.UI.Controls;
+
 namespace XenoAtom.Terminal.UI;
 
 public static partial class VisualExtensions
@@ -14,11 +16,10 @@ public static partial class VisualExtensions
         return obj;
     }
 
-    public static T Add<T>(this T obj, params Visual[] visuals) where T : Visual
+    public static T Add<T>(this T obj, params Visual[] visuals) where T : Panel
     {
         ArgumentNullException.ThrowIfNull(obj);
         obj.AddRange(visuals);
         return obj;
     }
 }
-

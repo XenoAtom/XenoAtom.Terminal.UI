@@ -17,7 +17,7 @@ public abstract partial class Panel : Visual, IEnumerable<Visual>
 
     protected IReadOnlyList<Visual> Children => _children;
 
-    internal override void AddRange(params Visual[] children)
+    internal void AddRange(params Visual[] children)
     {
         ArgumentNullException.ThrowIfNull(children);
         foreach (var child in children)

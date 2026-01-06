@@ -212,9 +212,6 @@ public abstract partial class Visual : BindableObject
         App?.RequestRender();
     }
 
-    internal virtual void AddRange(params Visual[] visuals)
-        => throw new InvalidOperationException($"'{GetType().Name}' does not support adding children.");
-
     internal void AttachToApp(TerminalApp app)
     {
         App = app;
