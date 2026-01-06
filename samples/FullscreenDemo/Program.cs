@@ -6,62 +6,9 @@ using XenoAtom.Terminal.UI.Hosting;
 
 using var session = Terminal.Open();
 
-var name = new TextBox().Text("Type here (Ctrl+A, Shift+Arrows, Ctrl+Left/Right)");
-var accept = new CheckBox().Text("Accept terms");
 var showModal = new CheckBox().Text("Show modal");
-var list = new ListBox()
-    .Items(new[] { "First", "Second", "Third", "Fourth", "Fifth", "Sixth" })
-    .Height(6);
 var progress = new ProgressBar().Label("Work").Value(0.0);
-
-var button = new Button().Text("Click me (mouse or Enter)");
 var statusState = new State<string>("ready");
-var status = new TextBlock().Text(() => $"Status: {statusState.Value}");
-button.Click += (_, _) => statusState.Value = "click received";
-
-var scrollContent = new VStack();
-for (var i = 0; i < 20; i++)
-{
-    scrollContent.Add($"Log line {i}");
-}
-var scroll = new ScrollViewer()
-    .Height(5)
-    .With(x => x.Content = scrollContent);
-
-var pickGroup = new Group()
-    .TopLeftText("Pick one")
-    .TopRightText("mouse wheel supported")
-    .Padding(new Thickness(1))
-    .Content(list);
-
-var scrollGroup = new Group()
-    .TopLeftText("ScrollViewer")
-    .TopRightText("focus + wheel")
-    .Padding(new Thickness(1))
-    .Content(scroll);
-
-var table = new Table().With(x =>
-{
-    x.HeaderCells = ["Task", "Status"];
-    x.RowCells =
-    [
-        ["Download", "Running"],
-        ["Render", "OK"],
-        ["Tests", "OK"]
-    ];
-});
-
-var main = new VStack(
-    "Fullscreen demo: Tab focus, mouse click, wheel scroll, F12 debug, Esc quit",
-    name,
-    accept,
-    showModal,
-    table,
-    pickGroup,
-    scrollGroup,
-    progress,
-    button,
-    status).Spacing(1);
 
 
 // Disabling this part for now, as the custom color on the selection is not nice with the default theme.
@@ -76,14 +23,6 @@ var main = new VStack(
 //    Disabled = Theme.Default.Disabled,
 //});
 
-var statusBar = new StatusBar()
-    .LeftText("Tab focus | Mouse click | Wheel scroll | F12 debug | Esc quit")
-    .RightText("XenoAtom.Terminal.UI");
-
-var layout = new DockLayout()
-    .Content(main)
-    .Bottom(statusBar);
-
 var overlay = new ComputedVisual(() =>
 {
     if (!showModal.IsChecked)
@@ -91,13 +30,12 @@ var overlay = new ComputedVisual(() =>
         return null;
     }
 
-    var close = new Button().Text("Close");
-    close.Click += (_, _) => showModal.IsChecked = false;
-
     var dialogContent = new VStack(
         "Modal dialog",
         new TextBlock().Text("This is a wrapped paragraph demonstrating document-style text rendering.").Wrap(true),
-        close).Spacing(1);
+        new Button()
+            .Text("Close")
+            .With(b => b.Click += (_, _) => showModal.IsChecked = false)).Spacing(1);
 
     var dialog = new Dialog()
         .Title("Modal dialog")
@@ -109,10 +47,58 @@ var overlay = new ComputedVisual(() =>
     return new ZStack(new Backdrop(), dialog);
 });
 
-var root = new WindowLayer { Content = layout };
-root.AddWindow(overlay);
-
-var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+var app = new TerminalApp(
+    new WindowLayer()
+        .Content(
+            new DockLayout()
+                .Content(
+                    new VStack(
+                        "Fullscreen demo: Tab focus, mouse click, wheel scroll, F12 debug, Esc quit",
+                        new TextBox().Text("Type here (Ctrl+A, Shift+Arrows, Ctrl+Left/Right)"),
+                        new CheckBox().Text("Accept terms"),
+                        showModal,
+                        new Table().With(t =>
+                        {
+                            t.HeaderCells = ["Task", "Status"];
+                            t.RowCells =
+                            [
+                                ["Download", "Running"],
+                                ["Render", "OK"],
+                                ["Tests", "OK"]
+                            ];
+                        }),
+                        new Group()
+                            .TopLeftText("Pick one")
+                            .TopRightText("mouse wheel supported")
+                            .Padding(new Thickness(1))
+                            .Content(new ListBox()
+                                .Items(new[] { "First", "Second", "Third", "Fourth", "Fifth", "Sixth" })
+                                .Height(6)),
+                        new Group()
+                            .TopLeftText("ScrollViewer")
+                            .TopRightText("focus + wheel")
+                            .Padding(new Thickness(1))
+                            .Content(new ScrollViewer()
+                                .Height(5)
+                                .Content(new VStack().With(v =>
+                                {
+                                    for (var i = 0; i < 20; i++)
+                                    {
+                                        v.Add($"Log line {i}");
+                                    }
+                                }))),
+                        progress,
+                        new Button()
+                            .Text("Click me (mouse or Enter)")
+                            .With(b => b.Click += (_, _) => statusState.Value = "click received"),
+                        new TextBlock().Text(() => $"Status: {statusState.Value}")).Spacing(1))
+                .Bottom(
+                    new StatusBar()
+                        .LeftText("Tab focus | Mouse click | Wheel scroll | F12 debug | Esc quit")
+                        .RightText("XenoAtom.Terminal.UI")))
+        .With(layer => layer.AddWindow(overlay)),
+    session.Instance,
+    new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
 
 using var cts = new CancellationTokenSource();
 _ = Task.Run(async () =>
