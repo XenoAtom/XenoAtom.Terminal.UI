@@ -53,7 +53,7 @@ public sealed partial class ProgressBar : Visuals.Visual
         var barWidth = Math.Max(0, rect.Width - prefixWidth - 6);
         var filled = (int)Math.Round(barWidth * value);
 
-        buffer.WriteText(rect.X, rect.Y, prefix.AsSpan(), theme.BaseTextStyle());
+        buffer.WriteText(rect.X, rect.Y, prefix.AsSpan(), CellStyle.None);
         var borderStyle = progressStyle.ResolveBorder(theme);
         var filledStyle = progressStyle.ResolveFilled(theme);
         var unfilledStyle = progressStyle.ResolveUnfilled(theme);
@@ -68,6 +68,6 @@ public sealed partial class ProgressBar : Visuals.Visual
         buffer.WriteText(rect.X + prefixWidth + 1 + barWidth, rect.Y, "]".AsSpan(), borderStyle);
 
         var percentText = $"{percent,3}%";
-        buffer.WriteText(rect.X + Math.Max(0, rect.Width - 4), rect.Y, percentText.AsSpan(), theme.BaseTextStyle());
+        buffer.WriteText(rect.X + Math.Max(0, rect.Width - 4), rect.Y, percentText.AsSpan(), CellStyle.None);
     }
 }

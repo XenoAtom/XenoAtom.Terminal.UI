@@ -123,6 +123,7 @@ public sealed class TerminalApp : IAsyncDisposable
             block.Arrange(new Rectangle(0, 0, width, block.DesiredSize.Height));
 
             var buffer = new CellBuffer(width, Math.Max(1, block.DesiredSize.Height));
+            buffer.Clear(block.GetTheme().BaseTextStyle());
             block.RenderTree(buffer);
 
             _inlineHost.WriteMarkupLines(buffer.ToMarkupLines());
@@ -319,6 +320,7 @@ public sealed class TerminalApp : IAsyncDisposable
             Root.Arrange(new Rectangle(0, 0, width, Root.DesiredSize.Height));
 
             var buffer = new CellBuffer(width, Math.Max(1, Root.DesiredSize.Height));
+            buffer.Clear(Root.GetTheme().BaseTextStyle());
             Root.RenderTree(buffer);
             if (_debugOverlayVisible)
             {

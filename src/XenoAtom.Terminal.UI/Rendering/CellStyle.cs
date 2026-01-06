@@ -49,6 +49,29 @@ public readonly struct CellStyle : IEquatable<CellStyle>
     internal CellStyle WithContinuation()
         => new((Value & ~ContinuationMask) | ContinuationMask);
 
+    internal CellStyle MergeUnspecified(CellStyle under)
+    {
+        var value = Value;
+        var underValue = under.Value;
+
+        if ((value & ForegroundMask) == 0)
+        {
+            value |= underValue & ForegroundMask;
+        }
+
+        if ((value & BackgroundMask) == 0)
+        {
+            value |= underValue & BackgroundMask;
+        }
+
+        if ((value & TextStyleMask) == 0)
+        {
+            value |= underValue & TextStyleMask;
+        }
+
+        return new CellStyle(value);
+    }
+
     public CellStyle WithTextStyle(TextStyle style)
         => new((Value & ~TextStyleMask) | ((ulong)style & TextStyleMask));
 

@@ -157,7 +157,7 @@ public sealed partial class Table : Visuals.Visual
         var headers = Headers;
         if (headers is not null)
         {
-            WriteRow(buffer, rect, y, headers, widths, border, glyphs, theme.BaseTextStyle() | TextStyle.Bold);
+            WriteRow(buffer, rect, y, headers, widths, border, glyphs, CellStyle.None | TextStyle.Bold);
             y++;
 
             if (ShowHeaderSeparator && y < rect.Y + rect.Height)
@@ -172,7 +172,7 @@ public sealed partial class Table : Visuals.Visual
         {
             for (var r = 0; r < rows.Count && y < rect.Y + rect.Height - 1; r++, y++)
             {
-                WriteRow(buffer, rect, y, rows[r], widths, border, glyphs, theme.BaseTextStyle());
+                WriteRow(buffer, rect, y, rows[r], widths, border, glyphs, CellStyle.None);
             }
         }
 

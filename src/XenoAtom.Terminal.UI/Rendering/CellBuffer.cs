@@ -92,7 +92,8 @@ public sealed class CellBuffer
 
         var index = (y * Width) + x;
         _scalars[index] = rune.Value;
-        _cells[index] = cellStyle.WithoutContinuation();
+        var style = cellStyle.WithoutContinuation().MergeUnspecified(_cells[index].WithoutContinuation());
+        _cells[index] = style;
 
         if (width > 1 && x + 1 < Width)
         {
@@ -101,7 +102,7 @@ public sealed class CellBuffer
                 return;
             }
             _scalars[index + 1] = ' ';
-            _cells[index + 1] = cellStyle.WithoutContinuation().WithContinuation();
+            _cells[index + 1] = style.WithContinuation();
         }
     }
 
