@@ -34,6 +34,9 @@ public sealed partial class TextBox : Visual, ICursorProvider
     [Bindable]
     public partial bool ShowBorder { get; set; }
 
+    [Bindable]
+    public partial TextAlignment TextAlignment { get; set; }
+
     public int CaretIndex
     {
         get => _caretIndex;
@@ -124,13 +127,21 @@ public sealed partial class TextBox : Visual, ICursorProvider
         var contentWidth = Math.Max(0, innerWidth - padding.Horizontal);
 
         var text = Text ?? string.Empty;
+        var alignment = TextAlignment;
 
         if (contentWidth == 0)
         {
             return;
         }
 
+        var totalTextCells = TerminalTextUtility.GetWidth(text.AsSpan());
+        var fits = totalTextCells <= contentWidth;
+
         var caretCells = TerminalTextUtility.GetWidth(text.AsSpan(0, Math.Clamp(_caretIndex, 0, text.Length)));
+        if (fits)
+        {
+            _scrollCellOffset = 0;
+        }
 
         if (caretCells < _scrollCellOffset)
         {
@@ -149,15 +160,37 @@ public sealed partial class TextBox : Visual, ICursorProvider
         TerminalTextUtility.TryGetIndexAtCell(text.AsSpan(), _scrollCellOffset + contentWidth, out var endIndex);
         endIndex = Math.Clamp(endIndex, startIndex, text.Length);
 
+        var contentXAligned = contentX;
+        if (fits && alignment != TextAlignment.Left && alignment != TextAlignment.Justify)
+        {
+            var shift = alignment == TextAlignment.Center ? (contentWidth - totalTextCells) / 2 : (contentWidth - totalTextCells);
+            contentXAligned = contentX + Math.Max(0, shift);
+        }
+
         if (!HasSelection)
         {
             if (text.Length == 0 && !isFocused && !string.IsNullOrEmpty(Placeholder))
             {
-                buffer.WriteText(contentX, textRowY, Placeholder.AsSpan(), placeholderStyle);
+                var placeholder = Placeholder.AsSpan();
+                if (alignment != TextAlignment.Left && alignment != TextAlignment.Justify)
+                {
+                    var placeholderCells = TerminalTextUtility.GetWidth(placeholder);
+                    if (placeholderCells < contentWidth)
+                    {
+                        var shift = alignment == TextAlignment.Center ? (contentWidth - placeholderCells) / 2 : (contentWidth - placeholderCells);
+                        contentXAligned = contentX + Math.Max(0, shift);
+                    }
+                    else
+                    {
+                        contentXAligned = contentX;
+                    }
+                }
+
+                buffer.WriteText(contentXAligned, textRowY, placeholder, placeholderStyle);
             }
             else
             {
-                buffer.WriteText(contentX, textRowY, text.AsSpan(startIndex, endIndex - startIndex), backgroundStyle);
+                buffer.WriteText(contentXAligned, textRowY, text.AsSpan(startIndex, endIndex - startIndex), backgroundStyle);
             }
         }
         else
@@ -168,19 +201,19 @@ public sealed partial class TextBox : Visual, ICursorProvider
 
             if (visSelStart > startIndex)
             {
-                buffer.WriteText(contentX, textRowY, text.AsSpan(startIndex, visSelStart - startIndex), backgroundStyle);
+                buffer.WriteText(contentXAligned, textRowY, text.AsSpan(startIndex, visSelStart - startIndex), backgroundStyle);
             }
 
             if (visSelEnd > visSelStart)
             {
                 var selStartCell = TerminalTextUtility.GetWidth(text.AsSpan(startIndex, visSelStart - startIndex));
-                buffer.WriteText(contentX + selStartCell, textRowY, text.AsSpan(visSelStart, visSelEnd - visSelStart), selectionStyle);
+                buffer.WriteText(contentXAligned + selStartCell, textRowY, text.AsSpan(visSelStart, visSelEnd - visSelStart), selectionStyle);
             }
 
             if (endIndex > visSelEnd)
             {
                 var selEndCell = TerminalTextUtility.GetWidth(text.AsSpan(startIndex, visSelEnd - startIndex));
-                buffer.WriteText(contentX + selEndCell, textRowY, text.AsSpan(visSelEnd, endIndex - visSelEnd), backgroundStyle);
+                buffer.WriteText(contentXAligned + selEndCell, textRowY, text.AsSpan(visSelEnd, endIndex - visSelEnd), backgroundStyle);
             }
         }
 
@@ -191,7 +224,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
             {
                 if (!HasSelection)
                 {
-                    buffer.SetCell(contentX + caretX, textRowY, new Rune(' '), CellStyle.None | TextStyle.Invert);
+                    buffer.SetCell(contentXAligned + caretX, textRowY, new Rune(' '), CellStyle.None | TextStyle.Invert);
                 }
             }
         }
@@ -699,6 +732,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
         var caretIndex = Math.Clamp(_caretIndex, 0, text.Length);
         var caretCells = TerminalTextUtility.GetWidth(text.AsSpan(0, caretIndex));
 
+        var innerLeft = rect.X + (showBorder ? 1 : 0);
         var caretX = caretCells - _scrollCellOffset;
         if (caretX < 0)
         {
@@ -707,8 +741,16 @@ public sealed partial class TextBox : Visual, ICursorProvider
 
         caretX = Math.Min(contentWidth, caretX);
 
-        var innerLeft = rect.X + (showBorder ? 1 : 0);
-        x = innerLeft + padding.Left + caretX;
+        var alignedOffset = 0;
+        var alignment = TextAlignment;
+        var totalTextCells = TerminalTextUtility.GetWidth(text.AsSpan());
+        if (_scrollCellOffset == 0 && totalTextCells <= contentWidth && alignment != TextAlignment.Left && alignment != TextAlignment.Justify)
+        {
+            alignedOffset = alignment == TextAlignment.Center ? (contentWidth - totalTextCells) / 2 : (contentWidth - totalTextCells);
+            alignedOffset = Math.Max(0, alignedOffset);
+        }
+
+        x = innerLeft + padding.Left + alignedOffset + caretX;
         y = rect.Y + (showBorder ? 1 : 0);
         return true;
     }
