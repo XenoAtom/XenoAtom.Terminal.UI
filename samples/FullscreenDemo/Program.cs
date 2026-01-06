@@ -1,3 +1,4 @@
+using XenoAtom.Ansi;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
@@ -57,7 +58,7 @@ main.SetEnvironmentValue(Theme.Key, new Theme
     Border = Theme.Default.Border,
     FocusBorder = Theme.Default.FocusBorder,
     Accent = Theme.Default.Accent,
-    Selection = new Rgb24(0x00, 0xFF, 0x00),
+    Selection = AnsiColor.Rgb(0x00, 0xFF, 0x00),
     Disabled = Theme.Default.Disabled,
 });
 
@@ -91,6 +92,7 @@ var overlay = new ComputedVisual(() =>
     var dialog = new Dialog
     {
         Title = "Modal dialog",
+        IsModal = true,
         Padding = new Thickness(1),
         Width = 60,
         Child = dialogContent,
