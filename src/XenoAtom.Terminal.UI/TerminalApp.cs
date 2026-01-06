@@ -281,6 +281,7 @@ public sealed class TerminalApp : IAsyncDisposable
     private void OnValueChanged(object owner, string name)
     {
         _ = name;
+        Root.PropagateBindingChanged(owner, name);
         if (ReferenceEquals(owner, Root) || owner is Visual)
         {
             RequestRender();

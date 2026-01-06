@@ -2,14 +2,12 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using System.Runtime.CompilerServices;
-
 namespace XenoAtom.Terminal.UI;
 
 public sealed class Computed<T> : IDisposable
 {
     private readonly Func<T> _compute;
-    private HashSet<BindingDependency> _deps = new(BindingDependencyComparer.Instance);
+    private HashSet<BindingDependency> _deps = new(BindingDependencyReferenceComparer.Instance);
     private bool _isDirty = true;
     private bool _isDisposed;
     private T? _value;
@@ -84,16 +82,4 @@ public sealed class Computed<T> : IDisposable
             throw new ObjectDisposedException(nameof(Computed<T>));
         }
     }
-
-    private sealed class BindingDependencyComparer : IEqualityComparer<BindingDependency>
-    {
-        public static BindingDependencyComparer Instance { get; } = new();
-
-        public bool Equals(BindingDependency x, BindingDependency y)
-            => ReferenceEquals(x.Owner, y.Owner) && ReferenceEquals(x.Name, y.Name);
-
-        public int GetHashCode(BindingDependency obj)
-            => HashCode.Combine(RuntimeHelpers.GetHashCode(obj.Owner), RuntimeHelpers.GetHashCode(obj.Name));
-    }
 }
-

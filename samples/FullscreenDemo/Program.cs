@@ -41,13 +41,13 @@ var scrollGroup = new Group
 
 var table = new Table
 {
-    HeaderCells = new Visual[] { "Task", "Status" },
-    RowCells = new Visual[][]
-    {
-        new Visual[] { "Download", "Running" },
-        new Visual[] { "Render", "OK" },
-        new Visual[] { "Tests", "OK" },
-    },
+    HeaderCells = ["Task", "Status"],
+    RowCells =
+    [
+        ["Download", "Running"],
+        ["Render", "OK"],
+        ["Tests", "OK"]
+    ],
 };
 
 var main = new VStack(

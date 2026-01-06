@@ -14,6 +14,13 @@ public abstract partial class Visual : BindableObject
     private Dictionary<object, Delegate?>? _handlers;
     private List<KeyBinding>? _keyBindings;
     private Dictionary<object, object?>? _environment;
+    private List<Action<Visual>>? _initializers;
+
+    private bool _initializersDirty;
+    private HashSet<BindingDependency>? _initializerDeps;
+    private HashSet<BindingDependency>? _measureDeps;
+    private HashSet<BindingDependency>? _arrangeDeps;
+    private HashSet<BindingDependency>? _renderDeps;
 
     public Visual? Parent { get; private set; }
 
@@ -193,6 +200,18 @@ public abstract partial class Visual : BindableObject
 
     public Theme GetTheme() => GetEnvironmentValue(Theme.Key);
 
+    public void Initialize(Action<Visual> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        _initializers ??= new List<Action<Visual>>();
+        _initializers.Add(configure);
+        _initializersDirty = true;
+        App?.RequestRender();
+    }
+
+    internal virtual void AddRange(params Visual[] visuals)
+        => throw new InvalidOperationException($"'{GetType().Name}' does not support adding children.");
+
     internal void AttachToApp(TerminalApp app)
     {
         App = app;
@@ -235,13 +254,22 @@ public abstract partial class Visual : BindableObject
 
     public void Measure(Size availableSize)
     {
+        EnsureInitialized();
+
+        using var session = BindingManager.Current.StartTracking();
         DesiredSize = MeasureOverride(availableSize);
+        StoreDependencies(ref _measureDeps, session.Dependencies);
     }
 
     public void Arrange(Rectangle finalRect)
     {
         Bounds = finalRect;
+
+        EnsureInitialized();
+
+        using var session = BindingManager.Current.StartTracking();
         ArrangeOverride(finalRect);
+        StoreDependencies(ref _arrangeDeps, session.Dependencies);
     }
 
     protected virtual Size MeasureOverride(Size availableSize)
@@ -271,13 +299,28 @@ public abstract partial class Visual : BindableObject
 
     internal void RenderTree(CellBuffer buffer)
     {
-        if (!IsVisible)
+        EnsureInitialized();
+
+        bool visible;
+        using (var session = BindingManager.Current.StartTracking())
+        {
+            visible = IsVisible;
+            if (visible)
+            {
+                buffer.PushClip(Bounds);
+                RenderOverride(buffer);
+                buffer.PopClip();
+            }
+
+            StoreDependencies(ref _renderDeps, session.Dependencies);
+        }
+
+        if (!visible)
         {
             return;
         }
 
         buffer.PushClip(Bounds);
-        RenderOverride(buffer);
         for (var i = 0; i < ChildrenCount; i++)
         {
             var child = GetChild(i);
@@ -322,6 +365,63 @@ public abstract partial class Visual : BindableObject
         }
 
         return this;
+    }
+
+    internal void PropagateBindingChanged(object owner, string name)
+    {
+        var stack = new Stack<Visual>();
+        stack.Push(this);
+
+        var dep = new BindingDependency(owner, name);
+
+        while (stack.Count > 0)
+        {
+            var v = stack.Pop();
+            if (v._initializerDeps is not null && v._initializerDeps.Contains(dep))
+            {
+                v._initializersDirty = true;
+            }
+
+            for (var i = v.ChildrenCount - 1; i >= 0; i--)
+            {
+                stack.Push(v.GetChild(i));
+            }
+        }
+    }
+
+    private void EnsureInitialized()
+    {
+        if (!_initializersDirty || _initializers is null)
+        {
+            return;
+        }
+
+        _initializersDirty = false;
+
+        using var session = BindingManager.Current.StartTracking();
+        for (var i = 0; i < _initializers.Count; i++)
+        {
+            _initializers[i](this);
+        }
+
+        StoreDependencies(ref _initializerDeps, session.Dependencies);
+    }
+
+    private static void StoreDependencies(ref HashSet<BindingDependency>? target, IReadOnlyCollection<BindingDependency> dependencies)
+    {
+        if (target is null)
+        {
+            target = new HashSet<BindingDependency>(BindingDependencyReferenceComparer.Instance);
+        }
+        else
+        {
+            target.Clear();
+        }
+
+        foreach (var dep in dependencies)
+        {
+            target.Add(dep);
+        }
     }
 
     protected void AddHandler<TArgs>(RoutedEvent<TArgs> routedEvent, EventHandler<TArgs> handler)
