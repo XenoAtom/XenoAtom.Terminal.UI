@@ -278,11 +278,10 @@ public sealed class TerminalApp : IAsyncDisposable
         _wakeUp.Set();
     }
 
-    private void OnValueChanged(object owner, string name)
+    private void OnValueChanged(Binding binding)
     {
-        _ = name;
-        Root.PropagateBindingChanged(owner, name);
-        if (ReferenceEquals(owner, Root) || owner is Visual)
+        Root.PropagateBindingChanged(binding);
+        if (ReferenceEquals(binding.Owner, Root) || binding.Owner is Visual)
         {
             RequestRender();
         }

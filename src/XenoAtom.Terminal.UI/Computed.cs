@@ -7,7 +7,7 @@ namespace XenoAtom.Terminal.UI;
 public sealed class Computed<T> : IDisposable
 {
     private readonly Func<T> _compute;
-    private HashSet<BindingDependency> _deps = new(BindingDependencyReferenceComparer.Instance);
+    private HashSet<Binding> _deps = new(BindingReferenceComparer.Instance);
     private bool _isDirty = true;
     private bool _isDisposed;
     private T? _value;
@@ -61,14 +61,14 @@ public sealed class Computed<T> : IDisposable
         _isDirty = false;
     }
 
-    private void OnBindingChanged(object owner, string name)
+    private void OnBindingChanged(Binding binding)
     {
         if (_isDisposed || _isDirty)
         {
             return;
         }
 
-        if (_deps.Contains(new BindingDependency(owner, name)))
+        if (_deps.Contains(binding))
         {
             _isDirty = true;
             Invalidated?.Invoke();

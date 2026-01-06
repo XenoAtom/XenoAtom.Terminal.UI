@@ -20,10 +20,10 @@ public abstract partial class Visual : BindableObject
     private bool _measureDirty = true;
     private bool _arrangeDirty = true;
     private bool _renderDirty = true;
-    private HashSet<BindingDependency>? _initializerDeps;
-    private HashSet<BindingDependency>? _measureDeps;
-    private HashSet<BindingDependency>? _arrangeDeps;
-    private HashSet<BindingDependency>? _renderDeps;
+    private HashSet<Binding>? _initializerDeps;
+    private HashSet<Binding>? _measureDeps;
+    private HashSet<Binding>? _arrangeDeps;
+    private HashSet<Binding>? _renderDeps;
 
     public Visual? Parent { get; private set; }
 
@@ -370,32 +370,30 @@ public abstract partial class Visual : BindableObject
         return this;
     }
 
-    internal void PropagateBindingChanged(object owner, string name)
+    internal void PropagateBindingChanged(Binding binding)
     {
         var stack = new Stack<Visual>();
         stack.Push(this);
 
-        var dep = new BindingDependency(owner, name);
-
         while (stack.Count > 0)
         {
             var v = stack.Pop();
-            if (v._initializerDeps is not null && v._initializerDeps.Contains(dep))
+            if (v._initializerDeps is not null && v._initializerDeps.Contains(binding))
             {
                 v._initializersDirty = true;
             }
 
-            if (!v._measureDirty && v._measureDeps is not null && v._measureDeps.Contains(dep))
+            if (!v._measureDirty && v._measureDeps is not null && v._measureDeps.Contains(binding))
             {
                 v._measureDirty = true;
             }
 
-            if (!v._arrangeDirty && v._arrangeDeps is not null && v._arrangeDeps.Contains(dep))
+            if (!v._arrangeDirty && v._arrangeDeps is not null && v._arrangeDeps.Contains(binding))
             {
                 v._arrangeDirty = true;
             }
 
-            if (!v._renderDirty && v._renderDeps is not null && v._renderDeps.Contains(dep))
+            if (!v._renderDirty && v._renderDeps is not null && v._renderDeps.Contains(binding))
             {
                 v._renderDirty = true;
             }
@@ -428,11 +426,11 @@ public abstract partial class Visual : BindableObject
         StoreDependencies(ref _initializerDeps, session.Dependencies);
     }
 
-    private static void StoreDependencies(ref HashSet<BindingDependency>? target, IReadOnlyCollection<BindingDependency> dependencies)
+    private static void StoreDependencies(ref HashSet<Binding>? target, IReadOnlyCollection<Binding> dependencies)
     {
         if (target is null)
         {
-            target = new HashSet<BindingDependency>(BindingDependencyReferenceComparer.Instance);
+            target = new HashSet<Binding>(BindingReferenceComparer.Instance);
         }
         else
         {

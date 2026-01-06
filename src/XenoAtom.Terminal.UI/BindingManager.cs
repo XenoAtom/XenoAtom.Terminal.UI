@@ -2,8 +2,6 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using System.Runtime.CompilerServices;
-
 namespace XenoAtom.Terminal.UI;
 
 /// <summary>
@@ -13,14 +11,14 @@ public sealed class BindingManager
 {
     public static BindingManager Current { get; } = new();
 
-    public event Action<object, string>? ValueChanged;
+    public event Action<Binding>? ValueChanged;
 
     [ThreadStatic]
     private static TrackingContext? _tracking;
 
     public T GetValue<T>(object owner, ref T backingField, BindingAccessor<T> accessor)
     {
-        _tracking?.RegisterRead(owner, accessor.Name);
+        _tracking?.RegisterRead(owner, accessor);
         return backingField;
     }
 
@@ -38,7 +36,7 @@ public sealed class BindingManager
         }
 
         backingField = value;
-        ValueChanged?.Invoke(owner, accessor.Name);
+        ValueChanged?.Invoke(new Binding(owner, accessor));
     }
 
     public TrackingSession StartTracking()
@@ -51,7 +49,8 @@ public sealed class BindingManager
 
     public void RegisterRead(object owner, string name)
     {
-        _tracking?.RegisterRead(owner, name);
+        ArgumentNullException.ThrowIfNull(name);
+        _tracking?.RegisterRead(owner, GetNameAccessor(name));
     }
 
     public void NotifyValueChanged(object owner, string name)
@@ -61,20 +60,38 @@ public sealed class BindingManager
             app.Dispatcher.VerifyAccess();
         }
 
-        ValueChanged?.Invoke(owner, name);
+        ArgumentNullException.ThrowIfNull(name);
+        ValueChanged?.Invoke(new Binding(owner, GetNameAccessor(name)));
+    }
+
+    public void RegisterRead(object owner, BindingAccessor accessor)
+    {
+        ArgumentNullException.ThrowIfNull(accessor);
+        _tracking?.RegisterRead(owner, accessor);
+    }
+
+    public void NotifyValueChanged(object owner, BindingAccessor accessor)
+    {
+        ArgumentNullException.ThrowIfNull(accessor);
+        if (owner is Visual { App: { } app })
+        {
+            app.Dispatcher.VerifyAccess();
+        }
+
+        ValueChanged?.Invoke(new Binding(owner, accessor));
     }
 
     public readonly struct TrackingSession : IDisposable
     {
         private readonly TrackingContext? _previous;
 
-        internal TrackingSession(object? previous, IReadOnlyCollection<BindingDependency> dependencies)
+        internal TrackingSession(object? previous, IReadOnlyCollection<Binding> dependencies)
         {
             _previous = (TrackingContext?)previous;
             Dependencies = dependencies;
         }
 
-        public IReadOnlyCollection<BindingDependency> Dependencies { get; }
+        public IReadOnlyCollection<Binding> Dependencies { get; }
 
         public void Dispose()
         {
@@ -84,24 +101,41 @@ public sealed class BindingManager
 
     private sealed class TrackingContext
     {
-        private readonly HashSet<BindingDependency> _dependencies = new(BindingDependencyComparer.Instance);
+        private readonly HashSet<Binding> _dependencies = new(BindingReferenceComparer.Instance);
 
-        public IReadOnlyCollection<BindingDependency> Dependencies => _dependencies;
+        public IReadOnlyCollection<Binding> Dependencies => _dependencies;
 
-        public void RegisterRead(object owner, string name)
+        public void RegisterRead(object owner, BindingAccessor accessor)
         {
-            _dependencies.Add(new BindingDependency(owner, name));
+            _dependencies.Add(new Binding(owner, accessor));
         }
     }
 
-    private sealed class BindingDependencyComparer : IEqualityComparer<BindingDependency>
+    private readonly Dictionary<string, BindingAccessor> _nameAccessors = new(StringComparer.Ordinal);
+
+    private BindingAccessor GetNameAccessor(string name)
     {
-        public static BindingDependencyComparer Instance { get; } = new();
+        lock (_nameAccessors)
+        {
+            if (_nameAccessors.TryGetValue(name, out var accessor))
+            {
+                return accessor;
+            }
 
-        public bool Equals(BindingDependency x, BindingDependency y)
-            => ReferenceEquals(x.Owner, y.Owner) && ReferenceEquals(x.Name, y.Name);
+            accessor = new NameBindingAccessor(name);
+            _nameAccessors.Add(name, accessor);
+            return accessor;
+        }
+    }
 
-        public int GetHashCode(BindingDependency obj)
-            => HashCode.Combine(RuntimeHelpers.GetHashCode(obj.Owner), RuntimeHelpers.GetHashCode(obj.Name));
+    private sealed class NameBindingAccessor : BindingAccessor
+    {
+        public NameBindingAccessor(string name) : base(name)
+        {
+        }
+
+        public override object? GetValue(object instance) => throw new NotSupportedException();
+
+        public override void SetValue(object instance, object? value) => throw new NotSupportedException();
     }
 }

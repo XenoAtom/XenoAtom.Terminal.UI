@@ -7,8 +7,15 @@ namespace XenoAtom.Terminal.UI;
 /// <summary>
 /// Represents a strongly-typed reference to a bindable property on an object instance.
 /// </summary>
-/// <typeparam name="T">The property type.</typeparam>
-public readonly record struct Binding<T>(object Owner, BindingAccessor<T> Accessor)
+public readonly record struct Binding(object Owner, BindingAccessor Accessor)
 {
 }
 
+/// <summary>
+/// Represents a strongly-typed reference to a bindable property on an object instance.
+/// </summary>
+/// <typeparam name="T">The property type.</typeparam>
+public readonly record struct Binding<T>(object Owner, BindingAccessor<T> Accessor)
+{
+    public static implicit operator Binding(Binding<T> binding) => new(binding.Owner, binding.Accessor);
+}

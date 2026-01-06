@@ -649,9 +649,9 @@ public sealed class TerminalAppTests
         var checkBox = new CheckBox("A", isChecked: false);
         var changed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        void Handler(object owner, string name)
+        void Handler(Binding binding)
         {
-            if (ReferenceEquals(owner, checkBox) && name == "IsChecked")
+            if (ReferenceEquals(binding.Owner, checkBox) && binding.Accessor.Name == "IsChecked")
             {
                 changed.TrySetResult();
             }
@@ -699,9 +699,9 @@ public sealed class TerminalAppTests
         await Task.Delay(10);
 
         var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        void Handler(object owner, string name)
+        void Handler(Binding binding)
         {
-            if (ReferenceEquals(owner, textBox) && name == "Text" && textBox.Text == "axyzc")
+            if (ReferenceEquals(binding.Owner, textBox) && binding.Accessor.Name == "Text" && textBox.Text == "axyzc")
             {
                 reached.TrySetResult();
             }
@@ -773,9 +773,9 @@ public sealed class TerminalAppTests
         await Task.Delay(10);
 
         var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        void Handler(object owner, string name)
+        void Handler(Binding binding)
         {
-            if (ReferenceEquals(owner, textBox) && name == "Text" && textBox.Text == "hello")
+            if (ReferenceEquals(binding.Owner, textBox) && binding.Accessor.Name == "Text" && textBox.Text == "hello")
             {
                 reached.TrySetResult();
             }
@@ -932,9 +932,9 @@ public sealed class TerminalAppTests
         };
 
         var selected = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        void Handler(object owner, string name)
+        void Handler(Binding binding)
         {
-            if (ReferenceEquals(owner, listBox) && name == "SelectedIndex" && listBox.SelectedIndex == 1)
+            if (ReferenceEquals(binding.Owner, listBox) && binding.Accessor.Name == "SelectedIndex" && listBox.SelectedIndex == 1)
             {
                 selected.TrySetResult();
             }
