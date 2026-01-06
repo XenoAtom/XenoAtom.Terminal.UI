@@ -25,12 +25,14 @@ public sealed class TerminalApp : IAsyncDisposable
     private TerminalPosition _lastCursorPosition;
     private bool _debugOverlayVisible;
     private int _renderFrameIndex;
+    private Task? _runTask;
 
     public TerminalApp(Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
     {
         Root = root ?? throw new ArgumentNullException(nameof(root));
         _terminal = terminal ?? global::XenoAtom.Terminal.Terminal.Instance;
         _options = options ?? new TerminalAppOptions();
+        Dispatcher = new Dispatcher(this);
 
         if (_options.HostKind == TerminalHostKind.Fullscreen)
         {
@@ -46,6 +48,8 @@ public sealed class TerminalApp : IAsyncDisposable
 
     public Visual Root { get; }
 
+    public Dispatcher Dispatcher { get; }
+
     public Visual? FocusedElement { get; private set; }
 
     public void Post(Action action)
@@ -60,6 +64,17 @@ public sealed class TerminalApp : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         Stop();
+        if (_runTask is not null)
+        {
+            try
+            {
+                await _runTask.ConfigureAwait(false);
+            }
+            catch
+            {
+                // Ignore.
+            }
+        }
         _inlineHost?.Dispose();
         _fullscreenHost?.Dispose();
         _cts.Dispose();
@@ -68,6 +83,7 @@ public sealed class TerminalApp : IAsyncDisposable
 
     public void WriteMarkupLine(string markup)
     {
+        Dispatcher.VerifyAccess();
         if (_inlineHost is null)
         {
             throw new InvalidOperationException("Flow output is only supported in inline host mode.");
@@ -80,6 +96,7 @@ public sealed class TerminalApp : IAsyncDisposable
     public void Append(Visual block)
     {
         ArgumentNullException.ThrowIfNull(block);
+        Dispatcher.VerifyAccess();
 
         if (_inlineHost is null)
         {
@@ -112,10 +129,47 @@ public sealed class TerminalApp : IAsyncDisposable
         RequestRender();
     }
 
-    public async Task RunAsync(CancellationToken cancellationToken = default)
+    public Task RunAsync(CancellationToken cancellationToken = default)
+    {
+        if (_runTask is not null)
+        {
+            throw new InvalidOperationException("The app is already running.");
+        }
+
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _runTask = tcs.Task;
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                RunCore(cancellationToken);
+                tcs.TrySetResult();
+            }
+            catch (OperationCanceledException)
+            {
+                tcs.TrySetResult();
+            }
+            catch (Exception ex)
+            {
+                tcs.TrySetException(ex);
+            }
+        })
+        {
+            IsBackground = true,
+            Name = "XenoAtom.Terminal.UI",
+        };
+
+        thread.Start();
+        return _runTask;
+    }
+
+    private void RunCore(CancellationToken cancellationToken)
     {
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
         var token = linkedCts.Token;
+
+        Dispatcher.BindToCurrentThread();
 
         Root.AttachToApp(this);
         BindingManager.Current.ValueChanged += OnValueChanged;
@@ -177,14 +231,14 @@ public sealed class TerminalApp : IAsyncDisposable
                 var readEventTask = _terminal.ReadEventAsync(waitCts.Token).AsTask();
                 var wakeTask = _wakeUp.WaitAsync(token);
 
-                var completed = await Task.WhenAny(readEventTask, wakeTask).ConfigureAwait(false);
+                var completed = Task.WhenAny(readEventTask, wakeTask).GetAwaiter().GetResult();
                 if (completed == wakeTask)
                 {
                     waitCts.Cancel();
 
                     try
                     {
-                        var maybeEvent = await readEventTask.ConfigureAwait(false);
+                        var maybeEvent = readEventTask.GetAwaiter().GetResult();
                         HandleTerminalEvent(maybeEvent);
                     }
                     catch (OperationCanceledException)
@@ -194,7 +248,7 @@ public sealed class TerminalApp : IAsyncDisposable
                     continue;
                 }
 
-                var ev = await readEventTask.ConfigureAwait(false);
+                var ev = readEventTask.GetAwaiter().GetResult();
                 HandleTerminalEvent(ev);
             }
         }
@@ -207,6 +261,7 @@ public sealed class TerminalApp : IAsyncDisposable
             rawScope.Dispose();
             alternateScope.Dispose();
             BindingManager.Current.ValueChanged -= OnValueChanged;
+            Root.DetachFromApp();
         }
     }
 

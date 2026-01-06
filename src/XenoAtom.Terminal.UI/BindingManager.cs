@@ -32,6 +32,11 @@ public sealed class BindingManager
             return;
         }
 
+        if (owner is Visual { App: { } app })
+        {
+            app.Dispatcher.VerifyAccess();
+        }
+
         backingField = value;
         ValueChanged?.Invoke(owner, accessor.Name);
     }
@@ -51,6 +56,11 @@ public sealed class BindingManager
 
     public void NotifyValueChanged(object owner, string name)
     {
+        if (owner is Visual { App: { } app })
+        {
+            app.Dispatcher.VerifyAccess();
+        }
+
         ValueChanged?.Invoke(owner, name);
     }
 
