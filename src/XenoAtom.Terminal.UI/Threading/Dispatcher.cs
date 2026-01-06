@@ -17,6 +17,7 @@ public sealed class Dispatcher
     internal void BindToCurrentThread()
     {
         _threadId = Environment.CurrentManagedThreadId;
+        SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(this));
     }
 
     public bool CheckAccess()
@@ -82,6 +83,94 @@ public sealed class Dispatcher
                 tcs.SetException(ex);
             }
         });
+        return tcs.Task;
+    }
+
+    public Task InvokeAsync(Func<Task> func)
+    {
+        ArgumentNullException.ThrowIfNull(func);
+
+        if (CheckAccess())
+        {
+            return func();
+        }
+
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _app.Post(() =>
+        {
+            Task task;
+            try
+            {
+                task = func();
+            }
+            catch (Exception ex)
+            {
+                tcs.SetException(ex);
+                return;
+            }
+
+            task.ContinueWith(static (t, state) =>
+            {
+                var completion = (TaskCompletionSource)state!;
+                if (t.IsFaulted)
+                {
+                    completion.TrySetException(t.Exception!);
+                }
+                else if (t.IsCanceled)
+                {
+                    completion.TrySetCanceled();
+                }
+                else
+                {
+                    completion.TrySetResult();
+                }
+            }, tcs, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        });
+
+        return tcs.Task;
+    }
+
+    public Task<T> InvokeAsync<T>(Func<Task<T>> func)
+    {
+        ArgumentNullException.ThrowIfNull(func);
+
+        if (CheckAccess())
+        {
+            return func();
+        }
+
+        var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _app.Post(() =>
+        {
+            Task<T> task;
+            try
+            {
+                task = func();
+            }
+            catch (Exception ex)
+            {
+                tcs.SetException(ex);
+                return;
+            }
+
+            task.ContinueWith(static (t, state) =>
+            {
+                var completion = (TaskCompletionSource<T>)state!;
+                if (t.IsFaulted)
+                {
+                    completion.TrySetException(t.Exception!);
+                }
+                else if (t.IsCanceled)
+                {
+                    completion.TrySetCanceled();
+                }
+                else
+                {
+                    completion.TrySetResult(t.Result);
+                }
+            }, tcs, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        });
+
         return tcs.Task;
     }
 }
