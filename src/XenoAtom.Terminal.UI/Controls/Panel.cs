@@ -13,6 +13,8 @@ public abstract partial class Panel : Visual, IEnumerable<Visual>
 
     protected Panel()
     {
+        HorizontalAlignment = HorizontalAlignment.Stretch;
+        VerticalAlignment = VerticalAlignment.Stretch;
     }
 
     protected IReadOnlyList<Visual> Children => _children;

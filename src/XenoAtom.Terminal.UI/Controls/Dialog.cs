@@ -20,6 +20,12 @@ public sealed partial class Dialog : Visual, IModalVisual
     private int _dragStartLeft;
     private int _dragStartTop;
 
+    public Dialog()
+    {
+        HorizontalAlignment = HorizontalAlignment.Stretch;
+        VerticalAlignment = VerticalAlignment.Stretch;
+    }
+
     [Bindable]
     public partial string? Title { get; set; }
 

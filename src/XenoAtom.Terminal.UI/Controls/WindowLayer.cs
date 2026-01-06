@@ -10,6 +10,12 @@ public sealed partial class WindowLayer : Visual
 {
     private readonly List<Visual> _windows = new();
 
+    public WindowLayer()
+    {
+        HorizontalAlignment = HorizontalAlignment.Stretch;
+        VerticalAlignment = VerticalAlignment.Stretch;
+    }
+
     [Bindable]
     public partial Visual? Content { get; set; }
 

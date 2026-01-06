@@ -46,6 +46,14 @@ public sealed partial class Group : Visual
         var desiredWidth = 2 + padding.Horizontal + (content?.DesiredSize.Width ?? 0);
         var desiredHeight = 2 + padding.Vertical + (content?.DesiredSize.Height ?? 0);
 
+        var topRequired = GetLabelWidth(TopLeftText) + GetLabelWidth(TopRightText);
+        var bottomRequired = GetLabelWidth(BottomLeftText) + GetLabelWidth(BottomRightText);
+        var labelRequired = Math.Max(topRequired, bottomRequired);
+        if (labelRequired > 0)
+        {
+            desiredWidth = Math.Max(desiredWidth, 2 + labelRequired);
+        }
+
         return new Size(Math.Min(availableSize.Width, desiredWidth), Math.Min(availableSize.Height, desiredHeight));
     }
 
@@ -157,5 +165,16 @@ public sealed partial class Group : Visual
         var cells = TerminalTextUtility.GetWidth(span);
         var startX = x + Math.Max(0, maxWidth - cells);
         buffer.WriteText(startX, y, span, style);
+    }
+
+    private static int GetLabelWidth(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return 0;
+        }
+
+        var label = $" {text} ";
+        return TerminalTextUtility.GetWidth(label.AsSpan());
     }
 }
