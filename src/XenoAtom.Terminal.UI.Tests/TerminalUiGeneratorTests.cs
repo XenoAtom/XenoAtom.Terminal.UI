@@ -27,6 +27,9 @@ public sealed class TerminalUiGeneratorTests
                               {
                                   [Bindable]
                                   public partial int Count { get; set; }
+
+                                  [Bindable]
+                                  public partial Visual? Content { get; set; }
                               
                                   [RoutedEvent(RoutingStrategy.Preview | RoutingStrategy.Bubble)]
                                   protected virtual void OnPointerPressed(PointerPressedEventArgs e)
@@ -63,6 +66,9 @@ public sealed class TerminalUiGeneratorTests
         Assert.IsTrue(generatedSources.Any(s => s.Contains("MyControl", StringComparison.Ordinal)), "Expected generated sources for MyControl.");
         Assert.IsTrue(generatedSources.Any(s => s.Contains("IBindings", StringComparison.Ordinal)), "Expected generated IBindings interface.");
         Assert.IsTrue(generatedSources.Any(s => s.Contains("BindingManager.Current.GetValue(this", StringComparison.Ordinal)), "Expected generated binding accessors.");
+        Assert.IsTrue(generatedSources.Any(s => s.Contains("RegisterRead(this, nameof(Content))", StringComparison.Ordinal)), "Expected generated Visual bindable getter tracking.");
+        Assert.IsTrue(generatedSources.Any(s => s.Contains("AttachChild(value)", StringComparison.Ordinal)), "Expected generated Visual bindable setter child attachment.");
+        Assert.IsTrue(generatedSources.Any(s => s.Contains("NotifyValueChanged(this, nameof(Content))", StringComparison.Ordinal)), "Expected generated Visual bindable setter notifications.");
         Assert.IsTrue(generatedSources.Any(s => s.Contains("PointerPressedEvent", StringComparison.Ordinal)), "Expected generated routed event field.");
     }
 

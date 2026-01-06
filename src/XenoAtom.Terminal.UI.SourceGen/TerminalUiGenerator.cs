@@ -76,6 +76,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
         string ContainingTypeDisplayName,
         string PropertyName,
         string PropertyTypeFullyQualified,
+        bool IsVisualChildProperty,
         string PropertyModifiers,
         string BackingFieldName,
         string AccessorClassName)
@@ -131,6 +132,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
 
             var propertyTypeFullyQualified = propertySymbol.Type.ToDisplayString(typeFormat);
+            var isVisualChildProperty = ComputeIsVisualChildProperty(context.SemanticModel.Compilation, containingType, propertySymbol.Type);
 
             var propertyName = propertySymbol.Name;
             var backingFieldName = "_" + ToLowerCamel(propertyName);
@@ -144,9 +146,44 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 ContainingTypeDisplayName: containingTypeDisplayName,
                 PropertyName: propertyName,
                 PropertyTypeFullyQualified: propertyTypeFullyQualified,
+                IsVisualChildProperty: isVisualChildProperty,
                 PropertyModifiers: modifiers,
                 BackingFieldName: backingFieldName,
                 AccessorClassName: accessorClassName), diagnostics.ToImmutable());
+        }
+
+        private static bool ComputeIsVisualChildProperty(Compilation compilation, INamedTypeSymbol containingType, ITypeSymbol propertyType)
+        {
+            var visualType = compilation.GetTypeByMetadataName("XenoAtom.Terminal.UI.Visual");
+            if (visualType is null)
+            {
+                return false;
+            }
+
+            return IsOrInheritsFrom(containingType, visualType) && IsOrInheritsFrom(propertyType, visualType);
+        }
+
+        private static bool IsOrInheritsFrom(ITypeSymbol type, INamedTypeSymbol baseType)
+        {
+            if (SymbolEqualityComparer.Default.Equals(type, baseType))
+            {
+                return true;
+            }
+
+            if (type is not INamedTypeSymbol named)
+            {
+                return false;
+            }
+
+            for (var current = named.BaseType; current is not null; current = current.BaseType)
+            {
+                if (SymbolEqualityComparer.Default.Equals(current, baseType))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public static bool IsPartial(INamedTypeSymbol typeSymbol)
@@ -396,8 +433,39 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 sb.Append(baseIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                 sb.Append(baseIndent).Append(p.PropertyModifiers).Append(' ').Append(p.PropertyTypeFullyQualified).Append(' ').Append(p.PropertyName).AppendLine();
                 sb.Append(baseIndent).AppendLine("{");
-                sb.Append(baseIndent).Append("    get => global::XenoAtom.Terminal.UI.BindingManager.Current.GetValue(this, ref ").Append(p.BackingFieldName).Append(", ").Append(p.AccessorClassName).AppendLine(".Instance);");
-                sb.Append(baseIndent).Append("    set => global::XenoAtom.Terminal.UI.BindingManager.Current.SetValue(this, ref ").Append(p.BackingFieldName).Append(", value, ").Append(p.AccessorClassName).AppendLine(".Instance);");
+                if (p.IsVisualChildProperty)
+                {
+                    sb.Append(baseIndent).Append("    get").AppendLine();
+                    sb.Append(baseIndent).AppendLine("    {");
+                    sb.Append(baseIndent).Append("        global::XenoAtom.Terminal.UI.BindingManager.Current.RegisterRead(this, nameof(").Append(p.PropertyName).AppendLine("));");
+                    sb.Append(baseIndent).Append("        return ").Append(p.BackingFieldName).AppendLine(";");
+                    sb.Append(baseIndent).AppendLine("    }");
+                    sb.Append(baseIndent).Append("    set").AppendLine();
+                    sb.Append(baseIndent).AppendLine("    {");
+                    sb.Append(baseIndent).Append("        if (global::System.Object.ReferenceEquals(").Append(p.BackingFieldName).AppendLine(", value))");
+                    sb.Append(baseIndent).AppendLine("        {");
+                    sb.Append(baseIndent).AppendLine("            return;");
+                    sb.Append(baseIndent).AppendLine("        }");
+                    sb.AppendLine();
+                    sb.Append(baseIndent).Append("        if (").Append(p.BackingFieldName).AppendLine(" is not null)");
+                    sb.Append(baseIndent).AppendLine("        {");
+                    sb.Append(baseIndent).Append("            throw new global::System.InvalidOperationException(\"").Append(containingType.Name).Append(" currently only supports setting ").Append(p.PropertyName).AppendLine(" once.\");");
+                    sb.Append(baseIndent).AppendLine("        }");
+                    sb.AppendLine();
+                    sb.Append(baseIndent).Append("        ").Append(p.BackingFieldName).AppendLine(" = value;");
+                    sb.Append(baseIndent).AppendLine("        if (value is not null)");
+                    sb.Append(baseIndent).AppendLine("        {");
+                    sb.Append(baseIndent).AppendLine("            AttachChild(value);");
+                    sb.Append(baseIndent).AppendLine("        }");
+                    sb.AppendLine();
+                    sb.Append(baseIndent).Append("        global::XenoAtom.Terminal.UI.BindingManager.Current.NotifyValueChanged(this, nameof(").Append(p.PropertyName).AppendLine("));");
+                    sb.Append(baseIndent).AppendLine("    }");
+                }
+                else
+                {
+                    sb.Append(baseIndent).Append("    get => global::XenoAtom.Terminal.UI.BindingManager.Current.GetValue(this, ref ").Append(p.BackingFieldName).Append(", ").Append(p.AccessorClassName).AppendLine(".Instance);");
+                    sb.Append(baseIndent).Append("    set => global::XenoAtom.Terminal.UI.BindingManager.Current.SetValue(this, ref ").Append(p.BackingFieldName).Append(", value, ").Append(p.AccessorClassName).AppendLine(".Instance);");
+                }
                 sb.Append(baseIndent).AppendLine("}");
                 sb.AppendLine();
 
