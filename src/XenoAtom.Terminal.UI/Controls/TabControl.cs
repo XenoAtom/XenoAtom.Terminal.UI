@@ -61,7 +61,7 @@ public sealed class TabControl : Visuals.Visual
 
         var index = _tabs.Count;
         _tabs.Add(new TabPage(header, content));
-        AddChild(content);
+        AttachChild(content);
 
         content.IsVisible = index == SelectedIndex;
         if (index == 0)
@@ -71,6 +71,10 @@ public sealed class TabControl : Visuals.Visual
 
         App?.RequestRender();
     }
+
+    protected override int ChildrenCount => _tabs.Count;
+
+    protected override Visuals.Visual GetChild(int index) => _tabs[index].Content;
 
     protected override Size MeasureOverride(Size availableSize)
     {

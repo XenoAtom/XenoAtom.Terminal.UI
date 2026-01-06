@@ -9,6 +9,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 public sealed class WindowLayer : Visuals.Visual
 {
     private Visuals.Visual? _content;
+    private readonly List<Visuals.Visual> _windows = new();
 
     public Visuals.Visual? Content
     {
@@ -28,7 +29,7 @@ public sealed class WindowLayer : Visuals.Visual
             _content = value;
             if (value is not null)
             {
-                AddChild(value);
+                AttachChild(value);
             }
 
             App?.RequestRender();
@@ -38,7 +39,8 @@ public sealed class WindowLayer : Visuals.Visual
     public void AddWindow(Visuals.Visual window)
     {
         ArgumentNullException.ThrowIfNull(window);
-        AddChild(window);
+        AttachChild(window);
+        _windows.Add(window);
         App?.RequestRender();
     }
 
@@ -66,7 +68,41 @@ public sealed class WindowLayer : Visuals.Visual
             return;
         }
 
-        BringChildToFront(rootChild);
+        BringWindowToFront(rootChild);
+    }
+
+    protected override int ChildrenCount => (_content is null ? 0 : 1) + _windows.Count;
+
+    protected override Visuals.Visual GetChild(int index)
+    {
+        if (_content is not null)
+        {
+            if (index == 0)
+            {
+                return _content;
+            }
+
+            index--;
+        }
+
+        if ((uint)index >= (uint)_windows.Count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+
+        return _windows[index];
+    }
+
+    private void BringWindowToFront(Visuals.Visual window)
+    {
+        var index = _windows.IndexOf(window);
+        if (index < 0 || index == _windows.Count - 1)
+        {
+            return;
+        }
+
+        _windows.RemoveAt(index);
+        _windows.Add(window);
+        App?.RequestRender();
     }
 }
-

@@ -105,9 +105,49 @@ public sealed partial class DockLayout : Visuals.Visual
         field = value;
         if (value is not null)
         {
-            AddChild(value);
+            AttachChild(value);
         }
 
         App?.RequestRender();
+    }
+
+    protected override int ChildrenCount
+    {
+        get
+        {
+            var count = 0;
+            if (_top is not null) count++;
+            if (_content is not null) count++;
+            if (_bottom is not null) count++;
+            return count;
+        }
+    }
+
+    protected override Visuals.Visual GetChild(int index)
+    {
+        if ((uint)index >= (uint)ChildrenCount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+
+        var i = index;
+        if (_top is not null)
+        {
+            if (i == 0) return _top;
+            i--;
+        }
+
+        if (_content is not null)
+        {
+            if (i == 0) return _content;
+            i--;
+        }
+
+        if (_bottom is not null)
+        {
+            return _bottom;
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(index));
     }
 }

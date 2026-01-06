@@ -60,12 +60,17 @@ public sealed partial class Dialog : Visuals.Visual, IModalVisual
             _child = value;
             if (value is not null)
             {
-                AddChild(value);
+                AttachChild(value);
             }
 
             App?.RequestRender();
         }
     }
+
+    protected override int ChildrenCount => _child is null ? 0 : 1;
+
+    protected override Visuals.Visual GetChild(int index)
+        => index == 0 && _child is not null ? _child : throw new ArgumentOutOfRangeException(nameof(index));
 
     protected override Size MeasureOverride(Size availableSize)
     {

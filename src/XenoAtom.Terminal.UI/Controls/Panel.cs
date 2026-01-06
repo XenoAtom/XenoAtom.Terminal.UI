@@ -6,17 +6,27 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public abstract partial class Panel : Visuals.Visual
 {
+    private readonly List<Visuals.Visual> _children = new();
+
     protected Panel()
     {
     }
+
+    protected IReadOnlyList<Visuals.Visual> Children => _children;
 
     public void Add(params Visuals.Visual[] children)
     {
         ArgumentNullException.ThrowIfNull(children);
         foreach (var child in children)
         {
-            AddChild(child);
+            AttachChild(child);
+            _children.Add(child);
         }
-    }
-}
 
+        App?.RequestRender();
+    }
+
+    protected override int ChildrenCount => _children.Count;
+
+    protected override Visuals.Visual GetChild(int index) => _children[index];
+}

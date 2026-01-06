@@ -42,11 +42,23 @@ public sealed partial class ScrollViewer : Visuals.Visual
         _horizontalBar = new HorizontalScrollBarVisual(this);
         _corner = new ScrollCornerVisual(this);
 
-        AddChild(_contentHost);
-        AddChild(_verticalBar);
-        AddChild(_horizontalBar);
-        AddChild(_corner);
+        AttachChild(_contentHost);
+        AttachChild(_verticalBar);
+        AttachChild(_horizontalBar);
+        AttachChild(_corner);
     }
+
+    protected override int ChildrenCount => 4;
+
+    protected override Visuals.Visual GetChild(int index)
+        => index switch
+        {
+            0 => _contentHost,
+            1 => _verticalBar,
+            2 => _horizontalBar,
+            3 => _corner,
+            _ => throw new ArgumentOutOfRangeException(nameof(index)),
+        };
 
     public Visuals.Visual? Child
     {
@@ -443,8 +455,13 @@ public sealed partial class ScrollViewer : Visuals.Visual
             }
 
             _child = child;
-            AddChild(child);
+            AttachChild(child);
         }
+
+        protected override int ChildrenCount => _child is null ? 0 : 1;
+
+        protected override Visuals.Visual GetChild(int index)
+            => index == 0 && _child is not null ? _child : throw new ArgumentOutOfRangeException(nameof(index));
 
         public void UpdateLayout(int contentWidth, int contentHeight, int horizontalOffset, int verticalOffset)
         {

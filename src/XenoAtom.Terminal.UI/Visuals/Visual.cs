@@ -11,14 +11,11 @@ namespace XenoAtom.Terminal.UI.Visuals;
 
 public abstract partial class Visual : BindableObject
 {
-    private readonly List<Visual> _children = new();
     private Dictionary<object, Delegate?>? _handlers;
     private List<KeyBinding>? _keyBindings;
     private Dictionary<object, object?>? _environment;
 
     public Visual? Parent { get; private set; }
-
-    public IReadOnlyList<Visual> Children => _children;
 
     public Rectangle Bounds { get; protected set; }
 
@@ -120,7 +117,21 @@ public abstract partial class Visual : BindableObject
         return false;
     }
 
-    public void AddChild(Visual child)
+    /// <summary>
+    /// Gets the number of visual children in this <see cref="Visual"/>.
+    /// </summary>
+    protected virtual int ChildrenCount => 0;
+
+    /// <summary>
+    /// Gets the visual child at the specified <paramref name="index"/>.
+    /// </summary>
+    protected virtual Visual GetChild(int index) => throw new ArgumentOutOfRangeException(nameof(index));
+
+    internal int GetChildrenCount() => ChildrenCount;
+
+    internal Visual GetChildUnsafe(int index) => GetChild(index);
+
+    protected void AttachChild(Visual child)
     {
         ArgumentNullException.ThrowIfNull(child);
         if (child.Parent is not null)
@@ -128,13 +139,28 @@ public abstract partial class Visual : BindableObject
             throw new InvalidOperationException("The visual already has a parent.");
         }
 
-        _children.Add(child);
         child.Parent = this;
 
         if (App is not null)
         {
             child.AttachToApp(App);
         }
+    }
+
+    protected void DetachChild(Visual child)
+    {
+        ArgumentNullException.ThrowIfNull(child);
+        if (!ReferenceEquals(child.Parent, this))
+        {
+            throw new InvalidOperationException("The visual is not a child of this visual.");
+        }
+
+        if (App is not null)
+        {
+            child.DetachFromApp();
+        }
+
+        child.Parent = null;
     }
 
     public void SetEnvironmentValue<T>(EnvironmentKey<T> key, T value)
@@ -167,49 +193,18 @@ public abstract partial class Visual : BindableObject
 
     public Theme GetTheme() => GetEnvironmentValue(Theme.Key);
 
-    protected void ClearChildren()
-    {
-        if (_children.Count == 0)
-        {
-            return;
-        }
-
-        for (var i = 0; i < _children.Count; i++)
-        {
-            var child = _children[i];
-            if (App is not null)
-            {
-                child.DetachFromApp();
-            }
-            child.Parent = null;
-        }
-
-        _children.Clear();
-    }
-
-    protected bool BringChildToFront(Visual child)
-    {
-        ArgumentNullException.ThrowIfNull(child);
-
-        var index = _children.IndexOf(child);
-        if (index < 0 || index == _children.Count - 1)
-        {
-            return false;
-        }
-
-        _children.RemoveAt(index);
-        _children.Add(child);
-        App?.RequestRender();
-        return true;
-    }
-
     internal void AttachToApp(TerminalApp app)
     {
         App = app;
         OnAttachedToApp(app);
-        foreach (var child in _children)
+
+        for (var i = 0; i < ChildrenCount; i++)
         {
-            child.AttachToApp(app);
+            var child = GetChild(i);
+            if (child.App is null)
+            {
+                child.AttachToApp(app);
+            }
         }
     }
 
@@ -221,9 +216,13 @@ public abstract partial class Visual : BindableObject
             return;
         }
 
-        foreach (var child in _children)
+        for (var i = 0; i < ChildrenCount; i++)
         {
-            child.DetachFromApp();
+            var child = GetChild(i);
+            if (child.App is not null)
+            {
+                child.DetachFromApp();
+            }
         }
 
         App = null;
@@ -250,8 +249,9 @@ public abstract partial class Visual : BindableObject
         var width = 0;
         var height = 0;
 
-        foreach (var child in _children)
+        for (var i = 0; i < ChildrenCount; i++)
         {
+            var child = GetChild(i);
             child.Measure(availableSize);
             width = Math.Max(width, child.DesiredSize.Width);
             height = Math.Max(height, child.DesiredSize.Height);
@@ -262,8 +262,9 @@ public abstract partial class Visual : BindableObject
 
     protected virtual void ArrangeOverride(Rectangle finalRect)
     {
-        foreach (var child in _children)
+        for (var i = 0; i < ChildrenCount; i++)
         {
+            var child = GetChild(i);
             child.Arrange(finalRect);
         }
     }
@@ -277,8 +278,9 @@ public abstract partial class Visual : BindableObject
 
         buffer.PushClip(Bounds);
         RenderOverride(buffer);
-        foreach (var child in _children)
+        for (var i = 0; i < ChildrenCount; i++)
         {
+            var child = GetChild(i);
             child.RenderTree(buffer);
         }
         buffer.PopClip();
@@ -293,8 +295,9 @@ public abstract partial class Visual : BindableObject
     {
         yield return this;
 
-        foreach (var child in _children)
+        for (var i = 0; i < ChildrenCount; i++)
         {
+            var child = GetChild(i);
             foreach (var nested in child.EnumerateVisualsDepthFirst())
             {
                 yield return nested;
@@ -309,9 +312,9 @@ public abstract partial class Visual : BindableObject
             return null;
         }
 
-        for (var i = _children.Count - 1; i >= 0; i--)
+        for (var i = ChildrenCount - 1; i >= 0; i--)
         {
-            var hit = _children[i].HitTest(x, y);
+            var hit = GetChild(i).HitTest(x, y);
             if (hit is not null)
             {
                 return hit;

@@ -811,9 +811,9 @@ public sealed class TerminalApp : IAsyncDisposable
             return null;
         }
 
-        for (var i = root.Children.Count - 1; i >= 0; i--)
+        for (var i = root.GetChildrenCount() - 1; i >= 0; i--)
         {
-            var found = FindActiveModalRoot(root.Children[i]);
+            var found = FindActiveModalRoot(root.GetChildUnsafe(i));
             if (found is not null)
             {
                 return found;

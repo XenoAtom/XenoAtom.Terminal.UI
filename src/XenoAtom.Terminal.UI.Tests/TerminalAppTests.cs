@@ -261,8 +261,8 @@ public sealed class TerminalAppTests
 
         var layer = new WindowLayer { Content = new TextBlock("Base") };
 
-        var a = new Dialog { Title = "A", Width = 8, Height = 4, Left = 1, Top = 1, Child = new TextBlock("A") };
-        var b = new Dialog { Title = "B", Width = 8, Height = 4, Left = 10, Top = 1, Child = new TextBlock("B") };
+        var a = new Dialog { Title = "A", Width = 10, Height = 4, Left = 1, Top = 1, Child = new TextBlock("A") };
+        var b = new Dialog { Title = "B", Width = 10, Height = 4, Left = 3, Top = 2, Child = new TextBlock("B") };
         layer.AddWindow(a);
         layer.AddWindow(b);
 
@@ -271,12 +271,30 @@ public sealed class TerminalAppTests
 
         await Task.Delay(20);
 
-        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 2, Y = 1 });
-        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 2, Y = 1 });
+        static Visual GetRootChild(WindowLayer layer, Visual visual)
+        {
+            var rootChild = visual;
+            while (rootChild.Parent is not null && !ReferenceEquals(rootChild.Parent, layer))
+            {
+                rootChild = rootChild.Parent;
+            }
+
+            return rootChild;
+        }
+
+        var initialHit = layer.HitTest(4, 3);
+        Assert.IsNotNull(initialHit);
+        Assert.AreSame(b, GetRootChild(layer, initialHit));
+
+        // Click within A only (not overlapped by B) to bring it to front.
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 2, Y = 2 });
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 2, Y = 2 });
 
         await Task.Delay(20);
 
-        Assert.AreSame(a, layer.Children[^1]);
+        var postClickHit = layer.HitTest(4, 3);
+        Assert.IsNotNull(postClickHit);
+        Assert.AreSame(a, GetRootChild(layer, postClickHit));
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));
@@ -416,8 +434,7 @@ public sealed class TerminalAppTests
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
         var button = new Button("OK");
-        var root = new PointerProbe();
-        root.AddChild(button);
+        var root = new PointerProbe { Child = button };
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
         var runTask = app.RunAsync();
@@ -436,9 +453,26 @@ public sealed class TerminalAppTests
 
     private sealed class PointerProbe : Visual
     {
+        private Visual? _child;
+
         public Visual? SeenOriginal { get; private set; }
 
         public Visual? SeenSource { get; private set; }
+
+        public Visual? Child
+        {
+            get => _child;
+            init
+            {
+                if (value is null)
+                {
+                    return;
+                }
+
+                _child = value;
+                AttachChild(value);
+            }
+        }
 
         public PointerProbe()
         {
@@ -447,6 +481,18 @@ public sealed class TerminalAppTests
                 SeenOriginal = e.OriginalSource;
                 SeenSource = e.Source;
             });
+        }
+
+        protected override int ChildrenCount => _child is null ? 0 : 1;
+
+        protected override Visual GetChild(int index)
+        {
+            if (index == 0 && _child is not null)
+            {
+                return _child;
+            }
+
+            throw new ArgumentOutOfRangeException(nameof(index));
         }
     }
 

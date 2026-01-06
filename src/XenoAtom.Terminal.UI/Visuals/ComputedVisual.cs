@@ -9,6 +9,7 @@ namespace XenoAtom.Terminal.UI.Visuals;
 public sealed class ComputedVisual : Visual, IDisposable
 {
     private readonly Computed<Visual?> _computed;
+    private Visual? _child;
 
     public ComputedVisual(Func<Visual?> build)
     {
@@ -31,7 +32,7 @@ public sealed class ComputedVisual : Visual, IDisposable
     protected override void OnDetachedFromApp(TerminalApp app)
     {
         _ = app;
-        ClearChildren();
+        ClearChild();
     }
 
     protected override Size MeasureOverride(Size availableSize)
@@ -62,9 +63,9 @@ public sealed class ComputedVisual : Visual, IDisposable
 
     private Visual? EnsureChild()
     {
-        if (Children.Count > 0)
+        if (_child is not null)
         {
-            return Children[0];
+            return _child;
         }
 
         var child = _computed.Value;
@@ -73,14 +74,38 @@ public sealed class ComputedVisual : Visual, IDisposable
             return null;
         }
 
-        AddChild(child);
+        _child = child;
+        AttachChild(child);
         return child;
     }
 
     private void OnInvalidated()
     {
-        ClearChildren();
+        ClearChild();
         EnsureChild();
         App?.RequestRender();
+    }
+
+    private void ClearChild()
+    {
+        if (_child is null)
+        {
+            return;
+        }
+
+        DetachChild(_child);
+        _child = null;
+    }
+
+    protected override int ChildrenCount => _child is null ? 0 : 1;
+
+    protected override Visual GetChild(int index)
+    {
+        if (index == 0 && _child is not null)
+        {
+            return _child;
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(index));
     }
 }
