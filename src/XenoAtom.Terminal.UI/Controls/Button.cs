@@ -10,7 +10,7 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public partial class Button : Visuals.Visual
+public partial class Button : Visual
 {
     private bool _isPressed;
 

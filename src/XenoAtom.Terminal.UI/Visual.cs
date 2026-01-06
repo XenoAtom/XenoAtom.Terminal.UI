@@ -7,7 +7,7 @@ using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
-namespace XenoAtom.Terminal.UI.Visuals;
+namespace XenoAtom.Terminal.UI;
 
 public abstract partial class Visual : BindableObject
 {

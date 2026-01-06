@@ -32,7 +32,7 @@ public sealed class BindingManager
             return;
         }
 
-        if (owner is Visuals.Visual { App: { } app })
+        if (owner is Visual { App: { } app })
         {
             app.Dispatcher.VerifyAccess();
         }
@@ -56,7 +56,7 @@ public sealed class BindingManager
 
     public void NotifyValueChanged(object owner, string name)
     {
-        if (owner is Visuals.Visual { App: { } app })
+        if (owner is Visual { App: { } app })
         {
             app.Dispatcher.VerifyAccess();
         }

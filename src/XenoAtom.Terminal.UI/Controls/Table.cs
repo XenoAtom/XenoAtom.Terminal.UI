@@ -9,7 +9,7 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class Table : Visuals.Visual
+public sealed partial class Table : Visual
 {
     private int[]? _columnWidths;
 

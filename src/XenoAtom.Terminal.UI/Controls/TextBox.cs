@@ -11,7 +11,7 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class TextBox : Visuals.Visual, ICursorProvider
+public sealed partial class TextBox : Visual, ICursorProvider
 {
     private int _caretIndex;
     private int _scrollCellOffset;

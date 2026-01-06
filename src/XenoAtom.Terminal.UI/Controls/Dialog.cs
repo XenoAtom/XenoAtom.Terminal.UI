@@ -10,9 +10,9 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class Dialog : Visuals.Visual, IModalVisual
+public sealed partial class Dialog : Visual, IModalVisual
 {
-    private Visuals.Visual? _child;
+    private Visual? _child;
     private Rectangle _layoutSlot;
 
     private bool _dragging;
@@ -42,7 +42,7 @@ public sealed partial class Dialog : Visuals.Visual, IModalVisual
     [Bindable]
     public partial bool IsModal { get; set; }
 
-    public Visuals.Visual? Child
+    public Visual? Child
     {
         get => _child;
         set
@@ -69,7 +69,7 @@ public sealed partial class Dialog : Visuals.Visual, IModalVisual
 
     protected override int ChildrenCount => _child is null ? 0 : 1;
 
-    protected override Visuals.Visual GetChild(int index)
+    protected override Visual GetChild(int index)
         => index == 0 && _child is not null ? _child : throw new ArgumentOutOfRangeException(nameof(index));
 
     protected override Size MeasureOverride(Size availableSize)

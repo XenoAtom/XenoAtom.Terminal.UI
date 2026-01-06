@@ -10,14 +10,14 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class ScrollViewer : Visuals.Visual
+public sealed partial class ScrollViewer : Visual
 {
     private readonly ContentViewportHost _contentHost;
     private readonly VerticalScrollBarVisual _verticalBar;
     private readonly HorizontalScrollBarVisual _horizontalBar;
     private readonly ScrollCornerVisual _corner;
 
-    private Visuals.Visual? _child;
+    private Visual? _child;
     private int _contentWidth;
     private int _contentHeight;
 
@@ -50,7 +50,7 @@ public sealed partial class ScrollViewer : Visuals.Visual
 
     protected override int ChildrenCount => 4;
 
-    protected override Visuals.Visual GetChild(int index)
+    protected override Visual GetChild(int index)
         => index switch
         {
             0 => _contentHost,
@@ -60,7 +60,7 @@ public sealed partial class ScrollViewer : Visuals.Visual
             _ => throw new ArgumentOutOfRangeException(nameof(index)),
         };
 
-    public Visuals.Visual? Child
+    public Visual? Child
     {
         get => _child;
         set
@@ -432,10 +432,10 @@ public sealed partial class ScrollViewer : Visuals.Visual
         return false;
     }
 
-    private sealed class ContentViewportHost : Visuals.Visual
+    private sealed class ContentViewportHost : Visual
     {
         private readonly ScrollViewer _owner;
-        private Visuals.Visual? _child;
+        private Visual? _child;
 
         private int _contentWidth;
         private int _contentHeight;
@@ -447,7 +447,7 @@ public sealed partial class ScrollViewer : Visuals.Visual
             _owner = owner;
         }
 
-        public void SetContent(Visuals.Visual child)
+        public void SetContent(Visual child)
         {
             if (_child is not null)
             {
@@ -460,7 +460,7 @@ public sealed partial class ScrollViewer : Visuals.Visual
 
         protected override int ChildrenCount => _child is null ? 0 : 1;
 
-        protected override Visuals.Visual GetChild(int index)
+        protected override Visual GetChild(int index)
             => index == 0 && _child is not null ? _child : throw new ArgumentOutOfRangeException(nameof(index));
 
         public void UpdateLayout(int contentWidth, int contentHeight, int horizontalOffset, int verticalOffset)
@@ -484,7 +484,7 @@ public sealed partial class ScrollViewer : Visuals.Visual
         }
     }
 
-    private abstract class ScrollBarVisualBase : Visuals.Visual
+    private abstract class ScrollBarVisualBase : Visual
     {
         protected readonly ScrollViewer Owner;
 

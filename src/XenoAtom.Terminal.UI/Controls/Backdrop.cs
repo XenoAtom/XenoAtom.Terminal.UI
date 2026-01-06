@@ -9,7 +9,7 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class Backdrop : Visuals.Visual
+public sealed partial class Backdrop : Visual
 {
     protected override Size MeasureOverride(Size availableSize) => availableSize;
 

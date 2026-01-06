@@ -10,7 +10,7 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed class TabControl : Visuals.Visual
+public sealed class TabControl : Visual
 {
     private readonly List<TabPage> _tabs = new();
     private readonly List<TabHitRange> _hitRanges = new();
@@ -49,7 +49,7 @@ public sealed class TabControl : Visuals.Visual
 
     public IReadOnlyList<TabPage> Tabs => _tabs;
 
-    public void AddTab(string header, Visuals.Visual content)
+    public void AddTab(string header, Visual content)
     {
         ArgumentException.ThrowIfNullOrEmpty(header);
         ArgumentNullException.ThrowIfNull(content);
@@ -74,7 +74,7 @@ public sealed class TabControl : Visuals.Visual
 
     protected override int ChildrenCount => _tabs.Count;
 
-    protected override Visuals.Visual GetChild(int index) => _tabs[index].Content;
+    protected override Visual GetChild(int index) => _tabs[index].Content;
 
     protected override Size MeasureOverride(Size availableSize)
     {
@@ -316,5 +316,5 @@ public sealed class TabControl : Visuals.Visual
 
     private readonly record struct TabHitRange(int Index, int Start, int End);
 
-    public readonly record struct TabPage(string Header, Visuals.Visual Content);
+    public readonly record struct TabPage(string Header, Visual Content);
 }

@@ -9,7 +9,7 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class ProgressBar : Visuals.Visual
+public sealed partial class ProgressBar : Visual
 {
     public ProgressBar()
     {

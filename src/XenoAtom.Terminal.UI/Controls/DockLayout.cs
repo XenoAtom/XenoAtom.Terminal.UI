@@ -11,25 +11,25 @@ using XenoAtom.Terminal.UI.Geometry;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class DockLayout : Visuals.Visual
+public sealed partial class DockLayout : Visual
 {
-    private Visuals.Visual? _top;
-    private Visuals.Visual? _bottom;
-    private Visuals.Visual? _content;
+    private Visual? _top;
+    private Visual? _bottom;
+    private Visual? _content;
 
-    public Visuals.Visual? Top
+    public Visual? Top
     {
         get => _top;
         set => SetOnce(ref _top, value);
     }
 
-    public Visuals.Visual? Bottom
+    public Visual? Bottom
     {
         get => _bottom;
         set => SetOnce(ref _bottom, value);
     }
 
-    public Visuals.Visual? Content
+    public Visual? Content
     {
         get => _content;
         set => SetOnce(ref _content, value);
@@ -90,7 +90,7 @@ public sealed partial class DockLayout : Visuals.Visual
         }
     }
 
-    private void SetOnce(ref Visuals.Visual? field, Visuals.Visual? value)
+    private void SetOnce(ref Visual? field, Visual? value)
     {
         if (ReferenceEquals(field, value))
         {
@@ -123,7 +123,7 @@ public sealed partial class DockLayout : Visuals.Visual
         }
     }
 
-    protected override Visuals.Visual GetChild(int index)
+    protected override Visual GetChild(int index)
     {
         if ((uint)index >= (uint)ChildrenCount)
         {

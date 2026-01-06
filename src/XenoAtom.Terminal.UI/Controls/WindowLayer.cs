@@ -6,12 +6,12 @@ using XenoAtom.Terminal.UI.Input;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed class WindowLayer : Visuals.Visual
+public sealed class WindowLayer : Visual
 {
-    private Visuals.Visual? _content;
-    private readonly List<Visuals.Visual> _windows = new();
+    private Visual? _content;
+    private readonly List<Visual> _windows = new();
 
-    public Visuals.Visual? Content
+    public Visual? Content
     {
         get => _content;
         set
@@ -36,7 +36,7 @@ public sealed class WindowLayer : Visuals.Visual
         }
     }
 
-    public void AddWindow(Visuals.Visual window)
+    public void AddWindow(Visual window)
     {
         ArgumentNullException.ThrowIfNull(window);
         AttachChild(window);
@@ -73,7 +73,7 @@ public sealed class WindowLayer : Visuals.Visual
 
     protected override int ChildrenCount => (_content is null ? 0 : 1) + _windows.Count;
 
-    protected override Visuals.Visual GetChild(int index)
+    protected override Visual GetChild(int index)
     {
         if (_content is not null)
         {
@@ -93,7 +93,7 @@ public sealed class WindowLayer : Visuals.Visual
         return _windows[index];
     }
 
-    private void BringWindowToFront(Visuals.Visual window)
+    private void BringWindowToFront(Visual window)
     {
         var index = _windows.IndexOf(window);
         if (index < 0 || index == _windows.Count - 1)

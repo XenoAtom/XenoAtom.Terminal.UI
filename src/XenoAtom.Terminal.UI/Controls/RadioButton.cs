@@ -10,7 +10,7 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class RadioButton : Visuals.Visual
+public sealed partial class RadioButton : Visual
 {
     private bool _isPressed;
 
@@ -128,7 +128,7 @@ public sealed partial class RadioButton : Visuals.Visual
             return;
         }
 
-        Visuals.Visual root = this;
+        Visual root = this;
         while (root.Parent is not null)
         {
             root = root.Parent;

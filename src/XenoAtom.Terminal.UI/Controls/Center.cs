@@ -11,11 +11,11 @@ using XenoAtom.Terminal.UI.Geometry;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class Center : Visuals.Visual
+public sealed partial class Center : Visual
 {
-    private Visuals.Visual? _child;
+    private Visual? _child;
 
-    public Visuals.Visual? Child
+    public Visual? Child
     {
         get => _child;
         set
@@ -42,7 +42,7 @@ public sealed partial class Center : Visuals.Visual
 
     protected override int ChildrenCount => _child is null ? 0 : 1;
 
-    protected override Visuals.Visual GetChild(int index)
+    protected override Visual GetChild(int index)
         => index == 0 && _child is not null ? _child : throw new ArgumentOutOfRangeException(nameof(index));
 
     protected override Size MeasureOverride(Size availableSize)

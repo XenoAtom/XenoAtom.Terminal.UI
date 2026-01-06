@@ -7,7 +7,7 @@ using XenoAtom.Terminal.UI.Rendering;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class TextBlock : Visuals.Visual
+public sealed partial class TextBlock : Visual
 {
     public TextBlock()
     {

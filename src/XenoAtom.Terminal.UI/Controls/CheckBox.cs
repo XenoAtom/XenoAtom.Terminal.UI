@@ -10,7 +10,7 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class CheckBox : Visuals.Visual
+public sealed partial class CheckBox : Visual
 {
     public CheckBox()
     {
