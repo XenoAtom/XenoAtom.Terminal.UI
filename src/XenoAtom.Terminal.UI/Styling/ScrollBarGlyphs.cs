@@ -7,7 +7,7 @@ namespace XenoAtom.Terminal.UI;
 public readonly record struct ScrollBarGlyphs(char Track, char Thumb)
 {
     public static ScrollBarGlyphs Default { get; } = new(
-        Track: '░',
-        Thumb: '█');
+        Track: ' ',
+        Thumb: ' ');
 }
 

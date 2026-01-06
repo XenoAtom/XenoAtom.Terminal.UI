@@ -621,9 +621,15 @@ public sealed class TerminalApp : IAsyncDisposable
 
         if (mouseEvent.Kind is TerminalMouseKind.Down or TerminalMouseKind.DoubleClick)
         {
-            if (target.Focusable && !ReferenceEquals(FocusedElement, target))
+            var focusTarget = target;
+            while (focusTarget is not null && !focusTarget.Focusable)
             {
-                FocusedElement = target;
+                focusTarget = focusTarget.Parent;
+            }
+
+            if (focusTarget is not null && !ReferenceEquals(FocusedElement, focusTarget))
+            {
+                FocusedElement = focusTarget;
                 RequestRender();
             }
         }
