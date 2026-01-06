@@ -523,6 +523,37 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task Fluent_Bindable_Extensions_Are_Applied_During_Initialization()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 8));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var textBox = new TextBox().Text("Hello");
+        var root = new VStack(textBox).Spacing(2);
+
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunAsync();
+
+        static async Task WaitUntil(Func<bool> condition)
+        {
+            var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+            while (!condition())
+            {
+                if (DateTime.UtcNow >= timeout)
+                {
+                    Assert.Fail("Timed out waiting for condition.");
+                }
+                await Task.Delay(10);
+            }
+        }
+
+        await WaitUntil(() => textBox.Text == "Hello" && root.Spacing == 2);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    [TestMethod]
     public async Task KeyBinding_Executes_On_Ctrl_Gesture()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));

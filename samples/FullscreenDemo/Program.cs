@@ -6,49 +6,49 @@ using XenoAtom.Terminal.UI.Hosting;
 
 using var session = Terminal.Open();
 
-var name = new TextBox { Text = "Type here (Ctrl+A, Shift+Arrows, Ctrl+Left/Right)" };
-var accept = new CheckBox("Accept terms");
-var showModal = new CheckBox("Show modal");
-var list = new ListBox { Items = new[] { "First", "Second", "Third", "Fourth", "Fifth", "Sixth" }, Height = 6 };
-var progress = new ProgressBar { Label = "Work", Value = 0.0 };
+var name = new TextBox().Text("Type here (Ctrl+A, Shift+Arrows, Ctrl+Left/Right)");
+var accept = new CheckBox().Text("Accept terms");
+var showModal = new CheckBox().Text("Show modal");
+var list = new ListBox()
+    .Items(new[] { "First", "Second", "Third", "Fourth", "Fifth", "Sixth" })
+    .Height(6);
+var progress = new ProgressBar().Label("Work").Value(0.0);
 
-var button = new Button("Click me (mouse or Enter)");
-var status = new TextBlock("Status: ready");
+var button = new Button().Text("Click me (mouse or Enter)");
+var status = new TextBlock().Text("Status: ready");
 button.Click += (_, _) => status.Text = "Status: click received";
 
 var scrollContent = new VStack();
 for (var i = 0; i < 20; i++)
 {
-    scrollContent.Add(new TextBlock($"Log line {i}"));
+    scrollContent.Add($"Log line {i}");
 }
-var scroll = new ScrollViewer { Child = scrollContent, Height = 5 };
+var scroll = new ScrollViewer()
+    .Height(5)
+    .With(x => x.Child = scrollContent);
 
-var pickGroup = new Group
-{
-    TopLeftText = "Pick one",
-    TopRightText = "mouse wheel supported",
-    Padding = new Thickness(1),
-    Child = list,
-};
+var pickGroup = new Group()
+    .TopLeftText("Pick one")
+    .TopRightText("mouse wheel supported")
+    .Padding(new Thickness(1))
+    .With(x => x.Child = list);
 
-var scrollGroup = new Group
-{
-    TopLeftText = "ScrollViewer",
-    TopRightText = "focus + wheel",
-    Padding = new Thickness(1),
-    Child = scroll,
-};
+var scrollGroup = new Group()
+    .TopLeftText("ScrollViewer")
+    .TopRightText("focus + wheel")
+    .Padding(new Thickness(1))
+    .With(x => x.Child = scroll);
 
-var table = new Table
+var table = new Table().With(x =>
 {
-    HeaderCells = ["Task", "Status"],
-    RowCells =
+    x.HeaderCells = ["Task", "Status"];
+    x.RowCells =
     [
         ["Download", "Running"],
         ["Render", "OK"],
         ["Tests", "OK"]
-    ],
-};
+    ];
+});
 
 var main = new VStack(
     "Fullscreen demo: Tab focus, mouse click, wheel scroll, F12 debug, Esc quit",
@@ -60,10 +60,7 @@ var main = new VStack(
     scrollGroup,
     progress,
     button,
-    status)
-{
-    Spacing = 1,
-};
+    status).Spacing(1);
 
 
 // Disabling this part for now, as the custom color on the selection is not nice with the default theme.
@@ -78,17 +75,15 @@ var main = new VStack(
 //    Disabled = Theme.Default.Disabled,
 //});
 
-var statusBar = new StatusBar
-{
-    LeftText = "Tab focus | Mouse click | Wheel scroll | F12 debug | Esc quit",
-    RightText = "XenoAtom.Terminal.UI",
-};
+var statusBar = new StatusBar()
+    .LeftText("Tab focus | Mouse click | Wheel scroll | F12 debug | Esc quit")
+    .RightText("XenoAtom.Terminal.UI");
 
-var layout = new DockLayout
+var layout = new DockLayout().With(x =>
 {
-    Content = main,
-    Bottom = statusBar,
-};
+    x.Content = main;
+    x.Bottom = statusBar;
+});
 
 var overlay = new ComputedVisual(() =>
 {
@@ -97,25 +92,20 @@ var overlay = new ComputedVisual(() =>
         return null;
     }
 
-    var close = new Button("Close");
+    var close = new Button().Text("Close");
     close.Click += (_, _) => showModal.IsChecked = false;
 
     var dialogContent = new VStack(
         "Modal dialog",
-        new TextBlock("This is a wrapped paragraph demonstrating document-style text rendering.") { Wrap = true },
-        close)
-    {
-        Spacing = 1,
-    };
+        new TextBlock().Text("This is a wrapped paragraph demonstrating document-style text rendering.").Wrap(true),
+        close).Spacing(1);
 
-    var dialog = new Dialog
-    {
-        Title = "Modal dialog",
-        IsModal = true,
-        Padding = new Thickness(1),
-        Width = 60,
-        Child = dialogContent,
-    };
+    var dialog = new Dialog()
+        .Title("Modal dialog")
+        .IsModal(true)
+        .Padding(new Thickness(1))
+        .Width(60)
+        .With(x => x.Child = dialogContent);
 
     return new ZStack(new Backdrop(), dialog);
 });

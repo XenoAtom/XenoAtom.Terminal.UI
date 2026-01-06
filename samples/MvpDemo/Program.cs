@@ -9,12 +9,16 @@ session.Instance.WriteMarkupLine("[bold]XenoAtom.Terminal.UI MVP Demo[/]");
 session.Instance.WriteMarkupLine("Tab: focus  Space/Enter: activate  Ctrl+V: paste  Esc: quit");
 session.Instance.WriteLine();
 
-var name = new TextBox { Text = "" };
-var accept = new CheckBox("Accept terms");
-var list = new ListBox { Items = new[] { "First", "Second", "Third", "Fourth", "Fifth" }, Height = 4 };
-var progress = new ProgressBar { Label = "Work", Value = 0.0 };
+var name = new TextBox().Text("");
+var accept = new CheckBox().Text("Accept terms");
+var list = new ListBox()
+    .Items(new[] { "First", "Second", "Third", "Fourth", "Fifth" })
+    .Height(4);
+var progress = new ProgressBar()
+    .Label("Work")
+    .Value(0.0);
 
-var button = new Button("Log line");
+var button = new Button().Text("Log line");
 TerminalApp? app = null;
 button.Click += (_, _) => app?.WriteMarkupLine("[dim]Click received[/]");
 
@@ -25,15 +29,12 @@ var content = new VStack(
     "Pick one:",
     list,
     progress,
-    button)
-{
-    Spacing = 1,
-};
+    button).Spacing(1);
 
-var root = new VStack(new Border { Padding = new Thickness(1), Child = content })
-{
-    Spacing = 1,
-};
+var root = new VStack(
+    new Border()
+        .Padding(new Thickness(1))
+        .With(x => x.Child = content)).Spacing(1);
 
 app = new TerminalApp(root, session.Instance);
 
