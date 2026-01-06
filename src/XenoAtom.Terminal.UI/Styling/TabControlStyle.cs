@@ -1,0 +1,62 @@
+// Copyright (c) Alexandre Mutel. All rights reserved.
+// Licensed under the BSD-Clause 2 license.
+// See license.txt file in the project root for full license information.
+
+namespace XenoAtom.Terminal.UI;
+
+public sealed class TabControlStyle
+{
+    public static TabControlStyle Default { get; } = new();
+
+    public static EnvironmentKey<TabControlStyle> Key { get; } = new("TabControlStyle", Default);
+
+    public Thickness TabPadding { get; init; } = new(Left: 2, Top: 0, Right: 2, Bottom: 0);
+
+    public CellStyle? StripStyle { get; init; }
+    public CellStyle? TabStyle { get; init; }
+    public CellStyle? TabHoveredStyle { get; init; }
+    public CellStyle? TabSelectedStyle { get; init; }
+    public CellStyle? TabDisabledStyle { get; init; }
+
+    public CellStyle ResolveStripStyle(Theme theme) => StripStyle ?? theme.SurfaceStyle();
+
+    public CellStyle ResolveTabStyle(Theme theme, bool enabled, bool selected, bool hovered)
+    {
+        if (!enabled)
+        {
+            return TabDisabledStyle ?? (theme.SurfaceStyle() | CellStyle.Dim);
+        }
+
+        if (selected)
+        {
+            if (TabSelectedStyle is { } selectedStyle)
+            {
+                return selectedStyle;
+            }
+
+            var style = theme.SurfaceStyle();
+            if (theme.SurfaceAlt is { } bg)
+            {
+                style = style.WithBackground(bg);
+            }
+            return style | CellStyle.Bold;
+        }
+
+        if (hovered)
+        {
+            if (TabHoveredStyle is { } hoveredStyle)
+            {
+                return hoveredStyle;
+            }
+
+            var style = theme.SurfaceStyle();
+            if (theme.Selection is { } bg)
+            {
+                style = style.WithBackground(bg);
+            }
+            return style;
+        }
+
+        return TabStyle ?? theme.SurfaceStyle();
+    }
+}

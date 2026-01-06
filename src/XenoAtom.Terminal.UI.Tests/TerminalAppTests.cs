@@ -363,6 +363,47 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task TabControl_Changes_SelectedIndex_On_ArrowKeys()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(30, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        static async Task WaitUntil(Func<bool> condition)
+        {
+            var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+            while (!condition())
+            {
+                if (DateTime.UtcNow >= timeout)
+                {
+                    Assert.Fail("Timed out waiting for condition.");
+                }
+                await Task.Delay(10);
+            }
+        }
+
+        var tabs = new TabControl();
+        tabs.AddTab("First", new TextBlock("First"));
+        tabs.AddTab("Second", new TextBlock("Second"));
+
+        var root = new VStack();
+        root.Add(tabs);
+
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunAsync();
+
+        await Task.Delay(20);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right });
+        await WaitUntil(() => tabs.SelectedIndex == 1);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left });
+        await WaitUntil(() => tabs.SelectedIndex == 0);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    [TestMethod]
     public async Task RoutedEventArgs_Sets_Source_And_OriginalSource()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(20, 10));
