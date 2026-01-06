@@ -318,6 +318,51 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task RadioButton_Unchecks_Others_In_Group()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(20, 8));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        static async Task WaitUntil(Func<bool> condition)
+        {
+            var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+            while (!condition())
+            {
+                if (DateTime.UtcNow >= timeout)
+                {
+                    Assert.Fail("Timed out waiting for condition.");
+                }
+                await Task.Delay(10);
+            }
+        }
+
+        var group = new object();
+        var a = new RadioButton("A", group);
+        var b = new RadioButton("B", group);
+
+        var root = new VStack();
+        root.Add(a);
+        root.Add(b);
+
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunAsync();
+
+        await Task.Delay(20);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Space });
+        await WaitUntil(() => a.IsChecked);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
+        await Task.Delay(20);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Space });
+        await WaitUntil(() => b.IsChecked && !a.IsChecked);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    [TestMethod]
     public async Task RoutedEventArgs_Sets_Source_And_OriginalSource()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(20, 10));
