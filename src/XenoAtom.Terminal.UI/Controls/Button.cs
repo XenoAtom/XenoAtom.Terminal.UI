@@ -41,7 +41,10 @@ public partial class Button : Visual
         var borderPad = style.ShowBorder ? 1 : 0;
         var width = Math.Min(availableSize.Width, innerWidth + padding.Horizontal + (borderPad * 2));
         var height = Math.Min(availableSize.Height, 1 + padding.Vertical + (borderPad * 2));
-        height = Math.Min(availableSize.Height, Math.Max(3, height));
+        if (borderPad != 0)
+        {
+            height = Math.Min(availableSize.Height, Math.Max(3, height));
+        }
         return new Size(width, height);
     }
 
