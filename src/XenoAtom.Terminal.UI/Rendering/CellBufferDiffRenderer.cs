@@ -5,6 +5,7 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using XenoAtom.Ansi;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Rendering;
 

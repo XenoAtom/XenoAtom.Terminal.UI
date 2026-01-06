@@ -3,9 +3,8 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Ansi;
-using XenoAtom.Terminal.UI.Styling;
 
-namespace XenoAtom.Terminal.UI.Rendering;
+namespace XenoAtom.Terminal.UI.Styling;
 
 /// <summary>
 /// Packed per-cell style (foreground/background + decorations).

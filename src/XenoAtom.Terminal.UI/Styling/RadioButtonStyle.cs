@@ -2,8 +2,6 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using XenoAtom.Terminal.UI.Rendering;
-
 namespace XenoAtom.Terminal.UI.Styling;
 
 public sealed class RadioButtonStyle
