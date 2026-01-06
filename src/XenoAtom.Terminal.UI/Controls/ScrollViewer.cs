@@ -496,9 +496,9 @@ public sealed partial class ScrollViewer : Visuals.Visual
         protected (CellStyle Track, CellStyle Thumb, ScrollBarGlyphs Glyphs) GetStyles()
         {
             var theme = GetTheme();
-            var focused = Owner.IsFocusWithin();
+            var highlighted = Owner.IsFocusWithin() || IsHovered || Owner._draggingHorizontal || Owner._draggingVertical;
             var style = GetEnvironmentValue(ScrollViewerStyle.Key);
-            return (style.ResolveTrackStyle(theme), style.ResolveThumbStyle(theme, focused), theme.ScrollBars);
+            return (style.ResolveTrackStyle(theme), style.ResolveThumbStyle(theme, highlighted), theme.ScrollBars);
         }
     }
 
