@@ -15,6 +15,10 @@ public sealed class ButtonStyle
 
     public Thickness Padding { get; init; } = new(2, 0, 2, 0);
 
+    public bool ShowBorder { get; init; }
+
+    public EdgeBorderGlyphs BorderGlyphs { get; init; } = EdgeBorderGlyphs.LegacyComputing;
+
     public CellStyle? Normal { get; init; }
     public CellStyle? Hovered { get; init; }
     public CellStyle? Pressed { get; init; }

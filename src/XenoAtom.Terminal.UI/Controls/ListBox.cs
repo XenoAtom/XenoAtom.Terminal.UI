@@ -18,7 +18,6 @@ public sealed partial class ListBox : Visual
     {
         Focusable = true;
         Height = 6;
-        ShowBorder = true;
     }
 
     [Bindable]
@@ -37,6 +36,8 @@ public sealed partial class ListBox : Visual
     {
         var height = Math.Max(1, Height);
         var width = 0;
+        var listBoxStyle = GetEnvironmentValue(ListBoxStyle.Key);
+        var showBorder = ShowBorder || listBoxStyle.ShowBorder;
 
         var items = Items;
         if (items is not null)
@@ -51,7 +52,7 @@ public sealed partial class ListBox : Visual
         width = Math.Min(availableSize.Width, width + 2);
 
         var desiredHeight = Math.Min(height, availableSize.Height);
-        if (ShowBorder)
+        if (showBorder)
         {
             width = Math.Min(availableSize.Width, width + 2);
             desiredHeight = Math.Min(availableSize.Height, desiredHeight + 2);
@@ -74,7 +75,8 @@ public sealed partial class ListBox : Visual
             return;
         }
 
-        var showBorder = ShowBorder;
+        var listBoxStyle = GetEnvironmentValue(ListBoxStyle.Key);
+        var showBorder = ShowBorder || listBoxStyle.ShowBorder;
         var innerLeft = rect.X + (showBorder ? 1 : 0);
         var innerTop = rect.Y + (showBorder ? 1 : 0);
         var innerWidth = Math.Max(0, rect.Width - (showBorder ? 2 : 0));
@@ -94,7 +96,6 @@ public sealed partial class ListBox : Visual
 
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var listBoxStyle = GetEnvironmentValue(ListBoxStyle.Key);
         var border = theme.BorderStyle(isFocused);
         var glyphs = theme.Lines;
 
@@ -172,7 +173,8 @@ public sealed partial class ListBox : Visual
             return;
         }
 
-        var viewportHeight = Math.Max(1, Bounds.Height - (ShowBorder ? 2 : 0));
+        var showBorder = ShowBorder || GetEnvironmentValue(ListBoxStyle.Key).ShowBorder;
+        var viewportHeight = Math.Max(1, Bounds.Height - (showBorder ? 2 : 0));
         var selected = Math.Clamp(SelectedIndex, 0, count - 1);
         switch (e.Key)
         {
@@ -217,8 +219,9 @@ public sealed partial class ListBox : Visual
             return;
         }
 
-        var innerY = e.LocalY - (ShowBorder ? 1 : 0);
-        var innerHeight = Math.Max(0, Bounds.Height - (ShowBorder ? 2 : 0));
+        var showBorder = ShowBorder || GetEnvironmentValue(ListBoxStyle.Key).ShowBorder;
+        var innerY = e.LocalY - (showBorder ? 1 : 0);
+        var innerHeight = Math.Max(0, Bounds.Height - (showBorder ? 2 : 0));
         if ((uint)innerY >= (uint)innerHeight)
         {
             return;

@@ -12,7 +12,9 @@ public sealed class ListBoxStyle
 
     public static EnvironmentKey<ListBoxStyle> Key { get; } = new("ListBoxStyle", Default);
 
-    public char MarkerGlyph { get; init; } = '▸';
+    public bool ShowBorder { get; init; }
+
+    public char MarkerGlyph { get; init; } = '?';
 
     public CellStyle? Item { get; init; }
     public CellStyle? SelectedFocused { get; init; }
@@ -41,3 +43,4 @@ public sealed class ListBoxStyle
         return SelectedUnfocused ?? (CellStyle.None | TextStyle.Bold | theme.BorderStyle(focused: false));
     }
 }
+

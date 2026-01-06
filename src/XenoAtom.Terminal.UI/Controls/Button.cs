@@ -38,8 +38,10 @@ public partial class Button : Visual
         var style = GetEnvironmentValue(ButtonStyle.Key);
         var padding = style.Padding;
 
-        var width = Math.Min(availableSize.Width, innerWidth + padding.Horizontal + 2);
-        var height = Math.Min(availableSize.Height, Math.Max(3, 1 + padding.Vertical + 2));
+        var borderPad = style.ShowBorder ? 1 : 0;
+        var width = Math.Min(availableSize.Width, innerWidth + padding.Horizontal + (borderPad * 2));
+        var height = Math.Min(availableSize.Height, 1 + padding.Vertical + (borderPad * 2));
+        height = Math.Min(availableSize.Height, Math.Max(3, height));
         return new Size(width, height);
     }
 
@@ -58,8 +60,6 @@ public partial class Button : Visual
         var rect = Bounds;
         var text = Text ?? string.Empty;
 
-        var glyphs = theme.Lines;
-
         // Background fill.
         for (var y = rect.Y; y < rect.Y + rect.Height; y++)
         {
@@ -69,10 +69,12 @@ public partial class Button : Visual
             }
         }
 
-        var border = theme.BorderStyle(isFocused);
-
-        if (rect.Width >= 2 && rect.Height >= 2)
+        var borderPad = buttonStyle.ShowBorder ? 1 : 0;
+        if (borderPad != 0 && rect.Width >= 2 && rect.Height >= 2)
         {
+            var glyphs = buttonStyle.BorderGlyphs;
+            var border = theme.BorderStyle(isFocused);
+
             var left = rect.X;
             var top = rect.Y;
             var right = rect.X + rect.Width - 1;
@@ -85,16 +87,23 @@ public partial class Button : Visual
 
             for (var x = left + 1; x < right; x++)
             {
-                buffer.SetCell(x, top, new Rune(glyphs.Horizontal), border);
-                buffer.SetCell(x, bottom, new Rune(glyphs.Horizontal), border);
+                buffer.SetCell(x, top, new Rune(glyphs.Top), border);
+                buffer.SetCell(x, bottom, new Rune(glyphs.Bottom), border);
+            }
+
+            for (var y = top + 1; y < bottom; y++)
+            {
+                buffer.SetCell(left, y, new Rune(glyphs.Left), border);
+                buffer.SetCell(right, y, new Rune(glyphs.Right), border);
             }
         }
 
         var padding = buttonStyle.Padding;
-        var contentX = rect.X + 1 + padding.Left;
-        var contentWidth = Math.Max(0, rect.Width - 2 - padding.Horizontal);
-        var contentY = rect.Y + (rect.Height / 2);
-        if (contentWidth > 0 && rect.Height > 0)
+        var contentX = rect.X + borderPad + padding.Left;
+        var contentWidth = Math.Max(0, rect.Width - (borderPad * 2) - padding.Horizontal);
+        var contentHeight = Math.Max(1, rect.Height - (borderPad * 2) - padding.Vertical);
+        var contentY = rect.Y + borderPad + padding.Top + (contentHeight / 2);
+        if (contentWidth > 0 && contentHeight > 0)
         {
             var span = text.AsSpan();
             if (TerminalTextUtility.TryGetIndexAtCell(span, contentWidth, out var endIndex))
