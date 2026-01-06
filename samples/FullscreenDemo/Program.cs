@@ -15,8 +15,9 @@ var list = new ListBox()
 var progress = new ProgressBar().Label("Work").Value(0.0);
 
 var button = new Button().Text("Click me (mouse or Enter)");
-var status = new TextBlock().Text("Status: ready");
-button.Click += (_, _) => status.Text = "Status: click received";
+var statusState = new State<string>("ready");
+var status = new TextBlock().Text(() => $"Status: {statusState.Value}");
+button.Click += (_, _) => statusState.Value = "click received";
 
 var scrollContent = new VStack();
 for (var i = 0; i < 20; i++)
