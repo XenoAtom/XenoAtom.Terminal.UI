@@ -23,6 +23,22 @@ for (var i = 0; i < 20; i++)
 }
 var scroll = new ScrollViewer { Child = scrollContent, Height = 5 };
 
+var pickGroup = new Group
+{
+    TopLeftText = "Pick one",
+    TopRightText = "mouse wheel supported",
+    Padding = new Thickness(1),
+    Child = list,
+};
+
+var scrollGroup = new Group
+{
+    TopLeftText = "ScrollViewer",
+    TopRightText = "focus + wheel",
+    Padding = new Thickness(1),
+    Child = scroll,
+};
+
 var table = new Table
 {
     HeaderCells = new Visual[] { "Task", "Status" },
@@ -42,10 +58,8 @@ var main = new VStack
     accept,
     showModal,
     table,
-    "Pick one (mouse wheel supported):",
-    list,
-    "ScrollViewer (focus + wheel):",
-    scroll,
+    pickGroup,
+    scrollGroup,
     progress,
     button,
     status,

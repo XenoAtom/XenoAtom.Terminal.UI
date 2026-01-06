@@ -988,6 +988,38 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task Group_Renders_Corner_Texts()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 8));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var group = new Group
+        {
+            Padding = new Thickness(1),
+            TopLeftText = "TL",
+            TopRightText = "TR",
+            BottomLeftText = "BL",
+            BottomRightText = "BR",
+            Child = new TextBlock("X"),
+        };
+
+        var root = new VStack { group };
+
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunAsync();
+
+        await Task.Delay(30);
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var outText = backend.GetOutText();
+        StringAssert.Contains(outText, "TL");
+        StringAssert.Contains(outText, "TR");
+        StringAssert.Contains(outText, "BL");
+        StringAssert.Contains(outText, "BR");
+    }
+
+    [TestMethod]
     public async Task StatusBar_Renders_Left_And_Right()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(30, 5));
