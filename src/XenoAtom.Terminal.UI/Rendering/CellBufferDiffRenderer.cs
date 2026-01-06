@@ -11,7 +11,7 @@ namespace XenoAtom.Terminal.UI.Rendering;
 public sealed class CellBufferDiffRenderer
 {
     private int[]? _lastScalars;
-    private Cell[]? _lastCells;
+    private CellStyle[]? _lastCells;
     private int _lastWidth;
     private int _lastHeight;
 
@@ -156,7 +156,7 @@ public sealed class CellBufferDiffRenderer
         if (_lastScalars is null || _lastCells is null || _lastScalars.Length != length)
         {
             _lastScalars = new int[length];
-            _lastCells = new Cell[length];
+            _lastCells = new CellStyle[length];
         }
 
         _lastWidth = width;
@@ -164,7 +164,7 @@ public sealed class CellBufferDiffRenderer
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int AdjustStartForWideGlyph(ReadOnlySpan<Cell> cells, int rowIndex, int x)
+    private static int AdjustStartForWideGlyph(ReadOnlySpan<CellStyle> cells, int rowIndex, int x)
     {
         var cell = cells[rowIndex + x];
         if (cell.IsContinuation && x > 0)
@@ -176,7 +176,7 @@ public sealed class CellBufferDiffRenderer
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int AdjustEndForWideGlyph(ReadOnlySpan<int> scalars, ReadOnlySpan<Cell> cells, int rowIndex, int x, int width)
+    private static int AdjustEndForWideGlyph(ReadOnlySpan<int> scalars, ReadOnlySpan<CellStyle> cells, int rowIndex, int x, int width)
     {
         var cell = cells[rowIndex + x];
         if (cell.IsContinuation)
@@ -193,20 +193,20 @@ public sealed class CellBufferDiffRenderer
         return x;
     }
 
-    private static AnsiStyle MapStyle(Cell cell)
+    private static AnsiStyle MapStyle(CellStyle cellStyle)
     {
-        cell = cell.WithoutContinuation();
-        var deco = cell.ToAnsiDecorations();
+        cellStyle = cellStyle.WithoutContinuation();
+        var deco = cellStyle.ToAnsiDecorations();
 
         AnsiColor? fg = null;
         AnsiColor? bg = null;
 
-        if (cell.TryGetForeground(out var fgColor))
+        if (cellStyle.TryGetForeground(out var fgColor))
         {
             fg = fgColor;
         }
 
-        if (cell.TryGetBackground(out var bgColor))
+        if (cellStyle.TryGetBackground(out var bgColor))
         {
             bg = bgColor;
         }

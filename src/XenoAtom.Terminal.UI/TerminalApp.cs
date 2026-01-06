@@ -376,7 +376,7 @@ public sealed class TerminalApp : IAsyncDisposable
         }
 
         var borderStyle = theme.BorderStyle(focused: true) | TextStyle.Bold;
-        var backgroundStyle = Cell.None | TextStyle.Dim;
+        var backgroundStyle = CellStyle.None | TextStyle.Dim;
         if (theme.Background is { } bg)
         {
             backgroundStyle = backgroundStyle.WithBackground(bg);
@@ -412,7 +412,7 @@ public sealed class TerminalApp : IAsyncDisposable
 
         for (var i = 0; i < lines.Length && i + 1 < bottom; i++)
         {
-            buffer.WriteText(1, 1 + i, lines[i].AsSpan(), Cell.None);
+            buffer.WriteText(1, 1 + i, lines[i].AsSpan(), CellStyle.None);
         }
     }
 

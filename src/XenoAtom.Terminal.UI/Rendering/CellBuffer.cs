@@ -13,7 +13,7 @@ namespace XenoAtom.Terminal.UI.Rendering;
 public sealed class CellBuffer
 {
     private readonly int[] _scalars;
-    private readonly Cell[] _cells;
+    private readonly CellStyle[] _cells;
 
     private Rectangle _clipRect;
     private Rectangle[]? _clipStack;
@@ -28,7 +28,7 @@ public sealed class CellBuffer
         Height = height;
 
         _scalars = new int[width * height];
-        _cells = new Cell[width * height];
+        _cells = new CellStyle[width * height];
         _clipRect = new Rectangle(0, 0, width, height);
         Clear();
     }
@@ -39,18 +39,18 @@ public sealed class CellBuffer
 
     internal ReadOnlySpan<int> UnsafeScalars => _scalars;
 
-    internal ReadOnlySpan<Cell> UnsafeCells => _cells;
+    internal ReadOnlySpan<CellStyle> UnsafeCells => _cells;
 
     public void Clear()
     {
         Array.Fill(_scalars, ' ');
-        Array.Fill(_cells, Cell.None);
+        Array.Fill(_cells, CellStyle.None);
     }
 
-    public void Clear(Cell cell)
+    public void Clear(CellStyle cellStyle)
     {
         Array.Fill(_scalars, ' ');
-        Array.Fill(_cells, cell);
+        Array.Fill(_cells, cellStyle);
     }
 
     public void PushClip(Rectangle rect)
@@ -77,7 +77,7 @@ public sealed class CellBuffer
         _clipRect = _clipStack![--_clipDepth];
     }
 
-    public void SetCell(int x, int y, Rune rune, Cell cell)
+    public void SetCell(int x, int y, Rune rune, CellStyle cellStyle)
     {
         if ((uint)x >= (uint)Width || (uint)y >= (uint)Height || !_clipRect.Contains(x, y))
         {
@@ -92,7 +92,7 @@ public sealed class CellBuffer
 
         var index = (y * Width) + x;
         _scalars[index] = rune.Value;
-        _cells[index] = cell.WithoutContinuation();
+        _cells[index] = cellStyle.WithoutContinuation();
 
         if (width > 1 && x + 1 < Width)
         {
@@ -101,11 +101,11 @@ public sealed class CellBuffer
                 return;
             }
             _scalars[index + 1] = ' ';
-            _cells[index + 1] = cell.WithoutContinuation().WithContinuation();
+            _cells[index + 1] = cellStyle.WithoutContinuation().WithContinuation();
         }
     }
 
-    public void WriteText(int x, int y, ReadOnlySpan<char> text, Cell cell)
+    public void WriteText(int x, int y, ReadOnlySpan<char> text, CellStyle cellStyle)
     {
         var posX = x;
         var index = 0;
@@ -125,7 +125,7 @@ public sealed class CellBuffer
                     break;
                 }
 
-                SetCell(posX, y, rune, cell);
+                SetCell(posX, y, rune, cellStyle);
                 posX += w;
             }
 
@@ -155,7 +155,7 @@ public sealed class CellBuffer
         {
             sb.Clear();
 
-            var currentCell = Cell.None;
+            var currentCell = CellStyle.None;
             var hasOpenStyle = false;
 
             for (var x = 0; x < Width; x++)
@@ -178,7 +178,7 @@ public sealed class CellBuffer
                     }
 
                     currentCell = cell;
-                    if (currentCell != Cell.None)
+                    if (currentCell != CellStyle.None)
                     {
                         AppendStyle(sb, currentCell);
                         hasOpenStyle = true;
@@ -208,12 +208,12 @@ public sealed class CellBuffer
         return lines;
     }
 
-    private static void AppendStyle(StringBuilder sb, Cell cell)
+    private static void AppendStyle(StringBuilder sb, CellStyle cellStyle)
     {
         sb.Append('[');
         var first = true;
 
-        var style = cell.TextStyle;
+        var style = cellStyle.TextStyle;
         AppendStyleToken(ref first, sb, style, TextStyle.Bold, "bold");
         AppendStyleToken(ref first, sb, style, TextStyle.Dim, "dim");
         AppendStyleToken(ref first, sb, style, TextStyle.Italic, "italic");
@@ -223,12 +223,12 @@ public sealed class CellBuffer
         AppendStyleToken(ref first, sb, style, TextStyle.Hidden, "hidden");
         AppendStyleToken(ref first, sb, style, TextStyle.Strikethrough, "strikethrough");
 
-        if (cell.TryGetForeground(out var fg))
+        if (cellStyle.TryGetForeground(out var fg))
         {
             AppendToken(ref first, sb, ToMarkupColor(fg));
         }
 
-        if (cell.TryGetBackground(out var bg))
+        if (cellStyle.TryGetBackground(out var bg))
         {
             AppendToken(ref first, sb, "on");
             AppendToken(ref first, sb, ToMarkupColor(bg));

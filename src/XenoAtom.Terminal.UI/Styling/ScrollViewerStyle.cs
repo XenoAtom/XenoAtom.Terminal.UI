@@ -14,17 +14,17 @@ public sealed class ScrollViewerStyle
 
     public int ScrollBarThickness { get; init; } = 2;
 
-    public Cell? TrackStyle { get; init; }
-    public Cell? ThumbStyle { get; init; }
+    public CellStyle? TrackStyle { get; init; }
+    public CellStyle? ThumbStyle { get; init; }
 
-    public Cell ResolveTrackStyle(Theme theme)
+    public CellStyle ResolveTrackStyle(Theme theme)
     {
         if (TrackStyle is { } track)
         {
             return track;
         }
 
-        var style = Cell.None | TextStyle.Dim;
+        var style = CellStyle.None | TextStyle.Dim;
         if (theme.Muted is { } fg)
         {
             style = style.WithForeground(fg);
@@ -36,14 +36,14 @@ public sealed class ScrollViewerStyle
         return style;
     }
 
-    public Cell ResolveThumbStyle(Theme theme, bool focused)
+    public CellStyle ResolveThumbStyle(Theme theme, bool focused)
     {
         if (ThumbStyle is { } thumb)
         {
             return thumb;
         }
 
-        var style = Cell.None | TextStyle.Bold;
+        var style = CellStyle.None | TextStyle.Bold;
         var fg = focused ? (theme.Accent ?? theme.Selection) : (theme.Border ?? theme.Muted);
         if (fg is { } fgc) style = style.WithForeground(fgc);
         if (theme.SurfaceAlt is { } bgc) style = style.WithBackground(bgc);

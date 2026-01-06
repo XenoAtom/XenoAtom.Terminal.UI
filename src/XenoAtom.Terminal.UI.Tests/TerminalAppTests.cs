@@ -32,7 +32,7 @@ public sealed class TerminalAppTests
 
         protected override void RenderOverride(CellBuffer buffer)
         {
-            buffer.WriteText(Bounds.X, Bounds.Y, Text.AsSpan(), ReferenceEquals(App?.FocusedElement, this) ? (Cell.None | TextStyle.Invert) : Cell.None);
+            buffer.WriteText(Bounds.X, Bounds.Y, Text.AsSpan(), ReferenceEquals(App?.FocusedElement, this) ? (CellStyle.None | TextStyle.Invert) : CellStyle.None);
         }
     }
 
@@ -52,7 +52,7 @@ public sealed class TerminalAppTests
 
         protected override void RenderOverride(CellBuffer buffer)
         {
-            buffer.WriteText(Bounds.X, Bounds.Y, $"Count:{Count}".AsSpan(), Cell.None);
+            buffer.WriteText(Bounds.X, Bounds.Y, $"Count:{Count}".AsSpan(), CellStyle.None);
         }
     }
 

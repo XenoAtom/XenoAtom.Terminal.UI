@@ -14,12 +14,12 @@ public sealed class ListBoxStyle
 
     public char MarkerGlyph { get; init; } = '▸';
 
-    public Cell? Item { get; init; }
-    public Cell? SelectedFocused { get; init; }
-    public Cell? SelectedUnfocused { get; init; }
-    public Cell? Disabled { get; init; }
+    public CellStyle? Item { get; init; }
+    public CellStyle? SelectedFocused { get; init; }
+    public CellStyle? SelectedUnfocused { get; init; }
+    public CellStyle? Disabled { get; init; }
 
-    public Cell ResolveItemStyle(Theme theme, bool enabled, bool selected, bool focused)
+    public CellStyle ResolveItemStyle(Theme theme, bool enabled, bool selected, bool focused)
     {
         var baseStyle = theme.SurfaceStyle();
 
@@ -38,6 +38,6 @@ public sealed class ListBoxStyle
             return SelectedFocused ?? theme.SelectionStyle();
         }
 
-        return SelectedUnfocused ?? (Cell.None | TextStyle.Bold | theme.BorderStyle(focused: false));
+        return SelectedUnfocused ?? (CellStyle.None | TextStyle.Bold | theme.BorderStyle(focused: false));
     }
 }

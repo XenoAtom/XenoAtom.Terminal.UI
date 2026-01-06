@@ -182,7 +182,7 @@ public sealed partial class Table : Visuals.Visual
         }
     }
 
-    private static void DrawLine(CellBuffer buffer, Rectangle rect, int y, IReadOnlyList<int> widths, Cell border, LineGlyphs glyphs, char left, char middle, char right)
+    private static void DrawLine(CellBuffer buffer, Rectangle rect, int y, IReadOnlyList<int> widths, CellStyle border, LineGlyphs glyphs, char left, char middle, char right)
     {
         var x = rect.X;
         buffer.SetCell(x, y, new Rune(left), border);
@@ -206,7 +206,7 @@ public sealed partial class Table : Visuals.Visual
         }
     }
 
-    private static void WriteRow(CellBuffer buffer, Rectangle rect, int y, IReadOnlyList<string> row, IReadOnlyList<int> widths, Cell border, LineGlyphs glyphs, Cell cellStyle)
+    private static void WriteRow(CellBuffer buffer, Rectangle rect, int y, IReadOnlyList<string> row, IReadOnlyList<int> widths, CellStyle border, LineGlyphs glyphs, CellStyle cellStyleStyle)
     {
         var x = rect.X;
 
@@ -215,12 +215,12 @@ public sealed partial class Table : Visuals.Visual
 
         for (var c = 0; c < widths.Count && x < rect.X + rect.Width; c++)
         {
-            buffer.SetCell(x, y, new Rune(' '), cellStyle);
+            buffer.SetCell(x, y, new Rune(' '), cellStyleStyle);
             x++;
 
             var contentWidth = widths[c];
             var text = c < row.Count ? row[c] : string.Empty;
-            WriteClipped(buffer, x, y, text.AsSpan(), contentWidth, cellStyle);
+            WriteClipped(buffer, x, y, text.AsSpan(), contentWidth, cellStyleStyle);
 
             x += contentWidth;
             if (x >= rect.X + rect.Width)
@@ -228,7 +228,7 @@ public sealed partial class Table : Visuals.Visual
                 break;
             }
 
-            buffer.SetCell(x, y, new Rune(' '), cellStyle);
+            buffer.SetCell(x, y, new Rune(' '), cellStyleStyle);
             x++;
 
             if (x >= rect.X + rect.Width)
@@ -241,7 +241,7 @@ public sealed partial class Table : Visuals.Visual
         }
     }
 
-    private static void WriteClipped(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, int maxCells, Cell style)
+    private static void WriteClipped(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, int maxCells, CellStyle style)
     {
         if (maxCells <= 0)
         {

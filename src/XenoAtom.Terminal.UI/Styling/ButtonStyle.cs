@@ -15,17 +15,17 @@ public sealed class ButtonStyle
 
     public Thickness Padding { get; init; } = new(2, 0, 2, 0);
 
-    public Cell? Normal { get; init; }
-    public Cell? Hovered { get; init; }
-    public Cell? Pressed { get; init; }
-    public Cell? Focused { get; init; }
-    public Cell? Disabled { get; init; }
+    public CellStyle? Normal { get; init; }
+    public CellStyle? Hovered { get; init; }
+    public CellStyle? Pressed { get; init; }
+    public CellStyle? Focused { get; init; }
+    public CellStyle? Disabled { get; init; }
 
-    public Cell Resolve(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, ControlTone tone)
+    public CellStyle Resolve(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, ControlTone tone)
     {
         if (!enabled)
         {
-            return Disabled ?? (Cell.None | TextStyle.Dim);
+            return Disabled ?? (CellStyle.None | TextStyle.Dim);
         }
 
         if (pressed)
@@ -45,7 +45,7 @@ public sealed class ButtonStyle
                 return h;
             }
 
-            var style = Cell.None;
+            var style = CellStyle.None;
             if (theme.Selection is { } selection)
             {
                 style = style.WithBackground(selection);
@@ -69,7 +69,7 @@ public sealed class ButtonStyle
 
         var fg = tone is ControlTone.Default ? theme.Foreground : (theme.Background ?? theme.Foreground);
 
-        var resolved = Cell.None;
+        var resolved = CellStyle.None;
         if (fg is { } fgc) resolved = resolved.WithForeground(fgc);
         if (bg is { } bgc) resolved = resolved.WithBackground(bgc);
         return resolved;

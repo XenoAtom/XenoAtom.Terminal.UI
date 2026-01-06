@@ -15,9 +15,9 @@ public sealed class StatusBarStyle
     public XenoAtom.Ansi.AnsiColor? Background { get; init; }
     public XenoAtom.Ansi.AnsiColor? Foreground { get; init; }
 
-    public Cell Resolve(Theme theme)
+    public CellStyle Resolve(Theme theme)
     {
-        var style = Cell.None;
+        var style = CellStyle.None;
         var fg = Foreground ?? theme.Foreground;
         var bg = Background ?? theme.SurfaceAlt ?? theme.Surface ?? theme.Background;
 

@@ -476,7 +476,7 @@ public sealed partial class ScrollViewer : Visuals.Visual
             Owner = owner;
         }
 
-        protected (Cell Track, Cell Thumb, ScrollBarGlyphs Glyphs) GetStyles()
+        protected (CellStyle Track, CellStyle Thumb, ScrollBarGlyphs Glyphs) GetStyles()
         {
             var theme = GetTheme();
             var focused = Owner.IsFocusWithin();

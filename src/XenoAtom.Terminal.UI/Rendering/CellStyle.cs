@@ -14,7 +14,7 @@ namespace XenoAtom.Terminal.UI.Rendering;
 /// This type is a lightweight, value-type container optimized for cell buffers.
 /// It encodes colors as 24-bit RGB (assuming truecolor is available).
 /// </remarks>
-public readonly struct Cell : IEquatable<Cell>
+public readonly struct CellStyle : IEquatable<CellStyle>
 {
     // Layout:
     // - Bits [0..7]   : TextStyle flags (matches AnsiDecorations bit positions)
@@ -36,35 +36,35 @@ public readonly struct Cell : IEquatable<Cell>
 
     internal readonly ulong Value;
 
-    internal Cell(ulong value) => Value = value;
+    internal CellStyle(ulong value) => Value = value;
 
-    public static Cell None => default;
+    public static CellStyle None => default;
 
     public TextStyle TextStyle => (TextStyle)(Value & TextStyleMask);
 
     internal bool IsContinuation => (Value & ContinuationMask) != 0;
 
-    internal Cell WithoutContinuation() => new(Value & ~ContinuationMask);
+    internal CellStyle WithoutContinuation() => new(Value & ~ContinuationMask);
 
-    internal Cell WithContinuation()
+    internal CellStyle WithContinuation()
         => new((Value & ~ContinuationMask) | ContinuationMask);
 
-    public Cell WithTextStyle(TextStyle style)
+    public CellStyle WithTextStyle(TextStyle style)
         => new((Value & ~TextStyleMask) | ((ulong)style & TextStyleMask));
 
-    public Cell AddTextStyle(TextStyle style)
+    public CellStyle AddTextStyle(TextStyle style)
         => new(Value | ((ulong)style & TextStyleMask));
 
-    public Cell RemoveTextStyle(TextStyle style)
+    public CellStyle RemoveTextStyle(TextStyle style)
         => new(Value & ~((ulong)style & TextStyleMask));
 
-    public Cell ClearForeground()
+    public CellStyle ClearForeground()
         => new(Value & ~ForegroundMask);
 
-    public Cell ClearBackground()
+    public CellStyle ClearBackground()
         => new(Value & ~BackgroundMask);
 
-    public Cell WithForeground(AnsiColor color)
+    public CellStyle WithForeground(AnsiColor color)
     {
         if (!TryGetRgb(color, out var packedRgb))
         {
@@ -74,10 +74,10 @@ public readonly struct Cell : IEquatable<Cell>
         var encoded = Encode(packedRgb);
         var value = Value;
         value = (value & ~ForegroundMask) | ((encoded & ColorMask) << ForegroundShift);
-        return new Cell(value);
+        return new CellStyle(value);
     }
 
-    public Cell WithBackground(AnsiColor color)
+    public CellStyle WithBackground(AnsiColor color)
     {
         if (!TryGetRgb(color, out var packedRgb))
         {
@@ -87,7 +87,7 @@ public readonly struct Cell : IEquatable<Cell>
         var encoded = Encode(packedRgb);
         var value = Value;
         value = (value & ~BackgroundMask) | ((encoded & ColorMask) << BackgroundShift);
-        return new Cell(value);
+        return new CellStyle(value);
     }
 
     public bool TryGetForeground(out AnsiColor color)
@@ -116,21 +116,21 @@ public readonly struct Cell : IEquatable<Cell>
         return true;
     }
 
-    public static Cell operator |(Cell a, Cell b) => new(a.Value | b.Value);
+    public static CellStyle operator |(CellStyle a, CellStyle b) => new(a.Value | b.Value);
 
-    public static Cell operator |(Cell a, TextStyle style) => a.AddTextStyle(style);
+    public static CellStyle operator |(CellStyle a, TextStyle style) => a.AddTextStyle(style);
 
-    public static Cell operator &(Cell a, TextStyle style) => new(a.Value & (ulong)style);
+    public static CellStyle operator &(CellStyle a, TextStyle style) => new(a.Value & (ulong)style);
 
-    public bool Equals(Cell other) => Value == other.Value;
+    public bool Equals(CellStyle other) => Value == other.Value;
 
-    public override bool Equals(object? obj) => obj is Cell other && Equals(other);
+    public override bool Equals(object? obj) => obj is CellStyle other && Equals(other);
 
     public override int GetHashCode() => Value.GetHashCode();
 
-    public static bool operator ==(Cell left, Cell right) => left.Equals(right);
+    public static bool operator ==(CellStyle left, CellStyle right) => left.Equals(right);
 
-    public static bool operator !=(Cell left, Cell right) => !left.Equals(right);
+    public static bool operator !=(CellStyle left, CellStyle right) => !left.Equals(right);
 
     internal AnsiDecorations ToAnsiDecorations()
         => (AnsiDecorations)((int)TextStyle);

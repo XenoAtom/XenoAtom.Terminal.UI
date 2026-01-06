@@ -63,9 +63,9 @@ public sealed class Theme
 
     public ScrollBarGlyphs ScrollBars { get; init; } = ScrollBarGlyphs.Default;
 
-    public Cell BaseTextStyle()
+    public CellStyle BaseTextStyle()
     {
-        var style = Cell.None;
+        var style = CellStyle.None;
         if (Foreground is { } fg)
         {
             style = style.WithForeground(fg);
@@ -77,9 +77,9 @@ public sealed class Theme
         return style;
     }
 
-    public Cell SurfaceStyle()
+    public CellStyle SurfaceStyle()
     {
-        var style = Cell.None;
+        var style = CellStyle.None;
         if (Foreground is { } fg)
         {
             style = style.WithForeground(fg);
@@ -91,7 +91,7 @@ public sealed class Theme
         return style;
     }
 
-    public Cell MutedTextStyle()
+    public CellStyle MutedTextStyle()
     {
         var style = BaseTextStyle();
         if (Muted is { } m)
@@ -101,10 +101,10 @@ public sealed class Theme
         return style;
     }
 
-    public Cell BorderStyle(bool focused)
+    public CellStyle BorderStyle(bool focused)
     {
         var color = focused ? FocusBorder : Border;
-        var style = Cell.None;
+        var style = CellStyle.None;
         if (color is { } c)
         {
             style = style.WithForeground(c);
@@ -112,9 +112,9 @@ public sealed class Theme
         return style;
     }
 
-    public Cell SelectionStyle()
+    public CellStyle SelectionStyle()
     {
-        var style = Cell.None;
+        var style = CellStyle.None;
         if (Selection is { } c)
         {
             style = style.WithBackground(c);

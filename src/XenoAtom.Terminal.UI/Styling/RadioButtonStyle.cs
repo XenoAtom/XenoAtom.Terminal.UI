@@ -15,12 +15,12 @@ public sealed class RadioButtonStyle
     public char CheckedGlyph { get; init; } = '◉';
     public char UncheckedGlyph { get; init; } = '○';
 
-    public Cell? Normal { get; init; }
-    public Cell? Hovered { get; init; }
-    public Cell? Focused { get; init; }
-    public Cell? Disabled { get; init; }
+    public CellStyle? Normal { get; init; }
+    public CellStyle? Hovered { get; init; }
+    public CellStyle? Focused { get; init; }
+    public CellStyle? Disabled { get; init; }
 
-    public Cell Resolve(Theme theme, bool enabled, bool focused, bool hovered)
+    public CellStyle Resolve(Theme theme, bool enabled, bool focused, bool hovered)
     {
         var baseStyle = theme.SurfaceStyle();
 

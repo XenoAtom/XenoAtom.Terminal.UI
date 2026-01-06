@@ -15,15 +15,15 @@ public sealed class TabControlStyle
 
     public Thickness TabPadding { get; init; } = new(Left: 2, Top: 0, Right: 2, Bottom: 0);
 
-    public Cell? StripStyle { get; init; }
-    public Cell? TabStyle { get; init; }
-    public Cell? TabHoveredStyle { get; init; }
-    public Cell? TabSelectedStyle { get; init; }
-    public Cell? TabDisabledStyle { get; init; }
+    public CellStyle? StripStyle { get; init; }
+    public CellStyle? TabStyle { get; init; }
+    public CellStyle? TabHoveredStyle { get; init; }
+    public CellStyle? TabSelectedStyle { get; init; }
+    public CellStyle? TabDisabledStyle { get; init; }
 
-    public Cell ResolveStripStyle(Theme theme) => StripStyle ?? theme.SurfaceStyle();
+    public CellStyle ResolveStripStyle(Theme theme) => StripStyle ?? theme.SurfaceStyle();
 
-    public Cell ResolveTabStyle(Theme theme, bool enabled, bool selected, bool hovered)
+    public CellStyle ResolveTabStyle(Theme theme, bool enabled, bool selected, bool hovered)
     {
         if (!enabled)
         {

@@ -21,10 +21,10 @@ public sealed class TextBoxStyle
     public XenoAtom.Ansi.AnsiColor? Background { get; init; }
     public XenoAtom.Ansi.AnsiColor? Placeholder { get; init; }
 
-    public Cell BorderStyle(Theme theme, bool focused)
+    public CellStyle BorderStyle(Theme theme, bool focused)
     {
         var color = focused ? (FocusBorder ?? theme.FocusBorder) : (Border ?? theme.Border);
-        var style = Cell.None;
+        var style = CellStyle.None;
         if (color is { } c)
         {
             style = style.WithForeground(c);
@@ -32,9 +32,9 @@ public sealed class TextBoxStyle
         return style;
     }
 
-    public Cell SelectionStyle(Theme theme)
+    public CellStyle SelectionStyle(Theme theme)
     {
-        var style = Cell.None;
+        var style = CellStyle.None;
         var color = Selection ?? theme.Selection;
         if (color is { } c)
         {
@@ -44,16 +44,16 @@ public sealed class TextBoxStyle
         return style;
     }
 
-    public Cell BackgroundStyle(Theme theme)
+    public CellStyle BackgroundStyle(Theme theme)
     {
-        var style = Cell.None;
+        var style = CellStyle.None;
         if (theme.Foreground is { } fg) style = style.WithForeground(fg);
         var bg = Background ?? theme.SurfaceAlt ?? theme.Surface ?? theme.Background;
         if (bg is { } b) style = style.WithBackground(b);
         return style;
     }
 
-    public Cell PlaceholderStyle(Theme theme)
+    public CellStyle PlaceholderStyle(Theme theme)
     {
         var style = BackgroundStyle(theme);
         var fg = Placeholder ?? theme.Muted ?? theme.Foreground;
