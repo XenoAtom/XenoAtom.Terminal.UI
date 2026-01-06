@@ -7,7 +7,7 @@ using XenoAtom.Terminal;
 
 namespace XenoAtom.Terminal.UI;
 
-public sealed partial class Dialog : Visual
+public sealed partial class Dialog : Visual, IModalVisual
 {
     private Visual? _child;
     private CellRect _layoutSlot;
@@ -35,6 +35,9 @@ public sealed partial class Dialog : Visual
 
     [Bindable]
     public partial int? Height { get; set; }
+
+    [Bindable]
+    public partial bool IsModal { get; set; }
 
     public Visual? Child
     {

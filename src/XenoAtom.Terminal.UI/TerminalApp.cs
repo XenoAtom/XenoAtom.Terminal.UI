@@ -470,6 +470,7 @@ public sealed class TerminalApp : IAsyncDisposable
 
     private void DispatchKeyEvent(TerminalKeyEvent keyEvent)
     {
+        EnsureFocusInScope();
         if (FocusedElement is null || !FocusedElement.IsEnabled || !FocusedElement.IsVisible)
         {
             return;
@@ -490,23 +491,19 @@ public sealed class TerminalApp : IAsyncDisposable
 
     private void EnsureInitialFocus()
     {
-        if (FocusedElement is not null)
-        {
-            return;
-        }
-
-        FocusedElement = Root.EnumerateVisualsDepthFirst().FirstOrDefault(v => v.Focusable && v.IsVisible && v.IsEnabled);
+        EnsureFocusInScope();
     }
 
     private void FocusNext()
     {
-        var focusables = Root.EnumerateVisualsDepthFirst().Where(v => v.Focusable && v.IsVisible && v.IsEnabled).ToList();
+        var scope = GetFocusScopeRoot();
+        var focusables = scope.EnumerateVisualsDepthFirst().Where(v => v.Focusable && v.IsVisible && v.IsEnabled).ToList();
         if (focusables.Count == 0)
         {
             return;
         }
 
-        if (FocusedElement is null)
+        if (FocusedElement is null || !focusables.Contains(FocusedElement))
         {
             FocusedElement = focusables[0];
             RequestRender();
@@ -520,13 +517,14 @@ public sealed class TerminalApp : IAsyncDisposable
 
     private void FocusPrevious()
     {
-        var focusables = Root.EnumerateVisualsDepthFirst().Where(v => v.Focusable && v.IsVisible && v.IsEnabled).ToList();
+        var scope = GetFocusScopeRoot();
+        var focusables = scope.EnumerateVisualsDepthFirst().Where(v => v.Focusable && v.IsVisible && v.IsEnabled).ToList();
         if (focusables.Count == 0)
         {
             return;
         }
 
-        if (FocusedElement is null)
+        if (FocusedElement is null || !focusables.Contains(FocusedElement))
         {
             FocusedElement = focusables[^1];
             RequestRender();
@@ -601,6 +599,7 @@ public sealed class TerminalApp : IAsyncDisposable
 
     private void DispatchTextInput(string text)
     {
+        EnsureFocusInScope();
         if (FocusedElement is null || string.IsNullOrEmpty(text))
         {
             return;
@@ -612,6 +611,7 @@ public sealed class TerminalApp : IAsyncDisposable
 
     private void DispatchPaste(string text)
     {
+        EnsureFocusInScope();
         if (FocusedElement is null || string.IsNullOrEmpty(text))
         {
             return;
@@ -623,6 +623,19 @@ public sealed class TerminalApp : IAsyncDisposable
 
     private void DispatchMouseEvent(TerminalMouseEvent mouseEvent)
     {
+        var inputRoot = GetInputRoot();
+
+        if (_pointerCapture is not null && !IsInScope(_pointerCapture, inputRoot))
+        {
+            _pointerCapture = null;
+        }
+
+        if (_hoveredElement is not null && !IsInScope(_hoveredElement, inputRoot))
+        {
+            _hoveredElement.IsHovered = false;
+            _hoveredElement = null;
+        }
+
         Visual? hitTarget;
         Visual? target;
         var uiY = mouseEvent.Y;
@@ -630,7 +643,7 @@ public sealed class TerminalApp : IAsyncDisposable
 
         if (_options.HostKind == TerminalHostKind.Fullscreen)
         {
-            hitTarget = Root.HitTest(mouseEvent.X, mouseEvent.Y);
+            hitTarget = inputRoot.HitTest(mouseEvent.X, mouseEvent.Y);
             target = _pointerCapture ?? hitTarget;
         }
         else
@@ -652,7 +665,7 @@ public sealed class TerminalApp : IAsyncDisposable
 
             uiY = translatedY;
             localY = translatedY;
-            hitTarget = Root.HitTest(mouseEvent.X, translatedY);
+            hitTarget = inputRoot.HitTest(mouseEvent.X, translatedY);
             target = _pointerCapture ?? hitTarget;
         }
 
@@ -743,6 +756,64 @@ public sealed class TerminalApp : IAsyncDisposable
         {
             _hoveredElement.IsHovered = true;
         }
+    }
+
+    private Visual GetInputRoot() => FindActiveModalRoot(Root) ?? Root;
+
+    private Visual GetFocusScopeRoot() => FindActiveModalRoot(Root) ?? Root;
+
+    private void EnsureFocusInScope()
+    {
+        var scopeRoot = GetFocusScopeRoot();
+
+        if (FocusedElement is not null)
+        {
+            if (!FocusedElement.IsEnabled || !FocusedElement.IsVisible || !IsInScope(FocusedElement, scopeRoot))
+            {
+                FocusedElement = null;
+            }
+        }
+
+        if (FocusedElement is null)
+        {
+            FocusedElement = scopeRoot.EnumerateVisualsDepthFirst().FirstOrDefault(v => v.Focusable && v.IsVisible && v.IsEnabled);
+            if (FocusedElement is not null)
+            {
+                RequestRender();
+            }
+        }
+    }
+
+    private static bool IsInScope(Visual visual, Visual scopeRoot)
+    {
+        for (var v = visual; v is not null; v = v.Parent)
+        {
+            if (ReferenceEquals(v, scopeRoot))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static Visual? FindActiveModalRoot(Visual root)
+    {
+        if (!root.IsVisible || !root.IsEnabled)
+        {
+            return null;
+        }
+
+        for (var i = root.Children.Count - 1; i >= 0; i--)
+        {
+            var found = FindActiveModalRoot(root.Children[i]);
+            if (found is not null)
+            {
+                return found;
+            }
+        }
+
+        return root is IModalVisual { IsModal: true } ? root : null;
     }
 }
 

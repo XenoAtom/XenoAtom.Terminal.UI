@@ -277,6 +277,47 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task ModalDialog_Blocks_Clicks_Behind()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(30, 12));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var clicked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var button = new Button("Click");
+        button.Click += (_, _) => clicked.TrySetResult();
+
+        var content = new VStack();
+        content.Add(button);
+
+        var layer = new WindowLayer { Content = content };
+        var modal = new Dialog
+        {
+            Title = "Modal",
+            IsModal = true,
+            Width = 12,
+            Height = 5,
+            Left = 10,
+            Top = 3,
+            Child = new TextBlock("Modal"),
+        };
+        layer.AddWindow(modal);
+
+        var app = new TerminalApp(layer, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunAsync();
+
+        await Task.Delay(20);
+
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 1, Y = 1 });
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 1, Y = 1 });
+
+        await Task.Delay(50);
+        Assert.IsFalse(clicked.Task.IsCompleted);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    [TestMethod]
     public async Task RoutedEventArgs_Sets_Source_And_OriginalSource()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(20, 10));
