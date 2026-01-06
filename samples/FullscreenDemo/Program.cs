@@ -25,12 +25,12 @@ var scroll = new ScrollViewer { Child = scrollContent, Height = 5 };
 
 var table = new Table
 {
-    Headers = new[] { "Task", "Status" },
-    Rows = new[]
+    HeaderCells = new Visual[] { "Task", "Status" },
+    RowCells = new Visual[][]
     {
-        new[] { "Download", "Running" },
-        new[] { "Render", "OK" },
-        new[] { "Tests", "OK" },
+        new Visual[] { "Download", "Running" },
+        new Visual[] { "Render", "OK" },
+        new Visual[] { "Tests", "OK" },
     },
 };
 

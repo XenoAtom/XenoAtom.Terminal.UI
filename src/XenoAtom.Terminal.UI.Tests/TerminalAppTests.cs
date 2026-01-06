@@ -967,12 +967,11 @@ public sealed class TerminalAppTests
 
         var table = new Table
         {
-            Headers = new[] { "Name", "Value" },
-            Rows = new[] { new[] { "A", "1" }, new[] { "B", "2" } },
+            HeaderCells = new Visual[] { "Name", "Value" },
+            RowCells = new Visual[][] { new Visual[] { "A", "1" }, new Visual[] { "B", "2" } },
         };
 
-        var root = new VStack();
-        root.Add(table);
+        var root = new VStack { table };
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
         var runTask = app.RunAsync();

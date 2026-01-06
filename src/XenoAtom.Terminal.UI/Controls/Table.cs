@@ -11,6 +11,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class Table : Visual
 {
+    private readonly List<Visual> _visualChildren = new();
     private int[]? _columnWidths;
 
     public Table()
@@ -24,21 +25,76 @@ public sealed partial class Table : Visual
     [Bindable]
     public partial IReadOnlyList<IReadOnlyList<string>>? Rows { get; set; }
 
+    private IReadOnlyList<Visual>? _headerCells;
+
+    public IReadOnlyList<Visual>? HeaderCells
+    {
+        get => _headerCells;
+        set
+        {
+            if (ReferenceEquals(_headerCells, value))
+            {
+                return;
+            }
+
+            _headerCells = value;
+            RebuildVisualChildren();
+            App?.RequestRender();
+        }
+    }
+
+    private IReadOnlyList<IReadOnlyList<Visual>>? _rowCells;
+
+    public IReadOnlyList<IReadOnlyList<Visual>>? RowCells
+    {
+        get => _rowCells;
+        set
+        {
+            if (ReferenceEquals(_rowCells, value))
+            {
+                return;
+            }
+
+            _rowCells = value;
+            RebuildVisualChildren();
+            App?.RequestRender();
+        }
+    }
+
     [Bindable]
     public partial bool ShowHeaderSeparator { get; set; }
+
+    protected override int ChildrenCount => _visualChildren.Count;
+
+    protected override Visual GetChild(int index) => _visualChildren[index];
 
     protected override Size MeasureOverride(Size availableSize)
     {
         var width = Math.Max(1, availableSize.Width);
+        var headerCells = _headerCells;
+        var rowCells = _rowCells;
+
         var headers = Headers;
         var rows = Rows;
 
         var columns = 0;
-        if (headers is not null)
+        if (headerCells is not null)
+        {
+            columns = Math.Max(columns, headerCells.Count);
+        }
+        else if (headers is not null)
         {
             columns = Math.Max(columns, headers.Count);
         }
-        if (rows is not null)
+
+        if (rowCells is not null)
+        {
+            for (var i = 0; i < rowCells.Count; i++)
+            {
+                columns = Math.Max(columns, rowCells[i].Count);
+            }
+        }
+        else if (rows is not null)
         {
             for (var i = 0; i < rows.Count; i++)
             {
@@ -54,7 +110,21 @@ public sealed partial class Table : Visual
 
         var widths = new int[columns];
 
-        if (headers is not null)
+        if (headerCells is not null)
+        {
+            for (var c = 0; c < columns; c++)
+            {
+                var cell = c < headerCells.Count ? headerCells[c] : null;
+                if (cell is null)
+                {
+                    continue;
+                }
+
+                cell.Measure(new Size(int.MaxValue / 4, 1));
+                widths[c] = Math.Max(widths[c], cell.DesiredSize.Width);
+            }
+        }
+        else if (headers is not null)
         {
             for (var c = 0; c < columns; c++)
             {
@@ -63,7 +133,25 @@ public sealed partial class Table : Visual
             }
         }
 
-        if (rows is not null)
+        if (rowCells is not null)
+        {
+            for (var r = 0; r < rowCells.Count; r++)
+            {
+                var row = rowCells[r];
+                for (var c = 0; c < columns; c++)
+                {
+                    var cell = c < row.Count ? row[c] : null;
+                    if (cell is null)
+                    {
+                        continue;
+                    }
+
+                    cell.Measure(new Size(int.MaxValue / 4, 1));
+                    widths[c] = Math.Max(widths[c], cell.DesiredSize.Width);
+                }
+            }
+        }
+        else if (rows is not null)
         {
             for (var r = 0; r < rows.Count; r++)
             {
@@ -100,7 +188,7 @@ public sealed partial class Table : Visual
         _columnWidths = widths;
 
         var height = 2; // top + bottom
-        if (headers is not null)
+        if (headerCells is not null || headers is not null)
         {
             height += 1;
             if (ShowHeaderSeparator)
@@ -108,8 +196,8 @@ public sealed partial class Table : Visual
                 height += 1;
             }
         }
-        height += rows?.Count ?? 0;
-        if (headers is not null && ShowHeaderSeparator)
+        height += rowCells?.Count ?? rows?.Count ?? 0;
+        if ((headerCells is not null || headers is not null) && ShowHeaderSeparator)
         {
             // already included
         }
@@ -120,6 +208,37 @@ public sealed partial class Table : Visual
     protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
+
+        var widths = _columnWidths;
+        if (widths is null || widths.Length == 0)
+        {
+            return;
+        }
+
+        var y = finalRect.Y + 1;
+
+        var hasHeader = _headerCells is not null || Headers is not null;
+        if (hasHeader)
+        {
+            if (_headerCells is not null)
+            {
+                ArrangeRow(finalRect, y, widths, _headerCells);
+            }
+            y++;
+
+            if (ShowHeaderSeparator)
+            {
+                y++;
+            }
+        }
+
+        if (_rowCells is not null)
+        {
+            for (var r = 0; r < _rowCells.Count; r++, y++)
+            {
+                ArrangeRow(finalRect, y, widths, _rowCells[r]);
+            }
+        }
     }
 
     protected override void RenderOverride(CellBuffer buffer)
@@ -154,10 +273,18 @@ public sealed partial class Table : Visual
         DrawLine(buffer, rect, y, widths, border, glyphs, glyphs.TopLeft, glyphs.TeeTop, glyphs.TopRight);
         y++;
 
-        var headers = Headers;
-        if (headers is not null)
+        var hasHeader = _headerCells is not null || Headers is not null;
+        if (hasHeader)
         {
-            WriteRow(buffer, rect, y, headers, widths, border, glyphs, CellStyle.None | TextStyle.Bold);
+            if (_headerCells is not null)
+            {
+                DrawRowFrame(buffer, rect, y, widths, border, glyphs);
+            }
+            else
+            {
+                var headers = Headers;
+                WriteRow(buffer, rect, y, headers ?? Array.Empty<string>(), widths, border, glyphs, CellStyle.None | TextStyle.Bold);
+            }
             y++;
 
             if (ShowHeaderSeparator && y < rect.Y + rect.Height)
@@ -167,18 +294,115 @@ public sealed partial class Table : Visual
             }
         }
 
-        var rows = Rows;
-        if (rows is not null)
+        if (_rowCells is not null)
         {
-            for (var r = 0; r < rows.Count && y < rect.Y + rect.Height - 1; r++, y++)
+            for (var r = 0; r < _rowCells.Count && y < rect.Y + rect.Height - 1; r++, y++)
             {
-                WriteRow(buffer, rect, y, rows[r], widths, border, glyphs, CellStyle.None);
+                DrawRowFrame(buffer, rect, y, widths, border, glyphs);
+            }
+        }
+        else
+        {
+            var rows = Rows;
+            if (rows is not null)
+            {
+                for (var r = 0; r < rows.Count && y < rect.Y + rect.Height - 1; r++, y++)
+                {
+                    WriteRow(buffer, rect, y, rows[r], widths, border, glyphs, CellStyle.None);
+                }
             }
         }
 
         if (y < rect.Y + rect.Height)
         {
             DrawLine(buffer, rect, rect.Y + rect.Height - 1, widths, border, glyphs, glyphs.BottomLeft, glyphs.TeeBottom, glyphs.BottomRight);
+        }
+    }
+
+    private void RebuildVisualChildren()
+    {
+        for (var i = 0; i < _visualChildren.Count; i++)
+        {
+            DetachChild(_visualChildren[i]);
+        }
+
+        _visualChildren.Clear();
+
+        if (_headerCells is not null)
+        {
+            for (var i = 0; i < _headerCells.Count; i++)
+            {
+                var cell = _headerCells[i];
+                if (cell is null)
+                {
+                    continue;
+                }
+
+                AttachChild(cell);
+                _visualChildren.Add(cell);
+            }
+        }
+
+        if (_rowCells is not null)
+        {
+            for (var r = 0; r < _rowCells.Count; r++)
+            {
+                var row = _rowCells[r];
+                for (var c = 0; c < row.Count; c++)
+                {
+                    var cell = row[c];
+                    if (cell is null)
+                    {
+                        continue;
+                    }
+
+                    AttachChild(cell);
+                    _visualChildren.Add(cell);
+                }
+            }
+        }
+    }
+
+    private static void ArrangeRow(Rectangle rect, int y, IReadOnlyList<int> widths, IReadOnlyList<Visual> rowCells)
+    {
+        var x = rect.X + 1; // after left border
+
+        for (var c = 0; c < widths.Count; c++)
+        {
+            var contentWidth = widths[c];
+            var contentX = x + 1; // skip left padding
+
+            if (c < rowCells.Count)
+            {
+                var cell = rowCells[c];
+                cell.Arrange(new Rectangle(contentX, y, Math.Max(0, contentWidth), 1));
+            }
+
+            x += contentWidth + 3; // padding + content + padding + separator
+
+            if (x >= rect.X + rect.Width)
+            {
+                break;
+            }
+        }
+    }
+
+    private static void DrawRowFrame(CellBuffer buffer, Rectangle rect, int y, IReadOnlyList<int> widths, CellStyle border, LineGlyphs glyphs)
+    {
+        var x = rect.X;
+        buffer.SetCell(x, y, new Rune(glyphs.Vertical), border);
+        x++;
+
+        for (var c = 0; c < widths.Count; c++)
+        {
+            x += widths[c] + 2; // padding + content + padding
+            if (x >= rect.X + rect.Width)
+            {
+                break;
+            }
+
+            buffer.SetCell(x, y, new Rune(glyphs.Vertical), border);
+            x++;
         }
     }
 
