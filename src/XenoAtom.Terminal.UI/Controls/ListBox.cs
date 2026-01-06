@@ -116,21 +116,21 @@ public sealed partial class ListBox : Visual
             var right = rect.X + rect.Width - 1;
             var bottom = rect.Y + rect.Height - 1;
 
-            buffer.SetCell(left, top, new Rune(glyphs.TopLeft), border);
-            buffer.SetCell(right, top, new Rune(glyphs.TopRight), border);
-            buffer.SetCell(left, bottom, new Rune(glyphs.BottomLeft), border);
-            buffer.SetCell(right, bottom, new Rune(glyphs.BottomRight), border);
+            buffer.SetCell(left, top, glyphs.TopLeft, border);
+            buffer.SetCell(right, top, glyphs.TopRight, border);
+            buffer.SetCell(left, bottom, glyphs.BottomLeft, border);
+            buffer.SetCell(right, bottom, glyphs.BottomRight, border);
 
             for (var x = left + 1; x < right; x++)
             {
-                buffer.SetCell(x, top, new Rune(glyphs.Horizontal), border);
-                buffer.SetCell(x, bottom, new Rune(glyphs.Horizontal), border);
+                buffer.SetCell(x, top, glyphs.Horizontal, border);
+                buffer.SetCell(x, bottom, glyphs.Horizontal, border);
             }
 
             for (var y = top + 1; y < bottom; y++)
             {
-                buffer.SetCell(left, y, new Rune(glyphs.Vertical), border);
-                buffer.SetCell(right, y, new Rune(glyphs.Vertical), border);
+                buffer.SetCell(left, y, glyphs.Vertical, border);
+                buffer.SetCell(right, y, glyphs.Vertical, border);
             }
         }
 
@@ -150,7 +150,7 @@ public sealed partial class ListBox : Visual
 
             if (innerWidth >= 2)
             {
-                buffer.SetCell(innerLeft, y, new Rune(isSelected ? listBoxStyle.MarkerGlyph : ' '), style);
+                buffer.SetCell(innerLeft, y, isSelected ? listBoxStyle.MarkerGlyph : new Rune(' '), style);
                 buffer.SetCell(innerLeft + 1, y, new Rune(' '), style);
 
                 var span = item.AsSpan();

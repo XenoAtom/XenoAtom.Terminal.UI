@@ -539,7 +539,7 @@ public sealed partial class ScrollViewer : Visual
                 var st = isThumb ? thumbStyle : trackStyle;
                 for (var dx = 0; dx < thickness; dx++)
                 {
-                    buffer.SetCell(rect.X + dx, rect.Y + y, new Rune(ch), st);
+                    buffer.SetCell(rect.X + dx, rect.Y + y, ch, st);
                 }
             }
         }
@@ -576,7 +576,7 @@ public sealed partial class ScrollViewer : Visual
                 var st = isThumb ? thumbStyle : trackStyle;
                 for (var dy = 0; dy < thickness; dy++)
                 {
-                    buffer.SetCell(rect.X + x, rect.Y + dy, new Rune(ch), st);
+                    buffer.SetCell(rect.X + x, rect.Y + dy, ch, st);
                 }
             }
         }
@@ -601,7 +601,7 @@ public sealed partial class ScrollViewer : Visual
             {
                 for (var x = 0; x < rect.Width; x++)
                 {
-                    buffer.SetCell(rect.X + x, rect.Y + y, new Rune(glyphs.Track), trackStyle);
+                    buffer.SetCell(rect.X + x, rect.Y + y, glyphs.Track, trackStyle);
                 }
             }
         }

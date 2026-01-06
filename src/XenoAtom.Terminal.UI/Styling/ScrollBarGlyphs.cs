@@ -2,12 +2,13 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Text;
+
 namespace XenoAtom.Terminal.UI.Styling;
 
-public readonly record struct ScrollBarGlyphs(char Track, char Thumb)
+public readonly record struct ScrollBarGlyphs(Rune Track, Rune Thumb)
 {
     public static ScrollBarGlyphs Default { get; } = new(
-        Track: ' ',
-        Thumb: ' ');
+        Track: new Rune(' '),
+        Thumb: new Rune(' '));
 }
-

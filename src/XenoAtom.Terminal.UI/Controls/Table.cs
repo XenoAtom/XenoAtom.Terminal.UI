@@ -390,7 +390,7 @@ public sealed partial class Table : Visual
     private static void DrawRowFrame(CellBuffer buffer, Rectangle rect, int y, IReadOnlyList<int> widths, CellStyle border, LineGlyphs glyphs)
     {
         var x = rect.X;
-        buffer.SetCell(x, y, new Rune(glyphs.Vertical), border);
+        buffer.SetCell(x, y, glyphs.Vertical, border);
         x++;
 
         for (var c = 0; c < widths.Count; c++)
@@ -401,15 +401,15 @@ public sealed partial class Table : Visual
                 break;
             }
 
-            buffer.SetCell(x, y, new Rune(glyphs.Vertical), border);
+            buffer.SetCell(x, y, glyphs.Vertical, border);
             x++;
         }
     }
 
-    private static void DrawLine(CellBuffer buffer, Rectangle rect, int y, IReadOnlyList<int> widths, CellStyle border, LineGlyphs glyphs, char left, char middle, char right)
+    private static void DrawLine(CellBuffer buffer, Rectangle rect, int y, IReadOnlyList<int> widths, CellStyle border, LineGlyphs glyphs, Rune left, Rune middle, Rune right)
     {
         var x = rect.X;
-        buffer.SetCell(x, y, new Rune(left), border);
+        buffer.SetCell(x, y, left, border);
         x++;
 
         for (var c = 0; c < widths.Count; c++)
@@ -417,7 +417,7 @@ public sealed partial class Table : Visual
             var w = widths[c] + 2;
             for (var i = 0; i < w && x < rect.X + rect.Width; i++, x++)
             {
-                buffer.SetCell(x, y, new Rune(glyphs.Horizontal), border);
+                buffer.SetCell(x, y, glyphs.Horizontal, border);
             }
 
             if (x >= rect.X + rect.Width)
@@ -425,7 +425,7 @@ public sealed partial class Table : Visual
                 break;
             }
 
-            buffer.SetCell(x, y, new Rune(c + 1 < widths.Count ? middle : right), border);
+            buffer.SetCell(x, y, c + 1 < widths.Count ? middle : right, border);
             x++;
         }
     }
@@ -434,7 +434,7 @@ public sealed partial class Table : Visual
     {
         var x = rect.X;
 
-        buffer.SetCell(x, y, new Rune(glyphs.Vertical), border);
+        buffer.SetCell(x, y, glyphs.Vertical, border);
         x++;
 
         for (var c = 0; c < widths.Count && x < rect.X + rect.Width; c++)
@@ -460,7 +460,7 @@ public sealed partial class Table : Visual
                 break;
             }
 
-            buffer.SetCell(x, y, new Rune(glyphs.Vertical), border);
+            buffer.SetCell(x, y, glyphs.Vertical, border);
             x++;
         }
     }

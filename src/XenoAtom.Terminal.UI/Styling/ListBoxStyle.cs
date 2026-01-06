@@ -2,6 +2,8 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Text;
+
 namespace XenoAtom.Terminal.UI.Styling;
 
 public sealed record ListBoxStyle
@@ -12,7 +14,7 @@ public sealed record ListBoxStyle
 
     public bool ShowBorder { get; init; }
 
-    public char MarkerGlyph { get; init; } = '?';
+    public Rune MarkerGlyph { get; init; } = new('>');
 
     public CellStyle? Item { get; init; }
     public CellStyle? SelectedFocused { get; init; }
@@ -41,3 +43,4 @@ public sealed record ListBoxStyle
         return SelectedUnfocused ?? (CellStyle.None | TextStyle.Bold | theme.BorderStyle(focused: false));
     }
 }
+

@@ -2,6 +2,8 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Text;
+
 namespace XenoAtom.Terminal.UI.Styling;
 
 public sealed record ProgressBarStyle
@@ -10,8 +12,8 @@ public sealed record ProgressBarStyle
 
     public static EnvironmentKey<ProgressBarStyle> Key { get; } = new("ProgressBarStyle", Default);
 
-    public char FillGlyph { get; init; } = '█';
-    public char TrackGlyph { get; init; } = '░';
+    public Rune FillGlyph { get; init; } = new(0x2588);
+    public Rune TrackGlyph { get; init; } = new(0x2591);
 
     public CellStyle? Filled { get; init; }
     public CellStyle? Unfilled { get; init; }
@@ -21,3 +23,4 @@ public sealed record ProgressBarStyle
     public CellStyle ResolveFilled(Theme theme) => Filled ?? theme.SelectionStyle();
     public CellStyle ResolveUnfilled(Theme theme) => Unfilled ?? (theme.BorderStyle(focused: false) | TextStyle.Dim);
 }
+

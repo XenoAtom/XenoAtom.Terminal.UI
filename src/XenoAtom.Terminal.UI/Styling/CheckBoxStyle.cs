@@ -2,6 +2,8 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Text;
+
 namespace XenoAtom.Terminal.UI.Styling;
 
 public sealed record CheckBoxStyle
@@ -10,8 +12,8 @@ public sealed record CheckBoxStyle
 
     public static EnvironmentKey<CheckBoxStyle> Key { get; } = new("CheckBoxStyle", Default);
 
-    public char CheckedGlyph { get; init; } = '☑';
-    public char UncheckedGlyph { get; init; } = '☐';
+    public Rune CheckedGlyph { get; init; } = new(0x2611);
+    public Rune UncheckedGlyph { get; init; } = new(0x2610);
 
     public CellStyle? Normal { get; init; }
     public CellStyle? Hovered { get; init; }
@@ -50,3 +52,4 @@ public sealed record CheckBoxStyle
         return Normal ?? baseStyle;
     }
 }
+

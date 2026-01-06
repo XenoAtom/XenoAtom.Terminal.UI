@@ -62,7 +62,7 @@ public sealed partial class ProgressBar : Visual
 
         for (var i = 0; i < barWidth; i++)
         {
-            buffer.SetCell(rect.X + prefixWidth + 1 + i, rect.Y, new Rune(i < filled ? progressStyle.FillGlyph : progressStyle.TrackGlyph), i < filled ? filledStyle : unfilledStyle);
+            buffer.SetCell(rect.X + prefixWidth + 1 + i, rect.Y, i < filled ? progressStyle.FillGlyph : progressStyle.TrackGlyph, i < filled ? filledStyle : unfilledStyle);
         }
 
         buffer.WriteText(rect.X + prefixWidth + 1 + barWidth, rect.Y, "]".AsSpan(), borderStyle);

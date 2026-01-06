@@ -83,21 +83,21 @@ public partial class Button : Visual
             var right = rect.X + rect.Width - 1;
             var bottom = rect.Y + rect.Height - 1;
 
-            buffer.SetCell(left, top, new Rune(glyphs.TopLeft), border);
-            buffer.SetCell(right, top, new Rune(glyphs.TopRight), border);
-            buffer.SetCell(left, bottom, new Rune(glyphs.BottomLeft), border);
-            buffer.SetCell(right, bottom, new Rune(glyphs.BottomRight), border);
+            buffer.SetCell(left, top, glyphs.TopLeft, border);
+            buffer.SetCell(right, top, glyphs.TopRight, border);
+            buffer.SetCell(left, bottom, glyphs.BottomLeft, border);
+            buffer.SetCell(right, bottom, glyphs.BottomRight, border);
 
             for (var x = left + 1; x < right; x++)
             {
-                buffer.SetCell(x, top, new Rune(glyphs.Top), border);
-                buffer.SetCell(x, bottom, new Rune(glyphs.Bottom), border);
+                buffer.SetCell(x, top, glyphs.Top, border);
+                buffer.SetCell(x, bottom, glyphs.Bottom, border);
             }
 
             for (var y = top + 1; y < bottom; y++)
             {
-                buffer.SetCell(left, y, new Rune(glyphs.Left), border);
-                buffer.SetCell(right, y, new Rune(glyphs.Right), border);
+                buffer.SetCell(left, y, glyphs.Left, border);
+                buffer.SetCell(right, y, glyphs.Right, border);
             }
         }
 

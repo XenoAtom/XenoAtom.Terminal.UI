@@ -141,21 +141,21 @@ public sealed partial class Dialog : Visual, IModalVisual
             }
         }
 
-        buffer.SetCell(left, top, new Rune(glyphs.TopLeft), borderStyle);
-        buffer.SetCell(right, top, new Rune(glyphs.TopRight), borderStyle);
-        buffer.SetCell(left, bottom, new Rune(glyphs.BottomLeft), borderStyle);
-        buffer.SetCell(right, bottom, new Rune(glyphs.BottomRight), borderStyle);
+        buffer.SetCell(left, top, glyphs.TopLeft, borderStyle);
+        buffer.SetCell(right, top, glyphs.TopRight, borderStyle);
+        buffer.SetCell(left, bottom, glyphs.BottomLeft, borderStyle);
+        buffer.SetCell(right, bottom, glyphs.BottomRight, borderStyle);
 
         for (var x = left + 1; x < right; x++)
         {
-            buffer.SetCell(x, top, new Rune(glyphs.Horizontal), borderStyle);
-            buffer.SetCell(x, bottom, new Rune(glyphs.Horizontal), borderStyle);
+            buffer.SetCell(x, top, glyphs.Horizontal, borderStyle);
+            buffer.SetCell(x, bottom, glyphs.Horizontal, borderStyle);
         }
 
         for (var y = top + 1; y < bottom; y++)
         {
-            buffer.SetCell(left, y, new Rune(glyphs.Vertical), borderStyle);
-            buffer.SetCell(right, y, new Rune(glyphs.Vertical), borderStyle);
+            buffer.SetCell(left, y, glyphs.Vertical, borderStyle);
+            buffer.SetCell(right, y, glyphs.Vertical, borderStyle);
         }
 
         var title = Title;

@@ -85,21 +85,21 @@ public sealed partial class Border : Visual
             }
         }
 
-        buffer.SetCell(left, top, new Rune(glyphs.TopLeft), style);
-        buffer.SetCell(right, top, new Rune(glyphs.TopRight), style);
-        buffer.SetCell(left, bottom, new Rune(glyphs.BottomLeft), style);
-        buffer.SetCell(right, bottom, new Rune(glyphs.BottomRight), style);
+        buffer.SetCell(left, top, glyphs.TopLeft, style);
+        buffer.SetCell(right, top, glyphs.TopRight, style);
+        buffer.SetCell(left, bottom, glyphs.BottomLeft, style);
+        buffer.SetCell(right, bottom, glyphs.BottomRight, style);
 
         for (var x = left + 1; x < right; x++)
         {
-            buffer.SetCell(x, top, new Rune(glyphs.Horizontal), style);
-            buffer.SetCell(x, bottom, new Rune(glyphs.Horizontal), style);
+            buffer.SetCell(x, top, glyphs.Horizontal, style);
+            buffer.SetCell(x, bottom, glyphs.Horizontal, style);
         }
 
         for (var y = top + 1; y < bottom; y++)
         {
-            buffer.SetCell(left, y, new Rune(glyphs.Vertical), style);
-            buffer.SetCell(right, y, new Rune(glyphs.Vertical), style);
+            buffer.SetCell(left, y, glyphs.Vertical, style);
+            buffer.SetCell(right, y, glyphs.Vertical, style);
         }
     }
 }
