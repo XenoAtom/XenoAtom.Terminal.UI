@@ -2,9 +2,15 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using XenoAtom.Terminal.UI.Geometry;
 
-namespace XenoAtom.Terminal.UI.Visuals;
+// Copyright (c) Alexandre Mutel. All rights reserved.
+// Licensed under the BSD-Clause 2 license.
+// See license.txt file in the project root for full license information.
+
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Visuals;
+
+namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed class ComputedVisual : Visual, IDisposable
 {

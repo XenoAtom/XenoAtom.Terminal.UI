@@ -8,7 +8,6 @@ using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
-using XenoAtom.Terminal.UI.Visuals;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
