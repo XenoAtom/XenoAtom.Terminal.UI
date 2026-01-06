@@ -35,6 +35,15 @@ public sealed record ProgressBarStyle
         ShowPercentage = true,
     };
 
+    public static ProgressBarStyle Shaded { get; } = new()
+    {
+        Variant = ProgressBarVariant.Shaded,
+        FillGlyph = new Rune(0x2593), // ▓
+        TrackGlyph = new Rune(0x2591), // ░
+        ShowFrame = false,
+        ShowPercentage = true,
+    };
+
     public static ProgressBarStyle Bracketed { get; } = new()
     {
         Variant = ProgressBarVariant.Bracketed,
