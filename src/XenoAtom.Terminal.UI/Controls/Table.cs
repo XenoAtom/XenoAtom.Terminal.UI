@@ -27,7 +27,7 @@ public sealed partial class Table : Visuals.Visual
     [Bindable]
     public partial bool ShowHeaderSeparator { get; set; }
 
-    protected override CellSize MeasureOverride(CellSize availableSize)
+    protected override Size MeasureOverride(Size availableSize)
     {
         var width = Math.Max(1, availableSize.Width);
         var headers = Headers;
@@ -49,7 +49,7 @@ public sealed partial class Table : Visuals.Visual
         if (columns == 0)
         {
             _columnWidths = Array.Empty<int>();
-            return new CellSize(0, 0);
+            return new Size(0, 0);
         }
 
         var widths = new int[columns];
@@ -114,10 +114,10 @@ public sealed partial class Table : Visuals.Visual
             // already included
         }
 
-        return new CellSize(width, Math.Min(availableSize.Height, height));
+        return new Size(width, Math.Min(availableSize.Height, height));
     }
 
-    protected override void ArrangeOverride(CellRect finalRect)
+    protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
     }
@@ -182,7 +182,7 @@ public sealed partial class Table : Visuals.Visual
         }
     }
 
-    private static void DrawLine(CellBuffer buffer, CellRect rect, int y, IReadOnlyList<int> widths, Cell border, LineGlyphs glyphs, char left, char middle, char right)
+    private static void DrawLine(CellBuffer buffer, Rectangle rect, int y, IReadOnlyList<int> widths, Cell border, LineGlyphs glyphs, char left, char middle, char right)
     {
         var x = rect.X;
         buffer.SetCell(x, y, new Rune(left), border);
@@ -206,7 +206,7 @@ public sealed partial class Table : Visuals.Visual
         }
     }
 
-    private static void WriteRow(CellBuffer buffer, CellRect rect, int y, IReadOnlyList<string> row, IReadOnlyList<int> widths, Cell border, LineGlyphs glyphs, Cell cellStyle)
+    private static void WriteRow(CellBuffer buffer, Rectangle rect, int y, IReadOnlyList<string> row, IReadOnlyList<int> widths, Cell border, LineGlyphs glyphs, Cell cellStyle)
     {
         var x = rect.X;
 

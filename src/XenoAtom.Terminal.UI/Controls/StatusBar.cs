@@ -17,12 +17,12 @@ public sealed partial class StatusBar : Visuals.Visual
     [Bindable]
     public partial string? RightText { get; set; }
 
-    protected override CellSize MeasureOverride(CellSize availableSize)
+    protected override Size MeasureOverride(Size availableSize)
     {
-        return new CellSize(availableSize.Width, 1);
+        return new Size(availableSize.Width, 1);
     }
 
-    protected override void ArrangeOverride(CellRect finalRect)
+    protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
     }

@@ -120,8 +120,8 @@ public sealed class TerminalApp : IAsyncDisposable
         block.AttachToApp(this);
         try
         {
-            block.Measure(new CellSize(width, int.MaxValue / 4));
-            block.Arrange(new CellRect(0, 0, width, block.DesiredSize.Height));
+            block.Measure(new Size(width, int.MaxValue / 4));
+            block.Arrange(new Rectangle(0, 0, width, block.DesiredSize.Height));
 
             var buffer = new CellBuffer(width, Math.Max(1, block.DesiredSize.Height));
             block.RenderTree(buffer);
@@ -297,8 +297,8 @@ public sealed class TerminalApp : IAsyncDisposable
             var width = Math.Max(1, _terminal.Size.Columns);
             var height = Math.Max(1, _terminal.Size.Rows);
 
-            Root.Measure(new CellSize(width, height));
-            Root.Arrange(new CellRect(0, 0, width, height));
+            Root.Measure(new Size(width, height));
+            Root.Arrange(new Rectangle(0, 0, width, height));
 
             var buffer = new CellBuffer(width, height);
             buffer.Clear(Root.GetTheme().BaseTextStyle());
@@ -316,8 +316,8 @@ public sealed class TerminalApp : IAsyncDisposable
         {
             var width = Math.Max(1, _terminal.Size.Columns);
 
-            Root.Measure(new CellSize(width, int.MaxValue / 4));
-            Root.Arrange(new CellRect(0, 0, width, Root.DesiredSize.Height));
+            Root.Measure(new Size(width, int.MaxValue / 4));
+            Root.Arrange(new Rectangle(0, 0, width, Root.DesiredSize.Height));
 
             var buffer = new CellBuffer(width, Math.Max(1, Root.DesiredSize.Height));
             Root.RenderTree(buffer);

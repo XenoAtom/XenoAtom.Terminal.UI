@@ -26,9 +26,9 @@ public sealed class TerminalAppTests
 
         public string Text { get; }
 
-        protected override CellSize MeasureOverride(CellSize availableSize) => new(Math.Min(availableSize.Width, 10), 1);
+        protected override Size MeasureOverride(Size availableSize) => new(Math.Min(availableSize.Width, 10), 1);
 
-        protected override void ArrangeOverride(CellRect finalRect) => Bounds = finalRect;
+        protected override void ArrangeOverride(Rectangle finalRect) => Bounds = finalRect;
 
         protected override void RenderOverride(CellBuffer buffer)
         {
@@ -46,9 +46,9 @@ public sealed class TerminalAppTests
             AddKeyBinding(new Input.TerminalKeyGesture('k', TerminalModifiers.Ctrl), () => Count++);
         }
 
-        protected override CellSize MeasureOverride(CellSize availableSize) => new(Math.Min(availableSize.Width, 10), 1);
+        protected override Size MeasureOverride(Size availableSize) => new(Math.Min(availableSize.Width, 10), 1);
 
-        protected override void ArrangeOverride(CellRect finalRect) => Bounds = finalRect;
+        protected override void ArrangeOverride(Rectangle finalRect) => Bounds = finalRect;
 
         protected override void RenderOverride(CellBuffer buffer)
         {

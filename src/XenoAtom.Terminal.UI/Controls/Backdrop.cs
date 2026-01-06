@@ -11,9 +11,9 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class Backdrop : Visuals.Visual
 {
-    protected override CellSize MeasureOverride(CellSize availableSize) => availableSize;
+    protected override Size MeasureOverride(Size availableSize) => availableSize;
 
-    protected override void ArrangeOverride(CellRect finalRect) => Bounds = finalRect;
+    protected override void ArrangeOverride(Rectangle finalRect) => Bounds = finalRect;
 
     protected override void RenderOverride(CellBuffer buffer)
     {

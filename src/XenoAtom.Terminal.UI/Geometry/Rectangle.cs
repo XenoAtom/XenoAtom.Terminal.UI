@@ -4,7 +4,7 @@
 
 namespace XenoAtom.Terminal.UI.Geometry;
 
-public readonly record struct CellRect(int X, int Y, int Width, int Height)
+public readonly record struct Rectangle(int X, int Y, int Width, int Height)
 {
     public int Left => X;
     public int Top => Y;

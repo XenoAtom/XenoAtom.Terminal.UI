@@ -20,9 +20,9 @@ public abstract partial class Visual : BindableObject
 
     public IReadOnlyList<Visual> Children => _children;
 
-    public CellRect Bounds { get; protected set; }
+    public Rectangle Bounds { get; protected set; }
 
-    public CellSize DesiredSize { get; private set; }
+    public Size DesiredSize { get; private set; }
 
     public TerminalApp? App { get; private set; }
 
@@ -234,18 +234,18 @@ public abstract partial class Visual : BindableObject
 
     protected virtual void OnDetachedFromApp(TerminalApp app) { }
 
-    public void Measure(CellSize availableSize)
+    public void Measure(Size availableSize)
     {
         DesiredSize = MeasureOverride(availableSize);
     }
 
-    public void Arrange(CellRect finalRect)
+    public void Arrange(Rectangle finalRect)
     {
         Bounds = finalRect;
         ArrangeOverride(finalRect);
     }
 
-    protected virtual CellSize MeasureOverride(CellSize availableSize)
+    protected virtual Size MeasureOverride(Size availableSize)
     {
         var width = 0;
         var height = 0;
@@ -257,10 +257,10 @@ public abstract partial class Visual : BindableObject
             height = Math.Max(height, child.DesiredSize.Height);
         }
 
-        return new CellSize(width, height);
+        return new Size(width, height);
     }
 
-    protected virtual void ArrangeOverride(CellRect finalRect)
+    protected virtual void ArrangeOverride(Rectangle finalRect)
     {
         foreach (var child in _children)
         {

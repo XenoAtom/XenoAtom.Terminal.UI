@@ -4,9 +4,9 @@
 
 namespace XenoAtom.Terminal.UI.Geometry;
 
-public readonly record struct CellSize(int Width, int Height)
+public readonly record struct Size(int Width, int Height)
 {
-    public static readonly CellSize Zero = new(0, 0);
+    public static readonly Size Zero = new(0, 0);
 
     public override string ToString() => $"{Width}x{Height}";
 }

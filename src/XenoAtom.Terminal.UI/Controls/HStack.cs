@@ -11,7 +11,7 @@ public sealed partial class HStack : Panel
     [Bindable]
     public partial int Spacing { get; set; }
 
-    protected override CellSize MeasureOverride(CellSize availableSize)
+    protected override Size MeasureOverride(Size availableSize)
     {
         var width = 0;
         var height = 0;
@@ -21,7 +21,7 @@ public sealed partial class HStack : Panel
         {
             var child = Children[i];
             var remainingWidth = Math.Max(0, availableSize.Width - width);
-            child.Measure(new CellSize(remainingWidth, availableSize.Height));
+            child.Measure(new Size(remainingWidth, availableSize.Height));
             width += child.DesiredSize.Width;
             height = Math.Max(height, child.DesiredSize.Height);
             if (i + 1 < Children.Count)
@@ -30,10 +30,10 @@ public sealed partial class HStack : Panel
             }
         }
 
-        return new CellSize(Math.Min(availableSize.Width, width), height);
+        return new Size(Math.Min(availableSize.Width, width), height);
     }
 
-    protected override void ArrangeOverride(CellRect finalRect)
+    protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
 
@@ -43,9 +43,8 @@ public sealed partial class HStack : Panel
         foreach (var child in Children)
         {
             var w = child.DesiredSize.Width;
-            child.Arrange(new CellRect(x, finalRect.Y, w, finalRect.Height));
+            child.Arrange(new Rectangle(x, finalRect.Y, w, finalRect.Height));
             x += w + spacing;
         }
     }
 }
-

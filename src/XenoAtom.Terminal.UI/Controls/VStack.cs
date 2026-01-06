@@ -11,7 +11,7 @@ public sealed partial class VStack : Panel
     [Bindable]
     public partial int Spacing { get; set; }
 
-    protected override CellSize MeasureOverride(CellSize availableSize)
+    protected override Size MeasureOverride(Size availableSize)
     {
         var width = 0;
         var height = 0;
@@ -29,10 +29,10 @@ public sealed partial class VStack : Panel
             }
         }
 
-        return new CellSize(Math.Min(availableSize.Width, width), height);
+        return new Size(Math.Min(availableSize.Width, width), height);
     }
 
-    protected override void ArrangeOverride(CellRect finalRect)
+    protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
 
@@ -42,9 +42,8 @@ public sealed partial class VStack : Panel
         foreach (var child in Children)
         {
             var h = child.DesiredSize.Height;
-            child.Arrange(new CellRect(finalRect.X, y, finalRect.Width, h));
+            child.Arrange(new Rectangle(finalRect.X, y, finalRect.Width, h));
             y += h + spacing;
         }
     }
 }
-

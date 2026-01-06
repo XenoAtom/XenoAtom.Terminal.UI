@@ -40,7 +40,7 @@ public sealed partial class Center : Visuals.Visual
         }
     }
 
-    protected override CellSize MeasureOverride(CellSize availableSize)
+    protected override Size MeasureOverride(Size availableSize)
     {
         if (_child is null)
         {
@@ -51,7 +51,7 @@ public sealed partial class Center : Visuals.Visual
         return _child.DesiredSize;
     }
 
-    protected override void ArrangeOverride(CellRect finalRect)
+    protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
 
@@ -65,7 +65,6 @@ public sealed partial class Center : Visuals.Visual
         var x = finalRect.X + Math.Max(0, (finalRect.Width - w) / 2);
         var y = finalRect.Y + Math.Max(0, (finalRect.Height - h) / 2);
 
-        _child.Arrange(new CellRect(x, y, w, h));
+        _child.Arrange(new Rectangle(x, y, w, h));
     }
 }
-

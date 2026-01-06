@@ -72,10 +72,10 @@ public sealed class TabControl : Visuals.Visual
         App?.RequestRender();
     }
 
-    protected override CellSize MeasureOverride(CellSize availableSize)
+    protected override Size MeasureOverride(Size availableSize)
     {
         var headerHeight = 1;
-        var contentSlot = new CellSize(
+        var contentSlot = new Size(
             Math.Max(0, availableSize.Width - (ShowBorder ? 2 : 0)),
             Math.Max(0, availableSize.Height - headerHeight - (ShowBorder ? 2 : 0)));
 
@@ -91,10 +91,10 @@ public sealed class TabControl : Visuals.Visual
         width += ShowBorder ? 2 : 0;
         height += headerHeight + (ShowBorder ? 2 : 0);
 
-        return new CellSize(Math.Min(availableSize.Width, width), Math.Min(availableSize.Height, height));
+        return new Size(Math.Min(availableSize.Width, width), Math.Min(availableSize.Height, height));
     }
 
-    protected override void ArrangeOverride(CellRect finalRect)
+    protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
 
@@ -102,10 +102,10 @@ public sealed class TabControl : Visuals.Visual
         var contentTop = finalRect.Y + headerHeight;
         var contentHeight = Math.Max(0, finalRect.Height - headerHeight);
 
-        var inner = new CellRect(finalRect.X, contentTop, finalRect.Width, contentHeight);
+        var inner = new Rectangle(finalRect.X, contentTop, finalRect.Width, contentHeight);
         if (ShowBorder)
         {
-            inner = new CellRect(
+            inner = new Rectangle(
                 inner.X + 1,
                 inner.Y + 1,
                 Math.Max(0, inner.Width - 2),
@@ -183,7 +183,7 @@ public sealed class TabControl : Visuals.Visual
         }
     }
 
-    private static void RenderBorder(CellBuffer buffer, CellRect rect, Theme theme)
+    private static void RenderBorder(CellBuffer buffer, Rectangle rect, Theme theme)
     {
         var glyphs = theme.Lines;
         var border = theme.BorderStyle(focused: false);
@@ -314,4 +314,3 @@ public sealed class TabControl : Visuals.Visual
 
     public readonly record struct TabPage(string Header, Visuals.Visual Content);
 }
-

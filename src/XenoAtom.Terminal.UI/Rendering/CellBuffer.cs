@@ -15,8 +15,8 @@ public sealed class CellBuffer
     private readonly int[] _scalars;
     private readonly Cell[] _cells;
 
-    private CellRect _clipRect;
-    private CellRect[]? _clipStack;
+    private Rectangle _clipRect;
+    private Rectangle[]? _clipStack;
     private int _clipDepth;
 
     public CellBuffer(int width, int height)
@@ -29,7 +29,7 @@ public sealed class CellBuffer
 
         _scalars = new int[width * height];
         _cells = new Cell[width * height];
-        _clipRect = new CellRect(0, 0, width, height);
+        _clipRect = new Rectangle(0, 0, width, height);
         Clear();
     }
 
@@ -53,11 +53,11 @@ public sealed class CellBuffer
         Array.Fill(_cells, cell);
     }
 
-    public void PushClip(CellRect rect)
+    public void PushClip(Rectangle rect)
     {
         var next = Intersect(_clipRect, rect);
 
-        _clipStack ??= new CellRect[8];
+        _clipStack ??= new Rectangle[8];
         if (_clipDepth == _clipStack.Length)
         {
             Array.Resize(ref _clipStack, _clipStack.Length * 2);
@@ -133,7 +133,7 @@ public sealed class CellBuffer
         }
     }
 
-    private static CellRect Intersect(CellRect a, CellRect b)
+    private static Rectangle Intersect(Rectangle a, Rectangle b)
     {
         var x0 = Math.Max(a.X, b.X);
         var y0 = Math.Max(a.Y, b.Y);
@@ -142,7 +142,7 @@ public sealed class CellBuffer
 
         var w = Math.Max(0, x1 - x0);
         var h = Math.Max(0, y1 - y0);
-        return new CellRect(x0, y0, w, h);
+        return new Rectangle(x0, y0, w, h);
     }
 
     public IReadOnlyList<string> ToMarkupLines()

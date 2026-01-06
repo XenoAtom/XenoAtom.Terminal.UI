@@ -35,33 +35,33 @@ public sealed partial class DockLayout : Visuals.Visual
         set => SetOnce(ref _content, value);
     }
 
-    protected override CellSize MeasureOverride(CellSize availableSize)
+    protected override Size MeasureOverride(Size availableSize)
     {
         var topHeight = 0;
         var bottomHeight = 0;
 
         if (_top is not null)
         {
-            _top.Measure(new CellSize(availableSize.Width, availableSize.Height));
+            _top.Measure(new Size(availableSize.Width, availableSize.Height));
             topHeight = _top.DesiredSize.Height;
         }
 
         if (_bottom is not null)
         {
-            _bottom.Measure(new CellSize(availableSize.Width, Math.Max(0, availableSize.Height - topHeight)));
+            _bottom.Measure(new Size(availableSize.Width, Math.Max(0, availableSize.Height - topHeight)));
             bottomHeight = _bottom.DesiredSize.Height;
         }
 
         if (_content is not null)
         {
-            _content.Measure(new CellSize(availableSize.Width, Math.Max(0, availableSize.Height - topHeight - bottomHeight)));
+            _content.Measure(new Size(availableSize.Width, Math.Max(0, availableSize.Height - topHeight - bottomHeight)));
         }
 
         var height = Math.Min(availableSize.Height, topHeight + bottomHeight + (_content?.DesiredSize.Height ?? 0));
-        return new CellSize(availableSize.Width, height);
+        return new Size(availableSize.Width, height);
     }
 
-    protected override void ArrangeOverride(CellRect finalRect)
+    protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
 
@@ -71,7 +71,7 @@ public sealed partial class DockLayout : Visuals.Visual
         if (_top is not null)
         {
             var h = Math.Min(remainingHeight, _top.DesiredSize.Height);
-            _top.Arrange(new CellRect(finalRect.X, y, finalRect.Width, h));
+            _top.Arrange(new Rectangle(finalRect.X, y, finalRect.Width, h));
             y += h;
             remainingHeight -= h;
         }
@@ -80,13 +80,13 @@ public sealed partial class DockLayout : Visuals.Visual
         if (_bottom is not null)
         {
             bottomHeight = Math.Min(remainingHeight, _bottom.DesiredSize.Height);
-            _bottom.Arrange(new CellRect(finalRect.X, finalRect.Y + finalRect.Height - bottomHeight, finalRect.Width, bottomHeight));
+            _bottom.Arrange(new Rectangle(finalRect.X, finalRect.Y + finalRect.Height - bottomHeight, finalRect.Width, bottomHeight));
             remainingHeight -= bottomHeight;
         }
 
         if (_content is not null)
         {
-            _content.Arrange(new CellRect(finalRect.X, y, finalRect.Width, Math.Max(0, remainingHeight)));
+            _content.Arrange(new Rectangle(finalRect.X, y, finalRect.Width, Math.Max(0, remainingHeight)));
         }
     }
 
@@ -111,4 +111,3 @@ public sealed partial class DockLayout : Visuals.Visual
         App?.RequestRender();
     }
 }
-

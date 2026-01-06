@@ -40,7 +40,7 @@ public sealed partial class Border : Visuals.Visual
         }
     }
 
-    protected override CellSize MeasureOverride(CellSize availableSize)
+    protected override Size MeasureOverride(Size availableSize)
     {
         var padding = Padding;
         var innerWidth = Math.Max(0, availableSize.Width - 2 - padding.Horizontal);
@@ -48,16 +48,16 @@ public sealed partial class Border : Visuals.Visual
 
         if (_child is not null)
         {
-            _child.Measure(new CellSize(innerWidth, innerHeight));
+            _child.Measure(new Size(innerWidth, innerHeight));
         }
 
         var desiredWidth = 2 + padding.Horizontal + (_child?.DesiredSize.Width ?? 0);
         var desiredHeight = 2 + padding.Vertical + (_child?.DesiredSize.Height ?? 0);
 
-        return new CellSize(Math.Min(availableSize.Width, desiredWidth), desiredHeight);
+        return new Size(Math.Min(availableSize.Width, desiredWidth), desiredHeight);
     }
 
-    protected override void ArrangeOverride(CellRect finalRect)
+    protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
 
@@ -65,7 +65,7 @@ public sealed partial class Border : Visuals.Visual
 
         if (_child is not null)
         {
-            var inner = new CellRect(
+            var inner = new Rectangle(
                 finalRect.X + 1 + padding.Left,
                 finalRect.Y + 1 + padding.Top,
                 Math.Max(0, finalRect.Width - 2 - padding.Horizontal),

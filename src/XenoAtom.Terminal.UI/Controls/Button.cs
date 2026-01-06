@@ -31,7 +31,7 @@ public partial class Button : Visuals.Visual
     [Bindable]
     public partial ControlTone Tone { get; set; }
 
-    protected override CellSize MeasureOverride(CellSize availableSize)
+    protected override Size MeasureOverride(Size availableSize)
     {
         var text = Text ?? string.Empty;
         var innerWidth = TerminalTextUtility.GetWidth(text.AsSpan());
@@ -40,10 +40,10 @@ public partial class Button : Visuals.Visual
 
         var width = Math.Min(availableSize.Width, innerWidth + padding.Horizontal + 2);
         var height = Math.Min(availableSize.Height, Math.Max(3, 1 + padding.Vertical + 2));
-        return new CellSize(width, height);
+        return new Size(width, height);
     }
 
-    protected override void ArrangeOverride(CellRect finalRect)
+    protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
     }

@@ -29,14 +29,14 @@ public sealed partial class CheckBox : Visuals.Visual
     [Bindable]
     public partial bool IsChecked { get; set; }
 
-    protected override CellSize MeasureOverride(CellSize availableSize)
+    protected override Size MeasureOverride(Size availableSize)
     {
         var text = Text ?? string.Empty;
         var width = Math.Min(availableSize.Width, TerminalTextUtility.GetWidth(text.AsSpan()) + 4);
-        return new CellSize(width, 1);
+        return new Size(width, 1);
     }
 
-    protected override void ArrangeOverride(CellRect finalRect)
+    protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
     }

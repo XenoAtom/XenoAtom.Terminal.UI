@@ -34,7 +34,7 @@ public sealed class ComputedVisual : Visual, IDisposable
         ClearChildren();
     }
 
-    protected override CellSize MeasureOverride(CellSize availableSize)
+    protected override Size MeasureOverride(Size availableSize)
     {
         var child = EnsureChild();
         if (child is null)
@@ -46,7 +46,7 @@ public sealed class ComputedVisual : Visual, IDisposable
         return child.DesiredSize;
     }
 
-    protected override void ArrangeOverride(CellRect finalRect)
+    protected override void ArrangeOverride(Rectangle finalRect)
     {
         var child = EnsureChild();
         if (child is null)

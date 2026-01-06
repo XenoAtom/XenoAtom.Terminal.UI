@@ -13,7 +13,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 public sealed partial class Dialog : Visuals.Visual, IModalVisual
 {
     private Visuals.Visual? _child;
-    private CellRect _layoutSlot;
+    private Rectangle _layoutSlot;
 
     private bool _dragging;
     private int _dragStartUiX;
@@ -67,7 +67,7 @@ public sealed partial class Dialog : Visuals.Visual, IModalVisual
         }
     }
 
-    protected override CellSize MeasureOverride(CellSize availableSize)
+    protected override Size MeasureOverride(Size availableSize)
     {
         var padding = Padding;
         var availableWidth = Width ?? availableSize.Width;
@@ -76,7 +76,7 @@ public sealed partial class Dialog : Visuals.Visual, IModalVisual
         var innerWidth = Math.Max(0, availableWidth - 2 - padding.Horizontal);
         var innerHeight = Math.Max(0, availableHeight - 2 - padding.Vertical);
 
-        _child?.Measure(new CellSize(innerWidth, innerHeight));
+        _child?.Measure(new Size(innerWidth, innerHeight));
 
         var desiredWidth = Width ?? Math.Min(availableSize.Width, Math.Max(3, 2 + padding.Horizontal + (_child?.DesiredSize.Width ?? 0)));
         var desiredHeight = Height ?? Math.Min(availableSize.Height, Math.Max(3, 2 + padding.Vertical + (_child?.DesiredSize.Height ?? 0)));
@@ -88,10 +88,10 @@ public sealed partial class Dialog : Visuals.Visual, IModalVisual
             desiredWidth = Math.Max(desiredWidth, Math.Min(availableSize.Width, Math.Max(3, titleCells + 4)));
         }
 
-        return new CellSize(desiredWidth, desiredHeight);
+        return new Size(desiredWidth, desiredHeight);
     }
 
-    protected override void ArrangeOverride(CellRect finalRect)
+    protected override void ArrangeOverride(Rectangle finalRect)
     {
         _layoutSlot = finalRect;
 
@@ -104,12 +104,12 @@ public sealed partial class Dialog : Visuals.Visual, IModalVisual
         var left = Left is null ? maxLeft / 2 : Math.Clamp(Left.Value, 0, maxLeft);
         var top = Top is null ? maxTop / 2 : Math.Clamp(Top.Value, 0, maxTop);
 
-        Bounds = new CellRect(finalRect.X + left, finalRect.Y + top, width, height);
+        Bounds = new Rectangle(finalRect.X + left, finalRect.Y + top, width, height);
 
         if (_child is not null)
         {
             var padding = Padding;
-            var inner = new CellRect(
+            var inner = new Rectangle(
                 Bounds.X + 1 + padding.Left,
                 Bounds.Y + 1 + padding.Top,
                 Math.Max(0, Bounds.Width - 2 - padding.Horizontal),

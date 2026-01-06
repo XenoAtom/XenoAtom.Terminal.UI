@@ -21,13 +21,13 @@ public sealed partial class ProgressBar : Visuals.Visual
     [Bindable]
     public partial string? Label { get; set; }
 
-    protected override CellSize MeasureOverride(CellSize availableSize)
+    protected override Size MeasureOverride(Size availableSize)
     {
         var width = Math.Max(10, Math.Min(availableSize.Width, 30));
-        return new CellSize(width, 1);
+        return new Size(width, 1);
     }
 
-    protected override void ArrangeOverride(CellRect finalRect)
+    protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
     }

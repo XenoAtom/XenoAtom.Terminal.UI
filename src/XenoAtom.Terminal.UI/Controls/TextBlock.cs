@@ -24,7 +24,7 @@ public sealed partial class TextBlock : Visuals.Visual
     [Bindable]
     public partial bool Wrap { get; set; }
 
-    protected override CellSize MeasureOverride(CellSize availableSize)
+    protected override Size MeasureOverride(Size availableSize)
     {
         var text = Text ?? string.Empty;
         var width = Wrap ? availableSize.Width : Math.Min(availableSize.Width, TerminalTextUtility.GetWidth(text.AsSpan()));
@@ -32,14 +32,14 @@ public sealed partial class TextBlock : Visuals.Visual
 
         if (!Wrap || width == 0)
         {
-            return new CellSize(width, 1);
+            return new Size(width, 1);
         }
 
         var height = CountWrappedLines(text.AsSpan(), Math.Max(1, width));
-        return new CellSize(width, Math.Min(availableSize.Height, Math.Max(1, height)));
+        return new Size(width, Math.Min(availableSize.Height, Math.Max(1, height)));
     }
 
-    protected override void ArrangeOverride(CellRect finalRect)
+    protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
     }

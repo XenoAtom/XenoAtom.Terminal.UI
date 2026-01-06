@@ -82,13 +82,13 @@ public sealed partial class ScrollViewer : Visuals.Visual
     [Bindable]
     public partial int Height { get; set; }
 
-    protected override CellSize MeasureOverride(CellSize availableSize)
+    protected override Size MeasureOverride(Size availableSize)
     {
         var height = Math.Max(1, Height);
         var child = _child;
         if (child is not null)
         {
-            child.Measure(new CellSize(int.MaxValue / 4, int.MaxValue / 4));
+            child.Measure(new Size(int.MaxValue / 4, int.MaxValue / 4));
             _contentWidth = child.DesiredSize.Width;
             _contentHeight = child.DesiredSize.Height;
         }
@@ -100,10 +100,10 @@ public sealed partial class ScrollViewer : Visuals.Visual
 
         var desiredHeight = Math.Min(height, availableSize.Height);
         var desiredWidth = Math.Min(availableSize.Width, Math.Max(1, Math.Min(availableSize.Width, _contentWidth)));
-        return new CellSize(desiredWidth, desiredHeight);
+        return new Size(desiredWidth, desiredHeight);
     }
 
-    protected override void ArrangeOverride(CellRect finalRect)
+    protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
 
@@ -146,33 +146,33 @@ public sealed partial class ScrollViewer : Visuals.Visual
         if (hOffset != HorizontalOffset) HorizontalOffset = hOffset;
 
         _contentHost.UpdateLayout(_contentWidth, _contentHeight, hOffset, v);
-        _contentHost.Arrange(new CellRect(finalRect.X, finalRect.Y, contentViewportWidth, contentViewportHeight));
+        _contentHost.Arrange(new Rectangle(finalRect.X, finalRect.Y, contentViewportWidth, contentViewportHeight));
 
         if (_showVerticalBar)
         {
-            _verticalBar.Arrange(new CellRect(finalRect.X + finalRect.Width - thickness, finalRect.Y, thickness, contentViewportHeight));
+            _verticalBar.Arrange(new Rectangle(finalRect.X + finalRect.Width - thickness, finalRect.Y, thickness, contentViewportHeight));
         }
         else
         {
-            _verticalBar.Arrange(new CellRect(finalRect.X + finalRect.Width, finalRect.Y, 0, 0));
+            _verticalBar.Arrange(new Rectangle(finalRect.X + finalRect.Width, finalRect.Y, 0, 0));
         }
 
         if (_showHorizontalBar)
         {
-            _horizontalBar.Arrange(new CellRect(finalRect.X, finalRect.Y + finalRect.Height - thickness, contentViewportWidth, thickness));
+            _horizontalBar.Arrange(new Rectangle(finalRect.X, finalRect.Y + finalRect.Height - thickness, contentViewportWidth, thickness));
         }
         else
         {
-            _horizontalBar.Arrange(new CellRect(finalRect.X, finalRect.Y + finalRect.Height, 0, 0));
+            _horizontalBar.Arrange(new Rectangle(finalRect.X, finalRect.Y + finalRect.Height, 0, 0));
         }
 
         if (_showVerticalBar && _showHorizontalBar)
         {
-            _corner.Arrange(new CellRect(finalRect.X + finalRect.Width - thickness, finalRect.Y + finalRect.Height - thickness, thickness, thickness));
+            _corner.Arrange(new Rectangle(finalRect.X + finalRect.Width - thickness, finalRect.Y + finalRect.Height - thickness, thickness, thickness));
         }
         else
         {
-            _corner.Arrange(new CellRect(finalRect.X + finalRect.Width, finalRect.Y + finalRect.Height, 0, 0));
+            _corner.Arrange(new Rectangle(finalRect.X + finalRect.Width, finalRect.Y + finalRect.Height, 0, 0));
         }
     }
 
@@ -372,7 +372,7 @@ public sealed partial class ScrollViewer : Visuals.Visual
         }
     }
 
-    private bool TryGetVerticalThumb(CellRect rect, int viewportHeight, out int thumbStart, out int thumbLen)
+    private bool TryGetVerticalThumb(Rectangle rect, int viewportHeight, out int thumbStart, out int thumbLen)
     {
         var maxOffset = Math.Max(0, _contentHeight - viewportHeight);
         thumbLen = GetThumbLength(viewportHeight, _contentHeight);
@@ -382,7 +382,7 @@ public sealed partial class ScrollViewer : Visuals.Visual
         return true;
     }
 
-    private bool TryGetHorizontalThumb(CellRect rect, int viewportWidth, out int thumbStart, out int thumbLen)
+    private bool TryGetHorizontalThumb(Rectangle rect, int viewportWidth, out int thumbStart, out int thumbLen)
     {
         var maxOffset = Math.Max(0, _contentWidth - viewportWidth);
         thumbLen = GetThumbLength(viewportWidth, _contentWidth);
@@ -454,7 +454,7 @@ public sealed partial class ScrollViewer : Visuals.Visual
             _verticalOffset = verticalOffset;
         }
 
-        protected override void ArrangeOverride(CellRect finalRect)
+        protected override void ArrangeOverride(Rectangle finalRect)
         {
             Bounds = finalRect;
 
@@ -463,7 +463,7 @@ public sealed partial class ScrollViewer : Visuals.Visual
                 return;
             }
 
-            _child.Arrange(new CellRect(finalRect.X - _horizontalOffset, finalRect.Y - _verticalOffset, _contentWidth, _contentHeight));
+            _child.Arrange(new Rectangle(finalRect.X - _horizontalOffset, finalRect.Y - _verticalOffset, _contentWidth, _contentHeight));
         }
     }
 

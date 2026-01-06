@@ -49,14 +49,14 @@ public sealed partial class TextBox : Visuals.Visual, ICursorProvider
 
     private bool HasSelection => _selectionAnchor >= 0 && _selectionEnd >= 0 && _selectionAnchor != _selectionEnd;
 
-    protected override CellSize MeasureOverride(CellSize availableSize)
+    protected override Size MeasureOverride(Size availableSize)
     {
         var width = Math.Max(10, Math.Min(availableSize.Width, 24));
         var height = ShowBorder ? 3 : 1;
-        return new CellSize(width, Math.Min(availableSize.Height, height));
+        return new Size(width, Math.Min(availableSize.Height, height));
     }
 
-    protected override void ArrangeOverride(CellRect finalRect)
+    protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
     }

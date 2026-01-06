@@ -33,7 +33,7 @@ public sealed partial class ListBox : Visuals.Visual
     [Bindable]
     public partial bool ShowBorder { get; set; }
 
-    protected override CellSize MeasureOverride(CellSize availableSize)
+    protected override Size MeasureOverride(Size availableSize)
     {
         var height = Math.Max(1, Height);
         var width = 0;
@@ -57,10 +57,10 @@ public sealed partial class ListBox : Visuals.Visual
             desiredHeight = Math.Min(availableSize.Height, desiredHeight + 2);
         }
 
-        return new CellSize(width, desiredHeight);
+        return new Size(width, desiredHeight);
     }
 
-    protected override void ArrangeOverride(CellRect finalRect)
+    protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
     }
