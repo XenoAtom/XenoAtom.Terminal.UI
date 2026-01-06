@@ -60,11 +60,12 @@ public sealed partial class ScrollViewer : Visual
             _ => throw new ArgumentOutOfRangeException(nameof(index)),
         };
 
+    [Bindable]
     public Visual? Content
     {
         get
         {
-            BindingManager.Current.RegisterRead(this, nameof(Content));
+            BindingManager.Current.RegisterRead(this, __Content__BindingAccessor.Instance);
             return _content;
         }
         set
@@ -85,7 +86,7 @@ public sealed partial class ScrollViewer : Visual
                 _contentHost.SetContent(value);
             }
 
-            BindingManager.Current.NotifyValueChanged(this, nameof(Content));
+            BindingManager.Current.NotifyValueChanged(this, __Content__BindingAccessor.Instance);
             App?.RequestRender();
         }
     }
