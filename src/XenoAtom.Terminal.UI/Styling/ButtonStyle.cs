@@ -6,7 +6,7 @@ using XenoAtom.Terminal.UI.Geometry;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed class ButtonStyle
+public sealed record ButtonStyle
 {
     public static ButtonStyle Default { get; } = new();
 

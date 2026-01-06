@@ -4,7 +4,7 @@
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed class CheckBoxStyle
+public sealed record CheckBoxStyle
 {
     public static CheckBoxStyle Default { get; } = new();
 

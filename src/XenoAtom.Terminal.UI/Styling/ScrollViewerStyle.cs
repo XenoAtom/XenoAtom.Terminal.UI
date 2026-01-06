@@ -4,7 +4,7 @@
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed class ScrollViewerStyle
+public sealed record ScrollViewerStyle
 {
     public static ScrollViewerStyle Default { get; } = new();
 

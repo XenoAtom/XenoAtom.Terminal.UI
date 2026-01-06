@@ -4,7 +4,7 @@
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed class RadioButtonStyle
+public sealed record RadioButtonStyle
 {
     public static RadioButtonStyle Default { get; } = new();
 

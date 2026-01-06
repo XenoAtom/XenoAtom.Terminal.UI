@@ -4,7 +4,7 @@
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed class ListBoxStyle
+public sealed record ListBoxStyle
 {
     public static ListBoxStyle Default { get; } = new();
 
@@ -41,4 +41,3 @@ public sealed class ListBoxStyle
         return SelectedUnfocused ?? (CellStyle.None | TextStyle.Bold | theme.BorderStyle(focused: false));
     }
 }
-

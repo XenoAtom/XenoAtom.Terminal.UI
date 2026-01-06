@@ -6,7 +6,7 @@ using XenoAtom.Terminal.UI.Geometry;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed class TextBoxStyle
+public sealed record TextBoxStyle
 {
     public static TextBoxStyle Default { get; } = new();
 

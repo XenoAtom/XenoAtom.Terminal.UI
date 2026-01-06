@@ -4,7 +4,7 @@
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed class ProgressBarStyle
+public sealed record ProgressBarStyle
 {
     public static ProgressBarStyle Default { get; } = new();
 

@@ -4,7 +4,7 @@
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed class StatusBarStyle
+public sealed record StatusBarStyle
 {
     public static StatusBarStyle Default { get; } = new();
 
