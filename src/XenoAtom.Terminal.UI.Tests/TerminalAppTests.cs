@@ -8,6 +8,7 @@ using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Visuals;
 
 namespace XenoAtom.Terminal.UI.Tests;
@@ -31,7 +32,7 @@ public sealed class TerminalAppTests
 
         protected override void RenderOverride(CellBuffer buffer)
         {
-            buffer.WriteText(Bounds.X, Bounds.Y, Text.AsSpan(), ReferenceEquals(App?.FocusedElement, this) ? CellStyle.Invert : CellStyle.None);
+            buffer.WriteText(Bounds.X, Bounds.Y, Text.AsSpan(), ReferenceEquals(App?.FocusedElement, this) ? (Cell.None | TextStyle.Invert) : Cell.None);
         }
     }
 
@@ -51,7 +52,7 @@ public sealed class TerminalAppTests
 
         protected override void RenderOverride(CellBuffer buffer)
         {
-            buffer.WriteText(Bounds.X, Bounds.Y, $"Count:{Count}".AsSpan(), CellStyle.None);
+            buffer.WriteText(Bounds.X, Bounds.Y, $"Count:{Count}".AsSpan(), Cell.None);
         }
     }
 

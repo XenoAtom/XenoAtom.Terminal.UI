@@ -63,7 +63,7 @@ public sealed partial class RadioButton : Visuals.Visual
         }
 
         var glyph = IsChecked ? radioStyle.CheckedGlyph : radioStyle.UncheckedGlyph;
-        buffer.SetCell(rect.X, rect.Y, new Rune(glyph), style | CellStyle.Bold);
+        buffer.SetCell(rect.X, rect.Y, new Rune(glyph), style | TextStyle.Bold);
         buffer.WriteText(rect.X + 2, rect.Y, text.AsSpan(), style);
     }
 
@@ -143,4 +143,3 @@ public sealed partial class RadioButton : Visuals.Visual
         }
     }
 }
-

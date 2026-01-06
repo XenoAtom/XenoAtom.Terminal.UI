@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Ansi;
 using XenoAtom.Terminal.UI.Rendering;
 
 namespace XenoAtom.Terminal.UI.Styling;
@@ -10,61 +11,61 @@ public sealed class Theme
 {
     public static Theme Default { get; } = new Theme
     {
-        Foreground = new Rgb24(0xE5, 0xE7, 0xEB), // slate-200
-        Background = new Rgb24(0x0B, 0x12, 0x20), // deep slate
-        Surface = new Rgb24(0x10, 0x1A, 0x2D),
-        SurfaceAlt = new Rgb24(0x18, 0x24, 0x3A),
-        Border = new Rgb24(0x2A, 0x3A, 0x55),
-        FocusBorder = new Rgb24(0x60, 0xA5, 0xFA), // blue-400
-        Accent = new Rgb24(0xA7, 0x8B, 0xFA), // violet-400
-        Selection = new Rgb24(0x2D, 0x7D, 0xFF),
-        Disabled = new Rgb24(0x64, 0x74, 0x8B), // slate-500
-        Primary = new Rgb24(0xA7, 0x8B, 0xFA),
-        Success = new Rgb24(0x34, 0xD3, 0x99),
-        Warning = new Rgb24(0xFB, 0xBF, 0x24),
-        Error = new Rgb24(0xFB, 0x71, 0x85),
-        Muted = new Rgb24(0x94, 0xA3, 0xB8),
+        Foreground = AnsiColor.Rgb(0xE5, 0xE7, 0xEB), // slate-200
+        Background = AnsiColor.Rgb(0x0B, 0x12, 0x20), // deep slate
+        Surface = AnsiColor.Rgb(0x10, 0x1A, 0x2D),
+        SurfaceAlt = AnsiColor.Rgb(0x18, 0x24, 0x3A),
+        Border = AnsiColor.Rgb(0x2A, 0x3A, 0x55),
+        FocusBorder = AnsiColor.Rgb(0x60, 0xA5, 0xFA), // blue-400
+        Accent = AnsiColor.Rgb(0xA7, 0x8B, 0xFA), // violet-400
+        Selection = AnsiColor.Rgb(0x2D, 0x7D, 0xFF),
+        Disabled = AnsiColor.Rgb(0x64, 0x74, 0x8B), // slate-500
+        Primary = AnsiColor.Rgb(0xA7, 0x8B, 0xFA),
+        Success = AnsiColor.Rgb(0x34, 0xD3, 0x99),
+        Warning = AnsiColor.Rgb(0xFB, 0xBF, 0x24),
+        Error = AnsiColor.Rgb(0xFB, 0x71, 0x85),
+        Muted = AnsiColor.Rgb(0x94, 0xA3, 0xB8),
         Lines = LineGlyphs.Single,
         ScrollBars = ScrollBarGlyphs.Default,
     };
 
     public static EnvironmentKey<Theme> Key { get; } = new("Theme", Default);
 
-    public Rgb24? Foreground { get; init; }
+    public AnsiColor? Foreground { get; init; }
 
-    public Rgb24? Background { get; init; }
+    public AnsiColor? Background { get; init; }
 
-    public Rgb24? Surface { get; init; }
+    public AnsiColor? Surface { get; init; }
 
-    public Rgb24? SurfaceAlt { get; init; }
+    public AnsiColor? SurfaceAlt { get; init; }
 
-    public Rgb24? Border { get; init; }
+    public AnsiColor? Border { get; init; }
 
-    public Rgb24? FocusBorder { get; init; }
+    public AnsiColor? FocusBorder { get; init; }
 
-    public Rgb24? Accent { get; init; }
+    public AnsiColor? Accent { get; init; }
 
-    public Rgb24? Selection { get; init; }
+    public AnsiColor? Selection { get; init; }
 
-    public Rgb24? Disabled { get; init; }
+    public AnsiColor? Disabled { get; init; }
 
-    public Rgb24? Primary { get; init; }
+    public AnsiColor? Primary { get; init; }
 
-    public Rgb24? Success { get; init; }
+    public AnsiColor? Success { get; init; }
 
-    public Rgb24? Warning { get; init; }
+    public AnsiColor? Warning { get; init; }
 
-    public Rgb24? Error { get; init; }
+    public AnsiColor? Error { get; init; }
 
-    public Rgb24? Muted { get; init; }
+    public AnsiColor? Muted { get; init; }
 
     public LineGlyphs Lines { get; init; } = LineGlyphs.Single;
 
     public ScrollBarGlyphs ScrollBars { get; init; } = ScrollBarGlyphs.Default;
 
-    public CellStyle BaseTextStyle()
+    public Cell BaseTextStyle()
     {
-        var style = CellStyle.None;
+        var style = Cell.None;
         if (Foreground is { } fg)
         {
             style = style.WithForeground(fg);
@@ -76,9 +77,9 @@ public sealed class Theme
         return style;
     }
 
-    public CellStyle SurfaceStyle()
+    public Cell SurfaceStyle()
     {
-        var style = CellStyle.None;
+        var style = Cell.None;
         if (Foreground is { } fg)
         {
             style = style.WithForeground(fg);
@@ -90,7 +91,7 @@ public sealed class Theme
         return style;
     }
 
-    public CellStyle MutedTextStyle()
+    public Cell MutedTextStyle()
     {
         var style = BaseTextStyle();
         if (Muted is { } m)
@@ -100,10 +101,10 @@ public sealed class Theme
         return style;
     }
 
-    public CellStyle BorderStyle(bool focused)
+    public Cell BorderStyle(bool focused)
     {
         var color = focused ? FocusBorder : Border;
-        var style = CellStyle.None;
+        var style = Cell.None;
         if (color is { } c)
         {
             style = style.WithForeground(c);
@@ -111,14 +112,14 @@ public sealed class Theme
         return style;
     }
 
-    public CellStyle SelectionStyle()
+    public Cell SelectionStyle()
     {
-        var style = CellStyle.None;
+        var style = Cell.None;
         if (Selection is { } c)
         {
             style = style.WithBackground(c);
         }
-        style |= CellStyle.Bold;
+        style |= TextStyle.Bold;
         return style;
     }
 }

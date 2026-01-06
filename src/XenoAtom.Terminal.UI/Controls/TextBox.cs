@@ -192,7 +192,7 @@ public sealed partial class TextBox : Visuals.Visual, ICursorProvider
             {
                 if (!HasSelection)
                 {
-                    buffer.SetCell(contentX + caretX, textRowY, new Rune(' '), CellStyle.Invert);
+                    buffer.SetCell(contentX + caretX, textRowY, new Rune(' '), Cell.None | TextStyle.Invert);
                 }
             }
         }

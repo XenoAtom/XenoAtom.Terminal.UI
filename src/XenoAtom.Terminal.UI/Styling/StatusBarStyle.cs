@@ -12,19 +12,18 @@ public sealed class StatusBarStyle
 
     public static EnvironmentKey<StatusBarStyle> Key { get; } = new("StatusBarStyle", Default);
 
-    public Rgb24? Background { get; init; }
-    public Rgb24? Foreground { get; init; }
+    public XenoAtom.Ansi.AnsiColor? Background { get; init; }
+    public XenoAtom.Ansi.AnsiColor? Foreground { get; init; }
 
-    public CellStyle Resolve(Theme theme)
+    public Cell Resolve(Theme theme)
     {
-        var style = CellStyle.None;
+        var style = Cell.None;
         var fg = Foreground ?? theme.Foreground;
         var bg = Background ?? theme.SurfaceAlt ?? theme.Surface ?? theme.Background;
 
         if (fg is { } f) style = style.WithForeground(f);
         if (bg is { } b) style = style.WithBackground(b);
-        style |= CellStyle.Bold;
+        style |= TextStyle.Bold;
         return style;
     }
 }
-

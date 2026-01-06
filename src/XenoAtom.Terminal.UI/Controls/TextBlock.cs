@@ -55,7 +55,7 @@ public sealed partial class TextBlock : Visuals.Visual
 
         if (!Wrap || rect.Height == 1)
         {
-            buffer.WriteText(rect.X, rect.Y, text.AsSpan(), CellStyle.None);
+            buffer.WriteText(rect.X, rect.Y, text.AsSpan(), Cell.None);
             return;
         }
 
@@ -72,7 +72,7 @@ public sealed partial class TextBlock : Visuals.Visual
             }
 
             var slice = span.Slice(start, Math.Max(0, endExclusive - start));
-            buffer.WriteText(rect.X, rect.Y + lineIndex, slice, CellStyle.None);
+            buffer.WriteText(rect.X, rect.Y + lineIndex, slice, Cell.None);
             lineIndex++;
             start = nextStart;
         }

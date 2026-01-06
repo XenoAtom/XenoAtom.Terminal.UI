@@ -11,14 +11,14 @@ namespace XenoAtom.Terminal.UI.Rendering;
 public sealed class CellBufferDiffRenderer
 {
     private int[]? _lastScalars;
-    private CellStyle[]? _lastStyles;
+    private Cell[]? _lastCells;
     private int _lastWidth;
     private int _lastHeight;
 
     public void Reset()
     {
         _lastScalars = null;
-        _lastStyles = null;
+        _lastCells = null;
         _lastWidth = 0;
         _lastHeight = 0;
     }
@@ -53,10 +53,10 @@ public sealed class CellBufferDiffRenderer
         var currentStyle = AnsiStyle.Default;
 
         var scalars = buffer.UnsafeScalars;
-        var styles = buffer.UnsafeStyles;
+        var cells = buffer.UnsafeCells;
 
         var lastScalars = _lastScalars!;
-        var lastStyles = _lastStyles!;
+        var lastCells = _lastCells!;
 
         Span<char> runeBuffer = stackalloc char[2];
 
@@ -69,7 +69,7 @@ public sealed class CellBufferDiffRenderer
             for (var x = 0; x < width; x++)
             {
                 var i = rowIndex + x;
-                if (forceFull || scalars[i] != lastScalars[i] || styles[i] != lastStyles[i])
+                if (forceFull || scalars[i] != lastScalars[i] || cells[i] != lastCells[i])
                 {
                     firstChanged = x;
                     break;
@@ -84,7 +84,7 @@ public sealed class CellBufferDiffRenderer
             for (var x = width - 1; x >= firstChanged; x--)
             {
                 var i = rowIndex + x;
-                if (forceFull || scalars[i] != lastScalars[i] || styles[i] != lastStyles[i])
+                if (forceFull || scalars[i] != lastScalars[i] || cells[i] != lastCells[i])
                 {
                     lastChanged = x;
                     break;
@@ -96,8 +96,8 @@ public sealed class CellBufferDiffRenderer
                 continue;
             }
 
-            firstChanged = AdjustStartForWideGlyph(styles, rowIndex, firstChanged);
-            lastChanged = AdjustEndForWideGlyph(scalars, styles, rowIndex, lastChanged, width);
+            firstChanged = AdjustStartForWideGlyph(cells, rowIndex, firstChanged);
+            lastChanged = AdjustEndForWideGlyph(scalars, cells, rowIndex, lastChanged, width);
 
             writer.CursorPosition(y + 1, firstChanged + 1);
 
@@ -105,14 +105,14 @@ public sealed class CellBufferDiffRenderer
             while (xPos <= lastChanged)
             {
                 var i = rowIndex + xPos;
-                var style = styles[i];
-                if ((style & CellStyle.Continuation) != 0)
+                var cell = cells[i];
+                if (cell.IsContinuation)
                 {
                     xPos++;
                     continue;
                 }
 
-                var nextStyle = MapStyle(style);
+                var nextStyle = MapStyle(cell);
                 if (nextStyle != currentStyle)
                 {
                     writer.StyleTransition(currentStyle, nextStyle);
@@ -147,16 +147,16 @@ public sealed class CellBufferDiffRenderer
         });
 
         scalars.CopyTo(lastScalars.AsSpan());
-        styles.CopyTo(lastStyles.AsSpan());
+        cells.CopyTo(lastCells.AsSpan());
     }
 
     private void EnsureLastBuffers(int width, int height)
     {
         var length = checked(width * height);
-        if (_lastScalars is null || _lastStyles is null || _lastScalars.Length != length)
+        if (_lastScalars is null || _lastCells is null || _lastScalars.Length != length)
         {
             _lastScalars = new int[length];
-            _lastStyles = new CellStyle[length];
+            _lastCells = new Cell[length];
         }
 
         _lastWidth = width;
@@ -164,10 +164,10 @@ public sealed class CellBufferDiffRenderer
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int AdjustStartForWideGlyph(ReadOnlySpan<CellStyle> styles, int rowIndex, int x)
+    private static int AdjustStartForWideGlyph(ReadOnlySpan<Cell> cells, int rowIndex, int x)
     {
-        var style = styles[rowIndex + x];
-        if ((style & CellStyle.Continuation) != 0 && x > 0)
+        var cell = cells[rowIndex + x];
+        if (cell.IsContinuation && x > 0)
         {
             return x - 1;
         }
@@ -176,10 +176,10 @@ public sealed class CellBufferDiffRenderer
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int AdjustEndForWideGlyph(ReadOnlySpan<int> scalars, ReadOnlySpan<CellStyle> styles, int rowIndex, int x, int width)
+    private static int AdjustEndForWideGlyph(ReadOnlySpan<int> scalars, ReadOnlySpan<Cell> cells, int rowIndex, int x, int width)
     {
-        var style = styles[rowIndex + x];
-        if ((style & CellStyle.Continuation) != 0)
+        var cell = cells[rowIndex + x];
+        if (cell.IsContinuation)
         {
             return x;
         }
@@ -193,26 +193,22 @@ public sealed class CellBufferDiffRenderer
         return x;
     }
 
-    private static AnsiStyle MapStyle(CellStyle style)
+    private static AnsiStyle MapStyle(Cell cell)
     {
-        style &= ~CellStyle.Continuation;
-
-        var deco = AnsiDecorations.None;
-        if ((style & CellStyle.Bold) != 0) deco |= AnsiDecorations.Bold;
-        if ((style & CellStyle.Dim) != 0) deco |= AnsiDecorations.Dim;
-        if ((style & CellStyle.Invert) != 0) deco |= AnsiDecorations.Invert;
+        cell = cell.WithoutContinuation();
+        var deco = cell.ToAnsiDecorations();
 
         AnsiColor? fg = null;
         AnsiColor? bg = null;
 
-        if (style.TryGetForeground(out var fgRgb))
+        if (cell.TryGetForeground(out var fgColor))
         {
-            fg = AnsiColor.Rgb(fgRgb.R, fgRgb.G, fgRgb.B);
+            fg = fgColor;
         }
 
-        if (style.TryGetBackground(out var bgRgb))
+        if (cell.TryGetBackground(out var bgColor))
         {
-            bg = AnsiColor.Rgb(bgRgb.R, bgRgb.G, bgRgb.B);
+            bg = bgColor;
         }
 
         if (deco == AnsiDecorations.None && fg is null && bg is null)

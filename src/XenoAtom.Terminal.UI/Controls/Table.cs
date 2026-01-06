@@ -157,7 +157,7 @@ public sealed partial class Table : Visuals.Visual
         var headers = Headers;
         if (headers is not null)
         {
-            WriteRow(buffer, rect, y, headers, widths, border, glyphs, theme.BaseTextStyle() | CellStyle.Bold);
+            WriteRow(buffer, rect, y, headers, widths, border, glyphs, theme.BaseTextStyle() | TextStyle.Bold);
             y++;
 
             if (ShowHeaderSeparator && y < rect.Y + rect.Height)
@@ -182,7 +182,7 @@ public sealed partial class Table : Visuals.Visual
         }
     }
 
-    private static void DrawLine(CellBuffer buffer, CellRect rect, int y, IReadOnlyList<int> widths, CellStyle border, LineGlyphs glyphs, char left, char middle, char right)
+    private static void DrawLine(CellBuffer buffer, CellRect rect, int y, IReadOnlyList<int> widths, Cell border, LineGlyphs glyphs, char left, char middle, char right)
     {
         var x = rect.X;
         buffer.SetCell(x, y, new Rune(left), border);
@@ -206,7 +206,7 @@ public sealed partial class Table : Visuals.Visual
         }
     }
 
-    private static void WriteRow(CellBuffer buffer, CellRect rect, int y, IReadOnlyList<string> row, IReadOnlyList<int> widths, CellStyle border, LineGlyphs glyphs, CellStyle cellStyle)
+    private static void WriteRow(CellBuffer buffer, CellRect rect, int y, IReadOnlyList<string> row, IReadOnlyList<int> widths, Cell border, LineGlyphs glyphs, Cell cellStyle)
     {
         var x = rect.X;
 
@@ -241,7 +241,7 @@ public sealed partial class Table : Visuals.Visual
         }
     }
 
-    private static void WriteClipped(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, int maxCells, CellStyle style)
+    private static void WriteClipped(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, int maxCells, Cell style)
     {
         if (maxCells <= 0)
         {

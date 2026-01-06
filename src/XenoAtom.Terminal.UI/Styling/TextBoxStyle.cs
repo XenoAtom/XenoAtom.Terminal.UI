@@ -15,16 +15,16 @@ public sealed class TextBoxStyle
 
     public Thickness Padding { get; init; } = new(1, 0, 1, 0);
 
-    public Rgb24? Border { get; init; }
-    public Rgb24? FocusBorder { get; init; }
-    public Rgb24? Selection { get; init; }
-    public Rgb24? Background { get; init; }
-    public Rgb24? Placeholder { get; init; }
+    public XenoAtom.Ansi.AnsiColor? Border { get; init; }
+    public XenoAtom.Ansi.AnsiColor? FocusBorder { get; init; }
+    public XenoAtom.Ansi.AnsiColor? Selection { get; init; }
+    public XenoAtom.Ansi.AnsiColor? Background { get; init; }
+    public XenoAtom.Ansi.AnsiColor? Placeholder { get; init; }
 
-    public CellStyle BorderStyle(Theme theme, bool focused)
+    public Cell BorderStyle(Theme theme, bool focused)
     {
         var color = focused ? (FocusBorder ?? theme.FocusBorder) : (Border ?? theme.Border);
-        var style = CellStyle.None;
+        var style = Cell.None;
         if (color is { } c)
         {
             style = style.WithForeground(c);
@@ -32,28 +32,28 @@ public sealed class TextBoxStyle
         return style;
     }
 
-    public CellStyle SelectionStyle(Theme theme)
+    public Cell SelectionStyle(Theme theme)
     {
-        var style = CellStyle.None;
+        var style = Cell.None;
         var color = Selection ?? theme.Selection;
         if (color is { } c)
         {
             style = style.WithBackground(c);
         }
-        style |= CellStyle.Bold;
+        style |= TextStyle.Bold;
         return style;
     }
 
-    public CellStyle BackgroundStyle(Theme theme)
+    public Cell BackgroundStyle(Theme theme)
     {
-        var style = CellStyle.None;
+        var style = Cell.None;
         if (theme.Foreground is { } fg) style = style.WithForeground(fg);
         var bg = Background ?? theme.SurfaceAlt ?? theme.Surface ?? theme.Background;
         if (bg is { } b) style = style.WithBackground(b);
         return style;
     }
 
-    public CellStyle PlaceholderStyle(Theme theme)
+    public Cell PlaceholderStyle(Theme theme)
     {
         var style = BackgroundStyle(theme);
         var fg = Placeholder ?? theme.Muted ?? theme.Foreground;

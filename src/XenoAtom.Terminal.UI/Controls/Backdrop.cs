@@ -5,6 +5,7 @@
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -23,11 +24,8 @@ public sealed partial class Backdrop : Visuals.Visual
         }
 
         var theme = GetTheme();
-        var style = CellStyle.Dim;
-        if (theme.Disabled is { } c)
-        {
-            style = style.WithBackground(c);
-        }
+        var style = Cell.None | TextStyle.Dim;
+        if (theme.Disabled is { } c) style = style.WithBackground(c);
 
         for (var y = rect.Y; y < rect.Y + rect.Height; y++)
         {

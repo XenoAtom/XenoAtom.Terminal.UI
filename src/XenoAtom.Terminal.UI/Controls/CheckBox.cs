@@ -57,7 +57,7 @@ public sealed partial class CheckBox : Visuals.Visual
         }
 
         var glyph = IsChecked ? checkBoxStyle.CheckedGlyph : checkBoxStyle.UncheckedGlyph;
-        buffer.SetCell(rect.X, rect.Y, new Rune(glyph), style | CellStyle.Bold);
+        buffer.SetCell(rect.X, rect.Y, new Rune(glyph), style | TextStyle.Bold);
         buffer.WriteText(rect.X + 2, rect.Y, text.AsSpan(), style);
     }
 

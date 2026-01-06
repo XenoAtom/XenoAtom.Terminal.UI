@@ -14,18 +14,18 @@ public sealed class ListBoxStyle
 
     public char MarkerGlyph { get; init; } = '▸';
 
-    public CellStyle? Item { get; init; }
-    public CellStyle? SelectedFocused { get; init; }
-    public CellStyle? SelectedUnfocused { get; init; }
-    public CellStyle? Disabled { get; init; }
+    public Cell? Item { get; init; }
+    public Cell? SelectedFocused { get; init; }
+    public Cell? SelectedUnfocused { get; init; }
+    public Cell? Disabled { get; init; }
 
-    public CellStyle ResolveItemStyle(Theme theme, bool enabled, bool selected, bool focused)
+    public Cell ResolveItemStyle(Theme theme, bool enabled, bool selected, bool focused)
     {
         var baseStyle = theme.SurfaceStyle();
 
         if (!enabled)
         {
-            return Disabled ?? (baseStyle | CellStyle.Dim);
+            return Disabled ?? (baseStyle | TextStyle.Dim);
         }
 
         if (!selected)
@@ -38,6 +38,6 @@ public sealed class ListBoxStyle
             return SelectedFocused ?? theme.SelectionStyle();
         }
 
-        return SelectedUnfocused ?? (CellStyle.Bold | theme.BorderStyle(focused: false));
+        return SelectedUnfocused ?? (Cell.None | TextStyle.Bold | theme.BorderStyle(focused: false));
     }
 }

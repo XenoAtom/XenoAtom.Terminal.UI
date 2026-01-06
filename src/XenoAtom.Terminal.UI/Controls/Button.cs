@@ -110,7 +110,7 @@ public partial class Button : Visuals.Visual
 
             var textCells = TerminalTextUtility.GetWidth(span);
             var textX = contentX + Math.Max(0, (contentWidth - textCells) / 2);
-            buffer.WriteText(textX, contentY, span, style | CellStyle.Bold);
+            buffer.WriteText(textX, contentY, span, style | TextStyle.Bold);
         }
     }
 

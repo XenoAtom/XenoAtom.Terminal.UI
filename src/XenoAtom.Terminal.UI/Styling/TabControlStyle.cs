@@ -15,19 +15,19 @@ public sealed class TabControlStyle
 
     public Thickness TabPadding { get; init; } = new(Left: 2, Top: 0, Right: 2, Bottom: 0);
 
-    public CellStyle? StripStyle { get; init; }
-    public CellStyle? TabStyle { get; init; }
-    public CellStyle? TabHoveredStyle { get; init; }
-    public CellStyle? TabSelectedStyle { get; init; }
-    public CellStyle? TabDisabledStyle { get; init; }
+    public Cell? StripStyle { get; init; }
+    public Cell? TabStyle { get; init; }
+    public Cell? TabHoveredStyle { get; init; }
+    public Cell? TabSelectedStyle { get; init; }
+    public Cell? TabDisabledStyle { get; init; }
 
-    public CellStyle ResolveStripStyle(Theme theme) => StripStyle ?? theme.SurfaceStyle();
+    public Cell ResolveStripStyle(Theme theme) => StripStyle ?? theme.SurfaceStyle();
 
-    public CellStyle ResolveTabStyle(Theme theme, bool enabled, bool selected, bool hovered)
+    public Cell ResolveTabStyle(Theme theme, bool enabled, bool selected, bool hovered)
     {
         if (!enabled)
         {
-            return TabDisabledStyle ?? (theme.SurfaceStyle() | CellStyle.Dim);
+            return TabDisabledStyle ?? (theme.SurfaceStyle() | TextStyle.Dim);
         }
 
         if (selected)
@@ -42,7 +42,7 @@ public sealed class TabControlStyle
             {
                 style = style.WithBackground(bg);
             }
-            return style | CellStyle.Bold;
+            return style | TextStyle.Bold;
         }
 
         if (hovered)

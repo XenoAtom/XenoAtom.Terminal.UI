@@ -6,6 +6,7 @@ using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -183,7 +184,7 @@ public sealed partial class Dialog : Visuals.Visual, IModalVisual
                 titleSpan = titleSpan[..titleEnd];
             }
 
-            buffer.WriteText(rect.X + 2, rect.Y, titleSpan, borderStyle | CellStyle.Bold);
+            buffer.WriteText(rect.X + 2, rect.Y, titleSpan, borderStyle | TextStyle.Bold);
         }
     }
 
