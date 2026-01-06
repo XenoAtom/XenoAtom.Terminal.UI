@@ -2,27 +2,34 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-namespace XenoAtom.Terminal.UI;
 
-public sealed partial class DockLayout : Visual
+// Copyright (c) Alexandre Mutel. All rights reserved.
+// Licensed under the BSD-Clause 2 license.
+// See license.txt file in the project root for full license information.
+
+using XenoAtom.Terminal.UI.Geometry;
+
+namespace XenoAtom.Terminal.UI.Controls;
+
+public sealed partial class DockLayout : Visuals.Visual
 {
-    private Visual? _top;
-    private Visual? _bottom;
-    private Visual? _content;
+    private Visuals.Visual? _top;
+    private Visuals.Visual? _bottom;
+    private Visuals.Visual? _content;
 
-    public Visual? Top
+    public Visuals.Visual? Top
     {
         get => _top;
         set => SetOnce(ref _top, value);
     }
 
-    public Visual? Bottom
+    public Visuals.Visual? Bottom
     {
         get => _bottom;
         set => SetOnce(ref _bottom, value);
     }
 
-    public Visual? Content
+    public Visuals.Visual? Content
     {
         get => _content;
         set => SetOnce(ref _content, value);
@@ -83,7 +90,7 @@ public sealed partial class DockLayout : Visual
         }
     }
 
-    private void SetOnce(ref Visual? field, Visual? value)
+    private void SetOnce(ref Visuals.Visual? field, Visuals.Visual? value)
     {
         if (ReferenceEquals(field, value))
         {

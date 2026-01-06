@@ -2,12 +2,14 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using XenoAtom.Terminal;
 using System.Text;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
 
-namespace XenoAtom.Terminal.UI;
+namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class StatusBar : Visual
+public sealed partial class StatusBar : Visuals.Visual
 {
     [Bindable]
     public partial string? LeftText { get; set; }

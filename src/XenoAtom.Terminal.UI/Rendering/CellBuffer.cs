@@ -5,9 +5,9 @@
 using System.Buffers;
 using System.Text;
 using XenoAtom.Ansi;
-using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Geometry;
 
-namespace XenoAtom.Terminal.UI;
+namespace XenoAtom.Terminal.UI.Rendering;
 
 public sealed class CellBuffer
 {

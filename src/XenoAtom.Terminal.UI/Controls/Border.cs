@@ -3,17 +3,19 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Rendering;
 
-namespace XenoAtom.Terminal.UI;
+namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class Border : Visual
+public sealed partial class Border : Visuals.Visual
 {
-    private Visual? _child;
+    private Visuals.Visual? _child;
 
     [Bindable]
     public partial Thickness Padding { get; set; }
 
-    public Visual? Child
+    public Visuals.Visual? Child
     {
         get => _child;
         set

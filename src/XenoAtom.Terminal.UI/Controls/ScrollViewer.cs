@@ -3,18 +3,21 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
-using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
 
-namespace XenoAtom.Terminal.UI;
+namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class ScrollViewer : Visual
+public sealed partial class ScrollViewer : Visuals.Visual
 {
     private readonly ContentViewportHost _contentHost;
     private readonly VerticalScrollBarVisual _verticalBar;
     private readonly HorizontalScrollBarVisual _horizontalBar;
     private readonly ScrollCornerVisual _corner;
 
-    private Visual? _child;
+    private Visuals.Visual? _child;
     private int _contentWidth;
     private int _contentHeight;
 
@@ -45,7 +48,7 @@ public sealed partial class ScrollViewer : Visual
         AddChild(_corner);
     }
 
-    public Visual? Child
+    public Visuals.Visual? Child
     {
         get => _child;
         set
@@ -417,10 +420,10 @@ public sealed partial class ScrollViewer : Visual
         return false;
     }
 
-    private sealed class ContentViewportHost : Visual
+    private sealed class ContentViewportHost : Visuals.Visual
     {
         private readonly ScrollViewer _owner;
-        private Visual? _child;
+        private Visuals.Visual? _child;
 
         private int _contentWidth;
         private int _contentHeight;
@@ -432,7 +435,7 @@ public sealed partial class ScrollViewer : Visual
             _owner = owner;
         }
 
-        public void SetContent(Visual child)
+        public void SetContent(Visuals.Visual child)
         {
             if (_child is not null)
             {
@@ -464,7 +467,7 @@ public sealed partial class ScrollViewer : Visual
         }
     }
 
-    private abstract class ScrollBarVisualBase : Visual
+    private abstract class ScrollBarVisualBase : Visuals.Visual
     {
         protected readonly ScrollViewer Owner;
 

@@ -4,6 +4,11 @@
 
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.Backends;
+using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Hosting;
+using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Visuals;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -37,7 +42,7 @@ public sealed class TerminalAppTests
         public KeyBindingProbe()
         {
             Focusable = true;
-            AddKeyBinding(new TerminalKeyGesture('k', TerminalModifiers.Ctrl), () => Count++);
+            AddKeyBinding(new Input.TerminalKeyGesture('k', TerminalModifiers.Ctrl), () => Count++);
         }
 
         protected override CellSize MeasureOverride(CellSize availableSize) => new(Math.Min(availableSize.Width, 10), 1);
@@ -911,7 +916,7 @@ public sealed class TerminalAppTests
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));
 
-        Assert.IsTrue(scroll.VerticalOffset > 0);
+        Assert.IsGreaterThan(0, scroll.VerticalOffset);
     }
 
     [TestMethod]

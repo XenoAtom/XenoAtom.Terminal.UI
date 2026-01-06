@@ -3,11 +3,14 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
-using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
 
-namespace XenoAtom.Terminal.UI;
+namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed class TabControl : Visual
+public sealed class TabControl : Visuals.Visual
 {
     private readonly List<TabPage> _tabs = new();
     private readonly List<TabHitRange> _hitRanges = new();
@@ -46,7 +49,7 @@ public sealed class TabControl : Visual
 
     public IReadOnlyList<TabPage> Tabs => _tabs;
 
-    public void AddTab(string header, Visual content)
+    public void AddTab(string header, Visuals.Visual content)
     {
         ArgumentException.ThrowIfNullOrEmpty(header);
         ArgumentNullException.ThrowIfNull(content);
@@ -309,6 +312,6 @@ public sealed class TabControl : Visual
 
     private readonly record struct TabHitRange(int Index, int Start, int End);
 
-    public readonly record struct TabPage(string Header, Visual Content);
+    public readonly record struct TabPage(string Header, Visuals.Visual Content);
 }
 

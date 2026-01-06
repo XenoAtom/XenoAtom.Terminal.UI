@@ -2,13 +2,17 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using System.Text;
 using System.Buffers;
-using XenoAtom.Terminal;
+using System.Text;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Visuals;
 
-namespace XenoAtom.Terminal.UI;
+namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class TextBox : Visual, ICursorProvider
+public sealed partial class TextBox : Visuals.Visual, ICursorProvider
 {
     private int _caretIndex;
     private int _scrollCellOffset;

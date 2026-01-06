@@ -2,15 +2,15 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Input;
 
-namespace XenoAtom.Terminal.UI;
+namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed class WindowLayer : Visual
+public sealed class WindowLayer : Visuals.Visual
 {
-    private Visual? _content;
+    private Visuals.Visual? _content;
 
-    public Visual? Content
+    public Visuals.Visual? Content
     {
         get => _content;
         set
@@ -35,7 +35,7 @@ public sealed class WindowLayer : Visual
         }
     }
 
-    public void AddWindow(Visual window)
+    public void AddWindow(Visuals.Visual window)
     {
         ArgumentNullException.ThrowIfNull(window);
         AddChild(window);

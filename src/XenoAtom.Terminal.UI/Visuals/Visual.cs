@@ -2,10 +2,12 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using System.Collections.Generic;
-using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
 
-namespace XenoAtom.Terminal.UI;
+namespace XenoAtom.Terminal.UI.Visuals;
 
 public abstract partial class Visual : BindableObject
 {
@@ -90,7 +92,7 @@ public abstract partial class Visual : BindableObject
         }
     }
 
-    public void AddKeyBinding(TerminalKeyGesture gesture, Action action)
+    public void AddKeyBinding(Input.TerminalKeyGesture gesture, Action action)
     {
         ArgumentNullException.ThrowIfNull(action);
         _keyBindings ??= new List<KeyBinding>();

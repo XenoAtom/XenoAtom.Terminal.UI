@@ -3,13 +3,15 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
-using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Rendering;
 
-namespace XenoAtom.Terminal.UI;
+namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class Dialog : Visual, IModalVisual
+public sealed partial class Dialog : Visuals.Visual, IModalVisual
 {
-    private Visual? _child;
+    private Visuals.Visual? _child;
     private CellRect _layoutSlot;
 
     private bool _dragging;
@@ -39,7 +41,7 @@ public sealed partial class Dialog : Visual, IModalVisual
     [Bindable]
     public partial bool IsModal { get; set; }
 
-    public Visual? Child
+    public Visuals.Visual? Child
     {
         get => _child;
         set

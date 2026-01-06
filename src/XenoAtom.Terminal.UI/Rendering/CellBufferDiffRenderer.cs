@@ -2,14 +2,11 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using System.Buffers;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using XenoAtom.Ansi;
-using XenoAtom.Terminal;
 
-namespace XenoAtom.Terminal.UI;
+namespace XenoAtom.Terminal.UI.Rendering;
 
 public sealed class CellBufferDiffRenderer
 {

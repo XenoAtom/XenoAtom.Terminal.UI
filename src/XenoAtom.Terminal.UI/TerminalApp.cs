@@ -4,6 +4,12 @@
 
 using System.Text;
 using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Hosting;
+using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Threading;
+using XenoAtom.Terminal.UI.Visuals;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -18,8 +24,8 @@ public sealed class TerminalApp : IAsyncDisposable
     private readonly CancellationTokenSource _cts = new();
 
     private bool _renderRequested = true;
-    private Visual? _pointerCapture;
-    private Visual? _hoveredElement;
+    private Visuals.Visual? _pointerCapture;
+    private Visuals.Visual? _hoveredElement;
     private int? _inlineLiveRegionTopRow;
     private bool _lastCursorVisible;
     private TerminalPosition _lastCursorPosition;
@@ -27,7 +33,7 @@ public sealed class TerminalApp : IAsyncDisposable
     private int _renderFrameIndex;
     private Task? _runTask;
 
-    public TerminalApp(Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
+    public TerminalApp(Visuals.Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
     {
         Root = root ?? throw new ArgumentNullException(nameof(root));
         _terminal = terminal ?? global::XenoAtom.Terminal.Terminal.Instance;
@@ -46,11 +52,11 @@ public sealed class TerminalApp : IAsyncDisposable
 
     public TerminalInstance Terminal => _terminal;
 
-    public Visual Root { get; }
+    public Visuals.Visual Root { get; }
 
     public Dispatcher Dispatcher { get; }
 
-    public Visual? FocusedElement { get; private set; }
+    public Visuals.Visual? FocusedElement { get; private set; }
 
     public void Post(Action action)
     {
@@ -93,7 +99,7 @@ public sealed class TerminalApp : IAsyncDisposable
         RequestRender();
     }
 
-    public void Append(Visual block)
+    public void Append(Visuals.Visual block)
     {
         ArgumentNullException.ThrowIfNull(block);
         Dispatcher.VerifyAccess();
@@ -274,7 +280,7 @@ public sealed class TerminalApp : IAsyncDisposable
     private void OnValueChanged(object owner, string name)
     {
         _ = name;
-        if (ReferenceEquals(owner, Root) || owner is Visual)
+        if (ReferenceEquals(owner, Root) || owner is Visuals.Visual)
         {
             RequestRender();
         }
@@ -486,7 +492,7 @@ public sealed class TerminalApp : IAsyncDisposable
             }
         }
 
-        FocusedElement.RaiseEvent(Visual.KeyDownEvent, args);
+        FocusedElement.RaiseEvent(Visuals.Visual.KeyDownEvent, args);
     }
 
     private void EnsureInitialFocus()
@@ -606,7 +612,7 @@ public sealed class TerminalApp : IAsyncDisposable
         }
 
         var args = new TextInputEventArgs { Text = text };
-        FocusedElement.RaiseEvent(Visual.TextInputEvent, args);
+        FocusedElement.RaiseEvent(Visuals.Visual.TextInputEvent, args);
     }
 
     private void DispatchPaste(string text)
@@ -618,7 +624,7 @@ public sealed class TerminalApp : IAsyncDisposable
         }
 
         var args = new PasteEventArgs { Text = text };
-        FocusedElement.RaiseEvent(Visual.PasteEvent, args);
+        FocusedElement.RaiseEvent(Visuals.Visual.PasteEvent, args);
     }
 
     private void DispatchMouseEvent(TerminalMouseEvent mouseEvent)
@@ -636,8 +642,8 @@ public sealed class TerminalApp : IAsyncDisposable
             _hoveredElement = null;
         }
 
-        Visual? hitTarget;
-        Visual? target;
+        Visuals.Visual? hitTarget;
+        Visuals.Visual? target;
         var uiY = mouseEvent.Y;
         var localY = mouseEvent.Y;
 
@@ -716,24 +722,24 @@ public sealed class TerminalApp : IAsyncDisposable
         {
             case TerminalMouseKind.Move:
             case TerminalMouseKind.Drag:
-                target.RaiseEvent(Visual.PointerMovedEvent, args);
+                target.RaiseEvent(Visuals.Visual.PointerMovedEvent, args);
                 break;
             case TerminalMouseKind.Down:
             case TerminalMouseKind.DoubleClick:
                 _pointerCapture = target;
-                target.RaiseEvent(Visual.PointerPressedEvent, args);
+                target.RaiseEvent(Visuals.Visual.PointerPressedEvent, args);
                 break;
             case TerminalMouseKind.Up:
-                target.RaiseEvent(Visual.PointerReleasedEvent, args);
+                target.RaiseEvent(Visuals.Visual.PointerReleasedEvent, args);
                 _pointerCapture = null;
                 break;
             case TerminalMouseKind.Wheel:
-                target.RaiseEvent(Visual.PointerWheelEvent, args);
+                target.RaiseEvent(Visuals.Visual.PointerWheelEvent, args);
                 break;
         }
     }
 
-    private void UpdateHover(Visual? hitTarget)
+    private void UpdateHover(Visuals.Visual? hitTarget)
     {
         var hovered = hitTarget;
         while (hovered is not null && (!hovered.IsVisible || !hovered.IsEnabled))
@@ -758,9 +764,9 @@ public sealed class TerminalApp : IAsyncDisposable
         }
     }
 
-    private Visual GetInputRoot() => FindActiveModalRoot(Root) ?? Root;
+    private Visuals.Visual GetInputRoot() => FindActiveModalRoot(Root) ?? Root;
 
-    private Visual GetFocusScopeRoot() => FindActiveModalRoot(Root) ?? Root;
+    private Visuals.Visual GetFocusScopeRoot() => FindActiveModalRoot(Root) ?? Root;
 
     private void EnsureFocusInScope()
     {
@@ -784,7 +790,7 @@ public sealed class TerminalApp : IAsyncDisposable
         }
     }
 
-    private static bool IsInScope(Visual visual, Visual scopeRoot)
+    private static bool IsInScope(Visuals.Visual visual, Visuals.Visual scopeRoot)
     {
         for (var v = visual; v is not null; v = v.Parent)
         {
@@ -797,7 +803,7 @@ public sealed class TerminalApp : IAsyncDisposable
         return false;
     }
 
-    private static Visual? FindActiveModalRoot(Visual root)
+    private static Visuals.Visual? FindActiveModalRoot(Visuals.Visual root)
     {
         if (!root.IsVisible || !root.IsEnabled)
         {

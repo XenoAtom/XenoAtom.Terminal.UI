@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Hosting;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -20,5 +21,5 @@ public sealed class TerminalAppOptions
 
     public bool EnableBracketedPaste { get; init; } = true;
 
-    public TerminalKeyGesture ToggleDebugOverlayGesture { get; init; } = new(TerminalKey.F12);
+    public Input.TerminalKeyGesture ToggleDebugOverlayGesture { get; init; } = new(TerminalKey.F12);
 }

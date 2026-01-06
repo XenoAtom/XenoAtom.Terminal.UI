@@ -1,5 +1,10 @@
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
+using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Hosting;
+using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Visuals;
 
 using var session = Terminal.Open();
 

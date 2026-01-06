@@ -3,10 +3,12 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Rendering;
 
-namespace XenoAtom.Terminal.UI;
+namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class Backdrop : Visual
+public sealed partial class Backdrop : Visuals.Visual
 {
     protected override CellSize MeasureOverride(CellSize availableSize) => availableSize;
 

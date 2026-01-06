@@ -3,11 +3,14 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
-using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
 
-namespace XenoAtom.Terminal.UI;
+namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class RadioButton : Visual
+public sealed partial class RadioButton : Visuals.Visual
 {
     private bool _isPressed;
 
@@ -125,7 +128,7 @@ public sealed partial class RadioButton : Visual
             return;
         }
 
-        Visual root = this;
+        Visuals.Visual root = this;
         while (root.Parent is not null)
         {
             root = root.Parent;

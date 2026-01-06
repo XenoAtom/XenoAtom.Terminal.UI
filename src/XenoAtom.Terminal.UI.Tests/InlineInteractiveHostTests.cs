@@ -4,6 +4,7 @@
 
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.Backends;
+using XenoAtom.Terminal.UI.Hosting;
 
 namespace XenoAtom.Terminal.UI.Tests;
 

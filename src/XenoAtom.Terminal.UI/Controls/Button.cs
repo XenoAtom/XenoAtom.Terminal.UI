@@ -3,11 +3,14 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
-using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
 
-namespace XenoAtom.Terminal.UI;
+namespace XenoAtom.Terminal.UI.Controls;
 
-public partial class Button : Visual
+public partial class Button : Visuals.Visual
 {
     private bool _isPressed;
 
@@ -115,7 +118,7 @@ public partial class Button : Visual
     {
         if (e.Key is TerminalKey.Enter or TerminalKey.Space)
         {
-            RaiseEvent(ClickEvent, new ClickEventArgs());
+            RaiseEvent(Button.ClickEvent, new ClickEventArgs());
             e.Handled = true;
         }
     }
@@ -145,7 +148,7 @@ public partial class Button : Visual
             App?.RequestRender();
             if (e.LocalX >= 0 && e.LocalX < Bounds.Width && e.LocalY >= 0 && e.LocalY < Bounds.Height)
             {
-                RaiseEvent(ClickEvent, new ClickEventArgs());
+                RaiseEvent(Button.ClickEvent, new ClickEventArgs());
             }
             e.Handled = true;
         }

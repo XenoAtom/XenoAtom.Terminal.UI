@@ -2,13 +2,20 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-namespace XenoAtom.Terminal.UI;
 
-public sealed partial class Center : Visual
+// Copyright (c) Alexandre Mutel. All rights reserved.
+// Licensed under the BSD-Clause 2 license.
+// See license.txt file in the project root for full license information.
+
+using XenoAtom.Terminal.UI.Geometry;
+
+namespace XenoAtom.Terminal.UI.Controls;
+
+public sealed partial class Center : Visuals.Visual
 {
-    private Visual? _child;
+    private Visuals.Visual? _child;
 
-    public Visual? Child
+    public Visuals.Visual? Child
     {
         get => _child;
         set
