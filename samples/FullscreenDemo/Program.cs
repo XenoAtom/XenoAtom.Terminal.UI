@@ -45,7 +45,7 @@ var overlay = new ComputedVisual(() =>
         .Width(60)
         .Content(dialogContent);
 
-    return new ZStack(new Backdrop(), dialog);
+    return dialog;
 });
 
 var progressBars = new VStack(

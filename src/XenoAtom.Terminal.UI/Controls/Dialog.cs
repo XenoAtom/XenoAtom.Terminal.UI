@@ -131,7 +131,19 @@ public sealed partial class Dialog : Visual, IModalVisual
         var theme = GetTheme();
         var glyphs = theme.Lines;
         var borderStyle = theme.BorderStyle(focused);
-        var clearStyle = CellStyle.None;
+
+        var dialogBackground = theme.SurfaceAlt ?? theme.Surface;
+        var surface = theme.ForegroundTextStyle();
+        if (dialogBackground is { } bg)
+        {
+            surface = surface.WithBackground(bg);
+        }
+
+        var chromeStyle = borderStyle;
+        if (dialogBackground is { } chromeBg)
+        {
+            chromeStyle = chromeStyle.WithBackground(chromeBg);
+        }
 
         var left = rect.X;
         var top = rect.Y;
@@ -143,25 +155,25 @@ public sealed partial class Dialog : Visual, IModalVisual
         {
             for (var x = left; x <= right; x++)
             {
-                buffer.SetCell(x, y, new Rune(' '), clearStyle);
+                buffer.SetCell(x, y, new Rune(' '), surface);
             }
         }
 
-        buffer.SetCell(left, top, glyphs.TopLeft, borderStyle);
-        buffer.SetCell(right, top, glyphs.TopRight, borderStyle);
-        buffer.SetCell(left, bottom, glyphs.BottomLeft, borderStyle);
-        buffer.SetCell(right, bottom, glyphs.BottomRight, borderStyle);
+        buffer.SetCell(left, top, glyphs.TopLeft, chromeStyle);
+        buffer.SetCell(right, top, glyphs.TopRight, chromeStyle);
+        buffer.SetCell(left, bottom, glyphs.BottomLeft, chromeStyle);
+        buffer.SetCell(right, bottom, glyphs.BottomRight, chromeStyle);
 
         for (var x = left + 1; x < right; x++)
         {
-            buffer.SetCell(x, top, glyphs.Horizontal, borderStyle);
-            buffer.SetCell(x, bottom, glyphs.Horizontal, borderStyle);
+            buffer.SetCell(x, top, glyphs.Horizontal, chromeStyle);
+            buffer.SetCell(x, bottom, glyphs.Horizontal, chromeStyle);
         }
 
         for (var y = top + 1; y < bottom; y++)
         {
-            buffer.SetCell(left, y, glyphs.Vertical, borderStyle);
-            buffer.SetCell(right, y, glyphs.Vertical, borderStyle);
+            buffer.SetCell(left, y, glyphs.Vertical, chromeStyle);
+            buffer.SetCell(right, y, glyphs.Vertical, chromeStyle);
         }
 
         var title = Title;
@@ -174,7 +186,7 @@ public sealed partial class Dialog : Visual, IModalVisual
                 titleSpan = titleSpan[..titleEnd];
             }
 
-            buffer.WriteText(rect.X + 2, rect.Y, titleSpan, borderStyle | TextStyle.Bold);
+            buffer.WriteText(rect.X + 2, rect.Y, titleSpan, chromeStyle | TextStyle.Bold);
         }
     }
 
