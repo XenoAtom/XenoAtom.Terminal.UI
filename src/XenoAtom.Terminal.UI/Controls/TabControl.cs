@@ -10,27 +10,48 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed class TabControl : Visual
+public sealed partial class TabControl : Visual
 {
     private readonly List<TabPage> _tabs = new();
     private readonly List<TabHitRange> _hitRanges = new();
     private int _selectedIndex;
     private int _hoveredIndex = -1;
     private int _headerHeight = 1;
+    private bool _showBorder;
 
     public TabControl()
     {
         Focusable = true;
-        ShowBorder = true;
+        _showBorder = true;
     }
 
-    public bool ShowBorder { get; set; }
+    [Bindable]
+    public bool ShowBorder
+    {
+        get
+        {
+            BindingManager.Current.RegisterRead(this, __ShowBorder__BindingAccessor.Instance);
+            return _showBorder;
+        }
+        set
+        {
+            if (_showBorder == value)
+            {
+                return;
+            }
 
+            _showBorder = value;
+            BindingManager.Current.NotifyValueChanged(this, __ShowBorder__BindingAccessor.Instance);
+            App?.RequestRender();
+        }
+    }
+
+    [Bindable]
     public int SelectedIndex
     {
         get
         {
-            BindingManager.Current.RegisterRead(this, nameof(SelectedIndex));
+            BindingManager.Current.RegisterRead(this, __SelectedIndex__BindingAccessor.Instance);
             return _selectedIndex;
         }
         set
@@ -42,7 +63,7 @@ public sealed class TabControl : Visual
             }
 
             _selectedIndex = clamped;
-            BindingManager.Current.NotifyValueChanged(this, nameof(SelectedIndex));
+            BindingManager.Current.NotifyValueChanged(this, __SelectedIndex__BindingAccessor.Instance);
             UpdateTabVisibility();
             App?.RequestRender();
         }

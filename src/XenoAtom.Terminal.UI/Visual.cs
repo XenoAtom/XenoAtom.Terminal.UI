@@ -205,11 +205,12 @@ public abstract partial class Visual : DispatcherObject
         }
     }
 
+    [Bindable]
     public bool IsVisible
     {
         get
         {
-            BindingManager.Current.RegisterRead(this, nameof(IsVisible));
+            BindingManager.Current.RegisterRead(this, __IsVisible__BindingAccessor.Instance);
             return _isVisible;
         }
         set
@@ -220,16 +221,17 @@ public abstract partial class Visual : DispatcherObject
             }
 
             _isVisible = value;
-            BindingManager.Current.NotifyValueChanged(this, nameof(IsVisible));
+            BindingManager.Current.NotifyValueChanged(this, __IsVisible__BindingAccessor.Instance);
             App?.RequestRender();
         }
     }
 
+    [Bindable]
     public bool IsEnabled
     {
         get
         {
-            BindingManager.Current.RegisterRead(this, nameof(IsEnabled));
+            BindingManager.Current.RegisterRead(this, __IsEnabled__BindingAccessor.Instance);
             return _isEnabled;
         }
         set
@@ -240,16 +242,17 @@ public abstract partial class Visual : DispatcherObject
             }
 
             _isEnabled = value;
-            BindingManager.Current.NotifyValueChanged(this, nameof(IsEnabled));
+            BindingManager.Current.NotifyValueChanged(this, __IsEnabled__BindingAccessor.Instance);
             App?.RequestRender();
         }
     }
 
+    [Bindable]
     public bool IsHovered
     {
         get
         {
-            BindingManager.Current.RegisterRead(this, nameof(IsHovered));
+            BindingManager.Current.RegisterRead(this, __IsHovered__BindingAccessor.Instance);
             return _isHovered;
         }
         internal set
@@ -260,7 +263,7 @@ public abstract partial class Visual : DispatcherObject
             }
 
             _isHovered = value;
-            BindingManager.Current.NotifyValueChanged(this, nameof(IsHovered));
+            BindingManager.Current.NotifyValueChanged(this, __IsHovered__BindingAccessor.Instance);
             App?.RequestRender();
         }
     }
@@ -348,7 +351,7 @@ public abstract partial class Visual : DispatcherObject
         ArgumentNullException.ThrowIfNull(key);
         _environment ??= new Dictionary<object, object?>();
         _environment[key] = value;
-        BindingManager.Current.NotifyValueChanged(this, key.DependencyName);
+        BindingManager.Current.NotifyValueChanged(this, key.DependencyAccessor);
     }
 
     public T GetEnvironmentValue<T>(EnvironmentKey<T> key)
@@ -363,12 +366,12 @@ public abstract partial class Visual : DispatcherObject
             root = v;
             if (v._environment is not null && v._environment.TryGetValue(key, out var boxed))
             {
-                BindingManager.Current.RegisterRead(v, key.DependencyName);
+                BindingManager.Current.RegisterRead(v, key.DependencyAccessor);
                 return boxed is T typed ? typed : key.DefaultValue;
             }
         }
 
-        BindingManager.Current.RegisterRead(root ?? this, key.DependencyName);
+        BindingManager.Current.RegisterRead(root ?? this, key.DependencyAccessor);
         return key.DefaultValue;
     }
 

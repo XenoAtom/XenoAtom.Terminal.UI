@@ -10,16 +10,26 @@ public sealed class EnvironmentKey<T>
     {
         ArgumentNullException.ThrowIfNull(name);
         Name = string.Intern(name);
-        DependencyName = string.Intern("$env$" + Name);
+        DependencyAccessor = new EnvironmentBindingAccessor(string.Intern("$env$" + Name));
         DefaultValue = defaultValue;
     }
 
     public string Name { get; }
 
-    internal string DependencyName { get; }
+    internal BindingAccessor DependencyAccessor { get; }
 
     public T DefaultValue { get; }
 
     public override string ToString() => Name;
-}
 
+    private sealed class EnvironmentBindingAccessor : BindingAccessor
+    {
+        public EnvironmentBindingAccessor(string name) : base(name)
+        {
+        }
+
+        public override object? GetValue(object instance) => throw new NotSupportedException();
+
+        public override void SetValue(object instance, object? value) => throw new NotSupportedException();
+    }
+}

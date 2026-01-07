@@ -52,28 +52,6 @@ public sealed class BindingManager
         return new TrackingSession(previous, current.Dependencies);
     }
 
-    public void RegisterRead(object owner, string name)
-    {
-        ArgumentNullException.ThrowIfNull(name);
-        if (owner is Threading.DispatcherObject dispatcherObject)
-        {
-            dispatcherObject.VerifyAccess();
-        }
-
-        _tracking?.RegisterRead(owner, GetNameAccessor(name));
-    }
-
-    public void NotifyValueChanged(object owner, string name)
-    {
-        ArgumentNullException.ThrowIfNull(name);
-        if (owner is Threading.DispatcherObject dispatcherObject)
-        {
-            dispatcherObject.VerifyAccess();
-        }
-
-        ValueChanged?.Invoke(new Binding(owner, GetNameAccessor(name)));
-    }
-
     public void RegisterRead(object owner, BindingAccessor accessor)
     {
         ArgumentNullException.ThrowIfNull(accessor);
@@ -124,33 +102,5 @@ public sealed class BindingManager
         {
             _dependencies.Add(new Binding(owner, accessor));
         }
-    }
-
-    private readonly Dictionary<string, BindingAccessor> _nameAccessors = new(StringComparer.Ordinal);
-
-    private BindingAccessor GetNameAccessor(string name)
-    {
-        lock (_nameAccessors)
-        {
-            if (_nameAccessors.TryGetValue(name, out var accessor))
-            {
-                return accessor;
-            }
-
-            accessor = new NameBindingAccessor(name);
-            _nameAccessors.Add(name, accessor);
-            return accessor;
-        }
-    }
-
-    private sealed class NameBindingAccessor : BindingAccessor
-    {
-        public NameBindingAccessor(string name) : base(name)
-        {
-        }
-
-        public override object? GetValue(object instance) => throw new NotSupportedException();
-
-        public override void SetValue(object instance, object? value) => throw new NotSupportedException();
     }
 }
