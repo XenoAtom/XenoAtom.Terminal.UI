@@ -10,7 +10,7 @@ namespace XenoAtom.Terminal.UI;
 /// A bindable container for a value, useful for passing state between visuals.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
-public sealed class State<T>
+public sealed class State<T> : Threading.DispatcherObject
 {
     private T _value;
 
@@ -27,6 +27,7 @@ public sealed class State<T>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get
         {
+            VerifyAccess();
             BindingManager.Current.RegisterRead(this, InternalAccessor.Instance);
             return _value;
         }
@@ -34,6 +35,7 @@ public sealed class State<T>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         set
         {
+            VerifyAccess();
             if (EqualityComparer<T>.Default.Equals(_value, value))
             {
                 return;
@@ -67,4 +69,3 @@ public sealed class State<T>
         private static void StaticSetter(object instance, T value) => ((State<T>)instance).Value = value;
     }
 }
-

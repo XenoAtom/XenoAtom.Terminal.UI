@@ -19,6 +19,7 @@ public static partial class VisualExtensions
     public static T Add<T>(this T obj, params Visual[] visuals) where T : Panel
     {
         ArgumentNullException.ThrowIfNull(obj);
+        obj.VerifyAccess();
         obj.AddRange(visuals);
         return obj;
     }

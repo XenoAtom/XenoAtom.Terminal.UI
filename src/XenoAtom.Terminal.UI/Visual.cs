@@ -6,10 +6,11 @@ using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Threading;
 
 namespace XenoAtom.Terminal.UI;
 
-public abstract partial class Visual
+public abstract partial class Visual : DispatcherObject
 {
     private Dictionary<object, Delegate?>? _handlers;
     private List<KeyBinding>? _keyBindings;
@@ -266,6 +267,7 @@ public abstract partial class Visual
 
     public void AddKeyBinding(Input.TerminalKeyGesture gesture, Action action)
     {
+        VerifyAccess();
         ArgumentNullException.ThrowIfNull(action);
         _keyBindings ??= new List<KeyBinding>();
         _keyBindings.Add(new KeyBinding { Gesture = gesture, Action = action });
@@ -308,6 +310,7 @@ public abstract partial class Visual
 
     protected void AttachChild(Visual child)
     {
+        VerifyAccess();
         ArgumentNullException.ThrowIfNull(child);
         if (child.Parent is not null)
         {
@@ -324,6 +327,7 @@ public abstract partial class Visual
 
     protected void DetachChild(Visual child)
     {
+        VerifyAccess();
         ArgumentNullException.ThrowIfNull(child);
         if (!ReferenceEquals(child.Parent, this))
         {
@@ -340,6 +344,7 @@ public abstract partial class Visual
 
     public void SetEnvironmentValue<T>(EnvironmentKey<T> key, T value)
     {
+        VerifyAccess();
         ArgumentNullException.ThrowIfNull(key);
         _environment ??= new Dictionary<object, object?>();
         _environment[key] = value;
@@ -348,6 +353,7 @@ public abstract partial class Visual
 
     public T GetEnvironmentValue<T>(EnvironmentKey<T> key)
     {
+        VerifyAccess();
         ArgumentNullException.ThrowIfNull(key);
 
         Visual? root = null;
@@ -370,6 +376,7 @@ public abstract partial class Visual
 
     public void Initialize(Action<Visual> configure)
     {
+        VerifyAccess();
         ArgumentNullException.ThrowIfNull(configure);
         _initializers ??= new List<Action<Visual>>();
         _initializers.Add(configure);
@@ -419,6 +426,7 @@ public abstract partial class Visual
 
     public void Measure(Size availableSize)
     {
+        VerifyAccess();
         EnsureInitialized();
 
         using var session = BindingManager.Current.StartTracking();
@@ -434,6 +442,7 @@ public abstract partial class Visual
 
     public void Arrange(Rectangle finalRect)
     {
+        VerifyAccess();
         EnsureInitialized();
 
         using var session = BindingManager.Current.StartTracking();
@@ -564,6 +573,7 @@ public abstract partial class Visual
 
     internal void RenderTree(CellBuffer buffer)
     {
+        VerifyAccess();
         EnsureInitialized();
 
         bool visible;
@@ -602,6 +612,7 @@ public abstract partial class Visual
 
     public IEnumerable<Visual> EnumerateVisualsDepthFirst()
     {
+        VerifyAccess();
         yield return this;
 
         for (var i = 0; i < ChildrenCount; i++)
@@ -616,6 +627,7 @@ public abstract partial class Visual
 
     public Visual? HitTest(int x, int y)
     {
+        VerifyAccess();
         if (!IsVisible || !Bounds.Contains(x, y))
         {
             return null;

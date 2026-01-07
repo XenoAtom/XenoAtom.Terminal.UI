@@ -14,6 +14,29 @@ namespace XenoAtom.Terminal.UI.Tests;
 [TestClass]
 public sealed class TerminalAppTests
 {
+    private static async Task WaitUntilUi(TerminalApp app, Func<bool> condition)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+        ArgumentNullException.ThrowIfNull(condition);
+
+        var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+        while (true)
+        {
+            if (DateTime.UtcNow >= timeout)
+            {
+                Assert.Fail("Timed out waiting for condition.");
+            }
+
+            var ok = await app.Dispatcher.InvokeAsync(condition);
+            if (ok)
+            {
+                return;
+            }
+
+            await Task.Delay(10);
+        }
+    }
+
     private sealed class ProbeFocusable : Visual
     {
         public ProbeFocusable(string text)
@@ -177,24 +200,11 @@ public sealed class TerminalAppTests
 
         await Task.Delay(10);
 
-        static async Task WaitUntil(Func<bool> condition)
-        {
-            var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(2);
-            while (!condition())
-            {
-                if (DateTime.UtcNow >= timeout)
-                {
-                    Assert.Fail("Timed out waiting for condition.");
-                }
-                await Task.Delay(10);
-            }
-        }
-
         backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, Button = TerminalMouseButton.None, X = 1, Y = 0 });
-        await WaitUntil(() => button.IsHovered);
+        await WaitUntilUi(app, () => button.IsHovered);
 
         backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, Button = TerminalMouseButton.None, X = 19, Y = 9 });
-        await WaitUntil(() => !button.IsHovered);
+        await WaitUntilUi(app, () => !button.IsHovered);
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));
@@ -222,25 +232,12 @@ public sealed class TerminalAppTests
 
         await Task.Delay(10);
 
-        static async Task WaitUntil(Func<bool> condition)
-        {
-            var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(2);
-            while (!condition())
-            {
-                if (DateTime.UtcNow >= timeout)
-                {
-                    Assert.Fail("Timed out waiting for condition.");
-                }
-                await Task.Delay(10);
-            }
-        }
-
         // Centered: left=5, top=2 for a 20x10 slot and 10x5 dialog.
         backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 6, Y = 2 });
         backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Drag, Button = TerminalMouseButton.Left, X = 9, Y = 4 });
         backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 9, Y = 4 });
 
-        await WaitUntil(() => dialog.Left == 8 && dialog.Top == 4);
+        await WaitUntilUi(app, () => dialog.Left == 8 && dialog.Top == 4);
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));
@@ -275,9 +272,12 @@ public sealed class TerminalAppTests
             return rootChild;
         }
 
-        var initialHit = layer.HitTest(4, 3);
-        Assert.IsNotNull(initialHit);
-        Assert.AreSame(b, GetRootChild(layer, initialHit));
+        await app.Dispatcher.InvokeAsync(() =>
+        {
+            var initialHit = layer.HitTest(4, 3);
+            Assert.IsNotNull(initialHit);
+            Assert.AreSame(b, GetRootChild(layer, initialHit));
+        });
 
         // Click within A only (not overlapped by B) to bring it to front.
         backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 2, Y = 2 });
@@ -285,9 +285,12 @@ public sealed class TerminalAppTests
 
         await Task.Delay(20);
 
-        var postClickHit = layer.HitTest(4, 3);
-        Assert.IsNotNull(postClickHit);
-        Assert.AreSame(a, GetRootChild(layer, postClickHit));
+        await app.Dispatcher.InvokeAsync(() =>
+        {
+            var postClickHit = layer.HitTest(4, 3);
+            Assert.IsNotNull(postClickHit);
+            Assert.AreSame(a, GetRootChild(layer, postClickHit));
+        });
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));
@@ -340,19 +343,6 @@ public sealed class TerminalAppTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(20, 8));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        static async Task WaitUntil(Func<bool> condition)
-        {
-            var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(2);
-            while (!condition())
-            {
-                if (DateTime.UtcNow >= timeout)
-                {
-                    Assert.Fail("Timed out waiting for condition.");
-                }
-                await Task.Delay(10);
-            }
-        }
-
         var group = new object();
         var a = new RadioButton("A", group);
         var b = new RadioButton("B", group);
@@ -367,13 +357,13 @@ public sealed class TerminalAppTests
         await Task.Delay(20);
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Space });
-        await WaitUntil(() => a.IsChecked);
+        await WaitUntilUi(app, () => a.IsChecked);
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
         await Task.Delay(20);
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Space });
-        await WaitUntil(() => b.IsChecked && !a.IsChecked);
+        await WaitUntilUi(app, () => b.IsChecked && !a.IsChecked);
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));
@@ -384,19 +374,6 @@ public sealed class TerminalAppTests
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(30, 10));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
-        static async Task WaitUntil(Func<bool> condition)
-        {
-            var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(2);
-            while (!condition())
-            {
-                if (DateTime.UtcNow >= timeout)
-                {
-                    Assert.Fail("Timed out waiting for condition.");
-                }
-                await Task.Delay(10);
-            }
-        }
 
         var tabs = new TabControl();
         tabs.AddTab("First", new TextBlock("First"));
@@ -411,10 +388,10 @@ public sealed class TerminalAppTests
         await Task.Delay(20);
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right });
-        await WaitUntil(() => tabs.SelectedIndex == 1);
+        await WaitUntilUi(app, () => tabs.SelectedIndex == 1);
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left });
-        await WaitUntil(() => tabs.SelectedIndex == 0);
+        await WaitUntilUi(app, () => tabs.SelectedIndex == 0);
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));
@@ -533,21 +510,7 @@ public sealed class TerminalAppTests
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
         var runTask = app.RunInBackgroundAsync();
-
-        static async Task WaitUntil(Func<bool> condition)
-        {
-            var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(2);
-            while (!condition())
-            {
-                if (DateTime.UtcNow >= timeout)
-                {
-                    Assert.Fail("Timed out waiting for condition.");
-                }
-                await Task.Delay(10);
-            }
-        }
-
-        await WaitUntil(() => textBox.Text == "Hello" && root.Spacing == 2);
+        await WaitUntilUi(app, () => textBox.Text == "Hello" && root.Spacing == 2);
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));
@@ -629,12 +592,12 @@ public sealed class TerminalAppTests
         var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(30);
-        Assert.AreSame(a, app.FocusedElement);
+        await app.Dispatcher.InvokeAsync(() => Assert.AreSame(a, app.FocusedElement));
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
         await Task.Delay(30);
 
-        Assert.AreSame(d, app.FocusedElement);
+        await app.Dispatcher.InvokeAsync(() => Assert.AreSame(d, app.FocusedElement));
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));
@@ -665,15 +628,19 @@ public sealed class TerminalAppTests
 
             var app = new TerminalApp(root, session.Instance);
             var runTask = app.RunInBackgroundAsync();
+            try
+            {
+                await Task.Delay(10);
+                backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Space });
 
-            await Task.Delay(10);
-            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Space });
-
-            await changed.Task.WaitAsync(TimeSpan.FromSeconds(2));
-            Assert.IsTrue(checkBox.IsChecked);
-
-            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-            await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+                await changed.Task.WaitAsync(TimeSpan.FromSeconds(2));
+                await app.Dispatcher.InvokeAsync(() => Assert.IsTrue(checkBox.IsChecked));
+            }
+            finally
+            {
+                backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+                await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+            }
         }
         finally
         {
@@ -710,18 +677,23 @@ public sealed class TerminalAppTests
         BindingManager.Current.ValueChanged += Handler;
         try
         {
-            backend.PushEvent(new TerminalTextEvent { Text = "a" });
-            backend.PushEvent(new TerminalTextEvent { Text = "b" });
-            backend.PushEvent(new TerminalTextEvent { Text = "c" });
-            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left });
-            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Backspace });
-            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'v', Modifiers = TerminalModifiers.Ctrl });
+            try
+            {
+                backend.PushEvent(new TerminalTextEvent { Text = "a" });
+                backend.PushEvent(new TerminalTextEvent { Text = "b" });
+                backend.PushEvent(new TerminalTextEvent { Text = "c" });
+                backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left });
+                backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Backspace });
+                backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'v', Modifiers = TerminalModifiers.Ctrl });
 
-            await reached.Task.WaitAsync(TimeSpan.FromSeconds(2));
-            Assert.AreEqual("axyzc", textBox.Text);
-
-            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-            await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+                await reached.Task.WaitAsync(TimeSpan.FromSeconds(2));
+                await app.Dispatcher.InvokeAsync(() => Assert.AreEqual("axyzc", textBox.Text));
+            }
+            finally
+            {
+                backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+                await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+            }
         }
         finally
         {
@@ -808,27 +780,13 @@ public sealed class TerminalAppTests
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
         var runTask = app.RunInBackgroundAsync();
-
-        static async Task WaitUntil(Func<bool> condition)
-        {
-            var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(2);
-            while (!condition())
-            {
-                if (DateTime.UtcNow >= timeout)
-                {
-                    Assert.Fail("Timed out waiting for condition.");
-                }
-                await Task.Delay(10);
-            }
-        }
-
-        await WaitUntil(() => ReferenceEquals(app.FocusedElement, textBox));
+        await WaitUntilUi(app, () => ReferenceEquals(app.FocusedElement, textBox));
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'k', Modifiers = TerminalModifiers.Ctrl });
-        await WaitUntil(() => textBox.Text == "hello ");
+        await WaitUntilUi(app, () => textBox.Text == "hello ");
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'y', Modifiers = TerminalModifiers.Ctrl });
-        await WaitUntil(() => textBox.Text == "hello world");
+        await WaitUntilUi(app, () => textBox.Text == "hello world");
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));

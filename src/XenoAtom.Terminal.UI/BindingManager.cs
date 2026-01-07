@@ -18,6 +18,11 @@ public sealed class BindingManager
 
     public T GetValue<T>(object owner, ref T backingField, BindingAccessor<T> accessor)
     {
+        if (owner is Threading.DispatcherObject dispatcherObject)
+        {
+            dispatcherObject.VerifyAccess();
+        }
+
         _tracking?.RegisterRead(owner, accessor);
         return backingField;
     }
@@ -30,9 +35,9 @@ public sealed class BindingManager
             return;
         }
 
-        if (owner is Visual { App: { } app })
+        if (owner is Threading.DispatcherObject dispatcherObject)
         {
-            app.Dispatcher.VerifyAccess();
+            dispatcherObject.VerifyAccess();
         }
 
         backingField = value;
@@ -50,32 +55,42 @@ public sealed class BindingManager
     public void RegisterRead(object owner, string name)
     {
         ArgumentNullException.ThrowIfNull(name);
+        if (owner is Threading.DispatcherObject dispatcherObject)
+        {
+            dispatcherObject.VerifyAccess();
+        }
+
         _tracking?.RegisterRead(owner, GetNameAccessor(name));
     }
 
     public void NotifyValueChanged(object owner, string name)
     {
-        if (owner is Visual { App: { } app })
+        ArgumentNullException.ThrowIfNull(name);
+        if (owner is Threading.DispatcherObject dispatcherObject)
         {
-            app.Dispatcher.VerifyAccess();
+            dispatcherObject.VerifyAccess();
         }
 
-        ArgumentNullException.ThrowIfNull(name);
         ValueChanged?.Invoke(new Binding(owner, GetNameAccessor(name)));
     }
 
     public void RegisterRead(object owner, BindingAccessor accessor)
     {
         ArgumentNullException.ThrowIfNull(accessor);
+        if (owner is Threading.DispatcherObject dispatcherObject)
+        {
+            dispatcherObject.VerifyAccess();
+        }
+
         _tracking?.RegisterRead(owner, accessor);
     }
 
     public void NotifyValueChanged(object owner, BindingAccessor accessor)
     {
         ArgumentNullException.ThrowIfNull(accessor);
-        if (owner is Visual { App: { } app })
+        if (owner is Threading.DispatcherObject dispatcherObject)
         {
-            app.Dispatcher.VerifyAccess();
+            dispatcherObject.VerifyAccess();
         }
 
         ValueChanged?.Invoke(new Binding(owner, accessor));

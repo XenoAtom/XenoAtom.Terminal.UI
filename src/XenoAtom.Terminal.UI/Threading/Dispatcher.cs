@@ -6,18 +6,38 @@ namespace XenoAtom.Terminal.UI.Threading;
 
 public sealed class Dispatcher
 {
-    private readonly TerminalApp _app;
-    private int? _threadId;
+    public static Dispatcher Current { get; } = new();
 
-    internal Dispatcher(TerminalApp app)
+    private int? _threadId;
+    private TerminalApp? _app;
+
+    private Dispatcher() { }
+
+    internal void BindToCurrentThread(TerminalApp app)
     {
+        ArgumentNullException.ThrowIfNull(app);
+
+        var currentThreadId = Environment.CurrentManagedThreadId;
+        var threadId = _threadId;
+        if (threadId is not null && threadId.Value != currentThreadId)
+        {
+            throw new InvalidOperationException("The UI dispatcher is already bound to another thread.");
+        }
+
+        _threadId = Environment.CurrentManagedThreadId;
         _app = app;
+        SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(this));
     }
 
-    internal void BindToCurrentThread()
+    internal void DetachFromThread(TerminalApp app)
     {
-        _threadId = Environment.CurrentManagedThreadId;
-        SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(this));
+        if (!ReferenceEquals(_app, app))
+        {
+            return;
+        }
+
+        _app = null;
+        _threadId = null;
     }
 
     public bool CheckAccess()
@@ -34,7 +54,12 @@ public sealed class Dispatcher
         }
     }
 
-    public void Post(Action action) => _app.Post(action);
+    public void Post(Action action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        var app = _app ?? throw new InvalidOperationException("Dispatcher is not attached to a running TerminalApp.");
+        app.Post(action);
+    }
 
     public Task InvokeAsync(Action action)
     {
@@ -47,7 +72,7 @@ public sealed class Dispatcher
         }
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        _app.Post(() =>
+        Post(() =>
         {
             try
             {
@@ -72,7 +97,7 @@ public sealed class Dispatcher
         }
 
         var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _app.Post(() =>
+        Post(() =>
         {
             try
             {
@@ -96,7 +121,7 @@ public sealed class Dispatcher
         }
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        _app.Post(() =>
+        Post(() =>
         {
             Task task;
             try
@@ -140,7 +165,7 @@ public sealed class Dispatcher
         }
 
         var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _app.Post(() =>
+        Post(() =>
         {
             Task<T> task;
             try

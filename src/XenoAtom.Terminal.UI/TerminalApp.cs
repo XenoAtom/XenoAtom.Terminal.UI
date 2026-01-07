@@ -13,7 +13,7 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI;
 
-public sealed class TerminalApp : IAsyncDisposable
+public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 {
     private readonly System.Collections.Concurrent.ConcurrentQueue<Action> _pendingActions = new();
     private readonly TerminalInstance _terminal;
@@ -38,7 +38,6 @@ public sealed class TerminalApp : IAsyncDisposable
         Root = root ?? throw new ArgumentNullException(nameof(root));
         _terminal = terminal ?? global::XenoAtom.Terminal.Terminal.Instance;
         _options = options ?? new TerminalAppOptions();
-        Dispatcher = new Dispatcher(this);
 
         if (_options.HostKind == TerminalHostKind.Fullscreen)
         {
@@ -54,9 +53,17 @@ public sealed class TerminalApp : IAsyncDisposable
 
     public Visual Root { get; }
 
-    public Dispatcher Dispatcher { get; }
+    private Visual? _focusedElement;
 
-    public Visual? FocusedElement { get; private set; }
+    public Visual? FocusedElement
+    {
+        get
+        {
+            VerifyAccess();
+            return _focusedElement;
+        }
+        private set => _focusedElement = value;
+    }
 
     public void Post(Action action)
     {
@@ -150,13 +157,14 @@ public sealed class TerminalApp : IAsyncDisposable
         }
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var started = new ManualResetEventSlim(false);
         _runTask = tcs.Task;
 
         var thread = new Thread(() =>
         {
             try
             {
-                RunCore(cancellationToken);
+                RunCore(cancellationToken, started);
                 tcs.TrySetResult();
             }
             catch (OperationCanceledException)
@@ -167,6 +175,11 @@ public sealed class TerminalApp : IAsyncDisposable
             {
                 tcs.TrySetException(ex);
             }
+            finally
+            {
+                started.Set();
+                started.Dispose();
+            }
         })
         {
             IsBackground = true,
@@ -174,6 +187,12 @@ public sealed class TerminalApp : IAsyncDisposable
         };
 
         thread.Start();
+
+        if (!started.Wait(TimeSpan.FromSeconds(5)))
+        {
+            throw new TimeoutException("Timed out waiting for the UI thread to initialize.");
+        }
+
         return _runTask;
     }
 
@@ -196,12 +215,13 @@ public sealed class TerminalApp : IAsyncDisposable
         }
     }
 
-    private void RunCore(CancellationToken cancellationToken)
+    private void RunCore(CancellationToken cancellationToken, ManualResetEventSlim? started = null)
     {
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
         var token = linkedCts.Token;
 
-        Dispatcher.BindToCurrentThread();
+        Dispatcher.BindToCurrentThread(this);
+        started?.Set();
 
         Root.AttachToApp(this);
         BindingManager.Current.ValueChanged += OnValueChanged;
@@ -281,6 +301,7 @@ public sealed class TerminalApp : IAsyncDisposable
             alternateScope.Dispose();
             BindingManager.Current.ValueChanged -= OnValueChanged;
             Root.DetachFromApp();
+            Dispatcher.DetachFromThread(this);
         }
     }
 
