@@ -12,8 +12,8 @@ public sealed record CheckBoxStyle
 
     public static EnvironmentKey<CheckBoxStyle> Key { get; } = new("CheckBoxStyle", Default);
 
-    public Rune CheckedGlyph { get; init; } = new(0x2611);
-    public Rune UncheckedGlyph { get; init; } = new(0x2610);
+    public Rune CheckedGlyph { get; init; } = new(0x2611); // ☑
+    public Rune UncheckedGlyph { get; init; } = new(0x2610); // ☐
 
     public CellStyle? Normal { get; init; }
     public CellStyle? Hovered { get; init; }

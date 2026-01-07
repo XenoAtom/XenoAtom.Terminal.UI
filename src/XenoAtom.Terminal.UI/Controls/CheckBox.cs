@@ -12,6 +12,8 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class CheckBox : Visual
 {
+    private const int SpaceBetweenGlyphAndText = 2;
+
     public CheckBox()
     {
         Focusable = true;
@@ -32,7 +34,13 @@ public sealed partial class CheckBox : Visual
     protected override Size MeasureOverride(Size availableSize)
     {
         var text = Text ?? string.Empty;
-        var width = Math.Min(availableSize.Width, TerminalTextUtility.GetWidth(text.AsSpan()) + 4);
+
+        var theme = GetTheme();
+        var checkBoxStyle = GetEnvironmentValue(CheckBoxStyle.Key);
+        var glyph = IsChecked ? checkBoxStyle.CheckedGlyph : checkBoxStyle.UncheckedGlyph;
+        var glyphWidth = TerminalTextUtility.GetRuneWidth(glyph);
+
+        var width = Math.Min(availableSize.Width, TerminalTextUtility.GetWidth(text.AsSpan()) + glyphWidth + SpaceBetweenGlyphAndText);
         return new Size(width, 1);
     }
 
@@ -58,7 +66,10 @@ public sealed partial class CheckBox : Visual
 
         var glyph = IsChecked ? checkBoxStyle.CheckedGlyph : checkBoxStyle.UncheckedGlyph;
         buffer.SetCell(rect.X, rect.Y, glyph, style | TextStyle.Bold);
-        buffer.WriteText(rect.X + 2, rect.Y, text.AsSpan(), style);
+
+        var glyphWidth = TerminalTextUtility.GetRuneWidth(glyph);
+        var textX = rect.X + Math.Max(1, glyphWidth) + SpaceBetweenGlyphAndText;
+        buffer.WriteText(textX, rect.Y, text.AsSpan(), style);
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
