@@ -17,6 +17,8 @@ public sealed class CellBufferDiffRenderer : IDisposable
     private int _lastWidth;
     private int _lastHeight;
     private bool _lastCursorVisible;
+    private int _lastCursorX;
+    private int _lastCursorY;
 
     public void Reset()
     {
@@ -25,6 +27,8 @@ public sealed class CellBufferDiffRenderer : IDisposable
         _lastWidth = 0;
         _lastHeight = 0;
         _lastCursorVisible = false;
+        _lastCursorX = 0;
+        _lastCursorY = 0;
     }
 
     public void Dispose() => _builder.Dispose();
@@ -45,22 +49,16 @@ public sealed class CellBufferDiffRenderer : IDisposable
         var forceFull = _lastScalars is null || _lastWidth != width || _lastHeight != height;
         EnsureLastBuffers(width, height);
 
+        var cursorChanged = wantsCursor != _lastCursorVisible;
+        if (!cursorChanged && wantsCursor && (_lastCursorX != cursorX || _lastCursorY != cursorY))
+        {
+            cursorChanged = true;
+        }
+
         var caps = CreateAnsiCapabilities(terminal.Capabilities);
 
         _builder.Clear();
         var writer = new AnsiWriter(_builder, caps);
-
-        var hideCursorDuringWrite = wantsCursor || _lastCursorVisible;
-        if (hideCursorDuringWrite)
-        {
-            writer.ShowCursor(false);
-        }
-
-        if (forceFull)
-        {
-            writer.CursorPosition(1, 1);
-            writer.EraseDisplay(2);
-        }
 
         var currentStyle = AnsiStyle.Default;
 
@@ -71,6 +69,37 @@ public sealed class CellBufferDiffRenderer : IDisposable
         var lastCells = _lastCells!;
 
         Span<char> runeBuffer = stackalloc char[2];
+        var anyCellChanges = forceFull;
+        var hasOutput = false;
+
+        void BeginOutput()
+        {
+            if (hasOutput)
+            {
+                return;
+            }
+
+            writer.PrivateMode(2026, enabled: true);
+
+            if (forceFull)
+            {
+                writer.CursorPosition(1, 1);
+                writer.EraseDisplay(2);
+            }
+
+            // Hide cursor while writing to avoid cursor artifacts/flicker.
+            if (wantsCursor || _lastCursorVisible)
+            {
+                writer.ShowCursor(false);
+            }
+
+            hasOutput = true;
+        }
+
+        if (forceFull)
+        {
+            BeginOutput();
+        }
 
         for (var y = 0; y < height; y++)
         {
@@ -93,6 +122,7 @@ public sealed class CellBufferDiffRenderer : IDisposable
                 continue;
             }
 
+            anyCellChanges = true;
             for (var x = width - 1; x >= firstChanged; x--)
             {
                 var i = rowIndex + x;
@@ -111,6 +141,7 @@ public sealed class CellBufferDiffRenderer : IDisposable
             firstChanged = AdjustStartForWideGlyph(cells, rowIndex, firstChanged);
             lastChanged = AdjustEndForWideGlyph(scalars, cells, rowIndex, lastChanged, width);
 
+            BeginOutput();
             writer.CursorPosition(y + 1, firstChanged + 1);
 
             var xPos = firstChanged;
@@ -148,12 +179,19 @@ public sealed class CellBufferDiffRenderer : IDisposable
             }
         }
 
+        if (!anyCellChanges && !cursorChanged)
+        {
+            return;
+        }
+
+        BeginOutput();
+
         if (currentStyle != AnsiStyle.Default)
         {
             writer.StyleTransition(currentStyle, AnsiStyle.Default);
         }
 
-        if (wantsCursor)
+        if (wantsCursor && cursorChanged)
         {
             var cx = Math.Clamp(cursorX, 0, width - 1);
             var cy = Math.Clamp(cursorY, 0, height - 1);
@@ -161,15 +199,22 @@ public sealed class CellBufferDiffRenderer : IDisposable
             writer.ShowCursor(true);
         }
 
+        writer.PrivateMode(2026, enabled: false);
+
         terminal.WriteAtomic((TextWriter w) =>
         {
             w.Write(_builder.UnsafeAsSpan());
         });
 
-        scalars.CopyTo(lastScalars.AsSpan());
-        cells.CopyTo(lastCells.AsSpan());
+        if (anyCellChanges)
+        {
+            scalars.CopyTo(lastScalars.AsSpan());
+            cells.CopyTo(lastCells.AsSpan());
+        }
 
         _lastCursorVisible = wantsCursor;
+        _lastCursorX = cursorX;
+        _lastCursorY = cursorY;
     }
 
     private void EnsureLastBuffers(int width, int height)

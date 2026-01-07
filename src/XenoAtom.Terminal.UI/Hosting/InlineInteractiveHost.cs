@@ -142,6 +142,8 @@ public sealed class InlineInteractiveHost : IDisposable
                     _builder.Clear();
                     var writerLocal = new AnsiWriter(_builder, capsLocal);
 
+                    writerLocal.PrivateMode(2026, enabled: true);
+
                     var hideCursorDuringWriteLocal = wantsCursor || _lastCursorVisible;
                     if (hideCursorDuringWriteLocal)
                     {
@@ -159,10 +161,9 @@ public sealed class InlineInteractiveHost : IDisposable
                         writerLocal.ShowCursor(true);
                     }
 
-                    _terminal.WriteAtomic((TextWriter w) =>
-                    {
-                        w.Write(_builder.UnsafeAsSpan());
-                    });
+                    writerLocal.PrivateMode(2026, enabled: false);
+
+                    _terminal.Write(_builder.UnsafeAsSpan()); // atomic write with a single span
 
                     _lastCursorVisible = wantsCursor;
                     _lastRenderedCursorX = cursorX;
@@ -175,6 +176,8 @@ public sealed class InlineInteractiveHost : IDisposable
         var caps = CreateAnsiCapabilities(_terminal.Capabilities);
         _builder.Clear();
         var writer = new AnsiWriter(_builder, caps);
+
+        writer.PrivateMode(2026, enabled: true);
 
         var hideCursorDuringWrite = wantsCursor || _lastCursorVisible;
         if (hideCursorDuringWrite)
@@ -370,10 +373,9 @@ public sealed class InlineInteractiveHost : IDisposable
             writer.ShowCursor(true);
         }
 
-        _terminal.WriteAtomic((TextWriter w) =>
-        {
-            w.Write(_builder.UnsafeAsSpan());
-        });
+        writer.PrivateMode(2026, enabled: false);
+
+        _terminal.Write(_builder.UnsafeAsSpan()); // atomic write with a single span
 
         scalars.Slice(0, width * height).CopyTo(lastScalars.AsSpan());
         cells.Slice(0, width * height).CopyTo(lastCells.AsSpan());
@@ -416,6 +418,8 @@ public sealed class InlineInteractiveHost : IDisposable
         _builder.Clear();
         var writer = new AnsiWriter(_builder, caps);
         var formatter = new AnsiMarkup(writer);
+
+        writer.PrivateMode(2026, enabled: true);
 
         if (_lastWantsCursor || _lastCursorVisible)
         {
@@ -462,6 +466,8 @@ public sealed class InlineInteractiveHost : IDisposable
             writer.ShowCursor(true);
         }
 
+        writer.PrivateMode(2026, enabled: false);
+
         _terminal.WriteAtomic((TextWriter w) =>
         {
             w.Write(_builder.UnsafeAsSpan());
@@ -482,6 +488,8 @@ public sealed class InlineInteractiveHost : IDisposable
         var writer = new AnsiWriter(_builder, caps);
         var formatter = new AnsiMarkup(writer);
 
+        writer.PrivateMode(2026, enabled: true);
+
         foreach (var line in markupLines)
         {
             writer.EraseLine(2);
@@ -491,6 +499,8 @@ public sealed class InlineInteractiveHost : IDisposable
             }
             writer.NextLine();
         }
+
+        writer.PrivateMode(2026, enabled: false);
 
         _terminal.WriteAtomic((TextWriter w) =>
         {
