@@ -127,6 +127,7 @@ var rightColumn = new VStack(
 
                 tabs.AddTab(
                     new HStack(
+                        new Spinner().With(s => s.SetEnvironmentValue(SpinnerStyle.Key, SpinnerStyles.Dots2)),
                         new TextBlock("Logs"),
                         new TextBlock().Text(() => $"({(int)(progressState.Value * 100)}%)"))
                         .Spacing(1),
