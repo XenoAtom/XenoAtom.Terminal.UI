@@ -7,6 +7,7 @@ using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Threading;
+using XenoAtom.Terminal.UI.Animation;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -392,6 +393,11 @@ public abstract partial class Visual : DispatcherObject
         App = app;
         OnAttachedToApp(app);
 
+        if (this is IAnimatedVisual animated)
+        {
+            app.RegisterAnimatedVisual(animated);
+        }
+
         for (var i = 0; i < ChildrenCount; i++)
         {
             var child = GetChild(i);
@@ -417,6 +423,11 @@ public abstract partial class Visual : DispatcherObject
             {
                 child.DetachFromApp();
             }
+        }
+
+        if (this is IAnimatedVisual animated)
+        {
+            app.UnregisterAnimatedVisual(animated);
         }
 
         App = null;

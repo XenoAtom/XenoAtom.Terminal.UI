@@ -3,8 +3,10 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
+using System.Diagnostics;
 using XenoAtom.Ansi;
 using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Animation;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Input;
@@ -34,6 +36,9 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private CellBuffer? _renderBuffer;
     private Func<bool>? _onUpdate;
     private readonly AnsiBuilder _updateOutputBuilder = new(initialCapacity: 4096);
+
+    private readonly List<IAnimatedVisual> _animatedVisuals = new();
+    private long _nextAnimationTick = long.MaxValue;
 
     public TerminalApp(Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
     {
@@ -291,6 +296,8 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
                     }
                 }
 
+                AdvanceAnimations();
+
                 if (_onUpdate is not null && !token.IsCancellationRequested)
                 {
                     var keepGoing = false;
@@ -343,6 +350,56 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     {
         _renderRequested = true;
         _wakeUp.Set();
+    }
+
+    internal void RegisterAnimatedVisual(IAnimatedVisual visual)
+    {
+        ArgumentNullException.ThrowIfNull(visual);
+        _animatedVisuals.Add(visual);
+        _nextAnimationTick = 0;
+    }
+
+    internal void UnregisterAnimatedVisual(IAnimatedVisual visual)
+    {
+        ArgumentNullException.ThrowIfNull(visual);
+        _animatedVisuals.Remove(visual);
+        _nextAnimationTick = 0;
+    }
+
+    private void AdvanceAnimations()
+    {
+        if (_animatedVisuals.Count == 0)
+        {
+            _nextAnimationTick = long.MaxValue;
+            return;
+        }
+
+        var now = Stopwatch.GetTimestamp();
+        if (_nextAnimationTick != 0 && now < _nextAnimationTick)
+        {
+            return;
+        }
+
+        var next = long.MaxValue;
+        var changed = false;
+
+        for (var i = 0; i < _animatedVisuals.Count; i++)
+        {
+            var visual = _animatedVisuals[i];
+            if (now >= visual.NextAnimationTick)
+            {
+                changed |= visual.AdvanceAnimation(now);
+            }
+
+            next = Math.Min(next, visual.NextAnimationTick);
+        }
+
+        if (changed)
+        {
+            _renderRequested = true;
+        }
+
+        _nextAnimationTick = next;
     }
 
     private void OnValueChanged(Binding binding)
