@@ -33,12 +33,12 @@ public sealed class TerminalExtensionsTests
             new TextBlock().Text(() => $"Count: {counter.Value}"),
             new ProgressBar().Label("Work").Value(() => counter.Value / 3.0));
 
-        session.Instance.Live(root, ctx =>
+        session.Instance.Live(root, () =>
         {
             counter.Value++;
             if (counter.Value >= 3)
             {
-                ctx.WriteMarkupLine("[green]Done[/]");
+                session.Instance.WriteMarkupLine("[green]Done[/]");
                 return false;
             }
 
@@ -53,4 +53,3 @@ public sealed class TerminalExtensionsTests
         StringAssert.Contains(screen.GetText(), "Count: 3");
     }
 }
-

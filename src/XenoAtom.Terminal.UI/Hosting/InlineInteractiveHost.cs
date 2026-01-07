@@ -37,6 +37,47 @@ public sealed class InlineInteractiveHost : IDisposable
 
     public int? LiveRegionTopRow => _liveRegionTopRow;
 
+    internal void PrepareForUserUpdate()
+    {
+        if (!_hasSavedCursorPosition || _reservedHeight <= 0)
+        {
+            return;
+        }
+
+        var visibleHeight = Math.Max(1, _terminal.Size.Rows);
+        var regionHeight = Math.Min(_reservedHeight, visibleHeight);
+
+        _terminal.WriteAtomic(writer =>
+        {
+            writer.PrivateMode(2026, enabled: true);
+
+            if (_lastWantsCursor || _lastCursorVisible)
+            {
+                writer.ShowCursor(false);
+            }
+
+            writer.RestoreCursorPosition();
+            writer.CursorUp(regionHeight);
+            writer.CursorHorizontalAbsolute(1);
+
+            for (var i = 0; i < regionHeight; i++)
+            {
+                writer.EraseLine(2);
+                writer.NextLine();
+            }
+
+            writer.CursorUp(regionHeight);
+            writer.CursorHorizontalAbsolute(1);
+            writer.ResetStyle();
+
+            writer.PrivateMode(2026, enabled: false);
+        });
+
+        _hasSavedCursorPosition = false;
+        _reservedHeight = 0;
+        _liveRegionTopRow = null;
+    }
+
     public void Dispose()
     {
         try
@@ -82,7 +123,7 @@ public sealed class InlineInteractiveHost : IDisposable
 
         var width = Math.Max(1, _terminal.Size.Columns);
         var visibleHeight = Math.Max(1, _terminal.Size.Rows);
-        var previousHeight = Math.Min(_reservedHeight, visibleHeight);
+        var previousHeight = _hasSavedCursorPosition ? Math.Min(_reservedHeight, visibleHeight) : 0;
         var height = Math.Clamp(Math.Max(1, buffer.Height), 1, visibleHeight);
 
         if (_liveRegionTopRow is null)

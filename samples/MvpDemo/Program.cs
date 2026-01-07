@@ -6,9 +6,9 @@ using System.Diagnostics;
 
 using var session = Terminal.Open();
 
-session.Instance.WriteMarkupLine("[bold]XenoAtom.Terminal.UI MVP Demo[/]");
-session.Instance.WriteMarkupLine("Tab: focus  Space/Enter: activate  Ctrl+V: paste  Esc: quit");
-session.Instance.WriteLine();
+Terminal.WriteMarkupLine("[bold]XenoAtom.Terminal.UI MVP Demo[/]");
+Terminal.WriteMarkupLine("Tab: focus  Space/Enter: activate  Ctrl+V: paste  Esc: quit");
+Terminal.WriteLine();
 
 var name = new TextBox().Text("");
 var accept = new CheckBox().Text("Accept terms");
@@ -38,7 +38,7 @@ var root = new VStack(
         .Content(content)).Spacing(1);
 
 var lastTick = Stopwatch.GetTimestamp();
-session.Instance.Live(root, ctx =>
+Terminal.Live(root, () =>
 {
     var now = Stopwatch.GetTimestamp();
     if (Stopwatch.GetElapsedTime(lastTick, now) < TimeSpan.FromMilliseconds(50))
@@ -49,10 +49,10 @@ session.Instance.Live(root, ctx =>
     lastTick = now;
     if (progressState.Value < 1.0)
     {
-        progressState.Value = Math.Min(1.0, progressState.Value + 0.02);
+        progressState.Value = Math.Min(1.0, progressState.Value + 0.01);
         return true;
     }
 
-    ctx.WriteMarkupLine("[green]Done![/]");
+    Terminal.WriteMarkupLine("[green]Done![/]");
     return false;
 });

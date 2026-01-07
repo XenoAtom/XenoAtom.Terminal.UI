@@ -45,15 +45,6 @@ public static partial class TerminalExtensions
             ArgumentNullException.ThrowIfNull(visual);
             ArgumentNullException.ThrowIfNull(onUpdate);
 
-            return instance.Live(visual, _ => onUpdate());
-        }
-
-        public TerminalInstance Live(Visual visual, Func<TerminalLiveContext, bool> onUpdate)
-        {
-            ArgumentNullException.ThrowIfNull(instance);
-            ArgumentNullException.ThrowIfNull(visual);
-            ArgumentNullException.ThrowIfNull(onUpdate);
-
             if (visual.Parent is not null)
             {
                 throw new InvalidOperationException("A visual that is already in the UI tree cannot be used as a root for a live region.");
@@ -61,9 +52,7 @@ public static partial class TerminalExtensions
 
             var options = new TerminalAppOptions { HostKind = TerminalHostKind.Inline };
             var app = new TerminalApp(visual, instance, options);
-            var liveContext = new TerminalLiveContext(app);
-
-            app.SetUpdateCallback(() => onUpdate(liveContext));
+            app.SetUpdateCallback(onUpdate);
 
             try
             {
@@ -83,15 +72,6 @@ public static partial class TerminalExtensions
             ArgumentNullException.ThrowIfNull(visual);
             ArgumentNullException.ThrowIfNull(onUpdate);
 
-            return await instance.LiveAsync(visual, _ => onUpdate(), cancellationToken).ConfigureAwait(false);
-        }
-
-        public async ValueTask<TerminalInstance> LiveAsync(Visual visual, Func<TerminalLiveContext, bool> onUpdate, CancellationToken cancellationToken = default)
-        {
-            ArgumentNullException.ThrowIfNull(instance);
-            ArgumentNullException.ThrowIfNull(visual);
-            ArgumentNullException.ThrowIfNull(onUpdate);
-
             if (visual.Parent is not null)
             {
                 throw new InvalidOperationException("A visual that is already in the UI tree cannot be used as a root for a live region.");
@@ -99,9 +79,7 @@ public static partial class TerminalExtensions
 
             var options = new TerminalAppOptions { HostKind = TerminalHostKind.Inline };
             var app = new TerminalApp(visual, instance, options);
-            var liveContext = new TerminalLiveContext(app);
-
-            app.SetUpdateCallback(() => onUpdate(liveContext));
+            app.SetUpdateCallback(onUpdate);
 
             try
             {

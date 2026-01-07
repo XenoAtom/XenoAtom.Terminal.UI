@@ -290,6 +290,11 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
                 if (_onUpdate is not null && !token.IsCancellationRequested)
                 {
+                    if (_options.HostKind == TerminalHostKind.Inline)
+                    {
+                        _inlineHost?.PrepareForUserUpdate();
+                    }
+
                     var keepGoing = _onUpdate();
                     if (!keepGoing)
                     {
@@ -298,6 +303,9 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
                         _cts.Cancel();
                         break;
                     }
+
+                    // Updates may write to the terminal above the live region; always render after an update.
+                    _renderRequested = true;
                 }
 
                 if (_renderRequested)
