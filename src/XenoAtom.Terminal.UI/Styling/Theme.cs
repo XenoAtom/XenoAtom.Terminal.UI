@@ -11,7 +11,8 @@ public sealed class Theme
     public static Theme Default { get; } = new Theme
     {
         Foreground = AnsiColor.Rgb(0xE5, 0xE7, 0xEB), // slate-200
-        Background = AnsiColor.Rgb(0x0B, 0x12, 0x20), // deep slate
+        // Background is intentionally left unset by default, so that terminal applications blend with the
+        // user's terminal theme. Individual controls can still opt into backgrounds (e.g. TextBox, Button).
         Surface = AnsiColor.Rgb(0x10, 0x1A, 0x2D),
         SurfaceAlt = AnsiColor.Rgb(0x18, 0x24, 0x3A),
         Border = AnsiColor.Rgb(0x2A, 0x3A, 0x55),

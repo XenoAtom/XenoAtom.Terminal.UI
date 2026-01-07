@@ -22,16 +22,36 @@ public sealed record CheckBoxStyle
 
     public CellStyle Resolve(Theme theme, bool enabled, bool focused, bool hovered)
     {
-        var baseStyle = theme.SurfaceStyle();
+        var baseStyle = theme.ForegroundTextStyle();
 
         if (!enabled)
         {
-            return Disabled ?? (baseStyle | TextStyle.Dim);
+            if (Disabled is { } d)
+            {
+                return d;
+            }
+
+            var disabled = baseStyle | TextStyle.Dim;
+            if (theme.Disabled is { } c)
+            {
+                disabled = disabled.WithForeground(c);
+            }
+            return disabled;
         }
 
         if (focused)
         {
-            return Focused ?? theme.SelectionStyle();
+            if (Focused is { } f)
+            {
+                return f;
+            }
+
+            var focusedStyle = baseStyle | TextStyle.Bold;
+            if (theme.FocusBorder is { } c)
+            {
+                focusedStyle = focusedStyle.WithForeground(c);
+            }
+            return focusedStyle;
         }
 
         if (hovered)
@@ -42,9 +62,9 @@ public sealed record CheckBoxStyle
             }
 
             var style = baseStyle;
-            if (theme.Selection is { } selection)
+            if (theme.Accent is { } selection)
             {
-                style = style.WithBackground(selection);
+                style = style.WithForeground(selection);
             }
             return style;
         }
@@ -52,4 +72,3 @@ public sealed record CheckBoxStyle
         return Normal ?? baseStyle;
     }
 }
-

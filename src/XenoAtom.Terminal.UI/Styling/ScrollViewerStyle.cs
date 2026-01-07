@@ -22,24 +22,15 @@ public sealed record ScrollViewerStyle
             return track;
         }
 
-        var style = CellStyle.None;
-
-        // Prefer a subtle background for the track so the thumb stands out even when using space glyphs.
-        if (theme.SurfaceAlt is { } bg)
-        {
-            style = style.WithBackground(bg);
-        }
-        else if (theme.Surface is { } bg2)
-        {
-            style = style.WithBackground(bg2);
-        }
-
+        var style = CellStyle.None | TextStyle.Dim;
         if (theme.Muted is { } fg)
         {
             style = style.WithForeground(fg);
-            style |= TextStyle.Dim;
         }
-
+        else if (theme.Border is { } border)
+        {
+            style = style.WithForeground(border);
+        }
         return style;
     }
 
@@ -51,27 +42,13 @@ public sealed record ScrollViewerStyle
         }
 
         var style = CellStyle.None | TextStyle.Bold;
-
-        // When using space glyphs for the thumb, the background is the primary differentiator.
-        var thumbBg = highlighted
-            ? (theme.Selection ?? theme.Accent ?? theme.FocusBorder ?? theme.Border ?? theme.SurfaceAlt ?? theme.Surface)
-            : (theme.Border ?? theme.SurfaceAlt ?? theme.Surface);
-
-        if (thumbBg is { } bg)
+        var fg = highlighted
+            ? (theme.FocusBorder ?? theme.Selection ?? theme.Accent ?? theme.Border ?? theme.Foreground)
+            : (theme.Border ?? theme.Muted ?? theme.Foreground);
+        if (fg is { } c)
         {
-            style = style.WithBackground(bg);
+            style = style.WithForeground(c);
         }
-
-        // Keep a sensible foreground in case a theme uses non-space glyphs.
-        var thumbFg = highlighted
-            ? (theme.Background ?? theme.Foreground ?? theme.Muted)
-            : (theme.Foreground ?? theme.Muted);
-
-        if (thumbFg is { } fg)
-        {
-            style = style.WithForeground(fg);
-        }
-
         return style;
     }
 }

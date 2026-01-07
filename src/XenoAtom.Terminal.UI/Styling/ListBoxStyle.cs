@@ -23,11 +23,21 @@ public sealed record ListBoxStyle
 
     public CellStyle ResolveItemStyle(Theme theme, bool enabled, bool selected, bool focused)
     {
-        var baseStyle = theme.SurfaceStyle();
+        var baseStyle = theme.ForegroundTextStyle();
 
         if (!enabled)
         {
-            return Disabled ?? (baseStyle | TextStyle.Dim);
+            if (Disabled is { } d)
+            {
+                return d;
+            }
+
+            var disabled = baseStyle | TextStyle.Dim;
+            if (theme.Disabled is { } c)
+            {
+                disabled = disabled.WithForeground(c);
+            }
+            return disabled;
         }
 
         if (!selected)
@@ -37,10 +47,19 @@ public sealed record ListBoxStyle
 
         if (focused)
         {
-            return SelectedFocused ?? theme.SelectionStyle();
+            if (SelectedFocused is { } selectedFocused)
+            {
+                return selectedFocused;
+            }
+
+            var selectedStyle = baseStyle | TextStyle.Bold;
+            if (theme.FocusBorder is { } c)
+            {
+                selectedStyle = selectedStyle.WithForeground(c);
+            }
+            return selectedStyle;
         }
 
         return SelectedUnfocused ?? (CellStyle.None | TextStyle.Bold | theme.BorderStyle(focused: false));
     }
 }
-

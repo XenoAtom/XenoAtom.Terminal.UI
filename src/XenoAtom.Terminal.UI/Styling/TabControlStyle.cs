@@ -20,45 +20,30 @@ public sealed record TabControlStyle
     public CellStyle? TabSelectedStyle { get; init; }
     public CellStyle? TabDisabledStyle { get; init; }
 
-    public CellStyle ResolveStripStyle(Theme theme) => StripStyle ?? theme.SurfaceStyle();
+    public CellStyle ResolveStripStyle(Theme theme) => StripStyle ?? theme.ForegroundTextStyle();
 
     public CellStyle ResolveTabStyle(Theme theme, bool enabled, bool selected, bool hovered)
     {
         if (!enabled)
         {
-            return TabDisabledStyle ?? (theme.SurfaceStyle() | TextStyle.Dim);
+            var disabled = theme.ForegroundTextStyle() | TextStyle.Dim;
+            if (theme.Disabled is { } c)
+            {
+                disabled = disabled.WithForeground(c);
+            }
+            return TabDisabledStyle ?? disabled;
         }
 
         if (selected)
         {
-            if (TabSelectedStyle is { } selectedStyle)
-            {
-                return selectedStyle;
-            }
-
-            var style = theme.SurfaceStyle();
-            if (theme.SurfaceAlt is { } bg)
-            {
-                style = style.WithBackground(bg);
-            }
-            return style | TextStyle.Bold;
+            return TabSelectedStyle ?? (theme.BorderStyle(focused: true) | TextStyle.Bold);
         }
 
         if (hovered)
         {
-            if (TabHoveredStyle is { } hoveredStyle)
-            {
-                return hoveredStyle;
-            }
-
-            var style = theme.SurfaceStyle();
-            if (theme.Selection is { } bg)
-            {
-                style = style.WithBackground(bg);
-            }
-            return style;
+            return TabHoveredStyle ?? (theme.BorderStyle(focused: true) | TextStyle.Bold);
         }
 
-        return TabStyle ?? theme.SurfaceStyle();
+        return TabStyle ?? theme.ForegroundTextStyle();
     }
 }

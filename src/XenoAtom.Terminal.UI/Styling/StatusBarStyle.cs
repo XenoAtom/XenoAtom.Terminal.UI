@@ -17,7 +17,7 @@ public sealed record StatusBarStyle
     {
         var style = CellStyle.None;
         var fg = Foreground ?? theme.Foreground;
-        var bg = Background ?? theme.SurfaceAlt ?? theme.Surface ?? theme.Background;
+        var bg = Background;
 
         if (fg is { } f) style = style.WithForeground(f);
         if (bg is { } b) style = style.WithBackground(b);

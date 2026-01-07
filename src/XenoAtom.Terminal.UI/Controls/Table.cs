@@ -258,7 +258,7 @@ public sealed partial class Table : Visual
         var theme = GetTheme();
         var glyphs = theme.Lines;
         var border = theme.BorderStyle(focused: false);
-        var surface = theme.SurfaceStyle();
+        var surface = CellStyle.None;
 
         // Fill background.
         for (var yFill = rect.Y; yFill < rect.Y + rect.Height; yFill++)

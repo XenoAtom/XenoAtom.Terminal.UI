@@ -131,7 +131,7 @@ public sealed partial class Dialog : Visual, IModalVisual
         var theme = GetTheme();
         var glyphs = theme.Lines;
         var borderStyle = theme.BorderStyle(focused);
-        var surface = theme.SurfaceStyle();
+        var clearStyle = CellStyle.None;
 
         var left = rect.X;
         var top = rect.Y;
@@ -143,7 +143,7 @@ public sealed partial class Dialog : Visual, IModalVisual
         {
             for (var x = left; x <= right; x++)
             {
-                buffer.SetCell(x, y, new Rune(' '), surface);
+                buffer.SetCell(x, y, new Rune(' '), clearStyle);
             }
         }
 

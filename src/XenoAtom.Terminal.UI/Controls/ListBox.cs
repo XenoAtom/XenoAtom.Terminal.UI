@@ -100,7 +100,7 @@ public sealed partial class ListBox : Visual
         var glyphs = theme.Lines;
 
         // Fill background.
-        var background = theme.SurfaceStyle();
+        var background = CellStyle.None;
         for (var y = rect.Y; y < rect.Y + rect.Height; y++)
         {
             for (var x = rect.X; x < rect.X + rect.Width; x++)

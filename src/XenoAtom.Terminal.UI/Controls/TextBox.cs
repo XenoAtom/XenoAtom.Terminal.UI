@@ -81,18 +81,11 @@ public sealed partial class TextBox : Visual, ICursorProvider
         var padding = textBoxStyle.Padding;
         var showBorder = ShowBorder;
 
-        // Fill background.
-        for (var y = rect.Y; y < rect.Y + rect.Height; y++)
-        {
-            for (var x = rect.X; x < rect.X + rect.Width; x++)
-            {
-                buffer.SetCell(x, y, new Rune(' '), backgroundStyle);
-            }
-        }
-
         var textRowY = rect.Y;
         var innerLeft = rect.X;
         var innerWidth = rect.Width;
+        var innerTop = rect.Y;
+        var innerHeight = rect.Height;
         if (showBorder && rect.Width >= 2 && rect.Height >= 2)
         {
             var glyphs = theme.Lines;
@@ -121,6 +114,20 @@ public sealed partial class TextBox : Visual, ICursorProvider
             textRowY = rect.Y + 1;
             innerLeft = rect.X + 1;
             innerWidth = Math.Max(0, rect.Width - 2);
+            innerTop = rect.Y + 1;
+            innerHeight = Math.Max(0, rect.Height - 2);
+        }
+
+        // Fill background (text area only).
+        if (innerWidth > 0 && innerHeight > 0)
+        {
+            for (var y = innerTop; y < innerTop + innerHeight; y++)
+            {
+                for (var x = innerLeft; x < innerLeft + innerWidth; x++)
+                {
+                    buffer.SetCell(x, y, new Rune(' '), backgroundStyle);
+                }
+            }
         }
 
         var contentX = innerLeft + padding.Left;

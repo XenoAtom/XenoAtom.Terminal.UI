@@ -191,7 +191,7 @@ public sealed class TabControl : Visual
     {
         var glyphs = theme.Lines;
         var border = theme.BorderStyle(focused: false);
-        var surface = theme.SurfaceStyle();
+        var clearStyle = CellStyle.None;
 
         var left = rect.X;
         var top = rect.Y + 1;
@@ -202,7 +202,7 @@ public sealed class TabControl : Visual
         {
             for (var x = left; x <= right; x++)
             {
-                buffer.SetCell(x, y, new Rune(' '), surface);
+                buffer.SetCell(x, y, new Rune(' '), clearStyle);
             }
         }
 

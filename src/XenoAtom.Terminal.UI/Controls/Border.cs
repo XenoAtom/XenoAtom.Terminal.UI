@@ -5,6 +5,7 @@
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -69,7 +70,7 @@ public sealed partial class Border : Visual
         var theme = GetTheme();
         var glyphs = theme.Lines;
         var style = theme.BorderStyle(focused: false);
-        var surface = theme.SurfaceStyle();
+        var clearStyle = CellStyle.None;
 
         var left = rect.X;
         var top = rect.Y;
@@ -81,7 +82,7 @@ public sealed partial class Border : Visual
         {
             for (var x = left; x <= right; x++)
             {
-                buffer.SetCell(x, y, new Rune(' '), surface);
+                buffer.SetCell(x, y, new Rune(' '), clearStyle);
             }
         }
 
