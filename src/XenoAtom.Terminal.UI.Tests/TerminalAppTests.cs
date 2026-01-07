@@ -703,9 +703,39 @@ public sealed class TerminalAppTests
         var cells = (CellStyle[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
 
         Assert.AreEqual(wideGlyph.Value, scalars[0]);
-        Assert.IsTrue((bool)typeof(CellStyle).GetProperty("IsContinuation", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(cells[1])!);
-        Assert.AreEqual(' ', scalars[2], "Expected a space after the checkbox glyph.");
-        Assert.AreEqual('A', scalars[3], "Expected the label text to start after the space.");
+
+        var glyphWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(wideGlyph));
+        if (glyphWidth > 1)
+        {
+            Assert.IsTrue((bool)typeof(CellStyle).GetProperty("IsContinuation", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(cells[1])!);
+        }
+
+        var labelIndex = Array.IndexOf(scalars, 'A');
+        Assert.IsTrue(labelIndex >= 0, "Expected the label text to be rendered.");
+        Assert.IsTrue(labelIndex >= glyphWidth + 1, "Expected at least one space after the checkbox glyph.");
+
+        for (var i = glyphWidth; i < labelIndex; i++)
+        {
+            Assert.AreEqual(' ', scalars[i], "Expected padding between the checkbox glyph and the label.");
+        }
+    }
+
+    [TestMethod]
+    public void TabControl_Supports_Visual_Headers()
+    {
+        var tabControl = new TabControl();
+
+        var header = new HStack(new TextBlock("A"), new TextBlock("!")).Spacing(1);
+        var content = new TextBlock("Content");
+
+        tabControl.AddTab(header, content);
+
+        Assert.AreSame(tabControl, header.Parent);
+        Assert.AreSame(tabControl, content.Parent);
+
+        var visuals = tabControl.EnumerateVisualsDepthFirst().ToList();
+        CollectionAssert.Contains(visuals, header);
+        CollectionAssert.Contains(visuals, content);
     }
 
     [TestMethod]

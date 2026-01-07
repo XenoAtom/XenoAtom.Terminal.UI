@@ -16,6 +16,7 @@ public sealed class TabControl : Visual
     private readonly List<TabHitRange> _hitRanges = new();
     private int _selectedIndex;
     private int _hoveredIndex = -1;
+    private int _headerHeight = 1;
 
     public TabControl()
     {
@@ -52,7 +53,18 @@ public sealed class TabControl : Visual
     public void AddTab(string header, Visual content)
     {
         ArgumentException.ThrowIfNullOrEmpty(header);
+        AddTab(new TextBlock(header), content);
+    }
+
+    public void AddTab(Visual header, Visual content)
+    {
+        ArgumentNullException.ThrowIfNull(header);
         ArgumentNullException.ThrowIfNull(content);
+
+        if (header.Parent is not null)
+        {
+            throw new InvalidOperationException("A visual that is already in the UI tree cannot be used as a tab header.");
+        }
 
         if (content.Parent is not null)
         {
@@ -60,7 +72,10 @@ public sealed class TabControl : Visual
         }
 
         var index = _tabs.Count;
-        _tabs.Add(new TabPage(header, content));
+        var page = new TabPage(header, content);
+        _tabs.Add(page);
+
+        AttachChild(header);
         AttachChild(content);
 
         content.IsVisible = index == SelectedIndex;
@@ -72,39 +87,117 @@ public sealed class TabControl : Visual
         App?.RequestRender();
     }
 
-    protected override int ChildrenCount => _tabs.Count;
+    public void AddTab(TabPage page)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+        AddTab(page.Header, page.Content);
+    }
 
-    protected override Visual GetChild(int index) => _tabs[index].Content;
+    protected override int ChildrenCount => _tabs.Count * 2;
+
+    protected override Visual GetChild(int index)
+    {
+        if ((uint)index >= (uint)ChildrenCount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+
+        var tabIndex = index / 2;
+        var page = _tabs[tabIndex];
+        return (index % 2) == 0 ? page.Header : page.Content;
+    }
 
     protected override Size MeasureOverride(Size availableSize)
     {
+        var style = GetEnvironmentValue(TabControlStyle.Key);
+        var pad = style.TabPadding;
+
         var headerHeight = 1;
+        var headerTotalWidth = 0;
+
+        for (var i = 0; i < _tabs.Count; i++)
+        {
+            var header = _tabs[i].Header;
+            header.Measure(new Size(availableSize.Width, availableSize.Height));
+            headerHeight = Math.Max(headerHeight, header.DesiredSize.Height);
+
+            var tabWidth = header.DesiredSize.Width + pad.Horizontal;
+            headerTotalWidth += tabWidth;
+            if (i + 1 < _tabs.Count)
+            {
+                headerTotalWidth += 1;
+            }
+        }
+
+        headerHeight = Math.Min(headerHeight, availableSize.Height);
+
         var contentSlot = new Size(
             Math.Max(0, availableSize.Width - (ShowBorder ? 2 : 0)),
             Math.Max(0, availableSize.Height - headerHeight - (ShowBorder ? 2 : 0)));
 
-        var width = 0;
-        var height = 0;
-        foreach (var tab in _tabs)
+        var contentWidth = 0;
+        var contentHeight = 0;
+        for (var i = 0; i < _tabs.Count; i++)
         {
-            tab.Content.Measure(contentSlot);
-            width = Math.Max(width, tab.Content.DesiredSize.Width);
-            height = Math.Max(height, tab.Content.DesiredSize.Height);
+            var content = _tabs[i].Content;
+            content.Measure(contentSlot);
+            contentWidth = Math.Max(contentWidth, content.DesiredSize.Width);
+            contentHeight = Math.Max(contentHeight, content.DesiredSize.Height);
         }
 
-        width += ShowBorder ? 2 : 0;
-        height += headerHeight + (ShowBorder ? 2 : 0);
+        if (ShowBorder)
+        {
+            contentWidth += 2;
+            contentHeight += 2;
+        }
+
+        var width = Math.Max(headerTotalWidth, contentWidth);
+        var height = headerHeight + contentHeight;
 
         return new Size(Math.Min(availableSize.Width, width), Math.Min(availableSize.Height, height));
     }
 
     protected override void ArrangeOverride(Rectangle finalRect)
     {
-        Bounds = finalRect;
+        var style = GetEnvironmentValue(TabControlStyle.Key);
+        var pad = style.TabPadding;
 
-        var headerHeight = Math.Min(1, finalRect.Height);
-        var contentTop = finalRect.Y + headerHeight;
-        var contentHeight = Math.Max(0, finalRect.Height - headerHeight);
+        var headerHeight = 1;
+        for (var i = 0; i < _tabs.Count; i++)
+        {
+            headerHeight = Math.Max(headerHeight, _tabs[i].Header.DesiredSize.Height);
+        }
+
+        _headerHeight = Math.Max(1, Math.Min(headerHeight, finalRect.Height));
+
+        _hitRanges.Clear();
+
+        var x0 = finalRect.X;
+        for (var i = 0; i < _tabs.Count && x0 < finalRect.Right; i++)
+        {
+            var header = _tabs[i].Header;
+            var headerWidth = header.DesiredSize.Width;
+
+            var tabWidth = Math.Min(finalRect.Right - x0, headerWidth + pad.Horizontal);
+            if (tabWidth <= 0)
+            {
+                break;
+            }
+
+            var headerSlot = new Rectangle(
+                x0 + pad.Left,
+                finalRect.Y,
+                Math.Max(0, tabWidth - pad.Horizontal),
+                _headerHeight);
+
+            header.Arrange(headerSlot);
+
+            _hitRanges.Add(new TabHitRange(i, x0 - finalRect.X, (x0 - finalRect.X) + tabWidth));
+            x0 += tabWidth + 1;
+        }
+
+        var contentTop = finalRect.Y + _headerHeight;
+        var contentHeight = Math.Max(0, finalRect.Height - _headerHeight);
 
         var inner = new Rectangle(finalRect.X, contentTop, finalRect.Width, contentHeight);
         if (ShowBorder)
@@ -116,9 +209,9 @@ public sealed class TabControl : Visual
                 Math.Max(0, inner.Height - 2));
         }
 
-        foreach (var tab in _tabs)
+        for (var i = 0; i < _tabs.Count; i++)
         {
-            tab.Content.Arrange(inner);
+            _tabs[i].Content.Arrange(inner);
         }
     }
 
@@ -133,78 +226,58 @@ public sealed class TabControl : Visual
         var theme = GetTheme();
         var style = GetEnvironmentValue(TabControlStyle.Key);
 
+        var headerHeight = Math.Min(Math.Max(1, _headerHeight), rect.Height);
         var stripStyle = style.ResolveStripStyle(theme);
 
         // Header strip.
-        for (var x = rect.X; x < rect.X + rect.Width; x++)
+        for (var y = rect.Y; y < rect.Y + headerHeight; y++)
         {
-            buffer.SetCell(x, rect.Y, new Rune(' '), stripStyle);
+            for (var x = rect.X; x < rect.X + rect.Width; x++)
+            {
+                buffer.SetCell(x, y, new Rune(' '), stripStyle);
+            }
         }
 
-        _hitRanges.Clear();
-
-        var x0 = rect.X;
-        for (var i = 0; i < _tabs.Count && x0 < rect.X + rect.Width; i++)
+        for (var i = 0; i < _hitRanges.Count; i++)
         {
-            var tab = _tabs[i];
-            var selected = i == SelectedIndex;
-            var hovered = i == _hoveredIndex;
+            var range = _hitRanges[i];
+            if ((uint)range.Index >= (uint)_tabs.Count)
+            {
+                continue;
+            }
+
+            var tab = _tabs[range.Index];
+            var selected = range.Index == SelectedIndex;
+            var hovered = range.Index == _hoveredIndex;
             var tabStyle = style.ResolveTabStyle(theme, tab.Content.IsEnabled, selected, hovered);
 
-            var header = tab.Header.AsSpan();
-            var headerCells = TerminalTextUtility.GetWidth(header);
-            var pad = style.TabPadding;
-            var tabWidth = Math.Min(rect.X + rect.Width - x0, headerCells + pad.Horizontal);
-            if (tabWidth <= 0)
-            {
-                break;
-            }
+            var xStart = rect.X + range.Start;
+            var xEnd = rect.X + range.End;
 
-            for (var x = 0; x < tabWidth; x++)
+            for (var y = rect.Y; y < rect.Y + headerHeight; y++)
             {
-                buffer.SetCell(x0 + x, rect.Y, new Rune(' '), tabStyle);
-            }
-
-            var textX = x0 + pad.Left;
-            var availableText = Math.Max(0, tabWidth - pad.Horizontal);
-            if (availableText > 0)
-            {
-                if (TerminalTextUtility.TryGetIndexAtCell(header, availableText, out var endIndex))
+                for (var x = xStart; x < xEnd && x < rect.X + rect.Width; x++)
                 {
-                    header = header[..endIndex];
+                    buffer.SetCell(x, y, new Rune(' '), tabStyle);
                 }
-
-                buffer.WriteText(textX, rect.Y, header, tabStyle);
             }
-
-            _hitRanges.Add(new TabHitRange(i, x0 - rect.X, (x0 - rect.X) + tabWidth));
-            x0 += tabWidth + 1;
         }
 
-        if (ShowBorder && rect.Height >= 3)
+        if (ShowBorder && rect.Height >= headerHeight + 2)
         {
-            RenderBorder(buffer, rect, theme);
+            RenderBorder(buffer, rect, headerHeight, theme);
         }
     }
 
-    private static void RenderBorder(CellBuffer buffer, Rectangle rect, Theme theme)
+    private static void RenderBorder(CellBuffer buffer, Rectangle rect, int headerHeight, Theme theme)
     {
         var glyphs = theme.Lines;
         var border = theme.BorderStyle(focused: false);
-        var clearStyle = CellStyle.None;
 
         var left = rect.X;
-        var top = rect.Y + 1;
+        var top = rect.Y + headerHeight;
         var right = rect.X + rect.Width - 1;
         var bottom = rect.Y + rect.Height - 1;
-
-        for (var y = top; y <= bottom; y++)
-        {
-            for (var x = left; x <= right; x++)
-            {
-                buffer.SetCell(x, y, new Rune(' '), clearStyle);
-            }
-        }
 
         buffer.SetCell(left, top, glyphs.TopLeft, border);
         buffer.SetCell(right, top, glyphs.TopRight, border);
@@ -248,7 +321,7 @@ public sealed class TabControl : Visual
     {
         var localX = e.UiX - Bounds.X;
         var localY = e.UiY - Bounds.Y;
-        if (localY != 0)
+        if (localY < 0 || localY >= _headerHeight)
         {
             UpdateHoveredIndex(-1);
             return;
@@ -267,7 +340,7 @@ public sealed class TabControl : Visual
 
         var localX = e.UiX - Bounds.X;
         var localY = e.UiY - Bounds.Y;
-        if (localY != 0)
+        if (localY < 0 || localY >= _headerHeight)
         {
             return;
         }
@@ -315,6 +388,4 @@ public sealed class TabControl : Visual
     }
 
     private readonly record struct TabHitRange(int Index, int Start, int End);
-
-    public readonly record struct TabPage(string Header, Visual Content);
 }

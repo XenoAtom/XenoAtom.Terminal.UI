@@ -111,6 +111,36 @@ var rightColumn = new VStack(
                     .Text("Bottom aligned (Center + Bottom)")
                     .HorizontalAlignment(HorizontalAlignment.Center)
                     .VerticalAlignment(VerticalAlignment.Bottom)),
+        new TabControl()
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .With(tabs =>
+            {
+                tabs.AddTab(
+                    new HStack(
+                        new TextBlock("Status"),
+                        new TextBlock().Text(() => $"({statusState.Value})").Trimming(TextTrimming.EndEllipsis).MaxWidth(12))
+                        .Spacing(1),
+                    new VStack(
+                            new TextBlock("This is the Status tab."),
+                            new TextBlock().Text(() => $"Current status: {statusState.Value}"))
+                        .Spacing(0));
+
+                tabs.AddTab(
+                    new HStack(
+                        new TextBlock("Logs"),
+                        new TextBlock().Text(() => $"({(int)(progressState.Value * 100)}%)"))
+                        .Spacing(1),
+                    new ScrollViewer()
+                        .Height(4)
+                        .HorizontalAlignment(HorizontalAlignment.Stretch)
+                        .Content(new VStack().With(v =>
+                        {
+                            for (var i = 0; i < 12; i++)
+                            {
+                                v.Add($"Log line {i}");
+                            }
+                        })));
+            }),
         new HStack(
                 new TextBlock()
                     .Text("This is a very long piece of text that will be trimmed.")
