@@ -2,6 +2,7 @@ using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
+using System.Diagnostics;
 
 using var session = Terminal.Open();
 
@@ -14,13 +15,8 @@ var accept = new CheckBox().Text("Accept terms");
 var list = new ListBox()
     .Items(new[] { "First", "Second", "Third", "Fourth", "Fifth" })
     .Height(4);
-var progress = new ProgressBar()
-    .Label("Work")
-    .Value(0.0);
-
-var button = new Button().Text("Log line");
-TerminalApp? app = null;
-button.Click += (_, _) => app?.WriteMarkupLine("[dim]Click received[/]");
+var status = new State<string>("ready");
+var progressState = new State<double>(0.0);
 
 var content = new VStack(
     "Name:",
@@ -28,28 +24,35 @@ var content = new VStack(
     accept,
     "Pick one:",
     list,
-    progress,
-    button).Spacing(1);
+    new ProgressBar()
+        .Label("Work")
+        .Value(() => progressState.Value),
+    new Button()
+        .Text("Set status")
+        .With(b => b.Click += (_, _) => status.Value = "click received"),
+    new TextBlock().Text(() => $"Status: {status.Value}")).Spacing(1);
 
 var root = new VStack(
     new Border()
         .Padding(new Thickness(1))
         .Content(content)).Spacing(1);
 
-app = new TerminalApp(root, session.Instance);
-
-using var cts = new CancellationTokenSource();
-_ = Task.Run(async () =>
+var lastTick = Stopwatch.GetTimestamp();
+session.Instance.Live(root, ctx =>
 {
-    var t = 0.0;
-    while (!cts.IsCancellationRequested)
+    var now = Stopwatch.GetTimestamp();
+    if (Stopwatch.GetElapsedTime(lastTick, now) < TimeSpan.FromMilliseconds(50))
     {
-        t += 0.02;
-        var v = (Math.Sin(t) + 1.0) / 2.0;
-        app.Post(() => progress.Value = v);
-        await Task.Delay(50, cts.Token).ConfigureAwait(false);
+        return true;
     }
-}, cts.Token);
 
-await app.RunAsync();
-cts.Cancel();
+    lastTick = now;
+    if (progressState.Value < 1.0)
+    {
+        progressState.Value = Math.Min(1.0, progressState.Value + 0.02);
+        return true;
+    }
+
+    ctx.WriteMarkupLine("[green]Done![/]");
+    return false;
+});

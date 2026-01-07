@@ -31,6 +31,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private int _renderFrameIndex;
     private Task? _runTask;
     private CellBuffer? _renderBuffer;
+    private Func<bool>? _onUpdate;
 
     public TerminalApp(Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
     {
@@ -51,6 +52,12 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     public TerminalInstance Terminal => _terminal;
 
     public Visual Root { get; }
+
+    internal void SetUpdateCallback(Func<bool> onUpdate)
+    {
+        ArgumentNullException.ThrowIfNull(onUpdate);
+        _onUpdate = onUpdate;
+    }
 
     private Visual? _focusedElement;
 
@@ -277,6 +284,18 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
                     HandleTerminalEvent(ev);
                     if (token.IsCancellationRequested)
                     {
+                        break;
+                    }
+                }
+
+                if (_onUpdate is not null && !token.IsCancellationRequested)
+                {
+                    var keepGoing = _onUpdate();
+                    if (!keepGoing)
+                    {
+                        _renderRequested = true;
+                        Render();
+                        _cts.Cancel();
                         break;
                     }
                 }

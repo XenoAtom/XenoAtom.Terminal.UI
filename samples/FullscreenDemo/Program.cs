@@ -2,8 +2,8 @@ using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
-using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Styling;
+using System.Diagnostics;
 
 using var session = Terminal.Open();
 
@@ -151,42 +151,40 @@ var rightColumn = new VStack(
     .HorizontalAlignment(HorizontalAlignment.Stretch)
     .VerticalAlignment(VerticalAlignment.Stretch);
 
-var app = new TerminalApp(
-    new WindowLayer()
-        .Content(
-            new DockLayout()
+var root = new WindowLayer()
+    .Content(
+        new DockLayout()
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .VerticalAlignment(VerticalAlignment.Stretch)
+            .Content(
+                new VStack(
+                    "Fullscreen demo: Tab focus, mouse click, wheel scroll, F12 debug, Esc quit",
+                    new HStack(leftColumn, rightColumn)
+                        .Spacing(3)
+                        .HorizontalAlignment(HorizontalAlignment.Stretch)
+                        .VerticalAlignment(VerticalAlignment.Stretch))
+                .Spacing(1)
                 .HorizontalAlignment(HorizontalAlignment.Stretch)
-                .VerticalAlignment(VerticalAlignment.Stretch)
-                .Content(
-                    new VStack(
-                        "Fullscreen demo: Tab focus, mouse click, wheel scroll, F12 debug, Esc quit",
-                        new HStack(leftColumn, rightColumn)
-                            .Spacing(3)
-                            .HorizontalAlignment(HorizontalAlignment.Stretch)
-                            .VerticalAlignment(VerticalAlignment.Stretch))
-                    .Spacing(1)
-                    .HorizontalAlignment(HorizontalAlignment.Stretch)
-                    .VerticalAlignment(VerticalAlignment.Stretch))
-                .Bottom(
-                    new StatusBar()
-                        .LeftText("Tab focus | Mouse click | Wheel scroll | F12 debug | Esc quit")
-                        .RightText("XenoAtom.Terminal.UI")))
-        .With(layer => layer.AddWindow(overlay)),
-    session.Instance,
-    new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+                .VerticalAlignment(VerticalAlignment.Stretch))
+            .Bottom(
+                new StatusBar()
+                    .LeftText("Tab focus | Mouse click | Wheel scroll | F12 debug | Esc quit")
+                    .RightText("XenoAtom.Terminal.UI")))
+    .With(layer => layer.AddWindow(overlay));
 
-using var cts = new CancellationTokenSource();
-_ = Task.Run(async () =>
+var lastTick = Stopwatch.GetTimestamp();
+var t = 0.0;
+
+session.Instance.Run(root, () =>
 {
-    var t = 0.0;
-    while (!cts.IsCancellationRequested)
+    var now = Stopwatch.GetTimestamp();
+    if (Stopwatch.GetElapsedTime(lastTick, now) < TimeSpan.FromMilliseconds(50))
     {
-        t += 0.02;
-        var v = (Math.Sin(t) + 1.0) / 2.0;
-        app.Post(() => progressState.Value = v);
-        await Task.Delay(50, cts.Token).ConfigureAwait(false);
+        return true;
     }
-}, cts.Token);
 
-await app.RunAsync();
-cts.Cancel();
+    lastTick = now;
+    t += 0.02;
+    progressState.Value = (Math.Sin(t) + 1.0) / 2.0;
+    return true;
+});
