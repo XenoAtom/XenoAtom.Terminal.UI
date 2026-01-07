@@ -338,6 +338,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
                 RenderDebugOverlay(buffer);
             }
 
+            PrepareForTerminalWrite();
             _fullscreenHost!.Render(buffer);
             UpdateCursor();
             return;
@@ -357,6 +358,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
                 RenderDebugOverlay(buffer);
             }
 
+            PrepareForTerminalWrite();
             _inlineHost!.Render(buffer.ToMarkupLines());
 
             if (_terminal.Capabilities.SupportsCursorPositionGet && _terminal.TryGetCursorPosition(out var position))
@@ -369,6 +371,29 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
             }
 
             UpdateCursor();
+        }
+    }
+
+    private void PrepareForTerminalWrite()
+    {
+        // Rendering moves the terminal cursor around via ANSI cursor positioning.
+        // Hide the cursor while drawing to avoid visible "cursor flicker" over the UI,
+        // and invalidate our cached position so UpdateCursor re-applies it after.
+        _lastCursorPosition = new TerminalPosition(int.MinValue, int.MinValue);
+
+        if (!_lastCursorVisible)
+        {
+            return;
+        }
+
+        try
+        {
+            _terminal.SetCursorVisible(false);
+            _lastCursorVisible = false;
+        }
+        catch
+        {
+            // Best effort.
         }
     }
 
