@@ -25,15 +25,62 @@ public sealed partial class HStack : Panel
         var width = 0;
         var height = 0;
         var spacing = Math.Max(0, Spacing);
+        var childCount = Children.Count;
+        if (childCount == 0)
+        {
+            return Size.Zero;
+        }
 
-        for (var i = 0; i < Children.Count; i++)
+        var totalSpacing = spacing * Math.Max(0, childCount - 1);
+
+        // Measure fixed-width children first, then distribute remaining width among stretch children.
+        var fixedWidth = 0;
+        var stretchCount = 0;
+        for (var i = 0; i < childCount; i++)
+        {
+            if (Children[i].HorizontalAlignment == HorizontalAlignment.Stretch)
+            {
+                stretchCount++;
+            }
+        }
+
+        for (var i = 0; i < childCount; i++)
         {
             var child = Children[i];
-            var remainingWidth = Math.Max(0, availableSize.Width - width);
-            child.Measure(new Size(remainingWidth, availableSize.Height));
-            width += child.DesiredSize.Width;
+            if (child.HorizontalAlignment == HorizontalAlignment.Stretch)
+            {
+                continue;
+            }
+
+            child.Measure(new Size(Math.Max(0, availableSize.Width), availableSize.Height));
+            fixedWidth += child.DesiredSize.Width;
             height = Math.Max(height, child.DesiredSize.Height);
-            if (i + 1 < Children.Count)
+        }
+
+        var remainingForStretch = Math.Max(0, availableSize.Width - fixedWidth - totalSpacing);
+        var perStretch = stretchCount > 0 ? remainingForStretch / stretchCount : 0;
+        var remainder = stretchCount > 0 ? remainingForStretch % stretchCount : 0;
+
+        var stretchIndex = 0;
+        for (var i = 0; i < childCount; i++)
+        {
+            var child = Children[i];
+            if (child.HorizontalAlignment != HorizontalAlignment.Stretch)
+            {
+                continue;
+            }
+
+            var w = perStretch + (stretchIndex < remainder ? 1 : 0);
+            stretchIndex++;
+            child.Measure(new Size(w, availableSize.Height));
+            height = Math.Max(height, child.DesiredSize.Height);
+        }
+
+        for (var i = 0; i < childCount; i++)
+        {
+            var child = Children[i];
+            width += child.DesiredSize.Width;
+            if (i + 1 < childCount)
             {
                 width += spacing;
             }
