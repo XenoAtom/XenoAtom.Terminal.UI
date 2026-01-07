@@ -38,13 +38,12 @@ public sealed class CellBufferDiffRenderer : IDisposable
         ArgumentNullException.ThrowIfNull(terminal);
         ArgumentNullException.ThrowIfNull(buffer);
 
-        var width = Math.Max(1, terminal.Size.Columns);
-        var height = Math.Max(1, terminal.Size.Rows);
-
-        if (buffer.Width != width || buffer.Height != height)
-        {
-            throw new InvalidOperationException("Fullscreen render requires a buffer sized to the current viewport.");
-        }
+        // Use the buffer size as the render viewport.
+        // Terminal size can change between consecutive reads while a resize is in progress, so relying on
+        // terminal.Size here can cause spurious mismatches/crashes even though the caller sized the buffer
+        // based on the terminal size it observed.
+        var width = Math.Max(1, buffer.Width);
+        var height = Math.Max(1, buffer.Height);
 
         var forceFull = _lastScalars is null || _lastWidth != width || _lastHeight != height;
         EnsureLastBuffers(width, height);
