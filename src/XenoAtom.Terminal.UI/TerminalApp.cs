@@ -138,6 +138,12 @@ public sealed class TerminalApp : IAsyncDisposable
 
     public Task RunAsync(CancellationToken cancellationToken = default)
     {
+        Run(cancellationToken);
+        return Task.CompletedTask;
+    }
+
+    public Task RunInBackgroundAsync(CancellationToken cancellationToken = default)
+    {
         if (_runTask is not null)
         {
             throw new InvalidOperationException("The app is already running.");
@@ -169,6 +175,25 @@ public sealed class TerminalApp : IAsyncDisposable
 
         thread.Start();
         return _runTask;
+    }
+
+    public void Run(CancellationToken cancellationToken = default)
+    {
+        if (_runTask is not null)
+        {
+            throw new InvalidOperationException("The app is already running.");
+        }
+
+        _runTask = Task.CompletedTask;
+
+        try
+        {
+            RunCore(cancellationToken);
+        }
+        finally
+        {
+            _runTask = null;
+        }
     }
 
     private void RunCore(CancellationToken cancellationToken)
@@ -228,35 +253,22 @@ public sealed class TerminalApp : IAsyncDisposable
                     action();
                 }
 
+                while (_terminal.TryReadEvent(out var ev))
+                {
+                    HandleTerminalEvent(ev);
+                    if (token.IsCancellationRequested)
+                    {
+                        break;
+                    }
+                }
+
                 if (_renderRequested)
                 {
                     _renderRequested = false;
                     Render();
                 }
 
-                using var waitCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-                var readEventTask = _terminal.ReadEventAsync(waitCts.Token).AsTask();
-                var wakeTask = _wakeUp.WaitAsync(token);
-
-                var completed = Task.WhenAny(readEventTask, wakeTask).GetAwaiter().GetResult();
-                if (completed == wakeTask)
-                {
-                    waitCts.Cancel();
-
-                    try
-                    {
-                        var maybeEvent = readEventTask.GetAwaiter().GetResult();
-                        HandleTerminalEvent(maybeEvent);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // Ignore.
-                    }
-                    continue;
-                }
-
-                var ev = readEventTask.GetAwaiter().GetResult();
-                HandleTerminalEvent(ev);
+                Thread.Sleep(1);
             }
         }
         finally
@@ -281,10 +293,7 @@ public sealed class TerminalApp : IAsyncDisposable
     private void OnValueChanged(Binding binding)
     {
         Root.PropagateBindingChanged(binding);
-        if (ReferenceEquals(binding.Owner, Root) || binding.Owner is Visual)
-        {
-            RequestRender();
-        }
+        RequestRender();
     }
 
     private void Render()

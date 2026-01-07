@@ -34,7 +34,7 @@ public sealed class BorderDefaultsTests
 
         var root = new VStack(new Button("OK"));
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(30);
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
@@ -50,7 +50,7 @@ public sealed class BorderDefaultsTests
         borderedRoot.SetEnvironmentValue(ButtonStyle.Key, new ButtonStyle { ShowBorder = true });
 
         var app2 = new TerminalApp(borderedRoot, session2.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask2 = app2.RunAsync();
+        var runTask2 = app2.RunInBackgroundAsync();
 
         await Task.Delay(30);
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });

@@ -29,7 +29,7 @@ public sealed class TextBlockRenderingTests
 
         var root = new VStack(tb);
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(30);
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
@@ -55,7 +55,7 @@ public sealed class TextBlockRenderingTests
 
         var root = new VStack(tb);
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(30);
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
@@ -80,7 +80,7 @@ public sealed class TextBlockRenderingTests
 
         var root = new VStack(tb);
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(30);
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });

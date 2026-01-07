@@ -64,7 +64,7 @@ public sealed class TerminalAppTests
 
         var app = new TerminalApp(root, session.Instance);
 
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
         await Task.Delay(10);
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
 
@@ -100,7 +100,7 @@ public sealed class TerminalAppTests
         var root = new VStack { button };
 
         var app = new TerminalApp(root, session.Instance);
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(10);
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
@@ -124,7 +124,7 @@ public sealed class TerminalAppTests
         var root = new ZStack { button, new ComputedVisual(static () => null) };
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(10);
         backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 1, Y = 0 });
@@ -149,7 +149,7 @@ public sealed class TerminalAppTests
         var root = new VStack { button };
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(10);
         backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 1, Y = 0 });
@@ -173,7 +173,7 @@ public sealed class TerminalAppTests
         var root = new VStack { button };
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(10);
 
@@ -218,7 +218,7 @@ public sealed class TerminalAppTests
         root.Add(dialog);
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(10);
 
@@ -260,7 +260,7 @@ public sealed class TerminalAppTests
         layer.AddWindow(b);
 
         var app = new TerminalApp(layer, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(20);
 
@@ -320,7 +320,7 @@ public sealed class TerminalAppTests
         layer.AddWindow(modal);
 
         var app = new TerminalApp(layer, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(20);
 
@@ -362,7 +362,7 @@ public sealed class TerminalAppTests
         root.Add(b);
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(20);
 
@@ -406,7 +406,7 @@ public sealed class TerminalAppTests
         root.Add(tabs);
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(20);
 
@@ -430,7 +430,7 @@ public sealed class TerminalAppTests
         var root = new PointerProbe { Content = button };
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(20);
 
@@ -500,7 +500,7 @@ public sealed class TerminalAppTests
         root.Add(textBox);
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         static async Task WaitUntil(Func<bool> condition)
         {
@@ -532,7 +532,7 @@ public sealed class TerminalAppTests
         var root = new VStack(textBox).Spacing(2);
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         static async Task WaitUntil(Func<bool> condition)
         {
@@ -564,7 +564,7 @@ public sealed class TerminalAppTests
         root.Add(probe);
 
         var app = new TerminalApp(root, session.Instance);
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(10);
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'k', Modifiers = TerminalModifiers.Ctrl });
@@ -592,7 +592,7 @@ public sealed class TerminalAppTests
         root.Add(button);
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Inline });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(30);
 
@@ -626,7 +626,7 @@ public sealed class TerminalAppTests
         root.Add(d);
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(30);
         Assert.AreSame(a, app.FocusedElement);
@@ -664,7 +664,7 @@ public sealed class TerminalAppTests
             root.Add(checkBox);
 
             var app = new TerminalApp(root, session.Instance);
-            var runTask = app.RunAsync();
+            var runTask = app.RunInBackgroundAsync();
 
             await Task.Delay(10);
             backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Space });
@@ -694,7 +694,7 @@ public sealed class TerminalAppTests
         root.Add(textBox);
 
         var app = new TerminalApp(root, session.Instance);
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(10);
 
@@ -740,7 +740,7 @@ public sealed class TerminalAppTests
         root.Add(textBox);
 
         var app = new TerminalApp(root, session.Instance);
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(10);
 
@@ -768,7 +768,7 @@ public sealed class TerminalAppTests
         root.Add(textBox);
 
         var app = new TerminalApp(root, session.Instance);
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(10);
 
@@ -807,7 +807,7 @@ public sealed class TerminalAppTests
         root.Add(textBox);
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         static async Task WaitUntil(Func<bool> condition)
         {
@@ -849,7 +849,7 @@ public sealed class TerminalAppTests
 
         var app = new TerminalApp(root, session.Instance);
 
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
         await Task.Delay(20);
 
         app.Post(() => model.Text = "B");
@@ -875,7 +875,7 @@ public sealed class TerminalAppTests
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Inline });
 
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
         await Task.Delay(20);
 
         app.Post(() => app.Append(new TextBlock("Flow: Hello")));
@@ -904,7 +904,7 @@ public sealed class TerminalAppTests
         root.Add(view);
 
         var app = new TerminalApp(root, session.Instance);
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(20);
         app.Post(() => root.SetEnvironmentValue(key, "B"));
@@ -947,7 +947,7 @@ public sealed class TerminalAppTests
             root.Add(listBox);
 
             var app = new TerminalApp(root, session.Instance);
-            var runTask = app.RunAsync();
+            var runTask = app.RunInBackgroundAsync();
 
             await Task.Delay(10);
             backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
@@ -981,7 +981,7 @@ public sealed class TerminalAppTests
         root.Add(scroll);
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(20);
         backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Wheel, Button = TerminalMouseButton.Wheel, WheelDelta = -1, X = 1, Y = 0 });
@@ -1008,7 +1008,7 @@ public sealed class TerminalAppTests
         var root = new VStack { table };
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(30);
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
@@ -1040,7 +1040,7 @@ public sealed class TerminalAppTests
         var root = new VStack { group };
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(30);
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
@@ -1063,7 +1063,7 @@ public sealed class TerminalAppTests
         var layout = new DockLayout { Content = new TextBlock("X"), Bottom = status };
 
         var app = new TerminalApp(layout, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(30);
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });

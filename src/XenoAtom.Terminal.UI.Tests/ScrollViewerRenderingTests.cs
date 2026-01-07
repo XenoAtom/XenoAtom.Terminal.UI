@@ -29,7 +29,7 @@ public sealed class ScrollViewerRenderingTests
         var root = new ScrollViewer { Height = 6, Content = content };
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunAsync();
+        var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(20);
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
@@ -40,4 +40,3 @@ public sealed class ScrollViewerRenderingTests
         StringAssert.Contains(outText, "Log line 0");
     }
 }
-
