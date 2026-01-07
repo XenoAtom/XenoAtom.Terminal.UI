@@ -353,6 +353,8 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
     private void Render()
     {
+        EnsureFocusInScope();
+
         _inlineLiveRegionTopRow = null;
         _renderFrameIndex++;
 

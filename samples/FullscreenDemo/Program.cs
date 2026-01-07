@@ -46,7 +46,9 @@ var overlay = new ComputedVisual(() =>
         .Content(dialogContent);
 
     return dialog;
-});
+})
+    .HorizontalAlignment(HorizontalAlignment.Stretch)
+    .VerticalAlignment(VerticalAlignment.Stretch);
 
 var progressBars = new VStack(
     new TextBlock("Progress variants:"),
