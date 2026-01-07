@@ -684,20 +684,33 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
             if (topRow is null || height <= 0)
             {
                 UpdateHover(null);
+                _pointerCapture = null;
                 return;
             }
 
             var translatedY = mouseEvent.Y - topRow.Value;
-            if ((uint)translatedY >= (uint)height)
-            {
-                UpdateHover(null);
-                return;
-            }
-
             uiY = translatedY;
             localY = translatedY;
-            hitTarget = inputRoot.HitTest(mouseEvent.X, translatedY);
-            target = _pointerCapture ?? hitTarget;
+
+            if (_pointerCapture is null)
+            {
+                if ((uint)translatedY >= (uint)height)
+                {
+                    UpdateHover(null);
+                    return;
+                }
+
+                hitTarget = inputRoot.HitTest(mouseEvent.X, translatedY);
+                target = hitTarget;
+            }
+            else
+            {
+                // When a pointer is captured, keep dispatching events to the captured element even if the
+                // pointer leaves the live region. This avoids "stuck" captures and prevents hover effects
+                // on other controls while dragging.
+                hitTarget = (uint)translatedY < (uint)height ? inputRoot.HitTest(mouseEvent.X, translatedY) : null;
+                target = _pointerCapture;
+            }
         }
 
         if (target is null)
@@ -706,10 +719,19 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
             return;
         }
 
-        UpdateHover(hitTarget);
+        // While capturing, keep hover on the captured element to avoid hover state "leaking" to other visuals.
+        UpdateHover(_pointerCapture ?? hitTarget);
 
         while (target is not null && (!target.IsVisible || !target.IsEnabled))
         {
+            if (ReferenceEquals(target, _pointerCapture))
+            {
+                _pointerCapture = null;
+                target = hitTarget;
+                UpdateHover(hitTarget);
+                continue;
+            }
+
             target = target.Parent;
         }
 
@@ -751,12 +773,20 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
                 break;
             case TerminalMouseKind.Down:
             case TerminalMouseKind.DoubleClick:
-                _pointerCapture = target;
+                if (mouseEvent.Button == TerminalMouseButton.Left)
+                {
+                    _pointerCapture = target;
+                }
                 target.RaiseEvent(Visual.PointerPressedEvent, args);
                 break;
             case TerminalMouseKind.Up:
                 target.RaiseEvent(Visual.PointerReleasedEvent, args);
-                _pointerCapture = null;
+                if (mouseEvent.Button == TerminalMouseButton.Left)
+                {
+                    _pointerCapture = null;
+                    // Refresh hover after releasing capture.
+                    UpdateHover(hitTarget);
+                }
                 break;
             case TerminalMouseKind.Wheel:
                 target.RaiseEvent(Visual.PointerWheelEvent, args);
