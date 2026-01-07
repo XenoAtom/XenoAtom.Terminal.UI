@@ -10,6 +10,7 @@ public sealed class Dispatcher
 
     private int? _threadId;
     private TerminalApp? _app;
+    private SynchronizationContext? _previousSynchronizationContext;
 
     private Dispatcher() { }
 
@@ -24,8 +25,19 @@ public sealed class Dispatcher
             throw new InvalidOperationException("The UI dispatcher is already bound to another thread.");
         }
 
+        if (_app is not null && !ReferenceEquals(_app, app))
+        {
+            throw new InvalidOperationException("The UI dispatcher is already attached to another TerminalApp.");
+        }
+
         _threadId = Environment.CurrentManagedThreadId;
         _app = app;
+
+        if (_previousSynchronizationContext is null)
+        {
+            _previousSynchronizationContext = SynchronizationContext.Current;
+        }
+
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(this));
     }
 
@@ -36,6 +48,8 @@ public sealed class Dispatcher
             return;
         }
 
+        SynchronizationContext.SetSynchronizationContext(_previousSynchronizationContext);
+        _previousSynchronizationContext = null;
         _app = null;
         _threadId = null;
     }
