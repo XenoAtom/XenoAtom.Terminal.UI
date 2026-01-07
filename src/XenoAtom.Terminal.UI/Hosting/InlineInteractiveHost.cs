@@ -12,6 +12,7 @@ public sealed class InlineInteractiveHost : IDisposable
     private int _reservedHeight;
     private readonly List<string> _lastLines = new();
     private bool _cursorHidden;
+    private bool _hasSavedCursorPosition;
 
     public InlineInteractiveHost(TerminalInstance terminal)
     {
@@ -80,6 +81,11 @@ public sealed class InlineInteractiveHost : IDisposable
         {
             var formatter = new AnsiMarkup(writer);
 
+            if (_hasSavedCursorPosition)
+            {
+                writer.RestoreCursorPosition();
+            }
+
             if (previousHeight > 0)
             {
                 writer.CursorUp(previousHeight);
@@ -106,19 +112,20 @@ public sealed class InlineInteractiveHost : IDisposable
 
             if (previousHeight > height)
             {
-                writer.SaveCursorPosition();
-
                 for (var i = height; i < previousHeight; i++)
                 {
                     writer.EraseLine(2);
                     writer.NextLine();
                 }
 
-                writer.RestoreCursorPosition();
+                writer.CursorUp(previousHeight - height);
                 writer.CursorHorizontalAbsolute(1);
             }
+
+            writer.SaveCursorPosition();
         });
 
+        _hasSavedCursorPosition = true;
         _reservedHeight = height;
         _lastLines.Clear();
         for (var i = 0; i < height; i++)
@@ -171,6 +178,11 @@ public sealed class InlineInteractiveHost : IDisposable
         {
             var formatter = new AnsiMarkup(writer);
 
+            if (_hasSavedCursorPosition)
+            {
+                writer.RestoreCursorPosition();
+            }
+
             writer.CursorUp(regionHeight);
             writer.CursorHorizontalAbsolute(1);
 
@@ -199,8 +211,11 @@ public sealed class InlineInteractiveHost : IDisposable
                 }
                 writer.NextLine();
             }
+
+            writer.SaveCursorPosition();
         });
 
+        _hasSavedCursorPosition = true;
         _reservedHeight = regionHeight;
         _lastLines.Clear();
         _lastLines.AddRange(lastRegionLines);

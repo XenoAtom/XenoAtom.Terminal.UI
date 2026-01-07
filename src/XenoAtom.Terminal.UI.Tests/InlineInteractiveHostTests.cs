@@ -12,6 +12,28 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class InlineInteractiveHostTests
 {
     [TestMethod]
+    public void Render_Restores_Cursor_Position_When_Cursor_Moved()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(20, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions(), force: true);
+
+        var host = new InlineInteractiveHost(session.Instance);
+
+        host.Render(["A", "B", "C"]);
+
+        var out1 = backend.GetOutText();
+        StringAssert.Contains(out1, "\x1b[s");
+
+        session.Instance.SetCursorPosition(new TerminalPosition(0, 0));
+
+        host.Render(["A", "B", "D"]);
+
+        var out2 = backend.GetOutText();
+        var delta = out2.Substring(out1.Length);
+        StringAssert.Contains(delta, "\x1b[u");
+    }
+
+    [TestMethod]
     public void Render_Same_Lines_Produces_No_Output()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(20, 10));
@@ -43,4 +65,3 @@ public sealed class InlineInteractiveHostTests
         host.Render(["L1", "L2", "L3", "L4", "L5"]);
     }
 }
-
