@@ -5,12 +5,27 @@
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI.Hosting;
+using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
 [TestClass]
 public sealed class InlineInteractiveHostTests
 {
+    private static CellBuffer CreateBuffer(int width, params string[] lines)
+    {
+        var buffer = new CellBuffer(width, lines.Length);
+        buffer.Clear(CellStyle.None);
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            buffer.WriteText(0, i, lines[i].AsSpan(), CellStyle.None);
+        }
+
+        return buffer;
+    }
+
     [TestMethod]
     public void Render_Restores_Cursor_Position_When_Cursor_Moved()
     {
@@ -19,14 +34,14 @@ public sealed class InlineInteractiveHostTests
 
         var host = new InlineInteractiveHost(session.Instance);
 
-        host.Render(["A", "B", "C"]);
+        host.Render(CreateBuffer(20, "A", "B", "C"), wantsCursor: false, cursorX: 0, cursorY: 0);
 
         var out1 = backend.GetOutText();
         StringAssert.Contains(out1, "\x1b[s");
 
         session.Instance.SetCursorPosition(new TerminalPosition(0, 0));
 
-        host.Render(["A", "B", "D"]);
+        host.Render(CreateBuffer(20, "A", "B", "D"), wantsCursor: false, cursorX: 0, cursorY: 0);
 
         var out2 = backend.GetOutText();
         var delta = out2.Substring(out1.Length);
@@ -41,11 +56,11 @@ public sealed class InlineInteractiveHostTests
 
         var host = new InlineInteractiveHost(session.Instance);
 
-        host.Render(["A", "B", "C"]);
+        host.Render(CreateBuffer(20, "A", "B", "C"), wantsCursor: false, cursorX: 0, cursorY: 0);
 
         var len = backend.GetOutText().Length;
 
-        host.Render(["A", "B", "C"]);
+        host.Render(CreateBuffer(20, "A", "B", "C"), wantsCursor: false, cursorX: 0, cursorY: 0);
 
         Assert.AreEqual(len, backend.GetOutText().Length);
     }
@@ -58,10 +73,10 @@ public sealed class InlineInteractiveHostTests
 
         var host = new InlineInteractiveHost(session.Instance);
 
-        host.Render(["L1", "L2", "L3", "L4", "L5"]);
+        host.Render(CreateBuffer(20, "L1", "L2", "L3", "L4", "L5"), wantsCursor: false, cursorX: 0, cursorY: 0);
 
         backend.SetSize(new TerminalSize(20, 2), raiseEvent: false);
 
-        host.Render(["L1", "L2", "L3", "L4", "L5"]);
+        host.Render(CreateBuffer(20, "L1", "L2", "L3", "L4", "L5"), wantsCursor: false, cursorX: 0, cursorY: 0);
     }
 }

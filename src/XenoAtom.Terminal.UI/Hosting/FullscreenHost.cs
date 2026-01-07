@@ -19,15 +19,14 @@ public sealed class FullscreenHost : IDisposable
 
     public void Dispose()
     {
-        _renderer.Reset();
+        _renderer.Dispose();
     }
 
-    public void Render(CellBuffer buffer)
+    public void Render(CellBuffer buffer, bool wantsCursor, int cursorX, int cursorY)
     {
         ArgumentNullException.ThrowIfNull(buffer);
-        _renderer.RenderFullscreen(_terminal, buffer);
+        _renderer.RenderFullscreen(_terminal, buffer, wantsCursor, cursorX, cursorY);
     }
 
     public void Reset() => _renderer.Reset();
 }
-

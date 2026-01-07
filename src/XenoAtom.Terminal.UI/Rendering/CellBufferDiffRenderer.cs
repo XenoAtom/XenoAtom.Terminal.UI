@@ -9,12 +9,14 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Rendering;
 
-public sealed class CellBufferDiffRenderer
+public sealed class CellBufferDiffRenderer : IDisposable
 {
+    private readonly AnsiBuilder _builder = new(initialCapacity: 4096);
     private int[]? _lastScalars;
     private CellStyle[]? _lastCells;
     private int _lastWidth;
     private int _lastHeight;
+    private bool _lastCursorVisible;
 
     public void Reset()
     {
@@ -22,9 +24,12 @@ public sealed class CellBufferDiffRenderer
         _lastCells = null;
         _lastWidth = 0;
         _lastHeight = 0;
+        _lastCursorVisible = false;
     }
 
-    public void RenderFullscreen(TerminalInstance terminal, CellBuffer buffer)
+    public void Dispose() => _builder.Dispose();
+
+    public void RenderFullscreen(TerminalInstance terminal, CellBuffer buffer, bool wantsCursor, int cursorX, int cursorY)
     {
         ArgumentNullException.ThrowIfNull(terminal);
         ArgumentNullException.ThrowIfNull(buffer);
@@ -42,8 +47,14 @@ public sealed class CellBufferDiffRenderer
 
         var caps = CreateAnsiCapabilities(terminal.Capabilities);
 
-        using var builder = new AnsiBuilder(initialCapacity: width * height + 128);
-        var writer = new AnsiWriter(builder, caps);
+        _builder.Clear();
+        var writer = new AnsiWriter(_builder, caps);
+
+        var hideCursorDuringWrite = wantsCursor || _lastCursorVisible;
+        if (hideCursorDuringWrite)
+        {
+            writer.ShowCursor(false);
+        }
 
         if (forceFull)
         {
@@ -142,13 +153,23 @@ public sealed class CellBufferDiffRenderer
             writer.StyleTransition(currentStyle, AnsiStyle.Default);
         }
 
+        if (wantsCursor)
+        {
+            var cx = Math.Clamp(cursorX, 0, width - 1);
+            var cy = Math.Clamp(cursorY, 0, height - 1);
+            writer.CursorPosition(cy + 1, cx + 1);
+            writer.ShowCursor(true);
+        }
+
         terminal.WriteAtomic((TextWriter w) =>
         {
-            w.Write(builder.UnsafeAsSpan());
+            w.Write(_builder.UnsafeAsSpan());
         });
 
         scalars.CopyTo(lastScalars.AsSpan());
         cells.CopyTo(lastCells.AsSpan());
+
+        _lastCursorVisible = wantsCursor;
     }
 
     private void EnsureLastBuffers(int width, int height)

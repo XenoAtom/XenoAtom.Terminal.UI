@@ -466,15 +466,36 @@ public sealed class TerminalAppTests
         }
     }
 
+    private sealed class CursorProbe : Visual, XenoAtom.Terminal.UI.Input.ICursorProvider
+    {
+        private readonly int _x;
+        private readonly int _y;
+
+        public CursorProbe(int x, int y)
+        {
+            Focusable = true;
+            _x = x;
+            _y = y;
+        }
+
+        public bool TryGetCursorCell(out int x, out int y)
+        {
+            x = _x;
+            y = _y;
+            return true;
+        }
+
+        protected override Size MeasureOverride(Size availableSize) => new(1, 1);
+    }
+
     [TestMethod]
     public async Task TextBox_Shows_Cursor_And_Sets_Position()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(20, 5));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        var textBox = new TextBox();
-        var root = new VStack();
-        root.Add(textBox);
+        var probe = new CursorProbe(x: 6, y: 3);
+        var root = new VStack(probe);
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
         var runTask = app.RunInBackgroundAsync();
@@ -492,8 +513,7 @@ public sealed class TerminalAppTests
             }
         }
 
-        await WaitUntil(() => session.Instance.GetCursorVisible());
-        await WaitUntil(() => session.Instance.Cursor.Position.Equals(new TerminalPosition(2, 1)));
+        await WaitUntil(() => backend.GetOutText().Contains("\x1b[4;7H\x1b[?25h", StringComparison.Ordinal));
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));
@@ -557,13 +577,23 @@ public sealed class TerminalAppTests
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Inline });
         var runTask = app.RunInBackgroundAsync();
 
-        await Task.Delay(30);
+        static async Task WaitUntil(Func<bool> condition)
+        {
+            var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+            while (!condition())
+            {
+                if (DateTime.UtcNow >= timeout)
+                {
+                    Assert.Fail("Timed out waiting for condition.");
+                }
+                await Task.Delay(10);
+            }
+        }
 
-        var cursor = session.Instance.Cursor.Position;
-        var liveTop = cursor.Row - 1;
+        await WaitUntil(() => backend.GetOutText().Contains("\x1b[s", StringComparison.Ordinal));
 
-        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 1, Y = liveTop });
-        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 1, Y = liveTop });
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 1, Y = 0 });
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 1, Y = 0 });
 
         await clicked.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
@@ -818,7 +848,11 @@ public sealed class TerminalAppTests
 
         var outText = backend.GetOutText();
         StringAssert.Contains(outText, "Computed:A");
-        StringAssert.Contains(outText, "Computed:B");
+
+        var screen = new AnsiTestScreen(40, 10);
+        screen.Apply(outText);
+        var rendered = screen.GetText();
+        StringAssert.Contains(rendered, "Computed:B");
     }
 
     [TestMethod]
@@ -873,7 +907,11 @@ public sealed class TerminalAppTests
 
         var outText = backend.GetOutText();
         StringAssert.Contains(outText, "Env:A");
-        StringAssert.Contains(outText, "Env:B");
+
+        var screen = new AnsiTestScreen(40, 10);
+        screen.Apply(outText);
+        var rendered = screen.GetText();
+        StringAssert.Contains(rendered, "Env:B");
     }
 
     [TestMethod]

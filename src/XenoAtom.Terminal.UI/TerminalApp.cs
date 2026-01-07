@@ -27,11 +27,10 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private Visual? _pointerCapture;
     private Visual? _hoveredElement;
     private int? _inlineLiveRegionTopRow;
-    private bool _lastCursorVisible;
-    private TerminalPosition _lastCursorPosition;
     private bool _debugOverlayVisible;
     private int _renderFrameIndex;
     private Task? _runTask;
+    private CellBuffer? _renderBuffer;
 
     public TerminalApp(Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
     {
@@ -129,10 +128,10 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
             block.Measure(new Size(width, int.MaxValue / 4));
             block.Arrange(new Rectangle(0, 0, width, block.DesiredSize.Height));
 
+            // Flow output can allocate (it's not per-frame). Keep it simple for now.
             var buffer = new CellBuffer(width, Math.Max(1, block.DesiredSize.Height));
             buffer.Clear(block.GetTheme().ForegroundTextStyle());
             block.RenderTree(buffer);
-
             _inlineHost.WriteMarkupLines(buffer.ToMarkupLines());
         }
         finally
@@ -322,6 +321,8 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         _inlineLiveRegionTopRow = null;
         _renderFrameIndex++;
 
+        var wantsCursor = TryGetDesiredCursor(out var cursorX, out var cursorY);
+
         if (_options.HostKind == TerminalHostKind.Fullscreen)
         {
             var width = Math.Max(1, _terminal.Size.Columns);
@@ -330,7 +331,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
             Root.Measure(new Size(width, height));
             Root.Arrange(new Rectangle(0, 0, width, height));
 
-            var buffer = new CellBuffer(width, height);
+            var buffer = EnsureRenderBuffer(width, height);
             buffer.Clear(Root.GetTheme().ForegroundTextStyle());
             Root.RenderTree(buffer);
             if (_debugOverlayVisible)
@@ -338,9 +339,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
                 RenderDebugOverlay(buffer);
             }
 
-            PrepareForTerminalWrite();
-            _fullscreenHost!.Render(buffer);
-            UpdateCursor();
+            _fullscreenHost!.Render(buffer, wantsCursor, cursorX, cursorY);
             return;
         }
 
@@ -350,7 +349,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
             Root.Measure(new Size(width, int.MaxValue / 4));
             Root.Arrange(new Rectangle(0, 0, width, Root.DesiredSize.Height));
 
-            var buffer = new CellBuffer(width, Math.Max(1, Root.DesiredSize.Height));
+            var buffer = EnsureRenderBuffer(width, Math.Max(1, Root.DesiredSize.Height));
             buffer.Clear(Root.GetTheme().ForegroundTextStyle());
             Root.RenderTree(buffer);
             if (_debugOverlayVisible)
@@ -358,43 +357,34 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
                 RenderDebugOverlay(buffer);
             }
 
-            PrepareForTerminalWrite();
-            _inlineHost!.Render(buffer.ToMarkupLines());
-
-            if (_terminal.Capabilities.SupportsCursorPositionGet && _terminal.TryGetCursorPosition(out var position))
-            {
-                var reserved = _inlineHost.ReservedHeight;
-                if (reserved > 0)
-                {
-                    _inlineLiveRegionTopRow = position.Row - reserved;
-                }
-            }
-
-            UpdateCursor();
+            _inlineHost!.Render(buffer, wantsCursor, cursorX, cursorY);
+            _inlineLiveRegionTopRow = _inlineHost.LiveRegionTopRow;
         }
     }
 
-    private void PrepareForTerminalWrite()
+    private bool TryGetDesiredCursor(out int x, out int y)
     {
-        // Rendering moves the terminal cursor around via ANSI cursor positioning.
-        // Hide the cursor while drawing to avoid visible "cursor flicker" over the UI,
-        // and invalidate our cached position so UpdateCursor re-applies it after.
-        _lastCursorPosition = new TerminalPosition(int.MinValue, int.MinValue);
-
-        if (!_lastCursorVisible)
+        var focused = _focusedElement;
+        if (focused is Input.ICursorProvider provider && provider.TryGetCursorCell(out x, out y))
         {
-            return;
+            return true;
         }
 
-        try
+        x = 0;
+        y = 0;
+        return false;
+    }
+
+    private CellBuffer EnsureRenderBuffer(int width, int height)
+    {
+        var existing = _renderBuffer;
+        if (existing is not null && existing.Width == width && existing.Height == height)
         {
-            _terminal.SetCursorVisible(false);
-            _lastCursorVisible = false;
+            return existing;
         }
-        catch
-        {
-            // Best effort.
-        }
+
+        _renderBuffer = new CellBuffer(width, height);
+        return _renderBuffer;
     }
 
     private void RenderDebugOverlay(CellBuffer buffer)
@@ -469,65 +459,6 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         for (var i = 0; i < lines.Length && i + 1 < bottom; i++)
         {
             buffer.WriteText(1, 1 + i, lines[i].AsSpan(), CellStyle.None);
-        }
-    }
-
-    private void UpdateCursor()
-    {
-        var focused = FocusedElement;
-        var x = 0;
-        var y = 0;
-        var wantsCursor = focused is ICursorProvider provider && provider.TryGetCursorCell(out x, out y);
-
-        TerminalPosition position = default;
-        if (wantsCursor)
-        {
-            if (_options.HostKind == TerminalHostKind.Inline)
-            {
-                var topRow = _inlineLiveRegionTopRow;
-                if (topRow is null)
-                {
-                    wantsCursor = false;
-                }
-                else
-                {
-                    position = new TerminalPosition(x, topRow.Value + y);
-                }
-            }
-            else
-            {
-                position = new TerminalPosition(x, y);
-            }
-        }
-
-        try
-        {
-            if (wantsCursor)
-            {
-                if (!_lastCursorVisible)
-                {
-                    _terminal.SetCursorVisible(true);
-                    _lastCursorVisible = true;
-                }
-
-                if (!_lastCursorPosition.Equals(position))
-                {
-                    _terminal.SetCursorPosition(position);
-                    _lastCursorPosition = position;
-                }
-            }
-            else
-            {
-                if (_lastCursorVisible)
-                {
-                    _terminal.SetCursorVisible(false);
-                    _lastCursorVisible = false;
-                }
-            }
-        }
-        catch
-        {
-            // Best effort.
         }
     }
 
