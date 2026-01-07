@@ -78,7 +78,7 @@ public sealed class TabControl : Visual
         AttachChild(header);
         AttachChild(content);
 
-        content.IsVisible = index == SelectedIndex;
+        content.IsVisible = index == _selectedIndex;
         if (index == 0)
         {
             UpdateTabVisibility();
@@ -380,7 +380,7 @@ public sealed class TabControl : Visual
 
     private void UpdateTabVisibility()
     {
-        var selected = SelectedIndex;
+        var selected = _selectedIndex;
         for (var i = 0; i < _tabs.Count; i++)
         {
             _tabs[i].Content.IsVisible = i == selected;

@@ -739,6 +739,28 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public void TabControl_DoesNotDuplicateTabs_When_SelectedIndex_Changes()
+    {
+        var tabControl = new TabControl()
+            .With(tabs =>
+            {
+                tabs.AddTab(new TextBlock("One"), new TextBlock("A"));
+                tabs.AddTab(new TextBlock("Two"), new TextBlock("B"));
+            });
+
+        tabControl.Measure(new Size(80, 25));
+        tabControl.Arrange(new Rectangle(0, 0, 80, 25));
+
+        Assert.AreEqual(2, tabControl.Tabs.Count);
+
+        tabControl.SelectedIndex = 1;
+        tabControl.Measure(new Size(80, 25));
+        tabControl.Arrange(new Rectangle(0, 0, 80, 25));
+
+        Assert.AreEqual(2, tabControl.Tabs.Count, "Tabs should not be re-added when SelectedIndex changes.");
+    }
+
+    [TestMethod]
     public async Task TextBox_Edits_Text_And_Uses_Clipboard_Paste()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
