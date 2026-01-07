@@ -13,7 +13,7 @@ Terminal.WriteLine();
 var name = new TextBox().Text("");
 var accept = new CheckBox().Text("Accept terms");
 var list = new ListBox()
-    .Items(new[] { "First", "Second", "Third", "Fourth", "Fifth" })
+    .Items(["First", "Second", "Third", "Fourth", "Fifth"])
     .Height(4);
 var status = new State<string>("ready");
 var progressState = new State<double>(0.0);
@@ -54,5 +54,6 @@ Terminal.Live(root, () =>
     }
 
     Terminal.WriteMarkupLine("[green]Done![/]");
-    return false;
+    progressState.Value = 0.0;
+    return true;
 });

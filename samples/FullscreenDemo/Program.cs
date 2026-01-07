@@ -175,7 +175,7 @@ var root = new WindowLayer()
 var lastTick = Stopwatch.GetTimestamp();
 var t = 0.0;
 
-session.Instance.Run(root, () =>
+Terminal.Run(root, () =>
 {
     var now = Stopwatch.GetTimestamp();
     if (Stopwatch.GetElapsedTime(lastTick, now) < TimeSpan.FromMilliseconds(50))

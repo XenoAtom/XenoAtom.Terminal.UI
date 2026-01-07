@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
+using XenoAtom.Ansi;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Hosting;
@@ -32,6 +33,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private Task? _runTask;
     private CellBuffer? _renderBuffer;
     private Func<bool>? _onUpdate;
+    private readonly AnsiBuilder _updateOutputBuilder = new(initialCapacity: 4096);
 
     public TerminalApp(Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
     {
@@ -53,7 +55,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
     public Visual Root { get; }
 
-    internal void SetUpdateCallback(Func<bool> onUpdate)
+    internal void SetUpdateCallback(Func<bool>? onUpdate)
     {
         ArgumentNullException.ThrowIfNull(onUpdate);
         _onUpdate = onUpdate;
@@ -97,6 +99,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         _inlineHost?.Dispose();
         _fullscreenHost?.Dispose();
         _cts.Dispose();
+        _updateOutputBuilder.Dispose();
         await ValueTask.CompletedTask;
     }
 
@@ -290,12 +293,20 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
                 if (_onUpdate is not null && !token.IsCancellationRequested)
                 {
-                    if (_options.HostKind == TerminalHostKind.Inline)
+                    var keepGoing = false;
+                    using (_terminal.CaptureOutput(_updateOutputBuilder))
                     {
-                        _inlineHost?.PrepareForUserUpdate();
+                        keepGoing = _onUpdate();
                     }
 
-                    var keepGoing = _onUpdate();
+                    if (_updateOutputBuilder.Length > 0 && _options.HostKind == TerminalHostKind.Inline)
+                    {
+                        _inlineHost?.PrepareForUserUpdate();
+                        _terminal.WriteAtomic((TextWriter w) => w.Write(_updateOutputBuilder.UnsafeAsSpan()));
+                        _updateOutputBuilder.Clear();
+                        _renderRequested = true;
+                    }
+
                     if (!keepGoing)
                     {
                         _renderRequested = true;
@@ -303,9 +314,6 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
                         _cts.Cancel();
                         break;
                     }
-
-                    // Updates may write to the terminal above the live region; always render after an update.
-                    _renderRequested = true;
                 }
 
                 if (_renderRequested)
