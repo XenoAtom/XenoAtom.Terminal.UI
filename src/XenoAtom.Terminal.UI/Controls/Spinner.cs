@@ -87,15 +87,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
     protected override Size MeasureOverride(Size availableSize)
     {
         var style = GetEnvironmentValue(SpinnerStyle.Key);
-        var frameWidth = 1;
-        var frames = style.Frames;
-        if (frames.Length > 0)
-        {
-            for (var i = 0; i < frames.Length; i++)
-            {
-                frameWidth = Math.Max(frameWidth, TerminalTextUtility.GetRuneWidth(frames[i]));
-            }
-        }
+        var frameWidth = Math.Max(1, style.FrameWidth);
 
         var label = Label;
         if (string.IsNullOrEmpty(label))
@@ -128,16 +120,22 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
             labelStyle |= TextStyle.Dim;
         }
 
-        var frame = IsActive ? style.GetFrame(_frameIndex) : style.GetFrame(0);
-        buffer.SetCell(rect.X, rect.Y, frame, spinnerStyle);
+        var frameWidth = Math.Max(1, style.FrameWidth);
+        var frameText = IsActive ? style.GetFrame(_frameIndex) : style.GetFrame(0);
+        var span = frameText.AsSpan();
+        if (TerminalTextUtility.TryGetIndexAtCell(span, Math.Min(frameWidth, rect.Width), out var frameEndIndex))
+        {
+            span = span[..frameEndIndex];
+        }
+
+        buffer.WriteText(rect.X, rect.Y, span, spinnerStyle);
 
         var label = Label;
-        if (string.IsNullOrEmpty(label) || rect.Width <= 1)
+        if (string.IsNullOrEmpty(label) || rect.Width <= frameWidth)
         {
             return;
         }
 
-        var frameWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(frame));
         var labelX = rect.X + frameWidth + 1;
         if (labelX >= rect.X + rect.Width)
         {
@@ -146,7 +144,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
 
         buffer.SetCell(rect.X + frameWidth, rect.Y, new Rune(' '), labelStyle);
 
-        var span = label.AsSpan();
+        span = label.AsSpan();
         var maxCells = rect.Right - labelX;
         if (TerminalTextUtility.TryGetIndexAtCell(span, maxCells, out var endIndex))
         {

@@ -20,11 +20,8 @@ public sealed class SpinnerTests
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
         var spinner = new Spinner();
-        spinner.SetEnvironmentValue(SpinnerStyle.Key, new SpinnerStyle
+        spinner.SetEnvironmentValue(SpinnerStyle.Key, new SpinnerStyle("Test", TimeSpan.FromMilliseconds(10), "a", "b")
         {
-            Name = "Test",
-            Interval = TimeSpan.FromMilliseconds(10),
-            Frames = [new Rune('a'), new Rune('b')],
             TextStyle = TextStyle.None,
         });
 
@@ -39,5 +36,19 @@ public sealed class SpinnerTests
         var outText = backend.GetOutText();
         StringAssert.Contains(outText, "a");
         StringAssert.Contains(outText, "b");
+    }
+
+    [TestMethod]
+    public void SpinnerStyle_Rejects_Different_FrameWidths()
+    {
+        try
+        {
+            _ = new SpinnerStyle("Bad", TimeSpan.FromMilliseconds(10), "a", "ab");
+            Assert.Fail("Expected an ArgumentException.");
+        }
+        catch (ArgumentException)
+        {
+            // Expected.
+        }
     }
 }

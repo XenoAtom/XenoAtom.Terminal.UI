@@ -2,8 +2,8 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using System.Text;
 using XenoAtom.Ansi;
+using XenoAtom.Terminal.UI.Rendering;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
@@ -13,25 +13,60 @@ public sealed record SpinnerStyle
 
     public static EnvironmentKey<SpinnerStyle> Key { get; } = new("SpinnerStyle", Default);
 
-    public string Name { get; init; } = "Custom";
+    private readonly string[] _frames;
 
-    public TimeSpan Interval { get; init; } = TimeSpan.FromMilliseconds(80);
+    public SpinnerStyle(string name, TimeSpan interval, params string[] frames)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(name);
+        if (interval < TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(interval));
+        }
 
-    public Rune[] Frames { get; init; } = [new Rune('|'), new Rune('/'), new Rune('-'), new Rune('\\')];
+        if (frames is null || frames.Length == 0)
+        {
+            throw new ArgumentException("Spinner frames cannot be null or empty.", nameof(frames));
+        }
 
-    public int FrameCount => Frames.Length;
+        _frames = frames;
+
+        Name = name;
+        Interval = interval;
+
+        var width = TerminalTextUtility.GetWidth(frames[0].AsSpan());
+        if (width <= 0)
+        {
+            throw new ArgumentException("Spinner frames must have a width > 0.", nameof(frames));
+        }
+
+        for (var i = 1; i < frames.Length; i++)
+        {
+            if (TerminalTextUtility.GetWidth(frames[i].AsSpan()) != width)
+            {
+                throw new ArgumentException("All spinner frames must have the same cell width.", nameof(frames));
+            }
+        }
+
+        FrameWidth = width;
+    }
+
+    public string Name { get; }
+
+    public TimeSpan Interval { get; }
+
+    public int FrameWidth { get; }
+
+    public ReadOnlySpan<string> Frames => _frames;
+
+    public int FrameCount => _frames.Length;
 
     public TextStyle TextStyle { get; init; } = TextStyle.Bold;
 
     public AnsiColor? Foreground { get; init; }
 
-    public Rune GetFrame(int frameIndex)
+    public string GetFrame(int frameIndex)
     {
-        var frames = Frames;
-        if (frames.Length == 0)
-        {
-            return new Rune(' ');
-        }
+        var frames = _frames;
 
         var idx = frameIndex % frames.Length;
         if (idx < 0)
@@ -68,4 +103,3 @@ public sealed record SpinnerStyle
         return style;
     }
 }
-
