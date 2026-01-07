@@ -48,10 +48,42 @@ public sealed partial class HStack : Panel
 
         var x = finalRect.X;
         var spacing = Math.Max(0, Spacing);
+        var childCount = Children.Count;
+        if (childCount == 0)
+        {
+            return;
+        }
+
+        var totalSpacing = spacing * Math.Max(0, childCount - 1);
+        var fixedWidth = 0;
+        var stretchCount = 0;
+        for (var i = 0; i < childCount; i++)
+        {
+            var child = Children[i];
+            if (child.HorizontalAlignment == HorizontalAlignment.Stretch)
+            {
+                stretchCount++;
+            }
+            else
+            {
+                fixedWidth += child.DesiredSize.Width;
+            }
+        }
+
+        var remaining = Math.Max(0, finalRect.Width - fixedWidth - totalSpacing);
+        var stretchWidth = stretchCount > 0 ? remaining / stretchCount : 0;
+        var stretchRemainder = stretchCount > 0 ? remaining % stretchCount : 0;
+        var stretchIndex = 0;
 
         foreach (var child in Children)
         {
             var w = child.DesiredSize.Width;
+            if (child.HorizontalAlignment == HorizontalAlignment.Stretch)
+            {
+                w = stretchWidth + (stretchIndex < stretchRemainder ? 1 : 0);
+                stretchIndex++;
+            }
+
             child.Arrange(new Rectangle(x, finalRect.Y, w, finalRect.Height));
             x += w + spacing;
         }

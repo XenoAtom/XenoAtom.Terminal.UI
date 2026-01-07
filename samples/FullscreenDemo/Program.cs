@@ -48,6 +48,109 @@ var overlay = new ComputedVisual(() =>
     return new ZStack(new Backdrop(), dialog);
 });
 
+var progressBars = new VStack(
+    new TextBlock("Progress variants:"),
+    new HStack(
+            new ProgressBar()
+                .Label("Thin")
+                .Value(() => progressState.Value)
+                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                .With(p => p.SetEnvironmentValue(ProgressBarStyle.Key, ProgressBarStyle.Thin)),
+            new ProgressBar()
+                .Label("Segmented")
+                .Value(() => progressState.Value)
+                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                .With(p => p.SetEnvironmentValue(ProgressBarStyle.Key, ProgressBarStyle.Segmented)))
+        .Spacing(2)
+        .HorizontalAlignment(HorizontalAlignment.Stretch),
+    new HStack(
+            new ProgressBar()
+                .Label("Shaded")
+                .Value(() => progressState.Value)
+                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                .With(p => p.SetEnvironmentValue(ProgressBarStyle.Key, ProgressBarStyle.Shaded)),
+            new ProgressBar()
+                .Label("Bracketed")
+                .Value(() => progressState.Value)
+                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                .With(p => p.SetEnvironmentValue(ProgressBarStyle.Key, ProgressBarStyle.Bracketed)))
+        .Spacing(2)
+        .HorizontalAlignment(HorizontalAlignment.Stretch))
+    .Spacing(0)
+    .HorizontalAlignment(HorizontalAlignment.Stretch);
+
+var leftColumn = new VStack(
+        new TextBox()
+            .Text("Type here (Ctrl+A, Shift+Arrows, Ctrl+Left/Right)")
+            .HorizontalAlignment(HorizontalAlignment.Stretch),
+        new CheckBox().Text("Accept terms"),
+        showModal,
+        new Table().With(t =>
+        {
+            t.HeaderCells = ["Task", "Status"];
+            t.RowCells =
+            [
+                ["Download", "Running"],
+                ["Render", "OK"],
+            ];
+        }),
+        progressBars)
+    .Spacing(0)
+    .HorizontalAlignment(HorizontalAlignment.Stretch)
+    .VerticalAlignment(VerticalAlignment.Stretch);
+
+var rightColumn = new VStack(
+        new Border()
+            .Padding(new Thickness(0))
+            .MinHeight(4)
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .Content(
+                new TextBlock()
+                    .Text("Bottom aligned (Center + Bottom)")
+                    .HorizontalAlignment(HorizontalAlignment.Center)
+                    .VerticalAlignment(VerticalAlignment.Bottom)),
+        new HStack(
+                new TextBlock()
+                    .Text("This is a very long piece of text that will be trimmed.")
+                    .Trimming(TextTrimming.EndEllipsis)
+                    .MaxWidth(28),
+                new TextBlock()
+                    .Text("This is a very long piece of text that will be trimmed.")
+                    .Trimming(TextTrimming.StartEllipsis)
+                    .MaxWidth(28))
+            .Spacing(2),
+        new Group()
+            .TopLeftText("Pick one")
+            .TopRightText("wheel")
+            .Padding(Thickness.Zero)
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .Content(new ListBox()
+                .Items(new[] { "First", "Second", "Third", "Fourth", "Fifth", "Sixth" })
+                .Height(5)),
+        new Group()
+            .TopLeftText("ScrollViewer")
+            .TopRightText("focus + wheel")
+            .Padding(Thickness.Zero)
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .Content(new ScrollViewer()
+                .Height(4)
+                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                .Content(new VStack().With(v =>
+                {
+                    for (var i = 0; i < 12; i++)
+                    {
+                        v.Add($"Log line {i}");
+                    }
+                }))),
+        new Button()
+            .Text("Click me (mouse or Enter)")
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .With(b => b.Click += (_, _) => statusState.Value = "click received"),
+        new TextBlock().Text(() => $"Status: {statusState.Value}"))
+    .Spacing(0)
+    .HorizontalAlignment(HorizontalAlignment.Stretch)
+    .VerticalAlignment(VerticalAlignment.Stretch);
+
 var app = new TerminalApp(
     new WindowLayer()
         .Content(
@@ -57,128 +160,13 @@ var app = new TerminalApp(
                 .Content(
                     new VStack(
                         "Fullscreen demo: Tab focus, mouse click, wheel scroll, F12 debug, Esc quit",
-                        new TextBox()
-                            .Text("Type here (Ctrl+A, Shift+Arrows, Ctrl+Left/Right)")
-                            .HorizontalAlignment(HorizontalAlignment.Stretch),
-                        new CheckBox().Text("Accept terms"),
-                        showModal,
-                        new Group()
-                            .TopLeftText("Layout + Text")
-                            .TopRightText("alignment / margin / trimming")
-                            .Padding(new Thickness(1))
+                        new HStack(leftColumn, rightColumn)
+                            .Spacing(3)
                             .HorizontalAlignment(HorizontalAlignment.Stretch)
-                            .Content(
-                                new VStack(
-                                    new Border()
-                                        .Padding(new Thickness(1))
-                                        .MinHeight(5)
-                                        .HorizontalAlignment(HorizontalAlignment.Stretch)
-                                        .Content(
-                                            new TextBlock()
-                                                .Text("Centered in a taller container (VerticalAlignment.Center)")
-                                                .HorizontalAlignment(HorizontalAlignment.Center)
-                                                .VerticalAlignment(VerticalAlignment.Center)),
-                                    new HStack(
-                                            new TextBlock("Trim end:").Margin(new Thickness(0, 0, 1, 0)),
-                                            new TextBlock()
-                                                .Text("This is a very long piece of text that will be trimmed.")
-                                                .Trimming(TextTrimming.EndEllipsis)
-                                                .MaxWidth(24),
-                                            new TextBlock("Trim start:").Margin(new Thickness(2, 0, 1, 0)),
-                                            new TextBlock()
-                                                .Text("This is a very long piece of text that will be trimmed.")
-                                                .Trimming(TextTrimming.StartEllipsis)
-                                                .MaxWidth(24))
-                                        .Spacing(1),
-                                    new HStack(
-                                            new Button()
-                                                .Text("Left")
-                                                .HorizontalAlignment(HorizontalAlignment.Left)
-                                                .With(b => b.Click += (_, _) => statusState.Value = "left clicked"),
-                                            new Button()
-                                                .Text("Center")
-                                                .HorizontalAlignment(HorizontalAlignment.Center)
-                                                .With(b => b.Click += (_, _) => statusState.Value = "center clicked"),
-                                            new Button()
-                                                .Text("Right")
-                                                .HorizontalAlignment(HorizontalAlignment.Right)
-                                                .With(b => b.Click += (_, _) => statusState.Value = "right clicked"))
-                                        .Spacing(2),
-                                    new HStack(
-                                            new TextBlock("Amount:").Margin(new Thickness(0, 0, 1, 0)),
-                                            new TextBox()
-                                                .Text("12345")
-                                                .Placeholder("0")
-                                                .TextAlignment(TextAlignment.Right)
-                                                .MaxWidth(12))
-                                        .Spacing(1))
-                                .Spacing(1)),
-                        new Table().With(t =>
-                        {
-                            t.HeaderCells = ["Task", "Status"];
-                            t.RowCells =
-                            [
-                                ["Download", "Running"],
-                                ["Render", "OK"],
-                                ["Tests", "OK"]
-                            ];
-                        }),
-                        new Group()
-                            .TopLeftText("Pick one")
-                            .TopRightText("mouse wheel supported")
-                            .Padding(new Thickness(1))
-                            .HorizontalAlignment(HorizontalAlignment.Stretch)
-                            .Content(new ListBox()
-                                .Items(new[] { "First", "Second", "Third", "Fourth", "Fifth", "Sixth" })
-                                .Height(6)),
-                        new Group()
-                            .TopLeftText("ScrollViewer")
-                            .TopRightText("focus + wheel")
-                            .Padding(new Thickness(1))
-                            .HorizontalAlignment(HorizontalAlignment.Stretch)
-                            .Content(new ScrollViewer()
-                                .Height(5)
-                                .HorizontalAlignment(HorizontalAlignment.Stretch)
-                                .Content(new VStack().With(v =>
-                                {
-                                    for (var i = 0; i < 20; i++)
-                                    {
-                                        v.Add($"Log line {i}");
-                                    }
-                                }))),
-                        new Group()
-                            .TopLeftText("Progress")
-                            .TopRightText("variants")
-                            .Padding(new Thickness(1))
-                            .HorizontalAlignment(HorizontalAlignment.Stretch)
-                            .Content(
-                                new VStack(
-                                        new ProgressBar()
-                                            .Label("Thin")
-                                            .Value(() => progressState.Value)
-                                            .HorizontalAlignment(HorizontalAlignment.Stretch)
-                                            .With(p => p.SetEnvironmentValue(ProgressBarStyle.Key, ProgressBarStyle.Thin)),
-                                        new ProgressBar()
-                                            .Label("Segmented")
-                                            .Value(() => progressState.Value)
-                                            .HorizontalAlignment(HorizontalAlignment.Stretch)
-                                            .With(p => p.SetEnvironmentValue(ProgressBarStyle.Key, ProgressBarStyle.Segmented)),
-                                        new ProgressBar()
-                                            .Label("Shaded")
-                                            .Value(() => progressState.Value)
-                                            .HorizontalAlignment(HorizontalAlignment.Stretch)
-                                            .With(p => p.SetEnvironmentValue(ProgressBarStyle.Key, ProgressBarStyle.Shaded)),
-                                        new ProgressBar()
-                                            .Label("Bracketed")
-                                            .Value(() => progressState.Value)
-                                            .HorizontalAlignment(HorizontalAlignment.Stretch)
-                                            .With(p => p.SetEnvironmentValue(ProgressBarStyle.Key, ProgressBarStyle.Bracketed)))
-                                    .Spacing(1)),
-                        new Button()
-                            .Text("Click me (mouse or Enter)")
-                            .HorizontalAlignment(HorizontalAlignment.Stretch)
-                            .With(b => b.Click += (_, _) => statusState.Value = "click received"),
-                        new TextBlock().Text(() => $"Status: {statusState.Value}")).Spacing(1))
+                            .VerticalAlignment(VerticalAlignment.Stretch))
+                    .Spacing(1)
+                    .HorizontalAlignment(HorizontalAlignment.Stretch)
+                    .VerticalAlignment(VerticalAlignment.Stretch))
                 .Bottom(
                     new StatusBar()
                         .LeftText("Tab focus | Mouse click | Wheel scroll | F12 debug | Esc quit")
