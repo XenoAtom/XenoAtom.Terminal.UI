@@ -451,6 +451,8 @@ public sealed partial class ScrollViewer : Visual
         public ContentViewportHost(ScrollViewer owner)
         {
             _owner = owner;
+            HorizontalAlignment = HorizontalAlignment.Stretch;
+            VerticalAlignment = VerticalAlignment.Stretch;
         }
 
         public void SetContent(Visual child)
@@ -497,6 +499,8 @@ public sealed partial class ScrollViewer : Visual
         protected ScrollBarVisualBase(ScrollViewer owner)
         {
             Owner = owner;
+            HorizontalAlignment = HorizontalAlignment.Stretch;
+            VerticalAlignment = VerticalAlignment.Stretch;
         }
 
         protected (CellStyle Track, CellStyle Thumb, ScrollBarGlyphs Glyphs) GetStyles()
