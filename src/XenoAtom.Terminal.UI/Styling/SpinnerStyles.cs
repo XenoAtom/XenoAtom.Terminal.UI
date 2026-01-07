@@ -142,17 +142,41 @@ public static class SpinnerStyles
 
     public static SpinnerStyle DotsBounce2 { get; } = S("DotsBounce2", 80, "⠂  ", " ⠂ ", "  ⠂", " ⠂ ");
 
+    public static SpinnerStyle DotsEllipsis { get; } = S("DotsEllipsis", 120, ".  ", ".. ", "...");
+
+    public static SpinnerStyle DotsEllipsis2 { get; } = S("DotsEllipsis2", 120, "   ", ".  ", ".. ", "...");
+
     public static SpinnerStyle DotSlide { get; } = S("DotSlide", 70, ".    ", " .   ", "  .  ", "   . ", "    .", "   . ", "  .  ", " .   ");
 
     public static SpinnerStyle DotSlide2 { get; } = S("DotSlide2", 70, "●    ", " ●   ", "  ●  ", "   ● ", "    ●", "   ● ", "  ●  ", " ●   ");
 
+    public static SpinnerStyle DotCrawl { get; } = S("DotCrawl", 70, "o    ", "oo   ", "ooo  ", "oooo ", "ooooo", " oooo", "  ooo", "   oo", "    o");
+
     public static SpinnerStyle ArrowSlide { get; } = S("ArrowSlide", 70, "<    ", " <   ", "  <  ", "   < ", "    <", "   < ", "  <  ", " <   ");
+
+    public static SpinnerStyle ArrowSlide2 { get; } = S("ArrowSlide2", 70, ">    ", " >   ", "  >  ", "   > ", "    >", "   > ", "  >  ", " >   ");
+
+    public static SpinnerStyle Chevron { get; } = S("Chevron", 80, "<<<< ", " <<< ", "  << ", "   < ", "    <", "   < ", "  << ", " <<< ");
 
     public static SpinnerStyle BoxSlide { get; } = S("BoxSlide", 80, "[■    ]", "[ ■   ]", "[  ■  ]", "[   ■ ]", "[    ■]", "[   ■ ]", "[  ■  ]", "[ ■   ]");
 
+    public static SpinnerStyle BoxSlide2 { get; } = S("BoxSlide2", 80, "(■     )", "( ■    )", "(  ■   )", "(   ■  )", "(    ■ )", "(     ■)");
+
+    public static SpinnerStyle BouncingBar { get; } = S("BouncingBar", 90, "⟦█     ⟧", "⟦ █    ⟧", "⟦  █   ⟧", "⟦   █  ⟧", "⟦    █ ⟧", "⟦     █⟧", "⟦    █ ⟧", "⟦   █  ⟧", "⟦  █   ⟧", "⟦ █    ⟧");
+
+    public static SpinnerStyle BouncingBar2 { get; } = S("BouncingBar2", 90, "⟦▄     ⟧", "⟦ ▄    ⟧", "⟦  ▄   ⟧", "⟦   ▄  ⟧", "⟦    ▄ ⟧", "⟦     ▄⟧", "⟦    ▄ ⟧", "⟦   ▄  ⟧", "⟦  ▄   ⟧", "⟦ ▄    ⟧");
+
     public static SpinnerStyle BouncingBall { get; } = S("BouncingBall", 80, "(●     )", "( ●    )", "(  ●   )", "(   ●  )", "(    ● )", "(     ●)");
 
+    public static SpinnerStyle Orbit { get; } = S("Orbit", 90, "(●     )", "(○●    )", "( ○●   )", "(  ○●  )", "(   ○● )", "(    ○●)", "(     ●)", "(    ●○)", "(   ●○ )", "(  ●○  )", "( ●○   )", "(●○    )");
+
     public static SpinnerStyle Runner { get; } = S("Runner", 90, "🏃    ", " 🏃   ", "  🏃  ", "   🏃 ", "    🏃", "   🏃 ", "  🏃  ", " 🏃   ");
+
+    public static SpinnerStyle Rocket { get; } = S("Rocket", 90, "🚀    ", " 🚀   ", "  🚀  ", "   🚀 ", "    🚀", "   🚀 ", "  🚀  ", " 🚀   ");
+
+    public static SpinnerStyle Fish { get; } = S("Fish", 90, "🐟    ", " 🐟   ", "  🐟  ", "   🐟 ", "    🐟", "   🐟 ", "  🐟  ", " 🐟   ");
+
+    public static SpinnerStyle Turtle { get; } = S("Turtle", 120, "🐢    ", " 🐢   ", "  🐢  ", "   🐢 ", "    🐢", "   🐢 ", "  🐢  ", " 🐢   ");
 
     public static SpinnerStyle Earth { get; } = S("Earth", 120, "🌍", "🌎", "🌏");
 
@@ -163,6 +187,24 @@ public static class SpinnerStyles
     public static SpinnerStyle Weather { get; } = S("Weather", 160, "SUN", "CLD", "RAN", "STO", "SNW", "WND");
 
     public static SpinnerStyle Sparkle { get; } = S("Sparkle", 120, "✨  ", " ✨ ", "  ✨", " ✨ ");
+
+    public static SpinnerStyle Wave { get; } = S("Wave", 70,
+        "\u2581\u2582\u2583\u2584\u2585\u2586\u2587\u2588",
+        "\u2582\u2583\u2584\u2585\u2586\u2587\u2588\u2587",
+        "\u2583\u2584\u2585\u2586\u2587\u2588\u2587\u2586",
+        "\u2584\u2585\u2586\u2587\u2588\u2587\u2586\u2585",
+        "\u2585\u2586\u2587\u2588\u2587\u2586\u2585\u2584",
+        "\u2586\u2587\u2588\u2587\u2586\u2585\u2584\u2583",
+        "\u2587\u2588\u2587\u2586\u2585\u2584\u2583\u2582",
+        "\u2588\u2587\u2586\u2585\u2584\u2583\u2582\u2581");
+
+    public static SpinnerStyle BinaryDance { get; } = S("BinaryDance", 90,
+        "010010",
+        "001001",
+        "100100",
+        "010010",
+        "001001",
+        "100100");
 
     public static IReadOnlyList<SpinnerStyle> All { get; } = new[]
     {
@@ -232,16 +274,30 @@ public static class SpinnerStyles
         Hearts,
         DotsBounce,
         DotsBounce2,
+        DotsEllipsis,
+        DotsEllipsis2,
         DotSlide,
         DotSlide2,
+        DotCrawl,
         ArrowSlide,
+        ArrowSlide2,
+        Chevron,
         BoxSlide,
+        BoxSlide2,
+        BouncingBar,
+        BouncingBar2,
         BouncingBall,
+        Orbit,
         Runner,
+        Rocket,
+        Fish,
+        Turtle,
         Earth,
         MoonEmoji,
         Clock,
         Weather,
         Sparkle,
+        Wave,
+        BinaryDance,
     };
 }
