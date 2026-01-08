@@ -36,7 +36,7 @@ var overlay = new ComputedVisual(() =>
         new TextBlock().Text("This is a wrapped paragraph demonstrating document-style text rendering.").Wrap(true),
         new Button()
             .Text("Close")
-            .With(b => b.Click += (_, _) => showModal.IsChecked = false)).Spacing(1);
+            .Click(() => showModal.IsChecked = false)).Spacing(1);
 
     var dialog = new Dialog()
         .Title("Modal dialog")
@@ -189,7 +189,7 @@ var rightColumn = new VStack(
         new Button()
             .Text("Click me (mouse or Enter)")
             .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .With(b => b.Click += (_, _) => statusState.Value = "click received"),
+            .Click(() => statusState.Value = "click received"),
         new TextBlock().Text(() => $"Status: {statusState.Value}"))
     .Spacing(0)
     .HorizontalAlignment(HorizontalAlignment.Stretch)

@@ -29,7 +29,7 @@ var content = new VStack(
         .Value(progressState),
     new Button()
         .Text("Set status")
-        .With(b => b.Click += (_, _) => status.Value = "click received"),
+        .Click(() => status.Value = "click received"),
     new TextBlock().Text(() => $"Status: {status.Value}")).Spacing(1);
 
 var root = new VStack(

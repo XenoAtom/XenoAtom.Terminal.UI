@@ -120,7 +120,7 @@ public sealed class TerminalAppTests
 
         var button = new Button("OK");
         var clicked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        button.Click += (_, _) => clicked.TrySetResult();
+        button.Click((_, _) => clicked.TrySetResult());
 
         var root = new VStack { button };
 
@@ -144,7 +144,7 @@ public sealed class TerminalAppTests
 
         var button = new Button("OK");
         var clicked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        button.Click += (_, _) => clicked.TrySetResult();
+        button.Click((_, _) => clicked.TrySetResult());
 
         var root = new ZStack { button, new ComputedVisual(static () => null) };
 
@@ -169,7 +169,7 @@ public sealed class TerminalAppTests
 
         var button = new Button("OK");
         var clicked = false;
-        button.Click += (_, _) => clicked = true;
+        button.Click((_, _) => clicked = true);
 
         var root = new VStack { button };
 
@@ -306,7 +306,7 @@ public sealed class TerminalAppTests
 
         var clicked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var button = new Button("Click");
-        button.Click += (_, _) => clicked.TrySetResult();
+        button.Click((_, _) => clicked.TrySetResult());
 
         var content = new VStack();
         content.Add(button);
@@ -571,7 +571,7 @@ public sealed class TerminalAppTests
 
         var button = new Button("OK");
         var clicked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        button.Click += (_, _) => clicked.TrySetResult();
+        button.Click((_, _) => clicked.TrySetResult());
 
         var root = new VStack();
         root.Add(button);

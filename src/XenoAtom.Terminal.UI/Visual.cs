@@ -551,6 +551,9 @@ public abstract partial class Visual : DispatcherObject
             return;
         }
 
+        _handlers = null;
+        _keyBindings = null;
+
         _initializersDirty = false;
         _measureDirty = true;
         _arrangeDirty = true;
