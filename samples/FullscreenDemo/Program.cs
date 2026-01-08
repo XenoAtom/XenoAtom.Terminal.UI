@@ -12,7 +12,7 @@ var progressState = new State<double>(0.0);
 
 var showDialog = new Button()
     .Text("Show modal")
-    .HorizontalAlignment(HorizontalAlignment.Stretch)
+    .HorizontalAlignment(HorizontalAlignment.Left)
     .Click(() =>
     {
         Dialog? dialog = null;
@@ -117,19 +117,21 @@ var rightColumn = new VStack(
                     .Text("Bottom aligned (Center + Bottom)")
                     .HorizontalAlignment(HorizontalAlignment.Center)
                     .VerticalAlignment(VerticalAlignment.Bottom)),
-        new TabControl()
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .With(tabs =>
+        new TabControl(new[]
             {
-                tabs.AddTab(
+                new TabPage(
                     new HStack(
-                        new Spinner().Style(SpinnerStyles.Dots3),
-                        new TextBlock("Status"),
-                        new TextBlock().Text(() => $"({statusState.Value})").Trimming(TextTrimming.EndEllipsis).MaxWidth(12))
+                            new Spinner().Style(SpinnerStyles.Dots3),
+                            new TextBlock("Status"),
+                            new TextBlock()
+                                .Text(() => statusState.Value)
+                                .Trimming(TextTrimming.EndEllipsis)
+                                .MaxWidth(12))
                         .Spacing(1),
                     new VStack(
                             new TextBlock("This is the Status tab."),
-                            new TextBlock().Text(() => $"Current status: {statusState.Value}"),
+                            new TextBlock()
+                                .Text(() => $"Current status: {statusState.Value}"),
                             new TextBlock("Spinners:"),
                             new VStack(
                                     new HStack(
@@ -145,13 +147,12 @@ var rightColumn = new VStack(
                                             new Spinner().Style(SpinnerStyles.DotsEllipsis2))
                                         .Spacing(2))
                                 .Spacing(0))
-                        .Spacing(0));
-
-                tabs.AddTab(
+                        .Spacing(0)),
+                new TabPage(
                     new HStack(
-                        new Spinner().Style(SpinnerStyles.Dots2),
-                        new TextBlock("Logs"),
-                        new TextBlock().Text(() => $"({(int)(progressState.Value * 100)}%)"))
+                            new Spinner().Style(SpinnerStyles.Dots2),
+                            new TextBlock("Logs"),
+                            new TextBlock().Text(() => $"({(int)(progressState.Value * 100)}%)"))
                         .Spacing(1),
                     new ScrollViewer()
                         .Height(4)
@@ -162,8 +163,9 @@ var rightColumn = new VStack(
                             {
                                 v.Add($"Log line {i}");
                             }
-                        })));
-            }),
+                        }))),
+            })
+            .HorizontalAlignment(HorizontalAlignment.Stretch),
         new HStack(
                 new TextBlock()
                     .Text("This is a very long piece of text that will be trimmed.")

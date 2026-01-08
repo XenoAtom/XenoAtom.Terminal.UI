@@ -751,8 +751,11 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
-    public void TabControl_DoesNotDuplicateTabs_When_SelectedIndex_Changes()
+    public async Task TabControl_DoesNotDuplicateTabs_When_SelectedIndex_Changes()
     {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(80, 25));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
         var tabControl = new TabControl()
             .With(tabs =>
             {
@@ -760,16 +763,27 @@ public sealed class TerminalAppTests
                 tabs.AddTab(new TextBlock("Two"), new TextBlock("B"));
             });
 
-        tabControl.Measure(new Size(80, 25));
-        tabControl.Arrange(new Rectangle(0, 0, 80, 25));
+        var root = new VStack(tabControl);
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunInBackgroundAsync();
 
-        Assert.AreEqual(2, tabControl.Tabs.Count);
+        try
+        {
+            await Task.Delay(20);
 
-        tabControl.SelectedIndex = 1;
-        tabControl.Measure(new Size(80, 25));
-        tabControl.Arrange(new Rectangle(0, 0, 80, 25));
+            await app.Dispatcher.InvokeAsync(() => Assert.AreEqual(2, tabControl.Tabs.Count));
 
-        Assert.AreEqual(2, tabControl.Tabs.Count, "Tabs should not be re-added when SelectedIndex changes.");
+            await app.Dispatcher.InvokeAsync(() => tabControl.SelectedIndex = 1);
+            await Task.Delay(50);
+
+            await app.Dispatcher.InvokeAsync(() =>
+                Assert.AreEqual(2, tabControl.Tabs.Count, "Tabs should not be re-added when SelectedIndex changes."));
+        }
+        finally
+        {
+            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+            await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+        }
     }
 
     [TestMethod]

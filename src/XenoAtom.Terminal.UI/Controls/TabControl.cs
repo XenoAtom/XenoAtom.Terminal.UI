@@ -23,6 +23,15 @@ public sealed partial class TabControl : Visual
         this.ShowBorder(true);
     }
 
+    public TabControl(params TabPage[] tabs) : this()
+    {
+        ArgumentNullException.ThrowIfNull(tabs);
+        for (var i = 0; i < tabs.Length; i++)
+        {
+            AddTab(tabs[i]);
+        }
+    }
+
     [Bindable]
     public partial bool ShowBorder { get; set; }
 
@@ -70,7 +79,8 @@ public sealed partial class TabControl : Visual
         AttachChild(header);
         AttachChild(content);
 
-        content.IsVisible = index == SelectedIndex;
+        // Avoid capturing SelectedIndex as an initializer dependency when AddTab is called from an initializer.
+        content.IsVisible = index == _selectedIndex;
         if (index == 0)
         {
             UpdateTabVisibility();
@@ -370,7 +380,7 @@ public sealed partial class TabControl : Visual
 
     private void UpdateTabVisibility()
     {
-        var selected = SelectedIndex;
+        var selected = _selectedIndex;
         for (var i = 0; i < _tabs.Count; i++)
         {
             _tabs[i].Content.IsVisible = i == selected;
