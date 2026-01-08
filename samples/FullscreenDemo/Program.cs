@@ -87,10 +87,21 @@ var leftColumn = new VStack(
             .HorizontalAlignment(HorizontalAlignment.Stretch),
         new CheckBox().Text("Accept terms"),
         showDialog,
-        new Table()
-            .Headers("Task", "Status")
-            .AddRow("Download", "Running")
-            .AddRow("Render", "OK"),
+        new HStack(
+                new Table()
+                    .Headers("Task", "Status")
+                    .AddRow("Download", "Running")
+                    .AddRow("Render", "OK")
+                    .Style(TableStyle.Minimal)
+                    .HorizontalAlignment(HorizontalAlignment.Stretch),
+                new Table()
+                    .Headers("Task", "Status")
+                    .AddRow("Download", "Running")
+                    .AddRow("Render", "OK")
+                    .Style(TableStyle.DoubleGrid)
+                    .HorizontalAlignment(HorizontalAlignment.Stretch))
+            .Spacing(2)
+            .HorizontalAlignment(HorizontalAlignment.Stretch),
         progressBars)
     .Spacing(0)
     .HorizontalAlignment(HorizontalAlignment.Stretch)

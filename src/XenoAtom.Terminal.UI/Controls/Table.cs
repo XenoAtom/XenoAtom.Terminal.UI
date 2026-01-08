@@ -70,16 +70,7 @@ public sealed partial class Table : Visual
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        var width = Math.Max(1, availableSize.Width);
-
-        var columns = 0;
-        columns = Math.Max(columns, HeaderCells.Count);
-
-        for (var i = 0; i < RowCells.Count; i++)
-        {
-            columns = Math.Max(columns, RowCells[i].Count);
-        }
-
+        var columns = GetColumnCount();
         if (columns == 0)
         {
             _columnWidths = Array.Empty<int>();
@@ -93,7 +84,7 @@ public sealed partial class Table : Visual
             if (c < HeaderCells.Count)
             {
                 var cell = HeaderCells[c];
-                cell.Measure(new Size(int.MaxValue / 4, 1));
+                cell.Measure(new Size(int.MaxValue / 4, int.MaxValue / 4));
                 widths[c] = Math.Max(widths[c], cell.DesiredSize.Width);
             }
         }
@@ -109,45 +100,32 @@ public sealed partial class Table : Visual
                 }
 
                 var cell = row[c];
-                cell.Measure(new Size(int.MaxValue / 4, 1));
+                cell.Measure(new Size(int.MaxValue / 4, int.MaxValue / 4));
                 widths[c] = Math.Max(widths[c], cell.DesiredSize.Width);
             }
         }
 
-        // Full box:
-        // For N columns: N content areas with 2 padding spaces, plus N+1 vertical separators.
-        // Also includes an outer border and optional header separator row.
-        var required = 1 + columns + (columns * 2);
-        for (var c = 0; c < columns; c++)
-        {
-            required += widths[c];
-        }
-        required = Math.Min(width, Math.Max(0, required));
+        var tableStyle = Get<TableStyle>();
+        var (showOuterBorder, showVerticalLines, showRowSeparators, showHeaderSeparator, padding) = ResolveOptions(tableStyle);
 
-        if (required > width)
-        {
-            var availableForText = Math.Max(0, width - (1 + columns + (columns * 2)));
-            var perColumn = Math.Max(1, availableForText / columns);
-            for (var c = 0; c < columns; c++)
-            {
-                widths[c] = Math.Min(widths[c], perColumn);
-            }
-        }
+        FitColumnWidthsToWidth(widths, availableSize.Width, padding.Horizontal, showOuterBorder, showVerticalLines, expandToAvailable: false);
 
         _columnWidths = widths;
 
-        var height = 2; // top + bottom
-        if (HeaderCells.Count > 0)
-        {
-            height += 1;
-            if (ShowHeaderSeparator)
-            {
-                height += 1;
-            }
-        }
-        height += RowCells.Count;
+        var desiredWidth = ComputeRequiredWidth(widths, padding.Horizontal, showOuterBorder, showVerticalLines);
 
-        return new Size(width, Math.Min(availableSize.Height, height));
+        var rowHeight = GetRowHeight(padding);
+        var desiredHeight = ComputeRequiredHeight(
+            headerCount: HeaderCells.Count,
+            rowCount: RowCells.Count,
+            rowHeight,
+            showOuterBorder,
+            showHeaderSeparator,
+            showRowSeparators);
+
+        return new Size(
+            Math.Min(availableSize.Width, desiredWidth),
+            Math.Min(availableSize.Height, desiredHeight));
     }
 
     protected override void ArrangeOverride(Rectangle finalRect)
@@ -160,22 +138,37 @@ public sealed partial class Table : Visual
             return;
         }
 
-        var y = finalRect.Y + 1;
+        var tableStyle = Get<TableStyle>();
+        var (showOuterBorder, showVerticalLines, showRowSeparators, showHeaderSeparator, padding) = ResolveOptions(tableStyle);
+
+        FitColumnWidthsToWidth(widths, finalRect.Width, padding.Horizontal, showOuterBorder, showVerticalLines, expandToAvailable: true);
+
+        var columns = widths.Length;
+        var rowHeight = GetRowHeight(padding);
+
+        var xStart = finalRect.X + (showOuterBorder ? 1 : 0);
+        var y = finalRect.Y + (showOuterBorder ? 1 : 0);
 
         if (HeaderCells.Count > 0)
         {
-            ArrangeRow(finalRect, y, widths, HeaderCells);
-            y++;
+            ArrangeRow(xStart, y, rowHeight, widths, padding, showVerticalLines, HeaderCells);
+            y += rowHeight;
 
-            if (ShowHeaderSeparator)
+            if (showHeaderSeparator)
             {
-                y++;
+                y += 1;
             }
         }
 
-        for (var r = 0; r < RowCells.Count; r++, y++)
+        for (var r = 0; r < RowCells.Count; r++)
         {
-            ArrangeRow(finalRect, y, widths, RowCells[r]);
+            ArrangeRow(xStart, y, rowHeight, widths, padding, showVerticalLines, RowCells[r]);
+            y += rowHeight;
+
+            if (showRowSeparators && r + 1 < RowCells.Count)
+            {
+                y += 1;
+            }
         }
     }
 
@@ -193,54 +186,365 @@ public sealed partial class Table : Visual
             return;
         }
 
-        var theme = GetTheme();
-        var glyphs = theme.Lines;
-        var border = theme.BorderStyle(focused: false);
-        var surface = CellStyle.None;
+        var tableStyle = Get<TableStyle>();
+        var (showOuterBorder, showVerticalLines, showRowSeparators, showHeaderSeparator, padding) = ResolveOptions(tableStyle);
 
-        // Fill background.
-        for (var yFill = rect.Y; yFill < rect.Y + rect.Height; yFill++)
-        {
-            for (var xFill = rect.X; xFill < rect.X + rect.Width; xFill++)
-            {
-                buffer.SetCell(xFill, yFill, new Rune(' '), surface);
-            }
-        }
+        var theme = GetTheme();
+        var glyphs = tableStyle.Glyphs ?? theme.Lines;
+        var focused = IsFocusedInScope();
+
+        var borderStyle = tableStyle.ResolveBorderStyle(theme, focused);
+        var cellStyle = tableStyle.ResolveCellStyle(theme);
+        var headerStyle = tableStyle.ResolveHeaderStyle(theme);
+
+        var columns = widths.Length;
+        var rowHeight = GetRowHeight(padding);
 
         var y = rect.Y;
-        DrawLine(buffer, rect, y, widths, border, glyphs, glyphs.TopLeft, glyphs.TeeTop, glyphs.TopRight);
-        y++;
-
-        if (HeaderCells.Count > 0 && y < rect.Y + rect.Height)
+        if (showOuterBorder && rect.Width >= 2 && rect.Height >= 2)
         {
-            FillInteriorRow(buffer, rect, y, CellStyle.None | TextStyle.Bold);
-            DrawRowFrame(buffer, rect, y, widths, border, glyphs);
+            DrawOuterBorderLine(buffer, rect, y, widths, padding, showVerticalLines, glyphs, borderStyle, isTop: true);
             y++;
+        }
 
-            if (ShowHeaderSeparator && y < rect.Y + rect.Height)
+        var rowTop = rect.Y + (showOuterBorder ? 1 : 0);
+        if (HeaderCells.Count > 0 && rowTop < rect.Y + rect.Height)
+        {
+            RenderRowArea(buffer, rect, rowTop, rowHeight, widths, padding, showOuterBorder, showVerticalLines, glyphs, headerStyle, borderStyle);
+            rowTop += rowHeight;
+
+            if (showHeaderSeparator && rowTop < rect.Y + rect.Height)
             {
-                DrawLine(buffer, rect, y, widths, border, glyphs, glyphs.TeeLeft, glyphs.Cross, glyphs.TeeRight);
-                y++;
+                DrawSeparatorLine(buffer, rect, rowTop, widths, padding, showOuterBorder, showVerticalLines, glyphs, borderStyle);
+                rowTop += 1;
             }
         }
 
-        for (var r = 0; r < RowCells.Count && y < rect.Y + rect.Height - 1; r++, y++)
+        for (var r = 0; r < RowCells.Count && rowTop < rect.Y + rect.Height; r++)
         {
-            DrawRowFrame(buffer, rect, y, widths, border, glyphs);
+            RenderRowArea(buffer, rect, rowTop, rowHeight, widths, padding, showOuterBorder, showVerticalLines, glyphs, cellStyle, borderStyle);
+            rowTop += rowHeight;
+
+            if (showRowSeparators && r + 1 < RowCells.Count && rowTop < rect.Y + rect.Height)
+            {
+                DrawSeparatorLine(buffer, rect, rowTop, widths, padding, showOuterBorder, showVerticalLines, glyphs, borderStyle);
+                rowTop += 1;
+            }
         }
 
-        if (y < rect.Y + rect.Height)
+        if (showOuterBorder && rect.Width >= 2 && rect.Height >= 2)
         {
-            DrawLine(buffer, rect, rect.Y + rect.Height - 1, widths, border, glyphs, glyphs.BottomLeft, glyphs.TeeBottom, glyphs.BottomRight);
+            DrawOuterBorderLine(buffer, rect, rect.Y + rect.Height - 1, widths, padding, showVerticalLines, glyphs, borderStyle, isTop: false);
         }
     }
 
-    private static void FillInteriorRow(CellBuffer buffer, Rectangle rect, int y, CellStyle style)
+    private static void ArrangeRow(int xStart, int rowTop, int rowHeight, IReadOnlyList<int> widths, Thickness padding, bool showVerticalLines, IReadOnlyList<Visual> rowCells)
     {
-        for (var x = rect.X + 1; x < rect.X + rect.Width - 1; x++)
+        var padLeft = Math.Max(0, padding.Left);
+        var padTop = Math.Max(0, padding.Top);
+        var padRight = Math.Max(0, padding.Right);
+        var padBottom = Math.Max(0, padding.Bottom);
+
+        var contentHeight = Math.Max(0, rowHeight - (padTop + padBottom));
+        var cellPaddingWidth = padLeft + padRight;
+
+        var x = xStart;
+        for (var c = 0; c < widths.Count; c++)
         {
-            buffer.SetCell(x, y, new Rune(' '), style);
+            var contentWidth = Math.Max(0, widths[c]);
+
+            if (c < rowCells.Count)
+            {
+                var cell = rowCells[c];
+                cell.Arrange(new Rectangle(x + padLeft, rowTop + padTop, contentWidth, contentHeight));
+            }
+
+            x += contentWidth + cellPaddingWidth;
+
+            if (showVerticalLines && c + 1 < widths.Count)
+            {
+                x += 1;
+            }
         }
+    }
+
+    private static void RenderRowArea(
+        CellBuffer buffer,
+        Rectangle rect,
+        int rowTop,
+        int rowHeight,
+        IReadOnlyList<int> widths,
+        Thickness padding,
+        bool showOuterBorder,
+        bool showVerticalLines,
+        LineGlyphs glyphs,
+        CellStyle cellStyle,
+        CellStyle borderStyle)
+    {
+        var padLeft = Math.Max(0, padding.Left);
+        var padRight = Math.Max(0, padding.Right);
+        var cellPaddingWidth = padLeft + padRight;
+
+        var yEnd = Math.Min(rect.Y + rect.Height, rowTop + rowHeight);
+        for (var y = rowTop; y < yEnd; y++)
+        {
+            var x = rect.X;
+            if (showOuterBorder)
+            {
+                buffer.SetCell(x, y, glyphs.Vertical, borderStyle);
+                x++;
+            }
+
+            for (var c = 0; c < widths.Count; c++)
+            {
+                var contentWidth = Math.Max(0, widths[c]);
+                var cellWidth = contentWidth + cellPaddingWidth;
+
+                for (var i = 0; i < cellWidth; i++)
+                {
+                    buffer.SetCell(x + i, y, new Rune(' '), cellStyle);
+                }
+
+                x += cellWidth;
+
+                if (showVerticalLines && c + 1 < widths.Count)
+                {
+                    buffer.SetCell(x, y, glyphs.Vertical, borderStyle);
+                    x++;
+                }
+            }
+
+            if (showOuterBorder && rect.Width >= 1)
+            {
+                buffer.SetCell(rect.X + rect.Width - 1, y, glyphs.Vertical, borderStyle);
+            }
+        }
+    }
+
+    private static void DrawOuterBorderLine(
+        CellBuffer buffer,
+        Rectangle rect,
+        int y,
+        IReadOnlyList<int> widths,
+        Thickness padding,
+        bool showVerticalLines,
+        LineGlyphs glyphs,
+        CellStyle borderStyle,
+        bool isTop)
+    {
+        if (rect.Width <= 0)
+        {
+            return;
+        }
+
+        var padLeft = Math.Max(0, padding.Left);
+        var padRight = Math.Max(0, padding.Right);
+        var cellPaddingWidth = padLeft + padRight;
+
+        var left = isTop ? glyphs.TopLeft : glyphs.BottomLeft;
+        var right = isTop ? glyphs.TopRight : glyphs.BottomRight;
+        var middle = isTop ? glyphs.TeeTop : glyphs.TeeBottom;
+
+        var x = rect.X;
+        buffer.SetCell(x++, y, left, borderStyle);
+
+        for (var c = 0; c < widths.Count; c++)
+        {
+            var contentWidth = Math.Max(0, widths[c]);
+            var cellWidth = contentWidth + cellPaddingWidth;
+            for (var i = 0; i < cellWidth; i++)
+            {
+                buffer.SetCell(x + i, y, glyphs.Horizontal, borderStyle);
+            }
+            x += cellWidth;
+
+            if (showVerticalLines && c + 1 < widths.Count)
+            {
+                buffer.SetCell(x++, y, middle, borderStyle);
+            }
+        }
+
+        buffer.SetCell(x, y, right, borderStyle);
+    }
+
+    private static void DrawSeparatorLine(
+        CellBuffer buffer,
+        Rectangle rect,
+        int y,
+        IReadOnlyList<int> widths,
+        Thickness padding,
+        bool showOuterBorder,
+        bool showVerticalLines,
+        LineGlyphs glyphs,
+        CellStyle borderStyle)
+    {
+        if (rect.Width <= 0)
+        {
+            return;
+        }
+
+        var padLeft = Math.Max(0, padding.Left);
+        var padRight = Math.Max(0, padding.Right);
+        var cellPaddingWidth = padLeft + padRight;
+
+        var x = rect.X;
+        if (showOuterBorder)
+        {
+            buffer.SetCell(x++, y, glyphs.TeeLeft, borderStyle);
+        }
+
+        for (var c = 0; c < widths.Count; c++)
+        {
+            var contentWidth = Math.Max(0, widths[c]);
+            var cellWidth = contentWidth + cellPaddingWidth;
+            for (var i = 0; i < cellWidth; i++)
+            {
+                buffer.SetCell(x + i, y, glyphs.Horizontal, borderStyle);
+            }
+            x += cellWidth;
+
+            if (showVerticalLines && c + 1 < widths.Count)
+            {
+                buffer.SetCell(x++, y, glyphs.Cross, borderStyle);
+            }
+        }
+
+        if (showOuterBorder)
+        {
+            buffer.SetCell(x, y, glyphs.TeeRight, borderStyle);
+        }
+    }
+
+    private static int GetRowHeight(Thickness padding)
+    {
+        var vertical = Math.Max(0, padding.Top) + Math.Max(0, padding.Bottom);
+        return Math.Max(1, 1 + vertical);
+    }
+
+    private static int ComputeRequiredWidth(IReadOnlyList<int> widths, int paddingHorizontal, bool showOuterBorder, bool showVerticalLines)
+    {
+        var columns = widths.Count;
+        if (columns == 0)
+        {
+            return 0;
+        }
+
+        var separators = (showOuterBorder ? 2 : 0) + (showVerticalLines ? Math.Max(0, columns - 1) : 0);
+
+        var total = (long)separators + ((long)columns * Math.Max(0, paddingHorizontal));
+        for (var c = 0; c < columns; c++)
+        {
+            total += Math.Max(0, widths[c]);
+        }
+
+        return (int)Math.Clamp(total, 0, int.MaxValue);
+    }
+
+    private static int ComputeRequiredHeight(int headerCount, int rowCount, int rowHeight, bool showOuterBorder, bool showHeaderSeparator, bool showRowSeparators)
+    {
+        var height = 0;
+        if (showOuterBorder)
+        {
+            height += 2;
+        }
+
+        if (headerCount > 0)
+        {
+            height += rowHeight;
+            if (showHeaderSeparator)
+            {
+                height += 1;
+            }
+        }
+
+        height += rowCount * rowHeight;
+
+        if (showRowSeparators && rowCount > 1)
+        {
+            height += rowCount - 1;
+        }
+
+        return Math.Max(0, height);
+    }
+
+    private static void FitColumnWidthsToWidth(int[] widths, int availableWidth, int paddingHorizontal, bool showOuterBorder, bool showVerticalLines, bool expandToAvailable)
+    {
+        if (widths.Length == 0)
+        {
+            return;
+        }
+
+        var pad = Math.Max(0, paddingHorizontal);
+        var available = Math.Max(0, availableWidth);
+
+        var required = ComputeRequiredWidth(widths, pad, showOuterBorder, showVerticalLines);
+
+        if (required < available)
+        {
+            if (expandToAvailable)
+            {
+                widths[^1] = Math.Max(0, widths[^1]) + (available - required);
+            }
+            return;
+        }
+
+        if (required == available)
+        {
+            return;
+        }
+
+        var columns = widths.Length;
+        var separators = (showOuterBorder ? 2 : 0) + (showVerticalLines ? Math.Max(0, columns - 1) : 0);
+        var availableContent = Math.Max(0, available - separators - (columns * pad));
+        var perColumn = columns == 0 ? 0 : availableContent / columns;
+
+        for (var c = 0; c < columns; c++)
+        {
+            widths[c] = Math.Min(Math.Max(0, widths[c]), perColumn);
+        }
+
+        if (expandToAvailable)
+        {
+            var after = ComputeRequiredWidth(widths, pad, showOuterBorder, showVerticalLines);
+            if (after < available)
+            {
+                widths[^1] = Math.Max(0, widths[^1]) + (available - after);
+            }
+        }
+    }
+
+    private int GetColumnCount()
+    {
+        var columns = HeaderCells.Count;
+        for (var i = 0; i < RowCells.Count; i++)
+        {
+            columns = Math.Max(columns, RowCells[i].Count);
+        }
+
+        return columns;
+    }
+
+    private (bool showOuterBorder, bool showVerticalLines, bool showRowSeparators, bool showHeaderSeparator, Thickness padding) ResolveOptions(TableStyle tableStyle)
+    {
+        var showOuterBorder = tableStyle.ShowOuterBorder;
+        var showVerticalLines = tableStyle.ShowVerticalLines;
+        var showRowSeparators = tableStyle.ShowRowSeparators;
+        var showHeaderSeparator = ShowHeaderSeparator && tableStyle.ShowHeaderSeparator;
+        var padding = tableStyle.CellPadding;
+        return (showOuterBorder, showVerticalLines, showRowSeparators, showHeaderSeparator, padding);
+    }
+
+    private bool IsFocusedInScope()
+    {
+        for (var v = App?.FocusedElement; v is not null; v = v.Parent)
+        {
+            if (ReferenceEquals(v, this))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void ValidateRowOwner(VisualList<Visual> row)
@@ -256,73 +560,6 @@ public sealed partial class Table : Visual
         if (row.Count > 0)
         {
             row.Clear();
-        }
-    }
-
-    private static void ArrangeRow(Rectangle rect, int y, IReadOnlyList<int> widths, IReadOnlyList<Visual> rowCells)
-    {
-        var x = rect.X + 1; // after left border
-
-        for (var c = 0; c < widths.Count; c++)
-        {
-            var contentWidth = widths[c];
-            var contentX = x + 1; // skip left padding
-
-            if (c < rowCells.Count)
-            {
-                var cell = rowCells[c];
-                cell.Arrange(new Rectangle(contentX, y, Math.Max(0, contentWidth), 1));
-            }
-
-            x += contentWidth + 3; // padding + content + padding + separator
-
-            if (x >= rect.X + rect.Width)
-            {
-                break;
-            }
-        }
-    }
-
-    private static void DrawRowFrame(CellBuffer buffer, Rectangle rect, int y, IReadOnlyList<int> widths, CellStyle border, LineGlyphs glyphs)
-    {
-        var x = rect.X;
-        buffer.SetCell(x, y, glyphs.Vertical, border);
-        x++;
-
-        for (var c = 0; c < widths.Count; c++)
-        {
-            x += widths[c] + 2; // padding + content + padding
-            if (x >= rect.X + rect.Width)
-            {
-                break;
-            }
-
-            buffer.SetCell(x, y, glyphs.Vertical, border);
-            x++;
-        }
-    }
-
-    private static void DrawLine(CellBuffer buffer, Rectangle rect, int y, IReadOnlyList<int> widths, CellStyle border, LineGlyphs glyphs, Rune left, Rune middle, Rune right)
-    {
-        var x = rect.X;
-        buffer.SetCell(x, y, left, border);
-        x++;
-
-        for (var c = 0; c < widths.Count; c++)
-        {
-            var w = widths[c] + 2;
-            for (var i = 0; i < w && x < rect.X + rect.Width; i++, x++)
-            {
-                buffer.SetCell(x, y, glyphs.Horizontal, border);
-            }
-
-            if (x >= rect.X + rect.Width)
-            {
-                break;
-            }
-
-            buffer.SetCell(x, y, c + 1 < widths.Count ? middle : right, border);
-            x++;
         }
     }
 }
