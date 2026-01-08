@@ -964,6 +964,47 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task Initializers_Clear_Lists_Before_Reinitialize()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(80, 25));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var countState = new State<int>(1);
+
+        var stack = new VStack()
+            .With(v =>
+            {
+                var count = countState.Value;
+                for (var i = 0; i < count; i++)
+                {
+                    v.Add($"Item {i}");
+                }
+            });
+
+        var app = new TerminalApp(stack, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunInBackgroundAsync();
+
+        try
+        {
+            await Task.Delay(20);
+            await app.Dispatcher.InvokeAsync(() => Assert.AreEqual(1, stack.Children.Count));
+
+            await app.Dispatcher.InvokeAsync(() => countState.Value = 3);
+            await Task.Delay(50);
+            await app.Dispatcher.InvokeAsync(() => Assert.AreEqual(3, stack.Children.Count));
+
+            await app.Dispatcher.InvokeAsync(() => countState.Value = 2);
+            await Task.Delay(50);
+            await app.Dispatcher.InvokeAsync(() => Assert.AreEqual(2, stack.Children.Count));
+        }
+        finally
+        {
+            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+            await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+        }
+    }
+
+    [TestMethod]
     public async Task InlineApp_Can_Append_Flow_Visual()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));

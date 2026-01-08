@@ -11,13 +11,14 @@ namespace XenoAtom.Terminal.UI.Collections;
 /// A list that participates in the binding dependency tracking system.
 /// </summary>
 /// <typeparam name="T">The item type.</typeparam>
-public class BindableList<T> : IList<T>, IReadOnlyList<T>
+public class BindableList<T> : IList<T>, IReadOnlyList<T>, IInitializerResettable
 {
     private readonly object _owner;
     private readonly BindingAccessor _accessor;
     private readonly List<T> _items;
     private readonly Action<T>? _onAdding;
     private readonly Action<T>? _onRemoving;
+    private bool _touchedDuringInitialization;
 
     public BindableList(object owner, string name, Action<T>? onAdding = null, Action<T>? onRemoving = null)
     {
@@ -61,6 +62,7 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>
                 return;
             }
 
+            TrackInitializerMutation();
             _onRemoving?.Invoke(old);
             _onAdding?.Invoke(value);
 
@@ -72,6 +74,7 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>
     public void Add(T item)
     {
         ArgumentNullException.ThrowIfNull(item);
+        TrackInitializerMutation();
         _onAdding?.Invoke(item);
         _items.Add(item);
         BindingManager.Current.NotifyValueChanged(_owner, _accessor);
@@ -85,6 +88,7 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>
             return;
         }
 
+        TrackInitializerMutation();
         for (var i = 0; i < items.Length; i++)
         {
             var item = items[i];
@@ -103,6 +107,7 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>
             return;
         }
 
+        TrackInitializerMutation();
         if (_onRemoving is not null)
         {
             for (var i = 0; i < _items.Count; i++)
@@ -146,6 +151,7 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>
     public void Insert(int index, T item)
     {
         ArgumentNullException.ThrowIfNull(item);
+        TrackInitializerMutation();
         _onAdding?.Invoke(item);
         _items.Insert(index, item);
         BindingManager.Current.NotifyValueChanged(_owner, _accessor);
@@ -166,6 +172,7 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>
     public void RemoveAt(int index)
     {
         var item = _items[index];
+        TrackInitializerMutation();
         _onRemoving?.Invoke(item);
         _items.RemoveAt(index);
         BindingManager.Current.NotifyValueChanged(_owner, _accessor);
@@ -178,10 +185,47 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>
             return;
         }
 
+        TrackInitializerMutation();
         var item = _items[oldIndex];
         _items.RemoveAt(oldIndex);
         _items.Insert(newIndex, item);
         BindingManager.Current.NotifyValueChanged(_owner, _accessor);
+    }
+
+    void IInitializerResettable.ResetForReinitialize() => ResetForReinitialize();
+
+    internal void ResetForReinitialize()
+    {
+        if (!_touchedDuringInitialization || _items.Count == 0)
+        {
+            _touchedDuringInitialization = false;
+            return;
+        }
+
+        if (_onRemoving is not null)
+        {
+            for (var i = 0; i < _items.Count; i++)
+            {
+                _onRemoving(_items[i]);
+            }
+        }
+
+        _items.Clear();
+        _touchedDuringInitialization = false;
+    }
+
+    private void TrackInitializerMutation()
+    {
+        // If this list is mutated while the owning visual is executing initializers,
+        // mark it so we can reset it before re-running those initializers.
+        if (!_touchedDuringInitialization && ReferenceEquals(BindingManager.Current.InitializingOwner, _owner))
+        {
+            _touchedDuringInitialization = true;
+            if (_owner is Visual v)
+            {
+                v.RegisterInitializerList(this);
+            }
+        }
     }
 
     [EditorBrowsable(EditorBrowsableState.Never)]

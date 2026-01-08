@@ -17,6 +17,7 @@ public abstract partial class Visual : DispatcherObject
     private List<KeyBinding>? _keyBindings;
     private Dictionary<object, object?>? _environment;
     private List<Action<Visual>>? _initializers;
+    private List<Collections.IInitializerResettable>? _initializerLists;
 
     private Size _desiredSizeWithoutMargin;
 
@@ -238,6 +239,15 @@ public abstract partial class Visual : DispatcherObject
         Invalidate();
     }
 
+    internal void RegisterInitializerList(Collections.IInitializerResettable list)
+    {
+        _initializerLists ??= new List<Collections.IInitializerResettable>();
+        if (!_initializerLists.Contains(list))
+        {
+            _initializerLists.Add(list);
+        }
+    }
+
     internal void AttachToApp(TerminalApp app)
     {
         App = app;
@@ -280,6 +290,8 @@ public abstract partial class Visual : DispatcherObject
             app.UnregisterAnimatedVisual(animated);
         }
 
+        app.UnregisterDependencies(this);
+
         App = null;
         OnDetachedFromApp(app);
     }
@@ -300,7 +312,10 @@ public abstract partial class Visual : DispatcherObject
         _desiredSizeWithoutMargin = MeasureOverride(innerAvailable);
         _desiredSizeWithoutMargin = ApplyMinMaxConstraints(_desiredSizeWithoutMargin);
         DesiredSize = Inflate(_desiredSizeWithoutMargin, margin);
-        StoreDependencies(ref _measureDeps, session.Dependencies);
+        if (StoreDependencies(ref _measureDeps, session.Dependencies) && App is not null)
+        {
+            App.UpdateDependencies(this, TerminalApp.DependencyKind.Measure, _measureDeps!);
+        }
         _measureDirty = false;
     }
 
@@ -315,7 +330,10 @@ public abstract partial class Visual : DispatcherObject
         var arrangedRect = ApplyArrangeConstraints(innerSlot);
         Bounds = arrangedRect;
         ArrangeOverride(arrangedRect);
-        StoreDependencies(ref _arrangeDeps, session.Dependencies);
+        if (StoreDependencies(ref _arrangeDeps, session.Dependencies) && App is not null)
+        {
+            App.UpdateDependencies(this, TerminalApp.DependencyKind.Arrange, _arrangeDeps!);
+        }
         _arrangeDirty = false;
     }
 
@@ -451,7 +469,10 @@ public abstract partial class Visual : DispatcherObject
                 buffer.PopClip();
             }
 
-            StoreDependencies(ref _renderDeps, session.Dependencies);
+            if (StoreDependencies(ref _renderDeps, session.Dependencies) && App is not null)
+            {
+                App.UpdateDependencies(this, TerminalApp.DependencyKind.Render, _renderDeps!);
+            }
             _renderDirty = false;
         }
 
@@ -509,46 +530,19 @@ public abstract partial class Visual : DispatcherObject
         return this;
     }
 
-    internal void PropagateBindingChanged(Binding binding)
-    {
-        var stack = new Stack<Visual>();
-        stack.Push(this);
-
-        while (stack.Count > 0)
-        {
-            var v = stack.Pop();
-            if (v._initializerDeps is not null && v._initializerDeps.Contains(binding))
-            {
-                v._initializersDirty = true;
-            }
-
-            if (!v._measureDirty && v._measureDeps is not null && v._measureDeps.Contains(binding))
-            {
-                v._measureDirty = true;
-            }
-
-            if (!v._arrangeDirty && v._arrangeDeps is not null && v._arrangeDeps.Contains(binding))
-            {
-                v._arrangeDirty = true;
-            }
-
-            if (!v._renderDirty && v._renderDeps is not null && v._renderDeps.Contains(binding))
-            {
-                v._renderDirty = true;
-            }
-
-            for (var i = v.ChildrenCount - 1; i >= 0; i--)
-            {
-                stack.Push(v.GetChild(i));
-            }
-        }
-    }
-
     private void EnsureInitialized()
     {
         if (!_initializersDirty || _initializers is null)
         {
             return;
+        }
+
+        if (_initializerLists is not null)
+        {
+            for (var i = 0; i < _initializerLists.Count; i++)
+            {
+                _initializerLists[i].ResetForReinitialize();
+            }
         }
 
         _handlers = null;
@@ -559,31 +553,57 @@ public abstract partial class Visual : DispatcherObject
         _arrangeDirty = true;
         _renderDirty = true;
 
+        using var initScope = BindingManager.Current.BeginInitialization(this);
+        using var notifyScope = BindingManager.Current.SuppressNotifications();
         using var session = BindingManager.Current.StartTracking();
         for (var i = 0; i < _initializers.Count; i++)
         {
             _initializers[i](this);
         }
 
-        StoreDependencies(ref _initializerDeps, session.Dependencies);
+        if (StoreDependencies(ref _initializerDeps, session.Dependencies) && App is not null)
+        {
+            App.UpdateDependencies(this, TerminalApp.DependencyKind.Initializer, _initializerDeps!);
+        }
     }
 
-    private static void StoreDependencies(ref HashSet<Binding>? target, IReadOnlyCollection<Binding> dependencies)
+    private static bool StoreDependencies(ref HashSet<Binding>? target, IReadOnlyCollection<Binding> dependencies)
     {
         if (target is null)
         {
             target = new HashSet<Binding>(BindingReferenceComparer.Instance);
         }
-        else
+        else if (target.SetEquals(dependencies))
         {
-            target.Clear();
+            return false;
         }
+
+        target.Clear();
 
         foreach (var dep in dependencies)
         {
             target.Add(dep);
         }
+
+        return true;
     }
+
+    internal void MarkInitializerDirty() => _initializersDirty = true;
+
+    internal void MarkMeasureDirty()
+    {
+        _measureDirty = true;
+        _arrangeDirty = true;
+        _renderDirty = true;
+    }
+
+    internal void MarkArrangeDirty()
+    {
+        _arrangeDirty = true;
+        _renderDirty = true;
+    }
+
+    internal void MarkRenderDirty() => _renderDirty = true;
 
     protected void AddHandler<TArgs>(RoutedEvent<TArgs> routedEvent, EventHandler<TArgs> handler)
         where TArgs : EventArgs

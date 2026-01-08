@@ -16,6 +16,14 @@ public sealed class BindingManager
     [ThreadStatic]
     private static TrackingContext? _tracking;
 
+    [ThreadStatic]
+    private static object? _initializingOwner;
+
+    internal object? InitializingOwner => _initializingOwner;
+
+    [ThreadStatic]
+    private static int _suppressNotifications;
+
     public T GetValue<T>(object owner, ref T backingField, BindingAccessor<T> accessor)
     {
         if (owner is Threading.DispatcherObject dispatcherObject)
@@ -41,7 +49,10 @@ public sealed class BindingManager
         }
 
         backingField = value;
-        ValueChanged?.Invoke(new Binding(owner, accessor));
+        if (_suppressNotifications == 0)
+        {
+            ValueChanged?.Invoke(new Binding(owner, accessor));
+        }
         return true;
     }
 
@@ -51,6 +62,39 @@ public sealed class BindingManager
         var current = new TrackingContext();
         _tracking = current;
         return new TrackingSession(previous, current.Dependencies);
+    }
+
+    internal InitializerSession BeginInitialization(object owner)
+    {
+        var previous = _initializingOwner;
+        _initializingOwner = owner;
+        return new InitializerSession(previous);
+    }
+
+    internal NotificationSuppressionSession SuppressNotifications()
+    {
+        _suppressNotifications++;
+        return new NotificationSuppressionSession();
+    }
+
+    internal readonly struct NotificationSuppressionSession : IDisposable
+    {
+        public void Dispose()
+        {
+            if (_suppressNotifications > 0)
+            {
+                _suppressNotifications--;
+            }
+        }
+    }
+
+    internal readonly struct InitializerSession : IDisposable
+    {
+        private readonly object? _previous;
+
+        public InitializerSession(object? previous) => _previous = previous;
+
+        public void Dispose() => _initializingOwner = _previous;
     }
 
     public void RegisterRead(object owner, BindingAccessor accessor)
@@ -72,7 +116,10 @@ public sealed class BindingManager
             dispatcherObject.VerifyAccess();
         }
 
-        ValueChanged?.Invoke(new Binding(owner, accessor));
+        if (_suppressNotifications == 0)
+        {
+            ValueChanged?.Invoke(new Binding(owner, accessor));
+        }
     }
 
     public readonly struct TrackingSession : IDisposable

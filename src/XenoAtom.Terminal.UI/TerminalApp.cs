@@ -44,6 +44,21 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private readonly List<IAnimatedVisual> _animatedVisuals = new();
     private long _nextAnimationTick = long.MaxValue;
 
+    private readonly HashSet<Binding> _pendingBindings = new(BindingReferenceComparer.Instance);
+
+    internal enum DependencyKind
+    {
+        Initializer = 0,
+        Measure = 1,
+        Arrange = 2,
+        Render = 3,
+    }
+
+    private readonly DependencyIndex _initializerIndex = new();
+    private readonly DependencyIndex _measureIndex = new();
+    private readonly DependencyIndex _arrangeIndex = new();
+    private readonly DependencyIndex _renderIndex = new();
+
     public TerminalApp(Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(root);
@@ -341,12 +356,15 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
                     if (!keepGoing)
                     {
+                        ProcessPendingBindings();
                         _renderRequested = true;
                         Render();
                         _cts.Cancel();
                         break;
                     }
                 }
+
+                ProcessPendingBindings();
 
                 if (_renderRequested)
                 {
@@ -481,8 +499,86 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
     private void OnValueChanged(Binding binding)
     {
-        Root.PropagateBindingChanged(binding);
-        RequestRender();
+        _pendingBindings.Add(binding);
+    }
+
+    internal void UpdateDependencies(Visual visual, DependencyKind kind, IReadOnlyCollection<Binding> dependencies)
+    {
+        ArgumentNullException.ThrowIfNull(visual);
+        ArgumentNullException.ThrowIfNull(dependencies);
+
+        switch (kind)
+        {
+            case DependencyKind.Initializer:
+                _initializerIndex.Update(visual, dependencies);
+                break;
+            case DependencyKind.Measure:
+                _measureIndex.Update(visual, dependencies);
+                break;
+            case DependencyKind.Arrange:
+                _arrangeIndex.Update(visual, dependencies);
+                break;
+            case DependencyKind.Render:
+                _renderIndex.Update(visual, dependencies);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(kind));
+        }
+    }
+
+    internal void UnregisterDependencies(Visual visual)
+    {
+        ArgumentNullException.ThrowIfNull(visual);
+        _initializerIndex.Remove(visual);
+        _measureIndex.Remove(visual);
+        _arrangeIndex.Remove(visual);
+        _renderIndex.Remove(visual);
+    }
+
+    private void ProcessPendingBindings()
+    {
+        if (_pendingBindings.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var binding in _pendingBindings)
+        {
+            if (_initializerIndex.TryGetVisuals(binding, out var initVisuals))
+            {
+                foreach (var v in initVisuals)
+                {
+                    v.MarkInitializerDirty();
+                }
+            }
+
+            if (_measureIndex.TryGetVisuals(binding, out var measureVisuals))
+            {
+                foreach (var v in measureVisuals)
+                {
+                    v.MarkMeasureDirty();
+                }
+            }
+
+            if (_arrangeIndex.TryGetVisuals(binding, out var arrangeVisuals))
+            {
+                foreach (var v in arrangeVisuals)
+                {
+                    v.MarkArrangeDirty();
+                }
+            }
+
+            if (_renderIndex.TryGetVisuals(binding, out var renderVisuals))
+            {
+                foreach (var v in renderVisuals)
+                {
+                    v.MarkRenderDirty();
+                }
+            }
+        }
+
+        _pendingBindings.Clear();
+        _renderRequested = true;
     }
 
     private void Render()
@@ -1091,5 +1187,111 @@ internal sealed class AsyncAutoResetEvent
         }
 
         toRelease?.TrySetResult(true);
+    }
+}
+
+internal sealed class DependencyIndex
+{
+    private readonly Dictionary<Binding, HashSet<Visual>> _bindingToVisuals = new(BindingReferenceComparer.Instance);
+    private readonly Dictionary<Visual, HashSet<Binding>> _visualToBindings = new();
+
+    public void Update(Visual visual, IReadOnlyCollection<Binding> dependencies)
+    {
+        ArgumentNullException.ThrowIfNull(visual);
+        ArgumentNullException.ThrowIfNull(dependencies);
+
+        if (!_visualToBindings.TryGetValue(visual, out var old))
+        {
+            old = new HashSet<Binding>(BindingReferenceComparer.Instance);
+            _visualToBindings.Add(visual, old);
+        }
+        else if (old.SetEquals(dependencies))
+        {
+            return;
+        }
+
+        // Remove old bindings no longer present.
+        foreach (var binding in old)
+        {
+            if (Contains(dependencies, binding))
+            {
+                continue;
+            }
+
+            if (_bindingToVisuals.TryGetValue(binding, out var visuals))
+            {
+                visuals.Remove(visual);
+                if (visuals.Count == 0)
+                {
+                    _bindingToVisuals.Remove(binding);
+                }
+            }
+        }
+
+        // Add new bindings.
+        foreach (var binding in dependencies)
+        {
+            if (old.Contains(binding))
+            {
+                continue;
+            }
+
+            if (!_bindingToVisuals.TryGetValue(binding, out var visuals))
+            {
+                visuals = new HashSet<Visual>();
+                _bindingToVisuals.Add(binding, visuals);
+            }
+
+            visuals.Add(visual);
+        }
+
+        old.Clear();
+        foreach (var binding in dependencies)
+        {
+            old.Add(binding);
+        }
+    }
+
+    public void Remove(Visual visual)
+    {
+        if (!_visualToBindings.TryGetValue(visual, out var bindings))
+        {
+            return;
+        }
+
+        foreach (var binding in bindings)
+        {
+            if (_bindingToVisuals.TryGetValue(binding, out var visuals))
+            {
+                visuals.Remove(visual);
+                if (visuals.Count == 0)
+                {
+                    _bindingToVisuals.Remove(binding);
+                }
+            }
+        }
+
+        _visualToBindings.Remove(visual);
+    }
+
+    public bool TryGetVisuals(Binding binding, out HashSet<Visual> visuals)
+        => _bindingToVisuals.TryGetValue(binding, out visuals!);
+
+    private static bool Contains(IReadOnlyCollection<Binding> bindings, Binding binding)
+    {
+        if (bindings is HashSet<Binding> set)
+        {
+            return set.Contains(binding);
+        }
+
+        foreach (var b in bindings)
+        {
+            if (BindingReferenceComparer.Instance.Equals(b, binding))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
