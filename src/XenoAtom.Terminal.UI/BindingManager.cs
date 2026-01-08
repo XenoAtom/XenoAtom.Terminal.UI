@@ -27,12 +27,12 @@ public sealed class BindingManager
         return backingField;
     }
 
-    public void SetValue<T>(object owner, ref T backingField, T value, BindingAccessor<T> accessor)
+    public bool SetValue<T>(object owner, ref T backingField, T value, BindingAccessor<T> accessor)
     {
         _ = accessor;
         if (EqualityComparer<T>.Default.Equals(backingField, value))
         {
-            return;
+            return false;
         }
 
         if (owner is Threading.DispatcherObject dispatcherObject)
@@ -42,6 +42,7 @@ public sealed class BindingManager
 
         backingField = value;
         ValueChanged?.Invoke(new Binding(owner, accessor));
+        return true;
     }
 
     public TrackingSession StartTracking()

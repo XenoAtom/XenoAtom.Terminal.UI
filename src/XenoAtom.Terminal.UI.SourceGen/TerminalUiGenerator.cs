@@ -89,6 +89,9 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
         bool IsVisualChildProperty,
         bool GenerateImplementation,
         string PropertyModifiers,
+        string GetAccessorModifier,
+        string SetAccessorModifier,
+        string SetAccessorKeyword,
         string BackingFieldName,
         string AccessorClassName)
     {
@@ -163,6 +166,10 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
 
             var modifiers = string.Join(" ", propertySyntax.Modifiers.Select(m => m.Text));
 
+            var getAccessorModifier = ComputeAccessorModifier(propertySymbol, propertySymbol.GetMethod);
+            var setAccessorModifier = ComputeAccessorModifier(propertySymbol, propertySymbol.SetMethod);
+            var setAccessorKeyword = propertySymbol.SetMethod?.IsInitOnly == true ? "init" : "set";
+
             return new BindablePropertyResult(new BindablePropertyInfo(
                 ContainingType: containingType,
                 Namespace: ns,
@@ -172,8 +179,38 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 IsVisualChildProperty: isVisualChildProperty,
                 GenerateImplementation: generateImplementation,
                 PropertyModifiers: modifiers,
+                GetAccessorModifier: getAccessorModifier,
+                SetAccessorModifier: setAccessorModifier,
+                SetAccessorKeyword: setAccessorKeyword,
                 BackingFieldName: backingFieldName,
                 AccessorClassName: accessorClassName), diagnostics.ToImmutable());
+        }
+
+        private static string ComputeAccessorModifier(IPropertySymbol property, IMethodSymbol? accessor)
+        {
+            if (accessor is null)
+            {
+                return string.Empty;
+            }
+
+            var propertyAccessibility = property.DeclaredAccessibility;
+            var accessorAccessibility = accessor.DeclaredAccessibility;
+
+            if (propertyAccessibility == accessorAccessibility)
+            {
+                return string.Empty;
+            }
+
+            return accessorAccessibility switch
+            {
+                Accessibility.Private => "private",
+                Accessibility.Protected => "protected",
+                Accessibility.Internal => "internal",
+                Accessibility.ProtectedOrInternal => "protected internal",
+                Accessibility.ProtectedAndInternal => "private protected",
+                Accessibility.Public => "public",
+                _ => string.Empty,
+            };
         }
 
         private static bool ComputeIsVisualChildProperty(Compilation compilation, INamedTypeSymbol containingType, ITypeSymbol propertyType)
@@ -490,41 +527,60 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             {
                 if (p.GenerateImplementation)
                 {
+                    sb.Append(baseIndent).Append("partial void On").Append(p.PropertyName).Append("Changing(ref ").Append(p.PropertyTypeFullyQualified).AppendLine(" value);");
+                    sb.Append(baseIndent).Append("partial void On").Append(p.PropertyName).Append("Changed(").Append(p.PropertyTypeFullyQualified).AppendLine(" value);");
+                    sb.AppendLine();
+
                     sb.Append(baseIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                     sb.Append(baseIndent).Append(p.PropertyModifiers).Append(' ').Append(p.PropertyTypeFullyQualified).Append(' ').Append(p.PropertyName).AppendLine();
                     sb.Append(baseIndent).AppendLine("{");
                     if (p.IsVisualChildProperty)
                     {
-                        sb.Append(baseIndent).Append("    get").AppendLine();
+                        sb.Append(baseIndent).Append("    ").Append(string.IsNullOrEmpty(p.GetAccessorModifier) ? string.Empty : p.GetAccessorModifier + " ").Append("get").AppendLine();
                         sb.Append(baseIndent).AppendLine("    {");
                         sb.Append(baseIndent).Append("        global::XenoAtom.Terminal.UI.BindingManager.Current.RegisterRead(this, ").Append(p.AccessorClassName).AppendLine(".Instance);");
                         sb.Append(baseIndent).Append("        return ").Append(p.BackingFieldName).AppendLine(";");
                         sb.Append(baseIndent).AppendLine("    }");
-                        sb.Append(baseIndent).Append("    set").AppendLine();
+                        sb.Append(baseIndent).Append("    ").Append(string.IsNullOrEmpty(p.SetAccessorModifier) ? string.Empty : p.SetAccessorModifier + " ").Append(p.SetAccessorKeyword).AppendLine();
                         sb.Append(baseIndent).AppendLine("    {");
-                        sb.Append(baseIndent).Append("        if (global::System.Object.ReferenceEquals(").Append(p.BackingFieldName).AppendLine(", value))");
+                        sb.Append(baseIndent).Append("        var updated = value;").AppendLine();
+                        sb.Append(baseIndent).Append("        On").Append(p.PropertyName).AppendLine("Changing(ref updated);");
+                        sb.AppendLine();
+                        sb.Append(baseIndent).Append("        if (global::System.Object.ReferenceEquals(").Append(p.BackingFieldName).AppendLine(", updated))");
                         sb.Append(baseIndent).AppendLine("        {");
                         sb.Append(baseIndent).AppendLine("            return;");
                         sb.Append(baseIndent).AppendLine("        }");
                         sb.AppendLine();
                         sb.Append(baseIndent).Append("        if (").Append(p.BackingFieldName).AppendLine(" is not null)");
                         sb.Append(baseIndent).AppendLine("        {");
-                        sb.Append(baseIndent).Append("            throw new global::System.InvalidOperationException(\"").Append(containingType.Name).Append(" currently only supports setting ").Append(p.PropertyName).AppendLine(" once.\");");
+                        sb.Append(baseIndent).AppendLine("            DetachChild(" + p.BackingFieldName + ");");
                         sb.Append(baseIndent).AppendLine("        }");
                         sb.AppendLine();
-                        sb.Append(baseIndent).Append("        ").Append(p.BackingFieldName).AppendLine(" = value;");
-                        sb.Append(baseIndent).AppendLine("        if (value is not null)");
+                        sb.Append(baseIndent).Append("        ").Append(p.BackingFieldName).AppendLine(" = updated;");
+                        sb.Append(baseIndent).AppendLine("        if (updated is not null)");
                         sb.Append(baseIndent).AppendLine("        {");
-                        sb.Append(baseIndent).AppendLine("            AttachChild(value);");
+                        sb.Append(baseIndent).AppendLine("            AttachChild(updated);");
                         sb.Append(baseIndent).AppendLine("        }");
                         sb.AppendLine();
                         sb.Append(baseIndent).Append("        global::XenoAtom.Terminal.UI.BindingManager.Current.NotifyValueChanged(this, ").Append(p.AccessorClassName).AppendLine(".Instance);");
+                        sb.Append(baseIndent).Append("        On").Append(p.PropertyName).AppendLine("Changed(updated);");
                         sb.Append(baseIndent).AppendLine("    }");
                     }
                     else
                     {
-                        sb.Append(baseIndent).Append("    get => global::XenoAtom.Terminal.UI.BindingManager.Current.GetValue(this, ref ").Append(p.BackingFieldName).Append(", ").Append(p.AccessorClassName).AppendLine(".Instance);");
-                        sb.Append(baseIndent).Append("    set => global::XenoAtom.Terminal.UI.BindingManager.Current.SetValue(this, ref ").Append(p.BackingFieldName).Append(", value, ").Append(p.AccessorClassName).AppendLine(".Instance);");
+                        sb.Append(baseIndent).Append("    ").Append(string.IsNullOrEmpty(p.GetAccessorModifier) ? string.Empty : p.GetAccessorModifier + " ").AppendLine("get");
+                        sb.Append(baseIndent).AppendLine("    {");
+                        sb.Append(baseIndent).Append("        return global::XenoAtom.Terminal.UI.BindingManager.Current.GetValue(this, ref ").Append(p.BackingFieldName).Append(", ").Append(p.AccessorClassName).AppendLine(".Instance);");
+                        sb.Append(baseIndent).AppendLine("    }");
+                        sb.Append(baseIndent).Append("    ").Append(string.IsNullOrEmpty(p.SetAccessorModifier) ? string.Empty : p.SetAccessorModifier + " ").Append(p.SetAccessorKeyword).AppendLine();
+                        sb.Append(baseIndent).AppendLine("    {");
+                        sb.Append(baseIndent).Append("        var updated = value;").AppendLine();
+                        sb.Append(baseIndent).Append("        On").Append(p.PropertyName).AppendLine("Changing(ref updated);");
+                        sb.Append(baseIndent).Append("        if (global::XenoAtom.Terminal.UI.BindingManager.Current.SetValue(this, ref ").Append(p.BackingFieldName).Append(", updated, ").Append(p.AccessorClassName).AppendLine(".Instance))");
+                        sb.Append(baseIndent).AppendLine("        {");
+                        sb.Append(baseIndent).Append("            On").Append(p.PropertyName).AppendLine("Changed(updated);");
+                        sb.Append(baseIndent).AppendLine("        }");
+                        sb.Append(baseIndent).AppendLine("    }");
                     }
                     sb.Append(baseIndent).AppendLine("}");
                     sb.AppendLine();

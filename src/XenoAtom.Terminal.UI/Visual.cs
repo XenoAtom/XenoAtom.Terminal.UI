@@ -41,9 +41,6 @@ public abstract partial class Visual : DispatcherObject
 
     public bool Focusable { get; protected init; }
 
-    private HorizontalAlignment _horizontalAlignment = HorizontalAlignment.Left;
-    private VerticalAlignment _verticalAlignment = VerticalAlignment.Top;
-
     private sealed class __Invalidation__BindingAccessor : BindingAccessor
     {
         public static __Invalidation__BindingAccessor Instance { get; } = new();
@@ -68,220 +65,51 @@ public abstract partial class Visual : DispatcherObject
         BindingManager.Current.NotifyValueChanged(this, __Invalidation__BindingAccessor.Instance);
     }
 
-    [Bindable]
-    public HorizontalAlignment HorizontalAlignment
+    protected Visual()
     {
-        get
-        {
-            BindingManager.Current.RegisterRead(this, __HorizontalAlignment__BindingAccessor.Instance);
-            return _horizontalAlignment;
-        }
-        set
-        {
-            if (_horizontalAlignment == value)
-            {
-                return;
-            }
-
-            _horizontalAlignment = value;
-            BindingManager.Current.NotifyValueChanged(this, __HorizontalAlignment__BindingAccessor.Instance);
-        }
+        _isVisible = true;
+        _isEnabled = true;
+        _maxWidth = int.MaxValue;
+        _maxHeight = int.MaxValue;
     }
 
     [Bindable]
-    public VerticalAlignment VerticalAlignment
-    {
-        get
-        {
-            BindingManager.Current.RegisterRead(this, __VerticalAlignment__BindingAccessor.Instance);
-            return _verticalAlignment;
-        }
-        set
-        {
-            if (_verticalAlignment == value)
-            {
-                return;
-            }
-
-            _verticalAlignment = value;
-            BindingManager.Current.NotifyValueChanged(this, __VerticalAlignment__BindingAccessor.Instance);
-        }
-    }
-
-    private int _minWidth;
-    private int _minHeight;
-    private int _maxWidth = int.MaxValue;
-    private int _maxHeight = int.MaxValue;
+    public partial HorizontalAlignment HorizontalAlignment { get; set; }
 
     [Bindable]
-    public int MinWidth
-    {
-        get
-        {
-            BindingManager.Current.RegisterRead(this, __MinWidth__BindingAccessor.Instance);
-            return _minWidth;
-        }
-        set
-        {
-            ArgumentOutOfRangeException.ThrowIfNegative(value);
-            if (_minWidth == value)
-            {
-                return;
-            }
-
-            _minWidth = value;
-            BindingManager.Current.NotifyValueChanged(this, __MinWidth__BindingAccessor.Instance);
-        }
-    }
+    public partial VerticalAlignment VerticalAlignment { get; set; }
 
     [Bindable]
-    public int MinHeight
-    {
-        get
-        {
-            BindingManager.Current.RegisterRead(this, __MinHeight__BindingAccessor.Instance);
-            return _minHeight;
-        }
-        set
-        {
-            ArgumentOutOfRangeException.ThrowIfNegative(value);
-            if (_minHeight == value)
-            {
-                return;
-            }
-
-            _minHeight = value;
-            BindingManager.Current.NotifyValueChanged(this, __MinHeight__BindingAccessor.Instance);
-        }
-    }
+    public partial int MinWidth { get; set; }
 
     [Bindable]
-    public int MaxWidth
-    {
-        get
-        {
-            BindingManager.Current.RegisterRead(this, __MaxWidth__BindingAccessor.Instance);
-            return _maxWidth;
-        }
-        set
-        {
-            ArgumentOutOfRangeException.ThrowIfNegative(value);
-            if (_maxWidth == value)
-            {
-                return;
-            }
-
-            _maxWidth = value;
-            BindingManager.Current.NotifyValueChanged(this, __MaxWidth__BindingAccessor.Instance);
-        }
-    }
+    public partial int MinHeight { get; set; }
 
     [Bindable]
-    public int MaxHeight
-    {
-        get
-        {
-            BindingManager.Current.RegisterRead(this, __MaxHeight__BindingAccessor.Instance);
-            return _maxHeight;
-        }
-        set
-        {
-            ArgumentOutOfRangeException.ThrowIfNegative(value);
-            if (_maxHeight == value)
-            {
-                return;
-            }
-
-            _maxHeight = value;
-            BindingManager.Current.NotifyValueChanged(this, __MaxHeight__BindingAccessor.Instance);
-        }
-    }
-
-    private bool _isVisible = true;
-    private bool _isEnabled = true;
-    private bool _isHovered;
-
-    private Thickness _margin;
+    public partial int MaxWidth { get; set; }
 
     [Bindable]
-    public Thickness Margin
-    {
-        get
-        {
-            BindingManager.Current.RegisterRead(this, __Margin__BindingAccessor.Instance);
-            return _margin;
-        }
-        set
-        {
-            if (_margin == value)
-            {
-                return;
-            }
-
-            _margin = value;
-            BindingManager.Current.NotifyValueChanged(this, __Margin__BindingAccessor.Instance);
-        }
-    }
+    public partial int MaxHeight { get; set; }
 
     [Bindable]
-    public bool IsVisible
-    {
-        get
-        {
-            BindingManager.Current.RegisterRead(this, __IsVisible__BindingAccessor.Instance);
-            return _isVisible;
-        }
-        set
-        {
-            if (_isVisible == value)
-            {
-                return;
-            }
-
-            _isVisible = value;
-            BindingManager.Current.NotifyValueChanged(this, __IsVisible__BindingAccessor.Instance);
-        }
-    }
+    public partial Thickness Margin { get; set; }
 
     [Bindable]
-    public bool IsEnabled
-    {
-        get
-        {
-            BindingManager.Current.RegisterRead(this, __IsEnabled__BindingAccessor.Instance);
-            return _isEnabled;
-        }
-        set
-        {
-            if (_isEnabled == value)
-            {
-                return;
-            }
-
-            _isEnabled = value;
-            BindingManager.Current.NotifyValueChanged(this, __IsEnabled__BindingAccessor.Instance);
-        }
-    }
+    public partial bool IsVisible { get; set; }
 
     [Bindable]
-    public bool IsHovered
-    {
-        get
-        {
-            BindingManager.Current.RegisterRead(this, __IsHovered__BindingAccessor.Instance);
-            return _isHovered;
-        }
-        internal set
-        {
-            if (_isHovered == value)
-            {
-                return;
-            }
+    public partial bool IsEnabled { get; set; }
 
-            _isHovered = value;
-            BindingManager.Current.NotifyValueChanged(this, __IsHovered__BindingAccessor.Instance);
-        }
-    }
+    [Bindable]
+    public partial bool IsHovered { get; internal set; }
+
+    partial void OnMinWidthChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
+
+    partial void OnMinHeightChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
+
+    partial void OnMaxWidthChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
+
+    partial void OnMaxHeightChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
 
     public void AddKeyBinding(Input.TerminalKeyGesture gesture, Action action)
     {

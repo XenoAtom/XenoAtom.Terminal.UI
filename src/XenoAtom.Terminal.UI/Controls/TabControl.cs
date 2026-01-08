@@ -14,57 +14,30 @@ public sealed partial class TabControl : Visual
 {
     private readonly List<TabPage> _tabs = new();
     private readonly List<TabHitRange> _hitRanges = new();
-    private int _selectedIndex;
     private int _hoveredIndex = -1;
     private int _headerHeight = 1;
-    private bool _showBorder;
 
     public TabControl()
     {
         Focusable = true;
-        _showBorder = true;
+        ShowBorder = true;
     }
 
     [Bindable]
-    public bool ShowBorder
-    {
-        get
-        {
-            BindingManager.Current.RegisterRead(this, __ShowBorder__BindingAccessor.Instance);
-            return _showBorder;
-        }
-        set
-        {
-            if (_showBorder == value)
-            {
-                return;
-            }
-
-            _showBorder = value;
-            BindingManager.Current.NotifyValueChanged(this, __ShowBorder__BindingAccessor.Instance);
-        }
-    }
+    public partial bool ShowBorder { get; set; }
 
     [Bindable]
-    public int SelectedIndex
-    {
-        get
-        {
-            BindingManager.Current.RegisterRead(this, __SelectedIndex__BindingAccessor.Instance);
-            return _selectedIndex;
-        }
-        set
-        {
-            var clamped = _tabs.Count == 0 ? 0 : Math.Clamp(value, 0, _tabs.Count - 1);
-            if (_selectedIndex == clamped)
-            {
-                return;
-            }
+    public partial int SelectedIndex { get; set; }
 
-            _selectedIndex = clamped;
-            BindingManager.Current.NotifyValueChanged(this, __SelectedIndex__BindingAccessor.Instance);
-            UpdateTabVisibility();
-        }
+    partial void OnSelectedIndexChanging(ref int value)
+    {
+        value = _tabs.Count == 0 ? 0 : Math.Clamp(value, 0, _tabs.Count - 1);
+    }
+
+    partial void OnSelectedIndexChanged(int value)
+    {
+        _ = value;
+        UpdateTabVisibility();
     }
 
     public IReadOnlyList<TabPage> Tabs => _tabs;
@@ -97,7 +70,7 @@ public sealed partial class TabControl : Visual
         AttachChild(header);
         AttachChild(content);
 
-        content.IsVisible = index == _selectedIndex;
+        content.IsVisible = index == SelectedIndex;
         if (index == 0)
         {
             UpdateTabVisibility();
@@ -397,7 +370,7 @@ public sealed partial class TabControl : Visual
 
     private void UpdateTabVisibility()
     {
-        var selected = _selectedIndex;
+        var selected = SelectedIndex;
         for (var i = 0; i < _tabs.Count; i++)
         {
             _tabs[i].Content.IsVisible = i == selected;
