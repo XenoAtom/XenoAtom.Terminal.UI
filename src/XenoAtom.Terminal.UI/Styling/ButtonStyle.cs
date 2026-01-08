@@ -26,55 +26,77 @@ public sealed record ButtonStyle : IStyle<ButtonStyle>
 
     public CellStyle Resolve(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, ControlTone tone)
     {
+        ArgumentNullException.ThrowIfNull(theme);
+
+        var normal = Normal ?? ResolveDefaultNormal(theme, tone);
+
         if (!enabled)
         {
-            return Disabled ?? (CellStyle.None | TextStyle.Dim);
+            if (Disabled is { } disabled)
+            {
+                return disabled;
+            }
+
+            if (theme.Disabled is { } disabledFg)
+            {
+                normal = normal.WithForeground(disabledFg);
+            }
+
+            return normal | TextStyle.Dim;
         }
 
         if (pressed)
         {
-            return Pressed ?? theme.SelectionStyle();
+            return Pressed ?? ResolveDefaultPressed(theme, normal);
         }
 
         if (focused)
         {
-            return Focused ?? theme.SelectionStyle();
+            return Focused ?? ResolveDefaultPressed(theme, normal);
         }
 
         if (hovered)
         {
-            if (Hovered is { } h)
-            {
-                return h;
-            }
-
-            var style = CellStyle.None;
-            if (theme.Selection is { } selection)
-            {
-                style = style.WithBackground(selection);
-            }
-            return style;
+            return Hovered ?? ResolveDefaultHovered(theme, normal, tone);
         }
 
-        if (Normal is { } n)
-        {
-            return n;
-        }
+        return normal;
+    }
 
-        var bg = tone switch
+    private static CellStyle ResolveDefaultNormal(Theme theme, ControlTone tone)
+    {
+        var (fg, bg) = tone switch
         {
-            ControlTone.Primary => theme.Primary ?? theme.Accent,
-            ControlTone.Success => theme.Success,
-            ControlTone.Warning => theme.Warning,
-            ControlTone.Error => theme.Error,
-            _ => theme.SurfaceAlt ?? theme.Surface ?? theme.Background,
+            ControlTone.Primary => (theme.Background ?? theme.Foreground, theme.Primary ?? theme.Accent),
+            ControlTone.Success => (theme.Background ?? theme.Foreground, theme.Success),
+            ControlTone.Warning => (theme.Background ?? theme.Foreground, theme.Warning),
+            ControlTone.Error => (theme.Background ?? theme.Foreground, theme.Error),
+            _ => (theme.Foreground, theme.Surface ?? theme.SurfaceAlt ?? theme.Background),
         };
-
-        var fg = tone is ControlTone.Default ? theme.Foreground : (theme.Background ?? theme.Foreground);
 
         var resolved = CellStyle.None;
         if (fg is { } fgc) resolved = resolved.WithForeground(fgc);
         if (bg is { } bgc) resolved = resolved.WithBackground(bgc);
         return resolved;
+    }
+
+    private static CellStyle ResolveDefaultHovered(Theme theme, CellStyle normal, ControlTone tone)
+    {
+        if (tone == ControlTone.Default && theme.SurfaceAlt is { } hoverBg)
+        {
+            return normal.WithBackground(hoverBg);
+        }
+
+        return normal | TextStyle.Bold;
+    }
+
+    private static CellStyle ResolveDefaultPressed(Theme theme, CellStyle normal)
+    {
+        if (theme.Selection is { } selectionBg)
+        {
+            normal = normal.WithBackground(selectionBg);
+        }
+
+        return normal | TextStyle.Bold;
     }
 }

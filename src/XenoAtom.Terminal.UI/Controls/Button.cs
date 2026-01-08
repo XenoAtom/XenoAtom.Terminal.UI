@@ -12,6 +12,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public partial class Button : Visual
 {
+    private bool _pressedInside;
     public Button()
     {
         Focusable = true;
@@ -93,7 +94,9 @@ public partial class Button : Visual
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
         var buttonStyle = Get<ButtonStyle>();
-        var style = buttonStyle.Resolve(theme, IsEnabled, isFocused, hovered: IsHovered, pressed: IsPressed, Tone);
+        var pressed = IsPressed && _pressedInside;
+        var hovered = IsPressed ? _pressedInside : IsHovered;
+        var style = buttonStyle.Resolve(theme, IsEnabled, isFocused, hovered: hovered, pressed: pressed, Tone);
 
         var rect = Bounds;
 
@@ -167,8 +170,24 @@ public partial class Button : Visual
             return;
         }
 
+        _pressedInside = Bounds.Contains(e.UiX, e.UiY);
         IsPressed = true;
         e.Handled = true;
+    }
+
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        if (!IsPressed)
+        {
+            return;
+        }
+
+        var inside = Bounds.Contains(e.UiX, e.UiY);
+        if (_pressedInside != inside)
+        {
+            _pressedInside = inside;
+            Invalidate();
+        }
     }
 
     protected override void OnPointerReleased(PointerEventArgs e)
@@ -180,10 +199,15 @@ public partial class Button : Visual
 
         if (IsPressed)
         {
+            _pressedInside = Bounds.Contains(e.UiX, e.UiY);
             IsPressed = false;
-            if (e.LocalX >= 0 && e.LocalX < Bounds.Width && e.LocalY >= 0 && e.LocalY < Bounds.Height)
+            if (_pressedInside)
             {
                 RaiseEvent(Button.ClickEvent, new ClickEventArgs());
+            }
+            else
+            {
+                IsHovered = false;
             }
             e.Handled = true;
         }
