@@ -26,7 +26,7 @@ var content = new VStack(
     list,
     new ProgressBar()
         .Label("Work")
-        .Value(() => progressState.Value),
+        .Value(progressState),
     new Button()
         .Text("Set status")
         .With(b => b.Click += (_, _) => status.Value = "click received"),

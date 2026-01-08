@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -23,4 +24,7 @@ public static partial class VisualExtensions
         obj.AddRange(visuals);
         return obj;
     }
+
+    public static T Style<T, TStyle>(this T obj, TStyle style) where T : Visual where TStyle : IStyle<TStyle>
+        => obj.With(x => x.Set(style));
 }

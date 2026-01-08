@@ -55,27 +55,27 @@ var progressBars = new VStack(
     new HStack(
             new ProgressBar()
                 .Label("Thin")
-                .Value(() => progressState.Value)
+                .Value(progressState)
                 .HorizontalAlignment(HorizontalAlignment.Stretch)
-                .With(p => p.SetEnvironmentValue(ProgressBarStyle.Key, ProgressBarStyle.Thin)),
+                .Style(ProgressBarStyle.Thin),
             new ProgressBar()
                 .Label("Segmented")
-                .Value(() => progressState.Value)
+                .Value(progressState)
                 .HorizontalAlignment(HorizontalAlignment.Stretch)
-                .With(p => p.SetEnvironmentValue(ProgressBarStyle.Key, ProgressBarStyle.Segmented)))
+                .Style(ProgressBarStyle.Segmented))
         .Spacing(2)
         .HorizontalAlignment(HorizontalAlignment.Stretch),
     new HStack(
             new ProgressBar()
                 .Label("Shaded")
-                .Value(() => progressState.Value)
+                .Value(progressState)
                 .HorizontalAlignment(HorizontalAlignment.Stretch)
-                .With(p => p.SetEnvironmentValue(ProgressBarStyle.Key, ProgressBarStyle.Shaded)),
+                .Style(ProgressBarStyle.Shaded),
             new ProgressBar()
                 .Label("Bracketed")
-                .Value(() => progressState.Value)
+                .Value(progressState)
                 .HorizontalAlignment(HorizontalAlignment.Stretch)
-                .With(p => p.SetEnvironmentValue(ProgressBarStyle.Key, ProgressBarStyle.Bracketed)))
+                .Style(ProgressBarStyle.Bracketed))
         .Spacing(2)
         .HorizontalAlignment(HorizontalAlignment.Stretch))
     .Spacing(0)
@@ -117,7 +117,7 @@ var rightColumn = new VStack(
             {
                 tabs.AddTab(
                     new HStack(
-                        new Spinner().With(s => s.SetEnvironmentValue(SpinnerStyle.Key, SpinnerStyles.Dots3)),
+                        new Spinner().Style(SpinnerStyles.Dots3),
                         new TextBlock("Status"),
                         new TextBlock().Text(() => $"({statusState.Value})").Trimming(TextTrimming.EndEllipsis).MaxWidth(12))
                         .Spacing(1),
@@ -127,23 +127,23 @@ var rightColumn = new VStack(
                             new TextBlock("Spinners:"),
                             new VStack(
                                     new HStack(
-                                            new Spinner("Syncing").With(s => s.SetEnvironmentValue(SpinnerStyle.Key, SpinnerStyles.Dots2)),
-                                            new Spinner().With(s => s.SetEnvironmentValue(SpinnerStyle.Key, SpinnerStyles.BouncingBar)))
+                                            new Spinner("Syncing").Style(SpinnerStyles.Dots2),
+                                            new Spinner().Style(SpinnerStyles.BouncingBar))
                                         .Spacing(2),
                                     new HStack(
-                                            new Spinner("Rendering").With(s => s.SetEnvironmentValue(SpinnerStyle.Key, SpinnerStyles.Line)),
-                                            new Spinner().With(s => s.SetEnvironmentValue(SpinnerStyle.Key, SpinnerStyles.Wave)))
+                                            new Spinner("Rendering").Style(SpinnerStyles.Line),
+                                            new Spinner().Style(SpinnerStyles.Wave))
                                         .Spacing(2),
                                     new HStack(
-                                            new Spinner("Launch").With(s => s.SetEnvironmentValue(SpinnerStyle.Key, SpinnerStyles.Rocket)),
-                                            new Spinner().With(s => s.SetEnvironmentValue(SpinnerStyle.Key, SpinnerStyles.DotsEllipsis2)))
+                                            new Spinner("Launch").Style(SpinnerStyles.Rocket),
+                                            new Spinner().Style(SpinnerStyles.DotsEllipsis2))
                                         .Spacing(2))
                                 .Spacing(0))
                         .Spacing(0));
 
                 tabs.AddTab(
                     new HStack(
-                        new Spinner().With(s => s.SetEnvironmentValue(SpinnerStyle.Key, SpinnerStyles.Dots2)),
+                        new Spinner().Style(SpinnerStyles.Dots2),
                         new TextBlock("Logs"),
                         new TextBlock().Text(() => $"({(int)(progressState.Value * 100)}%)"))
                         .Spacing(1),
