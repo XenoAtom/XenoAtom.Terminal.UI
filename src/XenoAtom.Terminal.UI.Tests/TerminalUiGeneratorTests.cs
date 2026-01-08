@@ -81,6 +81,7 @@ public sealed class TerminalUiGeneratorTests
         Assert.IsTrue(generatedSources.Any(s => s.Contains("__Title__BindingAccessor", StringComparison.Ordinal)), "Expected generated accessor for custom bindable property.");
         Assert.IsFalse(generatedSources.Any(s => s.Contains("private global::System.String _title", StringComparison.Ordinal)), "Did not expect generated backing field for custom bindable property.");
         Assert.IsTrue(generatedSources.Any(s => s.Contains("PointerPressedEvent", StringComparison.Ordinal)), "Expected generated routed event field.");
+        Assert.IsTrue(generatedSources.Any(s => s.Contains("Count<T>(this T obj, global::XenoAtom.Terminal.UI.State<", StringComparison.Ordinal)), "Expected generated fluent overloads for State<T>.");
     }
 
     private static CSharpCompilation CreateCompilation(string source, CSharpParseOptions parseOptions)

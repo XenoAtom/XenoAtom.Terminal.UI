@@ -48,8 +48,6 @@ public sealed class State<T> : Threading.DispatcherObject
 
     public static implicit operator State<T>(T value) => new(value);
 
-    public static implicit operator System.Func<T>(State<T> state) => () => state.Value;
-
     public static implicit operator Binding<T>(State<T> state) => new(state, InternalAccessor.Instance);
 
     public static implicit operator Binding(State<T> state) => new(state, InternalAccessor.Instance);

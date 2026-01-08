@@ -174,7 +174,7 @@ var rightColumn = new VStack(
             .Padding(Thickness.Zero)
             .HorizontalAlignment(HorizontalAlignment.Stretch)
             .Content(new ListBox()
-                .Items(new[] { "First", "Second", "Third", "Fourth", "Fifth", "Sixth" })
+                .Items(["First", "Second", "Third", "Fourth", "Fifth", "Sixth"])
                 .Height(5)),
         new Group()
             .TopLeftText("ScrollViewer")
