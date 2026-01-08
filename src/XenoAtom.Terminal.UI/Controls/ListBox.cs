@@ -12,6 +12,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class ListBox : Visual
 {
+    private IReadOnlyList<Visual>? _items;
     private int _scrollOffset;
 
     public ListBox()
@@ -21,7 +22,42 @@ public sealed partial class ListBox : Visual
     }
 
     [Bindable]
-    public partial IReadOnlyList<string>? Items { get; set; }
+    public IReadOnlyList<Visual>? Items
+    {
+        get
+        {
+            BindingManager.Current.RegisterRead(this, __Items__BindingAccessor.Instance);
+            return _items;
+        }
+        set
+        {
+            if (ReferenceEquals(_items, value))
+            {
+                return;
+            }
+
+            if (_items is not null)
+            {
+                for (var i = 0; i < _items.Count; i++)
+                {
+                    DetachChild(_items[i]);
+                }
+            }
+
+            _items = value;
+
+            if (value is not null)
+            {
+                for (var i = 0; i < value.Count; i++)
+                {
+                    AttachChild(value[i]);
+                }
+            }
+
+            BindingManager.Current.NotifyValueChanged(this, __Items__BindingAccessor.Instance);
+            App?.RequestRender();
+        }
+    }
 
     [Bindable]
     public partial int SelectedIndex { get; set; }
@@ -32,24 +68,30 @@ public sealed partial class ListBox : Visual
     [Bindable]
     public partial bool ShowBorder { get; set; }
 
+    protected override int ChildrenCount => _items?.Count ?? 0;
+
+    protected override Visual GetChild(int index) => _items![index];
+
     protected override Size MeasureOverride(Size availableSize)
     {
         var height = Math.Max(1, Height);
-        var width = 0;
         var listBoxStyle = Get<ListBoxStyle>();
         var showBorder = ShowBorder || listBoxStyle.ShowBorder;
 
         var items = Items;
+        var itemWidth = 0;
         if (items is not null)
         {
-            foreach (var item in items)
+            for (var i = 0; i < items.Count; i++)
             {
-                width = Math.Max(width, TerminalTextUtility.GetWidth(item.AsSpan()));
+                var item = items[i];
+                item.Measure(new Size(int.MaxValue / 4, 1));
+                itemWidth = Math.Max(itemWidth, item.DesiredSize.Width);
             }
         }
 
         // Marker + space.
-        width = Math.Min(availableSize.Width, width + 2);
+        var width = Math.Min(availableSize.Width, itemWidth + 2);
 
         var desiredHeight = Math.Min(height, availableSize.Height);
         if (showBorder)
@@ -64,6 +106,40 @@ public sealed partial class ListBox : Visual
     protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
+
+        var rect = finalRect;
+        var items = Items;
+        if (rect.Width <= 0 || rect.Height <= 0 || items is null || items.Count == 0)
+        {
+            return;
+        }
+
+        var listBoxStyle = Get<ListBoxStyle>();
+        var showBorder = ShowBorder || listBoxStyle.ShowBorder;
+        var innerLeft = rect.X + (showBorder ? 1 : 0);
+        var innerTop = rect.Y + (showBorder ? 1 : 0);
+        var innerWidth = Math.Max(0, rect.Width - (showBorder ? 2 : 0));
+        var innerHeight = Math.Max(0, rect.Height - (showBorder ? 2 : 0));
+
+        var count = items.Count;
+        var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
+
+        if (selected < _scrollOffset)
+        {
+            _scrollOffset = selected;
+        }
+        else if (selected >= _scrollOffset + Math.Max(1, innerHeight))
+        {
+            _scrollOffset = Math.Max(0, selected - Math.Max(1, innerHeight) + 1);
+        }
+
+        var itemLeft = innerLeft + 2;
+        var itemWidth = Math.Max(0, innerWidth - 2);
+        for (var i = 0; i < count; i++)
+        {
+            var y = innerTop + (i - _scrollOffset);
+            items[i].Arrange(new Rectangle(itemLeft, y, itemWidth, 1));
+        }
     }
 
     protected override void RenderOverride(CellBuffer buffer)
@@ -84,15 +160,6 @@ public sealed partial class ListBox : Visual
 
         var count = items?.Count ?? 0;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
-
-        if (selected < _scrollOffset)
-        {
-            _scrollOffset = selected;
-        }
-        else if (selected >= _scrollOffset + Math.Max(1, innerHeight))
-        {
-            _scrollOffset = Math.Max(0, selected - Math.Max(1, innerHeight) + 1);
-        }
 
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
@@ -144,22 +211,24 @@ public sealed partial class ListBox : Visual
                 continue;
             }
 
-            var item = items![itemIndex];
             var isSelected = itemIndex == selected;
             var style = listBoxStyle.ResolveItemStyle(theme, IsEnabled, isSelected, isFocused);
+
+            if (innerWidth <= 0)
+            {
+                continue;
+            }
+
+            // Fill row background/style so that child visuals using CellStyle.None inherit foreground/background.
+            for (var x = 0; x < innerWidth; x++)
+            {
+                buffer.SetCell(innerLeft + x, y, new Rune(' '), style);
+            }
 
             if (innerWidth >= 2)
             {
                 buffer.SetCell(innerLeft, y, isSelected ? listBoxStyle.MarkerGlyph : new Rune(' '), style);
                 buffer.SetCell(innerLeft + 1, y, new Rune(' '), style);
-
-                var span = item.AsSpan();
-                var maxCells = Math.Max(0, innerWidth - 2);
-                if (TerminalTextUtility.TryGetIndexAtCell(span, maxCells, out var endIndex))
-                {
-                    span = span[..endIndex];
-                }
-                buffer.WriteText(innerLeft + 2, y, span, style);
             }
         }
     }
@@ -220,7 +289,7 @@ public sealed partial class ListBox : Visual
         }
 
         var showBorder = ShowBorder || Get<ListBoxStyle>().ShowBorder;
-        var innerY = e.LocalY - (showBorder ? 1 : 0);
+        var innerY = (e.UiY - Bounds.Y) - (showBorder ? 1 : 0);
         var innerHeight = Math.Max(0, Bounds.Height - (showBorder ? 2 : 0));
         if ((uint)innerY >= (uint)innerHeight)
         {

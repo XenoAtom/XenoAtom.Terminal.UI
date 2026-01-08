@@ -1004,7 +1004,7 @@ public sealed class TerminalAppTests
 
         var listBox = new ListBox
         {
-            Items = new[] { "A", "B", "C" },
+            Items = ["A", "B", "C"],
             SelectedIndex = 0,
             Height = 3,
         };

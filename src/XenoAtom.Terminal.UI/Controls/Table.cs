@@ -19,17 +19,16 @@ public sealed partial class Table : Visual
         ShowHeaderSeparator = true;
     }
 
-    [Bindable]
-    public partial IReadOnlyList<string>? Headers { get; set; }
-
-    [Bindable]
-    public partial IReadOnlyList<IReadOnlyList<string>>? Rows { get; set; }
-
     private IReadOnlyList<Visual>? _headerCells;
 
+    [Bindable]
     public IReadOnlyList<Visual>? HeaderCells
     {
-        get => _headerCells;
+        get
+        {
+            BindingManager.Current.RegisterRead(this, __HeaderCells__BindingAccessor.Instance);
+            return _headerCells;
+        }
         set
         {
             if (ReferenceEquals(_headerCells, value))
@@ -39,15 +38,21 @@ public sealed partial class Table : Visual
 
             _headerCells = value;
             RebuildVisualChildren();
+            BindingManager.Current.NotifyValueChanged(this, __HeaderCells__BindingAccessor.Instance);
             App?.RequestRender();
         }
     }
 
     private IReadOnlyList<IReadOnlyList<Visual>>? _rowCells;
 
+    [Bindable]
     public IReadOnlyList<IReadOnlyList<Visual>>? RowCells
     {
-        get => _rowCells;
+        get
+        {
+            BindingManager.Current.RegisterRead(this, __RowCells__BindingAccessor.Instance);
+            return _rowCells;
+        }
         set
         {
             if (ReferenceEquals(_rowCells, value))
@@ -57,6 +62,7 @@ public sealed partial class Table : Visual
 
             _rowCells = value;
             RebuildVisualChildren();
+            BindingManager.Current.NotifyValueChanged(this, __RowCells__BindingAccessor.Instance);
             App?.RequestRender();
         }
     }
@@ -71,20 +77,13 @@ public sealed partial class Table : Visual
     protected override Size MeasureOverride(Size availableSize)
     {
         var width = Math.Max(1, availableSize.Width);
-        var headerCells = _headerCells;
-        var rowCells = _rowCells;
-
-        var headers = Headers;
-        var rows = Rows;
+        var headerCells = HeaderCells;
+        var rowCells = RowCells;
 
         var columns = 0;
         if (headerCells is not null)
         {
             columns = Math.Max(columns, headerCells.Count);
-        }
-        else if (headers is not null)
-        {
-            columns = Math.Max(columns, headers.Count);
         }
 
         if (rowCells is not null)
@@ -92,13 +91,6 @@ public sealed partial class Table : Visual
             for (var i = 0; i < rowCells.Count; i++)
             {
                 columns = Math.Max(columns, rowCells[i].Count);
-            }
-        }
-        else if (rows is not null)
-        {
-            for (var i = 0; i < rows.Count; i++)
-            {
-                columns = Math.Max(columns, rows[i].Count);
             }
         }
 
@@ -124,14 +116,6 @@ public sealed partial class Table : Visual
                 widths[c] = Math.Max(widths[c], cell.DesiredSize.Width);
             }
         }
-        else if (headers is not null)
-        {
-            for (var c = 0; c < columns; c++)
-            {
-                var text = c < headers.Count ? headers[c] : string.Empty;
-                widths[c] = Math.Max(widths[c], TerminalTextUtility.GetWidth(text.AsSpan()));
-            }
-        }
 
         if (rowCells is not null)
         {
@@ -148,18 +132,6 @@ public sealed partial class Table : Visual
 
                     cell.Measure(new Size(int.MaxValue / 4, 1));
                     widths[c] = Math.Max(widths[c], cell.DesiredSize.Width);
-                }
-            }
-        }
-        else if (rows is not null)
-        {
-            for (var r = 0; r < rows.Count; r++)
-            {
-                var row = rows[r];
-                for (var c = 0; c < columns; c++)
-                {
-                    var text = c < row.Count ? row[c] : string.Empty;
-                    widths[c] = Math.Max(widths[c], TerminalTextUtility.GetWidth(text.AsSpan()));
                 }
             }
         }
@@ -188,7 +160,7 @@ public sealed partial class Table : Visual
         _columnWidths = widths;
 
         var height = 2; // top + bottom
-        if (headerCells is not null || headers is not null)
+        if (headerCells is not null)
         {
             height += 1;
             if (ShowHeaderSeparator)
@@ -196,11 +168,7 @@ public sealed partial class Table : Visual
                 height += 1;
             }
         }
-        height += rowCells?.Count ?? rows?.Count ?? 0;
-        if ((headerCells is not null || headers is not null) && ShowHeaderSeparator)
-        {
-            // already included
-        }
+        height += rowCells?.Count ?? 0;
 
         return new Size(width, Math.Min(availableSize.Height, height));
     }
@@ -217,13 +185,13 @@ public sealed partial class Table : Visual
 
         var y = finalRect.Y + 1;
 
-        var hasHeader = _headerCells is not null || Headers is not null;
+        var headerCells = HeaderCells;
+        var rowCells = RowCells;
+
+        var hasHeader = headerCells is not null;
         if (hasHeader)
         {
-            if (_headerCells is not null)
-            {
-                ArrangeRow(finalRect, y, widths, _headerCells);
-            }
+            ArrangeRow(finalRect, y, widths, headerCells!);
             y++;
 
             if (ShowHeaderSeparator)
@@ -232,11 +200,11 @@ public sealed partial class Table : Visual
             }
         }
 
-        if (_rowCells is not null)
+        if (rowCells is not null)
         {
-            for (var r = 0; r < _rowCells.Count; r++, y++)
+            for (var r = 0; r < rowCells.Count; r++, y++)
             {
-                ArrangeRow(finalRect, y, widths, _rowCells[r]);
+                ArrangeRow(finalRect, y, widths, rowCells[r]);
             }
         }
     }
@@ -273,18 +241,13 @@ public sealed partial class Table : Visual
         DrawLine(buffer, rect, y, widths, border, glyphs, glyphs.TopLeft, glyphs.TeeTop, glyphs.TopRight);
         y++;
 
-        var hasHeader = _headerCells is not null || Headers is not null;
+        var headerCells = HeaderCells;
+        var rowCells = RowCells;
+
+        var hasHeader = headerCells is not null;
         if (hasHeader)
         {
-            if (_headerCells is not null)
-            {
-                DrawRowFrame(buffer, rect, y, widths, border, glyphs);
-            }
-            else
-            {
-                var headers = Headers;
-                WriteRow(buffer, rect, y, headers ?? Array.Empty<string>(), widths, border, glyphs, CellStyle.None | TextStyle.Bold);
-            }
+            DrawRowFrame(buffer, rect, y, widths, border, glyphs);
             y++;
 
             if (ShowHeaderSeparator && y < rect.Y + rect.Height)
@@ -294,22 +257,11 @@ public sealed partial class Table : Visual
             }
         }
 
-        if (_rowCells is not null)
+        if (rowCells is not null)
         {
-            for (var r = 0; r < _rowCells.Count && y < rect.Y + rect.Height - 1; r++, y++)
+            for (var r = 0; r < rowCells.Count && y < rect.Y + rect.Height - 1; r++, y++)
             {
                 DrawRowFrame(buffer, rect, y, widths, border, glyphs);
-            }
-        }
-        else
-        {
-            var rows = Rows;
-            if (rows is not null)
-            {
-                for (var r = 0; r < rows.Count && y < rect.Y + rect.Height - 1; r++, y++)
-                {
-                    WriteRow(buffer, rect, y, rows[r], widths, border, glyphs, CellStyle.None);
-                }
             }
         }
 
@@ -430,60 +382,5 @@ public sealed partial class Table : Visual
         }
     }
 
-    private static void WriteRow(CellBuffer buffer, Rectangle rect, int y, IReadOnlyList<string> row, IReadOnlyList<int> widths, CellStyle border, LineGlyphs glyphs, CellStyle cellStyleStyle)
-    {
-        var x = rect.X;
 
-        buffer.SetCell(x, y, glyphs.Vertical, border);
-        x++;
-
-        for (var c = 0; c < widths.Count && x < rect.X + rect.Width; c++)
-        {
-            buffer.SetCell(x, y, new Rune(' '), cellStyleStyle);
-            x++;
-
-            var contentWidth = widths[c];
-            var text = c < row.Count ? row[c] : string.Empty;
-            WriteClipped(buffer, x, y, text.AsSpan(), contentWidth, cellStyleStyle);
-
-            x += contentWidth;
-            if (x >= rect.X + rect.Width)
-            {
-                break;
-            }
-
-            buffer.SetCell(x, y, new Rune(' '), cellStyleStyle);
-            x++;
-
-            if (x >= rect.X + rect.Width)
-            {
-                break;
-            }
-
-            buffer.SetCell(x, y, glyphs.Vertical, border);
-            x++;
-        }
-    }
-
-    private static void WriteClipped(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, int maxCells, CellStyle style)
-    {
-        if (maxCells <= 0)
-        {
-            return;
-        }
-
-        if (!TerminalTextUtility.TryGetIndexAtCell(text, maxCells, out var endIndex))
-        {
-            endIndex = text.Length;
-        }
-
-        var clipped = text[..Math.Clamp(endIndex, 0, text.Length)];
-        buffer.WriteText(x, y, clipped, style);
-
-        var writtenWidth = TerminalTextUtility.GetWidth(clipped);
-        for (var i = writtenWidth; i < maxCells; i++)
-        {
-            buffer.SetCell(x + i, y, new Rune(' '), style);
-        }
-    }
 }
