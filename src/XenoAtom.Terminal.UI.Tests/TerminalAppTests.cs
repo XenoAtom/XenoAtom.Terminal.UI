@@ -1080,9 +1080,9 @@ public sealed class TerminalAppTests
         var table = new Table
         {
         };
-        table.HeaderCells.AddRange("Name", "Value");
-        table.AddRow("A", "1");
-        table.AddRow("B", "2");
+        table.Headers("Name", "Value")
+            .AddRow("A", "1")
+            .AddRow("B", "2");
 
         var root = new VStack { table };
 

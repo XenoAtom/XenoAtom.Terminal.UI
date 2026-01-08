@@ -87,12 +87,10 @@ var leftColumn = new VStack(
             .HorizontalAlignment(HorizontalAlignment.Stretch),
         new CheckBox().Text("Accept terms"),
         showModal,
-        new Table().With(t =>
-        {
-            t.HeaderCells.AddRange("Task", "Status");
-            t.AddRow("Download", "Running");
-            t.AddRow("Render", "OK");
-        }),
+        new Table()
+            .Headers("Task", "Status")
+            .AddRow("Download", "Running")
+            .AddRow("Render", "OK"),
         progressBars)
     .Spacing(0)
     .HorizontalAlignment(HorizontalAlignment.Stretch)

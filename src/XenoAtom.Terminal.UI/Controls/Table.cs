@@ -29,14 +29,6 @@ public sealed partial class Table : Visual
     [Bindable]
     public partial bool ShowHeaderSeparator { get; set; }
 
-    public VisualList<Visual> AddRow(params Visual[] cells)
-    {
-        var row = new VisualList<Visual>(this, "Table.Row");
-        row.AddRange(cells);
-        RowCells.Add(row);
-        return row;
-    }
-
     protected override int ChildrenCount
     {
         get
@@ -334,4 +326,3 @@ public sealed partial class Table : Visual
         }
     }
 }
-
