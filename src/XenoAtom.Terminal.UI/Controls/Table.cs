@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
+using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
@@ -11,87 +12,80 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class Table : Visual
 {
-    private readonly List<Visual> _visualChildren = new();
     private int[]? _columnWidths;
 
     public Table()
     {
         ShowHeaderSeparator = true;
+
+        HeaderCells = new VisualList<Visual>(this, "Table.HeaderCells");
+        RowCells = new BindableList<VisualList<Visual>>(this, "Table.RowCells", onAdding: ValidateRowOwner, onRemoving: DetachRow);
     }
 
-    private IReadOnlyList<Visual>? _headerCells;
+    public VisualList<Visual> HeaderCells { get; }
 
-    [Bindable]
-    public IReadOnlyList<Visual>? HeaderCells
-    {
-        get
-        {
-            BindingManager.Current.RegisterRead(this, __HeaderCells__BindingAccessor.Instance);
-            return _headerCells;
-        }
-        set
-        {
-            if (ReferenceEquals(_headerCells, value))
-            {
-                return;
-            }
-
-            _headerCells = value;
-            RebuildVisualChildren();
-            BindingManager.Current.NotifyValueChanged(this, __HeaderCells__BindingAccessor.Instance);
-            App?.RequestRender();
-        }
-    }
-
-    private IReadOnlyList<IReadOnlyList<Visual>>? _rowCells;
-
-    [Bindable]
-    public IReadOnlyList<IReadOnlyList<Visual>>? RowCells
-    {
-        get
-        {
-            BindingManager.Current.RegisterRead(this, __RowCells__BindingAccessor.Instance);
-            return _rowCells;
-        }
-        set
-        {
-            if (ReferenceEquals(_rowCells, value))
-            {
-                return;
-            }
-
-            _rowCells = value;
-            RebuildVisualChildren();
-            BindingManager.Current.NotifyValueChanged(this, __RowCells__BindingAccessor.Instance);
-            App?.RequestRender();
-        }
-    }
+    public BindableList<VisualList<Visual>> RowCells { get; }
 
     [Bindable]
     public partial bool ShowHeaderSeparator { get; set; }
 
-    protected override int ChildrenCount => _visualChildren.Count;
+    public VisualList<Visual> AddRow(params Visual[] cells)
+    {
+        var row = new VisualList<Visual>(this, "Table.Row");
+        row.AddRange(cells);
+        RowCells.Add(row);
+        return row;
+    }
 
-    protected override Visual GetChild(int index) => _visualChildren[index];
+    protected override int ChildrenCount
+    {
+        get
+        {
+            var count = HeaderCells.Count;
+            for (var r = 0; r < RowCells.Count; r++)
+            {
+                count += RowCells[r].Count;
+            }
+
+            return count;
+        }
+    }
+
+    protected override Visual GetChild(int index)
+    {
+        var headerCount = HeaderCells.Count;
+        if ((uint)index < (uint)headerCount)
+        {
+            return HeaderCells[index];
+        }
+
+        index -= headerCount;
+
+        for (var r = 0; r < RowCells.Count; r++)
+        {
+            var row = RowCells[r];
+            var rowCount = row.Count;
+            if ((uint)index < (uint)rowCount)
+            {
+                return row[index];
+            }
+
+            index -= rowCount;
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(index));
+    }
 
     protected override Size MeasureOverride(Size availableSize)
     {
         var width = Math.Max(1, availableSize.Width);
-        var headerCells = HeaderCells;
-        var rowCells = RowCells;
 
         var columns = 0;
-        if (headerCells is not null)
-        {
-            columns = Math.Max(columns, headerCells.Count);
-        }
+        columns = Math.Max(columns, HeaderCells.Count);
 
-        if (rowCells is not null)
+        for (var i = 0; i < RowCells.Count; i++)
         {
-            for (var i = 0; i < rowCells.Count; i++)
-            {
-                columns = Math.Max(columns, rowCells[i].Count);
-            }
+            columns = Math.Max(columns, RowCells[i].Count);
         }
 
         if (columns == 0)
@@ -102,42 +96,33 @@ public sealed partial class Table : Visual
 
         var widths = new int[columns];
 
-        if (headerCells is not null)
+        for (var c = 0; c < columns; c++)
         {
-            for (var c = 0; c < columns; c++)
+            if (c < HeaderCells.Count)
             {
-                var cell = c < headerCells.Count ? headerCells[c] : null;
-                if (cell is null)
-                {
-                    continue;
-                }
-
+                var cell = HeaderCells[c];
                 cell.Measure(new Size(int.MaxValue / 4, 1));
                 widths[c] = Math.Max(widths[c], cell.DesiredSize.Width);
             }
         }
 
-        if (rowCells is not null)
+        for (var r = 0; r < RowCells.Count; r++)
         {
-            for (var r = 0; r < rowCells.Count; r++)
+            var row = RowCells[r];
+            for (var c = 0; c < columns; c++)
             {
-                var row = rowCells[r];
-                for (var c = 0; c < columns; c++)
+                if (c >= row.Count)
                 {
-                    var cell = c < row.Count ? row[c] : null;
-                    if (cell is null)
-                    {
-                        continue;
-                    }
-
-                    cell.Measure(new Size(int.MaxValue / 4, 1));
-                    widths[c] = Math.Max(widths[c], cell.DesiredSize.Width);
+                    continue;
                 }
+
+                var cell = row[c];
+                cell.Measure(new Size(int.MaxValue / 4, 1));
+                widths[c] = Math.Max(widths[c], cell.DesiredSize.Width);
             }
         }
 
         // Full box:
-        // Top/bottom lines: ┌─┬─┐, inner separators: │ ... │
         // For N columns: N content areas with 2 padding spaces, plus N+1 vertical separators.
         // Also includes an outer border and optional header separator row.
         var required = 1 + columns + (columns * 2);
@@ -160,7 +145,7 @@ public sealed partial class Table : Visual
         _columnWidths = widths;
 
         var height = 2; // top + bottom
-        if (headerCells is not null)
+        if (HeaderCells.Count > 0)
         {
             height += 1;
             if (ShowHeaderSeparator)
@@ -168,7 +153,7 @@ public sealed partial class Table : Visual
                 height += 1;
             }
         }
-        height += rowCells?.Count ?? 0;
+        height += RowCells.Count;
 
         return new Size(width, Math.Min(availableSize.Height, height));
     }
@@ -185,13 +170,9 @@ public sealed partial class Table : Visual
 
         var y = finalRect.Y + 1;
 
-        var headerCells = HeaderCells;
-        var rowCells = RowCells;
-
-        var hasHeader = headerCells is not null;
-        if (hasHeader)
+        if (HeaderCells.Count > 0)
         {
-            ArrangeRow(finalRect, y, widths, headerCells!);
+            ArrangeRow(finalRect, y, widths, HeaderCells);
             y++;
 
             if (ShowHeaderSeparator)
@@ -200,12 +181,9 @@ public sealed partial class Table : Visual
             }
         }
 
-        if (rowCells is not null)
+        for (var r = 0; r < RowCells.Count; r++, y++)
         {
-            for (var r = 0; r < rowCells.Count; r++, y++)
-            {
-                ArrangeRow(finalRect, y, widths, rowCells[r]);
-            }
+            ArrangeRow(finalRect, y, widths, RowCells[r]);
         }
     }
 
@@ -241,12 +219,9 @@ public sealed partial class Table : Visual
         DrawLine(buffer, rect, y, widths, border, glyphs, glyphs.TopLeft, glyphs.TeeTop, glyphs.TopRight);
         y++;
 
-        var headerCells = HeaderCells;
-        var rowCells = RowCells;
-
-        var hasHeader = headerCells is not null;
-        if (hasHeader)
+        if (HeaderCells.Count > 0 && y < rect.Y + rect.Height)
         {
+            FillInteriorRow(buffer, rect, y, CellStyle.None | TextStyle.Bold);
             DrawRowFrame(buffer, rect, y, widths, border, glyphs);
             y++;
 
@@ -257,12 +232,9 @@ public sealed partial class Table : Visual
             }
         }
 
-        if (rowCells is not null)
+        for (var r = 0; r < RowCells.Count && y < rect.Y + rect.Height - 1; r++, y++)
         {
-            for (var r = 0; r < rowCells.Count && y < rect.Y + rect.Height - 1; r++, y++)
-            {
-                DrawRowFrame(buffer, rect, y, widths, border, glyphs);
-            }
+            DrawRowFrame(buffer, rect, y, widths, border, glyphs);
         }
 
         if (y < rect.Y + rect.Height)
@@ -271,47 +243,27 @@ public sealed partial class Table : Visual
         }
     }
 
-    private void RebuildVisualChildren()
+    private static void FillInteriorRow(CellBuffer buffer, Rectangle rect, int y, CellStyle style)
     {
-        for (var i = 0; i < _visualChildren.Count; i++)
+        for (var x = rect.X + 1; x < rect.X + rect.Width - 1; x++)
         {
-            DetachChild(_visualChildren[i]);
+            buffer.SetCell(x, y, new Rune(' '), style);
         }
+    }
 
-        _visualChildren.Clear();
-
-        if (_headerCells is not null)
+    private void ValidateRowOwner(VisualList<Visual> row)
+    {
+        if (!ReferenceEquals(row.VisualOwner, this))
         {
-            for (var i = 0; i < _headerCells.Count; i++)
-            {
-                var cell = _headerCells[i];
-                if (cell is null)
-                {
-                    continue;
-                }
-
-                AttachChild(cell);
-                _visualChildren.Add(cell);
-            }
+            throw new InvalidOperationException("RowCells can only contain rows created for this Table instance.");
         }
+    }
 
-        if (_rowCells is not null)
+    private void DetachRow(VisualList<Visual> row)
+    {
+        if (row.Count > 0)
         {
-            for (var r = 0; r < _rowCells.Count; r++)
-            {
-                var row = _rowCells[r];
-                for (var c = 0; c < row.Count; c++)
-                {
-                    var cell = row[c];
-                    if (cell is null)
-                    {
-                        continue;
-                    }
-
-                    AttachChild(cell);
-                    _visualChildren.Add(cell);
-                }
-            }
+            row.Clear();
         }
     }
 
@@ -381,6 +333,5 @@ public sealed partial class Table : Visual
             x++;
         }
     }
-
-
 }
+

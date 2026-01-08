@@ -25,6 +25,16 @@ public static partial class VisualExtensions
         return obj;
     }
 
+    public static ListBox Items(this ListBox obj, params Visual[] items)
+    {
+        ArgumentNullException.ThrowIfNull(obj);
+        ArgumentNullException.ThrowIfNull(items);
+        obj.VerifyAccess();
+        obj.Items.Clear();
+        obj.Items.AddRange(items);
+        return obj;
+    }
+
     public static T Style<T, TStyle>(this T obj, TStyle style) where T : Visual where TStyle : IStyle<TStyle>
         => obj.With(x => x.Set(style));
 }

@@ -346,6 +346,10 @@ public abstract partial class Visual : DispatcherObject
         child.Parent = null;
     }
 
+    internal void AttachCollectionChild(Visual child) => AttachChild(child);
+
+    internal void DetachCollectionChild(Visual child) => DetachChild(child);
+
     public void Set<T>(T value) where T : IStyle<T> => Set(T.Key, value);
 
     public void Set<T>(StyleKey<T> key, T value)

@@ -1004,10 +1004,10 @@ public sealed class TerminalAppTests
 
         var listBox = new ListBox
         {
-            Items = ["A", "B", "C"],
             SelectedIndex = 0,
             Height = 3,
         };
+        listBox.Items.AddRange("A", "B", "C");
 
         var selected = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         void Handler(Binding binding)
@@ -1079,9 +1079,10 @@ public sealed class TerminalAppTests
 
         var table = new Table
         {
-            HeaderCells = new Visual[] { "Name", "Value" },
-            RowCells = new Visual[][] { new Visual[] { "A", "1" }, new Visual[] { "B", "2" } },
         };
+        table.HeaderCells.AddRange("Name", "Value");
+        table.AddRow("A", "1");
+        table.AddRow("B", "2");
 
         var root = new VStack { table };
 

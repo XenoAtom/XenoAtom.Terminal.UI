@@ -4,31 +4,27 @@
 
 using System.Collections;
 using System.ComponentModel;
+using XenoAtom.Terminal.UI.Collections;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
 public abstract partial class Panel : Visual, IEnumerable<Visual>
 {
-    private readonly List<Visual> _children = new();
+    private readonly VisualList<Visual> _children;
 
     protected Panel()
     {
         HorizontalAlignment = HorizontalAlignment.Stretch;
         VerticalAlignment = VerticalAlignment.Stretch;
+        _children = new VisualList<Visual>(this, "Children");
     }
 
-    protected IReadOnlyList<Visual> Children => _children;
+    public VisualList<Visual> Children => _children;
 
     internal void AddRange(params Visual[] children)
     {
         ArgumentNullException.ThrowIfNull(children);
-        foreach (var child in children)
-        {
-            AttachChild(child);
-            _children.Add(child);
-        }
-
-        App?.RequestRender();
+        _children.AddRange(children);
     }
 
     [EditorBrowsable(EditorBrowsableState.Never)]

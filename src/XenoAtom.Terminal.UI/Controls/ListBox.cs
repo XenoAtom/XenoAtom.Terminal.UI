@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
+using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Rendering;
@@ -12,51 +13,15 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class ListBox : Visual
 {
-    private IReadOnlyList<Visual>? _items;
     private int _scrollOffset;
+
+    public VisualList<Visual> Items { get; }
 
     public ListBox()
     {
+        Items = new VisualList<Visual>(this, "Items");
         Focusable = true;
         Height = 6;
-    }
-
-    [Bindable]
-    public IReadOnlyList<Visual>? Items
-    {
-        get
-        {
-            BindingManager.Current.RegisterRead(this, __Items__BindingAccessor.Instance);
-            return _items;
-        }
-        set
-        {
-            if (ReferenceEquals(_items, value))
-            {
-                return;
-            }
-
-            if (_items is not null)
-            {
-                for (var i = 0; i < _items.Count; i++)
-                {
-                    DetachChild(_items[i]);
-                }
-            }
-
-            _items = value;
-
-            if (value is not null)
-            {
-                for (var i = 0; i < value.Count; i++)
-                {
-                    AttachChild(value[i]);
-                }
-            }
-
-            BindingManager.Current.NotifyValueChanged(this, __Items__BindingAccessor.Instance);
-            App?.RequestRender();
-        }
     }
 
     [Bindable]
@@ -68,9 +33,9 @@ public sealed partial class ListBox : Visual
     [Bindable]
     public partial bool ShowBorder { get; set; }
 
-    protected override int ChildrenCount => _items?.Count ?? 0;
+    protected override int ChildrenCount => Items.Count;
 
-    protected override Visual GetChild(int index) => _items![index];
+    protected override Visual GetChild(int index) => Items[index];
 
     protected override Size MeasureOverride(Size availableSize)
     {
@@ -80,7 +45,7 @@ public sealed partial class ListBox : Visual
 
         var items = Items;
         var itemWidth = 0;
-        if (items is not null)
+        if (items.Count > 0)
         {
             for (var i = 0; i < items.Count; i++)
             {
@@ -109,7 +74,7 @@ public sealed partial class ListBox : Visual
 
         var rect = finalRect;
         var items = Items;
-        if (rect.Width <= 0 || rect.Height <= 0 || items is null || items.Count == 0)
+        if (rect.Width <= 0 || rect.Height <= 0 || items.Count == 0)
         {
             return;
         }
@@ -158,7 +123,7 @@ public sealed partial class ListBox : Visual
         var innerWidth = Math.Max(0, rect.Width - (showBorder ? 2 : 0));
         var innerHeight = Math.Max(0, rect.Height - (showBorder ? 2 : 0));
 
-        var count = items?.Count ?? 0;
+        var count = items.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
 
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
@@ -235,8 +200,7 @@ public sealed partial class ListBox : Visual
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
-        var items = Items;
-        var count = items?.Count ?? 0;
+        var count = Items.Count;
         if (count == 0)
         {
             return;
@@ -281,8 +245,7 @@ public sealed partial class ListBox : Visual
             return;
         }
 
-        var items = Items;
-        var count = items?.Count ?? 0;
+        var count = Items.Count;
         if (count == 0)
         {
             return;
@@ -306,8 +269,7 @@ public sealed partial class ListBox : Visual
 
     protected override void OnPointerWheel(PointerEventArgs e)
     {
-        var items = Items;
-        var count = items?.Count ?? 0;
+        var count = Items.Count;
         if (count == 0 || e.WheelDelta == 0)
         {
             return;

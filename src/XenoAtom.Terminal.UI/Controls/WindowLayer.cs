@@ -3,17 +3,19 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Collections;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class WindowLayer : Visual
 {
-    private readonly List<Visual> _windows = new();
+    private readonly VisualList<Visual> _windows;
 
     public WindowLayer()
     {
         HorizontalAlignment = HorizontalAlignment.Stretch;
         VerticalAlignment = VerticalAlignment.Stretch;
+        _windows = new VisualList<Visual>(this, "Windows");
     }
 
     [Bindable]
@@ -22,9 +24,7 @@ public sealed partial class WindowLayer : Visual
     public void AddWindow(Visual window)
     {
         ArgumentNullException.ThrowIfNull(window);
-        AttachChild(window);
         _windows.Add(window);
-        App?.RequestRender();
     }
 
     protected override void OnPointerPressed(PointerEventArgs e)
@@ -84,8 +84,6 @@ public sealed partial class WindowLayer : Visual
             return;
         }
 
-        _windows.RemoveAt(index);
-        _windows.Add(window);
-        App?.RequestRender();
+        _windows.Move(index, _windows.Count - 1);
     }
 }

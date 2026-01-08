@@ -89,12 +89,9 @@ var leftColumn = new VStack(
         showModal,
         new Table().With(t =>
         {
-            t.HeaderCells = ["Task", "Status"];
-            t.RowCells =
-            [
-                ["Download", "Running"],
-                ["Render", "OK"],
-            ];
+            t.HeaderCells.AddRange("Task", "Status");
+            t.AddRow("Download", "Running");
+            t.AddRow("Render", "OK");
         }),
         progressBars)
     .Spacing(0)
