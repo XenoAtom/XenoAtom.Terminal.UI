@@ -352,6 +352,11 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         _wakeUp.Set();
     }
 
+    internal void ClearInlineLiveRegion()
+    {
+        _inlineHost?.PrepareForUserUpdate();
+    }
+
     internal void RegisterAnimatedVisual(IAnimatedVisual visual)
     {
         ArgumentNullException.ThrowIfNull(visual);

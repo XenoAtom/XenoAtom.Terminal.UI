@@ -19,8 +19,13 @@ public static partial class TerminalExtensions
 
         public static TerminalInstance Live(Visual visual, Func<bool> onUpdate) => XenoAtom.Terminal.Terminal.Instance.Live(visual, onUpdate);
 
+        public static TerminalInstance Live(Visual visual, Func<bool> onUpdate, TerminalLiveOptions options) => XenoAtom.Terminal.Terminal.Instance.Live(visual, onUpdate, options);
+
         public static ValueTask<TerminalInstance> LiveAsync(Visual visual, Func<bool> onUpdate, CancellationToken cancellationToken = default)
             => XenoAtom.Terminal.Terminal.Instance.LiveAsync(visual, onUpdate, cancellationToken);
+
+        public static ValueTask<TerminalInstance> LiveAsync(Visual visual, Func<bool> onUpdate, TerminalLiveOptions options, CancellationToken cancellationToken = default)
+            => XenoAtom.Terminal.Terminal.Instance.LiveAsync(visual, onUpdate, options, cancellationToken);
 
         public static TerminalInstance Run(Visual visual, Func<bool>? onUpdate = null) => XenoAtom.Terminal.Terminal.Instance.Run(visual, onUpdate);
 
@@ -40,6 +45,9 @@ public static partial class TerminalExtensions
         }
 
         public TerminalInstance Live(Visual visual, Func<bool> onUpdate)
+            => Live(visual, onUpdate, options: default);
+
+        public TerminalInstance Live(Visual visual, Func<bool> onUpdate, TerminalLiveOptions options)
         {
             ArgumentNullException.ThrowIfNull(instance);
             ArgumentNullException.ThrowIfNull(visual);
@@ -50,13 +58,17 @@ public static partial class TerminalExtensions
                 throw new InvalidOperationException("A visual that is already in the UI tree cannot be used as a root for a live region.");
             }
 
-            var options = new TerminalAppOptions { HostKind = TerminalHostKind.Inline };
-            var app = new TerminalApp(visual, instance, options);
+            var appOptions = new TerminalAppOptions { HostKind = TerminalHostKind.Inline };
+            var app = new TerminalApp(visual, instance, appOptions);
             app.SetUpdateCallback(onUpdate);
 
             try
             {
                 app.Run();
+                if (options.RemoveOnEnd)
+                {
+                    app.ClearInlineLiveRegion();
+                }
             }
             finally
             {
@@ -67,6 +79,9 @@ public static partial class TerminalExtensions
         }
 
         public async ValueTask<TerminalInstance> LiveAsync(Visual visual, Func<bool> onUpdate, CancellationToken cancellationToken = default)
+            => await LiveAsync(visual, onUpdate, options: default, cancellationToken).ConfigureAwait(false);
+
+        public async ValueTask<TerminalInstance> LiveAsync(Visual visual, Func<bool> onUpdate, TerminalLiveOptions options, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(instance);
             ArgumentNullException.ThrowIfNull(visual);
@@ -77,13 +92,17 @@ public static partial class TerminalExtensions
                 throw new InvalidOperationException("A visual that is already in the UI tree cannot be used as a root for a live region.");
             }
 
-            var options = new TerminalAppOptions { HostKind = TerminalHostKind.Inline };
-            var app = new TerminalApp(visual, instance, options);
+            var appOptions = new TerminalAppOptions { HostKind = TerminalHostKind.Inline };
+            var app = new TerminalApp(visual, instance, appOptions);
             app.SetUpdateCallback(onUpdate);
 
             try
             {
                 app.Run(cancellationToken);
+                if (options.RemoveOnEnd)
+                {
+                    app.ClearInlineLiveRegion();
+                }
             }
             finally
             {
