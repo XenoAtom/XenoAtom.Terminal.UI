@@ -16,7 +16,7 @@ public sealed partial class Table : Visual
 
     public Table()
     {
-        ShowHeaderSeparator = true;
+        this.ShowHeaderSeparator(true);
 
         HeaderCells = new VisualList<Visual>(this, "Table.HeaderCells");
         RowCells = new BindableList<VisualList<Visual>>(this, "Table.RowCells", onAdding: ValidateRowOwner, onRemoving: DetachRow);

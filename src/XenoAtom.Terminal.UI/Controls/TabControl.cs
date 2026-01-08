@@ -20,7 +20,7 @@ public sealed partial class TabControl : Visual
     public TabControl()
     {
         Focusable = true;
-        ShowBorder = true;
+        this.ShowBorder(true);
     }
 
     [Bindable]

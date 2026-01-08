@@ -21,7 +21,7 @@ public sealed partial class ListBox : Visual
     {
         Items = new VisualList<Visual>(this, "Items");
         Focusable = true;
-        Height = 6;
+        this.Height(6);
     }
 
     [Bindable]

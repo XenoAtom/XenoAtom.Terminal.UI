@@ -22,7 +22,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
     public TextBox()
     {
         Focusable = true;
-        ShowBorder = true;
+        this.ShowBorder(true);
     }
 
     [Bindable]

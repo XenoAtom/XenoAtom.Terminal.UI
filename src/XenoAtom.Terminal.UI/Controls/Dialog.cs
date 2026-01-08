@@ -22,8 +22,8 @@ public sealed partial class Dialog : Visual, IModalVisual
 
     public Dialog()
     {
-        HorizontalAlignment = HorizontalAlignment.Stretch;
-        VerticalAlignment = VerticalAlignment.Stretch;
+        this.HorizontalAlignment(HorizontalAlignment.Stretch);
+        this.VerticalAlignment(VerticalAlignment.Stretch);
     }
 
     public void Show()

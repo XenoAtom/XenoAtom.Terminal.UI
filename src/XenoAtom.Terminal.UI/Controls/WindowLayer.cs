@@ -13,8 +13,8 @@ public sealed partial class WindowLayer : Visual
 
     public WindowLayer()
     {
-        HorizontalAlignment = HorizontalAlignment.Stretch;
-        VerticalAlignment = VerticalAlignment.Stretch;
+        this.HorizontalAlignment(HorizontalAlignment.Stretch);
+        this.VerticalAlignment(VerticalAlignment.Stretch);
         _windows = new VisualList<Visual>(this, "Windows");
     }
 

@@ -35,7 +35,7 @@ public sealed partial class ScrollViewer : Visual
     public ScrollViewer()
     {
         Focusable = true;
-        Height = 6;
+        this.Height(6);
 
         _contentHost = new ContentViewportHost(this);
         _verticalBar = new VerticalScrollBarVisual(this);
@@ -450,8 +450,8 @@ public sealed partial class ScrollViewer : Visual
         public ContentViewportHost(ScrollViewer owner)
         {
             _owner = owner;
-            HorizontalAlignment = HorizontalAlignment.Stretch;
-            VerticalAlignment = VerticalAlignment.Stretch;
+            this.HorizontalAlignment(HorizontalAlignment.Stretch);
+            this.VerticalAlignment(VerticalAlignment.Stretch);
         }
 
         public void SetContent(Visual child)
@@ -498,8 +498,8 @@ public sealed partial class ScrollViewer : Visual
         protected ScrollBarVisualBase(ScrollViewer owner)
         {
             Owner = owner;
-            HorizontalAlignment = HorizontalAlignment.Stretch;
-            VerticalAlignment = VerticalAlignment.Stretch;
+            this.HorizontalAlignment(HorizontalAlignment.Stretch);
+            this.VerticalAlignment(VerticalAlignment.Stretch);
         }
 
         protected (CellStyle Track, CellStyle Thumb, ScrollBarGlyphs Glyphs) GetStyles()
