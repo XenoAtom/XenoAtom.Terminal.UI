@@ -31,6 +31,8 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private bool _renderRequested = true;
     private Visual? _pointerCapture;
     private Visual? _hoveredElement;
+    private List<Visual>? _hoveredPath;
+    private List<Visual>? _hoveredPathScratch;
     private int? _inlineLiveRegionTopRow;
     private bool _debugOverlayVisible;
     private int _renderFrameIndex;
@@ -795,8 +797,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
         if (_hoveredElement is not null && !IsInScope(_hoveredElement, inputRoot))
         {
-            _hoveredElement.IsHovered = false;
-            _hoveredElement = null;
+            UpdateHover(null);
         }
 
         Visual? hitTarget;
@@ -928,27 +929,59 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
     private void UpdateHover(Visual? hitTarget)
     {
-        var hovered = hitTarget;
-        while (hovered is not null && (!hovered.IsVisible || !hovered.IsEnabled))
+        var hoveredLeaf = hitTarget;
+        while (hoveredLeaf is not null && (!hoveredLeaf.IsVisible || !hoveredLeaf.IsEnabled))
         {
-            hovered = hovered.Parent;
+            hoveredLeaf = hoveredLeaf.Parent;
         }
 
-        if (ReferenceEquals(_hoveredElement, hovered))
+        _hoveredPath ??= new List<Visual>(8);
+        _hoveredPathScratch ??= new List<Visual>(8);
+
+        _hoveredPathScratch.Clear();
+        for (var v = hoveredLeaf; v is not null; v = v.Parent)
         {
-            return;
+            _hoveredPathScratch.Add(v);
         }
 
-        if (_hoveredElement is not null)
+        if (ReferenceEquals(_hoveredElement, hoveredLeaf) && _hoveredPath.Count == _hoveredPathScratch.Count)
         {
-            _hoveredElement.IsHovered = false;
+            var same = true;
+            for (var i = 0; i < _hoveredPath.Count; i++)
+            {
+                if (!ReferenceEquals(_hoveredPath[i], _hoveredPathScratch[i]))
+                {
+                    same = false;
+                    break;
+                }
+            }
+
+            if (same)
+            {
+                return;
+            }
         }
 
-        _hoveredElement = hovered;
-        if (_hoveredElement is not null)
+        for (var i = 0; i < _hoveredPath.Count; i++)
         {
-            _hoveredElement.IsHovered = true;
+            var v = _hoveredPath[i];
+            if (!_hoveredPathScratch.Contains(v))
+            {
+                v.IsHovered = false;
+            }
         }
+
+        for (var i = 0; i < _hoveredPathScratch.Count; i++)
+        {
+            var v = _hoveredPathScratch[i];
+            if (!_hoveredPath.Contains(v))
+            {
+                v.IsHovered = true;
+            }
+        }
+
+        _hoveredElement = hoveredLeaf;
+        (_hoveredPath, _hoveredPathScratch) = (_hoveredPathScratch, _hoveredPath);
     }
 
     private Visual GetInputRoot() => FindActiveModalRoot(Root) ?? Root;

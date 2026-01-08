@@ -50,17 +50,18 @@ public sealed record ButtonStyle : IStyle<ButtonStyle>
             return Pressed ?? ResolveDefaultPressed(theme, normal);
         }
 
-        if (focused)
-        {
-            return Focused ?? ResolveDefaultPressed(theme, normal);
-        }
-
+        var style = normal;
         if (hovered)
         {
-            return Hovered ?? ResolveDefaultHovered(theme, normal, tone);
+            style = Hovered ?? ResolveDefaultHovered(theme, style, tone);
         }
 
-        return normal;
+        if (focused)
+        {
+            style = Focused ?? ResolveDefaultFocused(theme, style, tone);
+        }
+
+        return style;
     }
 
     private static CellStyle ResolveDefaultNormal(Theme theme, ControlTone tone)
@@ -98,5 +99,17 @@ public sealed record ButtonStyle : IStyle<ButtonStyle>
         }
 
         return normal | TextStyle.Bold;
+    }
+
+    private static CellStyle ResolveDefaultFocused(Theme theme, CellStyle normal, ControlTone tone)
+    {
+        var style = normal | TextStyle.Underline;
+
+        if (tone == ControlTone.Default && theme.FocusBorder is { } focus)
+        {
+            style = style.WithForeground(focus);
+        }
+
+        return style;
     }
 }
