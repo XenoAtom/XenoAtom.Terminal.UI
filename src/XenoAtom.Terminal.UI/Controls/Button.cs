@@ -12,8 +12,6 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public partial class Button : Visual
 {
-    private bool _isPressed;
-
     public Button()
     {
         Focusable = true;
@@ -30,6 +28,9 @@ public partial class Button : Visual
 
     [Bindable]
     public partial ControlTone Tone { get; set; }
+
+    [Bindable]
+    public partial bool IsPressed { get; set; }
 
     protected override int ChildrenCount => _text is null ? 0 : 1;
 
@@ -92,7 +93,7 @@ public partial class Button : Visual
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
         var buttonStyle = Get<ButtonStyle>();
-        var style = buttonStyle.Resolve(theme, IsEnabled, isFocused, hovered: IsHovered, pressed: _isPressed, Tone);
+        var style = buttonStyle.Resolve(theme, IsEnabled, isFocused, hovered: IsHovered, pressed: IsPressed, Tone);
 
         var rect = Bounds;
 
@@ -166,8 +167,7 @@ public partial class Button : Visual
             return;
         }
 
-        _isPressed = true;
-        App?.RequestRender();
+        IsPressed = true;
         e.Handled = true;
     }
 
@@ -178,10 +178,9 @@ public partial class Button : Visual
             return;
         }
 
-        if (_isPressed)
+        if (IsPressed)
         {
-            _isPressed = false;
-            App?.RequestRender();
+            IsPressed = false;
             if (e.LocalX >= 0 && e.LocalX < Bounds.Width && e.LocalY >= 0 && e.LocalY < Bounds.Height)
             {
                 RaiseEvent(Button.ClickEvent, new ClickEventArgs());

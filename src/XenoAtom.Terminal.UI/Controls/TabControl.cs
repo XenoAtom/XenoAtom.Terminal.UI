@@ -42,7 +42,6 @@ public sealed partial class TabControl : Visual
 
             _showBorder = value;
             BindingManager.Current.NotifyValueChanged(this, __ShowBorder__BindingAccessor.Instance);
-            App?.RequestRender();
         }
     }
 
@@ -65,7 +64,6 @@ public sealed partial class TabControl : Visual
             _selectedIndex = clamped;
             BindingManager.Current.NotifyValueChanged(this, __SelectedIndex__BindingAccessor.Instance);
             UpdateTabVisibility();
-            App?.RequestRender();
         }
     }
 
@@ -104,8 +102,6 @@ public sealed partial class TabControl : Visual
         {
             UpdateTabVisibility();
         }
-
-        App?.RequestRender();
     }
 
     public void AddTab(TabPage page)
@@ -396,7 +392,7 @@ public sealed partial class TabControl : Visual
         }
 
         _hoveredIndex = index;
-        App?.RequestRender();
+        Invalidate();
     }
 
     private void UpdateTabVisibility()

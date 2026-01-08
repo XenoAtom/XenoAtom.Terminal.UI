@@ -87,7 +87,6 @@ public sealed partial class ScrollViewer : Visual
             }
 
             BindingManager.Current.NotifyValueChanged(this, __Content__BindingAccessor.Instance);
-            App?.RequestRender();
         }
     }
 

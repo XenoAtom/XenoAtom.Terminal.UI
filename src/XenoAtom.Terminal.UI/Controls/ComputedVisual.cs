@@ -88,7 +88,7 @@ public sealed class ComputedVisual : Visual, IDisposable
     {
         ClearChild();
         EnsureChild();
-        App?.RequestRender();
+        Invalidate();
     }
 
     private void ClearChild()

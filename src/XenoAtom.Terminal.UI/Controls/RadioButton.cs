@@ -110,7 +110,6 @@ public sealed partial class RadioButton : Visual
         }
 
         _isPressed = true;
-        App?.RequestRender();
         e.Handled = true;
     }
 
@@ -124,7 +123,6 @@ public sealed partial class RadioButton : Visual
         if (_isPressed)
         {
             _isPressed = false;
-            App?.RequestRender();
 
             if (e.LocalX >= 0 && e.LocalX < Bounds.Width && e.LocalY >= 0 && e.LocalY < Bounds.Height)
             {

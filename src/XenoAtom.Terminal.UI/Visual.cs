@@ -44,6 +44,30 @@ public abstract partial class Visual : DispatcherObject
     private HorizontalAlignment _horizontalAlignment = HorizontalAlignment.Left;
     private VerticalAlignment _verticalAlignment = VerticalAlignment.Top;
 
+    private sealed class __Invalidation__BindingAccessor : BindingAccessor
+    {
+        public static __Invalidation__BindingAccessor Instance { get; } = new();
+
+        private __Invalidation__BindingAccessor() : base(string.Intern("$invalidate$"))
+        {
+        }
+
+        public override object? GetValue(object instance) => null;
+
+        public override void SetValue(object instance, object? value)
+        {
+        }
+    }
+
+    protected void Invalidate()
+    {
+        VerifyAccess();
+        _measureDirty = true;
+        _arrangeDirty = true;
+        _renderDirty = true;
+        BindingManager.Current.NotifyValueChanged(this, __Invalidation__BindingAccessor.Instance);
+    }
+
     [Bindable]
     public HorizontalAlignment HorizontalAlignment
     {
@@ -61,7 +85,6 @@ public abstract partial class Visual : DispatcherObject
 
             _horizontalAlignment = value;
             BindingManager.Current.NotifyValueChanged(this, __HorizontalAlignment__BindingAccessor.Instance);
-            App?.RequestRender();
         }
     }
 
@@ -82,7 +105,6 @@ public abstract partial class Visual : DispatcherObject
 
             _verticalAlignment = value;
             BindingManager.Current.NotifyValueChanged(this, __VerticalAlignment__BindingAccessor.Instance);
-            App?.RequestRender();
         }
     }
 
@@ -109,7 +131,6 @@ public abstract partial class Visual : DispatcherObject
 
             _minWidth = value;
             BindingManager.Current.NotifyValueChanged(this, __MinWidth__BindingAccessor.Instance);
-            App?.RequestRender();
         }
     }
 
@@ -131,7 +152,6 @@ public abstract partial class Visual : DispatcherObject
 
             _minHeight = value;
             BindingManager.Current.NotifyValueChanged(this, __MinHeight__BindingAccessor.Instance);
-            App?.RequestRender();
         }
     }
 
@@ -153,7 +173,6 @@ public abstract partial class Visual : DispatcherObject
 
             _maxWidth = value;
             BindingManager.Current.NotifyValueChanged(this, __MaxWidth__BindingAccessor.Instance);
-            App?.RequestRender();
         }
     }
 
@@ -175,7 +194,6 @@ public abstract partial class Visual : DispatcherObject
 
             _maxHeight = value;
             BindingManager.Current.NotifyValueChanged(this, __MaxHeight__BindingAccessor.Instance);
-            App?.RequestRender();
         }
     }
 
@@ -202,7 +220,6 @@ public abstract partial class Visual : DispatcherObject
 
             _margin = value;
             BindingManager.Current.NotifyValueChanged(this, __Margin__BindingAccessor.Instance);
-            App?.RequestRender();
         }
     }
 
@@ -223,7 +240,6 @@ public abstract partial class Visual : DispatcherObject
 
             _isVisible = value;
             BindingManager.Current.NotifyValueChanged(this, __IsVisible__BindingAccessor.Instance);
-            App?.RequestRender();
         }
     }
 
@@ -244,7 +260,6 @@ public abstract partial class Visual : DispatcherObject
 
             _isEnabled = value;
             BindingManager.Current.NotifyValueChanged(this, __IsEnabled__BindingAccessor.Instance);
-            App?.RequestRender();
         }
     }
 
@@ -265,7 +280,6 @@ public abstract partial class Visual : DispatcherObject
 
             _isHovered = value;
             BindingManager.Current.NotifyValueChanged(this, __IsHovered__BindingAccessor.Instance);
-            App?.RequestRender();
         }
     }
 
@@ -393,7 +407,7 @@ public abstract partial class Visual : DispatcherObject
         _initializers ??= new List<Action<Visual>>();
         _initializers.Add(configure);
         _initializersDirty = true;
-        App?.RequestRender();
+        Invalidate();
     }
 
     internal void AttachToApp(TerminalApp app)

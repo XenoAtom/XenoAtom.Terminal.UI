@@ -45,7 +45,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
             var t = Text ?? string.Empty;
             _caretIndex = Math.Clamp(value, 0, t.Length);
             ClearSelection();
-            App?.RequestRender();
+            Invalidate();
         }
     }
 
@@ -554,7 +554,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
         _selectionAnchor = 0;
         _selectionEnd = text.Length;
         _caretIndex = text.Length;
-        App?.RequestRender();
+        Invalidate();
     }
 
     private void UpdateSelectionAfterCaretMove(bool shift, int oldCaretIndex)
@@ -562,7 +562,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
         if (!shift)
         {
             ClearSelection();
-            App?.RequestRender();
+            Invalidate();
             return;
         }
 
@@ -572,7 +572,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
         }
 
         _selectionEnd = _caretIndex;
-        App?.RequestRender();
+        Invalidate();
     }
 
     private static int GetPreviousWordIndex(ReadOnlySpan<char> text, int caretIndex)
