@@ -130,7 +130,7 @@ public sealed partial class TabControl : Visual
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        var style = GetEnvironmentValue(TabControlStyle.Key);
+        var style = Get<TabControlStyle>();
         var pad = style.TabPadding;
 
         var headerHeight = 1;
@@ -180,7 +180,7 @@ public sealed partial class TabControl : Visual
 
     protected override void ArrangeOverride(Rectangle finalRect)
     {
-        var style = GetEnvironmentValue(TabControlStyle.Key);
+        var style = Get<TabControlStyle>();
         var pad = style.TabPadding;
 
         var headerHeight = 1;
@@ -245,7 +245,7 @@ public sealed partial class TabControl : Visual
         }
 
         var theme = GetTheme();
-        var style = GetEnvironmentValue(TabControlStyle.Key);
+        var style = Get<TabControlStyle>();
 
         var headerHeight = Math.Min(Math.Max(1, _headerHeight), rect.Height);
         var stripStyle = style.ResolveStripStyle(theme);

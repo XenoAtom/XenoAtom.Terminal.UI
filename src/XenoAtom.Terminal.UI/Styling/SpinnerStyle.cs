@@ -7,11 +7,11 @@ using XenoAtom.Terminal.UI.Rendering;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed record SpinnerStyle
+public sealed record SpinnerStyle : IStyle<SpinnerStyle>
 {
     public static SpinnerStyle Default { get; } = SpinnerStyles.Dots;
 
-    public static EnvironmentKey<SpinnerStyle> Key { get; } = new("SpinnerStyle", Default);
+    public static StyleKey<SpinnerStyle> Key { get; } = new("SpinnerStyle", Default);
 
     private readonly string[] _frames;
 

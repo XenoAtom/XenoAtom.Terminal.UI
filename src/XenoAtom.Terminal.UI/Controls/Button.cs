@@ -35,7 +35,7 @@ public partial class Button : Visual
     {
         var text = Text ?? string.Empty;
         var innerWidth = TerminalTextUtility.GetWidth(text.AsSpan());
-        var style = GetEnvironmentValue(ButtonStyle.Key);
+        var style = Get<ButtonStyle>();
         var padding = style.Padding;
 
         var borderPad = style.ShowBorder ? 1 : 0;
@@ -57,7 +57,7 @@ public partial class Button : Visual
     {
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var buttonStyle = GetEnvironmentValue(ButtonStyle.Key);
+        var buttonStyle = Get<ButtonStyle>();
         var style = buttonStyle.Resolve(theme, IsEnabled, isFocused, hovered: IsHovered, pressed: _isPressed, Tone);
 
         var rect = Bounds;

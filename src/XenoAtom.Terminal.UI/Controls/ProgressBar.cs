@@ -54,7 +54,7 @@ public sealed partial class ProgressBar : Visual
         }
 
         var theme = GetTheme();
-        var progressStyle = GetEnvironmentValue(ProgressBarStyle.Key);
+        var progressStyle = Get<ProgressBarStyle>();
 
         var value = Math.Clamp(Value, 0.0, 1.0);
         var percent = (int)Math.Round(value * 100.0);

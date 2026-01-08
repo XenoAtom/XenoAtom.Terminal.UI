@@ -23,7 +23,7 @@ public sealed class ButtonMeasureTests
     public void Button_With_Border_Measures_To_Minimum_Three_Rows()
     {
         var button = new Button("OK");
-        button.SetEnvironmentValue(ButtonStyle.Key, new ButtonStyle { ShowBorder = true });
+        button.Set(ButtonStyle.Key, new ButtonStyle { ShowBorder = true });
         button.Measure(new Size(80, 25));
         Assert.AreEqual(3, button.DesiredSize.Height);
     }

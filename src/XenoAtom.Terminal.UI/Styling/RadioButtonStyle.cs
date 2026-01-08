@@ -6,11 +6,11 @@ using System.Text;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed record RadioButtonStyle
+public sealed record RadioButtonStyle : IStyle<RadioButtonStyle>
 {
     public static RadioButtonStyle Default { get; } = new();
 
-    public static EnvironmentKey<RadioButtonStyle> Key { get; } = new("RadioButtonStyle", Default);
+    public static StyleKey<RadioButtonStyle> Key { get; } = new("RadioButtonStyle", Default);
 
     public Rune CheckedGlyph { get; init; } = new(0x25C9);
     public Rune UncheckedGlyph { get; init; } = new(0x25CB);

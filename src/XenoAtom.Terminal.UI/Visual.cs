@@ -346,7 +346,9 @@ public abstract partial class Visual : DispatcherObject
         child.Parent = null;
     }
 
-    public void SetEnvironmentValue<T>(EnvironmentKey<T> key, T value)
+    public void Set<T>(T value) where T : IStyle<T> => Set(T.Key, value);
+
+    public void Set<T>(StyleKey<T> key, T value)
     {
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(key);
@@ -355,7 +357,9 @@ public abstract partial class Visual : DispatcherObject
         BindingManager.Current.NotifyValueChanged(this, key.DependencyAccessor);
     }
 
-    public T GetEnvironmentValue<T>(EnvironmentKey<T> key)
+    public T Get<T>() where T : IStyle<T> => Get(T.Key);
+
+    public T Get<T>(StyleKey<T> key)
     {
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(key);
@@ -376,7 +380,7 @@ public abstract partial class Visual : DispatcherObject
         return key.DefaultValue;
     }
 
-    public Theme GetTheme() => GetEnvironmentValue(Theme.Key);
+    public Theme GetTheme() => Get<Theme>();
 
     public void Initialize(Action<Visual> configure)
     {

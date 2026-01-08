@@ -73,7 +73,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
 
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var textBoxStyle = GetEnvironmentValue(TextBoxStyle.Key);
+        var textBoxStyle = Get<TextBoxStyle>();
         var borderStyle = textBoxStyle.BorderStyle(theme, isFocused);
         var selectionStyle = textBoxStyle.SelectionStyle(theme);
         var backgroundStyle = textBoxStyle.BackgroundStyle(theme);
@@ -447,7 +447,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
             return;
         }
 
-        var style = GetEnvironmentValue(TextBoxStyle.Key);
+        var style = Get<TextBoxStyle>();
         var padding = style.Padding;
 
         var showBorder = ShowBorder;
@@ -724,7 +724,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
             return false;
         }
 
-        var style = GetEnvironmentValue(TextBoxStyle.Key);
+        var style = Get<TextBoxStyle>();
         var padding = style.Padding;
         var showBorder = ShowBorder;
 

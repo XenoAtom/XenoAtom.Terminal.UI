@@ -6,11 +6,11 @@ using XenoAtom.Terminal.UI.Geometry;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed record ButtonStyle
+public sealed record ButtonStyle : IStyle<ButtonStyle>
 {
     public static ButtonStyle Default { get; } = new();
 
-    public static EnvironmentKey<ButtonStyle> Key { get; } = new("ButtonStyle", Default);
+    public static StyleKey<ButtonStyle> Key { get; } = new("ButtonStyle", Default);
 
     public Thickness Padding { get; init; } = new(2, 0, 2, 0);
 

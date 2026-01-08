@@ -51,7 +51,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
             return false;
         }
 
-        var style = GetEnvironmentValue(SpinnerStyle.Key);
+        var style = Get<SpinnerStyle>();
         if (!ReferenceEquals(_cachedStyle, style))
         {
             _cachedStyle = style;
@@ -86,7 +86,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        var style = GetEnvironmentValue(SpinnerStyle.Key);
+        var style = Get<SpinnerStyle>();
         var frameWidth = Math.Max(1, style.FrameWidth);
 
         var label = Label;
@@ -111,7 +111,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
         }
 
         var theme = GetTheme();
-        var style = GetEnvironmentValue(SpinnerStyle.Key);
+        var style = Get<SpinnerStyle>();
 
         var spinnerStyle = style.Resolve(theme, IsEnabled, Tone);
         var labelStyle = theme.ForegroundTextStyle();

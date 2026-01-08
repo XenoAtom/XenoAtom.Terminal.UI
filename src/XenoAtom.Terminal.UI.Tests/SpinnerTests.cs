@@ -20,7 +20,7 @@ public sealed class SpinnerTests
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
         var spinner = new Spinner();
-        spinner.SetEnvironmentValue(SpinnerStyle.Key, new SpinnerStyle("Test", TimeSpan.FromMilliseconds(10), "a", "b")
+        spinner.Set(SpinnerStyle.Key, new SpinnerStyle("Test", TimeSpan.FromMilliseconds(10), "a", "b")
         {
             TextStyle = TextStyle.None,
         });

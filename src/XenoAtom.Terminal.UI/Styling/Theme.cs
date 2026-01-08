@@ -6,7 +6,7 @@ using XenoAtom.Ansi;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed class Theme
+public sealed class Theme : IStyle<Theme>
 {
     public static Theme Default { get; } = new Theme
     {
@@ -29,7 +29,7 @@ public sealed class Theme
         ScrollBars = ScrollBarGlyphs.Default,
     };
 
-    public static EnvironmentKey<Theme> Key { get; } = new("Theme", Default);
+    public static StyleKey<Theme> Key { get; } = new("Theme", Default);
 
     public AnsiColor? Foreground { get; init; }
 

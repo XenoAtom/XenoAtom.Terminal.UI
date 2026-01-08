@@ -4,11 +4,11 @@
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed record StatusBarStyle
+public sealed record StatusBarStyle : IStyle<StatusBarStyle>
 {
     public static StatusBarStyle Default { get; } = new();
 
-    public static EnvironmentKey<StatusBarStyle> Key { get; } = new("StatusBarStyle", Default);
+    public static StyleKey<StatusBarStyle> Key { get; } = new("StatusBarStyle", Default);
 
     public XenoAtom.Ansi.AnsiColor? Background { get; init; }
     public XenoAtom.Ansi.AnsiColor? Foreground { get; init; }

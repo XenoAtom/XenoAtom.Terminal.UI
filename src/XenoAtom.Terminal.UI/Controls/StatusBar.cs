@@ -36,7 +36,7 @@ public sealed partial class StatusBar : Visual
         }
 
         var theme = GetTheme();
-        var statusBarStyle = GetEnvironmentValue(StatusBarStyle.Key);
+        var statusBarStyle = Get<StatusBarStyle>();
         var style = statusBarStyle.Resolve(theme);
 
         for (var x = rect.X; x < rect.X + rect.Width; x++)

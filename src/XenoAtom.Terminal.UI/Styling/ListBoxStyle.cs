@@ -6,11 +6,11 @@ using System.Text;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed record ListBoxStyle
+public sealed record ListBoxStyle : IStyle<ListBoxStyle>
 {
     public static ListBoxStyle Default { get; } = new();
 
-    public static EnvironmentKey<ListBoxStyle> Key { get; } = new("ListBoxStyle", Default);
+    public static StyleKey<ListBoxStyle> Key { get; } = new("ListBoxStyle", Default);
 
     public bool ShowBorder { get; init; }
 

@@ -6,11 +6,11 @@ using System.Text;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed record CheckBoxStyle
+public sealed record CheckBoxStyle : IStyle<CheckBoxStyle>
 {
     public static CheckBoxStyle Default { get; } = new();
 
-    public static EnvironmentKey<CheckBoxStyle> Key { get; } = new("CheckBoxStyle", Default);
+    public static StyleKey<CheckBoxStyle> Key { get; } = new("CheckBoxStyle", Default);
 
     public Rune CheckedGlyph { get; init; } = new(0x2611); // ☑
     public Rune UncheckedGlyph { get; init; } = new(0x2610); // ☐

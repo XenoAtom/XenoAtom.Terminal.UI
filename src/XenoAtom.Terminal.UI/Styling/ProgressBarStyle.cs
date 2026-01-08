@@ -6,7 +6,7 @@ using System.Text;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed record ProgressBarStyle
+public sealed record ProgressBarStyle : IStyle<ProgressBarStyle>
 {
     public static ProgressBarStyle Thin { get; } = new()
     {
@@ -55,7 +55,7 @@ public sealed record ProgressBarStyle
 
     public static ProgressBarStyle Default { get; } = Thin;
 
-    public static EnvironmentKey<ProgressBarStyle> Key { get; } = new("ProgressBarStyle", Default);
+    public static StyleKey<ProgressBarStyle> Key { get; } = new("ProgressBarStyle", Default);
 
     public ProgressBarVariant Variant { get; init; } = ProgressBarVariant.Thin;
 

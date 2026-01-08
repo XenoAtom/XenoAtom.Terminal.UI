@@ -6,11 +6,11 @@ using XenoAtom.Terminal.UI.Geometry;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed record TextBoxStyle
+public sealed record TextBoxStyle : IStyle<TextBoxStyle>
 {
     public static TextBoxStyle Default { get; } = new();
 
-    public static EnvironmentKey<TextBoxStyle> Key { get; } = new("TextBoxStyle", Default);
+    public static StyleKey<TextBoxStyle> Key { get; } = new("TextBoxStyle", Default);
 
     public Thickness Padding { get; init; } = new(1, 0, 1, 0);
 

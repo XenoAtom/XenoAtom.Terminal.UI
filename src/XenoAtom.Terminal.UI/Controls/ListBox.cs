@@ -36,7 +36,7 @@ public sealed partial class ListBox : Visual
     {
         var height = Math.Max(1, Height);
         var width = 0;
-        var listBoxStyle = GetEnvironmentValue(ListBoxStyle.Key);
+        var listBoxStyle = Get<ListBoxStyle>();
         var showBorder = ShowBorder || listBoxStyle.ShowBorder;
 
         var items = Items;
@@ -75,7 +75,7 @@ public sealed partial class ListBox : Visual
             return;
         }
 
-        var listBoxStyle = GetEnvironmentValue(ListBoxStyle.Key);
+        var listBoxStyle = Get<ListBoxStyle>();
         var showBorder = ShowBorder || listBoxStyle.ShowBorder;
         var innerLeft = rect.X + (showBorder ? 1 : 0);
         var innerTop = rect.Y + (showBorder ? 1 : 0);
@@ -173,7 +173,7 @@ public sealed partial class ListBox : Visual
             return;
         }
 
-        var showBorder = ShowBorder || GetEnvironmentValue(ListBoxStyle.Key).ShowBorder;
+        var showBorder = ShowBorder || Get<ListBoxStyle>().ShowBorder;
         var viewportHeight = Math.Max(1, Bounds.Height - (showBorder ? 2 : 0));
         var selected = Math.Clamp(SelectedIndex, 0, count - 1);
         switch (e.Key)
@@ -219,7 +219,7 @@ public sealed partial class ListBox : Visual
             return;
         }
 
-        var showBorder = ShowBorder || GetEnvironmentValue(ListBoxStyle.Key).ShowBorder;
+        var showBorder = ShowBorder || Get<ListBoxStyle>().ShowBorder;
         var innerY = e.LocalY - (showBorder ? 1 : 0);
         var innerHeight = Math.Max(0, Bounds.Height - (showBorder ? 2 : 0));
         if ((uint)innerY >= (uint)innerHeight)

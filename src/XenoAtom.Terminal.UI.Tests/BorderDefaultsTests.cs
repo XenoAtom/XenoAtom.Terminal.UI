@@ -47,7 +47,7 @@ public sealed class BorderDefaultsTests
         using var session2 = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
         var borderedRoot = new VStack(new Button("OK"));
-        borderedRoot.SetEnvironmentValue(ButtonStyle.Key, new ButtonStyle { ShowBorder = true });
+        borderedRoot.Set(ButtonStyle.Key, new ButtonStyle { ShowBorder = true });
 
         var app2 = new TerminalApp(borderedRoot, session2.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
         var runTask2 = app2.RunInBackgroundAsync();

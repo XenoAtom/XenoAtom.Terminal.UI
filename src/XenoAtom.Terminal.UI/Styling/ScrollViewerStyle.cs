@@ -4,11 +4,11 @@
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed record ScrollViewerStyle
+public sealed record ScrollViewerStyle : IStyle<ScrollViewerStyle>
 {
     public static ScrollViewerStyle Default { get; } = new();
 
-    public static EnvironmentKey<ScrollViewerStyle> Key { get; } = new("ScrollViewerStyle", Default);
+    public static StyleKey<ScrollViewerStyle> Key { get; } = new("ScrollViewerStyle", Default);
 
     public int ScrollBarThickness { get; init; } = 2;
 

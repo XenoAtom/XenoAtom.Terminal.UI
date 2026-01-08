@@ -51,7 +51,7 @@ public sealed partial class RadioButton : Visual
     {
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var radioStyle = GetEnvironmentValue(RadioButtonStyle.Key);
+        var radioStyle = Get<RadioButtonStyle>();
         var style = radioStyle.Resolve(theme, IsEnabled, isFocused, IsHovered);
 
         var rect = Bounds;

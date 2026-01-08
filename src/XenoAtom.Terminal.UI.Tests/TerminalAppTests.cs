@@ -687,7 +687,7 @@ public sealed class TerminalAppTests
 
         // Use a wide glyph to ensure the label offset accounts for rune width.
         var wideGlyph = new Rune(0x1F600); // 😀
-        checkBox.SetEnvironmentValue(CheckBoxStyle.Key, new CheckBoxStyle
+        checkBox.Set(CheckBoxStyle.Key, new CheckBoxStyle
         {
             CheckedGlyph = wideGlyph,
         });
@@ -969,10 +969,10 @@ public sealed class TerminalAppTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        var key = new EnvironmentKey<string>("Title", "A");
+        var key = new StyleKey<string>("Title", "A");
 
         ComputedVisual? view = null;
-        view = new ComputedVisual(() => new TextBlock($"Env:{view!.GetEnvironmentValue(key)}"));
+        view = new ComputedVisual(() => new TextBlock($"Env:{view!.Get(key)}"));
 
         var root = new VStack();
         root.Add(view);
@@ -981,7 +981,7 @@ public sealed class TerminalAppTests
         var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(20);
-        app.Post(() => root.SetEnvironmentValue(key, "B"));
+        app.Post(() => root.Set(key, "B"));
         await Task.Delay(50);
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });

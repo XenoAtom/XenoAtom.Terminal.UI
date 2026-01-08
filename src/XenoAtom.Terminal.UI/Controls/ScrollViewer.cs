@@ -130,7 +130,7 @@ public sealed partial class ScrollViewer : Visual
             return;
         }
 
-        var style = GetEnvironmentValue(ScrollViewerStyle.Key);
+        var style = Get<ScrollViewerStyle>();
         var thickness = Math.Max(1, style.ScrollBarThickness);
         _scrollBarThickness = thickness;
 
@@ -507,7 +507,7 @@ public sealed partial class ScrollViewer : Visual
         {
             var theme = GetTheme();
             var highlighted = Owner.IsFocusWithin() || IsHovered || Owner._draggingHorizontal || Owner._draggingVertical;
-            var style = GetEnvironmentValue(ScrollViewerStyle.Key);
+            var style = Get<ScrollViewerStyle>();
             return (style.ResolveTrackStyle(theme), style.ResolveThumbStyle(theme, highlighted), theme.ScrollBars);
         }
     }

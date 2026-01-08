@@ -36,7 +36,7 @@ public sealed partial class CheckBox : Visual
         var text = Text ?? string.Empty;
 
         var theme = GetTheme();
-        var checkBoxStyle = GetEnvironmentValue(CheckBoxStyle.Key);
+        var checkBoxStyle = Get<CheckBoxStyle>();
         var glyph = IsChecked ? checkBoxStyle.CheckedGlyph : checkBoxStyle.UncheckedGlyph;
         var glyphWidth = TerminalTextUtility.GetRuneWidth(glyph);
 
@@ -53,7 +53,7 @@ public sealed partial class CheckBox : Visual
     {
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var checkBoxStyle = GetEnvironmentValue(CheckBoxStyle.Key);
+        var checkBoxStyle = Get<CheckBoxStyle>();
         var style = checkBoxStyle.Resolve(theme, IsEnabled, isFocused, IsHovered);
 
         var rect = Bounds;

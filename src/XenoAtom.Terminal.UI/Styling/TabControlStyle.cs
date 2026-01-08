@@ -6,11 +6,11 @@ using XenoAtom.Terminal.UI.Geometry;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed record TabControlStyle
+public sealed record TabControlStyle : IStyle<TabControlStyle>
 {
     public static TabControlStyle Default { get; } = new();
 
-    public static EnvironmentKey<TabControlStyle> Key { get; } = new("TabControlStyle", Default);
+    public static StyleKey<TabControlStyle> Key { get; } = new("TabControlStyle", Default);
 
     public Thickness TabPadding { get; init; } = new(Left: 2, Top: 0, Right: 2, Bottom: 0);
 
