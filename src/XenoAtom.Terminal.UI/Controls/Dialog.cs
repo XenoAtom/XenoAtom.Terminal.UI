@@ -27,7 +27,7 @@ public sealed partial class Dialog : Visual, IModalVisual
     }
 
     [Bindable]
-    public partial string? Title { get; set; }
+    public partial Visual? Title { get; set; }
 
     [Bindable]
     public partial Thickness Padding { get; set; }
@@ -50,10 +50,30 @@ public sealed partial class Dialog : Visual, IModalVisual
     [Bindable]
     public partial Visual? Content { get; set; }
 
-    protected override int ChildrenCount => _content is null ? 0 : 1;
+    protected override int ChildrenCount
+        => (_title is null ? 0 : 1) + (_content is null ? 0 : 1);
 
     protected override Visual GetChild(int index)
-        => index == 0 && _content is not null ? _content : throw new ArgumentOutOfRangeException(nameof(index));
+    {
+        if (_title is not null)
+        {
+            if (index == 0)
+            {
+                return _title;
+            }
+            index--;
+        }
+
+        if (_content is not null)
+        {
+            if (index == 0)
+            {
+                return _content;
+            }
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(index));
+    }
 
     protected override Size MeasureOverride(Size availableSize)
     {
@@ -71,10 +91,10 @@ public sealed partial class Dialog : Visual, IModalVisual
         var desiredHeight = Height ?? Math.Min(availableSize.Height, Math.Max(3, 2 + padding.Vertical + (content?.DesiredSize.Height ?? 0)));
 
         var title = Title;
-        if (!string.IsNullOrEmpty(title))
+        if (title is not null)
         {
-            var titleCells = TerminalTextUtility.GetWidth(title.AsSpan());
-            desiredWidth = Math.Max(desiredWidth, Math.Min(availableSize.Width, Math.Max(3, titleCells + 4)));
+            title.Measure(new Size(int.MaxValue / 4, 1));
+            desiredWidth = Math.Max(desiredWidth, Math.Min(availableSize.Width, Math.Max(3, title.DesiredSize.Width + 4)));
         }
 
         return new Size(desiredWidth, desiredHeight);
@@ -94,6 +114,14 @@ public sealed partial class Dialog : Visual, IModalVisual
         var top = Top is null ? maxTop / 2 : Math.Clamp(Top.Value, 0, maxTop);
 
         Bounds = new Rectangle(finalRect.X + left, finalRect.Y + top, width, height);
+
+        var title = Title;
+        if (title is not null && Bounds.Width >= 4)
+        {
+            var titleMaxWidth = Math.Max(0, Bounds.Width - 4);
+            var titleWidth = Math.Min(titleMaxWidth, title.DesiredSize.Width);
+            title.Arrange(new Rectangle(Bounds.X + 2, Bounds.Y, titleWidth, 1));
+        }
 
         var content = Content;
         if (content is not null)
@@ -177,16 +205,12 @@ public sealed partial class Dialog : Visual, IModalVisual
         }
 
         var title = Title;
-        if (!string.IsNullOrEmpty(title) && rect.Width >= 4)
+        if (title is not null && rect.Width >= 4 && title.Bounds.Width > 0)
         {
-            var maxTitleCells = rect.Width - 4;
-            var titleSpan = title.AsSpan();
-            if (TerminalTextUtility.TryGetIndexAtCell(titleSpan, maxTitleCells, out var titleEnd))
+            for (var x = title.Bounds.X; x < title.Bounds.X + title.Bounds.Width && x < rect.Right - 2; x++)
             {
-                titleSpan = titleSpan[..titleEnd];
+                buffer.SetCell(x, rect.Y, new Rune(' '), chromeStyle | TextStyle.Bold);
             }
-
-            buffer.WriteText(rect.X + 2, rect.Y, titleSpan, chromeStyle | TextStyle.Bold);
         }
     }
 

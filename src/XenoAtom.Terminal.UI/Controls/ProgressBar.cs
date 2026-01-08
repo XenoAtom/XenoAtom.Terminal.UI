@@ -32,17 +32,64 @@ public sealed partial class ProgressBar : Visual
     public partial double Value { get; set; }
 
     [Bindable]
-    public partial string? Label { get; set; }
+    public partial Visual? Label { get; set; }
+
+    protected override int ChildrenCount => _label is null ? 0 : 1;
+
+    protected override Visual GetChild(int index)
+        => index == 0 && _label is not null ? _label : throw new ArgumentOutOfRangeException(nameof(index));
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        var width = Math.Max(10, Math.Min(availableSize.Width, 30));
+        var progressStyle = Get<ProgressBarStyle>();
+
+        var showPercent = progressStyle.ShowPercentage;
+        var percentWidth = showPercent ? 4 : 0; // "100%"
+
+        var label = Label;
+        var labelWidth = 0;
+        if (label is not null)
+        {
+            label.Measure(new Size(int.MaxValue / 4, 1));
+            labelWidth = label.DesiredSize.Width;
+            if (labelWidth > 0)
+            {
+                labelWidth += 1; // space after label
+            }
+        }
+
+        var minBarWidth = 10;
+        var desiredWidth = labelWidth + minBarWidth + percentWidth;
+        var width = Math.Min(availableSize.Width, Math.Max(minBarWidth, desiredWidth));
         return new Size(width, 1);
     }
 
     protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
+
+        var rect = finalRect;
+        if (rect.Width <= 0 || rect.Height <= 0)
+        {
+            return;
+        }
+
+        var progressStyle = Get<ProgressBarStyle>();
+        var percentWidth = progressStyle.ShowPercentage ? 4 : 0; // "100%"
+        var label = Label;
+        if (label is null)
+        {
+            return;
+        }
+
+        var available = Math.Max(0, rect.Width - percentWidth);
+        var labelDesired = Math.Min(available, label.DesiredSize.Width);
+        if (labelDesired <= 0 || available <= 0)
+        {
+            return;
+        }
+
+        label.Arrange(new Rectangle(rect.X, rect.Y, labelDesired, 1));
     }
 
     protected override void RenderOverride(CellBuffer buffer)
@@ -60,14 +107,19 @@ public sealed partial class ProgressBar : Visual
         var percent = (int)Math.Round(value * 100.0);
 
         var label = Label;
-        var prefix = string.IsNullOrEmpty(label) ? string.Empty : $"{label} ";
-        var prefixWidth = TerminalTextUtility.GetWidth(prefix.AsSpan());
+        var prefixWidth = 0;
+        if (label is not null)
+        {
+            prefixWidth = label.Bounds.Width;
+            if (prefixWidth > 0 && prefixWidth < rect.Width)
+            {
+                prefixWidth += 1; // space after label
+            }
+        }
 
         var showPercent = progressStyle.ShowPercentage;
         var percentText = showPercent ? $"{percent,3}%" : string.Empty;
         var percentWidth = showPercent ? TerminalTextUtility.GetWidth(percentText.AsSpan()) : 0;
-
-        buffer.WriteText(rect.X, rect.Y, prefix.AsSpan(), CellStyle.None);
 
         var borderStyle = progressStyle.ResolveBorder(theme);
         var filledStyle = progressStyle.ResolveFilled(theme);
@@ -83,6 +135,11 @@ public sealed partial class ProgressBar : Visual
         if (showPercent && percentWidth > 0)
         {
             buffer.WriteText(rect.X + Math.Max(0, rect.Width - percentWidth), rect.Y, percentText.AsSpan(), CellStyle.None);
+        }
+
+        if (label is not null && prefixWidth > 0 && label.Bounds.Width > 0 && rect.Width > label.Bounds.Width)
+        {
+            buffer.SetCell(rect.X + label.Bounds.Width, rect.Y, new Rune(' '), CellStyle.None);
         }
 
         var showFrame = progressStyle.ShowFrame || progressStyle.Variant == ProgressBarVariant.Bracketed;

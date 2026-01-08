@@ -26,27 +26,52 @@ public sealed partial class CheckBox : Visual
     }
 
     [Bindable]
-    public partial string? Text { get; set; }
+    public partial Visual? Text { get; set; }
 
     [Bindable]
     public partial bool IsChecked { get; set; }
 
+    protected override int ChildrenCount => _text is null ? 0 : 1;
+
+    protected override Visual GetChild(int index)
+        => index == 0 && _text is not null ? _text : throw new ArgumentOutOfRangeException(nameof(index));
+
     protected override Size MeasureOverride(Size availableSize)
     {
-        var text = Text ?? string.Empty;
-
-        var theme = GetTheme();
         var checkBoxStyle = Get<CheckBoxStyle>();
         var glyph = IsChecked ? checkBoxStyle.CheckedGlyph : checkBoxStyle.UncheckedGlyph;
         var glyphWidth = TerminalTextUtility.GetRuneWidth(glyph);
 
-        var width = Math.Min(availableSize.Width, TerminalTextUtility.GetWidth(text.AsSpan()) + glyphWidth + SpaceBetweenGlyphAndText);
+        var textWidth = 0;
+        var textVisual = Text;
+        if (textVisual is not null)
+        {
+            textVisual.Measure(new Size(int.MaxValue / 4, 1));
+            textWidth = textVisual.DesiredSize.Width;
+        }
+
+        var width = Math.Min(availableSize.Width, textWidth + glyphWidth + SpaceBetweenGlyphAndText);
         return new Size(width, 1);
     }
 
     protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
+
+        var textVisual = Text;
+        if (textVisual is null)
+        {
+            return;
+        }
+
+        var checkBoxStyle = Get<CheckBoxStyle>();
+        var glyph = IsChecked ? checkBoxStyle.CheckedGlyph : checkBoxStyle.UncheckedGlyph;
+        var glyphWidth = TerminalTextUtility.GetRuneWidth(glyph);
+
+        var textX = finalRect.X + Math.Max(1, glyphWidth) + SpaceBetweenGlyphAndText;
+        var available = Math.Max(0, finalRect.Width - (textX - finalRect.X));
+        var desired = Math.Min(available, textVisual.DesiredSize.Width);
+        textVisual.Arrange(new Rectangle(textX, finalRect.Y, desired, 1));
     }
 
     protected override void RenderOverride(CellBuffer buffer)
@@ -57,7 +82,6 @@ public sealed partial class CheckBox : Visual
         var style = checkBoxStyle.Resolve(theme, IsEnabled, isFocused, IsHovered);
 
         var rect = Bounds;
-        var text = Text ?? string.Empty;
 
         for (var x = rect.X; x < rect.X + rect.Width; x++)
         {
@@ -67,9 +91,16 @@ public sealed partial class CheckBox : Visual
         var glyph = IsChecked ? checkBoxStyle.CheckedGlyph : checkBoxStyle.UncheckedGlyph;
         buffer.SetCell(rect.X, rect.Y, glyph, style | TextStyle.Bold);
 
-        var glyphWidth = TerminalTextUtility.GetRuneWidth(glyph);
-        var textX = rect.X + Math.Max(1, glyphWidth) + SpaceBetweenGlyphAndText;
-        buffer.WriteText(textX, rect.Y, text.AsSpan(), style);
+        var textVisual = Text;
+        if (textVisual is not null)
+        {
+            var glyphWidth = TerminalTextUtility.GetRuneWidth(glyph);
+            var gapX = rect.X + Math.Max(1, glyphWidth);
+            for (var i = 0; i < SpaceBetweenGlyphAndText && gapX + i < rect.X + rect.Width; i++)
+            {
+                buffer.SetCell(gapX + i, rect.Y, new Rune(' '), style);
+            }
+        }
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

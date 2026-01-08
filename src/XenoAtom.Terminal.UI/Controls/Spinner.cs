@@ -31,13 +31,18 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
     }
 
     [Bindable]
-    public partial string? Label { get; set; }
+    public partial Visual? Label { get; set; }
 
     [Bindable]
     public partial bool IsActive { get; set; }
 
     [Bindable]
     public partial ControlTone Tone { get; set; }
+
+    protected override int ChildrenCount => _label is null ? 0 : 1;
+
+    protected override Visual GetChild(int index)
+        => index == 0 && _label is not null ? _label : throw new ArgumentOutOfRangeException(nameof(index));
 
     long IAnimatedVisual.NextAnimationTick => _nextTick;
 
@@ -90,17 +95,38 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
         var frameWidth = Math.Max(1, style.FrameWidth);
 
         var label = Label;
-        if (string.IsNullOrEmpty(label))
+        if (label is null)
         {
             return new Size(Math.Min(availableSize.Width, frameWidth), 1);
         }
 
-        var labelCells = TerminalTextUtility.GetWidth(label.AsSpan());
-        var width = frameWidth + 1 + labelCells;
+        label.Measure(new Size(int.MaxValue / 4, 1));
+        var width = frameWidth + 1 + label.DesiredSize.Width;
         return new Size(Math.Min(availableSize.Width, width), 1);
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect) => Bounds = finalRect;
+    protected override void ArrangeOverride(Rectangle finalRect)
+    {
+        Bounds = finalRect;
+
+        var label = Label;
+        if (label is null)
+        {
+            return;
+        }
+
+        var style = Get<SpinnerStyle>();
+        var frameWidth = Math.Max(1, style.FrameWidth);
+        var labelX = finalRect.X + frameWidth + 1;
+        if (labelX >= finalRect.Right)
+        {
+            return;
+        }
+
+        var available = Math.Max(0, finalRect.Right - labelX);
+        var w = Math.Min(available, label.DesiredSize.Width);
+        label.Arrange(new Rectangle(labelX, finalRect.Y, w, 1));
+    }
 
     protected override void RenderOverride(CellBuffer buffer)
     {
@@ -131,7 +157,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
         buffer.WriteText(rect.X, rect.Y, span, spinnerStyle);
 
         var label = Label;
-        if (string.IsNullOrEmpty(label) || rect.Width <= frameWidth)
+        if (label is null || rect.Width <= frameWidth)
         {
             return;
         }
@@ -144,14 +170,14 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
 
         buffer.SetCell(rect.X + frameWidth, rect.Y, new Rune(' '), labelStyle);
 
-        span = label.AsSpan();
-        var maxCells = rect.Right - labelX;
-        if (TerminalTextUtility.TryGetIndexAtCell(span, maxCells, out var endIndex))
+        // Fill label area style so that the label visual inherits the proper styling.
+        if (label.Bounds.Width > 0)
         {
-            span = span[..endIndex];
+            for (var x = label.Bounds.X; x < label.Bounds.X + label.Bounds.Width && x < rect.Right; x++)
+            {
+                buffer.SetCell(x, rect.Y, new Rune(' '), labelStyle);
+            }
         }
-
-        buffer.WriteText(labelX, rect.Y, span, labelStyle);
     }
 
     private static long ToStopwatchTicks(TimeSpan interval)

@@ -26,15 +26,25 @@ public partial class Button : Visual
     }
 
     [Bindable]
-    public partial string? Text { get; set; }
+    public partial Visual? Text { get; set; }
 
     [Bindable]
     public partial ControlTone Tone { get; set; }
 
+    protected override int ChildrenCount => _text is null ? 0 : 1;
+
+    protected override Visual GetChild(int index)
+        => index == 0 && _text is not null ? _text : throw new ArgumentOutOfRangeException(nameof(index));
+
     protected override Size MeasureOverride(Size availableSize)
     {
-        var text = Text ?? string.Empty;
-        var innerWidth = TerminalTextUtility.GetWidth(text.AsSpan());
+        var textVisual = Text;
+        var innerWidth = 0;
+        if (textVisual is not null)
+        {
+            textVisual.Measure(new Size(int.MaxValue / 4, 1));
+            innerWidth = textVisual.DesiredSize.Width;
+        }
         var style = Get<ButtonStyle>();
         var padding = style.Padding;
 
@@ -51,6 +61,30 @@ public partial class Button : Visual
     protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
+
+        var textVisual = Text;
+        if (textVisual is null)
+        {
+            return;
+        }
+
+        var buttonStyle = Get<ButtonStyle>();
+        var borderPad = buttonStyle.ShowBorder ? 1 : 0;
+
+        var padding = buttonStyle.Padding;
+        var contentX = finalRect.X + borderPad + padding.Left;
+        var contentWidth = Math.Max(0, finalRect.Width - (borderPad * 2) - padding.Horizontal);
+        var contentHeight = Math.Max(1, finalRect.Height - (borderPad * 2) - padding.Vertical);
+        var contentY = finalRect.Y + borderPad + padding.Top + (contentHeight / 2);
+
+        if (contentWidth <= 0 || contentHeight <= 0)
+        {
+            return;
+        }
+
+        var desiredWidth = Math.Min(contentWidth, textVisual.DesiredSize.Width);
+        var x = contentX + Math.Max(0, (contentWidth - desiredWidth) / 2);
+        textVisual.Arrange(new Rectangle(x, contentY, desiredWidth, 1));
     }
 
     protected override void RenderOverride(CellBuffer buffer)
@@ -61,7 +95,6 @@ public partial class Button : Visual
         var style = buttonStyle.Resolve(theme, IsEnabled, isFocused, hovered: IsHovered, pressed: _isPressed, Tone);
 
         var rect = Bounds;
-        var text = Text ?? string.Empty;
 
         // Background fill.
         for (var y = rect.Y; y < rect.Y + rect.Height; y++)
@@ -106,17 +139,14 @@ public partial class Button : Visual
         var contentWidth = Math.Max(0, rect.Width - (borderPad * 2) - padding.Horizontal);
         var contentHeight = Math.Max(1, rect.Height - (borderPad * 2) - padding.Vertical);
         var contentY = rect.Y + borderPad + padding.Top + (contentHeight / 2);
-        if (contentWidth > 0 && contentHeight > 0)
-        {
-            var span = text.AsSpan();
-            if (TerminalTextUtility.TryGetIndexAtCell(span, contentWidth, out var endIndex))
-            {
-                span = span[..endIndex];
-            }
 
-            var textCells = TerminalTextUtility.GetWidth(span);
-            var textX = contentX + Math.Max(0, (contentWidth - textCells) / 2);
-            buffer.WriteText(textX, contentY, span, style | TextStyle.Bold);
+        var textVisual = Text;
+        if (textVisual is not null && contentWidth > 0 && contentHeight > 0)
+        {
+            for (var x = contentX; x < contentX + contentWidth; x++)
+            {
+                buffer.SetCell(x, contentY, new Rune(' '), style | TextStyle.Bold);
+            }
         }
     }
 

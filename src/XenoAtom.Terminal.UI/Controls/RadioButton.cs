@@ -27,7 +27,7 @@ public sealed partial class RadioButton : Visual
     }
 
     [Bindable]
-    public partial string? Text { get; set; }
+    public partial Visual? Text { get; set; }
 
     [Bindable]
     public partial bool IsChecked { get; set; }
@@ -35,16 +35,39 @@ public sealed partial class RadioButton : Visual
     [Bindable]
     public partial object? Group { get; set; }
 
+    protected override int ChildrenCount => _text is null ? 0 : 1;
+
+    protected override Visual GetChild(int index)
+        => index == 0 && _text is not null ? _text : throw new ArgumentOutOfRangeException(nameof(index));
+
     protected override Size MeasureOverride(Size availableSize)
     {
-        var text = Text ?? string.Empty;
-        var width = Math.Min(availableSize.Width, TerminalTextUtility.GetWidth(text.AsSpan()) + 4);
+        var textWidth = 0;
+        var textVisual = Text;
+        if (textVisual is not null)
+        {
+            textVisual.Measure(new Size(int.MaxValue / 4, 1));
+            textWidth = textVisual.DesiredSize.Width;
+        }
+
+        var width = Math.Min(availableSize.Width, textWidth + 4);
         return new Size(width, 1);
     }
 
     protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
+
+        var textVisual = Text;
+        if (textVisual is null)
+        {
+            return;
+        }
+
+        var textX = finalRect.X + 2;
+        var available = Math.Max(0, finalRect.Width - 2);
+        var desired = Math.Min(available, textVisual.DesiredSize.Width);
+        textVisual.Arrange(new Rectangle(textX, finalRect.Y, desired, 1));
     }
 
     protected override void RenderOverride(CellBuffer buffer)
@@ -55,7 +78,6 @@ public sealed partial class RadioButton : Visual
         var style = radioStyle.Resolve(theme, IsEnabled, isFocused, IsHovered);
 
         var rect = Bounds;
-        var text = Text ?? string.Empty;
 
         for (var x = rect.X; x < rect.X + rect.Width; x++)
         {
@@ -64,7 +86,11 @@ public sealed partial class RadioButton : Visual
 
         var glyph = IsChecked ? radioStyle.CheckedGlyph : radioStyle.UncheckedGlyph;
         buffer.SetCell(rect.X, rect.Y, glyph, style | TextStyle.Bold);
-        buffer.WriteText(rect.X + 2, rect.Y, text.AsSpan(), style);
+
+        if (_text is not null && rect.Width > 1)
+        {
+            buffer.SetCell(rect.X + 1, rect.Y, new Rune(' '), style);
+        }
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

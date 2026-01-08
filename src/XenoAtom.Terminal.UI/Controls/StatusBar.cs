@@ -12,19 +12,59 @@ namespace XenoAtom.Terminal.UI.Controls;
 public sealed partial class StatusBar : Visual
 {
     [Bindable]
-    public partial string? LeftText { get; set; }
+    public partial Visual? LeftText { get; set; }
 
     [Bindable]
-    public partial string? RightText { get; set; }
+    public partial Visual? RightText { get; set; }
+
+    protected override int ChildrenCount
+        => (_leftText is null ? 0 : 1) + (_rightText is null ? 0 : 1);
+
+    protected override Visual GetChild(int index)
+    {
+        if (_leftText is not null)
+        {
+            if (index == 0)
+            {
+                return _leftText;
+            }
+            index--;
+        }
+
+        if (_rightText is not null)
+        {
+            if (index == 0)
+            {
+                return _rightText;
+            }
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(index));
+    }
 
     protected override Size MeasureOverride(Size availableSize)
     {
+        _leftText?.Measure(new Size(int.MaxValue / 4, 1));
+        _rightText?.Measure(new Size(int.MaxValue / 4, 1));
         return new Size(availableSize.Width, 1);
     }
 
     protected override void ArrangeOverride(Rectangle finalRect)
     {
         Bounds = finalRect;
+
+        if (_leftText is not null)
+        {
+            var w = Math.Min(finalRect.Width, _leftText.DesiredSize.Width);
+            _leftText.Arrange(new Rectangle(finalRect.X, finalRect.Y, w, 1));
+        }
+
+        if (_rightText is not null)
+        {
+            var w = Math.Min(finalRect.Width, _rightText.DesiredSize.Width);
+            var x = finalRect.X + Math.Max(0, finalRect.Width - w);
+            _rightText.Arrange(new Rectangle(x, finalRect.Y, w, 1));
+        }
     }
 
     protected override void RenderOverride(CellBuffer buffer)
@@ -44,13 +84,6 @@ public sealed partial class StatusBar : Visual
             buffer.SetCell(x, rect.Y, new Rune(' '), style);
         }
 
-        var left = LeftText ?? string.Empty;
-        var right = RightText ?? string.Empty;
-
-        buffer.WriteText(rect.X, rect.Y, left.AsSpan(), style);
-
-        var rightWidth = TerminalTextUtility.GetWidth(right.AsSpan());
-        var rightX = rect.X + Math.Max(0, rect.Width - rightWidth);
-        buffer.WriteText(rightX, rect.Y, right.AsSpan(), style);
+        // Children render on top (inheriting the status bar style).
     }
 }
