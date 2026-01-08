@@ -7,9 +7,35 @@ using System.Diagnostics;
 
 using var session = Terminal.Open();
 
-var showModal = new CheckBox().Text("Show modal");
 var statusState = new State<string>("ready");
 var progressState = new State<double>(0.0);
+
+var showDialog = new Button()
+    .Text("Show modal")
+    .HorizontalAlignment(HorizontalAlignment.Stretch)
+    .Click(() =>
+    {
+        Dialog? dialog = null;
+
+        var dialogContent = new VStack(
+            "Modal dialog",
+            new TextBlock().Text("This is a wrapped paragraph demonstrating document-style text rendering.").Wrap(true),
+            new Button()
+                .Text("Close")
+                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                .Click(() => dialog!.Close()))
+            .Spacing(1)
+            .HorizontalAlignment(HorizontalAlignment.Stretch);
+
+        dialog = new Dialog()
+            .Title("Modal dialog")
+            .IsModal(true)
+            .Padding(1)
+            .Width(60)
+            .Content(dialogContent);
+
+        dialog.Show();
+    });
 
 
 // Disabling this part for now, as the custom color on the selection is not nice with the default theme.
@@ -23,32 +49,6 @@ var progressState = new State<double>(0.0);
 //    Selection = AnsiColor.Rgb(0x00, 0xFF, 0x00),
 //    Disabled = Theme.Default.Disabled,
 //});
-
-var overlay = new ComputedVisual(() =>
-{
-    if (!showModal.IsChecked)
-    {
-        return null;
-    }
-
-    var dialogContent = new VStack(
-        "Modal dialog",
-        new TextBlock().Text("This is a wrapped paragraph demonstrating document-style text rendering.").Wrap(true),
-        new Button()
-            .Text("Close")
-            .Click(() => showModal.IsChecked = false)).Spacing(1);
-
-    var dialog = new Dialog()
-        .Title("Modal dialog")
-        .IsModal(true)
-        .Padding(new Thickness(1))
-        .Width(60)
-        .Content(dialogContent);
-
-    return dialog;
-})
-    .HorizontalAlignment(HorizontalAlignment.Stretch)
-    .VerticalAlignment(VerticalAlignment.Stretch);
 
 var progressBars = new VStack(
     new TextBlock("Progress variants:"),
@@ -86,7 +86,7 @@ var leftColumn = new VStack(
             .Text("Type here (Ctrl+A, Shift+Arrows, Ctrl+Left/Right)")
             .HorizontalAlignment(HorizontalAlignment.Stretch),
         new CheckBox().Text("Accept terms"),
-        showModal,
+        showDialog,
         new Table()
             .Headers("Task", "Status")
             .AddRow("Download", "Running")
@@ -195,26 +195,23 @@ var rightColumn = new VStack(
     .HorizontalAlignment(HorizontalAlignment.Stretch)
     .VerticalAlignment(VerticalAlignment.Stretch);
 
-var root = new WindowLayer()
+var root = new DockLayout()
+    .HorizontalAlignment(HorizontalAlignment.Stretch)
+    .VerticalAlignment(VerticalAlignment.Stretch)
     .Content(
-        new DockLayout()
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .VerticalAlignment(VerticalAlignment.Stretch)
-            .Content(
-                new VStack(
-                    "Fullscreen demo: Tab focus, mouse click, wheel scroll, F12 debug, Esc quit",
-                    new HStack(leftColumn, rightColumn)
-                        .Spacing(3)
-                        .HorizontalAlignment(HorizontalAlignment.Stretch)
-                        .VerticalAlignment(VerticalAlignment.Stretch))
-                .Spacing(1)
+        new VStack(
+            "Fullscreen demo: Tab focus, mouse click, wheel scroll, F12 debug, Esc quit",
+            new HStack(leftColumn, rightColumn)
+                .Spacing(3)
                 .HorizontalAlignment(HorizontalAlignment.Stretch)
                 .VerticalAlignment(VerticalAlignment.Stretch))
-            .Bottom(
-                new StatusBar()
-                    .LeftText("Tab focus | Mouse click | Wheel scroll | F12 debug | Esc quit")
-                    .RightText("XenoAtom.Terminal.UI")))
-    .With(layer => layer.AddWindow(overlay));
+        .Spacing(1)
+        .HorizontalAlignment(HorizontalAlignment.Stretch)
+        .VerticalAlignment(VerticalAlignment.Stretch))
+    .Bottom(
+        new StatusBar()
+            .LeftText("Tab focus | Mouse click | Wheel scroll | F12 debug | Esc quit")
+            .RightText("XenoAtom.Terminal.UI"));
 
 var lastTick = Stopwatch.GetTimestamp();
 var t = 0.0;

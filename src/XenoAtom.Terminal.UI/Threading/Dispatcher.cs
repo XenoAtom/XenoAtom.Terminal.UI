@@ -14,6 +14,8 @@ public sealed class Dispatcher
 
     private Dispatcher() { }
 
+    internal TerminalApp? AttachedApp => _app;
+
     internal void BindToCurrentThread(TerminalApp app)
     {
         ArgumentNullException.ThrowIfNull(app);

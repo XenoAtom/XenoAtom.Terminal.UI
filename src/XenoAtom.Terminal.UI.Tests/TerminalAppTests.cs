@@ -311,7 +311,6 @@ public sealed class TerminalAppTests
         var content = new VStack();
         content.Add(button);
 
-        var layer = new WindowLayer { Content = content };
         var modal = new Dialog
         {
             Title = "Modal",
@@ -322,21 +321,34 @@ public sealed class TerminalAppTests
             Top = 3,
             Content = new TextBlock("Modal"),
         };
-        layer.AddWindow(modal);
 
-        var app = new TerminalApp(layer, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var app = new TerminalApp(content, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
         var runTask = app.RunInBackgroundAsync();
 
-        await Task.Delay(20);
+        try
+        {
+            await Task.Delay(20);
 
-        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 1, Y = 1 });
-        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 1, Y = 1 });
+            await app.Dispatcher.InvokeAsync(modal.Show);
 
-        await Task.Delay(50);
-        Assert.IsFalse(clicked.Task.IsCompleted);
+            backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 1, Y = 0 });
+            backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 1, Y = 0 });
 
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+            await Task.Delay(50);
+            Assert.IsFalse(clicked.Task.IsCompleted);
+
+            await app.Dispatcher.InvokeAsync(modal.Close);
+
+            backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 1, Y = 0 });
+            backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 1, Y = 0 });
+
+            await clicked.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        }
+        finally
+        {
+            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+            await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+        }
     }
 
     [TestMethod]

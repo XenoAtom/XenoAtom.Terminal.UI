@@ -7,6 +7,7 @@ using System.Diagnostics;
 using XenoAtom.Ansi;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Animation;
+using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Input;
@@ -21,6 +22,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private readonly System.Collections.Concurrent.ConcurrentQueue<Action> _pendingActions = new();
     private readonly TerminalInstance _terminal;
     private readonly TerminalAppOptions _options;
+    private readonly WindowLayer? _windowLayer;
     private readonly InlineInteractiveHost? _inlineHost;
     private readonly FullscreenHost? _fullscreenHost;
     private readonly AsyncAutoResetEvent _wakeUp = new();
@@ -42,9 +44,28 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
     public TerminalApp(Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
     {
-        Root = root ?? throw new ArgumentNullException(nameof(root));
+        ArgumentNullException.ThrowIfNull(root);
         _terminal = terminal ?? global::XenoAtom.Terminal.Terminal.Instance;
         _options = options ?? new TerminalAppOptions();
+
+        ContentRoot = root;
+        if (_options.HostKind == TerminalHostKind.Fullscreen)
+        {
+            if (root is WindowLayer layer)
+            {
+                _windowLayer = layer;
+                Root = layer;
+            }
+            else
+            {
+                _windowLayer = new WindowLayer { Content = root };
+                Root = _windowLayer;
+            }
+        }
+        else
+        {
+            Root = root;
+        }
 
         if (_options.HostKind == TerminalHostKind.Fullscreen)
         {
@@ -59,6 +80,8 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     public TerminalInstance Terminal => _terminal;
 
     public Visual Root { get; }
+
+    public Visual ContentRoot { get; }
 
     internal void SetUpdateCallback(Func<bool>? onUpdate)
     {
@@ -355,6 +378,53 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     internal void ClearInlineLiveRegion()
     {
         _inlineHost?.PrepareForUserUpdate();
+    }
+
+    internal void ShowWindow(Visual window)
+    {
+        ArgumentNullException.ThrowIfNull(window);
+        VerifyAccess();
+
+        if (_windowLayer is null)
+        {
+            throw new InvalidOperationException("Showing dialogs/windows is only supported in fullscreen apps.");
+        }
+
+        if (window.Parent is not null)
+        {
+            throw new InvalidOperationException("The visual is already part of the UI tree.");
+        }
+
+        _windowLayer.AddWindow(window);
+
+        var focusCandidate = window.Focusable
+            ? window
+            : window.EnumerateVisualsDepthFirst().FirstOrDefault(v => v.Focusable && v.IsVisible && v.IsEnabled);
+
+        if (focusCandidate is not null)
+        {
+            Focus(focusCandidate);
+        }
+    }
+
+    internal bool CloseWindow(Visual window)
+    {
+        ArgumentNullException.ThrowIfNull(window);
+        VerifyAccess();
+
+        if (_windowLayer is null)
+        {
+            throw new InvalidOperationException("Closing dialogs/windows is only supported in fullscreen apps.");
+        }
+
+        return _windowLayer.RemoveWindow(window);
+    }
+
+    internal void Focus(Visual? visual)
+    {
+        VerifyAccess();
+        _focusedElement = visual;
+        RequestRender();
     }
 
     internal void RegisterAnimatedVisual(IAnimatedVisual visual)

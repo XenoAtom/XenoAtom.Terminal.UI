@@ -26,6 +26,32 @@ public sealed partial class Dialog : Visual, IModalVisual
         VerticalAlignment = VerticalAlignment.Stretch;
     }
 
+    public void Show()
+    {
+        VerifyAccess();
+
+        var app = App ?? Dispatcher.AttachedApp;
+        if (app is null)
+        {
+            throw new InvalidOperationException("Dialog.Show is only supported while a TerminalApp is running.");
+        }
+
+        app.ShowWindow(this);
+    }
+
+    public void Close()
+    {
+        VerifyAccess();
+
+        var app = App ?? Dispatcher.AttachedApp;
+        if (app is null)
+        {
+            return;
+        }
+
+        app.CloseWindow(this);
+    }
+
     [Bindable]
     public partial Visual? Title { get; set; }
 
@@ -221,17 +247,15 @@ public sealed partial class Dialog : Visual, IModalVisual
             return;
         }
 
-        if (e.LocalY != 0)
+        if (e.UiY != Bounds.Y)
         {
             return;
         }
 
         _dragging = true;
 
-        var uiX = Bounds.X + e.LocalX;
-        var uiY = Bounds.Y + e.LocalY;
-        _dragStartUiX = uiX;
-        _dragStartUiY = uiY;
+        _dragStartUiX = e.UiX;
+        _dragStartUiY = e.UiY;
 
         var currentLeft = Bounds.X - _layoutSlot.X;
         var currentTop = Bounds.Y - _layoutSlot.Y;
@@ -251,11 +275,8 @@ public sealed partial class Dialog : Visual, IModalVisual
             return;
         }
 
-        var uiX = Bounds.X + e.LocalX;
-        var uiY = Bounds.Y + e.LocalY;
-
-        var deltaX = uiX - _dragStartUiX;
-        var deltaY = uiY - _dragStartUiY;
+        var deltaX = e.UiX - _dragStartUiX;
+        var deltaY = e.UiY - _dragStartUiY;
 
         var maxLeft = Math.Max(0, _layoutSlot.Width - Bounds.Width);
         var maxTop = Math.Max(0, _layoutSlot.Height - Bounds.Height);

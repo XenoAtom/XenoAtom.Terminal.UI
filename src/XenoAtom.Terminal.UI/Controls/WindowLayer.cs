@@ -27,6 +27,12 @@ public sealed partial class WindowLayer : Visual
         _windows.Add(window);
     }
 
+    public bool RemoveWindow(Visual window)
+    {
+        ArgumentNullException.ThrowIfNull(window);
+        return _windows.Remove(window);
+    }
+
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)
