@@ -564,7 +564,6 @@ public abstract partial class Visual : DispatcherObject
         _renderDirty = true;
 
         using var initScope = BindingManager.Current.BeginDynamicUpdate(this);
-        using var notifyScope = BindingManager.Current.SuppressNotifications();
         using var session = BindingManager.Current.StartTracking();
         for (var i = 0; i < _dynamicUpdates.Count; i++)
         {
