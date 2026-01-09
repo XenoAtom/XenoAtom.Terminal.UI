@@ -8,10 +8,10 @@ Following this list, you will find a compact spec for each high-priority control
 
 | Done | Priority   | Missing component                                     | Category                   | What it unlocks                      | Why it’s worth it                                 |
 | --- | ---------- | ----------------------------------------------------- | -------------------------- | ------------------------------------ | ------------------------------------------------- |
-| [ ] | **High**   | **Rule / Divider**                                    | Layout/visual              | Section separators                   | Ubiquitous readability win                        |
-| [ ] | **High**   | **Markup element**                                    | Content                    | Easy rich text output via AnsiMarkup | Low effort, high payoff across UI                 |
-| [ ] | **High**   | **Slider**                                            | Input                      | Adjust a value within a range        | Common control; distinct semantics from scrollbar |
-| [ ] | **High**   | **HSplitter / VSplitter (interactive)**               | Layout/input               | Mouse + keyboard resizing of panes   | Huge fullscreen UX win; enables IDE-style layouts |
+| [x] | **High**   | **Rule / Divider**                                    | Layout/visual              | Section separators                   | Ubiquitous readability win                        |
+| [x] | **High**   | **Markup element**                                    | Content                    | Easy rich text output via AnsiMarkup | Low effort, high payoff across UI                 |
+| [x] | **High**   | **Slider**                                            | Input                      | Adjust a value within a range        | Common control; distinct semantics from scrollbar |
+| [x] | **High**   | **HSplitter / VSplitter (interactive)**               | Layout/input               | Mouse + keyboard resizing of panes   | Huge fullscreen UX win; enables IDE-style layouts |
 | [ ] | **High**   | **Explicit Scrollbar widget**                         | Scrolling                  | Visible scroll affordance            | Immediate UX improvement                          |
 | [ ] | **High**   | **Select / Dropdown**                                 | Input                      | Compact single-choice                | Common in forms/settings                          |
 | [ ] | **High**   | **SelectionList (multi-select list widget)**          | Input                      | In-layout multi-select               | More app-like than prompts                        |
