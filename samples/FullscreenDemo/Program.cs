@@ -165,6 +165,13 @@ var rightColumn = new VStack(
                     .Trimming(TextTrimming.StartEllipsis)
                     .MaxWidth(28))
             .Spacing(2),
+        new Rule
+        {
+            StartLabel = "Start",
+            CenterLabel = "Rule",
+            EndLabel = "End",
+        }.Style(RuleStyle.Default with { Glyphs = RuleGlyphs.Dotted })
+            .HorizontalAlignment(HorizontalAlignment.Stretch),
         new Group()
             .TopLeftText("Pick one")
             .TopRightText("wheel")
@@ -196,8 +203,8 @@ var root = new DockLayout()
     .Content(
         new VStack(
             "Fullscreen demo: Tab focus, mouse click, wheel scroll, F12 debug, Esc quit",
-            new HStack(leftColumn, rightColumn)
-                .Spacing(3)
+            new HStack(leftColumn, new Rule { Orientation = Orientation.Vertical }, rightColumn)
+                .Spacing(2)
                 .HorizontalAlignment(HorizontalAlignment.Stretch)
                 .VerticalAlignment(VerticalAlignment.Stretch))
         .Spacing(1)
