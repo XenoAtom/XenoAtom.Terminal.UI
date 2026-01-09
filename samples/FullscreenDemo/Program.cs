@@ -157,13 +157,7 @@ var rightColumn = new VStack(
                     new ScrollViewer()
                         .Height(4)
                         .HorizontalAlignment(HorizontalAlignment.Stretch)
-                        .Content(new VStack().Update(v =>
-                        {
-                            for (var i = 0; i < 12; i++)
-                            {
-                                v.Add($"Log line {i}");
-                            }
-                        }))),
+                        .Content(new VStack().Add(Enumerable.Range(0, 12).Select(i => (Visual)new TextBlock($"Log line {i}")).ToArray())))
             })
             .HorizontalAlignment(HorizontalAlignment.Stretch),
         new HStack(
@@ -192,13 +186,7 @@ var rightColumn = new VStack(
             .Content(new ScrollViewer()
                 .Height(4)
                 .HorizontalAlignment(HorizontalAlignment.Stretch)
-                .Content(new VStack().Update(v =>
-                {
-                    for (var i = 0; i < 12; i++)
-                    {
-                        v.Add($"Log line {i}");
-                    }
-                }))),
+                .Content(new VStack().Add(Enumerable.Range(0, 12).Select(i => (Visual)new TextBlock($"Log line {i}")).ToArray()))),
         new Button()
             .Text("Click me (mouse or Enter)")
             .HorizontalAlignment(HorizontalAlignment.Stretch)
