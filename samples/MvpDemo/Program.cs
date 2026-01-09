@@ -10,8 +10,8 @@ Terminal.WriteMarkupLine("[bold]XenoAtom.Terminal.UI MVP Demo[/]");
 Terminal.WriteMarkupLine("Tab: focus  Space/Enter: activate  Ctrl+V: paste  Esc: quit");
 Terminal.WriteLine();
 
-var name = new TextBox().Text("");
-var accept = new CheckBox().Text("Accept terms");
+var name = new TextBox();
+var accept = new CheckBox("Accept terms");
 var list = new ListBox()
     .Items(["First", "Second", "Third", "Fourth", "Fifth"])
     .Height(4);
@@ -27,8 +27,7 @@ var content = new VStack(
     new ProgressBar()
         .Label("Work")
         .Value(progressState),
-    new Button()
-        .Text("Set status")
+    new Button("Set status")
         .Click(() => status.Value = "click received"),
     new TextBlock().Text(() => $"Status: {status.Value}")).Spacing(1);
 

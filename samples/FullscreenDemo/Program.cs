@@ -10,8 +10,7 @@ using var session = Terminal.Open();
 var statusState = new State<string>("ready");
 var progressState = new State<double>(0.0);
 
-var showDialog = new Button()
-    .Text("Show modal")
+var showDialog = new Button("Show modal")
     .HorizontalAlignment(HorizontalAlignment.Left)
     .Click(() =>
     {
@@ -19,9 +18,8 @@ var showDialog = new Button()
 
         var dialogContent = new VStack(
             "Modal dialog",
-            new TextBlock().Text("This is a wrapped paragraph demonstrating document-style text rendering.").Wrap(true),
-            new Button()
-                .Text("Close")
+            new TextBlock("This is a wrapped paragraph demonstrating document-style text rendering.").Wrap(true),
+            new Button("Close")
                 .HorizontalAlignment(HorizontalAlignment.Stretch)
                 .Click(() => dialog!.Close()))
             .Spacing(1)
@@ -51,7 +49,7 @@ var showDialog = new Button()
 //});
 
 var progressBars = new VStack(
-    new TextBlock("Progress variants:"),
+    "Progress variants:",
     new HStack(
             new ProgressBar()
                 .Label("Thin")
@@ -113,8 +111,7 @@ var rightColumn = new VStack(
             .MinHeight(4)
             .HorizontalAlignment(HorizontalAlignment.Stretch)
             .Content(
-                new TextBlock()
-                    .Text("Bottom aligned (Center + Bottom)")
+                new TextBlock("Bottom aligned (Center + Bottom)")
                     .HorizontalAlignment(HorizontalAlignment.Center)
                     .VerticalAlignment(VerticalAlignment.Bottom)),
         new TabControl(new[]
@@ -122,17 +119,17 @@ var rightColumn = new VStack(
                 new TabPage(
                     new HStack(
                             new Spinner().Style(SpinnerStyles.Dots3),
-                            new TextBlock("Status"),
+                            "Status",
                             new TextBlock()
                                 .Text(() => statusState.Value)
                                 .Trimming(TextTrimming.EndEllipsis)
                                 .MaxWidth(12))
                         .Spacing(1),
                     new VStack(
-                            new TextBlock("This is the Status tab."),
+                            "This is the Status tab.",
                             new TextBlock()
                                 .Text(() => $"Current status: {statusState.Value}"),
-                            new TextBlock("Spinners:"),
+                            "Spinners:",
                             new VStack(
                                     new HStack(
                                             new Spinner("Syncing").Style(SpinnerStyles.Dots2),
@@ -151,7 +148,7 @@ var rightColumn = new VStack(
                 new TabPage(
                     new HStack(
                             new Spinner().Style(SpinnerStyles.Dots2),
-                            new TextBlock("Logs"),
+                            "Logs",
                             new TextBlock().Text(() => $"({(int)(progressState.Value * 100)}%)"))
                         .Spacing(1),
                     new ScrollViewer()
@@ -161,12 +158,10 @@ var rightColumn = new VStack(
             })
             .HorizontalAlignment(HorizontalAlignment.Stretch),
         new HStack(
-                new TextBlock()
-                    .Text("This is a very long piece of text that will be trimmed.")
+                new TextBlock("This is a very long piece of text that will be trimmed.")
                     .Trimming(TextTrimming.EndEllipsis)
                     .MaxWidth(28),
-                new TextBlock()
-                    .Text("This is a very long piece of text that will be trimmed.")
+                new TextBlock("This is a very long piece of text that will be trimmed.")
                     .Trimming(TextTrimming.StartEllipsis)
                     .MaxWidth(28))
             .Spacing(2),
@@ -187,8 +182,7 @@ var rightColumn = new VStack(
                 .Height(4)
                 .HorizontalAlignment(HorizontalAlignment.Stretch)
                 .Content(new VStack().Add(Enumerable.Range(0, 12).Select(i => (Visual)new TextBlock($"Log line {i}")).ToArray()))),
-        new Button()
-            .Text("Click me (mouse or Enter)")
+        new Button("Click me (mouse or Enter)")
             .HorizontalAlignment(HorizontalAlignment.Stretch)
             .Click(() => statusState.Value = "click received"),
         new TextBlock().Text(() => $"Status: {statusState.Value}"))
