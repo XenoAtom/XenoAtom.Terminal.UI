@@ -1,0 +1,103 @@
+// Copyright (c) Alexandre Mutel. All rights reserved.
+// Licensed under the BSD-Clause 2 license.
+// See license.txt file in the project root for full license information.
+
+using System.Text;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
+
+namespace XenoAtom.Terminal.UI.Controls;
+
+public sealed partial class Header : Visual
+{
+    [Bindable]
+    public partial Visual? Left { get; set; }
+
+    [Bindable]
+    public partial Visual? Center { get; set; }
+
+    [Bindable]
+    public partial Visual? Right { get; set; }
+
+    protected override int ChildrenCount
+        => (_left is null ? 0 : 1) + (_center is null ? 0 : 1) + (_right is null ? 0 : 1);
+
+    protected override Visual GetChild(int index)
+    {
+        if (_left is not null)
+        {
+            if (index == 0) return _left;
+            index--;
+        }
+
+        if (_center is not null)
+        {
+            if (index == 0) return _center;
+            index--;
+        }
+
+        if (_right is not null)
+        {
+            if (index == 0) return _right;
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(index));
+    }
+
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        _left?.Measure(new Size(int.MaxValue / 4, 1));
+        _center?.Measure(new Size(int.MaxValue / 4, 1));
+        _right?.Measure(new Size(int.MaxValue / 4, 1));
+        return new Size(availableSize.Width, 1);
+    }
+
+    protected override void ArrangeOverride(Rectangle finalRect)
+    {
+        Bounds = finalRect;
+
+        var left = _left;
+        var center = _center;
+        var right = _right;
+
+        var leftW = left is null ? 0 : Math.Min(finalRect.Width, left.DesiredSize.Width);
+        var rightW = right is null ? 0 : Math.Min(finalRect.Width, right.DesiredSize.Width);
+
+        if (left is not null)
+        {
+            left.Arrange(new Rectangle(finalRect.X, finalRect.Y, leftW, 1));
+        }
+
+        if (right is not null)
+        {
+            var x = finalRect.X + Math.Max(0, finalRect.Width - rightW);
+            right.Arrange(new Rectangle(x, finalRect.Y, rightW, 1));
+        }
+
+        if (center is not null)
+        {
+            var maxCenterWidth = Math.Max(0, finalRect.Width - leftW - rightW);
+            var w = Math.Min(maxCenterWidth, center.DesiredSize.Width);
+            var x = finalRect.X + leftW + Math.Max(0, (maxCenterWidth - w) / 2);
+            center.Arrange(new Rectangle(x, finalRect.Y, w, 1));
+        }
+    }
+
+    protected override void RenderOverride(CellBuffer buffer)
+    {
+        var rect = Bounds;
+        if (rect.Width <= 0 || rect.Height <= 0)
+        {
+            return;
+        }
+
+        var theme = GetTheme();
+        var style = Get<HeaderStyle>().Resolve(theme);
+
+        for (var x = rect.X; x < rect.X + rect.Width; x++)
+        {
+            buffer.SetCell(x, rect.Y, new Rune(' '), style);
+        }
+    }
+}
