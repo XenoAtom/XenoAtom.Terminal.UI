@@ -13,8 +13,8 @@ namespace XenoAtom.Terminal.UI.Controls;
 public sealed partial class ScrollViewer : Visual
 {
     private readonly ContentViewportHost _contentHost;
-    private readonly VerticalScrollBarVisual _verticalBar;
-    private readonly HorizontalScrollBarVisual _horizontalBar;
+    private readonly ScrollBar _verticalBar;
+    private readonly ScrollBar _horizontalBar;
     private readonly ScrollCornerVisual _corner;
 
     private Visual? _content;
@@ -24,13 +24,7 @@ public sealed partial class ScrollViewer : Visual
     private bool _showHorizontalBar;
     private bool _showVerticalBar;
     private int _scrollBarThickness;
-
-    private bool _draggingVertical;
-    private bool _draggingHorizontal;
-    private int _dragStartUiX;
-    private int _dragStartUiY;
-    private int _dragStartHorizontalOffset;
-    private int _dragStartVerticalOffset;
+    private ScrollBarStyle? _internalScrollBarStyle;
 
     public ScrollViewer()
     {
@@ -38,9 +32,25 @@ public sealed partial class ScrollViewer : Visual
         this.Height(6);
 
         _contentHost = new ContentViewportHost(this);
-        _verticalBar = new VerticalScrollBarVisual(this);
-        _horizontalBar = new HorizontalScrollBarVisual(this);
+        _verticalBar = new ScrollBar(focusable: false).Orientation(Orientation.Vertical);
+        _horizontalBar = new ScrollBar(focusable: false).Orientation(Orientation.Horizontal);
         _corner = new ScrollCornerVisual(this);
+
+        _verticalBar.ValueChanged(static (s, e) =>
+        {
+            if (s is ScrollBar { Parent: ScrollViewer owner })
+            {
+                owner.VerticalOffset = e.NewValue;
+            }
+        });
+
+        _horizontalBar.ValueChanged(static (s, e) =>
+        {
+            if (s is ScrollBar { Parent: ScrollViewer owner })
+            {
+                owner.HorizontalOffset = e.NewValue;
+            }
+        });
 
         AttachChild(_contentHost);
         AttachChild(_verticalBar);
@@ -166,6 +176,33 @@ public sealed partial class ScrollViewer : Visual
         if (v != VerticalOffset) VerticalOffset = v;
         if (hOffset != HorizontalOffset) HorizontalOffset = hOffset;
 
+        // Keep scrollbars in sync with the viewport/content model (two-way via ValueChanged).
+        _verticalBar.Minimum(0);
+        _verticalBar.Maximum(maxVerticalOffset);
+        _verticalBar.ViewportSize(contentViewportHeight);
+        _verticalBar.Value(v);
+        _verticalBar.IsVisible = _showVerticalBar;
+
+        _horizontalBar.Minimum(0);
+        _horizontalBar.Maximum(maxHorizontalOffset);
+        _horizontalBar.ViewportSize(contentViewportWidth);
+        _horizontalBar.Value(hOffset);
+        _horizontalBar.IsVisible = _showHorizontalBar;
+
+        // Bridge ScrollViewerStyle to ScrollBarStyle for internal bars.
+        var scrollBarStyle = new ScrollBarStyle
+        {
+            Thickness = thickness,
+            TrackStyle = style.TrackStyle,
+            ThumbStyle = style.ThumbStyle,
+        };
+        if (!Equals(_internalScrollBarStyle, scrollBarStyle))
+        {
+            _internalScrollBarStyle = scrollBarStyle;
+            _verticalBar.Set(scrollBarStyle);
+            _horizontalBar.Set(scrollBarStyle);
+        }
+
         _contentHost.UpdateLayout(_contentWidth, _contentHeight, hOffset, v);
         _contentHost.Arrange(new Rectangle(finalRect.X, finalRect.Y, contentViewportWidth, contentViewportHeight));
 
@@ -275,172 +312,6 @@ public sealed partial class ScrollViewer : Visual
         e.Handled = true;
     }
 
-    protected override void OnPointerPressed(PointerEventArgs e)
-    {
-        if (e.Button != TerminalMouseButton.Left)
-        {
-            return;
-        }
-
-        var uiX = e.UiX;
-        var uiY = e.UiY;
-
-        var vRect = _verticalBar.Bounds;
-        if (vRect.Width > 0 && vRect.Height > 0 && vRect.Contains(uiX, uiY))
-        {
-            var viewportHeight = vRect.Height;
-            var maxOffset = Math.Max(0, _contentHeight - viewportHeight);
-            if (maxOffset > 0)
-            {
-                var local = uiY - vRect.Y;
-                if (TryGetVerticalThumb(viewportHeight, out var thumbStart, out var thumbLen))
-                {
-                    if (local >= thumbStart && local < thumbStart + thumbLen)
-                    {
-                        _draggingVertical = true;
-                        _dragStartUiY = uiY;
-                        _dragStartVerticalOffset = VerticalOffset;
-                    }
-                    else
-                    {
-                        var page = viewportHeight;
-                        VerticalOffset = local < thumbStart ? Math.Max(0, VerticalOffset - page) : Math.Min(maxOffset, VerticalOffset + page);
-                    }
-                }
-
-                e.Handled = true;
-                return;
-            }
-        }
-
-        var hRect = _horizontalBar.Bounds;
-        if (hRect.Width > 0 && hRect.Height > 0 && hRect.Contains(uiX, uiY))
-        {
-            var viewportWidth = hRect.Width;
-            var maxOffset = Math.Max(0, _contentWidth - viewportWidth);
-            if (maxOffset > 0)
-            {
-                var local = uiX - hRect.X;
-                if (TryGetHorizontalThumb(viewportWidth, out var thumbStart, out var thumbLen))
-                {
-                    if (local >= thumbStart && local < thumbStart + thumbLen)
-                    {
-                        _draggingHorizontal = true;
-                        _dragStartUiX = uiX;
-                        _dragStartHorizontalOffset = HorizontalOffset;
-                    }
-                    else
-                    {
-                        var page = viewportWidth;
-                        HorizontalOffset = local < thumbStart ? Math.Max(0, HorizontalOffset - page) : Math.Min(maxOffset, HorizontalOffset + page);
-                    }
-                }
-
-                e.Handled = true;
-                return;
-            }
-        }
-    }
-
-    protected override void OnPointerMoved(PointerEventArgs e)
-    {
-        if (!_draggingVertical && !_draggingHorizontal)
-        {
-            return;
-        }
-
-        if (_draggingVertical)
-        {
-            var viewportHeight = Math.Max(1, _verticalBar.Bounds.Height);
-            var maxOffset = Math.Max(0, _contentHeight - viewportHeight);
-            if (maxOffset > 0)
-            {
-                var trackLen = Math.Max(1, viewportHeight - GetThumbLength(viewportHeight, _contentHeight));
-                var delta = e.UiY - _dragStartUiY;
-                var deltaOffset = (int)Math.Round((double)delta * maxOffset / trackLen);
-                VerticalOffset = Math.Clamp(_dragStartVerticalOffset + deltaOffset, 0, maxOffset);
-                e.Handled = true;
-            }
-        }
-
-        if (_draggingHorizontal)
-        {
-            var viewportWidth = Math.Max(1, _horizontalBar.Bounds.Width);
-            var maxOffset = Math.Max(0, _contentWidth - viewportWidth);
-            if (maxOffset > 0)
-            {
-                var trackLen = Math.Max(1, viewportWidth - GetThumbLength(viewportWidth, _contentWidth));
-                var delta = e.UiX - _dragStartUiX;
-                var deltaOffset = (int)Math.Round((double)delta * maxOffset / trackLen);
-                HorizontalOffset = Math.Clamp(_dragStartHorizontalOffset + deltaOffset, 0, maxOffset);
-                e.Handled = true;
-            }
-        }
-    }
-
-    protected override void OnPointerReleased(PointerEventArgs e)
-    {
-        if (e.Button != TerminalMouseButton.Left)
-        {
-            return;
-        }
-
-        if (_draggingVertical || _draggingHorizontal)
-        {
-            _draggingVertical = false;
-            _draggingHorizontal = false;
-            e.Handled = true;
-        }
-    }
-
-    private bool TryGetVerticalThumb(Rectangle rect, int viewportHeight, out int thumbStart, out int thumbLen)
-    {
-        var maxOffset = Math.Max(0, _contentHeight - viewportHeight);
-        thumbLen = GetThumbLength(viewportHeight, _contentHeight);
-        var trackLen = Math.Max(1, viewportHeight - thumbLen);
-        thumbStart = maxOffset == 0 ? 0 : (int)Math.Round((double)VerticalOffset * trackLen / maxOffset);
-        thumbStart = Math.Clamp(thumbStart, 0, trackLen);
-        return true;
-    }
-
-    private bool TryGetHorizontalThumb(Rectangle rect, int viewportWidth, out int thumbStart, out int thumbLen)
-    {
-        var maxOffset = Math.Max(0, _contentWidth - viewportWidth);
-        thumbLen = GetThumbLength(viewportWidth, _contentWidth);
-        var trackLen = Math.Max(1, viewportWidth - thumbLen);
-        thumbStart = maxOffset == 0 ? 0 : (int)Math.Round((double)HorizontalOffset * trackLen / maxOffset);
-        thumbStart = Math.Clamp(thumbStart, 0, trackLen);
-        return true;
-    }
-
-    private bool TryGetVerticalThumb(int viewportHeight, out int thumbStart, out int thumbLen) => TryGetVerticalThumb(Bounds, viewportHeight, out thumbStart, out thumbLen);
-
-    private bool TryGetHorizontalThumb(int viewportWidth, out int thumbStart, out int thumbLen) => TryGetHorizontalThumb(Bounds, viewportWidth, out thumbStart, out thumbLen);
-
-    private static int GetThumbLength(int viewport, int content)
-    {
-        if (content <= 0)
-        {
-            return 1;
-        }
-
-        return Math.Clamp(Math.Max(1, (int)Math.Round((double)viewport * viewport / content)), 1, viewport);
-    }
-
-    private bool IsFocusWithin()
-    {
-        var focused = App?.FocusedElement;
-        for (var v = focused; v is not null; v = v.Parent)
-        {
-            if (ReferenceEquals(v, this))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private sealed class ContentViewportHost : Visual
     {
         private readonly ScrollViewer _owner;
@@ -505,115 +376,30 @@ public sealed partial class ScrollViewer : Visual
         }
     }
 
-    private abstract class ScrollBarVisualBase : Visual
+    private sealed class ScrollCornerVisual : Visual
     {
-        protected readonly ScrollViewer Owner;
+        private readonly ScrollViewer _owner;
 
-        protected ScrollBarVisualBase(ScrollViewer owner)
+        public ScrollCornerVisual(ScrollViewer owner)
         {
-            Owner = owner;
+            _owner = owner;
             this.HorizontalAlignment(HorizontalAlignment.Stretch);
             this.VerticalAlignment(VerticalAlignment.Stretch);
         }
 
-        protected (CellStyle Track, CellStyle Thumb, ScrollBarGlyphs Glyphs) GetStyles()
+        protected override void RenderOverride(CellBuffer buffer)
         {
+            var rect = Bounds;
+            if (rect.Width <= 0 || rect.Height <= 0)
+            {
+                return;
+            }
+
             var theme = GetTheme();
-            var highlighted = Owner.IsFocusWithin() || IsHovered || Owner._draggingHorizontal || Owner._draggingVertical;
-            var style = Get<ScrollViewerStyle>();
-            return (style.ResolveTrackStyle(theme), style.ResolveThumbStyle(theme, highlighted), theme.ScrollBars);
-        }
-    }
+            var style = _owner.Get<ScrollViewerStyle>();
+            var trackStyle = style.ResolveTrackStyle(theme);
+            var glyphs = theme.ScrollBars;
 
-    private sealed class VerticalScrollBarVisual : ScrollBarVisualBase
-    {
-        public VerticalScrollBarVisual(ScrollViewer owner) : base(owner)
-        {
-        }
-
-        protected override void RenderOverride(CellBuffer buffer)
-        {
-            var rect = Bounds;
-            if (rect.Width <= 0 || rect.Height <= 0)
-            {
-                return;
-            }
-
-            var viewportHeight = rect.Height;
-            var thickness = rect.Width;
-
-            var maxOffset = Math.Max(0, Owner._contentHeight - viewportHeight);
-            var thumbLen = GetThumbLength(viewportHeight, Owner._contentHeight);
-            var trackLen = Math.Max(1, viewportHeight - thumbLen);
-            var thumbStart = maxOffset == 0 ? 0 : (int)Math.Round((double)Owner.VerticalOffset * trackLen / maxOffset);
-            thumbStart = Math.Clamp(thumbStart, 0, trackLen);
-
-            var (trackStyle, thumbStyle, glyphs) = GetStyles();
-            for (var y = 0; y < viewportHeight; y++)
-            {
-                var isThumb = y >= thumbStart && y < thumbStart + thumbLen;
-                var ch = isThumb ? glyphs.Thumb : glyphs.Track;
-                var st = isThumb ? thumbStyle : trackStyle;
-                for (var dx = 0; dx < thickness; dx++)
-                {
-                    buffer.SetCell(rect.X + dx, rect.Y + y, ch, st);
-                }
-            }
-        }
-    }
-
-    private sealed class HorizontalScrollBarVisual : ScrollBarVisualBase
-    {
-        public HorizontalScrollBarVisual(ScrollViewer owner) : base(owner)
-        {
-        }
-
-        protected override void RenderOverride(CellBuffer buffer)
-        {
-            var rect = Bounds;
-            if (rect.Width <= 0 || rect.Height <= 0)
-            {
-                return;
-            }
-
-            var viewportWidth = rect.Width;
-            var thickness = rect.Height;
-
-            var maxOffset = Math.Max(0, Owner._contentWidth - viewportWidth);
-            var thumbLen = GetThumbLength(viewportWidth, Owner._contentWidth);
-            var trackLen = Math.Max(1, viewportWidth - thumbLen);
-            var thumbStart = maxOffset == 0 ? 0 : (int)Math.Round((double)Owner.HorizontalOffset * trackLen / maxOffset);
-            thumbStart = Math.Clamp(thumbStart, 0, trackLen);
-
-            var (trackStyle, thumbStyle, glyphs) = GetStyles();
-            for (var x = 0; x < viewportWidth; x++)
-            {
-                var isThumb = x >= thumbStart && x < thumbStart + thumbLen;
-                var ch = isThumb ? glyphs.Thumb : glyphs.Track;
-                var st = isThumb ? thumbStyle : trackStyle;
-                for (var dy = 0; dy < thickness; dy++)
-                {
-                    buffer.SetCell(rect.X + x, rect.Y + dy, ch, st);
-                }
-            }
-        }
-    }
-
-    private sealed class ScrollCornerVisual : ScrollBarVisualBase
-    {
-        public ScrollCornerVisual(ScrollViewer owner) : base(owner)
-        {
-        }
-
-        protected override void RenderOverride(CellBuffer buffer)
-        {
-            var rect = Bounds;
-            if (rect.Width <= 0 || rect.Height <= 0)
-            {
-                return;
-            }
-
-            var (trackStyle, _, glyphs) = GetStyles();
             for (var y = 0; y < rect.Height; y++)
             {
                 for (var x = 0; x < rect.Width; x++)
