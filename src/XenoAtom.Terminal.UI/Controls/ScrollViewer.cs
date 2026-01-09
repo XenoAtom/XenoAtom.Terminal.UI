@@ -99,6 +99,10 @@ public sealed partial class ScrollViewer : Visual
     [Bindable]
     public partial int Height { get; set; }
 
+    partial void OnVerticalOffsetChanged(int value) => MarkArrangeDirty();
+
+    partial void OnHorizontalOffsetChanged(int value) => MarkArrangeDirty();
+
     protected override Size MeasureOverride(Size availableSize)
     {
         var height = Math.Max(1, Height);
@@ -472,10 +476,20 @@ public sealed partial class ScrollViewer : Visual
 
         public void UpdateLayout(int contentWidth, int contentHeight, int horizontalOffset, int verticalOffset)
         {
+            if (_contentWidth == contentWidth
+                && _contentHeight == contentHeight
+                && _horizontalOffset == horizontalOffset
+                && _verticalOffset == verticalOffset)
+            {
+                return;
+            }
+
             _contentWidth = contentWidth;
             _contentHeight = contentHeight;
             _horizontalOffset = horizontalOffset;
             _verticalOffset = verticalOffset;
+
+            MarkArrangeDirty();
         }
 
         protected override void ArrangeOverride(Rectangle finalRect)
