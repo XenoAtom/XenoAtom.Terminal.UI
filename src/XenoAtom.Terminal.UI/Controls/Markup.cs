@@ -33,6 +33,21 @@ public sealed partial class Markup : Visual
         Text = markup;
     }
 
+    public Markup(ref AnsiMarkupInterpolatedStringHandler handler) : this()
+    {
+        Text = handler.WrittenSpan.ToString();
+    }
+
+    public Markup(Func<string> markup) : this()
+    {
+        this.Text(markup);
+    }
+
+    public Markup(Func<AnsiMarkupInterpolatedStringHandler> handler) : this()
+    {
+        this.Text(() => handler().WrittenSpan.ToString());
+    }
+
     [Bindable]
     public partial string? Text { get; set; }
 
