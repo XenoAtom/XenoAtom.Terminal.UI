@@ -49,7 +49,8 @@ public sealed partial class Slider : Visual
     [Bindable]
     public partial bool ShowValueLabel { get; set; }
 
-    public Func<double, string>? ValueFormatter { get; set; }
+    [Bindable]
+    public partial Func<double, string>? ValueFormatter { get; set; }
 
     partial void OnMinimumChanging(ref double value)
     {
