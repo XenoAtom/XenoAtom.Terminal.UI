@@ -23,7 +23,7 @@ public sealed class BorderDefaultsTests
     public void ListBox_Defaults_To_No_Border()
     {
         Assert.IsFalse(ListBoxStyle.Default.ShowBorder);
-        Assert.IsFalse(new ListBox().ShowBorder);
+        Assert.IsFalse(new ListBox().Get<ListBoxStyle>().ShowBorder);
     }
 
     [TestMethod]

@@ -22,7 +22,6 @@ public sealed partial class TextBox : Visual, ICursorProvider
     public TextBox()
     {
         Focusable = true;
-        this.ShowBorder(true);
     }
 
     [Bindable]
@@ -30,9 +29,6 @@ public sealed partial class TextBox : Visual, ICursorProvider
 
     [Bindable]
     public partial string? Placeholder { get; set; }
-
-    [Bindable]
-    public partial bool ShowBorder { get; set; }
 
     [Bindable]
     public partial TextAlignment TextAlignment { get; set; }
@@ -54,7 +50,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
     protected override Size MeasureOverride(Size availableSize)
     {
         var width = Math.Max(10, Math.Min(availableSize.Width, 24));
-        var height = ShowBorder ? 3 : 1;
+        var height = Get<TextBoxStyle>().ShowBorder ? 3 : 1;
         return new Size(width, Math.Min(availableSize.Height, height));
     }
 
@@ -79,7 +75,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
         var backgroundStyle = textBoxStyle.BackgroundStyle(theme);
         var placeholderStyle = textBoxStyle.PlaceholderStyle(theme);
         var padding = textBoxStyle.Padding;
-        var showBorder = ShowBorder;
+        var showBorder = textBoxStyle.ShowBorder;
 
         var textRowY = rect.Y;
         var innerLeft = rect.X;
@@ -450,7 +446,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
         var style = Get<TextBoxStyle>();
         var padding = style.Padding;
 
-        var showBorder = ShowBorder;
+        var showBorder = style.ShowBorder;
         var textRowY = showBorder ? 1 : 0;
         if (e.LocalY != textRowY)
         {
@@ -726,7 +722,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
 
         var style = Get<TextBoxStyle>();
         var padding = style.Padding;
-        var showBorder = ShowBorder;
+        var showBorder = style.ShowBorder;
 
         var innerWidth = Math.Max(0, rect.Width - (showBorder ? 2 : 0));
         var contentWidth = Math.Max(0, innerWidth - padding.Horizontal);

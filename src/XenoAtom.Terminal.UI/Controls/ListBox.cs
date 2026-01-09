@@ -30,9 +30,6 @@ public sealed partial class ListBox : Visual
     [Bindable]
     public partial int Height { get; set; }
 
-    [Bindable]
-    public partial bool ShowBorder { get; set; }
-
     protected override int ChildrenCount => Items.Count;
 
     protected override Visual GetChild(int index) => Items[index];
@@ -41,7 +38,7 @@ public sealed partial class ListBox : Visual
     {
         var height = Math.Max(1, Height);
         var listBoxStyle = Get<ListBoxStyle>();
-        var showBorder = ShowBorder || listBoxStyle.ShowBorder;
+        var showBorder = listBoxStyle.ShowBorder;
 
         var items = Items;
         var itemWidth = 0;
@@ -80,7 +77,7 @@ public sealed partial class ListBox : Visual
         }
 
         var listBoxStyle = Get<ListBoxStyle>();
-        var showBorder = ShowBorder || listBoxStyle.ShowBorder;
+        var showBorder = listBoxStyle.ShowBorder;
         var innerLeft = rect.X + (showBorder ? 1 : 0);
         var innerTop = rect.Y + (showBorder ? 1 : 0);
         var innerWidth = Math.Max(0, rect.Width - (showBorder ? 2 : 0));
@@ -117,7 +114,7 @@ public sealed partial class ListBox : Visual
         }
 
         var listBoxStyle = Get<ListBoxStyle>();
-        var showBorder = ShowBorder || listBoxStyle.ShowBorder;
+        var showBorder = listBoxStyle.ShowBorder;
         var innerLeft = rect.X + (showBorder ? 1 : 0);
         var innerTop = rect.Y + (showBorder ? 1 : 0);
         var innerWidth = Math.Max(0, rect.Width - (showBorder ? 2 : 0));
@@ -206,7 +203,7 @@ public sealed partial class ListBox : Visual
             return;
         }
 
-        var showBorder = ShowBorder || Get<ListBoxStyle>().ShowBorder;
+        var showBorder = Get<ListBoxStyle>().ShowBorder;
         var viewportHeight = Math.Max(1, Bounds.Height - (showBorder ? 2 : 0));
         var selected = Math.Clamp(SelectedIndex, 0, count - 1);
         switch (e.Key)
@@ -251,7 +248,7 @@ public sealed partial class ListBox : Visual
             return;
         }
 
-        var showBorder = ShowBorder || Get<ListBoxStyle>().ShowBorder;
+        var showBorder = Get<ListBoxStyle>().ShowBorder;
         var innerY = (e.UiY - Bounds.Y) - (showBorder ? 1 : 0);
         var innerHeight = Math.Max(0, Bounds.Height - (showBorder ? 2 : 0));
         if ((uint)innerY >= (uint)innerHeight)

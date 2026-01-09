@@ -20,7 +20,6 @@ public sealed partial class TabControl : Visual
     public TabControl()
     {
         Focusable = true;
-        this.ShowBorder(true);
     }
 
     public TabControl(params TabPage[] tabs) : this()
@@ -31,9 +30,6 @@ public sealed partial class TabControl : Visual
             AddTab(tabs[i]);
         }
     }
-
-    [Bindable]
-    public partial bool ShowBorder { get; set; }
 
     [Bindable]
     public partial int SelectedIndex { get; set; }
@@ -111,6 +107,7 @@ public sealed partial class TabControl : Visual
     {
         var style = Get<TabControlStyle>();
         var pad = style.TabPadding;
+        var showBorder = style.ShowBorder;
 
         var headerHeight = 1;
         var headerTotalWidth = 0;
@@ -132,8 +129,8 @@ public sealed partial class TabControl : Visual
         headerHeight = Math.Min(headerHeight, availableSize.Height);
 
         var contentSlot = new Size(
-            Math.Max(0, availableSize.Width - (ShowBorder ? 2 : 0)),
-            Math.Max(0, availableSize.Height - headerHeight - (ShowBorder ? 2 : 0)));
+            Math.Max(0, availableSize.Width - (showBorder ? 2 : 0)),
+            Math.Max(0, availableSize.Height - headerHeight - (showBorder ? 2 : 0)));
 
         var contentWidth = 0;
         var contentHeight = 0;
@@ -145,7 +142,7 @@ public sealed partial class TabControl : Visual
             contentHeight = Math.Max(contentHeight, content.DesiredSize.Height);
         }
 
-        if (ShowBorder)
+        if (showBorder)
         {
             contentWidth += 2;
             contentHeight += 2;
@@ -161,6 +158,7 @@ public sealed partial class TabControl : Visual
     {
         var style = Get<TabControlStyle>();
         var pad = style.TabPadding;
+        var showBorder = style.ShowBorder;
 
         var headerHeight = 1;
         for (var i = 0; i < _tabs.Count; i++)
@@ -200,7 +198,7 @@ public sealed partial class TabControl : Visual
         var contentHeight = Math.Max(0, finalRect.Height - _headerHeight);
 
         var inner = new Rectangle(finalRect.X, contentTop, finalRect.Width, contentHeight);
-        if (ShowBorder)
+        if (showBorder)
         {
             inner = new Rectangle(
                 inner.X + 1,
@@ -225,6 +223,7 @@ public sealed partial class TabControl : Visual
 
         var theme = GetTheme();
         var style = Get<TabControlStyle>();
+        var showBorder = style.ShowBorder;
 
         var headerHeight = Math.Min(Math.Max(1, _headerHeight), rect.Height);
         var stripStyle = style.ResolveStripStyle(theme);
@@ -263,7 +262,7 @@ public sealed partial class TabControl : Visual
             }
         }
 
-        if (ShowBorder && rect.Height >= headerHeight + 2)
+        if (showBorder && rect.Height >= headerHeight + 2)
         {
             RenderBorder(buffer, rect, headerHeight, theme);
         }
