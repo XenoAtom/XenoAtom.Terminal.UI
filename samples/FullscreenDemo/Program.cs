@@ -120,14 +120,13 @@ var leftColumn = new VStack(
     .VerticalAlignment(VerticalAlignment.Stretch);
 
 var rightColumn = new VStack(
-        new Border()
-            .Padding(new Thickness(0))
+        new VSplitter(
+                new Center().Content("Top pane (VSplitter)"),
+                new Center().Content("Bottom pane (drag splitter bar)"))
             .MinHeight(4)
+            .MaxHeight(4)
             .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .Content(
-                new TextBlock("Bottom aligned (Center + Bottom)")
-                    .HorizontalAlignment(HorizontalAlignment.Center)
-                    .VerticalAlignment(VerticalAlignment.Bottom)),
+            .Ratio(0.5),
         new TabControl(new[]
             {
                 new TabPage(
@@ -219,8 +218,10 @@ var root = new DockLayout()
     .Content(
         new VStack(
             "Fullscreen demo: Tab focus, mouse click, wheel scroll, F12 debug, Esc quit",
-            new HStack(leftColumn, new Rule { Orientation = Orientation.Vertical }, rightColumn)
-                .Spacing(2)
+            new HSplitter(leftColumn, rightColumn)
+                .MinFirst(20)
+                .MinSecond(25)
+                .Ratio(0.45)
                 .HorizontalAlignment(HorizontalAlignment.Stretch)
                 .VerticalAlignment(VerticalAlignment.Stretch))
         .Spacing(1)
