@@ -11,6 +11,35 @@ var statusState = new State<string>("ready");
 var progressState = new State<double>(0.0);
 var sliderState = new State<double>(0.35);
 
+var select = new Select();
+select.Items.AddRange(
+    new SelectItem("First"),
+    new SelectItem("Second"),
+    new SelectItem("Third"),
+    new SelectItem("Fourth"));
+
+var selectionList = new SelectionList()
+    .Height(5);
+selectionList.Items.AddRange(
+    new SelectionListItem("Arrakis", isChecked: true),
+    new SelectionListItem("Caladan"),
+    new SelectionListItem("Chusuk"),
+    new SelectionListItem("Giedi Prime"),
+    new SelectionListItem("Ginaz"),
+    new SelectionListItem("Grumman"),
+    new SelectionListItem("Kaitain"));
+
+var textArea = new TextArea()
+    .Text("Line 1\nLine 2\nLine 3")
+    .Placeholder("Type multi-line text here...");
+
+var tree = new TreeView().Height(8);
+var treeRoot = new TreeNode("XenoAtom") { Icon = TreeNodeIcon.Folder, IsExpanded = true };
+treeRoot.Children.Add(new TreeNode("src") { Icon = TreeNodeIcon.Folder, IsExpanded = true });
+treeRoot.Children[0].Children.Add(new TreeNode("Program.cs") { Icon = TreeNodeIcon.File });
+treeRoot.Children[0].Children.Add(new TreeNode("readme.md") { Icon = TreeNodeIcon.Document });
+tree.Roots.Add(treeRoot);
+
 var showDialog = new Button("Show modal")
     .HorizontalAlignment(HorizontalAlignment.Left)
     .Click(() =>
@@ -144,6 +173,19 @@ var rightColumn = new VStack(
                                 .Wrap(true),
                             new TextBlock()
                                 .Text(() => $"Current status: {statusState.Value}"),
+                            new HStack(
+                                    new TextBlock("Trimming:"),
+                                    new TextBlock("This is a very long piece of text that will be trimmed.")
+                                        .Trimming(TextTrimming.EndEllipsis)
+                                        .MaxWidth(24))
+                                .Spacing(1),
+                            new Rule
+                            {
+                                StartLabel = "Start",
+                                CenterLabel = "Rule",
+                                EndLabel = "End",
+                            }.Style(RuleStyle.Default with { Glyphs = RuleGlyphs.Dotted })
+                                .HorizontalAlignment(HorizontalAlignment.Stretch),
                             "Spinners:",
                             new VStack(
                                     new HStack(
@@ -158,8 +200,11 @@ var rightColumn = new VStack(
                                             new Spinner("Launch").Style(SpinnerStyles.Rocket),
                                             new Spinner().Style(SpinnerStyles.DotsEllipsis2))
                                         .Spacing(2))
-                                .Spacing(0))
-                        .Spacing(0)),
+                                .Spacing(0),
+                            new Button("Click me (mouse or Enter)")
+                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .Click(() => statusState.Value = "click received"))
+                        .Spacing(1)),
                 new TabPage(
                     new HStack(
                             new Spinner().Style(SpinnerStyles.Dots2),
@@ -170,67 +215,71 @@ var rightColumn = new VStack(
                         .Height(4)
                         .HorizontalAlignment(HorizontalAlignment.Stretch)
                         .Content(new VStack().Add(Enumerable.Range(0, 12).Select(i => (Visual)new TextBlock($"Log line {i}")).ToArray())))
+                ,
+                new TabPage(
+                    new HStack("Lists", new TextBlock().Text(() => $"(Select={select.SelectedIndex}, Checked={selectionList.Items.Count(i => i.IsChecked)})"))
+                        .Spacing(1),
+                    new VStack(
+                            new Group()
+                                .TopLeftText("Select / Dropdown")
+                                .Padding(Thickness.Zero)
+                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .Content(select.HorizontalAlignment(HorizontalAlignment.Stretch)),
+                            new Group()
+                                .TopLeftText("SelectionList (multi-select)")
+                                .TopRightText("Space/Click toggles")
+                                .Padding(Thickness.Zero)
+                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .Content(selectionList.HorizontalAlignment(HorizontalAlignment.Stretch)),
+                            new Group()
+                                .TopLeftText("Explicit ScrollBar")
+                                .Padding(Thickness.Zero)
+                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .Content(new HStack(
+                                        new ScrollBar().Orientation(Orientation.Vertical).Minimum(0).Maximum(100).ViewportSize(25).Value(() => (int)(progressState.Value * 100)),
+                                        new ScrollBar().Orientation(Orientation.Horizontal).Minimum(0).Maximum(100).ViewportSize(25).Value(() => (int)(progressState.Value * 100)).HorizontalAlignment(HorizontalAlignment.Stretch))
+                                    .Spacing(2)
+                                    .HorizontalAlignment(HorizontalAlignment.Stretch)))
+                        .Spacing(1)
+                        .HorizontalAlignment(HorizontalAlignment.Stretch)),
+                new TabPage(
+                    "TextArea",
+                    textArea.HorizontalAlignment(HorizontalAlignment.Stretch)),
+                new TabPage(
+                    "Tree",
+                    tree.HorizontalAlignment(HorizontalAlignment.Stretch))
             })
             .HorizontalAlignment(HorizontalAlignment.Stretch),
-        new HStack(
-                new TextBlock("This is a very long piece of text that will be trimmed.")
-                    .Trimming(TextTrimming.EndEllipsis)
-                    .MaxWidth(28),
-                new TextBlock("This is a very long piece of text that will be trimmed.")
-                    .Trimming(TextTrimming.StartEllipsis)
-                    .MaxWidth(28))
-            .Spacing(2),
-        new Rule
-        {
-            StartLabel = "Start",
-            CenterLabel = "Rule",
-            EndLabel = "End",
-        }.Style(RuleStyle.Default with { Glyphs = RuleGlyphs.Dotted })
-            .HorizontalAlignment(HorizontalAlignment.Stretch),
-        new Group()
-            .TopLeftText("Pick one")
-            .TopRightText("wheel")
-            .Padding(Thickness.Zero)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .Content(new ListBox()
-                .Items(["First", "Second", "Third", "Fourth", "Fifth", "Sixth"])
-                .Height(5)),
-        new Group()
-            .TopLeftText("ScrollViewer")
-            .TopRightText("focus + wheel")
-            .Padding(Thickness.Zero)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .Content(new ScrollViewer()
-                .Height(4)
-                .HorizontalAlignment(HorizontalAlignment.Stretch)
-                .Content(new VStack().Add(Enumerable.Range(0, 12).Select(i => (Visual)new TextBlock($"Log line {i}")).ToArray()))),
-        new Button("Click me (mouse or Enter)")
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .Click(() => statusState.Value = "click received"),
         new TextBlock().Text(() => $"Status: {statusState.Value} | Slider: {sliderState.Value:0.00}"))
-    .Spacing(0)
+    .Spacing(1)
     .HorizontalAlignment(HorizontalAlignment.Stretch)
     .VerticalAlignment(VerticalAlignment.Stretch);
+
+var header = new Header
+{
+    Left = "Fullscreen demo",
+    Center = "Tab focus, mouse click, wheel scroll, F12 debug, Esc quit",
+    Right = new TextBlock().Text(() => $"{(int)(progressState.Value * 100)}%"),
+};
+
+var footer = new Footer
+{
+    Left = "Tab focus | Mouse click | Wheel scroll | F12 debug | Esc quit",
+    Right = "XenoAtom.Terminal.UI",
+};
 
 var root = new DockLayout()
     .HorizontalAlignment(HorizontalAlignment.Stretch)
     .VerticalAlignment(VerticalAlignment.Stretch)
+    .Top(header)
     .Content(
-        new VStack(
-            "Fullscreen demo: Tab focus, mouse click, wheel scroll, F12 debug, Esc quit",
-            new HSplitter(leftColumn, rightColumn)
-                .MinFirst(20)
-                .MinSecond(25)
-                .Ratio(0.45)
-                .HorizontalAlignment(HorizontalAlignment.Stretch)
-                .VerticalAlignment(VerticalAlignment.Stretch))
-        .Spacing(1)
-        .HorizontalAlignment(HorizontalAlignment.Stretch)
-        .VerticalAlignment(VerticalAlignment.Stretch))
-    .Bottom(
-        new StatusBar()
-            .LeftText("Tab focus | Mouse click | Wheel scroll | F12 debug | Esc quit")
-            .RightText("XenoAtom.Terminal.UI"));
+        new HSplitter(leftColumn, rightColumn)
+            .MinFirst(20)
+            .MinSecond(25)
+            .Ratio(0.45)
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .VerticalAlignment(VerticalAlignment.Stretch))
+    .Bottom(footer);
 
 var lastTick = Stopwatch.GetTimestamp();
 var t = 0.0;

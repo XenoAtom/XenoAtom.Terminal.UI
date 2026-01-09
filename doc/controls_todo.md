@@ -12,13 +12,13 @@ Following this list, you will find a compact spec for each high-priority control
 | [x] | **High**   | **Markup element**                                    | Content                    | Easy rich text output via AnsiMarkup | Low effort, high payoff across UI                 |
 | [x] | **High**   | **Slider**                                            | Input                      | Adjust a value within a range        | Common control; distinct semantics from scrollbar |
 | [x] | **High**   | **HSplitter / VSplitter (interactive)**               | Layout/input               | Mouse + keyboard resizing of panes   | Huge fullscreen UX win; enables IDE-style layouts |
-| [ ] | **High**   | **Explicit Scrollbar widget**                         | Scrolling                  | Visible scroll affordance            | Immediate UX improvement                          |
-| [ ] | **High**   | **Select / Dropdown**                                 | Input                      | Compact single-choice                | Common in forms/settings                          |
-| [ ] | **High**   | **SelectionList (multi-select list widget)**          | Input                      | In-layout multi-select               | More app-like than prompts                        |
-| [ ] | **High**   | **Header / Footer (app chrome)**                      | App chrome                 | Key hints, status, breadcrumbs       | Better whole-app structure                        |
-| [ ] | **High**   | **TextArea (multiline editor)**                       | Input                      | Multi-line editing                   | “Real app” workflows beyond TextBox               |
-| [ ] | **High**   | **TreeView**                                          | Navigation                 | Hierarchical navigation              | Big UX upgrade over flat lists                    |
-| [ ] | **Medium** | **LoadingIndicator / Spinner**                        | Status                     | Busy state (unknown duration)        | Complements ProgressBar                           |
+| [x] | **High**   | **Explicit Scrollbar widget**                         | Scrolling                  | Visible scroll affordance            | Immediate UX improvement                          |
+| [x] | **High**   | **Select / Dropdown**                                 | Input                      | Compact single-choice                | Common in forms/settings                          |
+| [x] | **High**   | **SelectionList (multi-select list widget)**          | Input                      | In-layout multi-select               | More app-like than prompts                        |
+| [x] | **High**   | **Header / Footer (app chrome)**                      | App chrome                 | Key hints, status, breadcrumbs       | Better whole-app structure                        |
+| [x] | **High**   | **TextArea (multiline editor)**                       | Input                      | Multi-line editing                   | "Real app" workflows beyond TextBox               |
+| [x] | **High**   | **TreeView**                                          | Navigation                 | Hierarchical navigation              | Big UX upgrade over flat lists                    |
+| [x] | **Medium** | **LoadingIndicator / Spinner**                        | Status                     | Busy state (unknown duration)        | Complements ProgressBar                           |
 | [ ] | **Medium** | **MaskedInput (password/secret)**                     | Input                      | Auth + secrets                       | Often needed early                                |
 | [ ] | **Medium** | **OptionList (fast menu list)**                       | Navigation/input           | Command menus/quick pickers          | Base for palettes/menus                           |
 | [ ] | **Medium** | **Command palette / quick open**                      | Navigation                 | Searchable actions                   | Big productivity boost                            |
