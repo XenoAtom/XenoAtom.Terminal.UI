@@ -734,12 +734,12 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         }
     }
 
-    private void DispatchKeyEvent(TerminalKeyEvent keyEvent)
+    private bool DispatchKeyEvent(TerminalKeyEvent keyEvent)
     {
         EnsureFocusInScope();
         if (FocusedElement is null || !FocusedElement.IsEnabled || !FocusedElement.IsVisible)
         {
-            return;
+            return false;
         }
 
         var args = new KeyEventArgs { RawEvent = keyEvent };
@@ -748,11 +748,12 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         {
             if (v.TryHandleKeyBinding(args))
             {
-                return;
+                return true;
             }
         }
 
         FocusedElement.RaiseEvent(Visual.KeyDownEvent, args);
+        return args.Handled;
     }
 
     private void EnsureInitialFocus()
@@ -841,14 +842,26 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
             return;
         }
 
+        var activeModal = FindActiveModalRoot(Root);
+
         if (keyEvent.Key == TerminalKey.Escape)
         {
-            _cts.Cancel();
+            // Allow controls to handle Escape (e.g. close transient popups) before exiting the app.
+            if (!DispatchKeyEvent(keyEvent))
+            {
+                _cts.Cancel();
+            }
             return;
         }
 
         if (keyEvent.Key == TerminalKey.Tab)
         {
+            // Transient popups should close on Tab before focus moves in the underlying UI.
+            if (activeModal is Popup popup)
+            {
+                popup.Close();
+            }
+
             if ((keyEvent.Modifiers & TerminalModifiers.Shift) != 0)
             {
                 FocusPrevious();
@@ -860,7 +873,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
             return;
         }
 
-        DispatchKeyEvent(keyEvent);
+        _ = DispatchKeyEvent(keyEvent);
     }
 
     private void DispatchTextInput(string text)
