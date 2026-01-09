@@ -56,3 +56,4 @@ Terminal.Live(root, () =>
     progressState.Value = 0.0;
     return true;
 });
+Terminal.WriteMarkupLine("[yellow]Finished![/]");
