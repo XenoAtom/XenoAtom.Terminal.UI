@@ -9,6 +9,7 @@ using var session = Terminal.Open();
 
 var statusState = new State<string>("ready");
 var progressState = new State<double>(0.0);
+var sliderState = new State<double>(0.35);
 
 var showDialog = new Button("Show modal")
     .HorizontalAlignment(HorizontalAlignment.Left)
@@ -99,6 +100,19 @@ var leftColumn = new VStack(
                     .Style(TableStyle.DoubleGrid)
                     .HorizontalAlignment(HorizontalAlignment.Stretch))
             .Spacing(2)
+            .HorizontalAlignment(HorizontalAlignment.Stretch),
+        new HStack(
+                "Slider:",
+                new Slider()
+                    .Minimum(0)
+                    .Maximum(1)
+                    .Step(0.05)
+                    .LargeStep(0.2)
+                    .Value(sliderState.Value)
+                    .ShowValueLabel(true)
+                    .HorizontalAlignment(HorizontalAlignment.Stretch)
+                    .ValueChanged((_, e) => sliderState.Value = e.NewValue))
+            .Spacing(1)
             .HorizontalAlignment(HorizontalAlignment.Stretch),
         progressBars)
     .Spacing(0)
@@ -194,7 +208,7 @@ var rightColumn = new VStack(
         new Button("Click me (mouse or Enter)")
             .HorizontalAlignment(HorizontalAlignment.Stretch)
             .Click(() => statusState.Value = "click received"),
-        new TextBlock().Text(() => $"Status: {statusState.Value}"))
+        new TextBlock().Text(() => $"Status: {statusState.Value} | Slider: {sliderState.Value:0.00}"))
     .Spacing(0)
     .HorizontalAlignment(HorizontalAlignment.Stretch)
     .VerticalAlignment(VerticalAlignment.Stretch);
