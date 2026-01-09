@@ -9,18 +9,10 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class Border : Visual
+public sealed partial class Border : ContentVisual
 {
     [Bindable]
     public partial Thickness Padding { get; set; }
-
-    [Bindable]
-    public partial Visual? Content { get; set; }
-
-    protected override int ChildrenCount => _content is null ? 0 : 1;
-
-    protected override Visual GetChild(int index)
-        => index == 0 && _content is not null ? _content : throw new ArgumentOutOfRangeException(nameof(index));
 
     protected override Size MeasureOverride(Size availableSize)
     {

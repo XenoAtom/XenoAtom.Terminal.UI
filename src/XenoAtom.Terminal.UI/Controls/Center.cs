@@ -11,16 +11,8 @@ using XenoAtom.Terminal.UI.Geometry;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class Center : Visual
+public sealed partial class Center : ContentVisual
 {
-    [Bindable]
-    public partial Visual? Content { get; set; }
-
-    protected override int ChildrenCount => _content is null ? 0 : 1;
-
-    protected override Visual GetChild(int index)
-        => index == 0 && _content is not null ? _content : throw new ArgumentOutOfRangeException(nameof(index));
-
     protected override Size MeasureOverride(Size availableSize)
     {
         var content = Content;

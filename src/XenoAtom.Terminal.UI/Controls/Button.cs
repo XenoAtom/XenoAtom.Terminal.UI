@@ -10,7 +10,7 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public partial class Button : Visual
+public partial class Button : ContentVisual
 {
     private bool _pressedInside;
     public Button()
@@ -21,11 +21,8 @@ public partial class Button : Visual
 
     public Button(string text) : this()
     {
-        Text = text;
+        this.Content(text);
     }
-
-    [Bindable]
-    public partial Visual? Text { get; set; }
 
     [Bindable]
     public partial ControlTone Tone { get; set; }
@@ -33,28 +30,25 @@ public partial class Button : Visual
     [Bindable]
     public partial bool IsPressed { get; set; }
 
-    protected override int ChildrenCount => _text is null ? 0 : 1;
-
-    protected override Visual GetChild(int index)
-        => index == 0 && _text is not null ? _text : throw new ArgumentOutOfRangeException(nameof(index));
-
     protected override Size MeasureOverride(Size availableSize)
     {
-        var textVisual = Text;
-        var innerWidth = 0;
-        if (textVisual is not null)
-        {
-            textVisual.Measure(new Size(int.MaxValue / 4, 1));
-            innerWidth = textVisual.DesiredSize.Width;
-        }
         var style = Get<ButtonStyle>();
         var padding = style.Padding;
 
         var borderPad = style.ShowBorder ? 1 : 0;
-        var width = Math.Min(availableSize.Width, innerWidth + padding.Horizontal + (borderPad * 2));
-        var height = Math.Min(availableSize.Height, 1 + padding.Vertical + (borderPad * 2));
+
+        var innerAvailable = new Size(
+            Math.Max(0, availableSize.Width - padding.Horizontal - (borderPad * 2)),
+            Math.Max(0, availableSize.Height - padding.Vertical - (borderPad * 2)));
+
+        var content = Content;
+        content?.Measure(innerAvailable);
+
+        var width = Math.Min(availableSize.Width, (content?.DesiredSize.Width ?? 0) + padding.Horizontal + (borderPad * 2));
+        var height = Math.Min(availableSize.Height, (content?.DesiredSize.Height ?? 0) + padding.Vertical + (borderPad * 2));
         if (borderPad != 0)
         {
+            width = Math.Min(availableSize.Width, Math.Max(3, width));
             height = Math.Min(availableSize.Height, Math.Max(3, height));
         }
         return new Size(width, height);
@@ -64,8 +58,8 @@ public partial class Button : Visual
     {
         Bounds = finalRect;
 
-        var textVisual = Text;
-        if (textVisual is null)
+        var content = Content;
+        if (content is null)
         {
             return;
         }
@@ -75,18 +69,20 @@ public partial class Button : Visual
 
         var padding = buttonStyle.Padding;
         var contentX = finalRect.X + borderPad + padding.Left;
+        var contentY = finalRect.Y + borderPad + padding.Top;
         var contentWidth = Math.Max(0, finalRect.Width - (borderPad * 2) - padding.Horizontal);
-        var contentHeight = Math.Max(1, finalRect.Height - (borderPad * 2) - padding.Vertical);
-        var contentY = finalRect.Y + borderPad + padding.Top + (contentHeight / 2);
+        var contentHeight = Math.Max(0, finalRect.Height - (borderPad * 2) - padding.Vertical);
 
         if (contentWidth <= 0 || contentHeight <= 0)
         {
             return;
         }
 
-        var desiredWidth = Math.Min(contentWidth, textVisual.DesiredSize.Width);
-        var x = contentX + Math.Max(0, (contentWidth - desiredWidth) / 2);
-        textVisual.Arrange(new Rectangle(x, contentY, desiredWidth, 1));
+        var w = Math.Min(contentWidth, content.DesiredSize.Width);
+        var h = Math.Min(contentHeight, content.DesiredSize.Height);
+        var x = contentX + Math.Max(0, (contentWidth - w) / 2);
+        var y = contentY + Math.Max(0, (contentHeight - h) / 2);
+        content.Arrange(new Rectangle(x, y, w, h));
     }
 
     protected override void RenderOverride(CellBuffer buffer)
@@ -141,15 +137,18 @@ public partial class Button : Visual
         var padding = buttonStyle.Padding;
         var contentX = rect.X + borderPad + padding.Left;
         var contentWidth = Math.Max(0, rect.Width - (borderPad * 2) - padding.Horizontal);
-        var contentHeight = Math.Max(1, rect.Height - (borderPad * 2) - padding.Vertical);
-        var contentY = rect.Y + borderPad + padding.Top + (contentHeight / 2);
+        var contentY = rect.Y + borderPad + padding.Top;
+        var contentHeight = Math.Max(0, rect.Height - (borderPad * 2) - padding.Vertical);
 
-        var textVisual = Text;
-        if (textVisual is not null && contentWidth > 0 && contentHeight > 0)
+        var content = Content;
+        if (content is not null && contentWidth > 0 && contentHeight > 0)
         {
-            for (var x = contentX; x < contentX + contentWidth; x++)
+            for (var y = contentY; y < contentY + contentHeight; y++)
             {
-                buffer.SetCell(x, contentY, new Rune(' '), style | TextStyle.Bold);
+                for (var x = contentX; x < contentX + contentWidth; x++)
+                {
+                    buffer.SetCell(x, y, new Rune(' '), style | TextStyle.Bold);
+                }
             }
         }
     }
