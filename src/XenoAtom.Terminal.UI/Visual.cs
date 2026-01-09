@@ -24,11 +24,15 @@ public abstract partial class Visual : DispatcherObject
     private bool _dynamicUpdatesDirty;
     private bool _measureDirty = true;
     private bool _arrangeDirty = true;
-    private bool _renderDirty = true;
     private HashSet<Binding>? _dynamicUpdateDeps;
     private HashSet<Binding>? _measureDeps;
     private HashSet<Binding>? _arrangeDeps;
     private HashSet<Binding>? _renderDeps;
+
+    private bool _hasLastMeasure;
+    private Size _lastAvailableSize;
+    private bool _hasLastArrange;
+    private Rectangle _lastArrangeRect;
 
     public Visual? Parent { get; private set; }
 
@@ -60,9 +64,7 @@ public abstract partial class Visual : DispatcherObject
     protected void Invalidate()
     {
         VerifyAccess();
-        _measureDirty = true;
-        _arrangeDirty = true;
-        _renderDirty = true;
+        MarkMeasureDirty();
         BindingManager.Current.NotifyValueChanged(this, __Invalidation__BindingAccessor.Instance);
     }
 
@@ -318,6 +320,11 @@ public abstract partial class Visual : DispatcherObject
         VerifyAccess();
         EnsureDynamicUpdatesApplied();
 
+        if (!_measureDirty && _hasLastMeasure && availableSize.Equals(_lastAvailableSize))
+        {
+            return;
+        }
+
         using var session = BindingManager.Current.StartTracking();
         var margin = Margin;
         var availableWithoutMargin = Deflate(availableSize, margin);
@@ -330,12 +337,19 @@ public abstract partial class Visual : DispatcherObject
             App.UpdateDependencies(this, TerminalApp.DependencyKind.Measure, _measureDeps!);
         }
         _measureDirty = false;
+        _hasLastMeasure = true;
+        _lastAvailableSize = availableSize;
     }
 
     public void Arrange(Rectangle finalRect)
     {
         VerifyAccess();
         EnsureDynamicUpdatesApplied();
+
+        if (!_arrangeDirty && _hasLastArrange && finalRect.Equals(_lastArrangeRect))
+        {
+            return;
+        }
 
         using var session = BindingManager.Current.StartTracking();
         var margin = Margin;
@@ -348,6 +362,8 @@ public abstract partial class Visual : DispatcherObject
             App.UpdateDependencies(this, TerminalApp.DependencyKind.Arrange, _arrangeDeps!);
         }
         _arrangeDirty = false;
+        _hasLastArrange = true;
+        _lastArrangeRect = finalRect;
     }
 
     protected virtual Size MeasureOverride(Size availableSize)
@@ -486,7 +502,6 @@ public abstract partial class Visual : DispatcherObject
             {
                 App.UpdateDependencies(this, TerminalApp.DependencyKind.Render, _renderDeps!);
             }
-            _renderDirty = false;
         }
 
         if (!visible)
@@ -559,9 +574,7 @@ public abstract partial class Visual : DispatcherObject
         }
 
         _dynamicUpdatesDirty = false;
-        _measureDirty = true;
-        _arrangeDirty = true;
-        _renderDirty = true;
+        MarkMeasureDirty();
 
         using var initScope = BindingManager.Current.BeginDynamicUpdate(this);
         using var session = BindingManager.Current.StartTracking();
@@ -597,22 +610,63 @@ public abstract partial class Visual : DispatcherObject
         return true;
     }
 
-    internal void MarkDynamicUpdateDirty() => _dynamicUpdatesDirty = true;
+    internal void MarkDynamicUpdateDirty()
+    {
+        _dynamicUpdatesDirty = true;
+        MarkMeasureDirty();
+    }
 
     internal void MarkMeasureDirty()
     {
         _measureDirty = true;
         _arrangeDirty = true;
-        _renderDirty = true;
+        _hasLastMeasure = false;
+        _hasLastArrange = false;
+
+        Parent?.MarkMeasureDirtyFromChild();
     }
 
     internal void MarkArrangeDirty()
     {
         _arrangeDirty = true;
-        _renderDirty = true;
+        _hasLastArrange = false;
+
+        Parent?.MarkArrangeDirtyFromChild();
     }
 
-    internal void MarkRenderDirty() => _renderDirty = true;
+    internal void MarkRenderDirty()
+    {
+        // Rendering is currently full-frame, so we only request a redraw from the app.
+        // Layout caching uses measure/arrange dirtiness; render dirtiness is tracked by TerminalApp.
+    }
+
+    private void MarkMeasureDirtyFromChild()
+    {
+        if (_measureDirty && _arrangeDirty)
+        {
+            return;
+        }
+
+        _measureDirty = true;
+        _arrangeDirty = true;
+        _hasLastMeasure = false;
+        _hasLastArrange = false;
+
+        Parent?.MarkMeasureDirtyFromChild();
+    }
+
+    private void MarkArrangeDirtyFromChild()
+    {
+        if (_arrangeDirty)
+        {
+            return;
+        }
+
+        _arrangeDirty = true;
+        _hasLastArrange = false;
+
+        Parent?.MarkArrangeDirtyFromChild();
+    }
 
     protected void AddHandler<TArgs>(RoutedEvent<TArgs> routedEvent, EventHandler<TArgs> handler)
         where TArgs : EventArgs
