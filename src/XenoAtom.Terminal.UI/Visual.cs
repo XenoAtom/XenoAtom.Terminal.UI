@@ -117,6 +117,16 @@ public abstract partial class Visual : DispatcherObject
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(action);
         _keyBindings ??= new List<KeyBinding>();
+        for (var i = 0; i < _keyBindings.Count; i++)
+        {
+            var existing = _keyBindings[i];
+            if (existing.Gesture.Equals(gesture))
+            {
+                _keyBindings[i] = new KeyBinding { Gesture = gesture, Action = action };
+                return;
+            }
+        }
+
         _keyBindings.Add(new KeyBinding { Gesture = gesture, Action = action });
     }
 
@@ -547,9 +557,6 @@ public abstract partial class Visual : DispatcherObject
                 _dynamicUpdateLists[i].ResetForDynamicUpdate();
             }
         }
-
-        _handlers = null;
-        _keyBindings = null;
 
         _dynamicUpdatesDirty = false;
         _measureDirty = true;

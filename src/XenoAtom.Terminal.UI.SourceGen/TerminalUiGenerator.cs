@@ -936,12 +936,22 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 if (canUseGeneric)
                 {
                     sb.Append(methodIndent).Append("public static T ").Append(escapedEventName).Append("<T>(this T obj, global::System.EventHandler<").Append(argsType).Append("> handler) where T : ").Append(receiverType).AppendLine();
-                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => { x.").Append(escapedRoutedHandlerName).AppendLine(" += handler; });");
+                    sb.Append(methodIndent).AppendLine("{");
+                    sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
+                    sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(handler);");
+                    sb.Append(methodIndent).Append("    obj.").Append(escapedRoutedHandlerName).AppendLine(" += handler;");
+                    sb.Append(methodIndent).AppendLine("    return obj;");
+                    sb.Append(methodIndent).AppendLine("}");
                 }
                 else
                 {
                     sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(escapedEventName).Append("(this ").Append(receiverType).Append(" obj, global::System.EventHandler<").Append(argsType).AppendLine("> handler)");
-                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => { x.").Append(escapedRoutedHandlerName).AppendLine(" += handler; });");
+                    sb.Append(methodIndent).AppendLine("{");
+                    sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
+                    sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(handler);");
+                    sb.Append(methodIndent).Append("    obj.").Append(escapedRoutedHandlerName).AppendLine(" += handler;");
+                    sb.Append(methodIndent).AppendLine("    return obj;");
+                    sb.Append(methodIndent).AppendLine("}");
                 }
                 sb.AppendLine();
 
@@ -949,12 +959,22 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 if (canUseGeneric)
                 {
                     sb.Append(methodIndent).Append("public static T ").Append(escapedEventName).Append("<T>(this T obj, global::System.Action handler) where T : ").Append(receiverType).AppendLine();
-                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => { x.").Append(escapedRoutedHandlerName).Append(" += (_, __) => handler(); });").AppendLine();
+                    sb.Append(methodIndent).AppendLine("{");
+                    sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
+                    sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(handler);");
+                    sb.Append(methodIndent).Append("    obj.").Append(escapedRoutedHandlerName).AppendLine(" += (_, __) => handler();");
+                    sb.Append(methodIndent).AppendLine("    return obj;");
+                    sb.Append(methodIndent).AppendLine("}");
                 }
                 else
                 {
                     sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(escapedEventName).Append("(this ").Append(receiverType).AppendLine(" obj, global::System.Action handler)");
-                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => { x.").Append(escapedRoutedHandlerName).Append(" += (_, __) => handler(); });").AppendLine();
+                    sb.Append(methodIndent).AppendLine("{");
+                    sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
+                    sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(handler);");
+                    sb.Append(methodIndent).Append("    obj.").Append(escapedRoutedHandlerName).AppendLine(" += (_, __) => handler();");
+                    sb.Append(methodIndent).AppendLine("    return obj;");
+                    sb.Append(methodIndent).AppendLine("}");
                 }
                 sb.AppendLine();
             }
