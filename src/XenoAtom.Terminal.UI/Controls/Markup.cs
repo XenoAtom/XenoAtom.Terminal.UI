@@ -1,0 +1,455 @@
+// Copyright (c) Alexandre Mutel. All rights reserved.
+// Licensed under the BSD-Clause 2 license.
+// See license.txt file in the project root for full license information.
+
+using System.Buffers;
+using System.Text;
+using XenoAtom.Ansi;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
+
+namespace XenoAtom.Terminal.UI.Controls;
+
+public sealed partial class Markup : Visual
+{
+    private static readonly Rune Ellipsis = new(0x2026);
+
+    private readonly MarkupCaptureWriter _writer;
+    private readonly AnsiMarkup _markup;
+
+    private string? _cachedMarkup;
+    private string _plainText = string.Empty;
+    private StyledRun[] _runs = Array.Empty<StyledRun>();
+
+    public Markup()
+    {
+        _writer = new MarkupCaptureWriter();
+        _markup = new AnsiMarkup(_writer);
+    }
+
+    public Markup(string markup) : this()
+    {
+        Text = markup;
+    }
+
+    [Bindable]
+    public partial string? Text { get; set; }
+
+    [Bindable]
+    public partial bool Wrap { get; set; }
+
+    [Bindable]
+    public partial TextAlignment TextAlignment { get; set; }
+
+    [Bindable]
+    public partial TextTrimming Trimming { get; set; }
+
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        EnsureParsed();
+
+        var width = Wrap ? availableSize.Width : Math.Min(availableSize.Width, TerminalTextUtility.GetWidth(_plainText.AsSpan()));
+        width = Math.Max(0, width);
+
+        if (!Wrap || width == 0)
+        {
+            return new Size(width, 1);
+        }
+
+        var height = CountWrappedLines(_plainText.AsSpan(), Math.Max(1, width));
+        return new Size(width, Math.Min(availableSize.Height, Math.Max(1, height)));
+    }
+
+    protected override void ArrangeOverride(Rectangle finalRect) => Bounds = finalRect;
+
+    protected override void RenderOverride(CellBuffer buffer)
+    {
+        EnsureParsed();
+
+        var rect = Bounds;
+        if (rect.Width <= 0 || rect.Height <= 0)
+        {
+            return;
+        }
+
+        var text = _plainText.AsSpan();
+
+        if (!Wrap || rect.Height == 1)
+        {
+            WriteSingleLine(buffer, rect, text);
+            return;
+        }
+
+        var lineIndex = 0;
+        var start = 0;
+        var maxWidth = rect.Width;
+
+        while (start < text.Length && lineIndex < rect.Height)
+        {
+            if (!TryGetNextWrapSlice(text, start, maxWidth, out var endExclusive, out var nextStart))
+            {
+                break;
+            }
+
+            WriteAlignedLine(buffer, rect, rect.Y + lineIndex, start, endExclusive, isLastLine: nextStart >= text.Length);
+            lineIndex++;
+            start = nextStart;
+        }
+    }
+
+    private void WriteSingleLine(CellBuffer buffer, Rectangle rect, ReadOnlySpan<char> text)
+    {
+        var maxWidth = rect.Width;
+        if (maxWidth <= 0)
+        {
+            return;
+        }
+
+        var alignment = TextAlignment;
+        var trimming = Trimming;
+
+        if (alignment == TextAlignment.Justify)
+        {
+            alignment = TextAlignment.Left;
+        }
+
+        if (trimming == TextTrimming.Clip)
+        {
+            var endIndex = GetEndIndexAtCell(text, maxWidth);
+            var cells = TerminalTextUtility.GetWidth(text[..endIndex]);
+            var x = AlignX(rect, alignment, maxWidth, cells);
+            WriteStyledSpan(buffer, x, rect.Y, 0, endIndex);
+            return;
+        }
+
+        var fullWidth = TerminalTextUtility.GetWidth(text);
+        if (fullWidth <= maxWidth)
+        {
+            var x = AlignX(rect, alignment, maxWidth, fullWidth);
+            WriteStyledSpan(buffer, x, rect.Y, 0, text.Length);
+            return;
+        }
+
+        if (maxWidth == 1)
+        {
+            buffer.SetCell(rect.X, rect.Y, Ellipsis, CellStyle.None);
+            return;
+        }
+
+        if (trimming == TextTrimming.EndEllipsis)
+        {
+            var bodyWidth = maxWidth - 1;
+            var endIndex = GetEndIndexAtCell(text, bodyWidth);
+            var bodyCells = TerminalTextUtility.GetWidth(text[..endIndex]);
+            var contentWidth = Math.Min(maxWidth, bodyCells + 1);
+            var x = AlignX(rect, alignment, maxWidth, contentWidth);
+            WriteStyledSpan(buffer, x, rect.Y, 0, endIndex);
+            buffer.SetCell(x + bodyCells, rect.Y, Ellipsis, CellStyle.None);
+            return;
+        }
+
+        // StartEllipsis
+        var suffixWidth = maxWidth - 1;
+        var startIndex = GetStartIndexForSuffix(text, suffixWidth);
+        var suffix = text[startIndex..];
+        var suffixCells = TerminalTextUtility.GetWidth(suffix);
+        var contentW = Math.Min(maxWidth, 1 + suffixCells);
+        var x0 = AlignX(rect, alignment, maxWidth, contentW);
+        buffer.SetCell(x0, rect.Y, Ellipsis, CellStyle.None);
+        WriteStyledSpan(buffer, x0 + 1, rect.Y, startIndex, text.Length);
+    }
+
+    private void WriteAlignedLine(CellBuffer buffer, Rectangle rect, int y, int startIndex, int endExclusive, bool isLastLine)
+    {
+        var width = rect.Width;
+        if (width <= 0)
+        {
+            return;
+        }
+
+        var alignment = TextAlignment;
+        if (alignment == TextAlignment.Justify)
+        {
+            alignment = isLastLine ? TextAlignment.Left : TextAlignment.Left;
+        }
+
+        var line = _plainText.AsSpan(startIndex, Math.Max(0, endExclusive - startIndex));
+        var end = GetEndIndexAtCell(line, width);
+        var clipped = line[..end];
+        var cells = TerminalTextUtility.GetWidth(clipped);
+        var x = AlignX(rect, alignment, width, cells);
+        WriteStyledSpan(buffer, x, y, startIndex, startIndex + end);
+    }
+
+    private void EnsureParsed()
+    {
+        var text = Text ?? string.Empty;
+        if (ReferenceEquals(_cachedMarkup, text))
+        {
+            return;
+        }
+
+        _cachedMarkup = text;
+
+        _writer.Reset();
+        _markup.Write(text);
+
+        _plainText = _writer.GetTextAndRuns(out _runs);
+    }
+
+    private void WriteStyledSpan(CellBuffer buffer, int x, int y, int startIndex, int endIndex)
+    {
+        if (startIndex >= endIndex || _runs.Length == 0)
+        {
+            return;
+        }
+
+        var posX = x;
+        for (var i = 0; i < _runs.Length; i++)
+        {
+            var run = _runs[i];
+            var runStart = run.Start;
+            var runEnd = runStart + run.Length;
+
+            if (runEnd <= startIndex)
+            {
+                continue;
+            }
+
+            if (runStart >= endIndex)
+            {
+                break;
+            }
+
+            var segStart = Math.Max(runStart, startIndex);
+            var segEnd = Math.Min(runEnd, endIndex);
+            var slice = _plainText.AsSpan(segStart, segEnd - segStart);
+            buffer.WriteText(posX, y, slice, run.Style);
+            posX += TerminalTextUtility.GetWidth(slice);
+        }
+    }
+
+    private static int AlignX(Rectangle rect, TextAlignment alignment, int availableWidth, int contentWidth)
+    {
+        if (availableWidth <= contentWidth)
+        {
+            return rect.X;
+        }
+
+        return alignment switch
+        {
+            TextAlignment.Center => rect.X + ((availableWidth - contentWidth) / 2),
+            TextAlignment.Right => rect.X + (availableWidth - contentWidth),
+            _ => rect.X,
+        };
+    }
+
+    private static int GetEndIndexAtCell(ReadOnlySpan<char> text, int maxCells)
+    {
+        if (maxCells <= 0 || text.IsEmpty)
+        {
+            return 0;
+        }
+
+        if (!TerminalTextUtility.TryGetIndexAtCell(text, maxCells, out var endIndex))
+        {
+            endIndex = text.Length;
+        }
+
+        return Math.Clamp(endIndex, 0, text.Length);
+    }
+
+    private static int GetStartIndexForSuffix(ReadOnlySpan<char> text, int maxCells)
+    {
+        if (maxCells <= 0 || text.IsEmpty)
+        {
+            return text.Length;
+        }
+
+        var width = 0;
+        var index = text.Length;
+        while (index > 0)
+        {
+            var prev = TerminalTextUtility.GetPreviousRuneIndex(text, index);
+            if (Rune.DecodeFromUtf16(text[prev..], out var rune, out var consumed) != OperationStatus.Done || consumed <= 0)
+            {
+                rune = Rune.ReplacementChar;
+            }
+
+            var w = TerminalTextUtility.GetRuneWidth(rune);
+            if (width + w > maxCells)
+            {
+                break;
+            }
+
+            width += w;
+            index = prev;
+        }
+
+        return index;
+    }
+
+    private static int CountWrappedLines(ReadOnlySpan<char> text, int width)
+    {
+        if (width <= 0)
+        {
+            return 1;
+        }
+
+        var lines = 0;
+        var start = 0;
+        while (start < text.Length)
+        {
+            if (!TryGetNextWrapSlice(text, start, width, out _, out var nextStart))
+            {
+                break;
+            }
+
+            lines++;
+            start = nextStart;
+        }
+
+        return Math.Max(1, lines);
+    }
+
+    private static bool TryGetNextWrapSlice(ReadOnlySpan<char> text, int start, int width, out int endExclusive, out int nextStart)
+    {
+        endExclusive = start;
+        nextStart = start;
+
+        if (start >= text.Length)
+        {
+            return false;
+        }
+
+        while (start < text.Length && char.IsWhiteSpace(text[start]))
+        {
+            start++;
+        }
+
+        if (start >= text.Length)
+        {
+            return false;
+        }
+
+        if (!TerminalTextUtility.TryGetIndexAtCell(text[start..], width, out var relEnd))
+        {
+            relEnd = text.Length - start;
+        }
+
+        var tentativeEnd = Math.Clamp(start + relEnd, start, text.Length);
+
+        var wrapEnd = tentativeEnd;
+        if (tentativeEnd < text.Length)
+        {
+            var lastSpace = -1;
+            for (var i = tentativeEnd - 1; i > start; i--)
+            {
+                if (char.IsWhiteSpace(text[i]))
+                {
+                    lastSpace = i;
+                    break;
+                }
+            }
+
+            if (lastSpace > start)
+            {
+                wrapEnd = lastSpace;
+            }
+        }
+
+        endExclusive = wrapEnd;
+
+        nextStart = wrapEnd;
+        while (nextStart < text.Length && char.IsWhiteSpace(text[nextStart]))
+        {
+            nextStart++;
+        }
+
+        return endExclusive > start;
+    }
+
+    private readonly record struct StyledRun(int Start, int Length, CellStyle Style);
+
+    private sealed class MarkupCaptureWriter : IAnsiBasicWriter
+    {
+        private readonly StringBuilder _buffer;
+        private readonly List<StyledRun> _runs;
+        private AnsiStyle _style;
+
+        public MarkupCaptureWriter()
+        {
+            _buffer = new StringBuilder(256);
+            _runs = new List<StyledRun>(16);
+            _style = AnsiStyle.Default;
+            Capabilities = AnsiCapabilities.Default;
+        }
+
+        public AnsiCapabilities Capabilities { get; }
+
+        public void Reset()
+        {
+            _buffer.Clear();
+            _runs.Clear();
+            _style = AnsiStyle.Default;
+        }
+
+        public string GetTextAndRuns(out StyledRun[] runs)
+        {
+            runs = _runs.Count == 0 ? Array.Empty<StyledRun>() : _runs.ToArray();
+            return _buffer.ToString();
+        }
+
+        public void Write(ReadOnlySpan<char> text)
+        {
+            if (text.IsEmpty)
+            {
+                return;
+            }
+
+            var start = _buffer.Length;
+            _buffer.Append(text);
+
+            var runStyle = ConvertStyle(_style);
+            if (_runs.Count > 0)
+            {
+                var last = _runs[_runs.Count - 1];
+                if (last.Style == runStyle && last.Start + last.Length == start)
+                {
+                    _runs[_runs.Count - 1] = last with { Length = last.Length + text.Length };
+                    return;
+                }
+            }
+
+            _runs.Add(new StyledRun(start, text.Length, runStyle));
+        }
+
+        public void StyleTransition(AnsiStyle from, AnsiStyle to)
+        {
+            _style = to.ResolveMissingFrom(from);
+        }
+
+        private static CellStyle ConvertStyle(AnsiStyle style)
+        {
+            var cellStyle = CellStyle.None;
+            if (style.Foreground is { } fg)
+            {
+                cellStyle = cellStyle.WithForeground(fg);
+            }
+
+            if (style.Background is { } bg)
+            {
+                cellStyle = cellStyle.WithBackground(bg);
+            }
+
+            if (style.Decorations != AnsiDecorations.None)
+            {
+                cellStyle = cellStyle.AddTextStyle((TextStyle)((int)style.Decorations));
+            }
+
+            return cellStyle;
+        }
+    }
+}
+

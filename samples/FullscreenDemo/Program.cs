@@ -127,6 +127,8 @@ var rightColumn = new VStack(
                         .Spacing(1),
                     new VStack(
                             "This is the Status tab.",
+                            new Markup("[bold]Markup:[/] [green]success[/], [yellow]warning[/], [red]error[/].")
+                                .Wrap(true),
                             new TextBlock()
                                 .Text(() => $"Current status: {statusState.Value}"),
                             "Spinners:",
