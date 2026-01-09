@@ -78,6 +78,35 @@ public sealed class InlineInteractiveHost : IDisposable
         _liveRegionTopRow = null;
     }
 
+    internal void FinalizeAfterLive()
+    {
+        if (!_hasSavedCursorPosition)
+        {
+            return;
+        }
+
+        _terminal.WriteAtomic(writer =>
+        {
+            writer.PrivateMode(2026, enabled: true);
+
+            // Ensure the cursor is not left inside the live region (e.g. focused TextBox).
+            if (_lastWantsCursor || _lastCursorVisible)
+            {
+                writer.ShowCursor(false);
+            }
+
+            writer.RestoreCursorPosition();
+            writer.CursorHorizontalAbsolute(1);
+            writer.ResetStyle();
+            writer.ShowCursor(true);
+
+            writer.PrivateMode(2026, enabled: false);
+        });
+
+        _lastCursorVisible = true;
+        _lastWantsCursor = false;
+    }
+
     public void Dispose()
     {
         try

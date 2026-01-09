@@ -69,6 +69,10 @@ public static partial class TerminalExtensions
                 {
                     app.ClearInlineLiveRegion();
                 }
+                else
+                {
+                    app.FinalizeInlineLiveRegion();
+                }
             }
             finally
             {
@@ -102,6 +106,10 @@ public static partial class TerminalExtensions
                 if (options.RemoveOnEnd)
                 {
                     app.ClearInlineLiveRegion();
+                }
+                else
+                {
+                    app.FinalizeInlineLiveRegion();
                 }
             }
             finally

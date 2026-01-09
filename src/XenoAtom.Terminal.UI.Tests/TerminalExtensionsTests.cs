@@ -52,4 +52,59 @@ public sealed class TerminalExtensionsTests
         screen.Apply(outText);
         StringAssert.Contains(screen.GetText(), "Count: 3");
     }
+
+    [TestMethod]
+    public void Live_Places_Cursor_After_Region_When_Kept()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(30, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        session.Instance.WriteLine("TOP");
+
+        var root = new TextBox().Text("abc");
+        session.Instance.Live(root, () => false, new TerminalLiveOptions(RemoveOnEnd: false));
+
+        session.Instance.WriteLine("AFTER");
+
+        var outText = backend.GetOutText();
+        var screen = new AnsiTestScreen(30, 10);
+        screen.Apply(outText);
+        var rendered = screen.GetText().Split(Environment.NewLine, StringSplitOptions.None);
+
+        var topLine = Array.FindIndex(rendered, line => line.Contains("TOP", StringComparison.Ordinal));
+        var afterLine = Array.FindIndex(rendered, line => line.Contains("AFTER", StringComparison.Ordinal));
+
+        Assert.IsTrue(topLine >= 0);
+        Assert.IsTrue(afterLine >= 0);
+        // TextBox renders 3 rows by default (border + content). With the initial TOP line, the live region
+        // starts at row 1 and occupies rows 1..3, so output after Live() should start at row >= 4.
+        Assert.IsTrue(afterLine >= 4, $"Expected output after Live() to appear after the live region. Screen:\n{screen.GetText()}");
+    }
+
+    [TestMethod]
+    public void Live_Restores_Cursor_When_Removed()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(30, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        session.Instance.WriteLine("TOP");
+
+        var root = new TextBox().Text("abc");
+        session.Instance.Live(root, () => false, new TerminalLiveOptions(RemoveOnEnd: true));
+
+        session.Instance.WriteLine("AFTER");
+
+        var outText = backend.GetOutText();
+        var screen = new AnsiTestScreen(30, 10);
+        screen.Apply(outText);
+        var rendered = screen.GetText().Split(Environment.NewLine, StringSplitOptions.None);
+
+        var topLine = Array.FindIndex(rendered, line => line.Contains("TOP", StringComparison.Ordinal));
+        var afterLine = Array.FindIndex(rendered, line => line.Contains("AFTER", StringComparison.Ordinal));
+
+        Assert.IsTrue(topLine >= 0);
+        Assert.IsTrue(afterLine >= 0);
+        Assert.IsTrue(afterLine == topLine + 1, "Expected output after Live(RemoveOnEnd=true) to continue where Live started.");
+        Assert.IsFalse(screen.GetText().Contains("abc", StringComparison.Ordinal), "Expected the live region to be removed.");
+    }
 }

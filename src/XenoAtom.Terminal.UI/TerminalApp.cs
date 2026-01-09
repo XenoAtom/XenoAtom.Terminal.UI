@@ -400,6 +400,11 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         _inlineHost?.PrepareForUserUpdate();
     }
 
+    internal void FinalizeInlineLiveRegion()
+    {
+        _inlineHost?.FinalizeAfterLive();
+    }
+
     internal void ShowWindow(Visual window)
     {
         ArgumentNullException.ThrowIfNull(window);

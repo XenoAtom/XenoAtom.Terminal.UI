@@ -50,8 +50,28 @@ internal sealed class AnsiTestScreen
                 break;
             }
 
+            // Handle non-CSI escapes we rely on in tests.
+            // - DECSC (ESC 7): Save cursor position
+            // - DECRC (ESC 8): Restore cursor position
             if (text[i] != '[')
             {
+                var escFinal = text[i++];
+                switch (escFinal)
+                {
+                    case '7':
+                        _savedRow = _row;
+                        _savedCol = _col;
+                        _hasSaved = true;
+                        break;
+                    case '8':
+                        if (_hasSaved)
+                        {
+                            _row = _savedRow;
+                            _col = _savedCol;
+                        }
+                        break;
+                }
+
                 continue;
             }
 
@@ -264,4 +284,3 @@ internal sealed class AnsiTestScreen
         paramIndex++;
     }
 }
-
