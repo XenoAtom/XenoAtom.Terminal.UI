@@ -399,12 +399,20 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 {
                     sb.Append(methodIndent).Append("public static T ").Append(EscapeIdentifier(propName)).Append("<T>(this T obj, ").Append(argType).Append(' ').Append(EscapeIdentifier(argName))
                         .Append(") where T : ").Append(receiverType).AppendLine();
-                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.With(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine(");");
+                    sb.Append(methodIndent).AppendLine("{");
+                    sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
+                    sb.Append(methodIndent).Append("    obj.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine(";");
+                    sb.Append(methodIndent).AppendLine("    return obj;");
+                    sb.Append(methodIndent).AppendLine("}");
                 }
                 else
                 {
                     sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName)).Append("(this ").Append(receiverType).Append(" obj, ").Append(argType).Append(' ').Append(EscapeIdentifier(argName)).AppendLine(")");
-                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.With(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine(");");
+                    sb.Append(methodIndent).AppendLine("{");
+                    sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
+                    sb.Append(methodIndent).Append("    obj.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine(";");
+                    sb.Append(methodIndent).AppendLine("    return obj;");
+                    sb.Append(methodIndent).AppendLine("}");
                 }
                 sb.AppendLine();
 
@@ -413,12 +421,12 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 {
                     sb.Append(methodIndent).Append("public static T ").Append(EscapeIdentifier(propName)).Append("<T>(this T obj, global::System.Func<").Append(argType).Append("> ").Append(EscapeIdentifier(argName))
                         .Append(") where T : ").Append(receiverType).AppendLine();
-                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.With(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
+                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
                 }
                 else
                 {
                     sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName)).Append("(this ").Append(receiverType).Append(" obj, global::System.Func<").Append(argType).Append("> ").Append(EscapeIdentifier(argName)).AppendLine(")");
-                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.With(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
+                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
                 }
                 sb.AppendLine();
 
@@ -928,12 +936,12 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 if (canUseGeneric)
                 {
                     sb.Append(methodIndent).Append("public static T ").Append(escapedEventName).Append("<T>(this T obj, global::System.EventHandler<").Append(argsType).Append("> handler) where T : ").Append(receiverType).AppendLine();
-                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.With(obj, x => { x.").Append(escapedRoutedHandlerName).AppendLine(" += handler; });");
+                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => { x.").Append(escapedRoutedHandlerName).AppendLine(" += handler; });");
                 }
                 else
                 {
                     sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(escapedEventName).Append("(this ").Append(receiverType).Append(" obj, global::System.EventHandler<").Append(argsType).AppendLine("> handler)");
-                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.With(obj, x => { x.").Append(escapedRoutedHandlerName).AppendLine(" += handler; });");
+                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => { x.").Append(escapedRoutedHandlerName).AppendLine(" += handler; });");
                 }
                 sb.AppendLine();
 
@@ -941,12 +949,12 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 if (canUseGeneric)
                 {
                     sb.Append(methodIndent).Append("public static T ").Append(escapedEventName).Append("<T>(this T obj, global::System.Action handler) where T : ").Append(receiverType).AppendLine();
-                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.With(obj, x => { x.").Append(escapedRoutedHandlerName).Append(" += (_, __) => handler(); });").AppendLine();
+                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => { x.").Append(escapedRoutedHandlerName).Append(" += (_, __) => handler(); });").AppendLine();
                 }
                 else
                 {
                     sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(escapedEventName).Append("(this ").Append(receiverType).AppendLine(" obj, global::System.Action handler)");
-                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.With(obj, x => { x.").Append(escapedRoutedHandlerName).Append(" += (_, __) => handler(); });").AppendLine();
+                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => { x.").Append(escapedRoutedHandlerName).Append(" += (_, __) => handler(); });").AppendLine();
                 }
                 sb.AppendLine();
             }

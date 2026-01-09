@@ -11,7 +11,7 @@ namespace XenoAtom.Terminal.UI.Collections;
 /// A list that participates in the binding dependency tracking system.
 /// </summary>
 /// <typeparam name="T">The item type.</typeparam>
-public class BindableList<T> : IList<T>, IReadOnlyList<T>, IInitializerResettable
+public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResettable
 {
     private readonly object _owner;
     private readonly BindingAccessor _accessor;
@@ -19,6 +19,8 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IInitializerResettabl
     private readonly Action<T>? _onAdding;
     private readonly Action<T>? _onRemoving;
     private bool _touchedDuringInitialization;
+    private bool _hasStaticMutations;
+    private bool _hasDynamicMutations;
 
     public BindableList(object owner, string name, Action<T>? onAdding = null, Action<T>? onRemoving = null)
     {
@@ -62,7 +64,7 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IInitializerResettabl
                 return;
             }
 
-            TrackInitializerMutation();
+            TrackMutation();
             _onRemoving?.Invoke(old);
             _onAdding?.Invoke(value);
 
@@ -74,7 +76,7 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IInitializerResettabl
     public void Add(T item)
     {
         ArgumentNullException.ThrowIfNull(item);
-        TrackInitializerMutation();
+        TrackMutation();
         _onAdding?.Invoke(item);
         _items.Add(item);
         BindingManager.Current.NotifyValueChanged(_owner, _accessor);
@@ -88,7 +90,7 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IInitializerResettabl
             return;
         }
 
-        TrackInitializerMutation();
+        TrackMutation();
         for (var i = 0; i < items.Length; i++)
         {
             var item = items[i];
@@ -107,7 +109,7 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IInitializerResettabl
             return;
         }
 
-        TrackInitializerMutation();
+        TrackMutation();
         if (_onRemoving is not null)
         {
             for (var i = 0; i < _items.Count; i++)
@@ -151,7 +153,7 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IInitializerResettabl
     public void Insert(int index, T item)
     {
         ArgumentNullException.ThrowIfNull(item);
-        TrackInitializerMutation();
+        TrackMutation();
         _onAdding?.Invoke(item);
         _items.Insert(index, item);
         BindingManager.Current.NotifyValueChanged(_owner, _accessor);
@@ -172,7 +174,7 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IInitializerResettabl
     public void RemoveAt(int index)
     {
         var item = _items[index];
-        TrackInitializerMutation();
+        TrackMutation();
         _onRemoving?.Invoke(item);
         _items.RemoveAt(index);
         BindingManager.Current.NotifyValueChanged(_owner, _accessor);
@@ -185,16 +187,16 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IInitializerResettabl
             return;
         }
 
-        TrackInitializerMutation();
+        TrackMutation();
         var item = _items[oldIndex];
         _items.RemoveAt(oldIndex);
         _items.Insert(newIndex, item);
         BindingManager.Current.NotifyValueChanged(_owner, _accessor);
     }
 
-    void IInitializerResettable.ResetForReinitialize() => ResetForReinitialize();
+    void IDynamicUpdateResettable.ResetForDynamicUpdate() => ResetForDynamicUpdate();
 
-    internal void ResetForReinitialize()
+    internal void ResetForDynamicUpdate()
     {
         if (!_touchedDuringInitialization || _items.Count == 0)
         {
@@ -214,18 +216,44 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IInitializerResettabl
         _touchedDuringInitialization = false;
     }
 
-    private void TrackInitializerMutation()
+    private void TrackMutation()
     {
-        // If this list is mutated while the owning visual is executing initializers,
-        // mark it so we can reset it before re-running those initializers.
-        if (!_touchedDuringInitialization && ReferenceEquals(BindingManager.Current.InitializingOwner, _owner))
+        var isDynamicContext = ReferenceEquals(BindingManager.Current.DynamicUpdateOwner, _owner);
+
+        if (isDynamicContext)
         {
-            _touchedDuringInitialization = true;
-            if (_owner is Visual v)
+            if (_hasStaticMutations)
             {
-                v.RegisterInitializerList(this);
+                throw new InvalidOperationException("Cannot mix static list initialization with dynamic updates. Use a dedicated container for dynamic content.");
             }
+
+            _hasDynamicMutations = true;
+
+            // When a dynamic update starts mutating a list, it must start from an empty list.
+            // The owning visual will clear this list before re-running dynamic updates.
+            if (!_touchedDuringInitialization)
+            {
+                if (_items.Count != 0)
+                {
+                    throw new InvalidOperationException("Dynamic list updates require the list to be empty. Static children/items must be moved to a separate container.");
+                }
+
+                _touchedDuringInitialization = true;
+                if (_owner is Visual v)
+                {
+                    v.RegisterDynamicUpdateList(this);
+                }
+            }
+
+            return;
         }
+
+        if (_hasDynamicMutations)
+        {
+            throw new InvalidOperationException("Cannot modify a dynamically-updated list outside of a dynamic update. Use Update(...) to mutate this list.");
+        }
+
+        _hasStaticMutations = true;
     }
 
     [EditorBrowsable(EditorBrowsableState.Never)]

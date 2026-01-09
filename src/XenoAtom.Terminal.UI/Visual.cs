@@ -16,16 +16,16 @@ public abstract partial class Visual : DispatcherObject
     private Dictionary<object, Delegate?>? _handlers;
     private List<KeyBinding>? _keyBindings;
     private Dictionary<object, object?>? _environment;
-    private List<Action<Visual>>? _initializers;
-    private List<Collections.IInitializerResettable>? _initializerLists;
+    private List<Action<Visual>>? _dynamicUpdates;
+    private List<Collections.IDynamicUpdateResettable>? _dynamicUpdateLists;
 
     private Size _desiredSizeWithoutMargin;
 
-    private bool _initializersDirty;
+    private bool _dynamicUpdatesDirty;
     private bool _measureDirty = true;
     private bool _arrangeDirty = true;
     private bool _renderDirty = true;
-    private HashSet<Binding>? _initializerDeps;
+    private HashSet<Binding>? _dynamicUpdateDeps;
     private HashSet<Binding>? _measureDeps;
     private HashSet<Binding>? _arrangeDeps;
     private HashSet<Binding>? _renderDeps;
@@ -229,22 +229,25 @@ public abstract partial class Visual : DispatcherObject
 
     public Theme GetTheme() => Get<Theme>();
 
-    public void Initialize(Action<Visual> configure)
+    public void RegisterDynamicUpdate(Action<Visual> configure)
     {
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(configure);
-        _initializers ??= new List<Action<Visual>>();
-        _initializers.Add(configure);
-        _initializersDirty = true;
+        _dynamicUpdates ??= new List<Action<Visual>>();
+        _dynamicUpdates.Add(configure);
+        _dynamicUpdatesDirty = true;
         Invalidate();
     }
 
-    internal void RegisterInitializerList(Collections.IInitializerResettable list)
+    [Obsolete("Use RegisterDynamicUpdate(...) via VisualExtensions.Update(...).")]
+    public void Initialize(Action<Visual> configure) => RegisterDynamicUpdate(configure);
+
+    internal void RegisterDynamicUpdateList(Collections.IDynamicUpdateResettable list)
     {
-        _initializerLists ??= new List<Collections.IInitializerResettable>();
-        if (!_initializerLists.Contains(list))
+        _dynamicUpdateLists ??= new List<Collections.IDynamicUpdateResettable>();
+        if (!_dynamicUpdateLists.Contains(list))
         {
-            _initializerLists.Add(list);
+            _dynamicUpdateLists.Add(list);
         }
     }
 
@@ -303,7 +306,7 @@ public abstract partial class Visual : DispatcherObject
     public void Measure(Size availableSize)
     {
         VerifyAccess();
-        EnsureInitialized();
+        EnsureDynamicUpdatesApplied();
 
         using var session = BindingManager.Current.StartTracking();
         var margin = Margin;
@@ -322,7 +325,7 @@ public abstract partial class Visual : DispatcherObject
     public void Arrange(Rectangle finalRect)
     {
         VerifyAccess();
-        EnsureInitialized();
+        EnsureDynamicUpdatesApplied();
 
         using var session = BindingManager.Current.StartTracking();
         var margin = Margin;
@@ -456,7 +459,7 @@ public abstract partial class Visual : DispatcherObject
     internal void RenderTree(CellBuffer buffer)
     {
         VerifyAccess();
-        EnsureInitialized();
+        EnsureDynamicUpdatesApplied();
 
         bool visible;
         using (var session = BindingManager.Current.StartTracking())
@@ -530,40 +533,40 @@ public abstract partial class Visual : DispatcherObject
         return this;
     }
 
-    private void EnsureInitialized()
+    private void EnsureDynamicUpdatesApplied()
     {
-        if (!_initializersDirty || _initializers is null)
+        if (!_dynamicUpdatesDirty || _dynamicUpdates is null)
         {
             return;
         }
 
-        if (_initializerLists is not null)
+        if (_dynamicUpdateLists is not null)
         {
-            for (var i = 0; i < _initializerLists.Count; i++)
+            for (var i = 0; i < _dynamicUpdateLists.Count; i++)
             {
-                _initializerLists[i].ResetForReinitialize();
+                _dynamicUpdateLists[i].ResetForDynamicUpdate();
             }
         }
 
         _handlers = null;
         _keyBindings = null;
 
-        _initializersDirty = false;
+        _dynamicUpdatesDirty = false;
         _measureDirty = true;
         _arrangeDirty = true;
         _renderDirty = true;
 
-        using var initScope = BindingManager.Current.BeginInitialization(this);
+        using var initScope = BindingManager.Current.BeginDynamicUpdate(this);
         using var notifyScope = BindingManager.Current.SuppressNotifications();
         using var session = BindingManager.Current.StartTracking();
-        for (var i = 0; i < _initializers.Count; i++)
+        for (var i = 0; i < _dynamicUpdates.Count; i++)
         {
-            _initializers[i](this);
+            _dynamicUpdates[i](this);
         }
 
-        if (StoreDependencies(ref _initializerDeps, session.Dependencies) && App is not null)
+        if (StoreDependencies(ref _dynamicUpdateDeps, session.Dependencies) && App is not null)
         {
-            App.UpdateDependencies(this, TerminalApp.DependencyKind.Initializer, _initializerDeps!);
+            App.UpdateDependencies(this, TerminalApp.DependencyKind.DynamicUpdate, _dynamicUpdateDeps!);
         }
     }
 
@@ -588,7 +591,7 @@ public abstract partial class Visual : DispatcherObject
         return true;
     }
 
-    internal void MarkInitializerDirty() => _initializersDirty = true;
+    internal void MarkDynamicUpdateDirty() => _dynamicUpdatesDirty = true;
 
     internal void MarkMeasureDirty()
     {

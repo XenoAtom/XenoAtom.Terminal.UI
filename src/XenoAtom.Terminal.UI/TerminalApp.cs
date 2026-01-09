@@ -48,13 +48,13 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
     internal enum DependencyKind
     {
-        Initializer = 0,
+        DynamicUpdate = 0,
         Measure = 1,
         Arrange = 2,
         Render = 3,
     }
 
-    private readonly DependencyIndex _initializerIndex = new();
+    private readonly DependencyIndex _dynamicUpdateIndex = new();
     private readonly DependencyIndex _measureIndex = new();
     private readonly DependencyIndex _arrangeIndex = new();
     private readonly DependencyIndex _renderIndex = new();
@@ -509,8 +509,8 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
         switch (kind)
         {
-            case DependencyKind.Initializer:
-                _initializerIndex.Update(visual, dependencies);
+            case DependencyKind.DynamicUpdate:
+                _dynamicUpdateIndex.Update(visual, dependencies);
                 break;
             case DependencyKind.Measure:
                 _measureIndex.Update(visual, dependencies);
@@ -529,7 +529,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     internal void UnregisterDependencies(Visual visual)
     {
         ArgumentNullException.ThrowIfNull(visual);
-        _initializerIndex.Remove(visual);
+        _dynamicUpdateIndex.Remove(visual);
         _measureIndex.Remove(visual);
         _arrangeIndex.Remove(visual);
         _renderIndex.Remove(visual);
@@ -544,11 +544,11 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
         foreach (var binding in _pendingBindings)
         {
-            if (_initializerIndex.TryGetVisuals(binding, out var initVisuals))
+            if (_dynamicUpdateIndex.TryGetVisuals(binding, out var initVisuals))
             {
                 foreach (var v in initVisuals)
                 {
-                    v.MarkInitializerDirty();
+                    v.MarkDynamicUpdateDirty();
                 }
             }
 

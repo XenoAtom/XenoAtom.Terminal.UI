@@ -157,7 +157,7 @@ var rightColumn = new VStack(
                     new ScrollViewer()
                         .Height(4)
                         .HorizontalAlignment(HorizontalAlignment.Stretch)
-                        .Content(new VStack().With(v =>
+                        .Content(new VStack().Update(v =>
                         {
                             for (var i = 0; i < 12; i++)
                             {
@@ -192,7 +192,7 @@ var rightColumn = new VStack(
             .Content(new ScrollViewer()
                 .Height(4)
                 .HorizontalAlignment(HorizontalAlignment.Stretch)
-                .Content(new VStack().With(v =>
+                .Content(new VStack().Update(v =>
                 {
                     for (var i = 0; i < 12; i++)
                     {

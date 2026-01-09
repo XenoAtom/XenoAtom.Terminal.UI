@@ -4,8 +4,7 @@
 
 namespace XenoAtom.Terminal.UI.Collections;
 
-internal interface IInitializerResettable
+internal interface IDynamicUpdateResettable
 {
-    void ResetForReinitialize();
+    void ResetForDynamicUpdate();
 }
-

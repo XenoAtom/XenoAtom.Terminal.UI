@@ -757,7 +757,7 @@ public sealed class TerminalAppTests
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
         var tabControl = new TabControl()
-            .With(tabs =>
+            .Update(tabs =>
             {
                 tabs.AddTab(new TextBlock("One"), new TextBlock("A"));
                 tabs.AddTab(new TextBlock("Two"), new TextBlock("B"));
@@ -964,7 +964,7 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
-    public async Task Initializers_Clear_Lists_Before_Reinitialize()
+    public async Task DynamicUpdates_Clear_Lists_Before_Reapply()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(80, 25));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
@@ -972,7 +972,7 @@ public sealed class TerminalAppTests
         var countState = new State<int>(1);
 
         var stack = new VStack()
-            .With(v =>
+            .Update(v =>
             {
                 var count = countState.Value;
                 for (var i = 0; i < count; i++)
@@ -1001,6 +1001,27 @@ public sealed class TerminalAppTests
         {
             backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
             await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+        }
+    }
+
+    [TestMethod]
+    public void DynamicUpdates_Cannot_Mutate_StaticallyInitialized_List()
+    {
+        var stack = new VStack();
+        stack.Add("Static");
+
+        stack.Update(v =>
+        {
+            v.Add("Dynamic");
+        });
+
+        try
+        {
+            stack.Measure(new Size(80, 25));
+            Assert.Fail("Expected an InvalidOperationException when mixing static list initialization with dynamic updates.");
+        }
+        catch (InvalidOperationException)
+        {
         }
     }
 

@@ -17,9 +17,9 @@ public sealed class BindingManager
     private static TrackingContext? _tracking;
 
     [ThreadStatic]
-    private static object? _initializingOwner;
+    private static object? _dynamicUpdateOwner;
 
-    internal object? InitializingOwner => _initializingOwner;
+    internal object? DynamicUpdateOwner => _dynamicUpdateOwner;
 
     [ThreadStatic]
     private static int _suppressNotifications;
@@ -64,11 +64,11 @@ public sealed class BindingManager
         return new TrackingSession(previous, current.Dependencies);
     }
 
-    internal InitializerSession BeginInitialization(object owner)
+    internal DynamicUpdateSession BeginDynamicUpdate(object owner)
     {
-        var previous = _initializingOwner;
-        _initializingOwner = owner;
-        return new InitializerSession(previous);
+        var previous = _dynamicUpdateOwner;
+        _dynamicUpdateOwner = owner;
+        return new DynamicUpdateSession(previous);
     }
 
     internal NotificationSuppressionSession SuppressNotifications()
@@ -88,13 +88,13 @@ public sealed class BindingManager
         }
     }
 
-    internal readonly struct InitializerSession : IDisposable
+    internal readonly struct DynamicUpdateSession : IDisposable
     {
         private readonly object? _previous;
 
-        public InitializerSession(object? previous) => _previous = previous;
+        public DynamicUpdateSession(object? previous) => _previous = previous;
 
-        public void Dispose() => _initializingOwner = _previous;
+        public void Dispose() => _dynamicUpdateOwner = _previous;
     }
 
     public void RegisterRead(object owner, BindingAccessor accessor)

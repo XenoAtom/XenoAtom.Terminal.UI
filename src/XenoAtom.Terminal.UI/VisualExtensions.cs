@@ -10,13 +10,17 @@ namespace XenoAtom.Terminal.UI;
 
 public static partial class VisualExtensions
 {
-    public static T With<T>(this T obj, Action<T> configure) where T : Visual
+    public static T Update<T>(this T obj, Action<T> configure) where T : Visual
     {
         ArgumentNullException.ThrowIfNull(obj);
         ArgumentNullException.ThrowIfNull(configure);
-        obj.Initialize(x => configure((T)x));
+        obj.RegisterDynamicUpdate(x => configure((T)x));
         return obj;
     }
+
+    [Obsolete("Use Update(...) for dynamic updates.")]
+    public static T With<T>(this T obj, Action<T> configure) where T : Visual
+        => Update(obj, configure);
 
     public static T Add<T>(this T obj, params Visual[] visuals) where T : Panel
     {
@@ -99,5 +103,10 @@ public static partial class VisualExtensions
     }
 
     public static T Style<T, TStyle>(this T obj, TStyle style) where T : Visual where TStyle : IStyle<TStyle>
-        => obj.With(x => x.Set(style));
+    {
+        ArgumentNullException.ThrowIfNull(obj);
+        obj.VerifyAccess();
+        obj.Set(style);
+        return obj;
+    }
 }
