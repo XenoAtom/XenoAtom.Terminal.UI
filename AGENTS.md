@@ -25,6 +25,7 @@
 - Ensure that your code is well-structured and modular to facilitate maintenance and future enhancements.
 - Adhere to best practices for error handling and input validation.
 - Write unit tests for any new functionality you add to ensure code quality and reliability.
+  - When fixing a bug, add a unit test that reproduces the bug before implementing the fix.
 - Use meaningful variable and method names that accurately reflect their purpose.
 - Avoid code duplication by reusing existing methods and classes whenever possible.
 
