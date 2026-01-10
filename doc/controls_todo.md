@@ -19,25 +19,27 @@ Following this list, you will find a compact spec for each high-priority control
 | [x] | **High**   | **TextArea (multiline editor)**                       | Input                      | Multi-line editing                   | "Real app" workflows beyond TextBox               |
 | [x] | **High**   | **TreeView**                                          | Navigation                 | Hierarchical navigation              | Big UX upgrade over flat lists                    |
 | [x] | **Medium** | **LoadingIndicator / Spinner**                        | Status                     | Busy state (unknown duration)        | Complements ProgressBar                           |
+| [ ] | **Medium** | **Collapsible / Accordion**                           | Layout                     | Progressive disclosure               | Keeps screens navigable                           |
+| [ ] | **Medium** | **Advanced Grid Layout** | Layout   | 2D composition for forms/inspectors/dashboards with consistent alignment | “Killer” layout that removes deep nesting and covers most real screens |
 | [ ] | **Medium** | **MaskedInput (password/secret)**                     | Input                      | Auth + secrets                       | Often needed early                                |
 | [ ] | **Medium** | **OptionList (fast menu list)**                       | Navigation/input           | Command menus/quick pickers          | Base for palettes/menus                           |
-| [ ] | **Medium** | **Command palette / quick open**                      | Navigation                 | Searchable actions                   | Big productivity boost                            |
+| [ ] | **Medium** | **Menu**                                              | Navigation/input           | Full menu                            | Menu                                              |
 | [ ] | **Medium** | **Switch (toggle)**                                   | Input                      | Modern toggle UI                     | Nice settings affordance                          |
-| [ ] | **Medium** | **Collapsible / Accordion**                           | Layout                     | Progressive disclosure               | Keeps screens navigable                           |
-| [ ] | **Medium** | **DirectoryTree / File picker**                       | Navigation                 | File browsing                        | Popular in tool-like TUIs                         |
-| [ ] | **Medium** | **Log view (RichLog / styled log)**                   | Diagnostics                | Streaming logs + scroll + styling    | Huge value for devtools/ops TUIs                  |
-| [ ] | **Medium** | **Structured text viewer (syntax + JSON)**            | Content                    | Inspect JSON/configs                 | Great for tooling                                 |
 | [ ] | **Medium** | **Sparkline**                                         | Visualization              | Tiny trends                          | High value / low scope                            |
 | [ ] | **Medium** | **Basic charts (bar/line)**                           | Visualization              | Dashboards/telemetry                 | Highly desirable                                  |
-| [ ] | **Medium** | **Calendar widget**                                   | Visualization/productivity | Schedules/date picking               | App-dependent                                     |
 | [ ] | **Medium** | **Links (clickable/open URL)**                        | Interaction/content        | Hyperlinks in terminal               | Terminal support varies                           |
-| [ ] | **Medium** | **DockWorkspace (dockable panes + floating windows)** | Layout/windowing           | Rearrangeable panes                  | Bigger feature, strong differentiator             |
-| [ ] | **Medium**   | **ContentSwitcher (view routing)**                  | Layout/state               | Swap views without rebuild           | Great for navigation/wizards                      |
+| [ ] | **Medium** | **ContentSwitcher (view routing)**                  | Layout/state               | Swap views without rebuild           | Great for navigation/wizards                      |
+| [ ] | **Medium** | **Command palette / quick open**                      | Navigation                 | Searchable actions                   | Big productivity boost                            |
 | [ ] | **Low**   | **Toast / Notification**                               | UX feedback                | Non-blocking feedback                | Modern UX; avoids modal spam                      |
 | [ ] | **Low**    | **Digits / KPI big-number**                           | Visualization              | Dashboard counters                   | Mostly polish                                     |
 | [ ] | **Low**    | **Placeholder / empty-state widget**                  | UX                         | No-results/loading states            | Polish; easy to fake                              |
 | [ ] | **Low**    | **Figlet / big text**                                 | Visual                     | Banners/headers                      | Fun, rarely essential                             |
 | [ ] | **Low**    | **Canvas / pixel surface**                            | Visualization              | Images/advanced plots                | Bigger scope; later                               |
+| [ ] | **Low** | **DirectoryTree / File picker**                       | Navigation                 | File browsing                        | Popular in tool-like TUIs                         |
+| [ ] | **Low** | **Calendar widget**                                   | Visualization/productivity | Schedules/date picking               | App-dependent                                     |
+| [ ] | **Low** | **Log view (RichLog / styled log)**                   | Diagnostics                | Streaming logs + scroll + styling    | Huge value for devtools/ops TUIs                  |
+| [ ] | **Low** | **Structured text viewer (syntax + JSON)**            | Content                    | Inspect JSON/configs                 | Great for tooling                                 |
+| [ ] | **Low** | **DockWorkspace (dockable panes + floating windows)** | Layout/windowing           | Rearrangeable panes                  | Bigger feature, strong differentiator             |
 
 ## Add-on libraries after core (dependency-minimizing)
 
@@ -47,11 +49,9 @@ These controls will require additional dependencies, so they will be delivered a
 | --- | ------------------ | --------------------------- | -------------------------------------------------------------------------------- |
 | [ ] | **MarkdownViewer** | Markdig (or Markdown stack) | Keep core dependency-free; integrate via core rich-text spans + add-on renderer. |
 
----
+Beyond the follow specs, if there are improvements or features that would make sense for a control based on your experience implementing it, feel free to add them.
 
 # High priority control specs
-
-Beyond these specs, if there are improvements or features that would make sense for a control based on your experience implementing it, feel free to add them.
 
 ## TreeView
 
@@ -148,3 +148,21 @@ Beyond these specs, if there are improvements or features that would make sense 
 * **Key hints**: standard shortcut/hint area
 * **Status hooks**: title, breadcrumbs, counters, clock (optional)
 * **Focus policy**: typically non-focusable; optional focusable children
+
+# Medium priority control specs
+
+## Grid
+
+* **Row/Column definitions**: `Fixed(n)`, `Auto`, `Star(weight)`
+* **Min/Max constraints**: `Min`, `Max` per row/column (applies after sizing mode)
+* **Gaps & padding**: `RowGap`, `ColumnGap`, container `Padding`
+* **Cell placement**: `Row`, `Column`, `RowSpan`, `ColumnSpan` attached properties
+* **Implicit grid growth**: auto-add rows/cols when placing outside defined bounds (configurable)
+* **Named lines / areas**: optional `RowName[]`, `ColumnName[]`, and `Area` mapping for readability
+* **Alignment**: per-cell `HorizontalAlignment` / `VerticalAlignment` + optional container defaults
+* **Stretch behavior**: `Stretch` fills cell; respects child min/max sizing
+* **Size distribution**: deterministic integer cell allocation; stable results under resize
+* **Span resolution**: multi-pass sizing so spanning children influence `Auto` tracks sensibly
+* **Shared size groups**: optional "SharedGroup" to equalize column widths across multiple grids (great for property panels)
+* **Hit-testing / focus order**: cell-aware navigation ordering (row-major default; configurable)
+
