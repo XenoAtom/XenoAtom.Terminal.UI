@@ -31,6 +31,15 @@ selectionList.Items.AddRange(
     new SelectionListItem("Grumman"),
     new SelectionListItem("Kaitain"));
 
+var optionList = new OptionList().Height(6);
+optionList.Items.AddRange(
+    new OptionListItem("Build", "Ctrl+B") { Description = "Build the project" },
+    new OptionListItem("Run", "F5") { Description = "Run the app" },
+    new OptionListItem("Open", "Ctrl+O") { Description = "Open a file" },
+    new OptionListItem("Settings", "Ctrl+,") { Description = "Show preferences" },
+    new OptionListItem("Help", "F1") { Description = "Show help" });
+optionList.ItemActivated((_, e) => statusState.Value = $"option[{e.Index}] activated");
+
 var textArea = new TextArea()
     .Text("Line 1\nLine 2\nLine 3")
     .Placeholder("Type multi-line text here...");
@@ -298,6 +307,12 @@ var rightColumn = new VStack(
                                 .Padding(Thickness.Zero)
                                 .HorizontalAlignment(HorizontalAlignment.Stretch)
                                 .Content(selectionList.HorizontalAlignment(HorizontalAlignment.Stretch)),
+                            new Group()
+                                .TopLeftText("OptionList")
+                                .TopRightText("Enter/Click activates")
+                                .Padding(Thickness.Zero)
+                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .Content(optionList.HorizontalAlignment(HorizontalAlignment.Stretch)),
                             new Group()
                                 .TopLeftText("Explicit ScrollBar")
                                 .Padding(Thickness.Zero)
