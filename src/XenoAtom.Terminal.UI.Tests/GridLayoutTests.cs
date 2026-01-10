@@ -1,0 +1,93 @@
+// Copyright (c) Alexandre Mutel. All rights reserved.
+// Licensed under the BSD-Clause 2 license.
+// See license.txt file in the project root for full license information.
+
+using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Geometry;
+
+namespace XenoAtom.Terminal.UI.Tests;
+
+[TestClass]
+public sealed class GridLayoutTests
+{
+    [TestMethod]
+    public void Fixed_And_Star_Columns_Arrange_Correctly()
+    {
+        var grid = new Grid();
+        grid.ColumnDefinitions.AddRange(
+            new ColumnDefinition { Width = GridLength.Fixed(4) },
+            new ColumnDefinition { Width = GridLength.Star(1) });
+        grid.RowDefinitions.AddRange(new RowDefinition { Height = GridLength.Fixed(1) });
+
+        var a = new FillVisual(new Size(1, 1));
+        var b = new FillVisual(new Size(1, 1));
+
+        grid.Children.Add(a.Row(0).Column(0));
+        grid.Children.Add(b.Row(0).Column(1));
+
+        grid.Measure(new Size(10, 1));
+        grid.Arrange(new Rectangle(0, 0, 10, 1));
+
+        Assert.AreEqual(new Rectangle(0, 0, 4, 1), a.Bounds);
+        Assert.AreEqual(new Rectangle(4, 0, 6, 1), b.Bounds);
+    }
+
+    [TestMethod]
+    public void Auto_Column_Uses_Child_Desired_Width()
+    {
+        var grid = new Grid();
+        grid.ColumnDefinitions.AddRange(
+            new ColumnDefinition { Width = GridLength.Auto },
+            new ColumnDefinition { Width = GridLength.Star(1) });
+        grid.RowDefinitions.AddRange(new RowDefinition { Height = GridLength.Fixed(1) });
+
+        var a = new FillVisual(new Size(5, 1));
+        var b = new FillVisual(new Size(1, 1));
+
+        grid.Children.Add(a.Row(0).Column(0));
+        grid.Children.Add(b.Row(0).Column(1));
+
+        grid.Measure(new Size(20, 1));
+        grid.Arrange(new Rectangle(0, 0, 20, 1));
+
+        Assert.AreEqual(new Rectangle(0, 0, 5, 1), a.Bounds);
+        Assert.AreEqual(new Rectangle(5, 0, 15, 1), b.Bounds);
+    }
+
+    [TestMethod]
+    public void AutoGrow_Adds_Implicit_Columns()
+    {
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Star(1) });
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Fixed(1) });
+
+        var v = new FillVisual(new Size(1, 1)).Column(2);
+        grid.Children.Add(v);
+
+        grid.Measure(new Size(12, 1));
+        grid.Arrange(new Rectangle(0, 0, 12, 1));
+
+        Assert.AreEqual(new Rectangle(8, 0, 4, 1), v.Bounds);
+    }
+
+    private sealed class FillVisual : Visual
+    {
+        private readonly Size _desired;
+
+        public FillVisual(Size desired)
+        {
+            _desired = desired;
+            HorizontalAlignment = HorizontalAlignment.Stretch;
+            VerticalAlignment = VerticalAlignment.Stretch;
+        }
+
+        protected override Size MeasureOverride(Size availableSize)
+            => new(Math.Min(_desired.Width, availableSize.Width), Math.Min(_desired.Height, availableSize.Height));
+
+        protected override void ArrangeOverride(Rectangle finalRect)
+        {
+            Bounds = finalRect;
+        }
+    }
+}
+

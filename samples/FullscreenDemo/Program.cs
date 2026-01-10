@@ -181,6 +181,27 @@ var rightColumn = new VStack(
                                         .Trimming(TextTrimming.EndEllipsis)
                                         .MaxWidth(24))
                                 .Spacing(1),
+                            new Group()
+                                .TopLeftText("Grid")
+                                .Padding(Thickness.Zero)
+                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .Content(
+                                    new Grid()
+                                        .Columns(
+                                            new ColumnDefinition { Width = GridLength.Auto },
+                                            new ColumnDefinition { Width = GridLength.Star(1) })
+                                        .Rows(
+                                            new RowDefinition { Height = GridLength.Auto },
+                                            new RowDefinition { Height = GridLength.Auto },
+                                            new RowDefinition { Height = GridLength.Auto })
+                                        .ColumnGap(1)
+                                        .Add(
+                                            new TextBlock("User:").Row(0).Column(0),
+                                            new TextBox().Text("alex").Row(0).Column(1).HorizontalAlignment(HorizontalAlignment.Stretch),
+                                            new TextBlock("Password:").Row(1).Column(0),
+                                            new MaskedInput().Text("hunter2").RevealMode(MaskedInputRevealMode.WhileFocused).Row(1).Column(1).HorizontalAlignment(HorizontalAlignment.Stretch),
+                                            new TextBlock("Status:").Row(2).Column(0),
+                                            new TextBlock().Text(() => statusState.Value).Row(2).Column(1))),
                             new Rule
                             {
                                 StartLabel = "Start",
