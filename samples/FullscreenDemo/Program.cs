@@ -79,6 +79,14 @@ var showDialog = new Button("Show modal")
     .Click(ShowModalDialog);
 
 var menuBar = new MenuBar();
+var commandPalette = new CommandPalette();
+commandPalette.Items.AddRange(
+    new CommandPaletteItem("Open", () => statusState.Value = "open") { ShortcutFactory = () => "Ctrl+O", DescriptionFactory = () => "Open a file" },
+    new CommandPaletteItem("Search", () => statusState.Value = "search") { ShortcutFactory = () => "Ctrl+F", DescriptionFactory = () => "Search in the current view" },
+    new CommandPaletteItem("Build", () => statusState.Value = "build") { ShortcutFactory = () => "Ctrl+B", DescriptionFactory = () => "Build the project" },
+    new CommandPaletteItem("Run", () => statusState.Value = "run") { ShortcutFactory = () => "F5", DescriptionFactory = () => "Run the app" },
+    new CommandPaletteItem("Toggle modal", ShowModalDialog) { ShortcutFactory = () => "Ctrl+M", DescriptionFactory = () => "Show a modal dialog" });
+
 var menuFile = new MenuItem("File");
 menuFile.Items.Add(new MenuItem("New", () => statusState.Value = "new file") { Shortcut = "Ctrl+N" });
 menuFile.Items.Add(new MenuItem("Open", () => statusState.Value = "open") { Shortcut = "Ctrl+O" });
@@ -92,6 +100,7 @@ menuFile.Items.Add(new MenuItem("Close", () => statusState.Value = "close") { Sh
 
 var menuView = new MenuItem("View");
 menuView.Items.Add(new MenuItem("Toggle modal", ShowModalDialog) { Shortcut = "Ctrl+M" });
+menuView.Items.Add(new MenuItem("Command palette", commandPalette.Show) { Shortcut = "Ctrl+P" });
 menuView.Items.Add(new MenuItem("Reset status", () => statusState.Value = "ready"));
 
 var menuHelp = new MenuItem("Help");
@@ -385,6 +394,8 @@ var root = new DockLayout()
             .HorizontalAlignment(HorizontalAlignment.Stretch)
             .VerticalAlignment(VerticalAlignment.Stretch))
     .Bottom(footer);
+
+root.AddKeyBinding(new XenoAtom.Terminal.UI.Input.TerminalKeyGesture('p', TerminalModifiers.Ctrl), commandPalette.Show);
 
 var lastTick = Stopwatch.GetTimestamp();
 var t = 0.0;
