@@ -39,8 +39,10 @@ public sealed partial class SelectionList : Visual
         var height = Math.Max(1, Height);
         var style = Get<SelectionListStyle>();
         var showBorder = style.ShowBorder;
-
-        var prefixWidth = 3; // marker + checkbox + space
+        var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
+        var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
+        var checkWidth = Math.Max(1, Math.Max(TerminalTextUtility.GetRuneWidth(style.CheckedGlyph), TerminalTextUtility.GetRuneWidth(style.UncheckedGlyph)));
+        var prefixWidth = markerWidth + checkWidth + gap;
 
         var items = Items;
         var itemWidth = 0;
@@ -75,6 +77,9 @@ public sealed partial class SelectionList : Visual
 
         var style = Get<SelectionListStyle>();
         var showBorder = style.ShowBorder;
+        var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
+        var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
+        var checkWidth = Math.Max(1, Math.Max(TerminalTextUtility.GetRuneWidth(style.CheckedGlyph), TerminalTextUtility.GetRuneWidth(style.UncheckedGlyph)));
         var innerLeft = rect.X + (showBorder ? 1 : 0);
         var innerTop = rect.Y + (showBorder ? 1 : 0);
         var innerWidth = Math.Max(0, rect.Width - (showBorder ? 2 : 0));
@@ -92,7 +97,7 @@ public sealed partial class SelectionList : Visual
             _scrollOffset = Math.Max(0, selected - Math.Max(1, innerHeight) + 1);
         }
 
-        var prefixWidth = Math.Min(innerWidth, 3);
+        var prefixWidth = Math.Min(innerWidth, markerWidth + checkWidth + gap);
         var itemLeft = innerLeft + prefixWidth;
         var itemWidth = Math.Max(0, innerWidth - prefixWidth);
         for (var i = 0; i < count; i++)
@@ -113,6 +118,9 @@ public sealed partial class SelectionList : Visual
         var items = Items;
         var style = Get<SelectionListStyle>();
         var showBorder = style.ShowBorder;
+        var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
+        var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
+        var checkWidth = Math.Max(1, Math.Max(TerminalTextUtility.GetRuneWidth(style.CheckedGlyph), TerminalTextUtility.GetRuneWidth(style.UncheckedGlyph)));
         var innerLeft = rect.X + (showBorder ? 1 : 0);
         var innerTop = rect.Y + (showBorder ? 1 : 0);
         var innerWidth = Math.Max(0, rect.Width - (showBorder ? 2 : 0));
@@ -181,11 +189,25 @@ public sealed partial class SelectionList : Visual
                 buffer.SetCell(innerLeft + x, y, new Rune(' '), rowStyle);
             }
 
-            if (innerWidth >= 3)
+            var xCursor = innerLeft;
+            if (innerWidth > 0)
             {
-                buffer.SetCell(innerLeft, y, isSelected ? style.FocusMarkerGlyph : new Rune(' '), rowStyle);
-                buffer.SetCell(innerLeft + 1, y, item.IsChecked ? style.CheckedGlyph : style.UncheckedGlyph, rowStyle);
-                buffer.SetCell(innerLeft + 2, y, new Rune(' '), rowStyle);
+                var marker = isSelected ? style.FocusMarkerGlyph : new Rune(' ');
+                buffer.SetCell(xCursor, y, marker, rowStyle);
+                xCursor += markerWidth;
+            }
+
+            if (xCursor < innerLeft + innerWidth)
+            {
+                var check = item.IsChecked ? style.CheckedGlyph : style.UncheckedGlyph;
+                buffer.SetCell(xCursor, y, check, rowStyle);
+                xCursor += checkWidth;
+            }
+
+            for (var i = 0; i < gap && xCursor < innerLeft + innerWidth; i++)
+            {
+                buffer.SetCell(xCursor, y, new Rune(' '), rowStyle);
+                xCursor++;
             }
         }
     }
@@ -303,4 +325,3 @@ public sealed partial class SelectionList : Visual
         e.Handled = true;
     }
 }
-

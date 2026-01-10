@@ -12,6 +12,8 @@ public sealed record CheckBoxStyle : IStyle<CheckBoxStyle>
 
     public static StyleKey<CheckBoxStyle> Key { get; } = new("CheckBoxStyle", Default);
 
+    public int SpaceBetweenGlyphAndText { get; init; } = 2;
+
     public Rune CheckedGlyph { get; init; } = new(0x2611); // ☑
     public Rune UncheckedGlyph { get; init; } = new(0x2610); // ☐
 

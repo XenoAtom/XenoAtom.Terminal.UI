@@ -12,8 +12,6 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class CheckBox : Visual
 {
-    private const int SpaceBetweenGlyphAndText = 2;
-
     public CheckBox()
     {
         Focusable = true;
@@ -39,6 +37,7 @@ public sealed partial class CheckBox : Visual
     protected override Size MeasureOverride(Size availableSize)
     {
         var checkBoxStyle = Get<CheckBoxStyle>();
+        var gap = Math.Max(0, checkBoxStyle.SpaceBetweenGlyphAndText);
         var glyph = IsChecked ? checkBoxStyle.CheckedGlyph : checkBoxStyle.UncheckedGlyph;
         var glyphWidth = TerminalTextUtility.GetRuneWidth(glyph);
 
@@ -50,7 +49,7 @@ public sealed partial class CheckBox : Visual
             textWidth = textVisual.DesiredSize.Width;
         }
 
-        var width = Math.Min(availableSize.Width, textWidth + glyphWidth + SpaceBetweenGlyphAndText);
+        var width = Math.Min(availableSize.Width, textWidth + glyphWidth + gap);
         return new Size(width, 1);
     }
 
@@ -65,10 +64,11 @@ public sealed partial class CheckBox : Visual
         }
 
         var checkBoxStyle = Get<CheckBoxStyle>();
+        var gap = Math.Max(0, checkBoxStyle.SpaceBetweenGlyphAndText);
         var glyph = IsChecked ? checkBoxStyle.CheckedGlyph : checkBoxStyle.UncheckedGlyph;
         var glyphWidth = TerminalTextUtility.GetRuneWidth(glyph);
 
-        var textX = finalRect.X + Math.Max(1, glyphWidth) + SpaceBetweenGlyphAndText;
+        var textX = finalRect.X + Math.Max(1, glyphWidth) + gap;
         var available = Math.Max(0, finalRect.Width - (textX - finalRect.X));
         var desired = Math.Min(available, textVisual.DesiredSize.Width);
         textVisual.Arrange(new Rectangle(textX, finalRect.Y, desired, 1));
@@ -80,6 +80,7 @@ public sealed partial class CheckBox : Visual
         var theme = GetTheme();
         var checkBoxStyle = Get<CheckBoxStyle>();
         var style = checkBoxStyle.Resolve(theme, IsEnabled, isFocused, IsHovered);
+        var gap = Math.Max(0, checkBoxStyle.SpaceBetweenGlyphAndText);
 
         var rect = Bounds;
 
@@ -96,7 +97,7 @@ public sealed partial class CheckBox : Visual
         {
             var glyphWidth = TerminalTextUtility.GetRuneWidth(glyph);
             var gapX = rect.X + Math.Max(1, glyphWidth);
-            for (var i = 0; i < SpaceBetweenGlyphAndText && gapX + i < rect.X + rect.Width; i++)
+            for (var i = 0; i < gap && gapX + i < rect.X + rect.Width; i++)
             {
                 buffer.SetCell(gapX + i, rect.Y, new Rune(' '), style);
             }

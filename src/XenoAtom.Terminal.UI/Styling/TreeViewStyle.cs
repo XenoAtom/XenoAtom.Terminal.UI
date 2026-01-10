@@ -24,6 +24,8 @@ public sealed record TreeViewStyle : IStyle<TreeViewStyle>
 
     public int IndentSize { get; init; } = 2;
 
+    public int SpaceBetweenGlyphAndText { get; init; } = 2;
+
     public Rune ExpandedGlyph { get; init; } = new('▾');
 
     public Rune CollapsedGlyph { get; init; } = new('▸');
