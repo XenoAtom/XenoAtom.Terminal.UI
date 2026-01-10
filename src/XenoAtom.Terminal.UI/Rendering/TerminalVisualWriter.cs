@@ -38,10 +38,12 @@ internal static class TerminalVisualWriter
         writer.PrivateMode(2026, enabled: true);
 
         var currentStyle = AnsiStyle.Default;
+        ulong currentHyperlink = 0;
         Span<char> runeBuffer = stackalloc char[2];
 
         var scalars = buffer.UnsafeScalars;
         var cells = buffer.UnsafeCells;
+        var hyperlinks = buffer.UnsafeHyperlinks;
 
         for (var y = 0; y < height; y++)
         {
@@ -64,6 +66,22 @@ internal static class TerminalVisualWriter
                     currentStyle = nextStyle;
                 }
 
+                var nextHyperlink = hyperlinks[i];
+                if (nextHyperlink != currentHyperlink)
+                {
+                    if (currentHyperlink != 0)
+                    {
+                        writer.EndLink();
+                    }
+
+                    currentHyperlink = 0;
+                    if (nextHyperlink != 0 && buffer.TryGetHyperlinkUri(nextHyperlink, out var uri))
+                    {
+                        writer.BeginLink(uri);
+                        currentHyperlink = nextHyperlink;
+                    }
+                }
+
                 var scalar = scalars[i];
                 if (scalar == 0)
                 {
@@ -80,7 +98,18 @@ internal static class TerminalVisualWriter
                 xPos += Math.Max(1, runeWidth);
             }
 
+            if (currentHyperlink != 0)
+            {
+                writer.EndLink();
+                currentHyperlink = 0;
+            }
+
             writer.Write("\n");
+        }
+
+        if (currentHyperlink != 0)
+        {
+            writer.EndLink();
         }
 
         if (currentStyle != AnsiStyle.Default)
@@ -145,4 +174,3 @@ internal static class TerminalVisualWriter
         };
     }
 }
-

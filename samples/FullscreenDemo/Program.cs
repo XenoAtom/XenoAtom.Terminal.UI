@@ -210,10 +210,15 @@ var rightColumn = new VStack(
                                 .Trimming(TextTrimming.EndEllipsis)
                                 .MaxWidth(12))
                         .Spacing(1),
-                    new VStack(
+                            new VStack(
                             "This is the Status tab.",
                             new Markup("[bold]Markup:[/] [green]success[/], [yellow]warning[/], [red]error[/].")
                                 .Wrap(true),
+                            new HStack(
+                                    "Link:",
+                                    new Link("https://example.com", "https://example.com")
+                                        .Opened((_, e) => statusState.Value = $"link opened: {e.Uri}"))
+                                .Spacing(1),
                             new TextBlock()
                                 .Text(() => $"Current status: {statusState.Value}"),
                             new HStack(

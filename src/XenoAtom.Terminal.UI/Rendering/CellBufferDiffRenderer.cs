@@ -14,6 +14,7 @@ public sealed class CellBufferDiffRenderer : IDisposable
     private readonly AnsiBuilder _builder = new(initialCapacity: 4096);
     private int[]? _lastScalars;
     private CellStyle[]? _lastCells;
+    private ulong[]? _lastHyperlinks;
     private int _lastWidth;
     private int _lastHeight;
     private bool _lastCursorVisible;
@@ -24,6 +25,7 @@ public sealed class CellBufferDiffRenderer : IDisposable
     {
         _lastScalars = null;
         _lastCells = null;
+        _lastHyperlinks = null;
         _lastWidth = 0;
         _lastHeight = 0;
         _lastCursorVisible = false;
@@ -63,13 +65,16 @@ public sealed class CellBufferDiffRenderer : IDisposable
 
         var scalars = buffer.UnsafeScalars;
         var cells = buffer.UnsafeCells;
+        var hyperlinks = buffer.UnsafeHyperlinks;
 
         var lastScalars = _lastScalars!;
         var lastCells = _lastCells!;
+        var lastHyperlinks = _lastHyperlinks!;
 
         Span<char> runeBuffer = stackalloc char[2];
         var anyCellChanges = forceFull;
         var hasOutput = false;
+        ulong currentHyperlink = 0;
 
         void BeginOutput()
         {
@@ -109,7 +114,7 @@ public sealed class CellBufferDiffRenderer : IDisposable
             for (var x = 0; x < width; x++)
             {
                 var i = rowIndex + x;
-                if (forceFull || scalars[i] != lastScalars[i] || cells[i] != lastCells[i])
+                if (forceFull || scalars[i] != lastScalars[i] || cells[i] != lastCells[i] || hyperlinks[i] != lastHyperlinks[i])
                 {
                     firstChanged = x;
                     break;
@@ -125,7 +130,7 @@ public sealed class CellBufferDiffRenderer : IDisposable
             for (var x = width - 1; x >= firstChanged; x--)
             {
                 var i = rowIndex + x;
-                if (forceFull || scalars[i] != lastScalars[i] || cells[i] != lastCells[i])
+                if (forceFull || scalars[i] != lastScalars[i] || cells[i] != lastCells[i] || hyperlinks[i] != lastHyperlinks[i])
                 {
                     lastChanged = x;
                     break;
@@ -161,6 +166,22 @@ public sealed class CellBufferDiffRenderer : IDisposable
                     currentStyle = nextStyle;
                 }
 
+                var nextHyperlink = hyperlinks[i];
+                if (nextHyperlink != currentHyperlink)
+                {
+                    if (currentHyperlink != 0)
+                    {
+                        writer.EndLink();
+                    }
+
+                    currentHyperlink = 0;
+                    if (nextHyperlink != 0 && buffer.TryGetHyperlinkUri(nextHyperlink, out var uri))
+                    {
+                        writer.BeginLink(uri);
+                        currentHyperlink = nextHyperlink;
+                    }
+                }
+
                 var scalar = scalars[i];
                 if (scalar == 0)
                 {
@@ -184,6 +205,12 @@ public sealed class CellBufferDiffRenderer : IDisposable
         }
 
         BeginOutput();
+
+        if (currentHyperlink != 0)
+        {
+            writer.EndLink();
+            currentHyperlink = 0;
+        }
 
         if (currentStyle != AnsiStyle.Default)
         {
@@ -209,6 +236,7 @@ public sealed class CellBufferDiffRenderer : IDisposable
         {
             scalars.CopyTo(lastScalars.AsSpan());
             cells.CopyTo(lastCells.AsSpan());
+            hyperlinks.CopyTo(lastHyperlinks.AsSpan());
         }
 
         _lastCursorVisible = wantsCursor;
@@ -219,10 +247,11 @@ public sealed class CellBufferDiffRenderer : IDisposable
     private void EnsureLastBuffers(int width, int height)
     {
         var length = checked(width * height);
-        if (_lastScalars is null || _lastCells is null || _lastScalars.Length != length)
+        if (_lastScalars is null || _lastCells is null || _lastHyperlinks is null || _lastScalars.Length != length)
         {
             _lastScalars = new int[length];
             _lastCells = new CellStyle[length];
+            _lastHyperlinks = new ulong[length];
         }
 
         _lastWidth = width;

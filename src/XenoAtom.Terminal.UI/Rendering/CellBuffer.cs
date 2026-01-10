@@ -14,6 +14,8 @@ public sealed class CellBuffer
 {
     private readonly int[] _scalars;
     private readonly CellStyle[] _cells;
+    private readonly ulong[] _hyperlinks;
+    private Dictionary<ulong, string>? _hyperlinkTable;
 
     private Rectangle _clipRect;
     private Rectangle[]? _clipStack;
@@ -29,6 +31,7 @@ public sealed class CellBuffer
 
         _scalars = new int[width * height];
         _cells = new CellStyle[width * height];
+        _hyperlinks = new ulong[width * height];
         _clipRect = new Rectangle(0, 0, width, height);
         Clear();
     }
@@ -41,16 +44,22 @@ public sealed class CellBuffer
 
     internal ReadOnlySpan<CellStyle> UnsafeCells => _cells;
 
+    internal ReadOnlySpan<ulong> UnsafeHyperlinks => _hyperlinks;
+
     public void Clear()
     {
         Array.Fill(_scalars, ' ');
         Array.Fill(_cells, CellStyle.None);
+        Array.Fill(_hyperlinks, 0ul);
+        _hyperlinkTable?.Clear();
     }
 
     public void Clear(CellStyle cellStyle)
     {
         Array.Fill(_scalars, ' ');
         Array.Fill(_cells, cellStyle);
+        Array.Fill(_hyperlinks, 0ul);
+        _hyperlinkTable?.Clear();
     }
 
     public void PushClip(Rectangle rect)
@@ -78,6 +87,9 @@ public sealed class CellBuffer
     }
 
     public void SetCell(int x, int y, Rune rune, CellStyle cellStyle)
+        => SetCell(x, y, rune, cellStyle, hyperlinkToken: 0);
+
+    public void SetCell(int x, int y, Rune rune, CellStyle cellStyle, ulong hyperlinkToken)
     {
         if ((uint)x >= (uint)Width || (uint)y >= (uint)Height || !_clipRect.Contains(x, y))
         {
@@ -94,6 +106,7 @@ public sealed class CellBuffer
         _scalars[index] = rune.Value;
         var style = cellStyle.WithoutContinuation().MergeUnspecified(_cells[index].WithoutContinuation());
         _cells[index] = style;
+        _hyperlinks[index] = hyperlinkToken;
 
         if (width > 1 && x + 1 < Width)
         {
@@ -103,10 +116,14 @@ public sealed class CellBuffer
             }
             _scalars[index + 1] = ' ';
             _cells[index + 1] = style.WithContinuation();
+            _hyperlinks[index + 1] = hyperlinkToken;
         }
     }
 
     public void WriteText(int x, int y, ReadOnlySpan<char> text, CellStyle cellStyle)
+        => WriteText(x, y, text, cellStyle, hyperlinkToken: 0);
+
+    public void WriteText(int x, int y, ReadOnlySpan<char> text, CellStyle cellStyle, ulong hyperlinkToken)
     {
         var posX = x;
         var index = 0;
@@ -126,12 +143,84 @@ public sealed class CellBuffer
                     break;
                 }
 
-                SetCell(posX, y, rune, cellStyle);
+                SetCell(posX, y, rune, cellStyle, hyperlinkToken);
                 posX += w;
             }
 
             index += consumed;
         }
+    }
+
+    public ulong RegisterHyperlink(string uri)
+    {
+        ArgumentNullException.ThrowIfNull(uri);
+        if (uri.Length == 0)
+        {
+            return 0;
+        }
+
+        var token = ComputeFnv1a64(uri.AsSpan(), seed: 14695981039346656037ul);
+        if (token == 0)
+        {
+            token = 1;
+        }
+
+        _hyperlinkTable ??= new Dictionary<ulong, string>();
+        if (_hyperlinkTable.TryGetValue(token, out var existing) && !string.Equals(existing, uri, StringComparison.Ordinal))
+        {
+            // Extremely unlikely; use a second deterministic seed.
+            token = ComputeFnv1a64(uri.AsSpan(), seed: 14695981039346656037ul ^ 0x9E3779B97F4A7C15ul);
+            if (token == 0)
+            {
+                token = 2;
+            }
+        }
+
+        _hyperlinkTable[token] = uri;
+        return token;
+    }
+
+    internal bool TryGetHyperlinkUri(ulong token, out string uri)
+    {
+        if (token == 0 || _hyperlinkTable is null)
+        {
+            uri = string.Empty;
+            return false;
+        }
+
+        return _hyperlinkTable.TryGetValue(token, out uri!);
+    }
+
+    internal void CopyHyperlinkTableTo(Dictionary<ulong, string> target)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        target.Clear();
+
+        if (_hyperlinkTable is null || _hyperlinkTable.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var pair in _hyperlinkTable)
+        {
+            target[pair.Key] = pair.Value;
+        }
+    }
+
+    private static ulong ComputeFnv1a64(ReadOnlySpan<char> text, ulong seed)
+    {
+        const ulong prime = 1099511628211ul;
+        var hash = seed;
+        for (var i = 0; i < text.Length; i++)
+        {
+            var ch = text[i];
+            hash ^= (byte)ch;
+            hash *= prime;
+            hash ^= (byte)(ch >> 8);
+            hash *= prime;
+        }
+
+        return hash;
     }
 
     private static Rectangle Intersect(Rectangle a, Rectangle b)
@@ -283,6 +372,4 @@ public sealed class CellBuffer
 
         return "#000000";
     }
-
-
 }

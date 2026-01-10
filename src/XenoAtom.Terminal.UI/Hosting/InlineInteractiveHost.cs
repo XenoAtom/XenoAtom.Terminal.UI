@@ -19,6 +19,8 @@ public sealed class InlineInteractiveHost : IDisposable
     private bool _hasSavedCursorPosition;
     private int[]? _lastScalars;
     private CellStyle[]? _lastCells;
+    private ulong[]? _lastHyperlinks;
+    private Dictionary<ulong, string>? _lastHyperlinkTable;
     private int _lastWidth;
     private int _lastHeight;
     private bool _lastCursorVisible;
@@ -183,8 +185,10 @@ public sealed class InlineInteractiveHost : IDisposable
 
         var scalars = buffer.UnsafeScalars;
         var cells = buffer.UnsafeCells;
+        var hyperlinks = buffer.UnsafeHyperlinks;
         var lastScalars = _lastScalars!;
         var lastCells = _lastCells!;
+        var lastHyperlinks = _lastHyperlinks!;
 
         if (!forceFull)
         {
@@ -192,7 +196,7 @@ public sealed class InlineInteractiveHost : IDisposable
             var anyCellChanged = false;
             for (var i = 0; i < length; i++)
             {
-                if (scalars[i] != lastScalars[i] || cells[i] != lastCells[i])
+                if (scalars[i] != lastScalars[i] || cells[i] != lastCells[i] || hyperlinks[i] != lastHyperlinks[i])
                 {
                     anyCellChanged = true;
                     break;
@@ -268,6 +272,7 @@ public sealed class InlineInteractiveHost : IDisposable
         writer.CursorHorizontalAbsolute(1);
 
         var currentStyle = AnsiStyle.Default;
+        ulong currentHyperlink = 0;
         Span<char> runeBuffer = stackalloc char[2];
 
         if (forceFull)
@@ -291,6 +296,22 @@ public sealed class InlineInteractiveHost : IDisposable
                     {
                         writer.StyleTransition(currentStyle, nextStyle);
                         currentStyle = nextStyle;
+                    }
+
+                    var nextHyperlink = hyperlinks[i];
+                    if (nextHyperlink != currentHyperlink)
+                    {
+                        if (currentHyperlink != 0)
+                        {
+                            writer.EndLink();
+                        }
+
+                        currentHyperlink = 0;
+                        if (nextHyperlink != 0 && buffer.TryGetHyperlinkUri(nextHyperlink, out var uri))
+                        {
+                            writer.BeginLink(uri);
+                            currentHyperlink = nextHyperlink;
+                        }
                     }
 
                     var scalar = scalars[i];
@@ -326,7 +347,7 @@ public sealed class InlineInteractiveHost : IDisposable
                 for (var x = 0; x < width; x++)
                 {
                     var i = rowIndex + x;
-                    if (scalars[i] != lastScalars[i] || cells[i] != lastCells[i])
+                    if (scalars[i] != lastScalars[i] || cells[i] != lastCells[i] || hyperlinks[i] != lastHyperlinks[i])
                     {
                         firstChanged = x;
                         break;
@@ -341,7 +362,7 @@ public sealed class InlineInteractiveHost : IDisposable
                 for (var x = width - 1; x >= firstChanged; x--)
                 {
                     var i = rowIndex + x;
-                    if (scalars[i] != lastScalars[i] || cells[i] != lastCells[i])
+                    if (scalars[i] != lastScalars[i] || cells[i] != lastCells[i] || hyperlinks[i] != lastHyperlinks[i])
                     {
                         lastChanged = x;
                         break;
@@ -382,6 +403,22 @@ public sealed class InlineInteractiveHost : IDisposable
                     {
                         writer.StyleTransition(currentStyle, nextStyle);
                         currentStyle = nextStyle;
+                    }
+
+                    var nextHyperlink = hyperlinks[i];
+                    if (nextHyperlink != currentHyperlink)
+                    {
+                        if (currentHyperlink != 0)
+                        {
+                            writer.EndLink();
+                        }
+
+                        currentHyperlink = 0;
+                        if (nextHyperlink != 0 && buffer.TryGetHyperlinkUri(nextHyperlink, out var uri))
+                        {
+                            writer.BeginLink(uri);
+                            currentHyperlink = nextHyperlink;
+                        }
                     }
 
                     var scalar = scalars[i];
@@ -432,6 +469,12 @@ public sealed class InlineInteractiveHost : IDisposable
             currentStyle = AnsiStyle.Default;
         }
 
+        if (currentHyperlink != 0)
+        {
+            writer.EndLink();
+            currentHyperlink = 0;
+        }
+
         writer.SaveCursorPosition();
 
         if (wantsCursor)
@@ -449,6 +492,9 @@ public sealed class InlineInteractiveHost : IDisposable
 
         scalars.Slice(0, width * height).CopyTo(lastScalars.AsSpan());
         cells.Slice(0, width * height).CopyTo(lastCells.AsSpan());
+        hyperlinks.Slice(0, width * height).CopyTo(lastHyperlinks.AsSpan());
+        _lastHyperlinkTable ??= new Dictionary<ulong, string>();
+        buffer.CopyHyperlinkTableTo(_lastHyperlinkTable);
         _hasSavedCursorPosition = true;
         _reservedHeight = height;
         _liveRegionTopRow = Math.Min(_liveRegionTopRow.GetValueOrDefault(), visibleHeight - height);
@@ -581,10 +627,11 @@ public sealed class InlineInteractiveHost : IDisposable
     private void EnsureLastBuffers(int width, int height)
     {
         var length = checked(width * height);
-        if (_lastScalars is null || _lastCells is null || _lastScalars.Length != length)
+        if (_lastScalars is null || _lastCells is null || _lastHyperlinks is null || _lastScalars.Length != length)
         {
             _lastScalars = new int[length];
             _lastCells = new CellStyle[length];
+            _lastHyperlinks = new ulong[length];
         }
 
         _lastWidth = width;
@@ -595,8 +642,11 @@ public sealed class InlineInteractiveHost : IDisposable
     {
         var scalars = _lastScalars!;
         var cells = _lastCells!;
+        var hyperlinks = _lastHyperlinks!;
+        var linkTable = _lastHyperlinkTable;
 
         var currentStyle = AnsiStyle.Default;
+        ulong currentHyperlink = 0;
         Span<char> runeBuffer = stackalloc char[2];
 
         for (var y = 0; y < height; y++)
@@ -622,6 +672,22 @@ public sealed class InlineInteractiveHost : IDisposable
                     currentStyle = nextStyle;
                 }
 
+                var nextHyperlink = hyperlinks[i];
+                if (nextHyperlink != currentHyperlink)
+                {
+                    if (currentHyperlink != 0)
+                    {
+                        writer.EndLink();
+                    }
+
+                    currentHyperlink = 0;
+                    if (nextHyperlink != 0 && linkTable is not null && linkTable.TryGetValue(nextHyperlink, out var uri))
+                    {
+                        writer.BeginLink(uri);
+                        currentHyperlink = nextHyperlink;
+                    }
+                }
+
                 var scalar = scalars[i];
                 if (scalar == 0)
                 {
@@ -639,6 +705,11 @@ public sealed class InlineInteractiveHost : IDisposable
             }
 
             writer.NextLine();
+        }
+
+        if (currentHyperlink != 0)
+        {
+            writer.EndLink();
         }
 
         if (currentStyle != AnsiStyle.Default)
