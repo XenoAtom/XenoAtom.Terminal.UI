@@ -1,4 +1,4 @@
-# Specifications for ControlsDemo (“MegaDemo”)
+# Specifications for ControlsDemo ("MegaDemo")
 
 This document specifies a “ControlsDemo” app showcasing XenoAtom.Terminal.UI controls and composition patterns. It should feel like a polished, modern application and be the primary place to:
 
@@ -205,13 +205,11 @@ Add a “Log” panel that can capture:
 
 ## Packaging & naming
 
-Project location: `samples/ControlsDemo` (or `samples/MegaDemo`).
+Project location: `samples/ControlsDemo`
 
 Name suggestions (pick one):
 
-- `XenoAtom.Terminal.UI.Demo`
 - `XenoAtom.Terminal.UI.ControlsDemo`
-- `XenoAtom.Terminal.UI.Showcase`
 
 Global tool packaging (later step):
 
