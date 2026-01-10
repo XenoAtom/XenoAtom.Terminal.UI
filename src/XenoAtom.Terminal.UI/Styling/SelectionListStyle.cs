@@ -14,7 +14,7 @@ public sealed record SelectionListStyle : IStyle<SelectionListStyle>
 
     public bool ShowBorder { get; init; }
 
-    public Rune FocusMarkerGlyph { get; init; } = new('>');
+    public Rune FocusMarkerGlyph { get; init; } = new('→');
 
     public Rune CheckedGlyph { get; init; } = new(0x2611); // ☑
 

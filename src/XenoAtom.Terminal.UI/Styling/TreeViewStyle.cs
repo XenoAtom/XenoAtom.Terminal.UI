@@ -34,7 +34,7 @@ public sealed record TreeViewStyle : IStyle<TreeViewStyle>
 
     public Rune DocumentGlyph { get; init; } = new(0x1F4C3);
 
-    public Rune FocusMarkerGlyph { get; init; } = new('>');
+    public Rune FocusMarkerGlyph { get; init; } = new('→');
 
     public CellStyle? Item { get; init; }
     public CellStyle? SelectedFocused { get; init; }

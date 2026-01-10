@@ -14,7 +14,7 @@ public sealed record ListBoxStyle : IStyle<ListBoxStyle>
 
     public bool ShowBorder { get; init; }
 
-    public Rune MarkerGlyph { get; init; } = new('>');
+    public Rune MarkerGlyph { get; init; } = new('→');
 
     public CellStyle? Item { get; init; }
     public CellStyle? SelectedFocused { get; init; }
