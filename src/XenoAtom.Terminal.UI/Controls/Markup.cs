@@ -64,16 +64,21 @@ public sealed partial class Markup : Visual
     {
         EnsureParsed();
 
-        var width = Wrap ? availableSize.Width : Math.Min(availableSize.Width, TerminalTextUtility.GetWidth(_plainText.AsSpan()));
-        width = Math.Max(0, width);
-
-        if (!Wrap || width == 0)
+        var text = _plainText.AsSpan();
+        var width = Wrap ? Math.Max(0, availableSize.Width) : Math.Max(0, Math.Min(availableSize.Width, GetMaxLineWidth(text)));
+        if (!Wrap)
         {
-            return new Size(width, 1);
+            var height = Math.Min(Math.Max(0, availableSize.Height), CountHardLines(text));
+            return new Size(width, height);
         }
 
-        var height = CountWrappedLines(_plainText.AsSpan(), Math.Max(1, width));
-        return new Size(width, Math.Min(availableSize.Height, Math.Max(1, height)));
+        if (width == 0)
+        {
+            return new Size(0, Math.Min(Math.Max(0, availableSize.Height), 1));
+        }
+
+        var wrappedHeight = CountWrappedLines(text, Math.Max(1, width));
+        return new Size(width, Math.Min(Math.Max(0, availableSize.Height), Math.Max(1, wrappedHeight)));
     }
 
     protected override void ArrangeOverride(Rectangle finalRect) => Bounds = finalRect;
@@ -89,31 +94,63 @@ public sealed partial class Markup : Visual
         }
 
         var text = _plainText.AsSpan();
-
-        if (!Wrap || rect.Height == 1)
-        {
-            WriteSingleLine(buffer, rect, text);
-            return;
-        }
-
-        var lineIndex = 0;
+        var y = rect.Y;
         var start = 0;
-        var maxWidth = rect.Width;
 
-        while (start < text.Length && lineIndex < rect.Height)
+        while (y < rect.Bottom && start <= text.Length)
         {
-            if (!TryGetNextWrapSlice(text, start, maxWidth, out var endExclusive, out var nextStart))
+            if (!TryGetNextHardLine(text, start, out var hardEnd, out var nextStart))
             {
                 break;
             }
 
-            WriteAlignedLine(buffer, rect, rect.Y + lineIndex, start, endExclusive, isLastLine: nextStart >= text.Length);
-            lineIndex++;
+            if (!Wrap)
+            {
+                WriteSingleLine(buffer, rect, y, start, hardEnd);
+                y++;
+            }
+            else
+            {
+                var hardLine = text.Slice(start, Math.Max(0, hardEnd - start));
+                if (hardLine.IsEmpty || IsAllWhitespace(hardLine))
+                {
+                    y++;
+                }
+                else
+                {
+                    var rel = 0;
+                    var any = false;
+                    while (y < rect.Bottom && rel < hardLine.Length)
+                    {
+                        if (!TryGetNextWrapSlice(hardLine, rel, rect.Width, out var relEnd, out var relNext))
+                        {
+                            break;
+                        }
+
+                        any = true;
+                        var isLastLine = relNext >= hardLine.Length;
+                        WriteAlignedLine(buffer, rect, y, start + rel, start + relEnd, isLastLine);
+                        y++;
+                        rel = relNext;
+                    }
+
+                    if (!any)
+                    {
+                        y++;
+                    }
+                }
+            }
+
+            if (nextStart == start)
+            {
+                break;
+            }
+
             start = nextStart;
         }
     }
 
-    private void WriteSingleLine(CellBuffer buffer, Rectangle rect, ReadOnlySpan<char> text)
+    private void WriteSingleLine(CellBuffer buffer, Rectangle rect, int y, int lineStartIndex, int lineEndIndex)
     {
         var maxWidth = rect.Width;
         if (maxWidth <= 0)
@@ -129,12 +166,14 @@ public sealed partial class Markup : Visual
             alignment = TextAlignment.Left;
         }
 
+        var text = _plainText.AsSpan(lineStartIndex, Math.Max(0, lineEndIndex - lineStartIndex));
+
         if (trimming == TextTrimming.Clip)
         {
-            var endIndex = GetEndIndexAtCell(text, maxWidth);
-            var cells = TerminalTextUtility.GetWidth(text[..endIndex]);
+            var clipEndIndex = GetEndIndexAtCell(text, maxWidth);
+            var cells = TerminalTextUtility.GetWidth(text[..clipEndIndex]);
             var x = AlignX(rect, alignment, maxWidth, cells);
-            WriteStyledSpan(buffer, x, rect.Y, 0, endIndex);
+            WriteStyledSpan(buffer, x, y, lineStartIndex, lineStartIndex + clipEndIndex);
             return;
         }
 
@@ -142,37 +181,37 @@ public sealed partial class Markup : Visual
         if (fullWidth <= maxWidth)
         {
             var x = AlignX(rect, alignment, maxWidth, fullWidth);
-            WriteStyledSpan(buffer, x, rect.Y, 0, text.Length);
+            WriteStyledSpan(buffer, x, y, lineStartIndex, lineStartIndex + text.Length);
             return;
         }
 
         if (maxWidth == 1)
         {
-            buffer.SetCell(rect.X, rect.Y, Ellipsis, CellStyle.None);
+            buffer.SetCell(rect.X, y, Ellipsis, CellStyle.None);
             return;
         }
 
         if (trimming == TextTrimming.EndEllipsis)
         {
             var bodyWidth = maxWidth - 1;
-            var endIndex = GetEndIndexAtCell(text, bodyWidth);
-            var bodyCells = TerminalTextUtility.GetWidth(text[..endIndex]);
+            var bodyEndIndex = GetEndIndexAtCell(text, bodyWidth);
+            var bodyCells = TerminalTextUtility.GetWidth(text[..bodyEndIndex]);
             var contentWidth = Math.Min(maxWidth, bodyCells + 1);
             var x = AlignX(rect, alignment, maxWidth, contentWidth);
-            WriteStyledSpan(buffer, x, rect.Y, 0, endIndex);
-            buffer.SetCell(x + bodyCells, rect.Y, Ellipsis, CellStyle.None);
+            WriteStyledSpan(buffer, x, y, lineStartIndex, lineStartIndex + bodyEndIndex);
+            buffer.SetCell(x + bodyCells, y, Ellipsis, CellStyle.None);
             return;
         }
 
         // StartEllipsis
         var suffixWidth = maxWidth - 1;
-        var startIndex = GetStartIndexForSuffix(text, suffixWidth);
-        var suffix = text[startIndex..];
+        var suffixStart = GetStartIndexForSuffix(text, suffixWidth);
+        var suffix = text[suffixStart..];
         var suffixCells = TerminalTextUtility.GetWidth(suffix);
         var contentW = Math.Min(maxWidth, 1 + suffixCells);
         var x0 = AlignX(rect, alignment, maxWidth, contentW);
-        buffer.SetCell(x0, rect.Y, Ellipsis, CellStyle.None);
-        WriteStyledSpan(buffer, x0 + 1, rect.Y, startIndex, text.Length);
+        buffer.SetCell(x0, y, Ellipsis, CellStyle.None);
+        WriteStyledSpan(buffer, x0 + 1, y, lineStartIndex + suffixStart, lineStartIndex + text.Length);
     }
 
     private void WriteAlignedLine(CellBuffer buffer, Rectangle rect, int y, int startIndex, int endExclusive, bool isLastLine)
@@ -313,19 +352,153 @@ public sealed partial class Markup : Visual
         }
 
         var lines = 0;
-        var start = 0;
-        while (start < text.Length)
+        var hardStart = 0;
+        while (hardStart <= text.Length)
         {
-            if (!TryGetNextWrapSlice(text, start, width, out _, out var nextStart))
+            if (!TryGetNextHardLine(text, hardStart, out var hardEnd, out var hardNext))
             {
                 break;
             }
 
-            lines++;
-            start = nextStart;
+            var hardLine = text.Slice(hardStart, Math.Max(0, hardEnd - hardStart));
+            if (hardLine.IsEmpty || IsAllWhitespace(hardLine))
+            {
+                lines++;
+            }
+            else
+            {
+                var relStart = 0;
+                var any = false;
+                while (relStart < hardLine.Length)
+                {
+                    if (!TryGetNextWrapSlice(hardLine, relStart, width, out _, out var relNext))
+                    {
+                        break;
+                    }
+
+                    any = true;
+                    lines++;
+                    relStart = relNext;
+                }
+
+                if (!any)
+                {
+                    lines++;
+                }
+            }
+
+            if (hardNext == hardStart)
+            {
+                break;
+            }
+
+            hardStart = hardNext;
         }
 
         return Math.Max(1, lines);
+    }
+
+    private static int GetMaxLineWidth(ReadOnlySpan<char> text)
+    {
+        var maxWidth = 0;
+        var start = 0;
+        while (start <= text.Length)
+        {
+            if (!TryGetNextHardLine(text, start, out var end, out var next))
+            {
+                break;
+            }
+
+            var line = text.Slice(start, Math.Max(0, end - start));
+            maxWidth = Math.Max(maxWidth, TerminalTextUtility.GetWidth(line));
+
+            if (next == start)
+            {
+                break;
+            }
+
+            start = next;
+        }
+
+        return maxWidth;
+    }
+
+    private static int CountHardLines(ReadOnlySpan<char> text)
+    {
+        var count = 1;
+        for (var i = 0; i < text.Length; i++)
+        {
+            var ch = text[i];
+            if (ch == '\n')
+            {
+                count++;
+                continue;
+            }
+
+            if (ch == '\r')
+            {
+                count++;
+                if (i + 1 < text.Length && text[i + 1] == '\n')
+                {
+                    i++;
+                }
+            }
+        }
+
+        return count;
+    }
+
+    private static bool TryGetNextHardLine(ReadOnlySpan<char> text, int start, out int endExclusive, out int nextStart)
+    {
+        endExclusive = start;
+        nextStart = start;
+
+        if (start > text.Length)
+        {
+            return false;
+        }
+
+        var i = start;
+        while (i < text.Length)
+        {
+            var ch = text[i];
+            if (ch == '\n' || ch == '\r')
+            {
+                break;
+            }
+
+            i++;
+        }
+
+        endExclusive = i;
+        nextStart = i;
+
+        if (i < text.Length)
+        {
+            if (text[i] == '\r' && i + 1 < text.Length && text[i + 1] == '\n')
+            {
+                nextStart = i + 2;
+            }
+            else
+            {
+                nextStart = i + 1;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsAllWhitespace(ReadOnlySpan<char> text)
+    {
+        for (var i = 0; i < text.Length; i++)
+        {
+            var ch = text[i];
+            if (ch != ' ' && ch != '\t')
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static bool TryGetNextWrapSlice(ReadOnlySpan<char> text, int start, int width, out int endExclusive, out int nextStart)
@@ -467,4 +640,3 @@ public sealed partial class Markup : Visual
         }
     }
 }
-
