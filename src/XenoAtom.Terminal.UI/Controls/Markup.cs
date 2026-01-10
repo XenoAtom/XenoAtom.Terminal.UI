@@ -65,20 +65,34 @@ public sealed partial class Markup : Visual
         EnsureParsed();
 
         var text = _plainText.AsSpan();
-        var width = Wrap ? Math.Max(0, availableSize.Width) : Math.Max(0, Math.Min(availableSize.Width, GetMaxLineWidth(text)));
+        var availableWidth = Math.Max(0, availableSize.Width);
+        var availableHeight = Math.Max(0, availableSize.Height);
+
+        //if (Wrap && IsUnbounded(availableWidth))
+        //{
+        //    // Unbounded width means "no wrapping constraint": report the intrinsic width,
+        //    // not the (infinite) available width. This prevents ScrollViewer from treating
+        //    // the content extent as effectively infinite.
+        //    var naturalWidth = GetMaxLineWidth(text);
+        //    var naturalHeight = CountHardLines(text);
+        //    return new Size(naturalWidth, Math.Min(availableHeight, naturalHeight));
+        //}
+        //var width = Wrap ? availableWidth : Math.Max(0, Math.Min(availableWidth, GetMaxLineWidth(text)));
+
+        var width = Math.Max(0, Math.Min(availableWidth, GetMaxLineWidth(text)));
         if (!Wrap)
         {
-            var height = Math.Min(Math.Max(0, availableSize.Height), CountHardLines(text));
+            var height = Math.Min(availableHeight, CountHardLines(text));
             return new Size(width, height);
         }
 
         if (width == 0)
         {
-            return new Size(0, Math.Min(Math.Max(0, availableSize.Height), 1));
+            return new Size(0, Math.Min(availableHeight, 1));
         }
 
         var wrappedHeight = CountWrappedLines(text, Math.Max(1, width));
-        return new Size(width, Math.Min(Math.Max(0, availableSize.Height), Math.Max(1, wrappedHeight)));
+        return new Size(width, Math.Min(availableHeight, Math.Max(1, wrappedHeight)));
     }
 
     protected override void ArrangeOverride(Rectangle finalRect) => Bounds = finalRect;
@@ -447,6 +461,11 @@ public sealed partial class Markup : Visual
 
         return count;
     }
+
+    private static bool IsUnbounded(int size)
+        // The UI framework uses int.MaxValue/4 to represent "infinite" for measure constraints.
+        // Treat very large sizes as unbounded.
+        => size >= int.MaxValue / 8;
 
     private static bool TryGetNextHardLine(ReadOnlySpan<char> text, int start, out int endExclusive, out int nextStart)
     {
