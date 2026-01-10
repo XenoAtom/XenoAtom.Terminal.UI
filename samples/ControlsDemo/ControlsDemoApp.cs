@@ -72,9 +72,9 @@ internal static class ControlsDemoApp
                 BuildSidebarList(demos, selectedIndex, query: searchBox.Text ?? string.Empty));
 
             var sidebar = new VStack(
-                    new Group()
-                        .TopLeftText("Browse")
-                        .Padding(0)
+                     new Group()
+                         .TopLeftText("Browse")
+                         .Padding(0)
                         .HorizontalAlignment(HorizontalAlignment.Stretch)
                         .Content(new VStack(
                                 searchBox,
@@ -103,17 +103,12 @@ internal static class ControlsDemoApp
                 });
             });
 
-            var layout = new VStack(
-                    header,
-                    menu,
-                    new HSplitter(
-                            sidebar,
-                            page)
-                        .HorizontalAlignment(HorizontalAlignment.Stretch)
-                        .VerticalAlignment(VerticalAlignment.Stretch),
-                    new Rule(),
-                    footer)
-                .Spacing(0)
+            var layout = new DockLayout()
+                .Top(new VStack(header, menu).Spacing(0))
+                .Bottom(new VStack(new Rule(), footer).Spacing(0))
+                .Content(new HSplitter(sidebar, page)
+                    .HorizontalAlignment(HorizontalAlignment.Stretch)
+                    .VerticalAlignment(VerticalAlignment.Stretch))
                 .HorizontalAlignment(HorizontalAlignment.Stretch)
                 .VerticalAlignment(VerticalAlignment.Stretch)
                 .Style(theme);

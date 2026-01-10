@@ -47,6 +47,18 @@ public abstract partial class SplitterBase : Visual
     [Bindable]
     public partial int MinSecond { get; set; }
 
+    partial void OnMinFirstChanged(int value)
+    {
+        _ = value;
+        MarkArrangeDirty();
+    }
+
+    partial void OnMinSecondChanged(int value)
+    {
+        _ = value;
+        MarkArrangeDirty();
+    }
+
     partial void OnRatioChanging(ref double value)
     {
         if (double.IsNaN(value) || double.IsInfinity(value))
@@ -57,12 +69,24 @@ public abstract partial class SplitterBase : Visual
         value = Math.Clamp(value, 0.0, 1.0);
     }
 
+    partial void OnRatioChanged(double value)
+    {
+        _ = value;
+        MarkArrangeDirty();
+    }
+
     partial void OnBarSizeChanging(ref int value)
     {
         if (value < 1)
         {
             value = 1;
         }
+    }
+
+    partial void OnBarSizeChanged(int value)
+    {
+        _ = value;
+        MarkMeasureDirty();
     }
 
     protected override int ChildrenCount => (_first is null ? 0 : 1) + (_second is null ? 0 : 1);

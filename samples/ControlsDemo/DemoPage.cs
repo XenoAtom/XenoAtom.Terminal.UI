@@ -29,6 +29,7 @@ internal static class DemoPage
             VerticalAlignment = VerticalAlignment.Stretch,
         };
 
+
         var logTab = BuildLogTab(log);
         var sourceTab = BuildSourceTab(meta, log);
 
@@ -41,11 +42,15 @@ internal static class DemoPage
             VerticalAlignment = VerticalAlignment.Stretch,
         };
 
-        return new VStack(
+        var header = new VStack(
                 new Markup($"[bold]{EscapeMarkup(meta.Name)}[/]"),
-                new Markup($"[dim]{EscapeMarkup(meta.Description)}[/]").Wrap(true),
-                tabs)
+                new Markup($"[dim]{EscapeMarkup(meta.Description)}[/]").Wrap(true))
             .Spacing(1)
+            .HorizontalAlignment(HorizontalAlignment.Stretch);
+
+        return new DockLayout()
+            .Top(header)
+            .Content(tabs)
             .HorizontalAlignment(HorizontalAlignment.Stretch)
             .VerticalAlignment(VerticalAlignment.Stretch);
     }
