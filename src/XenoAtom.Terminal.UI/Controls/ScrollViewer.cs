@@ -32,8 +32,14 @@ public sealed partial class ScrollViewer : Visual
         HorizontalAlignment = HorizontalAlignment.Stretch;
 
         _contentHost = new ContentViewportHost(this);
-        _verticalBar = new ScrollBar(focusable: false).Orientation(Orientation.Vertical);
-        _horizontalBar = new ScrollBar(focusable: false).Orientation(Orientation.Horizontal);
+        _verticalBar = new ScrollBar(focusable: false)
+            .Orientation(Orientation.Vertical)
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .VerticalAlignment(VerticalAlignment.Stretch);
+        _horizontalBar = new ScrollBar(focusable: false)
+            .Orientation(Orientation.Horizontal)
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .VerticalAlignment(VerticalAlignment.Stretch);
         _corner = new ScrollCornerVisual(this);
 
         _verticalBar.ValueChanged(static (s, e) =>

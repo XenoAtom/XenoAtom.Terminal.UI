@@ -129,4 +129,38 @@ public sealed class ScrollViewerRenderingTests
         var outText = backend.GetOutText();
         StringAssert.Contains(outText, "Late content");
     }
+
+    [TestMethod]
+    public async Task ScrollViewer_Renders_ScrollBars_When_Content_Overflows()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(30, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var items = new VStack();
+        for (var i = 0; i < 200; i++)
+        {
+            items.Add($"Hello {i}");
+        }
+
+        var root = new ScrollViewer
+        {
+            Content = items,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+        };
+
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunInBackgroundAsync();
+
+        await Task.Delay(60);
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var screen = new AnsiTestScreen(30, 10);
+        screen.Apply(backend.GetOutText());
+        var rendered = screen.GetText();
+
+        // Default ScrollBarGlyphs are ░/█, content is "Hello {i}", so either rune indicates a scrollbar was drawn.
+        Assert.IsTrue(rendered.Contains('░', StringComparison.Ordinal) || rendered.Contains('█', StringComparison.Ordinal), "Expected ScrollViewer to render scrollbars when content overflows.");
+    }
 }
