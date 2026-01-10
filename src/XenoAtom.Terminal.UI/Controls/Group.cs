@@ -11,6 +11,15 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class Group : Visual
 {
+    public Group()
+    {
+    }
+
+    public Group(Visual topLeftText)
+    {
+        TopLeftText = topLeftText;
+    }
+    
     [Bindable]
     public partial Thickness Padding { get; set; }
 

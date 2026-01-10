@@ -36,9 +36,10 @@ public sealed class TablesMarkupLinksDemo : ControlsDemoBase
         link.Opened((_, e) => context.Log($"Link opened: {e.Uri}"));
 
         return new VStack(
-                new Group().TopLeftText("Markup").Padding(1).HorizontalAlignment(HorizontalAlignment.Stretch).Content(markup),
-                new Group().TopLeftText("Link").Padding(1).HorizontalAlignment(HorizontalAlignment.Stretch).Content(link),
-                new Group().TopLeftText("Table").Padding(1).HorizontalAlignment(HorizontalAlignment.Stretch).Content(table))
+                new Group("Markup").Padding(1).HorizontalAlignment(HorizontalAlignment.Stretch).Content(markup),
+                new Group("Link").Padding(1).HorizontalAlignment(HorizontalAlignment.Stretch).Content(link)
+                //, new Group().TopLeftText("Table").Padding(1).HorizontalAlignment(HorizontalAlignment.Stretch).Content(table)
+                )
             .Spacing(1)
             .HorizontalAlignment(HorizontalAlignment.Stretch);
     }
