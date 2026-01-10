@@ -75,11 +75,13 @@ public sealed partial class ScrollViewer : Visual
     {
         get
         {
+            VerifyAccess();
             BindingManager.Current.RegisterRead(this, __Content__BindingAccessor.Instance);
             return _content;
         }
         set
         {
+            VerifyAccess();
             if (ReferenceEquals(_content, value))
             {
                 return;
@@ -96,6 +98,7 @@ public sealed partial class ScrollViewer : Visual
                 _contentHost.SetContent(value);
             }
 
+            MarkMeasureDirty();
             BindingManager.Current.NotifyValueChanged(this, __Content__BindingAccessor.Instance);
         }
     }
@@ -116,7 +119,7 @@ public sealed partial class ScrollViewer : Visual
     protected override Size MeasureOverride(Size availableSize)
     {
         var height = Math.Max(1, Height);
-        var content = _content;
+        var content = Content;
         if (content is not null)
         {
             content.Measure(new Size(int.MaxValue / 4, int.MaxValue / 4));
@@ -138,7 +141,7 @@ public sealed partial class ScrollViewer : Visual
     {
         Bounds = finalRect;
 
-        if (_content is null)
+        if (Content is null)
         {
             return;
         }

@@ -12,6 +12,38 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class ScrollViewerRenderingTests
 {
     [TestMethod]
+    public async Task ScrollViewer_Renders_Content_When_Inside_TabControl()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(80, 20));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var demoTab = new ScrollViewer
+        {
+            Content = new VStack(new TextBlock("Hello from ScrollViewer")).Spacing(1).HorizontalAlignment(HorizontalAlignment.Stretch),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+        };
+
+        var root = new TabControl(
+            new TabPage("Demo", demoTab),
+            new TabPage("Other", new TextBlock("Other")))
+        {
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+        };
+
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunInBackgroundAsync();
+
+        await Task.Delay(40);
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var outText = backend.GetOutText();
+        StringAssert.Contains(outText, "Hello from ScrollViewer");
+    }
+
+    [TestMethod]
     public async Task ScrollViewer_Renders_Content()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(60, 12));
@@ -70,5 +102,31 @@ public sealed class ScrollViewerRenderingTests
 
         StringAssert.Contains(rendered, "Item 1");
         Assert.IsFalse(rendered.Contains("Item 0", StringComparison.Ordinal), "After scrolling down, Item 0 should no longer be visible in the viewport.");
+    }
+
+    [TestMethod]
+    public async Task ScrollViewer_Renders_Content_When_Set_After_Initial_Render()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var root = new ScrollViewer { Height = 4, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunInBackgroundAsync();
+
+        await Task.Delay(40);
+
+        app.Post(() =>
+        {
+            root.Content = new TextBlock("Late content");
+        });
+
+        await Task.Delay(80);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var outText = backend.GetOutText();
+        StringAssert.Contains(outText, "Late content");
     }
 }

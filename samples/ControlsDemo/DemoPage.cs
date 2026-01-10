@@ -29,7 +29,6 @@ internal static class DemoPage
             VerticalAlignment = VerticalAlignment.Stretch,
         };
 
-
         var logTab = BuildLogTab(log);
         var sourceTab = BuildSourceTab(meta, log);
 

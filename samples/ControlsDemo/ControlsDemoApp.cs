@@ -69,7 +69,9 @@ internal static class ControlsDemoApp
                 .HorizontalAlignment(HorizontalAlignment.Stretch);
 
             var sidebarList = new ComputedVisual(() =>
-                BuildSidebarList(demos, selectedIndex, query: searchBox.Text ?? string.Empty));
+                    BuildSidebarList(demos, selectedIndex, query: searchBox.Text ?? string.Empty))
+                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                .VerticalAlignment(VerticalAlignment.Stretch);
 
             var sidebar = new VStack(
                      new Group()
@@ -101,7 +103,9 @@ internal static class ControlsDemoApp
                     Log = _ => { },
                     Runtime = runtime,
                 });
-            });
+            })
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .VerticalAlignment(VerticalAlignment.Stretch);
 
             var layout = new DockLayout()
                 .Top(new VStack(header, menu).Spacing(0))
@@ -117,7 +121,9 @@ internal static class ControlsDemoApp
             layout.AddKeyBinding(new global::XenoAtom.Terminal.UI.Input.TerminalKeyGesture('t', TerminalModifiers.Ctrl), () => themeIndex.Value = 1 - themeIndex.Value);
 
             return layout;
-        });
+        })
+        .HorizontalAlignment(HorizontalAlignment.Stretch)
+        .VerticalAlignment(VerticalAlignment.Stretch);
     }
 
     private static MenuBar BuildMenuBar(CommandPalette commandPalette, State<int> themeIndex)
