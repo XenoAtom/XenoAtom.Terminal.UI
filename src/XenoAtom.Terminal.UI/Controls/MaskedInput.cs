@@ -281,6 +281,24 @@ public sealed partial class MaskedInput : Visual, ICursorProvider
                 }
             }
         }
+
+        if (isFocused)
+        {
+            var caretX = caretCells - _scrollCellOffset;
+            if (caretX >= 0 && caretX < contentWidth)
+            {
+                if (!HasSelection)
+                {
+                    var caretRune = new Rune(' ');
+                    if (caretIndex < text.Length && Rune.DecodeFromUtf16(text.AsSpan(caretIndex), out var rune, out var consumed) == OperationStatus.Done && consumed > 0)
+                    {
+                        caretRune = rune;
+                    }
+
+                    buffer.SetCell(contentXAligned + caretX, textRowY, caretRune, CellStyle.None | TextStyle.Invert);
+                }
+            }
+        }
     }
 
     private void RenderMasked(
@@ -351,6 +369,18 @@ public sealed partial class MaskedInput : Visual, ICursorProvider
             }
 
             buffer.SetCell(x, textRowY, glyph, cellStyle);
+        }
+
+        if (isFocused)
+        {
+            var caretX = caretCells - _scrollCellOffset;
+            if (caretX >= 0 && caretX < contentWidth)
+            {
+                if (!HasSelection)
+                {
+                    buffer.SetCell(xBase + caretX, textRowY, caretIndex < text.Length ? glyph : new Rune(' '), CellStyle.None | TextStyle.Invert);
+                }
+            }
         }
     }
 

@@ -12,6 +12,28 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class MaskedInputTests
 {
     [TestMethod]
+    public async Task MaskedInput_Renders_Caret_When_Focused()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 6));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var input = new MaskedInput()
+            .Text("secret")
+            .RevealMode(MaskedInputRevealMode.Never);
+
+        var root = new VStack { input };
+
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunInBackgroundAsync();
+
+        await Task.Delay(60);
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.IsTrue(backend.GetOutText().Contains("\x1b[7m", StringComparison.Ordinal), "Expected caret to render using reverse-video (SGR 7).");
+    }
+
+    [TestMethod]
     public async Task MaskedInput_Renders_Masked_Text_When_RevealNever()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 6));
@@ -64,4 +86,3 @@ public sealed class MaskedInputTests
         StringAssert.Contains(rendered, "secret");
     }
 }
-
