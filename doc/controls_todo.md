@@ -28,7 +28,7 @@ Following this list, you will find compact specs for high and medium priority co
 | [ ] | **Medium** | **Sparkline**                                         | Visualization              | Tiny trends                          | High value / low scope                            |
 | [ ] | **Medium** | **Basic charts (bar/line)**                           | Visualization              | Dashboards/telemetry                 | Highly desirable                                  |
 | [ ] | **Medium** | **Links (clickable/open URL)**                        | Interaction/content        | Hyperlinks in terminal               | Terminal support varies                           |
-| [ ] | **Medium** | **ContentSwitcher (view routing)**                  | Layout/state               | Swap views without rebuild           | Great for navigation/wizards                      |
+| [x] | **Medium** | **ContentSwitcher (view routing)**                  | Layout/state               | Swap views without rebuild           | Great for navigation/wizards                      |
 | [ ] | **Medium** | **Command palette / quick open**                      | Navigation                 | Searchable actions                   | Big productivity boost                            |
 | [ ] | **Low**   | **Toast / Notification**                               | UX feedback                | Non-blocking feedback                | Modern UX; avoids modal spam                      |
 | [ ] | **Low**    | **Digits / KPI big-number**                           | Visualization              | Dashboard counters                   | Mostly polish                                     |

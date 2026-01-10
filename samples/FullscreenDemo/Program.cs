@@ -10,6 +10,7 @@ using var session = Terminal.Open();
 var statusState = new State<string>("ready");
 var progressState = new State<double>(0.0);
 var sliderState = new State<double>(0.35);
+var switcherIndexState = new State<int>(0);
 
 var select = new Select();
 select.Items.AddRange(
@@ -215,6 +216,29 @@ var rightColumn = new VStack(
                         .Height(4)
                         .HorizontalAlignment(HorizontalAlignment.Stretch)
                         .Content(new VStack().Add(Enumerable.Range(0, 12).Select(i => (Visual)new TextBlock($"Log line {i}")).ToArray())))
+                ,
+                new TabPage(
+                    "Switcher",
+                    new VStack(
+                            new HStack(
+                                    new Button("View 1").Click(() => switcherIndexState.Value = 0),
+                                    new Button("View 2").Click(() => switcherIndexState.Value = 1),
+                                    new TextBlock().Text(() => $"Selected={switcherIndexState.Value}"))
+                                .Spacing(1),
+                            new ContentSwitcher()
+                                .SelectedIndex(switcherIndexState)
+                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .Add(
+                                    new Group()
+                                        .TopLeftText("First view")
+                                        .Padding(Thickness.Zero)
+                                        .Content(new VStack("Hello from view 1", "Use the buttons above to switch").Spacing(0)),
+                                    new Group()
+                                        .TopLeftText("Second view")
+                                        .Padding(Thickness.Zero)
+                                        .Content(new VStack("View 2 content", "This is a different visual tree").Spacing(0))))
+                        .Spacing(1)
+                        .HorizontalAlignment(HorizontalAlignment.Stretch))
                 ,
                 new TabPage(
                     new HStack("Lists", new TextBlock().Text(() => $"(Select={select.SelectedIndex}, Checked={selectionList.Items.Count(i => i.IsChecked)})"))
