@@ -12,6 +12,8 @@ var progressState = new State<double>(0.0);
 var sliderState = new State<double>(0.35);
 var switcherIndexState = new State<int>(0);
 var switchState = new State<bool>(false);
+var chartTickState = new State<int>(0);
+var chartValues = new double[80];
 
 var select = new Select();
 select.Items.AddRange(
@@ -367,6 +369,51 @@ var rightColumn = new VStack(
                 new TabPage(
                     "Tree",
                     tree.HorizontalAlignment(HorizontalAlignment.Stretch))
+                ,
+                new TabPage(
+                    "Viz",
+                    new VStack(
+                            new Group()
+                                .TopLeftText("Sparkline")
+                                .Padding(Thickness.Zero)
+                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .Content(new Sparkline()
+                                    .Values(() =>
+                                    {
+                                        _ = chartTickState.Value;
+                                        return chartValues;
+                                    })
+                                    .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                    .Style(SparklineStyle.Default with { Glyphs = SparklineGlyphs.Blocks8 })),
+                            new Group()
+                                .TopLeftText("BarChart")
+                                .Padding(Thickness.Zero)
+                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .Content(new BarChart()
+                                    .Values(() =>
+                                    {
+                                        _ = chartTickState.Value;
+                                        return chartValues;
+                                    })
+                                    .Orientation(Orientation.Vertical)
+                                    .MinHeight(4)
+                                    .MaxHeight(4)
+                                    .HorizontalAlignment(HorizontalAlignment.Stretch)),
+                            new Group()
+                                .TopLeftText("LineChart")
+                                .Padding(Thickness.Zero)
+                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .Content(new LineChart()
+                                    .Values(() =>
+                                    {
+                                        _ = chartTickState.Value;
+                                        return chartValues;
+                                    })
+                                    .MinHeight(4)
+                                    .MaxHeight(4)
+                                    .HorizontalAlignment(HorizontalAlignment.Stretch)))
+                        .Spacing(1)
+                        .HorizontalAlignment(HorizontalAlignment.Stretch))
             })
             .HorizontalAlignment(HorizontalAlignment.Stretch),
         new TextBlock().Text(() => $"Status: {statusState.Value} | Slider: {sliderState.Value:0.00}"))
@@ -416,5 +463,9 @@ Terminal.Run(root, () =>
     lastTick = now;
     t += 0.02;
     progressState.Value = (Math.Sin(t) + 1.0) / 2.0;
+
+    Array.Copy(chartValues, 1, chartValues, 0, chartValues.Length - 1);
+    chartValues[^1] = progressState.Value;
+    chartTickState.Value++;
     return true;
 });

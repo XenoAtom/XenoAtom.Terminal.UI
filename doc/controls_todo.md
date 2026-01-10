@@ -26,11 +26,10 @@ Following this list, you will find compact specs for high and medium priority co
 | [x] | **Medium** | **Menu**                                              | Navigation/input           | Full menu                            | Menu                                              |
 | [x] | **Medium** | **Command palette / quick open**                      | Navigation/input           | Searchable action launcher            | Great UX for larger apps                          |
 | [x] | **Medium** | **Switch (toggle)**                                   | Input                      | Modern toggle UI                     | Nice settings affordance                          |
-| [ ] | **Medium** | **Sparkline**                                         | Visualization              | Tiny trends                          | High value / low scope                            |
-| [ ] | **Medium** | **Basic charts (bar/line)**                           | Visualization              | Dashboards/telemetry                 | Highly desirable                                  |
+| [x] | **Medium** | **Sparkline**                                         | Visualization              | Tiny trends                          | High value / low scope                            |
+| [x] | **Medium** | **Basic charts (bar/line)**                           | Visualization              | Dashboards/telemetry                 | Highly desirable                                  |
 | [x] | **Medium** | **Links (clickable/open URL)**                        | Interaction/content        | Hyperlinks in terminal               | Terminal support varies                           |
 | [x] | **Medium** | **ContentSwitcher (view routing)**                  | Layout/state               | Swap views without rebuild           | Great for navigation/wizards                      |
-| [ ] | **Medium** | **Command palette / quick open**                      | Navigation                 | Searchable actions                   | Big productivity boost                            |
 | [ ] | **Low**   | **Toast / Notification**                               | UX feedback                | Non-blocking feedback                | Modern UX; avoids modal spam                      |
 | [ ] | **Low**    | **Digits / KPI big-number**                           | Visualization              | Dashboard counters                   | Mostly polish                                     |
 | [ ] | **Low**    | **Placeholder / empty-state widget**                  | UX                         | No-results/loading states            | Polish; easy to fake                              |
