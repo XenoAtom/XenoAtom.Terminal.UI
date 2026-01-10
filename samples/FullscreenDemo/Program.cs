@@ -243,6 +243,11 @@ var rightColumn = new VStack(
                                 .IsOn(switchState)
                                 .Toggled((_, e) => statusState.Value = $"switch={e.NewValue}")
                                 .HorizontalAlignment(HorizontalAlignment.Left),
+                            new MaskedInput()
+                                .Text("hunter2")
+                                .Placeholder("Password")
+                                .RevealMode(MaskedInputRevealMode.WhileFocused)
+                                .HorizontalAlignment(HorizontalAlignment.Stretch),
                             new Group()
                                 .TopLeftText("Accordion")
                                 .Padding(Thickness.Zero)
