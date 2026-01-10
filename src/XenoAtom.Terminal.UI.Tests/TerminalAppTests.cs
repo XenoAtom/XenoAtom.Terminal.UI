@@ -787,6 +787,21 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public void TabControl_Sets_Bounds_On_Arrange()
+    {
+        var tabControl = new TabControl(
+            new TabPage("One", new TextBlock("A")),
+            new TabPage("Two", new TextBlock("B")))
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .VerticalAlignment(VerticalAlignment.Stretch);
+
+        tabControl.Measure(new Size(80, 25));
+        tabControl.Arrange(new Rectangle(0, 0, 80, 25));
+
+        Assert.AreEqual(new Rectangle(0, 0, 80, 25), tabControl.Bounds);
+    }
+
+    [TestMethod]
     public async Task TextBox_Edits_Text_And_Uses_Clipboard_Paste()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));

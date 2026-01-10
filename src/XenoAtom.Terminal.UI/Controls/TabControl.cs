@@ -156,6 +156,8 @@ public sealed partial class TabControl : Visual
 
     protected override void ArrangeOverride(Rectangle finalRect)
     {
+        Bounds = finalRect;
+
         var style = Get<TabControlStyle>();
         var pad = style.TabPadding;
         var showBorder = style.ShowBorder;
