@@ -4,7 +4,7 @@ This is the list of controls planned for the core XenoAtom.Terminal.UI library. 
 
 Once a control is completed, test have been added and it has been added to the FullscreenDemo app, it can be checked off the list.
 
-Following this list, you will find a compact spec for each high-priority control to guide implementation.
+Following this list, you will find compact specs for high and medium priority controls to guide implementation.
 
 | Done | Priority   | Missing component                                     | Category                   | What it unlocks                      | Why it’s worth it                                 |
 | --- | ---------- | ----------------------------------------------------- | -------------------------- | ------------------------------------ | ------------------------------------------------- |
@@ -20,7 +20,7 @@ Following this list, you will find a compact spec for each high-priority control
 | [x] | **High**   | **TreeView**                                          | Navigation                 | Hierarchical navigation              | Big UX upgrade over flat lists                    |
 | [x] | **Medium** | **LoadingIndicator / Spinner**                        | Status                     | Busy state (unknown duration)        | Complements ProgressBar                           |
 | [ ] | **Medium** | **Collapsible / Accordion**                           | Layout                     | Progressive disclosure               | Keeps screens navigable                           |
-| [ ] | **Medium** | **Advanced Grid Layout** | Layout   | 2D composition for forms/inspectors/dashboards with consistent alignment | “Killer” layout that removes deep nesting and covers most real screens |
+| [ ] | **Medium** | **Advanced Grid Layout**                              | Layout                     | 2D composition for forms/inspectors/dashboards with consistent alignment | "Killer" layout that removes deep nesting and covers most real screens |
 | [ ] | **Medium** | **MaskedInput (password/secret)**                     | Input                      | Auth + secrets                       | Often needed early                                |
 | [ ] | **Medium** | **OptionList (fast menu list)**                       | Navigation/input           | Command menus/quick pickers          | Base for palettes/menus                           |
 | [ ] | **Medium** | **Menu**                                              | Navigation/input           | Full menu                            | Menu                                              |
@@ -49,7 +49,7 @@ These controls will require additional dependencies, so they will be delivered a
 | --- | ------------------ | --------------------------- | -------------------------------------------------------------------------------- |
 | [ ] | **MarkdownViewer** | Markdig (or Markdown stack) | Keep core dependency-free; integrate via core rich-text spans + add-on renderer. |
 
-Beyond the follow specs, if there are improvements or features that would make sense for a control based on your experience implementing it, feel free to add them.
+Beyond the following specs, if there are improvements or features that would make sense for a control based on your experience implementing it, feel free to add them.
 
 # High priority control specs
 
@@ -151,7 +151,17 @@ Beyond the follow specs, if there are improvements or features that would make s
 
 # Medium priority control specs
 
-## Grid
+## Collapsible / Accordion
+
+* **API**: `Header` (Visual), `Content` (Visual), `IsExpanded` (bool), optional `ExpandDirection` (Down/Up)
+* **Accordion mode**: optional parent/group behavior to keep at most one expanded
+* **Layout**: when collapsed, measure/arrange only header; when expanded, include content
+* **Interaction**: click header toggles; keyboard Space/Enter toggles when focused
+* **States**: normal/hover/focused/disabled styling for the header row
+* **Glyphs**: style-driven expand/collapse glyph and spacing
+* **Events**: `ExpandedChanged` (and/or `IsExpanded` bindable)
+
+## Advanced Grid Layout (Grid)
 
 * **Row/Column definitions**: `Fixed(n)`, `Auto`, `Star(weight)`
 * **Min/Max constraints**: `Min`, `Max` per row/column (applies after sizing mode)
@@ -166,3 +176,79 @@ Beyond the follow specs, if there are improvements or features that would make s
 * **Shared size groups**: optional "SharedGroup" to equalize column widths across multiple grids (great for property panels)
 * **Hit-testing / focus order**: cell-aware navigation ordering (row-major default; configurable)
 
+## MaskedInput (password/secret)
+
+* **API**: `Text` (string), `MaskGlyph` (Rune/string), `RevealMode` (Never/WhileFocused/Always), `Placeholder` (Visual?)
+* **Editing**: TextBox-like movement/selection/clipboard; respects max length; optional allowed character filter
+* **Reveal**: optional "momentary reveal" (e.g. last typed char) as a style/behavior flag
+* **Clipboard**: configurable copy/cut behavior (copy real text vs disabled)
+* **Interaction**: focus, mouse click to set caret, keyboard editing, paste
+* **Theming**: same surface/border/caret/selection model as TextBox
+
+## OptionList (fast menu list)
+
+* **Item model**: `OptionListItem` with `Content` (Visual), optional `Description` (Visual), optional `Shortcut` (Visual), `IsEnabled`
+* **Selection**: `SelectedIndex` bindable; keeps selection visible when scrolling
+* **Keyboard**: Up/Down, PageUp/Down, Home/End; Enter/Space activates
+* **Search**: type-to-filter or type-to-jump (configurable), highlight match
+* **Mouse**: click selects/activates; wheel scroll; hover highlight
+* **Rendering**: virtualization for large lists; spacing between marker/icon/text is style-driven
+* **Events**: `SelectionChanged`, `ItemActivated`
+
+## Menu
+
+* **Model**: `MenuItem` tree (header Visual, optional icon Visual, optional shortcut Visual, `IsEnabled`, optional checked state)
+* **Surfaces**: `MenuBar` (top-level) + popup submenu panels; separators supported
+* **Keyboard**: Alt focuses menu bar; arrows navigate; Enter/Space activates; Esc closes; type-to-jump within open menu
+* **Mouse**: click to open/activate; hover opens adjacent; click outside closes
+* **Commands**: per-item `Action` callback (optionally async later); disabled items ignored
+* **Theming**: focus/hover/pressed colors; separator glyphs; submenu arrow glyph; padding/spacing
+
+## Switch (toggle)
+
+* **API**: `IsOn` (bool), optional `Content` (Visual), optional `IsThreeState` later
+* **Interaction**: Space/Enter toggles; Left/Right sets Off/On; mouse click toggles
+* **Rendering**: style-driven track/thumb glyphs (and optional On/Off labels); width measured from glyphs + content
+* **States**: normal/hover/focused/disabled styling, including distinct pressed visual
+* **Events**: `Toggled` (and/or `IsOn` bindable)
+
+## Sparkline
+
+* **Data**: numeric series (list/span), optional explicit `Min`/`Max` (auto-scale by default)
+* **Rendering**: style chooses rune set (blocks/braille/shades), optional gradient/threshold coloring
+* **Size**: default 1 row; optional multi-row for denser plots
+* **Markers**: optional current/min/max marker glyphs (style-driven)
+* **Performance**: avoids allocations per render; caches computed frames when input unchanged
+
+## Basic charts (bar/line)
+
+* **Controls**: `BarChart` (horizontal/vertical) and `LineChart` (optionally builds on Sparkline logic)
+* **Data**: single series for MVP; extensible to multi-series and stacked bars
+* **Labels**: optional axis labels/titles/legend via Visual slots
+* **Scaling**: auto-scale + clamp; supports fixed range
+* **Theming**: per-series colors; gridline/axis glyphs; compact terminals-first layout rules
+
+## Links (clickable/open URL)
+
+* **API**: `Uri`/`Href` + `Content` (Visual)
+* **Output**: emits terminal hyperlink sequences when supported; otherwise styled fallback (underline/primary color)
+* **Interaction**: mouse click activates; keyboard Enter activates when focused; hover styling
+* **Behavior**: `OnOpen` callback; optional copy-to-clipboard helper action
+* **Accessibility**: focus rectangle/underline; tooltip-like display (optional later)
+
+## ContentSwitcher (view routing)
+
+* **API**: content collection + `SelectedIndex`/`SelectedKey` bindable
+* **Layout**: only selected child is measured/arranged/rendered
+* **Lifetime**: optional `KeepAlive` (cache created children) vs recreate on switch
+* **Navigation**: integrates well with Tabs/Menu; supports programmatic switching
+* **Events**: `SelectionChanged`
+
+## Command palette / quick open
+
+* **Composition**: search input + results list (reuse OptionList); works as popup or embedded
+* **Providers**: async-friendly item source with cancellation; supports grouping/categories later
+* **Search**: fuzzy matching + highlighting; configurable minimum query length
+* **Keyboard**: open command (host-defined), Esc closes, Up/Down navigate, Enter runs, Ctrl+Enter reserved
+* **Mouse**: click selects/runs; click outside closes when used as popup
+* **UX**: optional "recent" + history; empty state Visual; busy state spinner integration
