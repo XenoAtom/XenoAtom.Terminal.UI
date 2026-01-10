@@ -58,7 +58,7 @@ public sealed class ScrollViewerRenderingTests
             "Log line 4",
         };
 
-        var root = new ScrollViewer { Height = 6, Content = content };
+        var root = new ScrollViewer { Content = content };
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
         var runTask = app.RunInBackgroundAsync();
@@ -84,7 +84,7 @@ public sealed class ScrollViewerRenderingTests
             content.Add($"Item {i}");
         }
 
-        var root = new ScrollViewer { Height = 4, Content = content, HorizontalAlignment = XenoAtom.Terminal.UI.HorizontalAlignment.Stretch };
+        var root = new ScrollViewer { Content = content, HorizontalAlignment = XenoAtom.Terminal.UI.HorizontalAlignment.Stretch };
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
         var runTask = app.RunInBackgroundAsync();
 
@@ -110,7 +110,7 @@ public sealed class ScrollViewerRenderingTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        var root = new ScrollViewer { Height = 4, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var root = new ScrollViewer { HorizontalAlignment = HorizontalAlignment.Stretch };
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
         var runTask = app.RunInBackgroundAsync();
 

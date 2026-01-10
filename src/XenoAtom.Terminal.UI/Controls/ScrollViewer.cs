@@ -101,16 +101,12 @@ public sealed partial class ScrollViewer : Visual
     [Bindable]
     public partial int HorizontalOffset { get; set; }
 
-    [Bindable]
-    public partial int Height { get; set; }
-
     partial void OnVerticalOffsetChanged(int value) => MarkArrangeDirty();
 
     partial void OnHorizontalOffsetChanged(int value) => MarkArrangeDirty();
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        var height = Math.Max(1, Height);
         var content = Content;
         if (content is not null)
         {
@@ -124,8 +120,8 @@ public sealed partial class ScrollViewer : Visual
             _contentHeight = 0;
         }
 
-        var desiredHeight = Math.Min(height, availableSize.Height);
         var desiredWidth = Math.Min(availableSize.Width, Math.Max(1, Math.Min(availableSize.Width, _contentWidth)));
+        var desiredHeight = Math.Min(availableSize.Height, Math.Max(1, Math.Min(availableSize.Height, _contentHeight)));
         return new Size(desiredWidth, desiredHeight);
     }
 

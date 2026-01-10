@@ -1156,7 +1156,7 @@ public sealed class TerminalAppTests
             content.Add(new TextBlock($"Item {i}"));
         }
 
-        var scroll = new ScrollViewer { Content = content, Height = 4 };
+        var scroll = new ScrollViewer { Content = content };
 
         var root = new VStack { Spacing = 1 };
         root.Add(scroll);
