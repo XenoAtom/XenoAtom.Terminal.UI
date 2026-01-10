@@ -74,6 +74,7 @@ public sealed class CellBufferDiffRenderer : IDisposable
         Span<char> runeBuffer = stackalloc char[2];
         var anyCellChanges = forceFull;
         var hasOutput = false;
+        var cursorSuppressed = false;
         ulong currentHyperlink = 0;
 
         void BeginOutput()
@@ -95,6 +96,7 @@ public sealed class CellBufferDiffRenderer : IDisposable
             if (wantsCursor || _lastCursorVisible)
             {
                 writer.ShowCursor(false);
+                cursorSuppressed = true;
             }
 
             hasOutput = true;
@@ -217,12 +219,19 @@ public sealed class CellBufferDiffRenderer : IDisposable
             writer.StyleTransition(currentStyle, AnsiStyle.Default);
         }
 
-        if (wantsCursor && cursorChanged)
+        if (wantsCursor)
         {
+            // Cursor movements while rendering can leave the cursor in an arbitrary location.
+            // Always restore the final desired cursor when the cursor is wanted.
             var cx = Math.Clamp(cursorX, 0, width - 1);
             var cy = Math.Clamp(cursorY, 0, height - 1);
             writer.CursorPosition(cy + 1, cx + 1);
             writer.ShowCursor(true);
+        }
+        else if (_lastCursorVisible && !cursorSuppressed)
+        {
+            // Cursor is no longer wanted and we didn't already suppress it.
+            writer.ShowCursor(false);
         }
 
         writer.PrivateMode(2026, enabled: false);
