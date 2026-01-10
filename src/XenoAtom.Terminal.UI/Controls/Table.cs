@@ -84,7 +84,7 @@ public sealed partial class Table : Visual
             if (c < HeaderCells.Count)
             {
                 var cell = HeaderCells[c];
-                cell.Measure(new Size(int.MaxValue / 4, int.MaxValue / 4));
+                cell.Measure(new Size(LayoutConstants.Infinite, LayoutConstants.Infinite));
                 widths[c] = Math.Max(widths[c], cell.DesiredSize.Width);
             }
         }
@@ -100,7 +100,7 @@ public sealed partial class Table : Visual
                 }
 
                 var cell = row[c];
-                cell.Measure(new Size(int.MaxValue / 4, int.MaxValue / 4));
+                cell.Measure(new Size(LayoutConstants.Infinite, LayoutConstants.Infinite));
                 widths[c] = Math.Max(widths[c], cell.DesiredSize.Width);
             }
         }

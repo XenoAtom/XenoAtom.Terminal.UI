@@ -116,7 +116,7 @@ public sealed partial class ScrollViewer : Visual
         var content = Content;
         if (content is not null)
         {
-            content.Measure(new Size(int.MaxValue / 4, int.MaxValue / 4));
+            content.Measure(new Size(LayoutConstants.Infinite, LayoutConstants.Infinite));
             _contentWidth = content.DesiredSize.Width;
             _contentHeight = content.DesiredSize.Height;
         }

@@ -96,10 +96,10 @@ public sealed partial class Group : Visual
         var bottomLeft = BottomLeftText;
         var bottomRight = BottomRightText;
 
-        if (topLeft is not null) topLeft.Measure(new Size(int.MaxValue / 4, 1));
-        if (topRight is not null) topRight.Measure(new Size(int.MaxValue / 4, 1));
-        if (bottomLeft is not null) bottomLeft.Measure(new Size(int.MaxValue / 4, 1));
-        if (bottomRight is not null) bottomRight.Measure(new Size(int.MaxValue / 4, 1));
+        if (topLeft is not null) topLeft.Measure(new Size(LayoutConstants.Infinite, 1));
+        if (topRight is not null) topRight.Measure(new Size(LayoutConstants.Infinite, 1));
+        if (bottomLeft is not null) bottomLeft.Measure(new Size(LayoutConstants.Infinite, 1));
+        if (bottomRight is not null) bottomRight.Measure(new Size(LayoutConstants.Infinite, 1));
 
         var topRequired = GetLabelWidth(topLeft) + GetLabelWidth(topRight);
         var bottomRequired = GetLabelWidth(bottomLeft) + GetLabelWidth(bottomRight);

@@ -54,7 +54,7 @@ public sealed class MenuBar : Visual
         for (var i = 0; i < _presenters.Count; i++)
         {
             var item = _presenters[i];
-            item.Measure(new Size(int.MaxValue / 4, availableSize.Height));
+            item.Measure(new Size(LayoutConstants.Infinite, availableSize.Height));
             width += item.DesiredSize.Width;
             height = Math.Max(height, item.DesiredSize.Height);
 
@@ -67,7 +67,7 @@ public sealed class MenuBar : Visual
         height += padding.Vertical;
         width = Math.Min(availableSize.Width, padding.Horizontal + width);
         height = Math.Min(availableSize.Height, Math.Max(1, height));
-        return new Size(availableSize.Width, height);
+        return new Size(width, height);
     }
 
     protected override void ArrangeOverride(Rectangle finalRect)
@@ -324,7 +324,7 @@ public sealed class MenuBar : Visual
             var content = Content;
             if (content is not null)
             {
-                content.Measure(new Size(int.MaxValue / 4, Math.Max(1, availableSize.Height)));
+                content.Measure(new Size(LayoutConstants.Infinite, Math.Max(1, availableSize.Height)));
             }
 
             var w = padding.Horizontal + (content?.DesiredSize.Width ?? 0);
@@ -458,7 +458,7 @@ public sealed class MenuBar : Visual
             for (var i = 0; i < _rows.Count; i++)
             {
                 var row = _rows[i];
-                row.Measure(new Size(int.MaxValue / 4, 1));
+                row.Measure(new Size(LayoutConstants.Infinite, 1));
                 maxRowWidth = Math.Max(maxRowWidth, row.DesiredSize.Width);
 
                 if (_items[i].Items.Count > 0)
@@ -877,17 +877,17 @@ public sealed class MenuBar : Visual
             var iconW = 0;
             if (_item.Icon is not null)
             {
-                _item.Icon.Measure(new Size(int.MaxValue / 4, 1));
+                _item.Icon.Measure(new Size(LayoutConstants.Infinite, 1));
                 iconW = _item.Icon.DesiredSize.Width;
             }
 
-            _item.Header.Measure(new Size(int.MaxValue / 4, 1));
+            _item.Header.Measure(new Size(LayoutConstants.Infinite, 1));
             var headerW = _item.Header.DesiredSize.Width;
 
             var shortcutW = 0;
             if (_item.Shortcut is not null)
             {
-                _item.Shortcut.Measure(new Size(int.MaxValue / 4, 1));
+                _item.Shortcut.Measure(new Size(LayoutConstants.Infinite, 1));
                 shortcutW = _item.Shortcut.DesiredSize.Width;
             }
 

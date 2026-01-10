@@ -46,7 +46,7 @@ public sealed partial class RadioButton : Visual
         var textVisual = Text;
         if (textVisual is not null)
         {
-            textVisual.Measure(new Size(int.MaxValue / 4, 1));
+            textVisual.Measure(new Size(LayoutConstants.Infinite, 1));
             textWidth = textVisual.DesiredSize.Width;
         }
 

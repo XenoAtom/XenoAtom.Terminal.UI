@@ -100,7 +100,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
             return new Size(Math.Min(availableSize.Width, frameWidth), 1);
         }
 
-        label.Measure(new Size(int.MaxValue / 4, 1));
+        label.Measure(new Size(LayoutConstants.Infinite, 1));
         var width = frameWidth + 1 + label.DesiredSize.Width;
         return new Size(Math.Min(availableSize.Width, width), 1);
     }

@@ -44,9 +44,11 @@ public sealed partial class StatusBar : Visual
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        _leftText?.Measure(new Size(int.MaxValue / 4, 1));
-        _rightText?.Measure(new Size(int.MaxValue / 4, 1));
-        return new Size(availableSize.Width, 1);
+        _leftText?.Measure(new Size(LayoutConstants.Infinite, 1));
+        _rightText?.Measure(new Size(LayoutConstants.Infinite, 1));
+
+        var requiredWidth = (_leftText?.DesiredSize.Width ?? 0) + (_rightText?.DesiredSize.Width ?? 0);
+        return new Size(Math.Min(availableSize.Width, requiredWidth), Math.Min(availableSize.Height, 1));
     }
 
     protected override void ArrangeOverride(Rectangle finalRect)

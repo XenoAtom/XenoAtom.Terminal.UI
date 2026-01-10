@@ -119,7 +119,7 @@ public sealed partial class Dialog : Visual, IModalVisual
         var title = Title;
         if (title is not null)
         {
-            title.Measure(new Size(int.MaxValue / 4, 1));
+            title.Measure(new Size(LayoutConstants.Infinite, 1));
             desiredWidth = Math.Max(desiredWidth, Math.Min(availableSize.Width, Math.Max(3, title.DesiredSize.Width + 4)));
         }
 

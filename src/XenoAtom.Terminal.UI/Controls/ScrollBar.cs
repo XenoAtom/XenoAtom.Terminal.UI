@@ -107,10 +107,10 @@ public sealed partial class ScrollBar : Visual
         var thickness = Math.Max(1, Get<ScrollBarStyle>().Thickness);
         if (Orientation == Orientation.Vertical)
         {
-            return new Size(Math.Min(availableSize.Width, thickness), availableSize.Height);
+            return new Size(Math.Min(availableSize.Width, thickness), Math.Min(availableSize.Height, 1));
         }
 
-        return new Size(availableSize.Width, Math.Min(availableSize.Height, thickness));
+        return new Size(Math.Min(availableSize.Width, 1), Math.Min(availableSize.Height, thickness));
     }
 
     protected override void ArrangeOverride(Rectangle finalRect) => Bounds = finalRect;

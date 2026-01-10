@@ -57,18 +57,23 @@ public sealed partial class Rule : Visual
         var center = CenterLabel;
         var end = EndLabel;
 
-        start?.Measure(new Size(int.MaxValue / 4, 1));
-        center?.Measure(new Size(int.MaxValue / 4, 1));
-        end?.Measure(new Size(int.MaxValue / 4, 1));
+        start?.Measure(new Size(LayoutConstants.Infinite, 1));
+        center?.Measure(new Size(LayoutConstants.Infinite, 1));
+        end?.Measure(new Size(LayoutConstants.Infinite, 1));
 
         if (Orientation == Orientation.Vertical)
         {
             var maxLabel = Math.Max(GetLabelWidth(start), Math.Max(GetLabelWidth(center), GetLabelWidth(end)));
             var requiredWidth = Math.Max(1, maxLabel == 0 ? 1 : (maxLabel + (pad * 2)));
-            return new Size(Math.Min(availableSize.Width, requiredWidth), availableSize.Height);
+            return new Size(Math.Min(availableSize.Width, requiredWidth), Math.Min(availableSize.Height, 1));
         }
 
-        return new Size(availableSize.Width, Math.Min(availableSize.Height, 1));
+        var startTotal = GetTotalWidth(start, LayoutConstants.Infinite, pad);
+        var endTotal = GetTotalWidth(end, LayoutConstants.Infinite, pad);
+        var centerTotal = GetTotalWidth(center, LayoutConstants.Infinite, pad);
+
+        var required = Math.Max(1, startTotal + endTotal + centerTotal);
+        return new Size(Math.Min(availableSize.Width, required), Math.Min(availableSize.Height, 1));
     }
 
     protected override void ArrangeOverride(Rectangle finalRect)

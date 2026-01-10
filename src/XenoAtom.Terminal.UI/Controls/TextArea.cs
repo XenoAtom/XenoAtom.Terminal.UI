@@ -347,8 +347,8 @@ public sealed partial class TextArea : Visual, ICursorProvider
             return;
         }
 
-        var x = Math.Clamp(e.UiX - _contentX + _scrollColumnOffset, 0, int.MaxValue / 4);
-        var y = Math.Clamp(e.UiY - _contentY + _scrollLineOffset, 0, int.MaxValue / 4);
+        var x = Math.Clamp(e.UiX - _contentX + _scrollColumnOffset, 0, LayoutConstants.Infinite);
+        var y = Math.Clamp(e.UiY - _contentY + _scrollLineOffset, 0, LayoutConstants.Infinite);
 
         var t = GetText();
         var lineStarts = GetLineStarts(t);

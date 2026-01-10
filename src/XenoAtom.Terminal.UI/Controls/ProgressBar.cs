@@ -50,7 +50,7 @@ public sealed partial class ProgressBar : Visual
         var labelWidth = 0;
         if (label is not null)
         {
-            label.Measure(new Size(int.MaxValue / 4, 1));
+            label.Measure(new Size(LayoutConstants.Infinite, 1));
             labelWidth = label.DesiredSize.Width;
             if (labelWidth > 0)
             {

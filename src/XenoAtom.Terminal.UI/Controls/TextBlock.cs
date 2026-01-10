@@ -38,12 +38,12 @@ public sealed partial class TextBlock : Visual
     protected override Size MeasureOverride(Size availableSize)
     {
         var text = Text ?? string.Empty;
-        var width = Wrap ? availableSize.Width : Math.Min(availableSize.Width, TerminalTextUtility.GetWidth(text.AsSpan()));
-        width = Math.Max(0, width);
+        var naturalWidth = TerminalTextUtility.GetWidth(text.AsSpan());
+        var width = Math.Max(0, Math.Min(availableSize.Width, naturalWidth));
 
         if (!Wrap || width == 0)
         {
-            return new Size(width, 1);
+            return new Size(width, Math.Min(Math.Max(0, availableSize.Height), 1));
         }
 
         var height = CountWrappedLines(text.AsSpan(), Math.Max(1, width));

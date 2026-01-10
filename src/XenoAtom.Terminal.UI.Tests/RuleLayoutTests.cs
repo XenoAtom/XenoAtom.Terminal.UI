@@ -14,6 +14,7 @@ public sealed class RuleLayoutTests
     {
         var rule = new Rule
         {
+            HorizontalAlignment = HorizontalAlignment.Stretch,
             StartLabel = "A",
             CenterLabel = "B",
             EndLabel = "C",
@@ -42,7 +43,7 @@ public sealed class RuleLayoutTests
         var rule = new Rule { Orientation = Orientation.Vertical };
         rule.Measure(new Size(10, 5));
         Assert.AreEqual(1, rule.DesiredSize.Width);
-        Assert.AreEqual(5, rule.DesiredSize.Height);
+        Assert.AreEqual(1, rule.DesiredSize.Height);
     }
 
     [TestMethod]
@@ -51,11 +52,13 @@ public sealed class RuleLayoutTests
         var rule = new Rule
         {
             Orientation = Orientation.Vertical,
+            VerticalAlignment = VerticalAlignment.Stretch,
             CenterLabel = "ABC",
         };
 
         rule.Measure(new Size(10, 5));
         Assert.AreEqual(5, rule.DesiredSize.Width);
+        Assert.AreEqual(1, rule.DesiredSize.Height);
 
         rule.Arrange(new Rectangle(0, 0, 5, 5));
         Assert.IsNotNull(rule.CenterLabel);
@@ -64,4 +67,3 @@ public sealed class RuleLayoutTests
         Assert.AreEqual(2, rule.CenterLabel.Bounds.Y);
     }
 }
-

@@ -47,10 +47,21 @@ public sealed partial class Header : Visual
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        _left?.Measure(new Size(int.MaxValue / 4, 1));
-        _center?.Measure(new Size(int.MaxValue / 4, 1));
-        _right?.Measure(new Size(int.MaxValue / 4, 1));
-        return new Size(availableSize.Width, 1);
+        _left?.Measure(new Size(LayoutConstants.Infinite, 1));
+        _center?.Measure(new Size(LayoutConstants.Infinite, 1));
+        _right?.Measure(new Size(LayoutConstants.Infinite, 1));
+
+        var leftW = _left?.DesiredSize.Width ?? 0;
+        var centerW = _center?.DesiredSize.Width ?? 0;
+        var rightW = _right?.DesiredSize.Width ?? 0;
+
+        var requiredWidth = leftW + rightW;
+        if (_center is not null)
+        {
+            requiredWidth = Math.Max(requiredWidth, leftW + centerW + rightW);
+        }
+
+        return new Size(Math.Min(availableSize.Width, requiredWidth), Math.Min(availableSize.Height, 1));
     }
 
     protected override void ArrangeOverride(Rectangle finalRect)

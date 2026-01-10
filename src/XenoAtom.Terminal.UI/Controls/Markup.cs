@@ -68,17 +68,6 @@ public sealed partial class Markup : Visual
         var availableWidth = Math.Max(0, availableSize.Width);
         var availableHeight = Math.Max(0, availableSize.Height);
 
-        //if (Wrap && IsUnbounded(availableWidth))
-        //{
-        //    // Unbounded width means "no wrapping constraint": report the intrinsic width,
-        //    // not the (infinite) available width. This prevents ScrollViewer from treating
-        //    // the content extent as effectively infinite.
-        //    var naturalWidth = GetMaxLineWidth(text);
-        //    var naturalHeight = CountHardLines(text);
-        //    return new Size(naturalWidth, Math.Min(availableHeight, naturalHeight));
-        //}
-        //var width = Wrap ? availableWidth : Math.Max(0, Math.Min(availableWidth, GetMaxLineWidth(text)));
-
         var width = Math.Max(0, Math.Min(availableWidth, GetMaxLineWidth(text)));
         if (!Wrap)
         {
@@ -461,11 +450,6 @@ public sealed partial class Markup : Visual
 
         return count;
     }
-
-    private static bool IsUnbounded(int size)
-        // The UI framework uses int.MaxValue/4 to represent "infinite" for measure constraints.
-        // Treat very large sizes as unbounded.
-        => size >= int.MaxValue / 8;
 
     private static bool TryGetNextHardLine(ReadOnlySpan<char> text, int start, out int endExclusive, out int nextStart)
     {

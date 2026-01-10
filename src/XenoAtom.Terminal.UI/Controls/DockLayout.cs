@@ -26,12 +26,14 @@ public sealed partial class DockLayout : Visual
     {
         var topHeight = 0;
         var bottomHeight = 0;
+        var width = 0;
 
         var top = Top;
         if (top is not null)
         {
             top.Measure(new Size(availableSize.Width, availableSize.Height));
             topHeight = top.DesiredSize.Height;
+            width = Math.Max(width, top.DesiredSize.Width);
         }
 
         var bottom = Bottom;
@@ -39,16 +41,18 @@ public sealed partial class DockLayout : Visual
         {
             bottom.Measure(new Size(availableSize.Width, Math.Max(0, availableSize.Height - topHeight)));
             bottomHeight = bottom.DesiredSize.Height;
+            width = Math.Max(width, bottom.DesiredSize.Width);
         }
 
         var content = Content;
         if (content is not null)
         {
             content.Measure(new Size(availableSize.Width, Math.Max(0, availableSize.Height - topHeight - bottomHeight)));
+            width = Math.Max(width, content.DesiredSize.Width);
         }
 
         var height = Math.Min(availableSize.Height, topHeight + bottomHeight + (content?.DesiredSize.Height ?? 0));
-        return new Size(availableSize.Width, height);
+        return new Size(Math.Min(availableSize.Width, width), height);
     }
 
     protected override void ArrangeOverride(Rectangle finalRect)

@@ -78,7 +78,7 @@ public sealed partial class OptionList : Visual
         for (var i = 0; i < Items.Count; i++)
         {
             var item = Items[i];
-            item.Measure(new Size(int.MaxValue / 4, int.MaxValue / 4));
+            item.Measure(new Size(LayoutConstants.Infinite, LayoutConstants.Infinite));
             itemWidth = Math.Max(itemWidth, item.DesiredSize.Width);
             itemHeight = Math.Max(itemHeight, Math.Max(1, item.DesiredSize.Height));
         }

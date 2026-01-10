@@ -180,7 +180,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         block.AttachToApp(this);
         try
         {
-            block.Measure(new Size(width, int.MaxValue / 4));
+            block.Measure(new Size(width, LayoutConstants.Infinite));
             block.Arrange(new Rectangle(0, 0, width, block.DesiredSize.Height));
 
             // Flow output can allocate (it's not per-frame). Keep it simple for now.
@@ -618,7 +618,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         {
             var width = Math.Max(1, _terminal.Size.Columns);
 
-            Root.Measure(new Size(width, int.MaxValue / 4));
+            Root.Measure(new Size(width, LayoutConstants.Infinite));
             Root.Arrange(new Rectangle(0, 0, width, Root.DesiredSize.Height));
 
             var buffer = EnsureRenderBuffer(width, Math.Max(1, Root.DesiredSize.Height));

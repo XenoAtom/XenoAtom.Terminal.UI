@@ -132,7 +132,7 @@ public sealed partial class TreeView : Visual
             var iconWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(icon));
 
             var prefix = depth * style.IndentSize + markerWidth + expanderWidth + 1 + iconWidth + gapAfterIcon;
-            node.Header.Measure(new Size(int.MaxValue / 4, 1));
+            node.Header.Measure(new Size(LayoutConstants.Infinite, 1));
             maxWidth = Math.Max(maxWidth, prefix + node.Header.DesiredSize.Width);
         }
 

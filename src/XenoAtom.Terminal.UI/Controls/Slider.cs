@@ -145,13 +145,19 @@ public sealed partial class Slider : Visual
 
     protected override Size MeasureOverride(Size availableSize)
     {
+        const int MinTrackLength = 6;
+
         if (Orientation == Orientation.Vertical)
         {
-            return new Size(Math.Min(availableSize.Width, 1), availableSize.Height);
+            return new Size(
+                Math.Max(0, Math.Min(availableSize.Width, 1)),
+                Math.Max(0, Math.Min(availableSize.Height, MinTrackLength)));
         }
 
-        var desiredWidth = Math.Min(availableSize.Width, Math.Max(6, availableSize.Width));
-        return new Size(desiredWidth, Math.Min(availableSize.Height, 1));
+        var desiredWidth = Math.Min(availableSize.Width, MinTrackLength);
+        return new Size(
+            Math.Max(0, desiredWidth),
+            Math.Max(0, Math.Min(availableSize.Height, 1)));
     }
 
     protected override void ArrangeOverride(Rectangle finalRect) => Bounds = finalRect;
