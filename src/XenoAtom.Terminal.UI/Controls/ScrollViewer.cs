@@ -16,20 +16,20 @@ public sealed partial class ScrollViewer : Visual
     private readonly ScrollBar _verticalBar;
     private readonly ScrollBar _horizontalBar;
     private readonly ScrollCornerVisual _corner;
-
     private Visual? _content;
+
     private int _contentWidth;
     private int _contentHeight;
 
     private bool _showHorizontalBar;
     private bool _showVerticalBar;
-    private int _scrollBarThickness;
     private ScrollBarStyle? _internalScrollBarStyle;
 
     public ScrollViewer()
     {
         Focusable = true;
-        this.Height(6);
+        VerticalAlignment = VerticalAlignment.Stretch;
+        HorizontalAlignment = HorizontalAlignment.Stretch;
 
         _contentHost = new ContentViewportHost(this);
         _verticalBar = new ScrollBar(focusable: false).Orientation(Orientation.Vertical);
@@ -87,21 +87,13 @@ public sealed partial class ScrollViewer : Visual
                 return;
             }
 
-            if (_content is not null)
-            {
-                throw new InvalidOperationException("ScrollViewer currently only supports setting Content once.");
-            }
-
             _content = value;
-            if (value is not null)
-            {
-                _contentHost.SetContent(value);
-            }
+            _contentHost.SetContent(value);
 
-            MarkMeasureDirty();
             BindingManager.Current.NotifyValueChanged(this, __Content__BindingAccessor.Instance);
         }
     }
+
 
     [Bindable]
     public partial int VerticalOffset { get; set; }
@@ -148,8 +140,6 @@ public sealed partial class ScrollViewer : Visual
 
         var style = Get<ScrollViewerStyle>();
         var thickness = Math.Max(1, style.ScrollBarThickness);
-        _scrollBarThickness = thickness;
-
         var viewportWidth = Math.Max(1, finalRect.Width);
         var viewportHeight = Math.Max(1, finalRect.Height);
 
@@ -332,15 +322,18 @@ public sealed partial class ScrollViewer : Visual
             this.VerticalAlignment(VerticalAlignment.Stretch);
         }
 
-        public void SetContent(Visual child)
+        public void SetContent(Visual? child)
         {
             if (_child is not null)
             {
-                throw new InvalidOperationException("ScrollViewer content host currently only supports setting content once.");
+                DetachChild(_child);
             }
-
             _child = child;
-            AttachChild(child);
+            if (child is not null)
+            {
+                AttachChild(child);
+            }
+            MarkMeasureDirty();
         }
 
         protected override int ChildrenCount => _child is null ? 0 : 1;

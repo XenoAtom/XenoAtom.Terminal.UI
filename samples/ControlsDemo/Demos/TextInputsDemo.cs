@@ -13,7 +13,6 @@ public sealed class TextInputsDemo : ControlsDemoBase
     public override Visual Build(DemoContext context)
     {
         var textBox = new TextBox()
-            .Text("Hello")
             .Placeholder("Type here…")
             .HorizontalAlignment(HorizontalAlignment.Stretch);
 

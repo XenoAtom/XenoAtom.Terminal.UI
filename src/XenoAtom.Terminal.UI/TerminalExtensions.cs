@@ -27,9 +27,9 @@ public static partial class TerminalExtensions
         public static ValueTask<TerminalInstance> LiveAsync(Visual visual, Func<bool> onUpdate, TerminalLiveOptions options, CancellationToken cancellationToken = default)
             => XenoAtom.Terminal.Terminal.Instance.LiveAsync(visual, onUpdate, options, cancellationToken);
 
-        public static TerminalInstance Run(Visual visual, Func<bool>? onUpdate = null) => XenoAtom.Terminal.Terminal.Instance.Run(visual, onUpdate);
+        public static TerminalInstance Run(Visual visual, Func<bool> onUpdate) => XenoAtom.Terminal.Terminal.Instance.Run(visual, onUpdate);
 
-        public static ValueTask<TerminalInstance> RunAsync(Visual visual, Func<bool>? onUpdate = null, CancellationToken cancellationToken = default)
+        public static ValueTask<TerminalInstance> RunAsync(Visual visual, Func<bool> onUpdate, CancellationToken cancellationToken = default)
             => XenoAtom.Terminal.Terminal.Instance.RunAsync(visual, onUpdate, cancellationToken);
     }
 
@@ -120,10 +120,11 @@ public static partial class TerminalExtensions
             return instance;
         }
 
-        public TerminalInstance Run(Visual visual, Func<bool>? onUpdate = null)
+        public TerminalInstance Run(Visual visual, Func<bool> onUpdate)
         {
             ArgumentNullException.ThrowIfNull(instance);
             ArgumentNullException.ThrowIfNull(visual);
+            ArgumentNullException.ThrowIfNull(onUpdate);
 
             if (visual.Parent is not null)
             {
@@ -146,10 +147,11 @@ public static partial class TerminalExtensions
             return instance;
         }
 
-        public async ValueTask<TerminalInstance> RunAsync(Visual visual, Func<bool>? onUpdate = null, CancellationToken cancellationToken = default)
+        public async ValueTask<TerminalInstance> RunAsync(Visual visual, Func<bool> onUpdate, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(instance);
             ArgumentNullException.ThrowIfNull(visual);
+            ArgumentNullException.ThrowIfNull(onUpdate);
 
             if (visual.Parent is not null)
             {

@@ -14,8 +14,8 @@ public abstract partial class Panel : Visual, IEnumerable<Visual>
 
     protected Panel()
     {
-        this.HorizontalAlignment(HorizontalAlignment.Stretch);
-        this.VerticalAlignment(VerticalAlignment.Stretch);
+        this.HorizontalAlignment = HorizontalAlignment.Stretch;
+        this.VerticalAlignment = VerticalAlignment.Stretch;
         _children = new VisualList<Visual>(this, "Children");
     }
 

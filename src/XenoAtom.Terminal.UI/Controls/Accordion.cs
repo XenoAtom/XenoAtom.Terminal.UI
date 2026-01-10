@@ -14,7 +14,7 @@ public sealed partial class Accordion : Panel
 {
     public Accordion()
     {
-        this.SingleExpanded(true);
+        this.SingleExpanded = true;
         AddHandler(Collapsible.ExpandedChangedEvent, OnChildExpandedChanged);
     }
 

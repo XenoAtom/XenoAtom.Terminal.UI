@@ -100,7 +100,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
     public Visual ContentRoot { get; }
 
-    internal void SetUpdateCallback(Func<bool>? onUpdate)
+    internal void SetUpdateCallback(Func<bool> onUpdate)
     {
         ArgumentNullException.ThrowIfNull(onUpdate);
         _onUpdate = onUpdate;

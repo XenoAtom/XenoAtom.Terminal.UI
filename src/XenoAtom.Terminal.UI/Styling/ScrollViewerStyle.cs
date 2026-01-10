@@ -10,7 +10,7 @@ public sealed record ScrollViewerStyle : IStyle<ScrollViewerStyle>
 
     public static StyleKey<ScrollViewerStyle> Key { get; } = new("ScrollViewerStyle", Default);
 
-    public int ScrollBarThickness { get; init; } = 2;
+    public int ScrollBarThickness { get; init; } = 1;
 
     public CellStyle? TrackStyle { get; init; }
     public CellStyle? ThumbStyle { get; init; }

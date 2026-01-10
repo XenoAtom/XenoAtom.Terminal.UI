@@ -18,10 +18,6 @@ public static partial class VisualExtensions
         return obj;
     }
 
-    [Obsolete("Use Update(...) for dynamic updates.")]
-    public static T With<T>(this T obj, Action<T> configure) where T : Visual
-        => Update(obj, configure);
-
     public static T Add<T>(this T obj, params Visual[] visuals) where T : Panel
     {
         ArgumentNullException.ThrowIfNull(obj);
