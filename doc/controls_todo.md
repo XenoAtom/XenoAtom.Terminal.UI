@@ -23,7 +23,7 @@ Following this list, you will find compact specs for high and medium priority co
 | [x] | **Medium** | **Advanced Grid Layout**                              | Layout                     | 2D composition for forms/inspectors/dashboards with consistent alignment | "Killer" layout that removes deep nesting and covers most real screens |
 | [x] | **Medium** | **MaskedInput (password/secret)**                     | Input                      | Auth + secrets                       | Often needed early                                |
 | [x] | **Medium** | **OptionList (fast menu list)**                       | Navigation/input           | Command menus/quick pickers          | Base for palettes/menus                           |
-| [ ] | **Medium** | **Menu**                                              | Navigation/input           | Full menu                            | Menu                                              |
+| [x] | **Medium** | **Menu**                                              | Navigation/input           | Full menu                            | Menu                                              |
 | [x] | **Medium** | **Switch (toggle)**                                   | Input                      | Modern toggle UI                     | Nice settings affordance                          |
 | [ ] | **Medium** | **Sparkline**                                         | Visualization              | Tiny trends                          | High value / low scope                            |
 | [ ] | **Medium** | **Basic charts (bar/line)**                           | Visualization              | Dashboards/telemetry                 | Highly desirable                                  |

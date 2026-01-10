@@ -51,30 +51,53 @@ treeRoot.Children[0].Children.Add(new TreeNode("Program.cs") { Icon = TreeNodeIc
 treeRoot.Children[0].Children.Add(new TreeNode("readme.md") { Icon = TreeNodeIcon.Document });
 tree.Roots.Add(treeRoot);
 
-var showDialog = new Button("Show modal")
-    .HorizontalAlignment(HorizontalAlignment.Left)
-    .Click(() =>
-    {
-        Dialog? dialog = null;
+void ShowModalDialog()
+{
+    Dialog? dialog = null;
 
-        var dialogContent = new VStack(
+    var dialogContent = new VStack(
             "Modal dialog",
             new TextBlock("This is a wrapped paragraph demonstrating document-style text rendering.").Wrap(true),
             new Button("Close")
                 .HorizontalAlignment(HorizontalAlignment.Stretch)
                 .Click(() => dialog!.Close()))
-            .Spacing(1)
-            .HorizontalAlignment(HorizontalAlignment.Stretch);
+        .Spacing(1)
+        .HorizontalAlignment(HorizontalAlignment.Stretch);
 
-        dialog = new Dialog()
-            .Title("Modal dialog")
-            .IsModal(true)
-            .Padding(1)
-            .Width(60)
-            .Content(dialogContent);
+    dialog = new Dialog()
+        .Title("Modal dialog")
+        .IsModal(true)
+        .Padding(1)
+        .Width(60)
+        .Content(dialogContent);
 
-        dialog.Show();
-    });
+    dialog.Show();
+}
+
+var showDialog = new Button("Show modal")
+    .HorizontalAlignment(HorizontalAlignment.Left)
+    .Click(ShowModalDialog);
+
+var menuBar = new MenuBar();
+var menuFile = new MenuItem("File");
+menuFile.Items.Add(new MenuItem("New", () => statusState.Value = "new file") { Shortcut = "Ctrl+N" });
+menuFile.Items.Add(new MenuItem("Open", () => statusState.Value = "open") { Shortcut = "Ctrl+O" });
+menuFile.Items.Add(MenuItem.CreateSeparator());
+var menuRecent = new MenuItem("Recent");
+menuRecent.Items.Add(new MenuItem("XenoAtom.Terminal.UI", () => statusState.Value = "open recent: terminal.ui"));
+menuRecent.Items.Add(new MenuItem("Notes.txt", () => statusState.Value = "open recent: notes.txt"));
+menuFile.Items.Add(menuRecent);
+menuFile.Items.Add(MenuItem.CreateSeparator());
+menuFile.Items.Add(new MenuItem("Close", () => statusState.Value = "close") { Shortcut = "Ctrl+W" });
+
+var menuView = new MenuItem("View");
+menuView.Items.Add(new MenuItem("Toggle modal", ShowModalDialog) { Shortcut = "Ctrl+M" });
+menuView.Items.Add(new MenuItem("Reset status", () => statusState.Value = "ready"));
+
+var menuHelp = new MenuItem("Help");
+menuHelp.Items.Add(new MenuItem("About", () => statusState.Value = "XenoAtom.Terminal.UI FullscreenDemo"));
+
+menuBar.Items.AddRange(menuFile, menuView, menuHelp);
 
 
 // Disabling this part for now, as the custom color on the selection is not nice with the default theme.
@@ -353,7 +376,7 @@ var footer = new Footer
 var root = new DockLayout()
     .HorizontalAlignment(HorizontalAlignment.Stretch)
     .VerticalAlignment(VerticalAlignment.Stretch)
-    .Top(header)
+    .Top(new VStack(header, menuBar).Spacing(0))
     .Content(
         new HSplitter(leftColumn, rightColumn)
             .MinFirst(20)

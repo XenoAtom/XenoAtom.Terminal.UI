@@ -14,6 +14,8 @@ public enum PopupPlacement
 {
     Below = 0,
     Above = 1,
+    Right = 2,
+    Left = 3,
 }
 
 public sealed partial class Popup : ContentVisual, IModalVisual
@@ -123,18 +125,47 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         {
             var belowY = anchor.Bounds.Y + anchor.Bounds.Height;
             var aboveY = anchor.Bounds.Y - desiredHeight;
+            var rightX = anchor.Bounds.X + anchor.Bounds.Width;
+            var leftX = anchor.Bounds.X - width;
 
-            x = anchor.Bounds.X;
-            y = Placement == PopupPlacement.Above ? aboveY : belowY;
+            switch (Placement)
+            {
+                case PopupPlacement.Above:
+                    x = anchor.Bounds.X;
+                    y = aboveY;
+                    if (y < finalRect.Y && belowY + desiredHeight <= finalRect.Bottom)
+                    {
+                        y = belowY;
+                    }
+                    break;
 
-            // Flip if it doesn't fit.
-            if (y + desiredHeight > finalRect.Bottom && aboveY >= finalRect.Y)
-            {
-                y = aboveY;
-            }
-            else if (y < finalRect.Y && belowY + desiredHeight <= finalRect.Bottom)
-            {
-                y = belowY;
+                case PopupPlacement.Right:
+                    x = rightX;
+                    y = anchor.Bounds.Y;
+                    if (x + width > finalRect.Right && leftX >= finalRect.X)
+                    {
+                        x = leftX;
+                    }
+                    break;
+
+                case PopupPlacement.Left:
+                    x = leftX;
+                    y = anchor.Bounds.Y;
+                    if (x < finalRect.X && rightX + width <= finalRect.Right)
+                    {
+                        x = rightX;
+                    }
+                    break;
+
+                case PopupPlacement.Below:
+                default:
+                    x = anchor.Bounds.X;
+                    y = belowY;
+                    if (y + desiredHeight > finalRect.Bottom && aboveY >= finalRect.Y)
+                    {
+                        y = aboveY;
+                    }
+                    break;
             }
         }
         else
