@@ -3,7 +3,7 @@ using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Styling;
-using System.Diagnostics;
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 using var session = Terminal.Open();
 
@@ -11,6 +11,7 @@ var statusState = new State<string>("ready");
 var progressState = new State<double>(0.0);
 var sliderState = new State<double>(0.35);
 var switcherIndexState = new State<int>(0);
+var switchState = new State<bool>(false);
 
 var select = new Select();
 select.Items.AddRange(
@@ -236,7 +237,23 @@ var rightColumn = new VStack(
                                     new Group()
                                         .TopLeftText("Second view")
                                         .Padding(Thickness.Zero)
-                                        .Content(new VStack("View 2 content", "This is a different visual tree").Spacing(0))))
+                                        .Content(new VStack("View 2 content", "This is a different visual tree").Spacing(0))),
+                            new Rule().Style(RuleStyle.Default with { Glyphs = RuleGlyphs.Dotted }),
+                            new Switch("Enable feature")
+                                .IsOn(switchState)
+                                .Toggled((_, e) => statusState.Value = $"switch={e.NewValue}")
+                                .HorizontalAlignment(HorizontalAlignment.Left),
+                            new Group()
+                                .TopLeftText("Accordion")
+                                .Padding(Thickness.Zero)
+                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .Content(
+                                    new Accordion(
+                                            new Collapsible("Section A", new TextBlock("First section content")).IsExpanded(true),
+                                            new Collapsible("Section B", new TextBlock("Second section content")),
+                                            new Collapsible("Section C", new TextBlock("Third section content")))
+                                        .Spacing(0)
+                                        .HorizontalAlignment(HorizontalAlignment.Stretch)))
                         .Spacing(1)
                         .HorizontalAlignment(HorizontalAlignment.Stretch))
                 ,
