@@ -6,6 +6,7 @@ using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -48,8 +49,9 @@ public sealed partial class Rule : Visual
         throw new ArgumentOutOfRangeException(nameof(index));
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var style = Get<RuleStyle>();
         var pad = Math.Max(0, style.LabelPadding);
 
@@ -65,7 +67,7 @@ public sealed partial class Rule : Visual
         {
             var maxLabel = Math.Max(GetLabelWidth(start), Math.Max(GetLabelWidth(center), GetLabelWidth(end)));
             var requiredWidth = Math.Max(1, maxLabel == 0 ? 1 : (maxLabel + (pad * 2)));
-            return new Size(Math.Min(availableSize.Width, requiredWidth), Math.Min(availableSize.Height, 1));
+            return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, requiredWidth), Math.Min(availableSize.Height, 1)));
         }
 
         var startTotal = GetTotalWidth(start, LayoutConstants.Infinite, pad);
@@ -73,10 +75,10 @@ public sealed partial class Rule : Visual
         var centerTotal = GetTotalWidth(center, LayoutConstants.Infinite, pad);
 
         var required = Math.Max(1, startTotal + endTotal + centerTotal);
-        return new Size(Math.Min(availableSize.Width, required), Math.Min(availableSize.Height, 1));
+        return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, required), Math.Min(availableSize.Height, 1)));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
 

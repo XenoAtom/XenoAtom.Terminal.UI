@@ -4,6 +4,7 @@
 
 using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -36,18 +37,25 @@ public sealed partial class Grid : Panel
     [Bindable]
     public partial bool AutoGrowColumns { get; set; }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var padding = Padding;
         var rowGap = Math.Max(0, RowGap);
         var colGap = Math.Max(0, ColumnGap);
 
+        var maxW = constraints.MaxWidth;
+        var maxH = constraints.MaxHeight;
+
         var (rows, cols) = GetEffectiveCounts();
         var totalRowGaps = rows > 1 ? (rows - 1) * rowGap : 0;
         var totalColGaps = cols > 1 ? (cols - 1) * colGap : 0;
 
-        var innerAvailW = Math.Max(0, availableSize.Width - padding.Horizontal - totalColGaps);
-        var innerAvailH = Math.Max(0, availableSize.Height - padding.Vertical - totalRowGaps);
+        var innerAvailW = maxW == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : Math.Max(0, maxW - padding.Horizontal - totalColGaps);
+        var innerAvailH = maxH == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : Math.Max(0, maxH - padding.Vertical - totalRowGaps);
 
         var colDefs = GetEffectiveColumnDefinitions(cols);
         var rowDefs = GetEffectiveRowDefinitions(rows);
@@ -104,8 +112,11 @@ public sealed partial class Grid : Panel
             }
         }
 
-        // Allocate star columns.
-        AllocateStar(colDefs, innerAvailW, colWidths);
+        // Allocate star columns only when bounded; otherwise treat star as intrinsic (auto-like).
+        if (innerAvailW != LayoutConstants.Infinite)
+        {
+            AllocateStar(colDefs, innerAvailW, colWidths);
+        }
 
         // Measure children with column widths to determine row sizes.
         for (var i = 0; i < Children.Count; i++)
@@ -132,19 +143,32 @@ public sealed partial class Grid : Panel
             }
         }
 
-        // Allocate star rows.
-        AllocateStar(rowDefs, innerAvailH, rowHeights);
+        // Allocate star rows only when bounded; otherwise treat star as intrinsic (auto-like).
+        if (innerAvailH != LayoutConstants.Infinite)
+        {
+            AllocateStar(rowDefs, innerAvailH, rowHeights);
+        }
 
-        var desiredW = padding.Horizontal + totalColGaps + Sum(colWidths);
-        var desiredH = padding.Vertical + totalRowGaps + Sum(rowHeights);
+        long colSum = 0;
+        for (var i = 0; i < colWidths.Length; i++)
+        {
+            colSum += Math.Max(0, colWidths[i]);
+        }
 
-        return new Size(Math.Min(availableSize.Width, desiredW), Math.Min(availableSize.Height, desiredH));
+        long rowSum = 0;
+        for (var i = 0; i < rowHeights.Length; i++)
+        {
+            rowSum += Math.Max(0, rowHeights[i]);
+        }
+
+        var desiredW = LayoutConstants.ClampFinite((long)padding.Horizontal + totalColGaps + colSum);
+        var desiredH = LayoutConstants.ClampFinite((long)padding.Vertical + totalRowGaps + rowSum);
+
+        return SizeHints.Fixed(constraints.Clamp(new Size(desiredW, desiredH)));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var padding = Padding;
         var rowGap = Math.Max(0, RowGap);
         var colGap = Math.Max(0, ColumnGap);
@@ -527,4 +551,3 @@ public sealed partial class Grid : Panel
         return Math.Clamp(value, min, max);
     }
 }
-

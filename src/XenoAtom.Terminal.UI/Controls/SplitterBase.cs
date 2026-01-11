@@ -4,6 +4,7 @@
 
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -107,49 +108,104 @@ public abstract partial class SplitterBase : Visual
         throw new ArgumentOutOfRangeException(nameof(index));
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var first = First;
         var second = Second;
         if (first is null && second is null)
         {
-            return default;
+            return SizeHints.Fixed(default);
         }
 
-        var bar = Math.Max(1, BarSize);
+        var hasBar = first is not null && second is not null;
+        var bar = hasBar ? Math.Max(1, BarSize) : 0;
+
+        var maxW = constraints.MaxWidth;
+        var maxH = constraints.MaxHeight;
+
         if (SplitOrientation == Orientation.Horizontal)
         {
-            var w = Math.Max(0, availableSize.Width - bar);
-            var w1 = w / 2;
-            var w2 = w - w1;
-            first?.Measure(new Size(w1, availableSize.Height));
-            second?.Measure(new Size(w2, availableSize.Height));
+            if (maxW == LayoutConstants.Infinite)
+            {
+                first?.Measure(new LayoutConstraints(0, LayoutConstants.Infinite, constraints.MinHeight, maxH));
+                second?.Measure(new LayoutConstraints(0, LayoutConstants.Infinite, constraints.MinHeight, maxH));
+            }
+            else
+            {
+                var w = Math.Max(0, maxW - bar);
+                var w1 = w / 2;
+                var w2 = w - w1;
+                first?.Measure(new Size(w1, maxH));
+                second?.Measure(new Size(w2, maxH));
+            }
+
             var desiredW = (first?.DesiredSize.Width ?? 0) + (second?.DesiredSize.Width ?? 0) + bar;
             var desiredH = Math.Max(first?.DesiredSize.Height ?? 0, second?.DesiredSize.Height ?? 0);
-            return new Size(Math.Min(availableSize.Width, desiredW), Math.Min(availableSize.Height, desiredH));
+            var natural = constraints.Clamp(new Size(desiredW, desiredH));
+            return new SizeHints
+            {
+                Min = new Size(0, 0),
+                Natural = natural,
+                Max = natural,
+                FlexGrowX = HorizontalAlignment == HorizontalAlignment.Stretch ? 1 : 0,
+                FlexGrowY = VerticalAlignment == VerticalAlignment.Stretch ? 1 : 0,
+                FlexShrinkX = 1,
+                FlexShrinkY = 1,
+            }.Normalize();
         }
         else
         {
-            var h = Math.Max(0, availableSize.Height - bar);
-            var h1 = h / 2;
-            var h2 = h - h1;
-            first?.Measure(new Size(availableSize.Width, h1));
-            second?.Measure(new Size(availableSize.Width, h2));
+            if (maxH == LayoutConstants.Infinite)
+            {
+                first?.Measure(new LayoutConstraints(constraints.MinWidth, maxW, 0, LayoutConstants.Infinite));
+                second?.Measure(new LayoutConstraints(constraints.MinWidth, maxW, 0, LayoutConstants.Infinite));
+            }
+            else
+            {
+                var h = Math.Max(0, maxH - bar);
+                var h1 = h / 2;
+                var h2 = h - h1;
+                first?.Measure(new Size(maxW, h1));
+                second?.Measure(new Size(maxW, h2));
+            }
+
             var desiredW = Math.Max(first?.DesiredSize.Width ?? 0, second?.DesiredSize.Width ?? 0);
             var desiredH = (first?.DesiredSize.Height ?? 0) + (second?.DesiredSize.Height ?? 0) + bar;
-            return new Size(Math.Min(availableSize.Width, desiredW), Math.Min(availableSize.Height, desiredH));
+            var natural = constraints.Clamp(new Size(desiredW, desiredH));
+            return new SizeHints
+            {
+                Min = new Size(0, 0),
+                Natural = natural,
+                Max = natural,
+                FlexGrowX = HorizontalAlignment == HorizontalAlignment.Stretch ? 1 : 0,
+                FlexGrowY = VerticalAlignment == VerticalAlignment.Stretch ? 1 : 0,
+                FlexShrinkX = 1,
+                FlexShrinkY = 1,
+            }.Normalize();
         }
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var first = First;
         var second = Second;
         if (finalRect.Width <= 0 || finalRect.Height <= 0 || (first is null && second is null))
         {
             _barRect = default;
+            return;
+        }
+
+        if (first is null)
+        {
+            _barRect = default;
+            second!.Arrange(finalRect);
+            return;
+        }
+
+        if (second is null)
+        {
+            _barRect = default;
+            first.Arrange(finalRect);
             return;
         }
 

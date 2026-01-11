@@ -5,6 +5,7 @@
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -30,7 +31,7 @@ public sealed partial class Switch : ContentVisual
     [Bindable]
     public partial bool IsOn { get; set; }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = Get<SwitchStyle>();
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
@@ -38,18 +39,18 @@ public sealed partial class Switch : ContentVisual
         var content = Content;
         if (content is not null)
         {
-            content.Measure(new Size(Math.Max(0, availableSize.Width - TrackWidth - gap), availableSize.Height));
-            var width = Math.Min(availableSize.Width, TrackWidth + gap + content.DesiredSize.Width);
-            return new Size(width, Math.Min(availableSize.Height, Math.Max(1, content.DesiredSize.Height)));
+            var maxW = constraints.MaxWidth == LayoutConstants.Infinite ? LayoutConstants.Infinite : constraints.MaxWidth;
+            var maxH = constraints.MaxHeight == LayoutConstants.Infinite ? LayoutConstants.Infinite : constraints.MaxHeight;
+            content.Measure(new Size(Math.Max(0, maxW - TrackWidth - gap), maxH));
+            var natural = new Size(TrackWidth + gap + content.DesiredSize.Width, Math.Max(1, content.DesiredSize.Height));
+            return SizeHints.Fixed(constraints.Clamp(natural));
         }
 
-        return new Size(Math.Min(availableSize.Width, TrackWidth), 1);
+        return SizeHints.Fixed(constraints.Clamp(new Size(TrackWidth, 1)));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var style = Get<SwitchStyle>();
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
 

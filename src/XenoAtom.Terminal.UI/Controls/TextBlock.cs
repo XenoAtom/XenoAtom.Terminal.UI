@@ -5,6 +5,7 @@
 using System.Buffers;
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -35,22 +36,23 @@ public sealed partial class TextBlock : Visual
     [Bindable]
     public partial TextTrimming Trimming { get; set; }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var text = Text ?? string.Empty;
         var naturalWidth = TerminalTextUtility.GetWidth(text.AsSpan());
         var width = Math.Max(0, Math.Min(availableSize.Width, naturalWidth));
 
         if (!Wrap || width == 0)
         {
-            return new Size(width, Math.Min(Math.Max(0, availableSize.Height), 1));
+            return SizeHints.Fixed(new Size(width, Math.Min(Math.Max(0, availableSize.Height), 1)));
         }
 
         var height = CountWrappedLines(text.AsSpan(), Math.Max(1, width));
-        return new Size(width, Math.Min(availableSize.Height, Math.Max(1, height)));
+        return SizeHints.Fixed(new Size(width, Math.Min(availableSize.Height, Math.Max(1, height))));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
     }

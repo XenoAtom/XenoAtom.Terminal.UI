@@ -6,6 +6,7 @@ using System.Text;
 using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -40,7 +41,7 @@ public sealed class MenuBar : Visual
 
     protected override Visual GetChild(int index) => _presenters[index];
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         EnsurePresenters();
 
@@ -50,11 +51,12 @@ public sealed class MenuBar : Visual
 
         var width = 0;
         var height = 1;
+        var maxH = constraints.MaxHeight;
 
         for (var i = 0; i < _presenters.Count; i++)
         {
             var item = _presenters[i];
-            item.Measure(new Size(LayoutConstants.Infinite, availableSize.Height));
+            item.Measure(new Size(LayoutConstants.Infinite, maxH));
             width += item.DesiredSize.Width;
             height = Math.Max(height, item.DesiredSize.Height);
 
@@ -64,17 +66,14 @@ public sealed class MenuBar : Visual
             }
         }
 
-        height += padding.Vertical;
-        width = Math.Min(availableSize.Width, padding.Horizontal + width);
-        height = Math.Min(availableSize.Height, Math.Max(1, height));
-        return new Size(width, height);
+        height = Math.Max(1, height + padding.Vertical);
+        width = Math.Max(1, padding.Horizontal + width);
+        return SizeHints.Fixed(constraints.Clamp(new Size(width, height)));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         EnsurePresenters();
-
-        Bounds = finalRect;
 
         var style = Get<MenuBarStyle>();
         var padding = style.Padding;
@@ -316,7 +315,7 @@ public sealed class MenuBar : Visual
             Content = null;
         }
 
-        protected override Size MeasureOverride(Size availableSize)
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
         {
             var style = Get<MenuBarStyle>();
             var padding = style.ItemPadding;
@@ -324,18 +323,16 @@ public sealed class MenuBar : Visual
             var content = Content;
             if (content is not null)
             {
-                content.Measure(new Size(LayoutConstants.Infinite, Math.Max(1, availableSize.Height)));
+                content.Measure(new Size(LayoutConstants.Infinite, Math.Max(1, constraints.MaxHeight)));
             }
 
             var w = padding.Horizontal + (content?.DesiredSize.Width ?? 0);
             var h = Math.Max(1, padding.Vertical + (content?.DesiredSize.Height ?? 1));
-            return new Size(Math.Min(availableSize.Width, w), Math.Min(availableSize.Height, h));
+            return SizeHints.Fixed(constraints.Clamp(new Size(w, h)));
         }
 
-        protected override void ArrangeOverride(Rectangle finalRect)
+        protected override void ArrangeCore(in Rectangle finalRect)
         {
-            Bounds = finalRect;
-
             var style = Get<MenuBarStyle>();
             var padding = style.ItemPadding;
 
@@ -447,7 +444,7 @@ public sealed class MenuBar : Visual
 
         protected override Visual GetChild(int index) => _rows[index];
 
-        protected override Size MeasureOverride(Size availableSize)
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
         {
             var style = Get<MenuListStyle>();
             var padding = style.Padding;
@@ -472,15 +469,13 @@ public sealed class MenuBar : Visual
             var width = padding.Horizontal + maxRowWidth + submenuWidth;
             var height = padding.Vertical + _items.Count;
 
-            width = Math.Min(availableSize.Width, Math.Max(1, width));
-            height = Math.Min(availableSize.Height, Math.Max(1, height));
-            return new Size(width, height);
+            width = Math.Max(1, width);
+            height = Math.Max(1, height);
+            return SizeHints.Fixed(constraints.Clamp(new Size(width, height)));
         }
 
-        protected override void ArrangeOverride(Rectangle finalRect)
+        protected override void ArrangeCore(in Rectangle finalRect)
         {
-            Bounds = finalRect;
-
             var style = Get<MenuListStyle>();
             var padding = style.Padding;
 
@@ -863,11 +858,11 @@ public sealed class MenuBar : Visual
             throw new ArgumentOutOfRangeException(nameof(index));
         }
 
-        protected override Size MeasureOverride(Size availableSize)
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
         {
             if (_item.IsSeparator)
             {
-                return new Size(1, 1);
+                return SizeHints.Fixed(constraints.Clamp(new Size(1, 1)));
             }
 
             var style = Get<MenuListStyle>();
@@ -902,13 +897,11 @@ public sealed class MenuBar : Visual
                 width += shortcutGap + shortcutW;
             }
 
-            return new Size(Math.Min(availableSize.Width, width), 1);
+            return SizeHints.Fixed(constraints.Clamp(new Size(width, 1)));
         }
 
-        protected override void ArrangeOverride(Rectangle finalRect)
+        protected override void ArrangeCore(in Rectangle finalRect)
         {
-            Bounds = finalRect;
-
             _iconRect = default;
             _headerRect = finalRect;
             _shortcutRect = default;

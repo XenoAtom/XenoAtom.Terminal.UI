@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -91,12 +92,9 @@ public sealed class VisualLayoutTests
             _size = size;
         }
 
-        protected override Size MeasureOverride(Size availableSize)
-            => new(Math.Min(_size.Width, availableSize.Width), Math.Min(_size.Height, availableSize.Height));
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+            => SizeHints.Fixed(constraints.Clamp(_size));
 
-        protected override void ArrangeOverride(Rectangle finalRect)
-        {
-            Bounds = finalRect;
-        }
+        protected override void ArrangeCore(in Rectangle finalRect) { }
     }
 }

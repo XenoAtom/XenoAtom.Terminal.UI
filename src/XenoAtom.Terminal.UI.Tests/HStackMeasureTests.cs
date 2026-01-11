@@ -4,6 +4,7 @@
 
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -11,27 +12,23 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class HStackMeasureTests
 {
     [TestMethod]
-    public void HStack_Does_Not_Starve_Stretch_Children_During_Measure()
+    public void HStack_Distributes_Width_To_Stretch_Children_During_Arrange()
     {
         var a = new ProbeVisual { HorizontalAlignment = HorizontalAlignment.Stretch };
         var b = new ProbeVisual { HorizontalAlignment = HorizontalAlignment.Stretch };
 
         var stack = new HStack(a, b) { Spacing = 1 };
-        stack.Measure(new Size(10, 5));
+        stack.Measure(new Size(10, 1));
+        stack.Arrange(new Rectangle(0, 0, 10, 1));
 
-        Assert.IsTrue(a.LastAvailableSize.Width > 0);
-        Assert.IsTrue(b.LastAvailableSize.Width > 0);
-        Assert.IsTrue(a.LastAvailableSize.Width + b.LastAvailableSize.Width <= 9);
+        Assert.IsTrue(a.Bounds.Width > 0);
+        Assert.IsTrue(b.Bounds.Width > 0);
+        Assert.AreEqual(10, a.Bounds.Width + b.Bounds.Width + 1);
     }
 
     private sealed class ProbeVisual : Visual
     {
-        public Size LastAvailableSize { get; private set; }
-
-        protected override Size MeasureOverride(Size availableSize)
-        {
-            LastAvailableSize = availableSize;
-            return Size.Zero;
-        }
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+            => SizeHints.Fixed(Size.Zero);
     }
 }

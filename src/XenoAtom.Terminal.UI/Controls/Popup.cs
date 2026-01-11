@@ -5,6 +5,7 @@
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -84,15 +85,26 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         RaiseEvent(ClosedEvent, new PopupClosedEventArgs());
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         // Fill the available space so the popup can detect outside clicks.
-        // The inner content is measured by the base implementation.
-        _ = base.MeasureOverride(availableSize);
-        return availableSize;
+        var content = Content;
+        if (content is not null)
+        {
+            content.Measure(new LayoutConstraints(0, constraints.MaxWidth, 0, constraints.MaxHeight));
+        }
+
+        return SizeHints.Flex(
+            min: Size.Zero,
+            natural: Size.Zero,
+            max: new Size(LayoutConstants.Infinite, LayoutConstants.Infinite),
+            growX: 1,
+            growY: 1,
+            shrinkX: 0,
+            shrinkY: 0);
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         _layoutSlot = finalRect;
         Bounds = finalRect;

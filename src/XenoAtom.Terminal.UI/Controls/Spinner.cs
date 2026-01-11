@@ -7,6 +7,7 @@ using System.Text;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Animation;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -89,23 +90,24 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
         return true;
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var style = Get<SpinnerStyle>();
         var frameWidth = Math.Max(1, style.FrameWidth);
 
         var label = Label;
         if (label is null)
         {
-            return new Size(Math.Min(availableSize.Width, frameWidth), 1);
+            return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, frameWidth), 1));
         }
 
         label.Measure(new Size(LayoutConstants.Infinite, 1));
         var width = frameWidth + 1 + label.DesiredSize.Width;
-        return new Size(Math.Min(availableSize.Width, width), 1);
+        return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, width), 1));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
 

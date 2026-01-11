@@ -5,6 +5,7 @@
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -30,8 +31,9 @@ public partial class Button : ContentVisual
     [Bindable]
     public partial bool IsPressed { get; set; }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var style = Get<ButtonStyle>();
         var padding = style.Padding;
 
@@ -51,10 +53,10 @@ public partial class Button : ContentVisual
             width = Math.Min(availableSize.Width, Math.Max(3, width));
             height = Math.Min(availableSize.Height, Math.Max(3, height));
         }
-        return new Size(width, height);
+        return SizeHints.Fixed(new Size(width, height));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
 

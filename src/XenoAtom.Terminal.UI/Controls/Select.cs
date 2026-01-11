@@ -6,6 +6,7 @@ using System.Text;
 using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -46,8 +47,9 @@ public sealed partial class Select : ContentVisual
         UpdateSelectedContent();
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         // Rebuild selected content before measuring when needed.
         UpdateSelectedContent();
 
@@ -65,10 +67,10 @@ public sealed partial class Select : ContentVisual
 
         var desiredWidth = padding.Horizontal + arrowWidth + (content?.DesiredSize.Width ?? 0);
         var desiredHeight = Math.Max(1, padding.Vertical + (content?.DesiredSize.Height ?? 1));
-        return new Size(Math.Min(availableSize.Width, Math.Max(3, desiredWidth)), Math.Min(availableSize.Height, desiredHeight));
+        return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, Math.Max(3, desiredWidth)), Math.Min(availableSize.Height, desiredHeight)));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
 

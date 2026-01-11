@@ -4,6 +4,7 @@
 
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -81,13 +82,9 @@ public sealed class GridLayoutTests
             VerticalAlignment = VerticalAlignment.Stretch;
         }
 
-        protected override Size MeasureOverride(Size availableSize)
-            => new(Math.Min(_desired.Width, availableSize.Width), Math.Min(_desired.Height, availableSize.Height));
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+            => SizeHints.Fixed(constraints.Clamp(_desired));
 
-        protected override void ArrangeOverride(Rectangle finalRect)
-        {
-            Bounds = finalRect;
-        }
+        protected override void ArrangeCore(in Rectangle finalRect) { }
     }
 }
-

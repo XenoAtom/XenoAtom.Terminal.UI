@@ -4,6 +4,7 @@
 
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -45,7 +46,7 @@ public sealed partial class Footer : Visual
         throw new ArgumentOutOfRangeException(nameof(index));
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         _left?.Measure(new Size(LayoutConstants.Infinite, 1));
         _center?.Measure(new Size(LayoutConstants.Infinite, 1));
@@ -61,13 +62,12 @@ public sealed partial class Footer : Visual
             requiredWidth = Math.Max(requiredWidth, leftW + centerW + rightW);
         }
 
-        return new Size(Math.Min(availableSize.Width, requiredWidth), Math.Min(availableSize.Height, 1));
+        var natural = constraints.Clamp(new Size(requiredWidth, 1));
+        return SizeHints.FlexX(min: new Size(0, 1), natural: natural, growX: 1, shrinkX: 1);
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var left = _left;
         var center = _center;
         var right = _right;

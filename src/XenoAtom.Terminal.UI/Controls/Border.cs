@@ -4,6 +4,7 @@
 
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -14,8 +15,9 @@ public sealed partial class Border : ContentVisual
     [Bindable]
     public partial Thickness Padding { get; set; }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var padding = Padding;
         var innerWidth = Math.Max(0, availableSize.Width - 2 - padding.Horizontal);
         var innerHeight = Math.Max(0, availableSize.Height - 2 - padding.Vertical);
@@ -29,10 +31,10 @@ public sealed partial class Border : ContentVisual
         var desiredWidth = 2 + padding.Horizontal + (content?.DesiredSize.Width ?? 0);
         var desiredHeight = 2 + padding.Vertical + (content?.DesiredSize.Height ?? 0);
 
-        return new Size(Math.Min(availableSize.Width, desiredWidth), desiredHeight);
+        return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, desiredWidth), desiredHeight));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
 

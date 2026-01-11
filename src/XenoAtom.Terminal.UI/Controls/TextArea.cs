@@ -5,6 +5,7 @@
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -86,16 +87,13 @@ public sealed partial class TextArea : Visual, ICursorProvider
         return true;
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = Get<TextAreaStyle>();
         var showBorder = style.ShowBorder;
 
-        var minW = Math.Min(availableSize.Width, 16);
-        var minH = Math.Min(availableSize.Height, 5);
-
-        var width = Math.Max(minW, Math.Min(availableSize.Width, 32));
-        var height = Math.Max(minH, Math.Min(availableSize.Height, 10));
+        var width = 32;
+        var height = 10;
 
         if (showBorder)
         {
@@ -103,13 +101,11 @@ public sealed partial class TextArea : Visual, ICursorProvider
             height = Math.Max(height, 3);
         }
 
-        return new Size(Math.Min(availableSize.Width, width), Math.Min(availableSize.Height, height));
+        return SizeHints.Fixed(constraints.Clamp(new Size(width, height)));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var style = Get<TextAreaStyle>();
         var showBorder = style.ShowBorder;
         var padding = style.Padding;

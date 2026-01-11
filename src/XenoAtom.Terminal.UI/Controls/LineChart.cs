@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -19,20 +20,21 @@ public sealed partial class LineChart : Visual
     [Bindable]
     public partial double? Maximum { get; set; }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var count = Values?.Count ?? 0;
         if (count <= 0)
         {
-            return default;
+            return SizeHints.Fixed(Size.Zero);
         }
 
         var width = Math.Min(availableSize.Width, Math.Max(1, count));
         var height = Math.Min(availableSize.Height, Math.Max(1, 4));
-        return new Size(width, height);
+        return SizeHints.Fixed(new Size(width, height));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
     }
@@ -128,4 +130,3 @@ public sealed partial class LineChart : Visual
         }
     }
 }
-

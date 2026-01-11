@@ -4,6 +4,7 @@
 
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -45,8 +46,9 @@ public sealed partial class Header : Visual
         throw new ArgumentOutOfRangeException(nameof(index));
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         _left?.Measure(new Size(LayoutConstants.Infinite, 1));
         _center?.Measure(new Size(LayoutConstants.Infinite, 1));
         _right?.Measure(new Size(LayoutConstants.Infinite, 1));
@@ -61,10 +63,10 @@ public sealed partial class Header : Visual
             requiredWidth = Math.Max(requiredWidth, leftW + centerW + rightW);
         }
 
-        return new Size(Math.Min(availableSize.Width, requiredWidth), Math.Min(availableSize.Height, 1));
+        return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, requiredWidth), Math.Min(availableSize.Height, 1)));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
 

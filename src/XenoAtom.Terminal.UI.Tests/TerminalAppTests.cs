@@ -8,6 +8,7 @@ using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Hosting;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -49,9 +50,9 @@ public sealed class TerminalAppTests
 
         public string Text { get; }
 
-        protected override Size MeasureOverride(Size availableSize) => new(Math.Min(availableSize.Width, 10), 1);
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints) => SizeHints.Fixed(constraints.Clamp(new Size(10, 1)));
 
-        protected override void ArrangeOverride(Rectangle finalRect) => Bounds = finalRect;
+        protected override void ArrangeCore(in Rectangle finalRect) { }
 
         protected override void RenderOverride(CellBuffer buffer)
         {
@@ -69,9 +70,9 @@ public sealed class TerminalAppTests
             AddKeyBinding(new Input.TerminalKeyGesture('k', TerminalModifiers.Ctrl), () => Count++);
         }
 
-        protected override Size MeasureOverride(Size availableSize) => new(Math.Min(availableSize.Width, 10), 1);
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints) => SizeHints.Fixed(constraints.Clamp(new Size(10, 1)));
 
-        protected override void ArrangeOverride(Rectangle finalRect) => Bounds = finalRect;
+        protected override void ArrangeCore(in Rectangle finalRect) { }
 
         protected override void RenderOverride(CellBuffer buffer)
         {
@@ -499,7 +500,7 @@ public sealed class TerminalAppTests
             return true;
         }
 
-        protected override Size MeasureOverride(Size availableSize) => new(1, 1);
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints) => SizeHints.Fixed(constraints.Clamp(new Size(1, 1)));
     }
 
     [TestMethod]

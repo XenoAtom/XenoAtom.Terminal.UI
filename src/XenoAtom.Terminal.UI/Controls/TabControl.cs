@@ -5,6 +5,7 @@
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -103,8 +104,9 @@ public sealed partial class TabControl : Visual
         return (index % 2) == 0 ? page.Header : page.Content;
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var style = Get<TabControlStyle>();
         var pad = style.TabPadding;
         var showBorder = style.ShowBorder;
@@ -151,10 +153,10 @@ public sealed partial class TabControl : Visual
         var width = Math.Max(headerTotalWidth, contentWidth);
         var height = headerHeight + contentHeight;
 
-        return new Size(Math.Min(availableSize.Width, width), Math.Min(availableSize.Height, height));
+        return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, width), Math.Min(availableSize.Height, height)));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
 

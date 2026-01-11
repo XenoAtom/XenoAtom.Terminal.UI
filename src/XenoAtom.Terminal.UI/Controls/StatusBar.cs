@@ -4,6 +4,7 @@
 
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -42,19 +43,18 @@ public sealed partial class StatusBar : Visual
         throw new ArgumentOutOfRangeException(nameof(index));
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         _leftText?.Measure(new Size(LayoutConstants.Infinite, 1));
         _rightText?.Measure(new Size(LayoutConstants.Infinite, 1));
 
         var requiredWidth = (_leftText?.DesiredSize.Width ?? 0) + (_rightText?.DesiredSize.Width ?? 0);
-        return new Size(Math.Min(availableSize.Width, requiredWidth), Math.Min(availableSize.Height, 1));
+        var natural = constraints.Clamp(new Size(requiredWidth, 1));
+        return SizeHints.FlexX(min: new Size(0, 1), natural: natural, growX: 1, shrinkX: 1);
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         if (_leftText is not null)
         {
             var w = Math.Min(finalRect.Width, _leftText.DesiredSize.Width);

@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
@@ -64,7 +65,7 @@ public sealed partial class OptionListItem : Visual
         throw new ArgumentOutOfRangeException(nameof(index));
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = Get<OptionListStyle>();
         var gap = Math.Max(0, style.SpaceBetweenContentAndShortcut);
@@ -104,13 +105,11 @@ public sealed partial class OptionListItem : Visual
         }
 
         var height = Description is null ? 1 : 2;
-        return new Size(Math.Min(availableSize.Width, width), Math.Min(availableSize.Height, height));
+        return SizeHints.Fixed(constraints.Clamp(new Size(width, height)));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var style = Get<OptionListStyle>();
         var gap = Math.Max(0, style.SpaceBetweenContentAndShortcut);
         var descriptionIndent = Math.Max(0, style.DescriptionIndent);

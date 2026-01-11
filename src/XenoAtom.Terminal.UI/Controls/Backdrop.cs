@@ -4,6 +4,7 @@
 
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -11,9 +12,17 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class Backdrop : Visual
 {
-    protected override Size MeasureOverride(Size availableSize) => availableSize;
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+        => SizeHints.Flex(
+            min: Size.Zero,
+            natural: Size.Zero,
+            max: new Size(LayoutConstants.Infinite, LayoutConstants.Infinite),
+            growX: 1,
+            growY: 1,
+            shrinkX: 0,
+            shrinkY: 0);
 
-    protected override void ArrangeOverride(Rectangle finalRect) => Bounds = finalRect;
+    protected override void ArrangeCore(in Rectangle finalRect) => Bounds = finalRect;
 
     protected override void RenderOverride(CellBuffer buffer)
     {

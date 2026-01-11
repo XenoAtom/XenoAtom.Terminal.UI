@@ -8,24 +8,26 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class Center : ContentVisual
 {
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var content = Content;
         if (content is null)
         {
-            return default;
+            return SizeHints.Fixed(Size.Zero);
         }
 
         content.Measure(availableSize);
-        return content.DesiredSize;
+        return SizeHints.Fixed(content.DesiredSize);
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
 

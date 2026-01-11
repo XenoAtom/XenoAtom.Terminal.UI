@@ -5,6 +5,7 @@
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -101,11 +102,11 @@ public sealed partial class Dialog : Visual, IModalVisual
         throw new ArgumentOutOfRangeException(nameof(index));
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var padding = Padding;
-        var availableWidth = Width ?? availableSize.Width;
-        var availableHeight = Height ?? availableSize.Height;
+        var availableWidth = Width ?? constraints.MaxWidth;
+        var availableHeight = Height ?? constraints.MaxHeight;
 
         var innerWidth = Math.Max(0, availableWidth - 2 - padding.Horizontal);
         var innerHeight = Math.Max(0, availableHeight - 2 - padding.Vertical);
@@ -113,20 +114,20 @@ public sealed partial class Dialog : Visual, IModalVisual
         var content = Content;
         content?.Measure(new Size(innerWidth, innerHeight));
 
-        var desiredWidth = Width ?? Math.Min(availableSize.Width, Math.Max(3, 2 + padding.Horizontal + (content?.DesiredSize.Width ?? 0)));
-        var desiredHeight = Height ?? Math.Min(availableSize.Height, Math.Max(3, 2 + padding.Vertical + (content?.DesiredSize.Height ?? 0)));
+        var desiredWidth = Width ?? Math.Max(3, 2 + padding.Horizontal + (content?.DesiredSize.Width ?? 0));
+        var desiredHeight = Height ?? Math.Max(3, 2 + padding.Vertical + (content?.DesiredSize.Height ?? 0));
 
         var title = Title;
         if (title is not null)
         {
             title.Measure(new Size(LayoutConstants.Infinite, 1));
-            desiredWidth = Math.Max(desiredWidth, Math.Min(availableSize.Width, Math.Max(3, title.DesiredSize.Width + 4)));
+            desiredWidth = Math.Max(desiredWidth, Math.Max(3, title.DesiredSize.Width + 4));
         }
 
-        return new Size(desiredWidth, desiredHeight);
+        return SizeHints.Fixed(constraints.Clamp(new Size(desiredWidth, desiredHeight)));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         _layoutSlot = finalRect;
 

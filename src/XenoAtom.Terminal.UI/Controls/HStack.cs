@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -20,80 +21,80 @@ public sealed partial class HStack : Panel
     [Bindable]
     public partial int Spacing { get; set; }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var width = 0;
-        var height = 0;
         var spacing = Math.Max(0, Spacing);
         var childCount = Children.Count;
         if (childCount == 0)
         {
-            return Size.Zero;
+            return SizeHints.Fixed(Size.Zero);
         }
 
         var totalSpacing = spacing * Math.Max(0, childCount - 1);
+        var childConstraints = new LayoutConstraints(0, constraints.MaxWidth, constraints.MinHeight, constraints.MaxHeight);
 
-        // Measure fixed-width children first, then distribute remaining width among stretch children.
-        var fixedWidth = 0;
-        var stretchCount = 0;
-        for (var i = 0; i < childCount; i++)
-        {
-            if (Children[i].HorizontalAlignment == HorizontalAlignment.Stretch)
-            {
-                stretchCount++;
-            }
-        }
+        long minW = totalSpacing;
+        long natW = totalSpacing;
+        long maxW = totalSpacing;
 
-        for (var i = 0; i < childCount; i++)
-        {
-            var child = Children[i];
-            if (child.HorizontalAlignment == HorizontalAlignment.Stretch)
-            {
-                continue;
-            }
+        var minH = 0;
+        var natH = 0;
+        var maxH = 0;
+        var maxHInf = false;
 
-            child.Measure(new Size(Math.Max(0, availableSize.Width), availableSize.Height));
-            fixedWidth += child.DesiredSize.Width;
-            height = Math.Max(height, child.DesiredSize.Height);
-        }
-
-        var remainingForStretch = Math.Max(0, availableSize.Width - fixedWidth - totalSpacing);
-        var perStretch = stretchCount > 0 ? remainingForStretch / stretchCount : 0;
-        var remainder = stretchCount > 0 ? remainingForStretch % stretchCount : 0;
-
-        var stretchIndex = 0;
-        for (var i = 0; i < childCount; i++)
-        {
-            var child = Children[i];
-            if (child.HorizontalAlignment != HorizontalAlignment.Stretch)
-            {
-                continue;
-            }
-
-            var w = perStretch + (stretchIndex < remainder ? 1 : 0);
-            stretchIndex++;
-            child.Measure(new Size(w, availableSize.Height));
-            height = Math.Max(height, child.DesiredSize.Height);
-        }
+        var growX = 0;
+        var shrinkX = 0;
 
         for (var i = 0; i < childCount; i++)
         {
             var child = Children[i];
-            width += child.DesiredSize.Width;
-            if (i + 1 < childCount)
+            var hints = child.Measure(childConstraints);
+
+            minW += hints.Min.Width;
+            natW += hints.Natural.Width;
+
+            if (LayoutConstants.IsInfinite(hints.Max.Width))
             {
-                width += spacing;
+                maxW = LayoutConstants.Infinite;
             }
+            else if (maxW != LayoutConstants.Infinite)
+            {
+                maxW += hints.Max.Width;
+            }
+
+            minH = Math.Max(minH, hints.Min.Height);
+            natH = Math.Max(natH, hints.Natural.Height);
+            if (LayoutConstants.IsInfinite(hints.Max.Height))
+            {
+                maxHInf = true;
+            }
+            else if (!maxHInf)
+            {
+                maxH = Math.Max(maxH, hints.Max.Height);
+            }
+
+            growX += hints.FlexGrowX;
+            shrinkX += hints.FlexShrinkX;
         }
 
-        return new Size(Math.Min(availableSize.Width, width), height);
+        var maxSize = new Size(
+            maxW == LayoutConstants.Infinite ? LayoutConstants.Infinite : LayoutConstants.ClampFinite(maxW),
+            maxHInf ? LayoutConstants.Infinite : LayoutConstants.ClampFinite(maxH));
+
+        return SizeHints.Flex(
+            new Size(LayoutConstants.ClampFinite(minW), LayoutConstants.ClampFinite(minH)),
+            new Size(LayoutConstants.ClampFinite(natW), LayoutConstants.ClampFinite(natH)),
+            maxSize,
+            growX,
+            0,
+            shrinkX,
+            0).Normalize();
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
 
-        var x = finalRect.X;
         var spacing = Math.Max(0, Spacing);
         var childCount = Children.Count;
         if (childCount == 0)
@@ -102,36 +103,32 @@ public sealed partial class HStack : Panel
         }
 
         var totalSpacing = spacing * Math.Max(0, childCount - 1);
-        var fixedWidth = 0;
-        var stretchCount = 0;
+        var available = Math.Max(0, finalRect.Width - totalSpacing);
+
+        var mins = new int[childCount];
+        var nats = new int[childCount];
+        var maxs = new int[childCount];
+        var grows = new int[childCount];
+        var shrinks = new int[childCount];
+        var widths = new int[childCount];
+
         for (var i = 0; i < childCount; i++)
         {
-            var child = Children[i];
-            if (child.HorizontalAlignment == HorizontalAlignment.Stretch)
-            {
-                stretchCount++;
-            }
-            else
-            {
-                fixedWidth += child.DesiredSize.Width;
-            }
+            var hints = Children[i].MeasureHints;
+            mins[i] = hints.Min.Width;
+            nats[i] = hints.Natural.Width;
+            maxs[i] = hints.Max.Width;
+            grows[i] = hints.FlexGrowX;
+            shrinks[i] = hints.FlexShrinkX;
         }
 
-        var remaining = Math.Max(0, finalRect.Width - fixedWidth - totalSpacing);
-        var stretchWidth = stretchCount > 0 ? remaining / stretchCount : 0;
-        var stretchRemainder = stretchCount > 0 ? remaining % stretchCount : 0;
-        var stretchIndex = 0;
+        FlexAllocator.Allocate(available, mins, nats, maxs, grows, shrinks, widths);
 
-        foreach (var child in Children)
+        var x = finalRect.X;
+        for (var i = 0; i < childCount; i++)
         {
-            var w = child.DesiredSize.Width;
-            if (child.HorizontalAlignment == HorizontalAlignment.Stretch)
-            {
-                w = stretchWidth + (stretchIndex < stretchRemainder ? 1 : 0);
-                stretchIndex++;
-            }
-
-            child.Arrange(new Rectangle(x, finalRect.Y, w, finalRect.Height));
+            var w = widths[i];
+            Children[i].Arrange(new Rectangle(x, finalRect.Y, w, finalRect.Height));
             x += w + spacing;
         }
     }

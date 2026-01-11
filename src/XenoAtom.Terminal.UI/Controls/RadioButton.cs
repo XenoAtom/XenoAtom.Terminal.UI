@@ -5,6 +5,7 @@
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -40,7 +41,7 @@ public sealed partial class RadioButton : Visual
     protected override Visual GetChild(int index)
         => index == 0 && _text is not null ? _text : throw new ArgumentOutOfRangeException(nameof(index));
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var textWidth = 0;
         var textVisual = Text;
@@ -50,14 +51,11 @@ public sealed partial class RadioButton : Visual
             textWidth = textVisual.DesiredSize.Width;
         }
 
-        var width = Math.Min(availableSize.Width, textWidth + 4);
-        return new Size(width, 1);
+        return SizeHints.Fixed(constraints.Clamp(new Size(textWidth + 4, 1)));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var textVisual = Text;
         if (textVisual is null)
         {

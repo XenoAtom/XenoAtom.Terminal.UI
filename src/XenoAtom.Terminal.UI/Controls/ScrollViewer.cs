@@ -5,6 +5,7 @@
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -111,14 +112,15 @@ public sealed partial class ScrollViewer : Visual
 
     partial void OnHorizontalOffsetChanged(int value) => MarkArrangeDirty();
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var content = Content;
         if (content is not null)
         {
-            content.Measure(new Size(LayoutConstants.Infinite, LayoutConstants.Infinite));
-            _contentWidth = content.DesiredSize.Width;
-            _contentHeight = content.DesiredSize.Height;
+            var childConstraints = new LayoutConstraints(0, LayoutConstants.Infinite, 0, LayoutConstants.Infinite);
+            var hints = content.Measure(childConstraints);
+            _contentWidth = hints.Natural.Width;
+            _contentHeight = hints.Natural.Height;
         }
         else
         {
@@ -126,12 +128,22 @@ public sealed partial class ScrollViewer : Visual
             _contentHeight = 0;
         }
 
-        var desiredWidth = Math.Min(availableSize.Width, Math.Max(1, Math.Min(availableSize.Width, _contentWidth)));
-        var desiredHeight = Math.Min(availableSize.Height, Math.Max(1, Math.Min(availableSize.Height, _contentHeight)));
-        return new Size(desiredWidth, desiredHeight);
+        var desiredWidth = constraints.IsWidthBounded ? Math.Min(_contentWidth, constraints.MaxWidth) : _contentWidth;
+        var desiredHeight = constraints.IsHeightBounded ? Math.Min(_contentHeight, constraints.MaxHeight) : _contentHeight;
+
+        if (content is not null)
+        {
+            desiredWidth = Math.Max(1, desiredWidth);
+            desiredHeight = Math.Max(1, desiredHeight);
+        }
+
+        var min = content is null ? Size.Zero : new Size(1, 1);
+        var natural = new Size(desiredWidth, desiredHeight);
+        var max = new Size(LayoutConstants.Infinite, LayoutConstants.Infinite);
+        return SizeHints.Flex(min, natural, max, growX: 0, growY: 0, shrinkX: 1, shrinkY: 1);
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
 
@@ -361,7 +373,7 @@ public sealed partial class ScrollViewer : Visual
             MarkArrangeDirty();
         }
 
-        protected override void ArrangeOverride(Rectangle finalRect)
+        protected override void ArrangeCore(in Rectangle finalRect)
         {
             Bounds = finalRect;
 

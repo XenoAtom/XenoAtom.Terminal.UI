@@ -4,6 +4,7 @@
 
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -23,22 +24,19 @@ public sealed partial class BarChart : Visual
     [Bindable]
     public partial Orientation Orientation { get; set; }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var count = Values?.Count ?? 0;
         if (count <= 0)
         {
-            return default;
+            return SizeHints.Fixed(default);
         }
 
-        return Orientation == Orientation.Vertical
-            ? new Size(Math.Min(availableSize.Width, Math.Max(1, count)), Math.Min(availableSize.Height, Math.Max(1, 4)))
-            : new Size(Math.Min(availableSize.Width, Math.Max(1, 10)), Math.Min(availableSize.Height, Math.Max(1, count)));
-    }
+        var natural = Orientation == Orientation.Vertical
+            ? new Size(Math.Max(1, count), 4)
+            : new Size(10, Math.Max(1, count));
 
-    protected override void ArrangeOverride(Rectangle finalRect)
-    {
-        Bounds = finalRect;
+        return SizeHints.Fixed(constraints.Clamp(natural));
     }
 
     protected override void RenderOverride(CellBuffer buffer)

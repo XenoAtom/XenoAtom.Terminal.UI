@@ -5,6 +5,7 @@
 using System.Text;
 using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -68,13 +69,13 @@ public sealed partial class Table : Visual
         throw new ArgumentOutOfRangeException(nameof(index));
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var columns = GetColumnCount();
         if (columns == 0)
         {
             _columnWidths = Array.Empty<int>();
-            return new Size(0, 0);
+            return SizeHints.Fixed(default);
         }
 
         var widths = new int[columns];
@@ -108,7 +109,7 @@ public sealed partial class Table : Visual
         var tableStyle = Get<TableStyle>();
         var (showOuterBorder, showVerticalLines, showRowSeparators, showHeaderSeparator, padding) = ResolveOptions(tableStyle);
 
-        FitColumnWidthsToWidth(widths, availableSize.Width, padding.Horizontal, showOuterBorder, showVerticalLines, expandToAvailable: false);
+        FitColumnWidthsToWidth(widths, constraints.MaxWidth, padding.Horizontal, showOuterBorder, showVerticalLines, expandToAvailable: false);
 
         _columnWidths = widths;
 
@@ -123,15 +124,11 @@ public sealed partial class Table : Visual
             showHeaderSeparator,
             showRowSeparators);
 
-        return new Size(
-            Math.Min(availableSize.Width, desiredWidth),
-            Math.Min(availableSize.Height, desiredHeight));
+        return SizeHints.Fixed(constraints.Clamp(new Size(desiredWidth, desiredHeight)));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var widths = _columnWidths;
         if (widths is null || widths.Length == 0)
         {

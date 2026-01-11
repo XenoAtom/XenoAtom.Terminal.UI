@@ -11,12 +11,32 @@ internal static class LayoutConstants
     /// </summary>
     public const int Infinite = int.MaxValue;
 
+    public const int MaxFinite = int.MaxValue - 1;
+
     /// <summary>
     /// Returns true when <paramref name="value"/> should be treated as unbounded.
     /// </summary>
     public static bool IsInfinite(int value)
-        // We treat values extremely close to int.MaxValue as unbounded so that internal arithmetic
-        // (e.g. subtracting borders/padding) doesn't accidentally turn "infinite" into a huge finite number.
-        => value >= int.MaxValue - 1024;
+        => value == Infinite;
+
+    public static int ClampFinite(long value)
+    {
+        if (value <= 0)
+        {
+            return 0;
+        }
+
+        return value >= MaxFinite ? MaxFinite : (int)value;
+    }
+
+    public static int ClampOrInfinite(long value)
+    {
+        if (value <= 0)
+        {
+            return 0;
+        }
+
+        return value >= Infinite ? Infinite : (int)value;
+    }
 }
 

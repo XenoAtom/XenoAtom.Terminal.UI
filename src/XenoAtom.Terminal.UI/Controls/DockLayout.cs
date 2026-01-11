@@ -8,6 +8,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -22,8 +23,9 @@ public sealed partial class DockLayout : Visual
     [Bindable]
     public partial Visual? Content { get; set; }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var topHeight = 0;
         var bottomHeight = 0;
         var width = 0;
@@ -52,10 +54,10 @@ public sealed partial class DockLayout : Visual
         }
 
         var height = Math.Min(availableSize.Height, topHeight + bottomHeight + (content?.DesiredSize.Height ?? 0));
-        return new Size(Math.Min(availableSize.Width, width), height);
+        return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, width), height));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
 

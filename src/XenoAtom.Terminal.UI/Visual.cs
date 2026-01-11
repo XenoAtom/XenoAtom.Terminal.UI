@@ -4,6 +4,7 @@
 
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Threading;
@@ -30,7 +31,7 @@ public abstract partial class Visual : DispatcherObject
     private HashSet<Binding>? _renderDeps;
 
     private bool _hasLastMeasure;
-    private Size _lastAvailableSize;
+    private LayoutConstraints _lastMeasureConstraints;
     private bool _hasLastArrange;
     private Rectangle _lastArrangeRect;
 
@@ -39,6 +40,8 @@ public abstract partial class Visual : DispatcherObject
     public Rectangle Bounds { get; protected set; }
 
     public Size DesiredSize { get; private set; }
+
+    public SizeHints MeasureHints { get; private set; }
 
     internal Size DesiredSizeWithoutMargin => _desiredSizeWithoutMargin;
 
@@ -316,29 +319,43 @@ public abstract partial class Visual : DispatcherObject
     protected virtual void OnDetachedFromApp(TerminalApp app) { }
 
     public void Measure(Size availableSize)
+        => Measure(LayoutConstraints.FromMaxSize(availableSize));
+
+    public SizeHints Measure(in LayoutConstraints constraints)
     {
         VerifyAccess();
         EnsureDynamicUpdatesApplied();
 
-        if (!_measureDirty && _hasLastMeasure && availableSize.Equals(_lastAvailableSize))
+        if (!_measureDirty && _hasLastMeasure && constraints.Equals(_lastMeasureConstraints))
         {
-            return;
+            return MeasureHints;
         }
 
         using var session = BindingManager.Current.StartTracking();
         var margin = Margin;
-        var availableWithoutMargin = Deflate(availableSize, margin);
-        var innerAvailable = ApplyMeasureConstraints(availableWithoutMargin);
-        _desiredSizeWithoutMargin = MeasureOverride(innerAvailable);
-        _desiredSizeWithoutMargin = ApplyMinMaxConstraints(_desiredSizeWithoutMargin);
-        DesiredSize = Inflate(_desiredSizeWithoutMargin, margin);
-        if (StoreDependencies(ref _measureDeps, session.Dependencies) && App is not null)
+        var innerConstraints = ApplyMeasureConstraints(Deflate(constraints, margin));
+
+        var hints = MeasureCore(innerConstraints).Normalize();
+        hints = ClampHintsToConstraints(hints, innerConstraints);
+
+        _desiredSizeWithoutMargin = hints.Natural;
+
+        // Inflate hints by margin for the parent's perspective.
+        var inflatedHints = Inflate(hints, margin).Normalize();
+        inflatedHints = ClampHintsToConstraints(inflatedHints, constraints);
+
+        MeasureHints = inflatedHints;
+        DesiredSize = inflatedHints.Natural;
+
+        if (UnionDependencies(ref _measureDeps, session.Dependencies) && App is not null)
         {
             App.UpdateDependencies(this, TerminalApp.DependencyKind.Measure, _measureDeps!);
         }
         _measureDirty = false;
         _hasLastMeasure = true;
-        _lastAvailableSize = availableSize;
+        _lastMeasureConstraints = constraints;
+
+        return MeasureHints;
     }
 
     public void Arrange(Rectangle finalRect)
@@ -356,8 +373,8 @@ public abstract partial class Visual : DispatcherObject
         var innerSlot = Deflate(finalRect, margin);
         var arrangedRect = ApplyArrangeConstraints(innerSlot);
         Bounds = arrangedRect;
-        ArrangeOverride(arrangedRect);
-        if (StoreDependencies(ref _arrangeDeps, session.Dependencies) && App is not null)
+        ArrangeCore(arrangedRect);
+        if (UnionDependencies(ref _arrangeDeps, session.Dependencies) && App is not null)
         {
             App.UpdateDependencies(this, TerminalApp.DependencyKind.Arrange, _arrangeDeps!);
         }
@@ -366,7 +383,7 @@ public abstract partial class Visual : DispatcherObject
         _lastArrangeRect = finalRect;
     }
 
-    protected virtual Size MeasureOverride(Size availableSize)
+    protected virtual SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var width = 0;
         var height = 0;
@@ -374,15 +391,31 @@ public abstract partial class Visual : DispatcherObject
         for (var i = 0; i < ChildrenCount; i++)
         {
             var child = GetChild(i);
-            child.Measure(availableSize);
-            width = Math.Max(width, child.DesiredSize.Width);
-            height = Math.Max(height, child.DesiredSize.Height);
+            var childHints = child.Measure(constraints);
+            width = Math.Max(width, childHints.Natural.Width);
+            height = Math.Max(height, childHints.Natural.Height);
         }
 
-        return new Size(width, height);
+        var natural = new Size(
+            Math.Clamp(width, 0, LayoutConstants.MaxFinite),
+            Math.Clamp(height, 0, LayoutConstants.MaxFinite));
+
+        var min = new Size(
+            Math.Clamp(MinWidth, 0, natural.Width),
+            Math.Clamp(MinHeight, 0, natural.Height));
+
+        var maxW = MaxWidth == LayoutConstants.Infinite ? LayoutConstants.Infinite : Math.Clamp(MaxWidth, natural.Width, LayoutConstants.MaxFinite);
+        var maxH = MaxHeight == LayoutConstants.Infinite ? LayoutConstants.Infinite : Math.Clamp(MaxHeight, natural.Height, LayoutConstants.MaxFinite);
+
+        var growX = HorizontalAlignment == HorizontalAlignment.Stretch ? 1 : 0;
+        var growY = VerticalAlignment == VerticalAlignment.Stretch ? 1 : 0;
+        var shrinkX = natural.Width > min.Width ? 1 : 0;
+        var shrinkY = natural.Height > min.Height ? 1 : 0;
+
+        return SizeHints.Flex(min, natural, new Size(maxW, maxH), growX: growX, growY: growY, shrinkX: shrinkX, shrinkY: shrinkY).Normalize();
     }
 
-    protected virtual void ArrangeOverride(Rectangle finalRect)
+    protected virtual void ArrangeCore(in Rectangle finalRect)
     {
         for (var i = 0; i < ChildrenCount; i++)
         {
@@ -391,36 +424,140 @@ public abstract partial class Visual : DispatcherObject
         }
     }
 
-    private Size ApplyMeasureConstraints(Size availableSize)
+    private static LayoutConstraints Deflate(in LayoutConstraints constraints, Thickness thickness)
     {
-        var w = Math.Max(0, availableSize.Width);
-        var h = Math.Max(0, availableSize.Height);
+        var minW = Math.Max(0, constraints.MinWidth - thickness.Horizontal);
+        var minH = Math.Max(0, constraints.MinHeight - thickness.Vertical);
 
-        var maxW = Math.Max(0, MaxWidth);
-        var maxH = Math.Max(0, MaxHeight);
-        if (maxW != int.MaxValue)
-        {
-            w = Math.Min(w, maxW);
-        }
+        var maxW = constraints.MaxWidth == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : Math.Max(0, constraints.MaxWidth - thickness.Horizontal);
+        var maxH = constraints.MaxHeight == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : Math.Max(0, constraints.MaxHeight - thickness.Vertical);
 
-        if (maxH != int.MaxValue)
-        {
-            h = Math.Min(h, maxH);
-        }
-
-        return new Size(w, h);
+        return new LayoutConstraints(minW, maxW, minH, maxH);
     }
 
-    private Size ApplyMinMaxConstraints(Size size)
+    private static SizeHints Inflate(SizeHints hints, Thickness thickness)
     {
-        var minW = Math.Max(0, MinWidth);
-        var minH = Math.Max(0, MinHeight);
-        var maxW = Math.Max(Math.Max(0, MaxWidth), minW);
-        var maxH = Math.Max(Math.Max(0, MaxHeight), minH);
+        var minW = LayoutConstants.ClampFinite((long)hints.Min.Width + thickness.Horizontal);
+        var minH = LayoutConstants.ClampFinite((long)hints.Min.Height + thickness.Vertical);
 
-        var w = Math.Clamp(size.Width, minW, maxW);
-        var h = Math.Clamp(size.Height, minH, maxH);
-        return new Size(w, h);
+        var natW = LayoutConstants.ClampFinite((long)hints.Natural.Width + thickness.Horizontal);
+        var natH = LayoutConstants.ClampFinite((long)hints.Natural.Height + thickness.Vertical);
+
+        var maxW = hints.Max.Width == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : LayoutConstants.ClampFinite((long)hints.Max.Width + thickness.Horizontal);
+        var maxH = hints.Max.Height == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : LayoutConstants.ClampFinite((long)hints.Max.Height + thickness.Vertical);
+
+        return hints with
+        {
+            Min = new Size(minW, minH),
+            Natural = new Size(natW, natH),
+            Max = new Size(maxW, maxH),
+        };
+    }
+
+    private LayoutConstraints ApplyMeasureConstraints(in LayoutConstraints constraints)
+    {
+        var minW = Math.Max(0, constraints.MinWidth);
+        var minH = Math.Max(0, constraints.MinHeight);
+
+        var maxW = constraints.MaxWidth;
+        var maxH = constraints.MaxHeight;
+
+        var ownMinW = Math.Max(0, MinWidth);
+        var ownMinH = Math.Max(0, MinHeight);
+        var ownMaxW = Math.Max(0, MaxWidth);
+        var ownMaxH = Math.Max(0, MaxHeight);
+
+        minW = Math.Max(minW, ownMinW);
+        minH = Math.Max(minH, ownMinH);
+
+        if (maxW != LayoutConstants.Infinite)
+        {
+            maxW = Math.Min(maxW, ownMaxW);
+        }
+        else if (ownMaxW != LayoutConstants.Infinite)
+        {
+            maxW = ownMaxW;
+        }
+
+        if (maxH != LayoutConstants.Infinite)
+        {
+            maxH = Math.Min(maxH, ownMaxH);
+        }
+        else if (ownMaxH != LayoutConstants.Infinite)
+        {
+            maxH = ownMaxH;
+        }
+
+        return new LayoutConstraints(minW, maxW, minH, maxH);
+    }
+
+    private SizeHints ClampHintsToConstraints(SizeHints hints, in LayoutConstraints constraints)
+    {
+        var normalized = hints.Normalize();
+
+        var min = constraints.Clamp(normalized.Min);
+        var nat = constraints.Clamp(normalized.Natural);
+        nat = new Size(Math.Max(min.Width, nat.Width), Math.Max(min.Height, nat.Height));
+
+        var maxW = normalized.Max.Width;
+        if (maxW != LayoutConstants.Infinite)
+        {
+            var maxWLimit = constraints.MaxWidth == LayoutConstants.Infinite ? LayoutConstants.MaxFinite : constraints.MaxWidth;
+            maxW = Math.Clamp(maxW, nat.Width, maxWLimit);
+        }
+
+        var maxH = normalized.Max.Height;
+        if (maxH != LayoutConstants.Infinite)
+        {
+            var maxHLimit = constraints.MaxHeight == LayoutConstants.Infinite ? LayoutConstants.MaxFinite : constraints.MaxHeight;
+            maxH = Math.Clamp(maxH, nat.Height, maxHLimit);
+        }
+
+        var growX = normalized.FlexGrowX;
+        var growY = normalized.FlexGrowY;
+        var shrinkX = normalized.FlexShrinkX;
+        var shrinkY = normalized.FlexShrinkY;
+
+        // Treat Stretch as willingness to grow on that axis (bounded by MaxWidth/MaxHeight).
+        if (HorizontalAlignment == HorizontalAlignment.Stretch && MaxWidth == LayoutConstants.Infinite)
+        {
+            maxW = LayoutConstants.Infinite;
+            growX = Math.Max(growX, 1);
+            shrinkX = Math.Max(shrinkX, 1);
+        }
+
+        if (VerticalAlignment == VerticalAlignment.Stretch && MaxHeight == LayoutConstants.Infinite)
+        {
+            maxH = LayoutConstants.Infinite;
+            growY = Math.Max(growY, 1);
+            shrinkY = Math.Max(shrinkY, 1);
+        }
+
+        // Ensure min/natural are finite.
+        if (min.Width >= LayoutConstants.Infinite || min.Height >= LayoutConstants.Infinite ||
+            nat.Width >= LayoutConstants.Infinite || nat.Height >= LayoutConstants.Infinite)
+        {
+            throw new InvalidOperationException($"Measure produced an infinite Min/Natural size for {GetType().Name}. Min={min} Natural={nat} Constraints={constraints}");
+        }
+
+        return new SizeHints
+        {
+            Min = min,
+            Natural = nat,
+            Max = new Size(maxW, maxH),
+            FlexGrowX = growX,
+            FlexGrowY = growY,
+            FlexShrinkX = shrinkX,
+            FlexShrinkY = shrinkY,
+        }.Normalize();
     }
 
     private Rectangle ApplyArrangeConstraints(Rectangle slot)
@@ -498,7 +635,7 @@ public abstract partial class Visual : DispatcherObject
                 buffer.PopClip();
             }
 
-            if (StoreDependencies(ref _renderDeps, session.Dependencies) && App is not null)
+            if (ReplaceDependencies(ref _renderDeps, session.Dependencies) && App is not null)
             {
                 App.UpdateDependencies(this, TerminalApp.DependencyKind.Render, _renderDeps!);
             }
@@ -583,13 +720,13 @@ public abstract partial class Visual : DispatcherObject
             _dynamicUpdates[i](this);
         }
 
-        if (StoreDependencies(ref _dynamicUpdateDeps, session.Dependencies) && App is not null)
+        if (ReplaceDependencies(ref _dynamicUpdateDeps, session.Dependencies) && App is not null)
         {
             App.UpdateDependencies(this, TerminalApp.DependencyKind.DynamicUpdate, _dynamicUpdateDeps!);
         }
     }
 
-    private static bool StoreDependencies(ref HashSet<Binding>? target, IReadOnlyCollection<Binding> dependencies)
+    private static bool ReplaceDependencies(ref HashSet<Binding>? target, IReadOnlyCollection<Binding> dependencies)
     {
         if (target is null)
         {
@@ -610,9 +747,30 @@ public abstract partial class Visual : DispatcherObject
         return true;
     }
 
+    private static bool UnionDependencies(ref HashSet<Binding>? target, IReadOnlyCollection<Binding> dependencies)
+    {
+        if (target is null)
+        {
+            target = new HashSet<Binding>(BindingReferenceComparer.Instance);
+            foreach (var dep in dependencies)
+            {
+                target.Add(dep);
+            }
+            return true;
+        }
+
+        var changed = false;
+        foreach (var dep in dependencies)
+        {
+            changed |= target.Add(dep);
+        }
+        return changed;
+    }
+
     internal void MarkDynamicUpdateDirty()
     {
         _dynamicUpdatesDirty = true;
+        _dynamicUpdateDeps = null;
         MarkMeasureDirty();
     }
 
@@ -622,6 +780,8 @@ public abstract partial class Visual : DispatcherObject
         _arrangeDirty = true;
         _hasLastMeasure = false;
         _hasLastArrange = false;
+        _measureDeps = null;
+        _arrangeDeps = null;
 
         Parent?.MarkMeasureDirtyFromChild();
     }
@@ -630,6 +790,7 @@ public abstract partial class Visual : DispatcherObject
     {
         _arrangeDirty = true;
         _hasLastArrange = false;
+        _arrangeDeps = null;
 
         Parent?.MarkArrangeDirtyFromChild();
     }
@@ -651,6 +812,8 @@ public abstract partial class Visual : DispatcherObject
         _arrangeDirty = true;
         _hasLastMeasure = false;
         _hasLastArrange = false;
+        _measureDeps = null;
+        _arrangeDeps = null;
 
         Parent?.MarkMeasureDirtyFromChild();
     }
@@ -664,6 +827,7 @@ public abstract partial class Visual : DispatcherObject
 
         _arrangeDirty = true;
         _hasLastArrange = false;
+        _arrangeDeps = null;
 
         Parent?.MarkArrangeDirtyFromChild();
     }

@@ -4,6 +4,7 @@
 
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -29,8 +30,9 @@ public sealed partial class Accordion : Panel
     [Bindable]
     public partial bool SingleExpanded { get; set; }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var width = 0;
         var height = 0;
         var spacing = Math.Max(0, Spacing);
@@ -47,10 +49,10 @@ public sealed partial class Accordion : Panel
             }
         }
 
-        return new Size(Math.Min(availableSize.Width, width), height);
+        return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, width), height));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
 

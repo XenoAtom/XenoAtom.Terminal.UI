@@ -5,6 +5,7 @@
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -39,17 +40,12 @@ public sealed partial class Link : Visual
     [Bindable]
     public partial TextTrimming Trimming { get; set; }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var text = Text ?? Uri ?? string.Empty;
         var width = TerminalTextUtility.GetWidth(text.AsSpan());
-        width = Math.Min(availableSize.Width, width);
-        return new Size(Math.Max(0, width), Math.Min(availableSize.Height, 1));
-    }
-
-    protected override void ArrangeOverride(Rectangle finalRect)
-    {
-        Bounds = finalRect;
+        var natural = constraints.Clamp(new Size(Math.Max(0, width), 1));
+        return SizeHints.Fixed(natural);
     }
 
     protected override void RenderOverride(CellBuffer buffer)
@@ -180,4 +176,3 @@ public sealed class LinkOpenedEventArgs : RoutedEventArgs
 
     public string Uri { get; }
 }
-

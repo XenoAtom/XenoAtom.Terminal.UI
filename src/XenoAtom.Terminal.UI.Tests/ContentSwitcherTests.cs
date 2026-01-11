@@ -4,6 +4,7 @@
 
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -45,16 +46,15 @@ public sealed class ContentSwitcherTests
 
         public int ArrangeCount { get; private set; }
 
-        protected override Size MeasureOverride(Size availableSize)
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
         {
             MeasureCount++;
-            return new Size(Math.Min(_desired.Width, availableSize.Width), Math.Min(_desired.Height, availableSize.Height));
+            return SizeHints.Fixed(constraints.Clamp(_desired));
         }
 
-        protected override void ArrangeOverride(Rectangle finalRect)
+        protected override void ArrangeCore(in Rectangle finalRect)
         {
             ArrangeCount++;
-            Bounds = finalRect;
         }
     }
 }

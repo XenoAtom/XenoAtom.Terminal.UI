@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -19,16 +20,10 @@ public sealed partial class Sparkline : Visual
     [Bindable]
     public partial double? Maximum { get; set; }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var count = Values?.Count ?? 0;
-        var width = Math.Min(availableSize.Width, count);
-        return new Size(Math.Max(0, width), Math.Min(availableSize.Height, 1));
-    }
-
-    protected override void ArrangeOverride(Rectangle finalRect)
-    {
-        Bounds = finalRect;
+        return SizeHints.Fixed(constraints.Clamp(new Size(Math.Max(0, count), 1)));
     }
 
     protected override void RenderOverride(CellBuffer buffer)
@@ -123,4 +118,3 @@ public sealed partial class Sparkline : Visual
         }
     }
 }
-

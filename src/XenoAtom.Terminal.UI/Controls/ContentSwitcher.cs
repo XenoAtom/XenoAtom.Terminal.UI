@@ -5,6 +5,7 @@
 using System.Linq;
 using System.Diagnostics.CodeAnalysis;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -29,18 +30,19 @@ public sealed partial class ContentSwitcher : Panel
     protected override Visual GetChild(int index)
         => index == 0 && TryGetActiveChild(out var child) ? child : throw new ArgumentOutOfRangeException(nameof(index));
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         if (!TryGetActiveChild(out var child))
         {
-            return default;
+            return SizeHints.Fixed(Size.Zero);
         }
 
         child.Measure(availableSize);
-        return child.DesiredSize;
+        return SizeHints.Fixed(child.DesiredSize);
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         if (!TryGetActiveChild(out var child))
         {

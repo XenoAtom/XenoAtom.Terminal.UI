@@ -4,6 +4,7 @@
 
 using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
@@ -89,15 +90,13 @@ public sealed class CommandPalette : Visual
 
     protected override Visual GetChild(int index) => index == 0 ? _frame : throw new ArgumentOutOfRangeException(nameof(index));
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        _frame.Measure(availableSize);
-        return _frame.DesiredSize;
+        return _frame.Measure(constraints);
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
         _frame.Arrange(finalRect);
     }
 

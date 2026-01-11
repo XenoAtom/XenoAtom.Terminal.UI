@@ -6,6 +6,7 @@ using System.Text;
 using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -34,7 +35,7 @@ public sealed partial class SelectionList : Visual
 
     protected override Visual GetChild(int index) => Items[index];
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var height = Math.Max(1, Height);
         var style = Get<SelectionListStyle>();
@@ -53,21 +54,29 @@ public sealed partial class SelectionList : Visual
             itemWidth = Math.Max(itemWidth, item.DesiredSize.Width);
         }
 
-        var width = Math.Min(availableSize.Width, itemWidth + prefixWidth);
-        var desiredHeight = Math.Min(height, availableSize.Height);
+        var width = itemWidth + prefixWidth;
+        var desiredHeight = height;
         if (showBorder)
         {
-            width = Math.Min(availableSize.Width, width + 2);
-            desiredHeight = Math.Min(availableSize.Height, desiredHeight + 2);
+            width += 2;
+            desiredHeight += 2;
         }
 
-        return new Size(width, desiredHeight);
+        var natural = constraints.Clamp(new Size(width, desiredHeight));
+        return new SizeHints
+        {
+            Min = new Size(0, 0),
+            Natural = natural,
+            Max = natural,
+            FlexGrowX = HorizontalAlignment == HorizontalAlignment.Stretch ? 1 : 0,
+            FlexGrowY = VerticalAlignment == VerticalAlignment.Stretch ? 1 : 0,
+            FlexShrinkX = 1,
+            FlexShrinkY = 1,
+        }.Normalize();
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var rect = finalRect;
         var items = Items;
         if (rect.Width <= 0 || rect.Height <= 0 || items.Count == 0)

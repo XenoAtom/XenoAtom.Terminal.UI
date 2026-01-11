@@ -6,6 +6,7 @@ using System.Buffers;
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -72,14 +73,15 @@ public sealed partial class MaskedInput : Visual, ICursorProvider
 
     private bool HasSelection => _selectionAnchor >= 0 && _selectionEnd >= 0 && _selectionAnchor != _selectionEnd;
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var width = Math.Max(10, Math.Min(availableSize.Width, 24));
         var height = Get<MaskedInputStyle>().ShowBorder ? 3 : 1;
-        return new Size(width, Math.Min(availableSize.Height, height));
+        return SizeHints.Fixed(new Size(width, Math.Min(availableSize.Height, height)));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
     }

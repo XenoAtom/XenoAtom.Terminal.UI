@@ -5,6 +5,7 @@
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -34,8 +35,9 @@ public sealed partial class CheckBox : Visual
     protected override Visual GetChild(int index)
         => index == 0 && _text is not null ? _text : throw new ArgumentOutOfRangeException(nameof(index));
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var checkBoxStyle = Get<CheckBoxStyle>();
         var gap = Math.Max(0, checkBoxStyle.SpaceBetweenGlyphAndText);
         var glyph = IsChecked ? checkBoxStyle.CheckedGlyph : checkBoxStyle.UncheckedGlyph;
@@ -50,10 +52,10 @@ public sealed partial class CheckBox : Visual
         }
 
         var width = Math.Min(availableSize.Width, textWidth + glyphWidth + gap);
-        return new Size(width, 1);
+        return SizeHints.Fixed(new Size(width, 1));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
 

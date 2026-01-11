@@ -8,6 +8,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -40,19 +41,18 @@ public sealed class ComputedVisual : Visual, IDisposable
         ClearChild();
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var child = EnsureChild();
         if (child is null)
         {
-            return default;
+            return SizeHints.Fixed(default);
         }
 
-        child.Measure(availableSize);
-        return child.DesiredSize;
+        return child.Measure(constraints);
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         var child = EnsureChild();
         if (child is null)
@@ -63,7 +63,6 @@ public sealed class ComputedVisual : Visual, IDisposable
         }
 
         child.Arrange(finalRect);
-        Bounds = finalRect;
     }
 
     private Visual? EnsureChild()

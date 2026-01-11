@@ -6,6 +6,7 @@ using System.Text;
 using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -113,8 +114,9 @@ public sealed partial class TreeView : Visual
         }
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         EnsureVisibleList();
 
         var style = Get<TreeViewStyle>();
@@ -144,10 +146,10 @@ public sealed partial class TreeView : Visual
             desiredHeight = Math.Min(availableSize.Height, desiredHeight + 2);
         }
 
-        return new Size(width, desiredHeight);
+        return SizeHints.Fixed(new Size(width, desiredHeight));
     }
 
-    protected override void ArrangeOverride(Rectangle finalRect)
+    protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
         EnsureVisibleList();
