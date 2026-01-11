@@ -221,18 +221,6 @@ public sealed partial class TextBox : Visual, ICursorProvider
                 buffer.WriteText(contentXAligned + selEndCell, textRowY, text.AsSpan(visSelEnd, endIndex - visSelEnd), backgroundStyle);
             }
         }
-
-        if (isFocused)
-        {
-            var caretX = caretCells - _scrollCellOffset;
-            if (caretX >= 0 && caretX < contentWidth)
-            {
-                if (!HasSelection)
-                {
-                    buffer.SetCell(contentXAligned + caretX, textRowY, new Rune(' '), CellStyle.None | TextStyle.Invert);
-                }
-            }
-        }
     }
 
     protected override void OnTextInput(TextInputEventArgs e)
