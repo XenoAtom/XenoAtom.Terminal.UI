@@ -103,7 +103,7 @@ public sealed record ButtonStyle : IStyle<ButtonStyle>
 
     private static CellStyle ResolveDefaultFocused(Theme theme, CellStyle normal, ControlTone tone)
     {
-        var style = normal | TextStyle.Underline;
+        var style = normal;
 
         if (tone == ControlTone.Default && theme.FocusBorder is { } focus)
         {

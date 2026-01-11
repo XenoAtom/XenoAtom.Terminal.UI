@@ -82,11 +82,6 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
             style |= TextStyle.Bold;
         }
 
-        if (focused)
-        {
-            style |= TextStyle.Underline;
-        }
-
         return style;
     }
 
@@ -145,7 +140,7 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
             baseStyle = baseStyle.WithForeground(focusFg);
         }
 
-        return baseStyle | TextStyle.Underline;
+        return baseStyle;
     }
 
     private static CellStyle ResolveDefaultTrackDisabled(Theme theme)

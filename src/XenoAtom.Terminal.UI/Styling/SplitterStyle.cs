@@ -51,7 +51,7 @@ public sealed record SplitterStyle : IStyle<SplitterStyle>
 
         if (focused)
         {
-            return FocusStyle ?? (theme.BorderStyle(focused: true) | TextStyle.Underline);
+            return FocusStyle ?? (theme.BorderStyle(focused: true));
         }
 
         return BarStyle ?? theme.BorderStyle(focused: false);
