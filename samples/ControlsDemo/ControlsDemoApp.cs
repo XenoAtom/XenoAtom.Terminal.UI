@@ -47,7 +47,7 @@ internal static class ControlsDemoApp
         });
 
         return new DockLayout()
-            .Content(new HSplitter(sidebar, page).Ratio(0.33))
+            .Content(new HSplitter(sidebar, page).Ratio(0.16))
             .Bottom(new Footer().Left("Tab focus | Mouse | Resize").Right("F12 debug | Esc quit"))
             .Style(DemoThemes.Dark);
     }
