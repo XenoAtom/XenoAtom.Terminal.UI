@@ -14,15 +14,18 @@ public sealed class AccordionDemo : ControlsDemoBase
     {
         _ = context;
 
+        var state = new State<bool>(false);
+
         var accordion = new Accordion(
                 new Collapsible().Header("Section A").IsExpanded(true).Content("Content A"),
                 new Collapsible().Header("Section B").Content("Content B"),
                 new Collapsible().Header("Section C").Content("Content C"))
             .Spacing(1)
-            .SingleExpanded(true);
+            .SingleExpanded(state);
 
         return new VStack(
                 DemoUi.Hint("Accordion provides multiple collapsible sections."),
+                new HStack(new CheckBox("Single Expanded").IsChecked(state.Value)),
                 accordion)
             .Spacing(1);
     }
