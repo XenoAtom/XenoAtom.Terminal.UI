@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
+using XenoAtom.Ansi;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
@@ -20,7 +21,7 @@ public sealed record OptionListStyle : IStyle<OptionListStyle>
 
     public int DescriptionIndent { get; init; } = 2;
 
-    public Rune MarkerGlyph { get; init; } = new('>');
+    public Rune MarkerGlyph { get; init; } = new('→');
 
     public CellStyle? Item { get; init; }
     public CellStyle? SelectedFocused { get; init; }
@@ -64,7 +65,7 @@ public sealed record OptionListStyle : IStyle<OptionListStyle>
                 return selectedFocused;
             }
 
-            var selectedStyle = baseStyle | TextStyle.Bold;
+            var selectedStyle = CellStyle.None.WithForeground(theme.Accent ?? AnsiColors.Blue) | TextStyle.Bold;
             if (theme.FocusBorder is { } c)
             {
                 selectedStyle = selectedStyle.WithForeground(c);
@@ -72,7 +73,16 @@ public sealed record OptionListStyle : IStyle<OptionListStyle>
             return selectedStyle;
         }
 
-        return SelectedUnfocused ?? (CellStyle.None | TextStyle.Bold | theme.BorderStyle(focused: false));
+
+
+        var style = theme.ForegroundTextStyle();
+        if (theme.Accent is { } accent)
+        {
+            style = style.WithForeground(accent);
+        }
+
+        return SelectedUnfocused ?? (style | TextStyle.Bold);
+        //return SelectedUnfocused ?? (CellStyle.None | TextStyle.Bold | theme.BorderStyle(focused: false));
     }
 
     private static CellStyle ResolveDefaultHovered(Theme theme, CellStyle normal)
