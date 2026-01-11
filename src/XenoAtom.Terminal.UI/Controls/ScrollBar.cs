@@ -105,14 +105,25 @@ public sealed partial class ScrollBar : Visual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var thickness = Math.Max(1, Get<ScrollBarStyle>().Thickness);
+        thickness = LayoutConstants.ClampFinite(thickness);
+
         if (Orientation == Orientation.Vertical)
         {
-            return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, thickness), Math.Min(availableSize.Height, 1)));
+            // Fixed thickness, flexible length.
+            return SizeHints.FlexY(
+                min: new Size(thickness, 1),
+                natural: new Size(thickness, 1),
+                growY: 1,
+                shrinkY: 1);
         }
 
-        return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, 1), Math.Min(availableSize.Height, thickness)));
+        // Fixed thickness, flexible length.
+        return SizeHints.FlexX(
+            min: new Size(1, thickness),
+            natural: new Size(1, thickness),
+            growX: 1,
+            shrinkX: 1);
     }
 
     protected override void ArrangeCore(in Rectangle finalRect) => Bounds = finalRect;

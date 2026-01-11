@@ -94,8 +94,13 @@ Invariants (MUST):
 
 Derived:
 
-* `IsWidthBounded  := MaxWidth  != int.MaxValue`
-* `IsHeightBounded := MaxHeight != int.MaxValue`
+* `IsWidthBounded  := MaxWidth  < int.MaxValue`
+* `IsHeightBounded := MaxHeight < int.MaxValue`
+
+Notes (implementation detail):
+
+* `int.MaxValue` is reserved as the unbounded sentinel and must never be used as a *finite* size.
+* The implementation defines `MaxFinite = int.MaxValue - 1` as the largest finite size allowed for `Min`/`Natural`.
 
 ### 4.2 `SizeHints`
 
@@ -114,8 +119,8 @@ Fields (conceptual):
 Invariants (MUST), per axis:
 
 * `0 <= Min <= Natural <= Max <= int.MaxValue`
-* `Natural.Width` and `Natural.Height` MUST be **finite** (`!= int.MaxValue`)
-* `Min.Width` and `Min.Height` MUST be **finite** (`!= int.MaxValue`)
+* `Natural.Width` and `Natural.Height` MUST be **finite** (`<= int.MaxValue - 1`)
+* `Min.Width` and `Min.Height` MUST be **finite** (`<= int.MaxValue - 1`)
 
 Interpretation:
 
@@ -128,13 +133,13 @@ Interpretation:
 
 Each node exposes:
 
-* `HorizontalAlignment ∈ { Start, Center, End, Stretch }`
-* `VerticalAlignment   ∈ { Start, Center, End, Stretch }`
+* `HorizontalAlignment ∈ { Left, Center, Right, Stretch }`
+* `VerticalAlignment   ∈ { Top, Center, Bottom, Stretch }`
 
 **Default framework alignment** (your current default):
 
-* Horizontal: `Start`
-* Vertical: `Start`
+* Horizontal: `Left`
+* Vertical: `Top`
 
 This spec integrates alignment as an **arrange-time policy**.
 
@@ -147,12 +152,18 @@ This spec integrates alignment as an **arrange-time policy**.
 ```csharp
 public class Visual
 {
-    public SizeHints Measure(in LayoutConstraints constraints //...
+    public SizeHints Measure(in LayoutConstraints constraints) //...
     protected virtual SizeHints MeasureCore(in LayoutConstraints constraints) //...
     public void Arrange(Rectangle finalRect) //...
     protected virtual void ArrangeCore(in Rectangle finalRect)
 }
 ```
+
+Notes:
+
+* The codebase also exposes `public void Measure(Size availableSize)` as a convenience wrapper for callers that only have a max size.
+  It must not be used by controls internally: control layout code must always call `Measure(in LayoutConstraints)` on children so that
+  constraints remain explicit and unboundedness is never confused with “request infinity”.
 
 ### 5.2 Measure contract (normative)
 
@@ -225,16 +236,16 @@ Now compute position:
 
 **Horizontal position**
 
-* `Start`:  dx = 0
+* `Left`:   dx = 0
 * `Center`: dx = (slot.Width - childW) / 2
-* `End`:    dx = slot.Width - childW
+* `Right`:  dx = slot.Width - childW
 * `Stretch`: dx = 0
 
 **Vertical position**
 
-* `Start`:  dy = 0
+* `Top`:    dy = 0
 * `Center`: dy = (slot.Height - childH) / 2
-* `End`:    dy = slot.Height - childH
+* `Bottom`: dy = slot.Height - childH
 * `Stretch`: dy = 0
 
 Final rect:
@@ -265,6 +276,20 @@ Rules (MUST):
 * Handle integer remainder deterministically (e.g., left-to-right or stable index order).
 
 **Note:** Alignment is applied **after** the slot is computed. Flex alloc decides slot sizes; alignment decides how the child uses them.
+
+### 7.1 Relationship between Alignment and Flex
+
+In this framework, `Stretch` alignment implies “willingness to grow” on that axis when a parent runs a flex allocation algorithm.
+
+Normative behavior:
+
+* A `Visual` with `HorizontalAlignment == Stretch` must be treated as having `FlexGrowX > 0` (typically 1) when participating in flex allocation.
+* A `Visual` with `VerticalAlignment == Stretch` must be treated as having `FlexGrowY > 0` (typically 1) when participating in flex allocation.
+
+Implementation note:
+
+* This is achieved by the `Visual.Measure(...)` wrapper adjusting the returned `SizeHints` from `MeasureCore(...)` so that flex containers
+  (HStack/VStack/etc.) can allocate remaining space to stretched children without requiring children to “ask for available size” in Measure.
 
 ---
 
@@ -362,7 +387,7 @@ On failure: throw `LayoutException` (or your chosen equivalent).
 
 # Control guidance (grouped) + default alignments
 
-Below, I assume your general default is `Horizontal=Start`, `Vertical=Start`. I'll only call out controls that should override to better defaults.
+Below, I assume your general default is `Horizontal=Left`, `Vertical=Top`. I'll only call out controls that should override to better defaults.
 
 I'll group controls by how they should respect the spec: **leaf**, **decorator**, **layout container**, **scrolling/virtualized**, **overlay**, etc.
 
@@ -373,7 +398,7 @@ I'll group controls by how they should respect the spec: **leaf**, **decorator**
 ### Rule.cs
 
 * **Measure**: `Natural.Height = 1`, `Natural.Width = 0` (finite). `Max.Width = int.MaxValue`.
-* **Default alignment**: **Horizontal = Stretch**, Vertical = Start.
+* **Default alignment**: **Horizontal = Stretch**, Vertical = Top.
 * **Flex**: `FlexGrowX = 1` is often appropriate (acts like spacer line in HStack/VStack).
 * Never return `Natural.Width = constraints.MaxWidth`.
 
@@ -388,7 +413,7 @@ I'll group controls by how they should respect the spec: **leaf**, **decorator**
 ### ProgressBar.cs, Slider.cs
 
 * These are "track" controls; best as horizontal stretch.
-* **Default alignment**: **Horizontal = Stretch**, Vertical = Start.
+* **Default alignment**: **Horizontal = Stretch**, Vertical = Top.
 * `Natural.Height = 1`.
 * `Max.Width = int.MaxValue`, and typically `FlexGrowX = 1`.
 
@@ -409,7 +434,7 @@ I'll group controls by how they should respect the spec: **leaf**, **decorator**
   * If no wrapping: `Natural.Width = text length`, `Natural.Height = 1`.
   * If wrapping enabled and bounded width: `Natural.Width <= MaxWidth`, `Natural.Height = wrapped lines`.
 * `Max.Width` can be `int.MaxValue` (clipping/truncation allowed).
-* **Default alignment**: Start/Start is fine.
+* **Default alignment**: Left/Top is fine.
 
 ---
 
@@ -418,7 +443,7 @@ I'll group controls by how they should respect the spec: **leaf**, **decorator**
 ### TextBox.cs, MaskedInput.cs, Select.cs
 
 * Usually **1 row** high.
-* Best default: **Horizontal = Stretch**, Vertical = Start.
+* Best default: **Horizontal = Stretch**, Vertical = Top.
 * `Natural.Height = 1`, `Natural.Width` finite (e.g., minimal 4–10 or based on placeholder).
 * `Max.Width = int.MaxValue`, `FlexGrowX = 1` common.
 
@@ -432,7 +457,7 @@ I'll group controls by how they should respect the spec: **leaf**, **decorator**
 
 * Intrinsic width = indicator + spacing + label
 * `Natural.Height = 1`
-* **Default alignment**: Start/Start.
+* **Default alignment**: Left/Top.
 * Don't make them stretch by default; let containers allocate.
 
 ### Slider.cs already covered above.
@@ -445,13 +470,13 @@ I'll group controls by how they should respect the spec: **leaf**, **decorator**
 
 * **Measure**: subtract border/padding from constraints passed to child; add back to hints.
 * **Arrange**: compute child slot = inner rect; then apply child alignment inside that slot.
-* **Default alignment**: Border itself can be Start/Start; typically does not force stretch.
+* **Default alignment**: Border itself can be Left/Top; typically does not force stretch.
 
 ### Group.cs (often border + header)
 
 * Same as Border, but includes title row and content area.
 * Needs careful height math (title consumes 1 row typically).
-* Default alignment: Start/Start; content alignment inside group often Start/Start.
+* Default alignment: Left/Top; content alignment inside group often Left/Top.
 
 ### Center.cs
 
@@ -468,7 +493,7 @@ I'll group controls by how they should respect the spec: **leaf**, **decorator**
 
   * Measure: forward to child (or computed content) and return its hints (possibly adjusted)
   * Arrange: forward rect
-* Default alignment: follow framework default (Start/Start).
+* Default alignment: follow framework default (Left/Top).
 
 ### Backdrop.cs
 
@@ -571,7 +596,7 @@ Key points:
 * Most of these behave as viewports:
 
   * **Default alignment for the container controls**: **Stretch/Stretch**
-  * **Default alignment for item controls**: **Horizontal = Stretch**, Vertical = Start (items fill row width)
+  * **Default alignment for item controls**: **Horizontal = Stretch**, Vertical = Top (items fill row width)
 * Virtualization (optional but recommended):
 
   * In Arrange, only arrange visible items within viewport clip.
@@ -603,7 +628,7 @@ Key points:
 Key points:
 
 * Typically single-row, want to span width.
-* **Default alignment**: **Horizontal = Stretch**, Vertical = Start.
+* **Default alignment**: **Horizontal = Stretch**, Vertical = Top.
 * `Natural.Height = 1`
 * `Max.Width = int.MaxValue`, `FlexGrowX = 1`
 
@@ -629,7 +654,7 @@ Key points:
   * `Natural` derived from content, clamped to viewport constraints
 * Popups may prefer:
 
-  * Horizontal Start, Vertical Start, but placed relative to an anchor; alignment may be controlled externally.
+  * Horizontal Left, Vertical Top, but placed relative to an anchor; alignment may be controlled externally.
 
 Implementation:
 
@@ -664,7 +689,7 @@ Key points:
 Buttons:
 
 * Measure = text + padding, height typically 1.
-* Default alignment can remain Start/Start.
+* Default alignment can remain Left/Top.
 * Inside the button, you may center the label (internal content alignment ≠ layout alignment).
 
 ---
@@ -678,7 +703,7 @@ Buttons:
 
 # Recommended default alignments summary
 
-Keep global defaults `Start/Start`, but override these for better UX:
+Keep global defaults `Left/Top`, but override these for better UX:
 
 **Stretch horizontally by default**
 
@@ -709,7 +734,7 @@ Keep global defaults `Start/Start`, but override these for better UX:
 
 * Dialog
 * CommandPalette
-* (Popup depends on anchoring; often Start/Start)
+* (Popup depends on anchoring; often Left/Top)
 
 ---
 

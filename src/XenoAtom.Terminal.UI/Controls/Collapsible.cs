@@ -80,35 +80,137 @@ public sealed partial class Collapsible : Visual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var style = Get<CollapsibleStyle>();
         var glyph = IsExpanded ? style.ExpandedGlyph : style.CollapsedGlyph;
         var glyphWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(glyph));
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndHeader);
         var prefixWidth = glyphWidth + gap;
 
-        var headerHeight = 1;
-        var headerWidth = 0;
         var header = Header;
-        if (header is not null)
-        {
-            header.Measure(new Size(Math.Max(0, availableSize.Width - prefixWidth), availableSize.Height));
-            headerWidth = header.DesiredSize.Width;
-            headerHeight = Math.Max(1, header.DesiredSize.Height);
-        }
 
-        var width = Math.Min(availableSize.Width, Math.Min(availableSize.Width, prefixWidth + headerWidth));
-        var height = Math.Min(availableSize.Height, headerHeight);
+        var headerHints = header is null
+            ? SizeHints.Fixed(new Size(0, 1))
+            : MeasureHeader(header, constraints, prefixWidth);
 
         if (IsExpanded && Content is not null)
         {
-            var contentAvailHeight = Math.Max(0, availableSize.Height - height - Math.Max(0, style.ContentSpacing));
-            Content.Measure(new Size(availableSize.Width, contentAvailHeight));
-            width = Math.Min(availableSize.Width, Math.Max(width, Content.DesiredSize.Width));
-            height = Math.Min(availableSize.Height, height + Math.Max(0, style.ContentSpacing) + Content.DesiredSize.Height);
+            return MeasureExpanded(constraints, prefixWidth, headerHints);
         }
 
-        return SizeHints.Fixed(new Size(width, height));
+        // Collapsed: only header is visible.
+        return headerHints;
+    }
+
+    private SizeHints MeasureHeader(Visual header, in LayoutConstraints constraints, int prefixWidth)
+    {
+        var headerMaxW = constraints.MaxWidth == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : Math.Max(0, constraints.MaxWidth - prefixWidth);
+
+        var headerConstraints = new LayoutConstraints(0, headerMaxW, 0, constraints.MaxHeight);
+        var inner = header.Measure(headerConstraints);
+
+        int minW, natW, maxW;
+        try
+        {
+            checked
+            {
+                minW = prefixWidth + inner.Min.Width;
+                natW = prefixWidth + inner.Natural.Width;
+            }
+        }
+        catch (OverflowException ex)
+        {
+            throw new LayoutException("Overflow while computing Collapsible header widths.", ex);
+        }
+
+        if (LayoutConstants.IsInfinite(inner.Max.Width))
+        {
+            maxW = LayoutConstants.Infinite;
+        }
+        else
+        {
+            try
+            {
+                maxW = checked(prefixWidth + inner.Max.Width);
+                maxW = LayoutConstants.ClampOrInfinite(maxW);
+            }
+            catch (OverflowException ex)
+            {
+                throw new LayoutException("Overflow while computing Collapsible header Max.Width.", ex);
+            }
+        }
+
+        return SizeHints.Flex(
+            new Size(LayoutConstants.ClampFinite(minW), LayoutConstants.ClampFinite(inner.Min.Height)),
+            new Size(LayoutConstants.ClampFinite(natW), LayoutConstants.ClampFinite(Math.Max(1, inner.Natural.Height))),
+            new Size(maxW, inner.Max.Height),
+            inner.FlexGrowX,
+            inner.FlexGrowY,
+            inner.FlexShrinkX,
+            inner.FlexShrinkY).Normalize();
+    }
+
+    private SizeHints MeasureExpanded(in LayoutConstraints constraints, int prefixWidth, SizeHints headerHints)
+    {
+        var style = Get<CollapsibleStyle>();
+        var spacing = Math.Max(0, style.ContentSpacing);
+
+        var content = Content!;
+
+        var contentMaxH = constraints.MaxHeight == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : Math.Max(0, constraints.MaxHeight - headerHints.Natural.Height - spacing);
+
+        var contentConstraints = new LayoutConstraints(0, constraints.MaxWidth, 0, contentMaxH);
+        var contentHints = content.Measure(contentConstraints);
+
+        var minW = Math.Max(headerHints.Min.Width, contentHints.Min.Width);
+        var natW = Math.Max(headerHints.Natural.Width, contentHints.Natural.Width);
+
+        var maxW = LayoutConstants.IsInfinite(headerHints.Max.Width) || LayoutConstants.IsInfinite(contentHints.Max.Width)
+            ? LayoutConstants.Infinite
+            : Math.Max(headerHints.Max.Width, contentHints.Max.Width);
+
+        int minH, natH;
+        try
+        {
+            checked
+            {
+                minH = headerHints.Min.Height + spacing + contentHints.Min.Height;
+                natH = headerHints.Natural.Height + spacing + contentHints.Natural.Height;
+            }
+        }
+        catch (OverflowException ex)
+        {
+            throw new LayoutException("Overflow while computing Collapsible heights.", ex);
+        }
+
+        int maxH;
+        if (LayoutConstants.IsInfinite(headerHints.Max.Height) || LayoutConstants.IsInfinite(contentHints.Max.Height))
+        {
+            maxH = LayoutConstants.Infinite;
+        }
+        else
+        {
+            try
+            {
+                maxH = checked(headerHints.Max.Height + spacing + contentHints.Max.Height);
+            }
+            catch (OverflowException ex)
+            {
+                throw new LayoutException("Overflow while computing Collapsible Max.Height.", ex);
+            }
+        }
+
+        return SizeHints.Flex(
+            new Size(LayoutConstants.ClampFinite(minW), LayoutConstants.ClampFinite(minH)),
+            new Size(LayoutConstants.ClampFinite(natW), LayoutConstants.ClampFinite(natH)),
+            new Size(maxW, LayoutConstants.IsInfinite(maxH) ? LayoutConstants.Infinite : LayoutConstants.ClampFinite(maxH)),
+            growX: Math.Max(headerHints.FlexGrowX, contentHints.FlexGrowX),
+            growY: Math.Max(headerHints.FlexGrowY, contentHints.FlexGrowY),
+            shrinkX: Math.Max(headerHints.FlexShrinkX, contentHints.FlexShrinkX),
+            shrinkY: Math.Max(headerHints.FlexShrinkY, contentHints.FlexShrinkY)).Normalize();
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)

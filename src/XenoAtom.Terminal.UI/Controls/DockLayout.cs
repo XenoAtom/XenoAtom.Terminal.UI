@@ -14,6 +14,12 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class DockLayout : Visual
 {
+    public DockLayout()
+    {
+        HorizontalAlignment = HorizontalAlignment.Stretch;
+        VerticalAlignment = VerticalAlignment.Stretch;
+    }
+
     [Bindable]
     public partial Visual? Top { get; set; }
 
@@ -25,36 +31,75 @@ public sealed partial class DockLayout : Visual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
-        var topHeight = 0;
-        var bottomHeight = 0;
-        var width = 0;
-
         var top = Top;
-        if (top is not null)
-        {
-            top.Measure(new Size(availableSize.Width, availableSize.Height));
-            topHeight = top.DesiredSize.Height;
-            width = Math.Max(width, top.DesiredSize.Width);
-        }
-
         var bottom = Bottom;
-        if (bottom is not null)
-        {
-            bottom.Measure(new Size(availableSize.Width, Math.Max(0, availableSize.Height - topHeight)));
-            bottomHeight = bottom.DesiredSize.Height;
-            width = Math.Max(width, bottom.DesiredSize.Width);
-        }
-
         var content = Content;
-        if (content is not null)
+
+        var maxW = constraints.MaxWidth;
+        var remainingMaxH = constraints.MaxHeight;
+
+        var topHints = top is null ? SizeHints.Fixed(Size.Zero) : top.Measure(new LayoutConstraints(0, maxW, 0, remainingMaxH));
+        if (remainingMaxH != LayoutConstants.Infinite)
         {
-            content.Measure(new Size(availableSize.Width, Math.Max(0, availableSize.Height - topHeight - bottomHeight)));
-            width = Math.Max(width, content.DesiredSize.Width);
+            remainingMaxH = Math.Max(0, remainingMaxH - topHints.Natural.Height);
         }
 
-        var height = Math.Min(availableSize.Height, topHeight + bottomHeight + (content?.DesiredSize.Height ?? 0));
-        return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, width), height));
+        var bottomHints = bottom is null ? SizeHints.Fixed(Size.Zero) : bottom.Measure(new LayoutConstraints(0, maxW, 0, remainingMaxH));
+        if (remainingMaxH != LayoutConstants.Infinite)
+        {
+            remainingMaxH = Math.Max(0, remainingMaxH - bottomHints.Natural.Height);
+        }
+
+        var contentHints = content is null ? SizeHints.Fixed(Size.Zero) : content.Measure(new LayoutConstraints(0, maxW, 0, remainingMaxH));
+
+        var minW = Math.Max(topHints.Min.Width, Math.Max(contentHints.Min.Width, bottomHints.Min.Width));
+        var natW = Math.Max(topHints.Natural.Width, Math.Max(contentHints.Natural.Width, bottomHints.Natural.Width));
+
+        var maxWInf = LayoutConstants.IsInfinite(topHints.Max.Width) || LayoutConstants.IsInfinite(contentHints.Max.Width) || LayoutConstants.IsInfinite(bottomHints.Max.Width);
+        var maxWidth = maxWInf
+            ? LayoutConstants.Infinite
+            : Math.Max(topHints.Max.Width, Math.Max(contentHints.Max.Width, bottomHints.Max.Width));
+
+        int minH, natH;
+        try
+        {
+            checked
+            {
+                minH = topHints.Min.Height + contentHints.Min.Height + bottomHints.Min.Height;
+                natH = topHints.Natural.Height + contentHints.Natural.Height + bottomHints.Natural.Height;
+            }
+        }
+        catch (OverflowException ex)
+        {
+            throw new LayoutException("Overflow while computing DockLayout Min/Natural height.", ex);
+        }
+
+        int maxHeight;
+        if (LayoutConstants.IsInfinite(topHints.Max.Height) || LayoutConstants.IsInfinite(contentHints.Max.Height) || LayoutConstants.IsInfinite(bottomHints.Max.Height))
+        {
+            maxHeight = LayoutConstants.Infinite;
+        }
+        else
+        {
+            try
+            {
+                maxHeight = checked(topHints.Max.Height + contentHints.Max.Height + bottomHints.Max.Height);
+                maxHeight = LayoutConstants.ClampOrInfinite(maxHeight);
+            }
+            catch (OverflowException ex)
+            {
+                throw new LayoutException("Overflow while computing DockLayout Max.Height.", ex);
+            }
+        }
+
+        return SizeHints.Flex(
+            new Size(LayoutConstants.ClampFinite(minW), LayoutConstants.ClampFinite(minH)),
+            new Size(LayoutConstants.ClampFinite(natW), LayoutConstants.ClampFinite(natH)),
+            new Size(maxWidth, maxHeight),
+            growX: Math.Max(topHints.FlexGrowX, Math.Max(contentHints.FlexGrowX, bottomHints.FlexGrowX)),
+            growY: contentHints.FlexGrowY,
+            shrinkX: Math.Max(topHints.FlexShrinkX, Math.Max(contentHints.FlexShrinkX, bottomHints.FlexShrinkX)),
+            shrinkY: contentHints.FlexShrinkY).Normalize();
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)

@@ -24,6 +24,8 @@ public sealed partial class TreeView : Visual
     public TreeView()
     {
         Focusable = true;
+        HorizontalAlignment = HorizontalAlignment.Stretch;
+        VerticalAlignment = VerticalAlignment.Stretch;
         this.Height(8);
 
         _headers = new VisualList<Visual>(this, "TreeView.Headers");
@@ -116,7 +118,6 @@ public sealed partial class TreeView : Visual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         EnsureVisibleList();
 
         var style = Get<TreeViewStyle>();
@@ -125,6 +126,7 @@ public sealed partial class TreeView : Visual
         var gapAfterIcon = Math.Max(0, style.SpaceBetweenGlyphAndText);
 
         var maxWidth = 0;
+        var headerConstraints = new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1);
         for (var i = 0; i < _visible.Count; i++)
         {
             var (node, depth) = _visible[i];
@@ -134,19 +136,22 @@ public sealed partial class TreeView : Visual
             var iconWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(icon));
 
             var prefix = depth * style.IndentSize + markerWidth + expanderWidth + 1 + iconWidth + gapAfterIcon;
-            node.Header.Measure(new Size(LayoutConstants.Infinite, 1));
+            node.Header.Measure(headerConstraints);
             maxWidth = Math.Max(maxWidth, prefix + node.Header.DesiredSize.Width);
         }
 
-        var width = Math.Min(availableSize.Width, Math.Max(1, maxWidth));
-        var desiredHeight = Math.Min(Math.Max(1, Height), availableSize.Height);
+        var width = Math.Max(1, maxWidth);
+        var desiredHeight = Math.Max(1, Height);
         if (showBorder)
         {
-            width = Math.Min(availableSize.Width, width + 2);
-            desiredHeight = Math.Min(availableSize.Height, desiredHeight + 2);
+            width += 2;
+            desiredHeight += 2;
         }
 
-        return SizeHints.Fixed(new Size(width, desiredHeight));
+        var min = new Size(showBorder ? 3 : 1, showBorder ? 3 : 1);
+        var natural = new Size(Math.Max(min.Width, width), Math.Max(min.Height, desiredHeight));
+        var max = new Size(LayoutConstants.Infinite, LayoutConstants.Infinite);
+        return SizeHints.Flex(min, natural, max, growX: 1, growY: 1, shrinkX: 1, shrinkY: 1);
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)

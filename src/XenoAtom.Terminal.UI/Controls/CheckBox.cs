@@ -37,22 +37,21 @@ public sealed partial class CheckBox : Visual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var checkBoxStyle = Get<CheckBoxStyle>();
         var gap = Math.Max(0, checkBoxStyle.SpaceBetweenGlyphAndText);
         var glyph = IsChecked ? checkBoxStyle.CheckedGlyph : checkBoxStyle.UncheckedGlyph;
-        var glyphWidth = TerminalTextUtility.GetRuneWidth(glyph);
+        var glyphWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(glyph));
 
         var textWidth = 0;
         var textVisual = Text;
         if (textVisual is not null)
         {
-            textVisual.Measure(new Size(LayoutConstants.Infinite, 1));
+            textVisual.Measure(new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1));
             textWidth = textVisual.DesiredSize.Width;
         }
 
-        var width = Math.Min(availableSize.Width, textWidth + glyphWidth + gap);
-        return SizeHints.Fixed(new Size(width, 1));
+        var width = LayoutConstants.ClampFinite(textWidth + glyphWidth + gap);
+        return SizeHints.Fixed(constraints.Clamp(new Size(width, 1)));
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)

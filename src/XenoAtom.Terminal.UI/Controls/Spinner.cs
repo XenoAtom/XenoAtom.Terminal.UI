@@ -92,19 +92,18 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var style = Get<SpinnerStyle>();
         var frameWidth = Math.Max(1, style.FrameWidth);
 
         var label = Label;
         if (label is null)
         {
-            return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, frameWidth), 1));
+            return SizeHints.Fixed(constraints.Clamp(new Size(frameWidth, 1)));
         }
 
-        label.Measure(new Size(LayoutConstants.Infinite, 1));
+        label.Measure(new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1));
         var width = frameWidth + 1 + label.DesiredSize.Width;
-        return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, width), 1));
+        return SizeHints.Fixed(constraints.Clamp(new Size(width, 1)));
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)

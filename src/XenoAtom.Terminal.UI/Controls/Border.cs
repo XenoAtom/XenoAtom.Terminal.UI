@@ -17,21 +17,91 @@ public sealed partial class Border : ContentVisual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var padding = Padding;
-        var innerWidth = Math.Max(0, availableSize.Width - 2 - padding.Horizontal);
-        var innerHeight = Math.Max(0, availableSize.Height - 2 - padding.Vertical);
+
+        var maxW = constraints.MaxWidth == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : Math.Max(0, constraints.MaxWidth - 2 - padding.Horizontal);
+        var maxH = constraints.MaxHeight == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : Math.Max(0, constraints.MaxHeight - 2 - padding.Vertical);
+
+        var childConstraints = new LayoutConstraints(0, maxW, 0, maxH);
 
         var content = Content;
-        if (content is not null)
+        var contentHints = content is null ? SizeHints.Fixed(Size.Zero) : content.Measure(childConstraints);
+
+        int addW, addH;
+        try
         {
-            content.Measure(new Size(innerWidth, innerHeight));
+            checked
+            {
+                addW = 2 + padding.Horizontal;
+                addH = 2 + padding.Vertical;
+            }
+        }
+        catch (OverflowException ex)
+        {
+            throw new LayoutException("Overflow while computing Border padding/border contribution.", ex);
         }
 
-        var desiredWidth = 2 + padding.Horizontal + (content?.DesiredSize.Width ?? 0);
-        var desiredHeight = 2 + padding.Vertical + (content?.DesiredSize.Height ?? 0);
+        int minW, minH, natW, natH, maxWidth, maxHeight;
+        try
+        {
+            checked
+            {
+                minW = LayoutConstants.ClampFinite(contentHints.Min.Width + addW);
+                minH = LayoutConstants.ClampFinite(contentHints.Min.Height + addH);
 
-        return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, desiredWidth), desiredHeight));
+                natW = LayoutConstants.ClampFinite(contentHints.Natural.Width + addW);
+                natH = LayoutConstants.ClampFinite(contentHints.Natural.Height + addH);
+            }
+        }
+        catch (OverflowException ex)
+        {
+            throw new LayoutException("Overflow while computing Border Min/Natural size.", ex);
+        }
+
+        if (LayoutConstants.IsInfinite(contentHints.Max.Width))
+        {
+            maxWidth = LayoutConstants.Infinite;
+        }
+        else
+        {
+            try
+            {
+                maxWidth = LayoutConstants.ClampOrInfinite(checked(contentHints.Max.Width + addW));
+            }
+            catch (OverflowException ex)
+            {
+                throw new LayoutException("Overflow while computing Border Max.Width.", ex);
+            }
+        }
+
+        if (LayoutConstants.IsInfinite(contentHints.Max.Height))
+        {
+            maxHeight = LayoutConstants.Infinite;
+        }
+        else
+        {
+            try
+            {
+                maxHeight = LayoutConstants.ClampOrInfinite(checked(contentHints.Max.Height + addH));
+            }
+            catch (OverflowException ex)
+            {
+                throw new LayoutException("Overflow while computing Border Max.Height.", ex);
+            }
+        }
+
+        return SizeHints.Flex(
+            new Size(minW, minH),
+            new Size(natW, natH),
+            new Size(maxWidth, maxHeight),
+            contentHints.FlexGrowX,
+            contentHints.FlexGrowY,
+            contentHints.FlexShrinkX,
+            contentHints.FlexShrinkY).Normalize();
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)

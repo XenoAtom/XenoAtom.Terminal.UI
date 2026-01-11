@@ -441,18 +441,32 @@ public abstract partial class Visual : DispatcherObject
 
     private static SizeHints Inflate(SizeHints hints, Thickness thickness)
     {
-        var minW = LayoutConstants.ClampFinite((long)hints.Min.Width + thickness.Horizontal);
-        var minH = LayoutConstants.ClampFinite((long)hints.Min.Height + thickness.Vertical);
+        var horizontal = thickness.Horizontal;
+        var vertical = thickness.Vertical;
 
-        var natW = LayoutConstants.ClampFinite((long)hints.Natural.Width + thickness.Horizontal);
-        var natH = LayoutConstants.ClampFinite((long)hints.Natural.Height + thickness.Vertical);
+        int minW, minH, natW, natH, maxW, maxH;
+        try
+        {
+            checked
+            {
+                minW = LayoutConstants.ClampFinite(hints.Min.Width + horizontal);
+                minH = LayoutConstants.ClampFinite(hints.Min.Height + vertical);
 
-        var maxW = hints.Max.Width == LayoutConstants.Infinite
-            ? LayoutConstants.Infinite
-            : LayoutConstants.ClampFinite((long)hints.Max.Width + thickness.Horizontal);
-        var maxH = hints.Max.Height == LayoutConstants.Infinite
-            ? LayoutConstants.Infinite
-            : LayoutConstants.ClampFinite((long)hints.Max.Height + thickness.Vertical);
+                natW = LayoutConstants.ClampFinite(hints.Natural.Width + horizontal);
+                natH = LayoutConstants.ClampFinite(hints.Natural.Height + vertical);
+
+                maxW = hints.Max.Width == LayoutConstants.Infinite
+                    ? LayoutConstants.Infinite
+                    : LayoutConstants.ClampFinite(hints.Max.Width + horizontal);
+                maxH = hints.Max.Height == LayoutConstants.Infinite
+                    ? LayoutConstants.Infinite
+                    : LayoutConstants.ClampFinite(hints.Max.Height + vertical);
+            }
+        }
+        catch (OverflowException ex)
+        {
+            throw new LayoutException("Overflow while inflating SizeHints by margin.", ex);
+        }
 
         return hints with
         {
@@ -545,7 +559,7 @@ public abstract partial class Visual : DispatcherObject
         if (min.Width >= LayoutConstants.Infinite || min.Height >= LayoutConstants.Infinite ||
             nat.Width >= LayoutConstants.Infinite || nat.Height >= LayoutConstants.Infinite)
         {
-            throw new InvalidOperationException($"Measure produced an infinite Min/Natural size for {GetType().Name}. Min={min} Natural={nat} Constraints={constraints}");
+            throw new LayoutException($"Measure produced an infinite Min/Natural size for {GetType().Name}. Min={min} Natural={nat} Constraints={constraints}");
         }
 
         return new SizeHints

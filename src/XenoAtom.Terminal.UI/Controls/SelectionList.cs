@@ -50,7 +50,7 @@ public sealed partial class SelectionList : Visual
         for (var i = 0; i < items.Count; i++)
         {
             var item = items[i];
-            item.Measure(new Size(LayoutConstants.Infinite, 1));
+            item.Measure(new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1));
             itemWidth = Math.Max(itemWidth, item.DesiredSize.Width);
         }
 

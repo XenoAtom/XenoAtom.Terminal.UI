@@ -12,6 +12,11 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class Rule : Visual
 {
+    public Rule()
+    {
+        HorizontalAlignment = HorizontalAlignment.Stretch;
+    }
+
     [Bindable]
     public partial Orientation Orientation { get; set; }
 
@@ -51,7 +56,6 @@ public sealed partial class Rule : Visual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var style = Get<RuleStyle>();
         var pad = Math.Max(0, style.LabelPadding);
 
@@ -59,15 +63,17 @@ public sealed partial class Rule : Visual
         var center = CenterLabel;
         var end = EndLabel;
 
-        start?.Measure(new Size(LayoutConstants.Infinite, 1));
-        center?.Measure(new Size(LayoutConstants.Infinite, 1));
-        end?.Measure(new Size(LayoutConstants.Infinite, 1));
+        var labelConstraints = new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1);
+        start?.Measure(labelConstraints);
+        center?.Measure(labelConstraints);
+        end?.Measure(labelConstraints);
 
         if (Orientation == Orientation.Vertical)
         {
             var maxLabel = Math.Max(GetLabelWidth(start), Math.Max(GetLabelWidth(center), GetLabelWidth(end)));
             var requiredWidth = Math.Max(1, maxLabel == 0 ? 1 : (maxLabel + (pad * 2)));
-            return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, requiredWidth), Math.Min(availableSize.Height, 1)));
+            var w = LayoutConstants.ClampFinite(requiredWidth);
+            return SizeHints.FlexY(min: new Size(w, 1), natural: new Size(w, 1), growY: 1, shrinkY: 1);
         }
 
         var startTotal = GetTotalWidth(start, LayoutConstants.Infinite, pad);
@@ -75,7 +81,10 @@ public sealed partial class Rule : Visual
         var centerTotal = GetTotalWidth(center, LayoutConstants.Infinite, pad);
 
         var required = Math.Max(1, startTotal + endTotal + centerTotal);
-        return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, required), Math.Min(availableSize.Height, 1)));
+        var min = new Size(LayoutConstants.ClampFinite(required), 1);
+        var natural = min;
+        var max = new Size(LayoutConstants.Infinite, 1);
+        return SizeHints.Flex(min, natural, max, growX: 1, growY: 0, shrinkX: 1, shrinkY: 0);
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)

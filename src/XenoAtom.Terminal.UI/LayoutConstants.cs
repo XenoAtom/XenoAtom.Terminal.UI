@@ -19,24 +19,24 @@ internal static class LayoutConstants
     public static bool IsInfinite(int value)
         => value == Infinite;
 
-    public static int ClampFinite(long value)
+    public static int ClampFinite(int value)
     {
         if (value <= 0)
         {
             return 0;
         }
 
-        return value >= MaxFinite ? MaxFinite : (int)value;
+        return value >= Infinite ? MaxFinite : value;
     }
 
-    public static int ClampOrInfinite(long value)
+    public static int ClampOrInfinite(int value)
     {
         if (value <= 0)
         {
             return 0;
         }
 
-        return value >= Infinite ? Infinite : (int)value;
+        return value >= Infinite ? Infinite : value;
     }
 }
 

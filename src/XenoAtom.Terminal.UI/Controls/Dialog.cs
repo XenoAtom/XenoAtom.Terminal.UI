@@ -112,7 +112,10 @@ public sealed partial class Dialog : Visual, IModalVisual
         var innerHeight = Math.Max(0, availableHeight - 2 - padding.Vertical);
 
         var content = Content;
-        content?.Measure(new Size(innerWidth, innerHeight));
+        if (content is not null)
+        {
+            content.Measure(new LayoutConstraints(0, innerWidth, 0, innerHeight));
+        }
 
         var desiredWidth = Width ?? Math.Max(3, 2 + padding.Horizontal + (content?.DesiredSize.Width ?? 0));
         var desiredHeight = Height ?? Math.Max(3, 2 + padding.Vertical + (content?.DesiredSize.Height ?? 0));
@@ -120,7 +123,7 @@ public sealed partial class Dialog : Visual, IModalVisual
         var title = Title;
         if (title is not null)
         {
-            title.Measure(new Size(LayoutConstants.Infinite, 1));
+            title.Measure(new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1));
             desiredWidth = Math.Max(desiredWidth, Math.Max(3, title.DesiredSize.Width + 4));
         }
 

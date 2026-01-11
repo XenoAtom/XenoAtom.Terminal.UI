@@ -12,6 +12,11 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class StatusBar : Visual
 {
+    public StatusBar()
+    {
+        HorizontalAlignment = HorizontalAlignment.Stretch;
+    }
+
     [Bindable]
     public partial Visual? LeftText { get; set; }
 
@@ -45,8 +50,9 @@ public sealed partial class StatusBar : Visual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        _leftText?.Measure(new Size(LayoutConstants.Infinite, 1));
-        _rightText?.Measure(new Size(LayoutConstants.Infinite, 1));
+        var labelConstraints = new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1);
+        _leftText?.Measure(labelConstraints);
+        _rightText?.Measure(labelConstraints);
 
         var requiredWidth = (_leftText?.DesiredSize.Width ?? 0) + (_rightText?.DesiredSize.Width ?? 0);
         var natural = constraints.Clamp(new Size(requiredWidth, 1));

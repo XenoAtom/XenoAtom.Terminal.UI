@@ -30,12 +30,20 @@ public sealed partial class HStack : Panel
             return SizeHints.Fixed(Size.Zero);
         }
 
-        var totalSpacing = spacing * Math.Max(0, childCount - 1);
+        int totalSpacing;
+        try
+        {
+            totalSpacing = checked(spacing * Math.Max(0, childCount - 1));
+        }
+        catch (OverflowException ex)
+        {
+            throw new LayoutException("Overflow while computing total spacing for HStack.", ex);
+        }
         var childConstraints = new LayoutConstraints(0, constraints.MaxWidth, constraints.MinHeight, constraints.MaxHeight);
 
-        long minW = totalSpacing;
-        long natW = totalSpacing;
-        long maxW = totalSpacing;
+        var minW = totalSpacing;
+        var natW = totalSpacing;
+        var maxW = totalSpacing;
 
         var minH = 0;
         var natH = 0;
@@ -50,8 +58,18 @@ public sealed partial class HStack : Panel
             var child = Children[i];
             var hints = child.Measure(childConstraints);
 
-            minW += hints.Min.Width;
-            natW += hints.Natural.Width;
+            try
+            {
+                checked
+                {
+                    minW += hints.Min.Width;
+                    natW += hints.Natural.Width;
+                }
+            }
+            catch (OverflowException ex)
+            {
+                throw new LayoutException("Overflow while summing child widths in HStack.Measure.", ex);
+            }
 
             if (LayoutConstants.IsInfinite(hints.Max.Width))
             {
@@ -59,7 +77,14 @@ public sealed partial class HStack : Panel
             }
             else if (maxW != LayoutConstants.Infinite)
             {
-                maxW += hints.Max.Width;
+                try
+                {
+                    maxW = checked(maxW + hints.Max.Width);
+                }
+                catch (OverflowException ex)
+                {
+                    throw new LayoutException("Overflow while summing child Max.Width in HStack.Measure.", ex);
+                }
             }
 
             minH = Math.Max(minH, hints.Min.Height);
@@ -73,8 +98,18 @@ public sealed partial class HStack : Panel
                 maxH = Math.Max(maxH, hints.Max.Height);
             }
 
-            growX += hints.FlexGrowX;
-            shrinkX += hints.FlexShrinkX;
+            try
+            {
+                checked
+                {
+                    growX += hints.FlexGrowX;
+                    shrinkX += hints.FlexShrinkX;
+                }
+            }
+            catch (OverflowException ex)
+            {
+                throw new LayoutException("Overflow while summing child flex values in HStack.Measure.", ex);
+            }
         }
 
         var maxSize = new Size(
@@ -102,7 +137,15 @@ public sealed partial class HStack : Panel
             return;
         }
 
-        var totalSpacing = spacing * Math.Max(0, childCount - 1);
+        int totalSpacing;
+        try
+        {
+            totalSpacing = checked(spacing * Math.Max(0, childCount - 1));
+        }
+        catch (OverflowException ex)
+        {
+            throw new LayoutException("Overflow while computing total spacing for HStack.Arrange.", ex);
+        }
         var available = Math.Max(0, finalRect.Width - totalSpacing);
 
         var mins = new int[childCount];

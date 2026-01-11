@@ -82,36 +82,117 @@ public sealed partial class Group : Visual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var padding = Padding;
-        var innerWidth = Math.Max(0, availableSize.Width - 2 - padding.Horizontal);
-        var innerHeight = Math.Max(0, availableSize.Height - 2 - padding.Vertical);
+
+        var innerMaxW = constraints.MaxWidth == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : Math.Max(0, constraints.MaxWidth - 2 - padding.Horizontal);
+        var innerMaxH = constraints.MaxHeight == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : Math.Max(0, constraints.MaxHeight - 2 - padding.Vertical);
+
+        var innerConstraints = new LayoutConstraints(0, innerMaxW, 0, innerMaxH);
 
         var content = Content;
-        content?.Measure(new Size(innerWidth, innerHeight));
+        var contentHints = content is null ? SizeHints.Fixed(Size.Zero) : content.Measure(innerConstraints);
 
-        var desiredWidth = 2 + padding.Horizontal + (content?.DesiredSize.Width ?? 0);
-        var desiredHeight = 2 + padding.Vertical + (content?.DesiredSize.Height ?? 0);
+        int addW, addH;
+        try
+        {
+            checked
+            {
+                addW = 2 + padding.Horizontal;
+                addH = 2 + padding.Vertical;
+            }
+        }
+        catch (OverflowException ex)
+        {
+            throw new LayoutException("Overflow while computing Group padding/border contribution.", ex);
+        }
+
+        int minW, minH, natW, natH;
+        try
+        {
+            checked
+            {
+                minW = LayoutConstants.ClampFinite(contentHints.Min.Width + addW);
+                minH = LayoutConstants.ClampFinite(contentHints.Min.Height + addH);
+                natW = LayoutConstants.ClampFinite(contentHints.Natural.Width + addW);
+                natH = LayoutConstants.ClampFinite(contentHints.Natural.Height + addH);
+            }
+        }
+        catch (OverflowException ex)
+        {
+            throw new LayoutException("Overflow while computing Group Min/Natural size.", ex);
+        }
 
         var topLeft = TopLeftText;
         var topRight = TopRightText;
         var bottomLeft = BottomLeftText;
         var bottomRight = BottomRightText;
 
-        if (topLeft is not null) topLeft.Measure(new Size(LayoutConstants.Infinite, 1));
-        if (topRight is not null) topRight.Measure(new Size(LayoutConstants.Infinite, 1));
-        if (bottomLeft is not null) bottomLeft.Measure(new Size(LayoutConstants.Infinite, 1));
-        if (bottomRight is not null) bottomRight.Measure(new Size(LayoutConstants.Infinite, 1));
+        var labelConstraints = new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1);
+        if (topLeft is not null) topLeft.Measure(labelConstraints);
+        if (topRight is not null) topRight.Measure(labelConstraints);
+        if (bottomLeft is not null) bottomLeft.Measure(labelConstraints);
+        if (bottomRight is not null) bottomRight.Measure(labelConstraints);
 
         var topRequired = GetLabelWidth(topLeft) + GetLabelWidth(topRight);
         var bottomRequired = GetLabelWidth(bottomLeft) + GetLabelWidth(bottomRight);
         var labelRequired = Math.Max(topRequired, bottomRequired);
         if (labelRequired > 0)
         {
-            desiredWidth = Math.Max(desiredWidth, 2 + labelRequired);
+            var minLabelW = LayoutConstants.ClampFinite(2 + labelRequired);
+            minW = Math.Max(minW, minLabelW);
+            natW = Math.Max(natW, minLabelW);
         }
 
-        return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, desiredWidth), Math.Min(availableSize.Height, desiredHeight)));
+        int maxW, maxH;
+        if (LayoutConstants.IsInfinite(contentHints.Max.Width))
+        {
+            maxW = LayoutConstants.Infinite;
+        }
+        else
+        {
+            try
+            {
+                maxW = LayoutConstants.ClampOrInfinite(checked(contentHints.Max.Width + addW));
+            }
+            catch (OverflowException ex)
+            {
+                throw new LayoutException("Overflow while computing Group Max.Width.", ex);
+            }
+        }
+
+        if (LayoutConstants.IsInfinite(contentHints.Max.Height))
+        {
+            maxH = LayoutConstants.Infinite;
+        }
+        else
+        {
+            try
+            {
+                maxH = LayoutConstants.ClampOrInfinite(checked(contentHints.Max.Height + addH));
+            }
+            catch (OverflowException ex)
+            {
+                throw new LayoutException("Overflow while computing Group Max.Height.", ex);
+            }
+        }
+
+        if (labelRequired > 0 && maxW != LayoutConstants.Infinite)
+        {
+            maxW = Math.Max(maxW, LayoutConstants.ClampOrInfinite(2 + labelRequired));
+        }
+
+        return SizeHints.Flex(
+            new Size(minW, minH),
+            new Size(natW, natH),
+            new Size(maxW, maxH),
+            contentHints.FlexGrowX,
+            contentHints.FlexGrowY,
+            contentHints.FlexShrinkX,
+            contentHints.FlexShrinkY).Normalize();
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)

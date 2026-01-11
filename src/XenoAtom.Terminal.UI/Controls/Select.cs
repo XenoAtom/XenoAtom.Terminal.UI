@@ -49,7 +49,6 @@ public sealed partial class Select : ContentVisual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         // Rebuild selected content before measuring when needed.
         UpdateSelectedContent();
 
@@ -57,17 +56,94 @@ public sealed partial class Select : ContentVisual
         var padding = style.Padding;
         var arrowWidth = TerminalTextUtility.GetWidth(style.ArrowGlyph.ToString().AsSpan());
 
-        var innerWidth = Math.Max(0, availableSize.Width - padding.Horizontal);
+        var innerMaxW = constraints.MaxWidth == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : Math.Max(0, constraints.MaxWidth - padding.Horizontal);
+
+        var contentMaxW = innerMaxW == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : Math.Max(0, innerMaxW - arrowWidth);
 
         var content = Content;
-        if (content is not null)
+        var contentHints = content is null
+            ? SizeHints.Fixed(Size.Zero)
+            : content.Measure(new LayoutConstraints(0, contentMaxW, 0, constraints.MaxHeight));
+
+        int addW, addH;
+        try
         {
-            content.Measure(new Size(Math.Max(0, innerWidth - arrowWidth), Math.Max(1, availableSize.Height)));
+            checked
+            {
+                addW = padding.Horizontal + arrowWidth;
+                addH = padding.Vertical;
+            }
+        }
+        catch (OverflowException ex)
+        {
+            throw new LayoutException("Overflow while computing Select padding/arrow contribution.", ex);
         }
 
-        var desiredWidth = padding.Horizontal + arrowWidth + (content?.DesiredSize.Width ?? 0);
-        var desiredHeight = Math.Max(1, padding.Vertical + (content?.DesiredSize.Height ?? 1));
-        return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, Math.Max(3, desiredWidth)), Math.Min(availableSize.Height, desiredHeight)));
+        int minW, minH, natW, natH;
+        try
+        {
+            checked
+            {
+                minW = LayoutConstants.ClampFinite(contentHints.Min.Width + addW);
+                minH = LayoutConstants.ClampFinite(Math.Max(1, contentHints.Min.Height + addH));
+
+                natW = LayoutConstants.ClampFinite(contentHints.Natural.Width + addW);
+                natH = LayoutConstants.ClampFinite(Math.Max(1, contentHints.Natural.Height + addH));
+            }
+        }
+        catch (OverflowException ex)
+        {
+            throw new LayoutException("Overflow while computing Select Min/Natural size.", ex);
+        }
+
+        minW = Math.Max(3, minW);
+        natW = Math.Max(3, natW);
+
+        int maxW, maxH;
+        if (LayoutConstants.IsInfinite(contentHints.Max.Width))
+        {
+            maxW = LayoutConstants.Infinite;
+        }
+        else
+        {
+            try
+            {
+                maxW = LayoutConstants.ClampOrInfinite(checked(contentHints.Max.Width + addW));
+            }
+            catch (OverflowException ex)
+            {
+                throw new LayoutException("Overflow while computing Select Max.Width.", ex);
+            }
+        }
+
+        if (LayoutConstants.IsInfinite(contentHints.Max.Height))
+        {
+            maxH = LayoutConstants.Infinite;
+        }
+        else
+        {
+            try
+            {
+                maxH = LayoutConstants.ClampOrInfinite(checked(contentHints.Max.Height + addH));
+            }
+            catch (OverflowException ex)
+            {
+                throw new LayoutException("Overflow while computing Select Max.Height.", ex);
+            }
+        }
+
+        return SizeHints.Flex(
+            new Size(minW, minH),
+            new Size(natW, natH),
+            new Size(maxW, maxH),
+            contentHints.FlexGrowX,
+            contentHints.FlexGrowY,
+            contentHints.FlexShrinkX,
+            contentHints.FlexShrinkY).Normalize();
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)

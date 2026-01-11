@@ -22,6 +22,8 @@ public sealed partial class ListBox : Visual
     {
         Items = new VisualList<Visual>(this, "Items");
         Focusable = true;
+        HorizontalAlignment = HorizontalAlignment.Stretch;
+        VerticalAlignment = VerticalAlignment.Stretch;
         this.Height(6);
     }
 
@@ -37,7 +39,6 @@ public sealed partial class ListBox : Visual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var height = Math.Max(1, Height);
         var listBoxStyle = Get<ListBoxStyle>();
         var showBorder = listBoxStyle.ShowBorder;
@@ -46,25 +47,28 @@ public sealed partial class ListBox : Visual
         var itemWidth = 0;
         if (items.Count > 0)
         {
+            var itemConstraints = new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1);
             for (var i = 0; i < items.Count; i++)
             {
                 var item = items[i];
-                item.Measure(new Size(LayoutConstants.Infinite, 1));
+                item.Measure(itemConstraints);
                 itemWidth = Math.Max(itemWidth, item.DesiredSize.Width);
             }
         }
 
         // Marker + space.
-        var width = Math.Min(availableSize.Width, itemWidth + 2);
-
-        var desiredHeight = Math.Min(height, availableSize.Height);
+        var width = itemWidth + 2;
+        var desiredHeight = height;
         if (showBorder)
         {
-            width = Math.Min(availableSize.Width, width + 2);
-            desiredHeight = Math.Min(availableSize.Height, desiredHeight + 2);
+            width += 2;
+            desiredHeight += 2;
         }
 
-        return SizeHints.Fixed(new Size(width, desiredHeight));
+        var min = new Size(showBorder ? 3 : 1, showBorder ? 3 : 1);
+        var natural = new Size(Math.Max(min.Width, width), Math.Max(min.Height, desiredHeight));
+        var max = new Size(LayoutConstants.Infinite, LayoutConstants.Infinite);
+        return SizeHints.Flex(min, natural, max, growX: 1, growY: 1, shrinkX: 1, shrinkY: 1);
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)

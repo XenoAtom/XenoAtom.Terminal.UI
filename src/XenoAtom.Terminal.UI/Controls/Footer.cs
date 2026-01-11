@@ -12,6 +12,11 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class Footer : Visual
 {
+    public Footer()
+    {
+        HorizontalAlignment = HorizontalAlignment.Stretch;
+    }
+
     [Bindable]
     public partial Visual? Left { get; set; }
 
@@ -48,9 +53,10 @@ public sealed partial class Footer : Visual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        _left?.Measure(new Size(LayoutConstants.Infinite, 1));
-        _center?.Measure(new Size(LayoutConstants.Infinite, 1));
-        _right?.Measure(new Size(LayoutConstants.Infinite, 1));
+        var labelConstraints = new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1);
+        _left?.Measure(labelConstraints);
+        _center?.Measure(labelConstraints);
+        _right?.Measure(labelConstraints);
 
         var leftW = _left?.DesiredSize.Width ?? 0;
         var centerW = _center?.DesiredSize.Width ?? 0;

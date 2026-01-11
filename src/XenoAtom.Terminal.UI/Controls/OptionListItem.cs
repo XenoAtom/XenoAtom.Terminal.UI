@@ -77,19 +77,19 @@ public sealed partial class OptionListItem : Visual
 
         if (Content is not null)
         {
-            Content.Measure(new Size(LayoutConstants.Infinite, 1));
+            Content.Measure(new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1));
             contentW = Content.DesiredSize.Width;
         }
 
         if (Shortcut is not null)
         {
-            Shortcut.Measure(new Size(LayoutConstants.Infinite, 1));
+            Shortcut.Measure(new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1));
             shortcutW = Shortcut.DesiredSize.Width;
         }
 
         if (Description is not null)
         {
-            Description.Measure(new Size(LayoutConstants.Infinite, 1));
+            Description.Measure(new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1));
             descriptionW = Description.DesiredSize.Width;
         }
 

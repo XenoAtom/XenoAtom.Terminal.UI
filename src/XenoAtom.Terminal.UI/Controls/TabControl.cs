@@ -21,6 +21,8 @@ public sealed partial class TabControl : Visual
     public TabControl()
     {
         Focusable = true;
+        HorizontalAlignment = HorizontalAlignment.Stretch;
+        VerticalAlignment = VerticalAlignment.Stretch;
     }
 
     public TabControl(params TabPage[] tabs) : this()
@@ -106,21 +108,21 @@ public sealed partial class TabControl : Visual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var style = Get<TabControlStyle>();
         var pad = style.TabPadding;
         var showBorder = style.ShowBorder;
 
         var headerHeight = 1;
         var headerTotalWidth = 0;
+        var headerConstraints = new LayoutConstraints(0, LayoutConstants.Infinite, 0, constraints.MaxHeight);
 
         for (var i = 0; i < _tabs.Count; i++)
         {
             var header = _tabs[i].Header;
-            header.Measure(new Size(availableSize.Width, availableSize.Height));
-            headerHeight = Math.Max(headerHeight, header.DesiredSize.Height);
+            var headerHints = header.Measure(headerConstraints);
+            headerHeight = Math.Max(headerHeight, headerHints.Natural.Height);
 
-            var tabWidth = header.DesiredSize.Width + pad.Horizontal;
+            var tabWidth = headerHints.Natural.Width + pad.Horizontal;
             headerTotalWidth += tabWidth;
             if (i + 1 < _tabs.Count)
             {
@@ -128,20 +130,24 @@ public sealed partial class TabControl : Visual
             }
         }
 
-        headerHeight = Math.Min(headerHeight, availableSize.Height);
+        headerHeight = Math.Max(1, headerHeight);
 
-        var contentSlot = new Size(
-            Math.Max(0, availableSize.Width - (showBorder ? 2 : 0)),
-            Math.Max(0, availableSize.Height - headerHeight - (showBorder ? 2 : 0)));
+        var contentMaxW = constraints.MaxWidth == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : Math.Max(0, constraints.MaxWidth - (showBorder ? 2 : 0));
+        var contentMaxH = constraints.MaxHeight == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : Math.Max(0, constraints.MaxHeight - headerHeight - (showBorder ? 2 : 0));
 
         var contentWidth = 0;
         var contentHeight = 0;
-        for (var i = 0; i < _tabs.Count; i++)
+        if (_tabs.Count > 0)
         {
-            var content = _tabs[i].Content;
-            content.Measure(contentSlot);
-            contentWidth = Math.Max(contentWidth, content.DesiredSize.Width);
-            contentHeight = Math.Max(contentHeight, content.DesiredSize.Height);
+            var selected = Math.Clamp(SelectedIndex, 0, _tabs.Count - 1);
+            var content = _tabs[selected].Content;
+            var contentHints = content.Measure(new LayoutConstraints(0, contentMaxW, 0, contentMaxH));
+            contentWidth = contentHints.Natural.Width;
+            contentHeight = contentHints.Natural.Height;
         }
 
         if (showBorder)
@@ -153,7 +159,10 @@ public sealed partial class TabControl : Visual
         var width = Math.Max(headerTotalWidth, contentWidth);
         var height = headerHeight + contentHeight;
 
-        return SizeHints.Fixed(new Size(Math.Min(availableSize.Width, width), Math.Min(availableSize.Height, height)));
+        var min = new Size(Math.Min(width, LayoutConstants.MaxFinite), Math.Min(height, LayoutConstants.MaxFinite));
+        var natural = min;
+        var max = new Size(LayoutConstants.Infinite, LayoutConstants.Infinite);
+        return SizeHints.Flex(min, natural, max, growX: 1, growY: 1, shrinkX: 1, shrinkY: 1);
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)

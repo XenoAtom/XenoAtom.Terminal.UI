@@ -87,7 +87,7 @@ public sealed partial class Grid : Panel
         for (var i = 0; i < Children.Count; i++)
         {
             var child = Children[i];
-            child.Measure(new Size(innerAvailW, innerAvailH));
+            child.Measure(new LayoutConstraints(0, innerAvailW, 0, innerAvailH));
 
             var placement = GetPlacementForLayout(child, rows, cols);
             if (placement.ColumnSpan != 1)
@@ -125,7 +125,7 @@ public sealed partial class Grid : Panel
             var p = GetPlacementForLayout(child, rows, cols);
 
             var cellW = GetSpanSize(colWidths, p.Column, p.ColumnSpan, colGap);
-            child.Measure(new Size(cellW, innerAvailH));
+            child.Measure(new LayoutConstraints(0, cellW, 0, innerAvailH));
 
             if (p.RowSpan == 1 && rowDefs[p.Row].Height.Type == GridUnitType.Auto)
             {
@@ -149,20 +149,33 @@ public sealed partial class Grid : Panel
             AllocateStar(rowDefs, innerAvailH, rowHeights);
         }
 
-        long colSum = 0;
-        for (var i = 0; i < colWidths.Length; i++)
+        var desiredW = 0;
+        var desiredH = 0;
+
+        try
         {
-            colSum += Math.Max(0, colWidths[i]);
+            checked
+            {
+                desiredW = padding.Horizontal + totalColGaps;
+                for (var i = 0; i < colWidths.Length; i++)
+                {
+                    desiredW += Math.Max(0, colWidths[i]);
+                }
+
+                desiredH = padding.Vertical + totalRowGaps;
+                for (var i = 0; i < rowHeights.Length; i++)
+                {
+                    desiredH += Math.Max(0, rowHeights[i]);
+                }
+            }
+        }
+        catch (OverflowException ex)
+        {
+            throw new LayoutException("Overflow while computing desired size for Grid.", ex);
         }
 
-        long rowSum = 0;
-        for (var i = 0; i < rowHeights.Length; i++)
-        {
-            rowSum += Math.Max(0, rowHeights[i]);
-        }
-
-        var desiredW = LayoutConstants.ClampFinite((long)padding.Horizontal + totalColGaps + colSum);
-        var desiredH = LayoutConstants.ClampFinite((long)padding.Vertical + totalRowGaps + rowSum);
+        desiredW = LayoutConstants.ClampFinite(desiredW);
+        desiredH = LayoutConstants.ClampFinite(desiredH);
 
         return SizeHints.Fixed(constraints.Clamp(new Size(desiredW, desiredH)));
     }

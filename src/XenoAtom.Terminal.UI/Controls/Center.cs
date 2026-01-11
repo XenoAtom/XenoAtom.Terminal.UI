@@ -16,15 +16,13 @@ public sealed partial class Center : ContentVisual
 {
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var content = Content;
         if (content is null)
         {
             return SizeHints.Fixed(Size.Zero);
         }
 
-        content.Measure(availableSize);
-        return SizeHints.Fixed(content.DesiredSize);
+        return content.Measure(constraints);
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)

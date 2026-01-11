@@ -41,7 +41,9 @@ public sealed partial class Switch : ContentVisual
         {
             var maxW = constraints.MaxWidth == LayoutConstants.Infinite ? LayoutConstants.Infinite : constraints.MaxWidth;
             var maxH = constraints.MaxHeight == LayoutConstants.Infinite ? LayoutConstants.Infinite : constraints.MaxHeight;
-            content.Measure(new Size(Math.Max(0, maxW - TrackWidth - gap), maxH));
+
+            var contentMaxW = maxW == LayoutConstants.Infinite ? LayoutConstants.Infinite : Math.Max(0, maxW - TrackWidth - gap);
+            content.Measure(new LayoutConstraints(0, contentMaxW, 0, maxH));
             var natural = new Size(TrackWidth + gap + content.DesiredSize.Width, Math.Max(1, content.DesiredSize.Height));
             return SizeHints.Fixed(constraints.Clamp(natural));
         }

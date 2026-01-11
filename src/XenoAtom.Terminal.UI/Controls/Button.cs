@@ -33,27 +33,102 @@ public partial class Button : ContentVisual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var style = Get<ButtonStyle>();
         var padding = style.Padding;
 
         var borderPad = style.ShowBorder ? 1 : 0;
 
-        var innerAvailable = new Size(
-            Math.Max(0, availableSize.Width - padding.Horizontal - (borderPad * 2)),
-            Math.Max(0, availableSize.Height - padding.Vertical - (borderPad * 2)));
+        var innerMaxW = constraints.MaxWidth == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : Math.Max(0, constraints.MaxWidth - padding.Horizontal - (borderPad * 2));
+        var innerMaxH = constraints.MaxHeight == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : Math.Max(0, constraints.MaxHeight - padding.Vertical - (borderPad * 2));
+
+        var innerConstraints = new LayoutConstraints(0, innerMaxW, 0, innerMaxH);
 
         var content = Content;
-        content?.Measure(innerAvailable);
+        var contentHints = content is null ? SizeHints.Fixed(Size.Zero) : content.Measure(innerConstraints);
 
-        var width = Math.Min(availableSize.Width, (content?.DesiredSize.Width ?? 0) + padding.Horizontal + (borderPad * 2));
-        var height = Math.Min(availableSize.Height, (content?.DesiredSize.Height ?? 0) + padding.Vertical + (borderPad * 2));
+        int addW, addH;
+        try
+        {
+            checked
+            {
+                addW = padding.Horizontal + (borderPad * 2);
+                addH = padding.Vertical + (borderPad * 2);
+            }
+        }
+        catch (OverflowException ex)
+        {
+            throw new LayoutException("Overflow while computing Button padding/border contribution.", ex);
+        }
+
+        int minW, minH, natW, natH;
+        try
+        {
+            checked
+            {
+                minW = LayoutConstants.ClampFinite(contentHints.Min.Width + addW);
+                minH = LayoutConstants.ClampFinite(contentHints.Min.Height + addH);
+                natW = LayoutConstants.ClampFinite(contentHints.Natural.Width + addW);
+                natH = LayoutConstants.ClampFinite(contentHints.Natural.Height + addH);
+            }
+        }
+        catch (OverflowException ex)
+        {
+            throw new LayoutException("Overflow while computing Button Min/Natural size.", ex);
+        }
+
         if (borderPad != 0)
         {
-            width = Math.Min(availableSize.Width, Math.Max(3, width));
-            height = Math.Min(availableSize.Height, Math.Max(3, height));
+            minW = Math.Max(minW, 3);
+            minH = Math.Max(minH, 3);
+            natW = Math.Max(natW, 3);
+            natH = Math.Max(natH, 3);
         }
-        return SizeHints.Fixed(new Size(width, height));
+
+        int maxW, maxH;
+        if (LayoutConstants.IsInfinite(contentHints.Max.Width))
+        {
+            maxW = LayoutConstants.Infinite;
+        }
+        else
+        {
+            try
+            {
+                maxW = LayoutConstants.ClampOrInfinite(checked(contentHints.Max.Width + addW));
+            }
+            catch (OverflowException ex)
+            {
+                throw new LayoutException("Overflow while computing Button Max.Width.", ex);
+            }
+        }
+
+        if (LayoutConstants.IsInfinite(contentHints.Max.Height))
+        {
+            maxH = LayoutConstants.Infinite;
+        }
+        else
+        {
+            try
+            {
+                maxH = LayoutConstants.ClampOrInfinite(checked(contentHints.Max.Height + addH));
+            }
+            catch (OverflowException ex)
+            {
+                throw new LayoutException("Overflow while computing Button Max.Height.", ex);
+            }
+        }
+
+        return SizeHints.Flex(
+            new Size(minW, minH),
+            new Size(natW, natH),
+            new Size(maxW, maxH),
+            contentHints.FlexGrowX,
+            contentHints.FlexGrowY,
+            contentHints.FlexShrinkX,
+            contentHints.FlexShrinkY).Normalize();
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)

@@ -5,6 +5,7 @@
 using System.Text;
 using XenoAtom.Ansi;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Rendering;
@@ -23,7 +24,7 @@ internal static class TerminalVisualWriter
 
         var width = Math.Max(1, terminal.Size.Columns);
 
-        visual.Measure(new Size(width, LayoutConstants.Infinite));
+        visual.Measure(new LayoutConstraints(0, width, 0, LayoutConstants.Infinite));
         visual.Arrange(new Rectangle(0, 0, width, visual.DesiredSize.Height));
 
         var height = Math.Max(1, visual.DesiredSize.Height);

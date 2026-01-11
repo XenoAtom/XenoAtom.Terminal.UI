@@ -85,7 +85,7 @@ public sealed partial class Table : Visual
             if (c < HeaderCells.Count)
             {
                 var cell = HeaderCells[c];
-                cell.Measure(new Size(LayoutConstants.Infinite, LayoutConstants.Infinite));
+                cell.Measure(LayoutConstraints.Unbounded);
                 widths[c] = Math.Max(widths[c], cell.DesiredSize.Width);
             }
         }
@@ -101,7 +101,7 @@ public sealed partial class Table : Visual
                 }
 
                 var cell = row[c];
-                cell.Measure(new Size(LayoutConstants.Infinite, LayoutConstants.Infinite));
+                cell.Measure(LayoutConstraints.Unbounded);
                 widths[c] = Math.Max(widths[c], cell.DesiredSize.Width);
             }
         }
@@ -427,14 +427,26 @@ public sealed partial class Table : Visual
         }
 
         var separators = (showOuterBorder ? 2 : 0) + (showVerticalLines ? Math.Max(0, columns - 1) : 0);
+        var pad = Math.Max(0, paddingHorizontal);
 
-        var total = (long)separators + ((long)columns * Math.Max(0, paddingHorizontal));
-        for (var c = 0; c < columns; c++)
+        int total;
+        try
         {
-            total += Math.Max(0, widths[c]);
+            checked
+            {
+                total = separators + (columns * pad);
+                for (var c = 0; c < columns; c++)
+                {
+                    total += Math.Max(0, widths[c]);
+                }
+            }
+        }
+        catch (OverflowException ex)
+        {
+            throw new LayoutException("Overflow while computing required width for Table.", ex);
         }
 
-        return (int)Math.Clamp(total, 0, int.MaxValue);
+        return LayoutConstants.ClampFinite(total);
     }
 
     private static int ComputeRequiredHeight(int headerCount, int rowCount, int rowHeight, bool showOuterBorder, bool showHeaderSeparator, bool showRowSeparators)

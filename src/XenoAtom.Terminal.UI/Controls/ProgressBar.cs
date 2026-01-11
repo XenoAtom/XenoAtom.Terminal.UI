@@ -27,6 +27,7 @@ public sealed partial class ProgressBar : Visual
 
     public ProgressBar()
     {
+        HorizontalAlignment = HorizontalAlignment.Stretch;
     }
 
     [Bindable]
@@ -42,7 +43,6 @@ public sealed partial class ProgressBar : Visual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var progressStyle = Get<ProgressBarStyle>();
 
         var showPercent = progressStyle.ShowPercentage;
@@ -52,8 +52,8 @@ public sealed partial class ProgressBar : Visual
         var labelWidth = 0;
         if (label is not null)
         {
-            label.Measure(new Size(LayoutConstants.Infinite, 1));
-            labelWidth = label.DesiredSize.Width;
+            var labelHints = label.Measure(new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1));
+            labelWidth = labelHints.Natural.Width;
             if (labelWidth > 0)
             {
                 labelWidth += 1; // space after label
@@ -61,9 +61,13 @@ public sealed partial class ProgressBar : Visual
         }
 
         var minBarWidth = 10;
-        var desiredWidth = labelWidth + minBarWidth + percentWidth;
-        var width = Math.Min(availableSize.Width, Math.Max(minBarWidth, desiredWidth));
-        return SizeHints.Fixed(new Size(width, 1));
+        var required = Math.Max(minBarWidth, labelWidth + minBarWidth + percentWidth);
+
+        var min = new Size(required, 1);
+        var natural = min;
+        var max = new Size(LayoutConstants.Infinite, 1);
+
+        return SizeHints.Flex(min, natural, max, growX: 1, growY: 0, shrinkX: 1, shrinkY: 0);
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)

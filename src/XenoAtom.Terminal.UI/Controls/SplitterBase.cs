@@ -135,8 +135,8 @@ public abstract partial class SplitterBase : Visual
                 var w = Math.Max(0, maxW - bar);
                 var w1 = w / 2;
                 var w2 = w - w1;
-                first?.Measure(new Size(w1, maxH));
-                second?.Measure(new Size(w2, maxH));
+                first?.Measure(new LayoutConstraints(0, w1, constraints.MinHeight, maxH));
+                second?.Measure(new LayoutConstraints(0, w2, constraints.MinHeight, maxH));
             }
 
             var desiredW = (first?.DesiredSize.Width ?? 0) + (second?.DesiredSize.Width ?? 0) + bar;
@@ -165,8 +165,8 @@ public abstract partial class SplitterBase : Visual
                 var h = Math.Max(0, maxH - bar);
                 var h1 = h / 2;
                 var h2 = h - h1;
-                first?.Measure(new Size(maxW, h1));
-                second?.Measure(new Size(maxW, h2));
+                first?.Measure(new LayoutConstraints(constraints.MinWidth, maxW, 0, h1));
+                second?.Measure(new LayoutConstraints(constraints.MinWidth, maxW, 0, h2));
             }
 
             var desiredW = Math.Max(first?.DesiredSize.Width ?? 0, second?.DesiredSize.Width ?? 0);

@@ -11,6 +11,7 @@ using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Threading;
 using XenoAtom.Terminal.UI.Styling;
@@ -180,7 +181,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         block.AttachToApp(this);
         try
         {
-            block.Measure(new Size(width, LayoutConstants.Infinite));
+            block.Measure(new LayoutConstraints(0, width, 0, LayoutConstants.Infinite));
             block.Arrange(new Rectangle(0, 0, width, block.DesiredSize.Height));
 
             // Flow output can allocate (it's not per-frame). Keep it simple for now.
@@ -600,7 +601,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
             var width = Math.Max(1, _terminal.Size.Columns);
             var height = Math.Max(1, _terminal.Size.Rows);
 
-            Root.Measure(new Size(width, height));
+            Root.Measure(new LayoutConstraints(0, width, 0, height));
             Root.Arrange(new Rectangle(0, 0, width, height));
 
             var buffer = EnsureRenderBuffer(width, height);
@@ -618,7 +619,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         {
             var width = Math.Max(1, _terminal.Size.Columns);
 
-            Root.Measure(new Size(width, LayoutConstants.Infinite));
+            Root.Measure(new LayoutConstraints(0, width, 0, LayoutConstants.Infinite));
             Root.Arrange(new Rectangle(0, 0, width, Root.DesiredSize.Height));
 
             var buffer = EnsureRenderBuffer(width, Math.Max(1, Root.DesiredSize.Height));

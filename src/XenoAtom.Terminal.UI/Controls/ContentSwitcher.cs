@@ -32,14 +32,12 @@ public sealed partial class ContentSwitcher : Panel
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         if (!TryGetActiveChild(out var child))
         {
             return SizeHints.Fixed(Size.Zero);
         }
 
-        child.Measure(availableSize);
-        return SizeHints.Fixed(child.DesiredSize);
+        return child.Measure(constraints);
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)
