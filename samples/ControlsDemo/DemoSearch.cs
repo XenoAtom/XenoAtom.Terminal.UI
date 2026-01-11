@@ -19,15 +19,11 @@ internal static class DemoSearch
             return true;
         }
 
-        for (var i = 0; i < meta.Tags.Count; i++)
+        if (meta.Description.Contains(query, StringComparison.OrdinalIgnoreCase))
         {
-            if (meta.Tags[i].Contains(query, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
+            return true;
         }
 
         return false;
     }
 }
-

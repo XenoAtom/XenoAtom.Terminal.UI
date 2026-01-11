@@ -18,8 +18,5 @@ public sealed class DemoAttribute : Attribute
 
     public string Description { get; init; } = string.Empty;
 
-    public string[] Tags { get; init; } = [];
-
     public int Order { get; init; }
 }
-

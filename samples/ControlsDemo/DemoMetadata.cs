@@ -5,7 +5,5 @@ public sealed record DemoMetadata(
     string Name,
     string Category,
     string Description,
-    IReadOnlyList<string> Tags,
     string SourcePath,
     int Order = 0);
-

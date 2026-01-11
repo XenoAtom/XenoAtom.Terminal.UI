@@ -22,112 +22,62 @@ internal static class DemoPage
             Runtime = context.Runtime,
         });
 
-        var demoTab = new ScrollViewer
+        var link = BuildSourceLink(meta, log);
+        var header = new Header()
+            .Left(meta.Name)
+            .Right(link);
+
+        var demoContent = new ScrollViewer
         {
-            Content = new VStack(content).Spacing(1).HorizontalAlignment(HorizontalAlignment.Stretch),
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch,
+            Content = content,
         };
 
-        var logTab = BuildLogTab(log);
-        var sourceTab = BuildSourceTab(meta, log);
-
-        var tabs = new TabControl(
-            new TabPage("Demo", demoTab),
-            new TabPage(new TextBlock().Text(() => { _ = log.Version.Value; return $"Log ({log.Count})"; }), logTab),
-            new TabPage("Source", sourceTab))
-        {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch,
-        };
-
-        var header = new VStack(
-                new Markup($"[bold]{EscapeMarkup(meta.Name)}[/]"),
-                new Markup($"[dim]{EscapeMarkup(meta.Description)}[/]").Wrap(true))
-            .Spacing(1)
-            .HorizontalAlignment(HorizontalAlignment.Stretch);
+        var logPanel = BuildLogPanel(log);
 
         return new DockLayout()
-            .Top(header)
-            .Content(tabs)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .VerticalAlignment(VerticalAlignment.Stretch);
+            .Top(new VStack(header, new Rule()).Spacing(0))
+            .Content(demoContent)
+            .Bottom(logPanel);
     }
 
-    private static Visual BuildLogTab(DemoLog log)
+    private static Visual BuildLogPanel(DemoLog log)
     {
-        return new ComputedVisual(() =>
+        var logLines = new ComputedVisual(() =>
         {
             _ = log.Version.Value;
 
             var lines = log.Lines;
+            if (lines.Count == 0)
+            {
+                return (Visual)"[dim]Log is empty.[/]";
+            }
+
             var stack = new VStack().Spacing(0);
-            for (var i = 0; i < lines.Count; i++)
+            var start = Math.Max(0, lines.Count - 4);
+            for (var i = start; i < lines.Count; i++)
             {
-                stack.Add(new TextBlock(lines[i]));
+                stack.Add(lines[i]);
             }
 
-            return new ScrollViewer
-            {
-                Content = stack,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                VerticalAlignment = VerticalAlignment.Stretch,
-            };
-        });
-    }
-
-    private static Visual BuildSourceTab(DemoMetadata meta, DemoLog log)
-    {
-        var uri = GitHubLinks.TryGetSourceUri(meta.SourcePath, out var sourceUri) ? sourceUri : null;
-
-        Visual link = uri is null
-            ? new Markup("[dim]Source link unavailable[/]")
-            : new Link(uri.ToString(), "Open demo source on GitHub");
-
-        var copyPath = new Button("Copy relative path").Click(() =>
-        {
-            if (GitHubLinks.TryGetSourceRelativePath(meta.SourcePath, out var relative))
-            {
-                try
-                {
-                    XenoAtom.Terminal.Terminal.Instance.Clipboard.TrySetText(relative);
-                    log.Add($"Copied: {relative}");
-                }
-                catch (Exception ex)
-                {
-                    log.Add($"Copy failed: {ex.Message}");
-                }
-            }
-            else
-            {
-                log.Add("Copy failed: could not compute relative path.");
-            }
+            return stack;
         });
 
+        // Always visible, but small: show up to the last 4 lines.
         return new VStack(
-                new Group()
-                    .TopLeftText("Source")
-                    .Padding(1)
-                    .HorizontalAlignment(HorizontalAlignment.Stretch)
-                    .Content(new VStack(
-                            link,
-                            new Markup($"[dim]{EscapeMarkup(meta.SourcePath)}[/]").Wrap(true),
-                            copyPath)
-                        .Spacing(1)
-                        .HorizontalAlignment(HorizontalAlignment.Stretch)),
-                new Group()
-                    .TopLeftText("Tags")
-                    .Padding(1)
-                    .HorizontalAlignment(HorizontalAlignment.Stretch)
-                    .Content(new Markup($"[dim]{EscapeMarkup(meta.Tags.Count == 0 ? "<none>" : string.Join(", ", meta.Tags))}[/]").Wrap(true)))
-            .Spacing(1)
-            .HorizontalAlignment(HorizontalAlignment.Stretch);
+            new Rule(),
+            logLines.MaxHeight(4)).Spacing(0);
     }
 
-    private static string EscapeMarkup(string text)
-        => text
-            .Replace("[", "[[", StringComparison.Ordinal)
-            .Replace("]", "]]", StringComparison.Ordinal);
+    private static Visual BuildSourceLink(DemoMetadata meta, DemoLog log)
+    {
+        if (GitHubLinks.TryGetSourceUri(meta.SourcePath, out var sourceUri))
+        {
+            return new Link(sourceUri.ToString(), "Source");
+        }
+
+        _ = log;
+        return new Markup("[dim]Source unavailable[/]");
+    }
 
     private sealed class DemoLog
     {

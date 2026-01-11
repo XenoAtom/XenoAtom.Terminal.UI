@@ -22,7 +22,6 @@ public abstract class ControlsDemoBase : IControlsDemo
             Name: attr.Name,
             Category: attr.Category,
             Description: attr.Description,
-            Tags: attr.Tags,
             SourcePath: SourcePath,
             Order: attr.Order);
     }
@@ -33,4 +32,3 @@ public abstract class ControlsDemoBase : IControlsDemo
 
     public abstract Visual Build(DemoContext context);
 }
-

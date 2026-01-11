@@ -24,6 +24,11 @@ public sealed partial class TextBlock : Visual
         Text = text;
     }
 
+    public TextBlock(Func<string> text) : this()
+    {
+        this.Text(text);
+    }
+
     [Bindable]
     public partial string? Text { get; set; }
 
