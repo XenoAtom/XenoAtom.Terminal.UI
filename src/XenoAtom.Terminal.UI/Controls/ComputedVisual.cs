@@ -21,6 +21,8 @@ public sealed class ComputedVisual : Visual, IDisposable
     {
         _computed = new Computed<Visual?>(build ?? throw new ArgumentNullException(nameof(build)));
         _computed.Invalidated += OnInvalidated;
+        this.HorizontalAlignment(() => _child?.HorizontalAlignment ?? HorizontalAlignment.Stretch);
+        this.VerticalAlignment(() => _child?.VerticalAlignment ?? VerticalAlignment.Stretch);
     }
 
     public void Dispose()
