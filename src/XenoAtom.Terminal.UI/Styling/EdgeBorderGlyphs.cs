@@ -21,9 +21,9 @@ public readonly record struct EdgeBorderGlyphs(
         Bottom: new Rune('▁'), // U+2581
         Left: new Rune('▏'), // U+258F
         Right: new Rune('▕'), // U+2595
-        TopLeft: new Rune(0x1FB7C),
-        TopRight: new Rune(0x1FB7D),
-        BottomLeft: new Rune(0x1FB7E),
+        TopLeft: new Rune(0x1FB7D),
+        TopRight: new Rune(0x1FB7E),
+        BottomLeft: new Rune(0x1FB7C),
         BottomRight: new Rune(0x1FB7F));
 }
 
