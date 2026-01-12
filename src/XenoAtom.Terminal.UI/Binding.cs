@@ -9,6 +9,7 @@ namespace XenoAtom.Terminal.UI;
 /// </summary>
 public readonly record struct Binding(object Owner, BindingAccessor Accessor)
 {
+    public bool IsEmpty => Owner == null || Accessor == null;
 }
 
 /// <summary>
@@ -17,5 +18,11 @@ public readonly record struct Binding(object Owner, BindingAccessor Accessor)
 /// <typeparam name="T">The property type.</typeparam>
 public readonly record struct Binding<T>(object Owner, BindingAccessor<T> Accessor)
 {
+    public bool IsEmpty => Owner == null || Accessor == null;
+
+    public void SetValue(T value) => Accessor.Setter(Owner, value);
+
+    public T GetValue() => Accessor.Getter(Owner);
+
     public static implicit operator Binding(Binding<T> binding) => new(binding.Owner, binding.Accessor);
 }
