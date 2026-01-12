@@ -29,7 +29,7 @@ internal static class TerminalVisualWriter
 
         var height = Math.Max(1, visual.DesiredSize.Height);
         var buffer = new CellBuffer(width, height);
-        buffer.Clear(visual.GetTheme().ForegroundTextStyle());
+        buffer.Clear(visual.GetTheme().BaseTextStyle());
         visual.RenderTree(buffer);
 
         var caps = CreateAnsiCapabilities(terminal.Capabilities);

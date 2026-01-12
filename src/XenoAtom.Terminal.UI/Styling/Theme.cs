@@ -8,28 +8,36 @@ namespace XenoAtom.Terminal.UI.Styling;
 
 public sealed class Theme : IStyle<Theme>
 {
-    public static Theme Default { get; } = new Theme
-    {
-        Foreground = AnsiColor.Rgb(0xE5, 0xE7, 0xEB), // slate-200
-        // Background is intentionally left unset by default, so that terminal applications blend with the
-        // user's terminal theme. Individual controls can still opt into backgrounds (e.g. TextBox, Button).
-        Surface = AnsiColor.Rgb(0x10, 0x1A, 0x2D),
-        SurfaceAlt = AnsiColor.Rgb(0x18, 0x24, 0x3A),
-        Border = AnsiColor.Rgb(0x2A, 0x3A, 0x55),
-        FocusBorder = AnsiColor.Rgb(0x60, 0xA5, 0xFA), // blue-400
-        Accent = AnsiColor.Rgb(0xA7, 0x8B, 0xFA), // violet-400
-        Selection = AnsiColor.Rgb(0x2D, 0x7D, 0xFF),
-        Disabled = AnsiColor.Rgb(0x64, 0x74, 0x8B), // slate-500
-        Primary = AnsiColor.Rgb(0xA7, 0x8B, 0xFA),
-        Success = AnsiColor.Rgb(0x34, 0xD3, 0x99),
-        Warning = AnsiColor.Rgb(0xFB, 0xBF, 0x24),
-        Error = AnsiColor.Rgb(0xFB, 0x71, 0x85),
-        Muted = AnsiColor.Rgb(0x94, 0xA3, 0xB8),
-        Lines = LineGlyphs.Single,
-        ScrollBars = ScrollBarGlyphs.Default,
-    };
+    public static Theme Default { get; } = FromPalette(Ansi16Palette.RootLoops);
+
+    public static Theme Terminal { get; } = FromPalette(Ansi16Palette.Terminal);
 
     public static StyleKey<Theme> Key { get; } = new("Theme", Default);
+
+    public static Theme FromPalette(Ansi16Palette palette)
+    {
+        ArgumentNullException.ThrowIfNull(palette);
+
+        return new Theme
+        {
+            Foreground = palette.Foreground,
+            Background = palette.Background,
+            Surface = palette.Black,
+            SurfaceAlt = palette.BrightBlack,
+            Border = palette.BrightBlack,
+            FocusBorder = palette.CursorColor,
+            Accent = palette.Purple,
+            Selection = palette.SelectionBackground,
+            Disabled = palette.BrightBlack,
+            Primary = palette.Blue,
+            Success = palette.Green,
+            Warning = palette.Yellow,
+            Error = palette.Red,
+            Muted = palette.White,
+            Lines = LineGlyphs.Single,
+            ScrollBars = ScrollBarGlyphs.Default,
+        };
+    }
 
     public AnsiColor? Foreground { get; init; }
 

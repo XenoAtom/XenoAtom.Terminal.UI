@@ -188,7 +188,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
             // Flow output can allocate (it's not per-frame). Keep it simple for now.
             var buffer = new CellBuffer(width, Math.Max(1, block.DesiredSize.Height));
-            buffer.Clear(block.GetTheme().ForegroundTextStyle());
+            buffer.Clear(block.GetTheme().BaseTextStyle());
             block.RenderTree(buffer);
             _inlineHost.WriteMarkupLines(buffer.ToMarkupLines());
         }
@@ -626,7 +626,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
             var wantsCursor = TryGetDesiredCursor(out var cursorX, out var cursorY);
 
             var buffer = EnsureRenderBuffer(width, height);
-            buffer.Clear(Root.GetTheme().ForegroundTextStyle());
+            buffer.Clear(Root.GetTheme().BaseTextStyle());
             Root.RenderTree(buffer);
             if (_debugOverlayVisible)
             {
@@ -646,7 +646,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
             var wantsCursor = TryGetDesiredCursor(out var cursorX, out var cursorY);
 
             var buffer = EnsureRenderBuffer(width, Math.Max(1, Root.DesiredSize.Height));
-            buffer.Clear(Root.GetTheme().ForegroundTextStyle());
+            buffer.Clear(Root.GetTheme().BaseTextStyle());
             Root.RenderTree(buffer);
             if (_debugOverlayVisible)
             {
