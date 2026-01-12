@@ -62,8 +62,16 @@ public sealed class State<T> : Threading.DispatcherObject
         {
         }
 
-        private static T StaticGetter(object instance) => ((State<T>)instance)._value;
+        private static T StaticGetter(object instance)
+        {
+            var state = ((State<T>)instance);
+            return state.Value;
+        }
 
-        private static void StaticSetter(object instance, T value) => ((State<T>)instance).Value = value;
+        private static void StaticSetter(object instance, T value)
+        {
+            var state = ((State<T>)instance);
+            state.Value = value;
+        }
     }
 }

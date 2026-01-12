@@ -64,6 +64,13 @@ public sealed class BindingManager
         return new TrackingSession(previous, current.Dependencies);
     }
 
+    public TrackingSession DisableReadTracking()
+    {
+        var previous = _tracking;
+        _tracking = null;
+        return new TrackingSession(previous, Array.Empty<Binding>());
+    }
+
     internal DynamicUpdateSession BeginDynamicUpdate(object owner)
     {
         var previous = _dynamicUpdateOwner;

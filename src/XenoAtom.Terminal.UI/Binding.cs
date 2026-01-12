@@ -22,11 +22,7 @@ public readonly record struct Binding<T>(object Owner, BindingAccessor<T> Access
 
     public void SetValue(T value) => Accessor.Setter(Owner, value);
 
-    public T GetValue()
-    {
-        BindingManager.Current.RegisterRead(Owner, Accessor);
-        return Accessor.Getter(Owner);
-    }
+    public T GetValue() => Accessor.Getter(Owner);
 
     public static implicit operator Binding(Binding<T> binding) => new(binding.Owner, binding.Accessor);
 }

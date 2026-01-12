@@ -264,6 +264,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
     internal void AttachToApp(TerminalApp app)
     {
+        using var _ = BindingManager.Current.DisableReadTracking();
         App = app;
         OnAttachedToApp(app);
 
@@ -284,6 +285,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
     internal void DetachFromApp()
     {
+        using var _ = BindingManager.Current.DisableReadTracking();
         var app = App;
         if (app is null)
         {

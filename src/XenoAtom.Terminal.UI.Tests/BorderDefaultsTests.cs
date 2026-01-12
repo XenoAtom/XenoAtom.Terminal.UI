@@ -41,7 +41,7 @@ public sealed class BorderDefaultsTests
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));
 
         var outText = backend.GetOutText();
-        Assert.DoesNotContain("▔", outText);
+        Assert.DoesNotContain("▁", outText);
 
         backend = new InMemoryTerminalBackend(new TerminalSize(24, 6));
         using var session2 = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
@@ -57,6 +57,6 @@ public sealed class BorderDefaultsTests
         await runTask2.WaitAsync(TimeSpan.FromSeconds(2));
 
         var outText2 = backend.GetOutText();
-        Assert.Contains("▔", outText2);
+        Assert.Contains("▁", outText2);
     }
 }

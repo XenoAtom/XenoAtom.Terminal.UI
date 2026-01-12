@@ -83,16 +83,6 @@ public sealed partial class ContentSwitcher : Panel
             return;
         }
 
-        if (oldActive is not null && oldActive.App is not null)
-        {
-            oldActive.DetachFromApp();
-        }
-
-        if (newActive is not null && newActive.App is null)
-        {
-            newActive.AttachToApp(app);
-        }
-
         if (app.FocusedElement is { } focused && oldActive is not null && IsDescendantOf(focused, oldActive))
         {
             var focusCandidate = newActive?.Focusable == true
