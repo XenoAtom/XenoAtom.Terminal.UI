@@ -39,16 +39,7 @@ public sealed partial class Accordion : Panel
             return SizeHints.Fixed(Size.Zero);
         }
 
-        int totalSpacing;
-        try
-        {
-            totalSpacing = checked(spacing * Math.Max(0, childCount - 1));
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Overflow while computing total spacing for Accordion.", ex);
-        }
-
+        int totalSpacing = spacing * Math.Max(0, childCount - 1);
         var childConstraints = new LayoutConstraints(constraints.MinWidth, constraints.MaxWidth, 0, constraints.MaxHeight);
 
         var minW = 0;
@@ -79,18 +70,8 @@ public sealed partial class Accordion : Panel
                 maxW = Math.Max(maxW, hints.Max.Width);
             }
 
-            try
-            {
-                checked
-                {
-                    minH += hints.Min.Height;
-                    natH += hints.Natural.Height;
-                }
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Overflow while summing child heights in Accordion.Measure.", ex);
-            }
+            minH += hints.Min.Height;
+            natH += hints.Natural.Height;
 
             if (LayoutConstants.IsInfinite(hints.Max.Height))
             {
@@ -98,14 +79,7 @@ public sealed partial class Accordion : Panel
             }
             else if (maxH != LayoutConstants.Infinite)
             {
-                try
-                {
-                    maxH = checked(maxH + hints.Max.Height);
-                }
-                catch (OverflowException ex)
-                {
-                    throw new LayoutException("Overflow while summing child Max.Height in Accordion.Measure.", ex);
-                }
+                maxH = maxH + hints.Max.Height;
             }
 
             growY += hints.FlexGrowY;
@@ -138,16 +112,7 @@ public sealed partial class Accordion : Panel
             return;
         }
 
-        int totalSpacing;
-        try
-        {
-            totalSpacing = checked(spacing * Math.Max(0, childCount - 1));
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Overflow while computing total spacing for Accordion.Arrange.", ex);
-        }
-
+        int totalSpacing = spacing * Math.Max(0, childCount - 1);
         var available = Math.Max(0, finalRect.Height - totalSpacing);
 
         var mins = new int[childCount];

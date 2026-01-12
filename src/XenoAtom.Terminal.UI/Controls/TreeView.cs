@@ -26,7 +26,6 @@ public sealed partial class TreeView : Visual
         Focusable = true;
         HorizontalAlignment = HorizontalAlignment.Stretch;
         VerticalAlignment = VerticalAlignment.Stretch;
-        this.Height(8);
 
         _headers = new VisualList<Visual>(this, "TreeView.Headers");
         _roots = new BindableList<TreeNode>(
@@ -40,9 +39,6 @@ public sealed partial class TreeView : Visual
 
     [Bindable]
     public partial int SelectedIndex { get; set; }
-
-    [Bindable]
-    public partial int Height { get; set; }
 
     protected override int ChildrenCount => _headers.Count;
 
@@ -132,7 +128,7 @@ public sealed partial class TreeView : Visual
             var (node, depth) = _visible[i];
             var expander = node.Children.Count > 0 ? (node.IsExpanded ? style.ExpandedGlyph : style.CollapsedGlyph) : new Rune(' ');
             var expanderWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(expander));
-            var icon = style.ResolveIcon(node.Icon);
+            var icon = style.ResolveIcon(node.Data, node.Icon);
             var iconWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(icon));
 
             var prefix = depth * style.IndentSize + markerWidth + expanderWidth + 1 + iconWidth + gapAfterIcon;
@@ -141,7 +137,7 @@ public sealed partial class TreeView : Visual
         }
 
         var width = Math.Max(1, maxWidth);
-        var desiredHeight = Math.Max(1, Height);
+        var desiredHeight = Math.Max(1, _visible.Count);
         if (showBorder)
         {
             width += 2;
@@ -185,7 +181,7 @@ public sealed partial class TreeView : Visual
             var (node, depth) = _visible[i];
             var expander = node.Children.Count > 0 ? (node.IsExpanded ? style.ExpandedGlyph : style.CollapsedGlyph) : new Rune(' ');
             var expanderWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(expander));
-            var icon = style.ResolveIcon(node.Icon);
+            var icon = style.ResolveIcon(node.Data, node.Icon);
             var iconWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(icon));
 
             var prefix = depth * style.IndentSize + markerWidth + expanderWidth + 1 + iconWidth + gapAfterIcon;
@@ -298,7 +294,7 @@ public sealed partial class TreeView : Visual
             }
             xCursor++;
 
-            var icon = style.ResolveIcon(node.Icon);
+            var icon = style.ResolveIcon(node.Data, node.Icon);
             if (xCursor < innerLeft + innerWidth)
             {
                 buffer.SetCell(xCursor, y, icon, rowStyle);

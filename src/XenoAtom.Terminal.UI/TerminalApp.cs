@@ -42,6 +42,8 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private Func<bool>? _onUpdate;
     private readonly AnsiBuilder _updateOutputBuilder = new(initialCapacity: 4096);
 
+    private Visual? _visualBeingDynamicallyInitialized;
+
     private readonly List<IAnimatedVisual> _animatedVisuals = new();
     private long _nextAnimationTick = long.MaxValue;
 
@@ -503,8 +505,27 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         _nextAnimationTick = next;
     }
 
+    internal void SetVisualBeingDynamicallyInitialized(Visual? visual)
+    {
+        _visualBeingDynamicallyInitialized = visual;
+    }
+
     private void OnValueChanged(Binding binding)
     {
+        // Don't record bindings for visuals not yet attached to the app (e.g. in initializers)
+        if (binding.Owner is IVisualElement visual)
+        {
+            if (visual.App is null)
+            {
+                return;
+            }
+
+            if (_visualBeingDynamicallyInitialized is not null && !ReferenceEquals(_visualBeingDynamicallyInitialized, visual))
+            {
+                throw new InvalidOperationException($"A change was detected on a visual ({visual.GetType().Name}) outside of a current visual ({_visualBeingDynamicallyInitialized.GetType().Name}) being initialized .");
+            }
+        }
+
         _pendingBindings.Add(binding);
     }
 

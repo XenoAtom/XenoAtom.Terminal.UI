@@ -19,8 +19,8 @@ public sealed class TreeViewTests
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
         var tree = new TreeView { Height = 6 };
-        var rootNode = new TreeNode("Root") { Icon = TreeNodeIcon.Folder };
-        rootNode.Children.Add(new TreeNode("Child") { Icon = TreeNodeIcon.File });
+        var rootNode = new TreeNode("Root") { Icon = TreeNodeIcons.FolderGlyph };
+        rootNode.Children.Add(new TreeNode("Child") { Icon = TreeNodeIcons.FileGlyph });
         tree.Roots.Add(rootNode);
 
         var root = new VStack { tree };

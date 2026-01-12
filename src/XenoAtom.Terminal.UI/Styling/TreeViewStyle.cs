@@ -6,12 +6,14 @@ using System.Text;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public enum TreeNodeIcon
+public static class TreeNodeIcons
 {
-    None = 0,
-    Folder = 1,
-    File = 2,
-    Document = 3,
+    public static Rune FolderGlyph => new(0x1F4C1);
+
+    public static Rune FileGlyph => new(0x1F4C4);
+
+    public static Rune DocumentGlyph => new(0x1F4C3);
+
 }
 
 public sealed record TreeViewStyle : IStyle<TreeViewStyle>
@@ -30,27 +32,19 @@ public sealed record TreeViewStyle : IStyle<TreeViewStyle>
 
     public Rune CollapsedGlyph { get; init; } = new('▸');
 
-    public Rune FolderGlyph { get; init; } = new(0x1F4C1);
-
-    public Rune FileGlyph { get; init; } = new(0x1F4C4);
-
-    public Rune DocumentGlyph { get; init; } = new(0x1F4C3);
-
     public Rune FocusMarkerGlyph { get; init; } = new('→');
+
+    public Func<object?, Rune?, Rune>? IconResolver { get; init; }
 
     public CellStyle? Item { get; init; }
     public CellStyle? SelectedFocused { get; init; }
     public CellStyle? SelectedUnfocused { get; init; }
     public CellStyle? Disabled { get; init; }
-
-    public Rune ResolveIcon(TreeNodeIcon icon)
-        => icon switch
-        {
-            TreeNodeIcon.Folder => FolderGlyph,
-            TreeNodeIcon.File => FileGlyph,
-            TreeNodeIcon.Document => DocumentGlyph,
-            _ => new Rune(' '),
-        };
+    
+    public Rune ResolveIcon(object? dataContext, Rune? nodeIcon)
+    {
+        return IconResolver?.Invoke(dataContext, nodeIcon) ?? (nodeIcon ?? TreeNodeIcons.DocumentGlyph);
+    }
 
     public CellStyle ResolveItemStyle(Theme theme, bool enabled, bool selected, bool focused)
     {

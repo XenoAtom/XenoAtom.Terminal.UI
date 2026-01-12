@@ -12,40 +12,23 @@ using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed class ComputedVisual : Visual, IDisposable
+public sealed partial class ComputedVisual : Visual
 {
-    private readonly Computed<Visual?> _computed;
-    private Visual? _child;
-
     public ComputedVisual(Func<Visual?> build)
     {
-        _computed = new Computed<Visual?>(build ?? throw new ArgumentNullException(nameof(build)));
-        _computed.Invalidated += OnInvalidated;
+        this.Child(build);
+        // We should not use Child property directly here to avoid capturing the Func in the lambda
+        // If the child is changed, the initializer will still be called
         this.HorizontalAlignment(() => _child?.HorizontalAlignment ?? HorizontalAlignment.Stretch);
         this.VerticalAlignment(() => _child?.VerticalAlignment ?? VerticalAlignment.Stretch);
     }
 
-    public void Dispose()
-    {
-        _computed.Invalidated -= OnInvalidated;
-        _computed.Dispose();
-    }
-
-    protected override void OnAttachedToApp(TerminalApp app)
-    {
-        _ = app;
-        EnsureChild();
-    }
-
-    protected override void OnDetachedFromApp(TerminalApp app)
-    {
-        _ = app;
-        ClearChild();
-    }
+    [Bindable]
+    public partial Visual? Child { get; set; }
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var child = EnsureChild();
+        var child = Child;
         if (child is null)
         {
             return SizeHints.Fixed(default);
@@ -56,7 +39,7 @@ public sealed class ComputedVisual : Visual, IDisposable
 
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        var child = EnsureChild();
+        var child = Child;
         if (child is null)
         {
             // When there is no child, don't participate in hit-testing or rendering.
@@ -65,42 +48,6 @@ public sealed class ComputedVisual : Visual, IDisposable
         }
 
         child.Arrange(finalRect);
-    }
-
-    private Visual? EnsureChild()
-    {
-        if (_child is not null)
-        {
-            return _child;
-        }
-
-        var child = _computed.Value;
-        if (child is null)
-        {
-            return null;
-        }
-
-        _child = child;
-        AttachChild(child);
-        return child;
-    }
-
-    private void OnInvalidated()
-    {
-        ClearChild();
-        EnsureChild();
-        Invalidate();
-    }
-
-    private void ClearChild()
-    {
-        if (_child is null)
-        {
-            return;
-        }
-
-        DetachChild(_child);
-        _child = null;
     }
 
     protected override int ChildrenCount => _child is null ? 0 : 1;

@@ -2,12 +2,13 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Text;
 using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed class TreeNode
+public sealed partial class TreeNode: IVisualElement
 {
     private TreeView? _owner;
 
@@ -34,13 +35,20 @@ public sealed class TreeNode
 
     public Visual Header { get; }
 
+    public TerminalApp? App => Header.App;
+
     public BindableList<TreeNode> Children { get; }
 
     public TreeNode? Parent { get; private set; }
 
-    public bool IsExpanded { get; set; }
+    [Bindable]
+    public partial bool IsExpanded { get; set; }
 
-    public TreeNodeIcon Icon { get; set; }
+    [Bindable]
+    public partial Rune? Icon { get; set; }
+
+    [Bindable]
+    public partial object? Data { get; set; }
 
     internal void Attach(TreeView owner)
     {
@@ -59,5 +67,7 @@ public sealed class TreeNode
             owner.DetachNode(Children[i]);
         }
     }
+
+
 }
 

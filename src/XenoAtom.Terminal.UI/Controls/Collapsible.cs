@@ -51,15 +51,15 @@ public sealed partial class Collapsible : Visual
     public partial ExpandDirection Direction { get; set; }
 
     protected override int ChildrenCount
-        => (Header is null ? 0 : 1) + (IsExpanded && Content is not null ? 1 : 0);
+        => (_header is null ? 0 : 1) + (_isExpanded && _content is not null ? 1 : 0);
 
     protected override Visual GetChild(int index)
     {
-        if (Header is null)
+        if (_header is null)
         {
-            if (IsExpanded && Content is not null && index == 0)
+            if (_isExpanded && _content is not null && index == 0)
             {
-                return Content;
+                return _content;
             }
 
             throw new ArgumentOutOfRangeException(nameof(index));
@@ -67,12 +67,12 @@ public sealed partial class Collapsible : Visual
 
         if (index == 0)
         {
-            return Header;
+            return _header;
         }
 
-        if (IsExpanded && Content is not null && index == 1)
+        if (_isExpanded && _content is not null && index == 1)
         {
-            return Content;
+            return _content;
         }
 
         throw new ArgumentOutOfRangeException(nameof(index));
@@ -111,18 +111,8 @@ public sealed partial class Collapsible : Visual
         var inner = header.Measure(headerConstraints);
 
         int minW, natW, maxW;
-        try
-        {
-            checked
-            {
-                minW = prefixWidth + inner.Min.Width;
-                natW = prefixWidth + inner.Natural.Width;
-            }
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Overflow while computing Collapsible header widths.", ex);
-        }
+        minW = prefixWidth + inner.Min.Width;
+        natW = prefixWidth + inner.Natural.Width;
 
         if (LayoutConstants.IsInfinite(inner.Max.Width))
         {
@@ -130,15 +120,8 @@ public sealed partial class Collapsible : Visual
         }
         else
         {
-            try
-            {
-                maxW = checked(prefixWidth + inner.Max.Width);
-                maxW = LayoutConstants.ClampOrInfinite(maxW);
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Overflow while computing Collapsible header Max.Width.", ex);
-            }
+            maxW = prefixWidth + inner.Max.Width;
+            maxW = LayoutConstants.ClampOrInfinite(maxW);
         }
 
         return SizeHints.Flex(
@@ -349,7 +332,6 @@ public sealed partial class Collapsible : Visual
         if (wasPressed)
         {
             e.Handled = true;
-            Invalidate();
         }
     }
 

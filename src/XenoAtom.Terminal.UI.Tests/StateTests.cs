@@ -47,23 +47,5 @@ public sealed class StateTests
 
         Assert.AreEqual(1, notified);
     }
-
-    [TestMethod]
-    public void State_Invalidates_Computed_On_Change()
-    {
-        var state = new State<int>(1);
-        using var computed = new Computed<int>(() => state.Value + 1);
-
-        var invalidated = 0;
-        computed.Invalidated += () => invalidated++;
-
-        _ = computed.Value;
-        Assert.AreEqual(0, invalidated);
-
-        state.Value = 2;
-        Assert.AreEqual(1, invalidated);
-
-        Assert.AreEqual(3, computed.Value);
-    }
 }
 

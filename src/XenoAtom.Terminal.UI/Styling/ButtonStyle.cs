@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
 
 namespace XenoAtom.Terminal.UI.Styling;
@@ -16,7 +17,10 @@ public sealed record ButtonStyle : IStyle<ButtonStyle>
 
     public bool ShowBorder { get; init; }
 
-    public EdgeBorderGlyphs BorderGlyphs { get; init; } = EdgeBorderGlyphs.LegacyComputing;
+
+    public Rune BorderTopGlyph { get; init; } = new(' '); // U+2594
+
+    public Rune BorderBottomGlyph { get; init; } = new('▁'); // U+2581
 
     public CellStyle? Normal { get; init; }
     public CellStyle? Hovered { get; init; }

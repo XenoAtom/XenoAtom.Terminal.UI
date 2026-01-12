@@ -12,7 +12,7 @@ using XenoAtom.Terminal.UI.Animation;
 
 namespace XenoAtom.Terminal.UI;
 
-public abstract partial class Visual : DispatcherObject
+public abstract partial class Visual : DispatcherObject, IVisualElement
 {
     private Dictionary<object, Delegate?>? _handlers;
     private List<KeyBinding>? _keyBindings;
@@ -251,11 +251,7 @@ public abstract partial class Visual : DispatcherObject
         _dynamicUpdates ??= new List<Action<Visual>>();
         _dynamicUpdates.Add(configure);
         _dynamicUpdatesDirty = true;
-        Invalidate();
     }
-
-    [Obsolete("Use RegisterDynamicUpdate(...) via VisualExtensions.Update(...).")]
-    public void Initialize(Action<Visual> configure) => RegisterDynamicUpdate(configure);
 
     internal void RegisterDynamicUpdateList(Collections.IDynamicUpdateResettable list)
     {
@@ -725,13 +721,22 @@ public abstract partial class Visual : DispatcherObject
         }
 
         _dynamicUpdatesDirty = false;
-        MarkMeasureDirty();
 
         using var initScope = BindingManager.Current.BeginDynamicUpdate(this);
         using var session = BindingManager.Current.StartTracking();
-        for (var i = 0; i < _dynamicUpdates.Count; i++)
+        var app = App;
+
+        app?.SetVisualBeingDynamicallyInitialized(this);
+        try
         {
-            _dynamicUpdates[i](this);
+            for (var i = 0; i < _dynamicUpdates.Count; i++)
+            {
+                _dynamicUpdates[i](this);
+            }
+        }
+        finally
+        {
+            app?.SetVisualBeingDynamicallyInitialized(null);
         }
 
         if (ReplaceDependencies(ref _dynamicUpdateDeps, session.Dependencies) && App is not null)

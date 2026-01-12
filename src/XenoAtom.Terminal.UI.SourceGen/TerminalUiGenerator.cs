@@ -2,15 +2,16 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
 
 #pragma warning disable RS2000 // New analyzer diagnostics are tracked out-of-band for this repo.
 
@@ -86,6 +87,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
         string ContainingTypeDisplayName,
         string PropertyName,
         string PropertyTypeFullyQualified,
+        bool IsParentVisual,
         bool IsVisualChildProperty,
         bool GenerateImplementation,
         string PropertyModifiers,
@@ -159,6 +161,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
 
             var propertyTypeFullyQualified = propertySymbol.Type.ToDisplayString(typeFormat);
             var isVisualChildProperty = ComputeIsVisualChildProperty(context.SemanticModel.Compilation, containingType, propertySymbol.Type);
+            var isVisual = InheritsFromVisual(context.SemanticModel.Compilation, containingType);
 
             var propertyName = propertySymbol.Name;
             var backingFieldName = "_" + ToLowerCamel(propertyName);
@@ -176,6 +179,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 ContainingTypeDisplayName: containingTypeDisplayName,
                 PropertyName: propertyName,
                 PropertyTypeFullyQualified: propertyTypeFullyQualified,
+                IsParentVisual: isVisual,
                 IsVisualChildProperty: isVisualChildProperty,
                 GenerateImplementation: generateImplementation,
                 PropertyModifiers: modifiers,
@@ -213,6 +217,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             };
         }
 
+        
         private static bool ComputeIsVisualChildProperty(Compilation compilation, INamedTypeSymbol containingType, ITypeSymbol propertyType)
         {
             var visualType = compilation.GetTypeByMetadataName("XenoAtom.Terminal.UI.Visual");
@@ -224,28 +229,6 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             return IsOrInheritsFrom(containingType, visualType) && IsOrInheritsFrom(propertyType, visualType);
         }
 
-        private static bool IsOrInheritsFrom(ITypeSymbol type, INamedTypeSymbol baseType)
-        {
-            if (SymbolEqualityComparer.Default.Equals(type, baseType))
-            {
-                return true;
-            }
-
-            if (type is not INamedTypeSymbol named)
-            {
-                return false;
-            }
-
-            for (var current = named.BaseType; current is not null; current = current.BaseType)
-            {
-                if (SymbolEqualityComparer.Default.Equals(current, baseType))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
 
         public static bool IsPartial(INamedTypeSymbol typeSymbol)
         {
@@ -301,6 +284,40 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             return true;
         }
     }
+
+    private static bool InheritsFromVisual(Compilation compilation, INamedTypeSymbol type)
+    {
+        var visualType = compilation.GetTypeByMetadataName("XenoAtom.Terminal.UI.Visual");
+        if (visualType is null)
+        {
+            return false;
+        }
+        return IsOrInheritsFrom(type, visualType);
+    }
+
+    private static bool IsOrInheritsFrom(ITypeSymbol type, INamedTypeSymbol baseType)
+    {
+        if (SymbolEqualityComparer.Default.Equals(type, baseType))
+        {
+            return true;
+        }
+
+        if (type is not INamedTypeSymbol named)
+        {
+            return false;
+        }
+
+        for (var current = named.BaseType; current is not null; current = current.BaseType)
+        {
+            if (SymbolEqualityComparer.Default.Equals(current, baseType))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 
     private sealed record BindablePropertyResult(BindablePropertyInfo? Info, ImmutableArray<Diagnostic> Diagnostics);
 
@@ -441,50 +458,58 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     sb.AppendLine();
                 }
 
-                sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
-                if (canUseGeneric)
+                if (p.IsParentVisual)
                 {
-                    sb.Append(methodIndent).Append("public static T ").Append(EscapeIdentifier(propName)).Append("<T>(this T obj, global::System.Func<").Append(argType).Append("> ").Append(EscapeIdentifier(argName))
-                        .Append(") where T : ").Append(receiverType).AppendLine();
-                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
-                }
-                else
-                {
-                    sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName)).Append("(this ").Append(receiverType).Append(" obj, global::System.Func<").Append(argType).Append("> ").Append(EscapeIdentifier(argName)).AppendLine(")");
-                    sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
-                }
-                sb.AppendLine();
+                    sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
+                    if (canUseGeneric)
+                    {
+                        sb.Append(methodIndent).Append("public static T ").Append(EscapeIdentifier(propName)).Append("<T>(this T obj, global::System.Func<").Append(argType).Append("> ").Append(EscapeIdentifier(argName))
+                            .Append(") where T : ").Append(receiverType).AppendLine();
+                        sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
+                    }
+                    else
+                    {
+                        sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName)).Append("(this ").Append(receiverType).Append(" obj, global::System.Func<").Append(argType)
+                            .Append("> ").Append(EscapeIdentifier(argName)).AppendLine(")");
+                        sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
+                    }
 
-                sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
-                if (p.GenerateImplementation)
-                {
-                    if (canUseGeneric)
+                    sb.AppendLine();
+
+                    sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
+                    if (p.GenerateImplementation)
                     {
-                        sb.Append(methodIndent).Append("public static T ").Append(EscapeIdentifier(propName)).Append("<T>(this T obj, global::XenoAtom.Terminal.UI.State<").Append(argType).Append("> ").Append(EscapeIdentifier(argName))
-                            .Append(") where T : ").Append(receiverType).AppendLine();
-                        sb.Append(methodIndent).Append("    => ").Append(EscapeIdentifier(propName)).Append("(obj, (global::XenoAtom.Terminal.UI.Binding<").Append(argType).Append(">)").Append(EscapeIdentifier(argName)).AppendLine(");");
+                        if (canUseGeneric)
+                        {
+                            sb.Append(methodIndent).Append("public static T ").Append(EscapeIdentifier(propName)).Append("<T>(this T obj, global::XenoAtom.Terminal.UI.State<").Append(argType).Append("> ").Append(EscapeIdentifier(argName))
+                                .Append(") where T : ").Append(receiverType).AppendLine();
+                            sb.Append(methodIndent).Append("    => ").Append(EscapeIdentifier(propName)).Append("(obj, (global::XenoAtom.Terminal.UI.Binding<").Append(argType).Append(">)").Append(EscapeIdentifier(argName)).AppendLine(");");
+                        }
+                        else
+                        {
+                            sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName)).Append("(this ").Append(receiverType).Append(" obj, global::XenoAtom.Terminal.UI.State<")
+                                .Append(argType).Append("> ").Append(EscapeIdentifier(argName)).AppendLine(")");
+                            sb.Append(methodIndent).Append("    => ").Append(EscapeIdentifier(propName)).Append("(obj, (global::XenoAtom.Terminal.UI.Binding<").Append(argType).Append(">)").Append(EscapeIdentifier(argName)).AppendLine(");");
+                        }
                     }
                     else
                     {
-                        sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName)).Append("(this ").Append(receiverType).Append(" obj, global::XenoAtom.Terminal.UI.State<").Append(argType).Append("> ").Append(EscapeIdentifier(argName)).AppendLine(")");
-                        sb.Append(methodIndent).Append("    => ").Append(EscapeIdentifier(propName)).Append("(obj, (global::XenoAtom.Terminal.UI.Binding<").Append(argType).Append(">)").Append(EscapeIdentifier(argName)).AppendLine(");");
+                        if (canUseGeneric)
+                        {
+                            sb.Append(methodIndent).Append("public static T ").Append(EscapeIdentifier(propName)).Append("<T>(this T obj, global::XenoAtom.Terminal.UI.State<").Append(argType).Append("> ").Append(EscapeIdentifier(argName))
+                                .Append(") where T : ").Append(receiverType).AppendLine();
+                            sb.Append(methodIndent).Append("    => ").Append(EscapeIdentifier(propName)).Append("(obj, () => ").Append(EscapeIdentifier(argName)).AppendLine(".Value);");
+                        }
+                        else
+                        {
+                            sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName)).Append("(this ").Append(receiverType).Append(" obj, global::XenoAtom.Terminal.UI.State<")
+                                .Append(argType).Append("> ").Append(EscapeIdentifier(argName)).AppendLine(")");
+                            sb.Append(methodIndent).Append("    => ").Append(EscapeIdentifier(propName)).Append("(obj, () => ").Append(EscapeIdentifier(argName)).AppendLine(".Value);");
+                        }
                     }
+
+                    sb.AppendLine();
                 }
-                else
-                {
-                    if (canUseGeneric)
-                    {
-                        sb.Append(methodIndent).Append("public static T ").Append(EscapeIdentifier(propName)).Append("<T>(this T obj, global::XenoAtom.Terminal.UI.State<").Append(argType).Append("> ").Append(EscapeIdentifier(argName))
-                            .Append(") where T : ").Append(receiverType).AppendLine();
-                        sb.Append(methodIndent).Append("    => ").Append(EscapeIdentifier(propName)).Append("(obj, () => ").Append(EscapeIdentifier(argName)).AppendLine(".Value);");
-                    }
-                    else
-                    {
-                        sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName)).Append("(this ").Append(receiverType).Append(" obj, global::XenoAtom.Terminal.UI.State<").Append(argType).Append("> ").Append(EscapeIdentifier(argName)).AppendLine(")");
-                        sb.Append(methodIndent).Append("    => ").Append(EscapeIdentifier(propName)).Append("(obj, () => ").Append(EscapeIdentifier(argName)).AppendLine(".Value);");
-                    }
-                }
-                sb.AppendLine();
             }
 
             sb.Append(indent).AppendLine("}");
@@ -970,8 +995,8 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 var fluentHintName = $"{SanitizeFileName(containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))}.RoutedEvents.Fluent.g.cs";
                 var fluentSource = GenerateRoutedEventFluentExtensionsSource(containingType, ordered);
                 context.AddSource(fluentHintName, SourceText.From(fluentSource, Encoding.UTF8));
+            }
         }
-    }
 
         private static string GenerateRoutedEventsSource(INamedTypeSymbol containingType, List<RoutedEventMethodInfo> events)
         {

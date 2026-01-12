@@ -25,7 +25,7 @@ public sealed class AccordionDemo : ControlsDemoBase
 
         return new VStack(
                 DemoUi.Hint("Accordion provides multiple collapsible sections."),
-                new HStack(new CheckBox("Single Expanded").IsChecked(state.Value)),
+                new HStack(new CheckBox("Single Expanded").IsChecked(state)),
                 accordion)
             .Spacing(1);
     }

@@ -182,10 +182,9 @@ public partial class Button : ContentVisual
             }
         }
 
-        var borderPad = buttonStyle.ShowBorder ? 1 : 0;
-        if (borderPad != 0 && rect.Width >= 2 && rect.Height >= 2)
+        var borderYPad = buttonStyle.ShowBorder ? 1 : 0;
+        if (borderYPad != 0 && rect.Height >= 2)
         {
-            var glyphs = buttonStyle.BorderGlyphs;
             var border = theme.BorderStyle(isFocused);
 
             var left = rect.X;
@@ -193,29 +192,18 @@ public partial class Button : ContentVisual
             var right = rect.X + rect.Width - 1;
             var bottom = rect.Y + rect.Height - 1;
 
-            buffer.SetCell(left, top, glyphs.TopLeft, border);
-            buffer.SetCell(right, top, glyphs.TopRight, border);
-            buffer.SetCell(left, bottom, glyphs.BottomLeft, border);
-            buffer.SetCell(right, bottom, glyphs.BottomRight, border);
-
-            for (var x = left + 1; x < right; x++)
+            for (var x = left; x <= right; x++)
             {
-                buffer.SetCell(x, top, glyphs.Top, border);
-                buffer.SetCell(x, bottom, glyphs.Bottom, border);
-            }
-
-            for (var y = top + 1; y < bottom; y++)
-            {
-                buffer.SetCell(left, y, glyphs.Left, border);
-                buffer.SetCell(right, y, glyphs.Right, border);
+                buffer.SetCell(x, top, buttonStyle.BorderTopGlyph, border);
+                buffer.SetCell(x, bottom, buttonStyle.BorderBottomGlyph, border);
             }
         }
 
         var padding = buttonStyle.Padding;
-        var contentX = rect.X + borderPad + padding.Left;
-        var contentWidth = Math.Max(0, rect.Width - (borderPad * 2) - padding.Horizontal);
-        var contentY = rect.Y + borderPad + padding.Top;
-        var contentHeight = Math.Max(0, rect.Height - (borderPad * 2) - padding.Vertical);
+        var contentX = rect.X + padding.Left;
+        var contentWidth = Math.Max(0, rect.Width - padding.Horizontal);
+        var contentY = rect.Y + borderYPad + padding.Top;
+        var contentHeight = Math.Max(0, rect.Height - (borderYPad * 2) - padding.Vertical);
 
         var content = Content;
         if (content is not null && contentWidth > 0 && contentHeight > 0)

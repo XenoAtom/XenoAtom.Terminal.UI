@@ -19,6 +19,7 @@ public sealed partial class Slider : Visual
     public Slider()
     {
         Focusable = true;
+        HorizontalAlignment = HorizontalAlignment.Stretch;
         this.Minimum(0.0);
         this.Maximum(1.0);
         this.Step(0.1);

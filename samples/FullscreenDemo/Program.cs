@@ -46,11 +46,11 @@ var textArea = new TextArea()
     .Text("Line 1\nLine 2\nLine 3")
     .Placeholder("Type multi-line text here...");
 
-var tree = new TreeView().Height(8);
-var treeRoot = new TreeNode("XenoAtom") { Icon = TreeNodeIcon.Folder, IsExpanded = true };
-treeRoot.Children.Add(new TreeNode("src") { Icon = TreeNodeIcon.Folder, IsExpanded = true });
-treeRoot.Children[0].Children.Add(new TreeNode("Program.cs") { Icon = TreeNodeIcon.File });
-treeRoot.Children[0].Children.Add(new TreeNode("readme.md") { Icon = TreeNodeIcon.Document });
+var tree = new TreeView();
+var treeRoot = new TreeNode("XenoAtom") { Icon = TreeNodeIcons.FolderGlyph, IsExpanded = true };
+treeRoot.Children.Add(new TreeNode("src") { Icon = TreeNodeIcons.FolderGlyph, IsExpanded = true });
+treeRoot.Children[0].Children.Add(new TreeNode("Program.cs") { Icon = TreeNodeIcons.FileGlyph });
+treeRoot.Children[0].Children.Add(new TreeNode("readme.md") { Icon = TreeNodeIcons.DocumentGlyph });
 tree.Roots.Add(treeRoot);
 
 void ShowModalDialog()
