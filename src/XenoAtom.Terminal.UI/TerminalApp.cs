@@ -448,7 +448,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return _windowLayer.RemoveWindow(window);
     }
 
-    internal void Focus(Visual? visual)
+    public void Focus(Visual? visual)
     {
         VerifyAccess();
         _focusedElement = visual;

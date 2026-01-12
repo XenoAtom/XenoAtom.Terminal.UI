@@ -69,72 +69,25 @@ public sealed partial class Select : ContentVisual
             ? SizeHints.Fixed(Size.Zero)
             : content.Measure(new LayoutConstraints(0, contentMaxW, 0, constraints.MaxHeight));
 
-        int addW, addH;
-        try
-        {
-            checked
-            {
-                addW = padding.Horizontal + arrowWidth;
-                addH = padding.Vertical;
-            }
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Overflow while computing Select padding/arrow contribution.", ex);
-        }
+        var addW = padding.Horizontal + arrowWidth;
+        var addH = padding.Vertical;
 
-        int minW, minH, natW, natH;
-        try
-        {
-            checked
-            {
-                minW = LayoutConstants.ClampFinite(contentHints.Min.Width + addW);
-                minH = LayoutConstants.ClampFinite(Math.Max(1, contentHints.Min.Height + addH));
+        var minW = LayoutConstants.ClampFinite(contentHints.Min.Width + addW);
+        var minH = LayoutConstants.ClampFinite(Math.Max(1, contentHints.Min.Height + addH));
 
-                natW = LayoutConstants.ClampFinite(contentHints.Natural.Width + addW);
-                natH = LayoutConstants.ClampFinite(Math.Max(1, contentHints.Natural.Height + addH));
-            }
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Overflow while computing Select Min/Natural size.", ex);
-        }
+        var natW = LayoutConstants.ClampFinite(contentHints.Natural.Width + addW);
+        var natH = LayoutConstants.ClampFinite(Math.Max(1, contentHints.Natural.Height + addH));
 
         minW = Math.Max(3, minW);
         natW = Math.Max(3, natW);
 
-        int maxW, maxH;
-        if (LayoutConstants.IsInfinite(contentHints.Max.Width))
-        {
-            maxW = LayoutConstants.Infinite;
-        }
-        else
-        {
-            try
-            {
-                maxW = LayoutConstants.ClampOrInfinite(checked(contentHints.Max.Width + addW));
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Overflow while computing Select Max.Width.", ex);
-            }
-        }
+        var maxW = LayoutConstants.IsInfinite(contentHints.Max.Width)
+            ? LayoutConstants.Infinite
+            : LayoutConstants.ClampOrInfinite(contentHints.Max.Width + addW);
 
-        if (LayoutConstants.IsInfinite(contentHints.Max.Height))
-        {
-            maxH = LayoutConstants.Infinite;
-        }
-        else
-        {
-            try
-            {
-                maxH = LayoutConstants.ClampOrInfinite(checked(contentHints.Max.Height + addH));
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Overflow while computing Select Max.Height.", ex);
-            }
-        }
+        var maxH = LayoutConstants.IsInfinite(contentHints.Max.Height)
+            ? LayoutConstants.Infinite
+            : LayoutConstants.ClampOrInfinite(contentHints.Max.Height + addH);
 
         return SizeHints.Flex(
             new Size(minW, minH),
@@ -323,6 +276,7 @@ public sealed partial class Select : ContentVisual
             Anchor = this,
             Content = list,
             MatchAnchorWidth = true,
+            AdditionalWidth = 2,
             Placement = PopupPlacement.Below,
         };
 
@@ -335,6 +289,8 @@ public sealed partial class Select : ContentVisual
 
             owner._popup = null;
             owner._popupList = null;
+
+            owner.App?.Focus(owner);
         });
 
         popup.Show();

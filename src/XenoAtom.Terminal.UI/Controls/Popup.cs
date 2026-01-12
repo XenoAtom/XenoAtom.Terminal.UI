@@ -42,6 +42,10 @@ public sealed partial class Popup : ContentVisual, IModalVisual
 
     [Bindable]
     public partial bool MatchAnchorWidth { get; set; }
+    
+    [Bindable]
+    public partial int AdditionalWidth { get; set; }
+
 
     [Bindable]
     public partial PopupPlacement Placement { get; set; }
@@ -126,6 +130,7 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         {
             width = Math.Max(width, anchor.Bounds.Width);
         }
+        width += Math.Max(0, AdditionalWidth);
 
         width = Math.Clamp(width, 1, finalRect.Width);
         desiredHeight = Math.Clamp(desiredHeight, 1, finalRect.Height);
