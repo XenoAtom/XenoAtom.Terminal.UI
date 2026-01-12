@@ -300,13 +300,6 @@ public sealed partial class TextArea : Visual, ICursorProvider
             }
         }
 
-        if (isFocused && !HasSelection)
-        {
-            if (TryGetCursorCell(out var cx, out var cy))
-            {
-                buffer.SetCell(cx, cy, new Rune(' '), CellStyle.None | TextStyle.Invert);
-            }
-        }
     }
 
     protected override void OnTextInput(TextInputEventArgs e)

@@ -594,8 +594,6 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         _inlineLiveRegionTopRow = null;
         _renderFrameIndex++;
 
-        var wantsCursor = TryGetDesiredCursor(out var cursorX, out var cursorY);
-
         if (_options.HostKind == TerminalHostKind.Fullscreen)
         {
             var width = Math.Max(1, _terminal.Size.Columns);
@@ -603,6 +601,8 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
             Root.Measure(new LayoutConstraints(0, width, 0, height));
             Root.Arrange(new Rectangle(0, 0, width, height));
+
+            var wantsCursor = TryGetDesiredCursor(out var cursorX, out var cursorY);
 
             var buffer = EnsureRenderBuffer(width, height);
             buffer.Clear(Root.GetTheme().ForegroundTextStyle());
@@ -621,6 +621,8 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
             Root.Measure(new LayoutConstraints(0, width, 0, LayoutConstants.Infinite));
             Root.Arrange(new Rectangle(0, 0, width, Root.DesiredSize.Height));
+
+            var wantsCursor = TryGetDesiredCursor(out var cursorX, out var cursorY);
 
             var buffer = EnsureRenderBuffer(width, Math.Max(1, Root.DesiredSize.Height));
             buffer.Clear(Root.GetTheme().ForegroundTextStyle());

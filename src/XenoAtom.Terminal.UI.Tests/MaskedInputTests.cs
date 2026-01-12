@@ -26,11 +26,26 @@ public sealed class MaskedInputTests
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
         var runTask = app.RunInBackgroundAsync();
 
-        await Task.Delay(60);
+        var foundCursor = false;
+        var deadline = DateTime.UtcNow.AddSeconds(1);
+        while (DateTime.UtcNow < deadline)
+        {
+            var output = backend.GetOutText();
+            var screen = new AnsiTestScreen(40, 6);
+            screen.Apply(output);
+            if (screen.CursorRow == 1 && screen.CursorCol == 2)
+            {
+                foundCursor = true;
+                break;
+            }
+
+            await Task.Delay(20);
+        }
+
+        Assert.IsTrue(foundCursor, "Expected the focused input to drive the terminal cursor position.");
+
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));
-
-        Assert.IsTrue(backend.GetOutText().Contains("\x1b[7m", StringComparison.Ordinal), "Expected caret to render using reverse-video (SGR 7).");
     }
 
     [TestMethod]

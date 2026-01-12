@@ -28,6 +28,10 @@ internal sealed class AnsiTestScreen
         ClearAll();
     }
 
+    public int CursorRow => _row;
+
+    public int CursorCol => _col;
+
     public void Apply(string text)
     {
         if (string.IsNullOrEmpty(text))
