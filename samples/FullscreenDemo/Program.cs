@@ -243,13 +243,12 @@ var rightColumn = new VStack(
                                             new RowDefinition { Height = GridLength.Auto },
                                             new RowDefinition { Height = GridLength.Auto })
                                         .ColumnGap(1)
-                                        .Add(
-                                            new TextBlock("User:").Row(0).Column(0),
-                                            new TextBox().Text("alex").Row(0).Column(1).HorizontalAlignment(HorizontalAlignment.Stretch),
-                                            new TextBlock("Password:").Row(1).Column(0),
-                                            new MaskedInput().Text("hunter2").RevealMode(MaskedInputRevealMode.WhileFocused).Row(1).Column(1).HorizontalAlignment(HorizontalAlignment.Stretch),
-                                            new TextBlock("Status:").Row(2).Column(0),
-                                            new TextBlock().Text(() => statusState.Value).Row(2).Column(1))),
+                                        .Cell("User:", 0, 0)
+                                        .Cell(new TextBox().Text("alex").HorizontalAlignment(HorizontalAlignment.Stretch), 0, 1)
+                                        .Cell("Password:", 1, 0)
+                                        .Cell(new MaskedInput().Text("hunter2").RevealMode(MaskedInputRevealMode.WhileFocused).HorizontalAlignment(HorizontalAlignment.Stretch), 1, 1)
+                                        .Cell("Status:", 2, 0)
+                                        .Cell(new TextBlock().Text(() => statusState.Value), 2, 1)),
                             new Rule
                             {
                                 StartLabel = "Start",

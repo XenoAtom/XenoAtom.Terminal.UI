@@ -23,8 +23,8 @@ public sealed class GridLayoutTests
         var a = new FillVisual(new Size(1, 1));
         var b = new FillVisual(new Size(1, 1));
 
-        grid.Children.Add(a.Row(0).Column(0));
-        grid.Children.Add(b.Row(0).Column(1));
+        grid.Cell(a, 0, 0);
+        grid.Cell(b, 0, 1);
 
         grid.Measure(new Size(10, 1));
         grid.Arrange(new Rectangle(0, 0, 10, 1));
@@ -45,8 +45,8 @@ public sealed class GridLayoutTests
         var a = new FillVisual(new Size(5, 1));
         var b = new FillVisual(new Size(1, 1));
 
-        grid.Children.Add(a.Row(0).Column(0));
-        grid.Children.Add(b.Row(0).Column(1));
+        grid.Cell(a, 0, 0);
+        grid.Cell(b, 0, 1);
 
         grid.Measure(new Size(20, 1));
         grid.Arrange(new Rectangle(0, 0, 20, 1));
@@ -62,8 +62,8 @@ public sealed class GridLayoutTests
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Star(1) });
         grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Fixed(1) });
 
-        var v = new FillVisual(new Size(1, 1)).Column(2);
-        grid.Children.Add(v);
+        var v = new FillVisual(new Size(1, 1));
+        grid.Cell(v, 0, 2);
 
         grid.Measure(new Size(12, 1));
         grid.Arrange(new Rectangle(0, 0, 12, 1));

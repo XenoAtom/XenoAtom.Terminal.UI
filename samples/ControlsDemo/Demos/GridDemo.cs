@@ -3,7 +3,7 @@ using XenoAtom.Terminal.UI.Controls;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
-[Demo("Grid", "Layout", Description = "Rows/columns layout with attached Row/Column properties.")]
+[Demo("Grid", "Layout", Description = "Rows/columns layout with explicit GridCell entries.")]
 public sealed class GridDemo : ControlsDemoBase
 {
     public GridDemo() : base(DemoSource.Get())
@@ -23,25 +23,24 @@ public sealed class GridDemo : ControlsDemoBase
                 new ColumnDefinition { Width = GridLength.Auto },
                 new ColumnDefinition { Width = GridLength.Star(1) });
 
-        grid.Children.Add(new TextBlock("Name:").Row(0).Column(0));
-        grid.Children.Add(new TextBox().Text("Alex").Row(0).Column(1));
-
-        grid.Children.Add(new TextBlock("Mode:").Row(1).Column(0));
-        grid.Children.Add(new Select
-            {
-                Items =
+        grid
+            .Cell("Name:", 0, 0)
+            .Cell(new TextBox().Text("Alex").HorizontalAlignment(HorizontalAlignment.Stretch), 0, 1)
+            .Cell("Mode:", 1, 0)
+            .Cell(new Select
                 {
-                    new SelectItem("Normal"),
-                    new SelectItem("Safe"),
-                    new SelectItem("Fast"),
-                }
-            }.Row(1).Column(1));
-
-        grid.Children.Add(new TextBlock("Notes:").Row(2).Column(0));
-        grid.Children.Add(new TextBox().Text("Grid uses attached properties.").Row(2).Column(1));
+                    Items =
+                    {
+                        new SelectItem("Normal"),
+                        new SelectItem("Safe"),
+                        new SelectItem("Fast"),
+                    }
+                }.HorizontalAlignment(HorizontalAlignment.Stretch), 1, 1)
+            .Cell("Notes:", 2, 0)
+            .Cell(new TextBox().Text("Grid uses GridCell objects instead of attached properties.").HorizontalAlignment(HorizontalAlignment.Stretch), 2, 1);
 
         return new VStack(
-                DemoUi.Hint("Grid uses Row/Column attached properties and row/column definitions."),
+                DemoUi.Hint("Grid uses explicit GridCell entries (row/column definitions + Cells list)."),
                 new Border().Padding(1).Content(grid))
             .Spacing(1);
     }

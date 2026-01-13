@@ -8,14 +8,23 @@ using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class Grid : Panel
+public sealed partial class Grid : Visual
 {
+    private readonly VisualList<GridCell> _cells;
+
     public BindableList<RowDefinition> RowDefinitions { get; }
 
     public BindableList<ColumnDefinition> ColumnDefinitions { get; }
 
+    public BindableList<GridCell> Cells { get; }
+
     public Grid()
     {
+        HorizontalAlignment = HorizontalAlignment.Stretch;
+        VerticalAlignment = VerticalAlignment.Stretch;
+
+        _cells = new VisualList<GridCell>(this, "Cells");
+        Cells = _cells;
         RowDefinitions = new BindableList<RowDefinition>(this, "RowDefinitions");
         ColumnDefinitions = new BindableList<ColumnDefinition>(this, "ColumnDefinitions");
         AutoGrowRows = true;
@@ -84,12 +93,12 @@ public sealed partial class Grid : Panel
         }
 
         // Initial measure pass for auto columns.
-        for (var i = 0; i < Children.Count; i++)
+        for (var i = 0; i < _cells.Count; i++)
         {
-            var child = Children[i];
-            child.Measure(new LayoutConstraints(0, innerAvailW, 0, innerAvailH));
+            var cell = _cells[i];
+            cell.Measure(new LayoutConstraints(0, innerAvailW, 0, innerAvailH));
 
-            var placement = GetPlacementForLayout(child, rows, cols);
+            var placement = GetPlacementForLayout(cell, rows, cols);
             if (placement.ColumnSpan != 1)
             {
                 continue;
@@ -98,7 +107,7 @@ public sealed partial class Grid : Panel
             var col = placement.Column;
             if (colDefs[col].Width.Type == GridUnitType.Auto)
             {
-                colWidths[col] = Math.Max(colWidths[col], child.DesiredSize.Width);
+                colWidths[col] = Math.Max(colWidths[col], cell.DesiredSize.Width);
             }
         }
 
@@ -118,18 +127,18 @@ public sealed partial class Grid : Panel
             AllocateStar(colDefs, innerAvailW, colWidths);
         }
 
-        // Measure children with column widths to determine row sizes.
-        for (var i = 0; i < Children.Count; i++)
+        // Measure cells with column widths to determine row sizes.
+        for (var i = 0; i < _cells.Count; i++)
         {
-            var child = Children[i];
-            var p = GetPlacementForLayout(child, rows, cols);
+            var cell = _cells[i];
+            var p = GetPlacementForLayout(cell, rows, cols);
 
             var cellW = GetSpanSize(colWidths, p.Column, p.ColumnSpan, colGap);
-            child.Measure(new LayoutConstraints(0, cellW, 0, innerAvailH));
+            cell.Measure(new LayoutConstraints(0, cellW, 0, innerAvailH));
 
             if (p.RowSpan == 1 && rowDefs[p.Row].Height.Type == GridUnitType.Auto)
             {
-                rowHeights[p.Row] = Math.Max(rowHeights[p.Row], child.DesiredSize.Height);
+                rowHeights[p.Row] = Math.Max(rowHeights[p.Row], cell.DesiredSize.Height);
             }
         }
 
@@ -177,7 +186,21 @@ public sealed partial class Grid : Panel
         desiredW = LayoutConstants.ClampFinite(desiredW);
         desiredH = LayoutConstants.ClampFinite(desiredH);
 
-        return SizeHints.Fixed(constraints.Clamp(new Size(desiredW, desiredH)));
+        var natural = new Size(desiredW, desiredH);
+
+        var min = new Size(
+            Math.Clamp(MinWidth, 0, natural.Width),
+            Math.Clamp(MinHeight, 0, natural.Height));
+
+        var maxWGrid = MaxWidth == LayoutConstants.Infinite ? LayoutConstants.Infinite : Math.Clamp(MaxWidth, natural.Width, LayoutConstants.MaxFinite);
+        var maxHGrid = MaxHeight == LayoutConstants.Infinite ? LayoutConstants.Infinite : Math.Clamp(MaxHeight, natural.Height, LayoutConstants.MaxFinite);
+
+        var growX = HorizontalAlignment == HorizontalAlignment.Stretch ? 1 : 0;
+        var growY = VerticalAlignment == VerticalAlignment.Stretch ? 1 : 0;
+        var shrinkX = natural.Width > min.Width ? 1 : 0;
+        var shrinkY = natural.Height > min.Height ? 1 : 0;
+
+        return SizeHints.Flex(min, natural, new Size(maxWGrid, maxHGrid), growX: growX, growY: growY, shrinkX: shrinkX, shrinkY: shrinkY).Normalize();
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)
@@ -210,10 +233,10 @@ public sealed partial class Grid : Panel
         }
 
         // Auto columns based on desired sizes from measure pass.
-        for (var i = 0; i < Children.Count; i++)
+        for (var i = 0; i < _cells.Count; i++)
         {
-            var child = Children[i];
-            var p = GetPlacementForLayout(child, rows, cols);
+            var cell = _cells[i];
+            var p = GetPlacementForLayout(cell, rows, cols);
             if (p.ColumnSpan != 1)
             {
                 continue;
@@ -222,7 +245,7 @@ public sealed partial class Grid : Panel
             var col = p.Column;
             if (colDefs[col].Width.Type == GridUnitType.Auto)
             {
-                colWidths[col] = Math.Max(colWidths[col], child.DesiredSize.Width);
+                colWidths[col] = Math.Max(colWidths[col], cell.DesiredSize.Width);
             }
         }
 
@@ -249,10 +272,10 @@ public sealed partial class Grid : Panel
         }
 
         // Auto rows.
-        for (var i = 0; i < Children.Count; i++)
+        for (var i = 0; i < _cells.Count; i++)
         {
-            var child = Children[i];
-            var p = GetPlacementForLayout(child, rows, cols);
+            var cell = _cells[i];
+            var p = GetPlacementForLayout(cell, rows, cols);
             if (p.RowSpan != 1)
             {
                 continue;
@@ -260,7 +283,7 @@ public sealed partial class Grid : Panel
 
             if (rowDefs[p.Row].Height.Type == GridUnitType.Auto)
             {
-                rowHeights[p.Row] = Math.Max(rowHeights[p.Row], child.DesiredSize.Height);
+                rowHeights[p.Row] = Math.Max(rowHeights[p.Row], cell.DesiredSize.Height);
             }
         }
 
@@ -296,17 +319,17 @@ public sealed partial class Grid : Panel
             y += rowHeights[r] + rowGap;
         }
 
-        for (var i = 0; i < Children.Count; i++)
+        for (var i = 0; i < _cells.Count; i++)
         {
-            var child = Children[i];
-            var p = GetPlacementForLayout(child, rows, cols);
+            var cell = _cells[i];
+            var p = GetPlacementForLayout(cell, rows, cols);
 
             var cellX = colOffsets[p.Column];
             var cellY = rowOffsets[p.Row];
             var cellW = GetSpanSize(colWidths, p.Column, p.ColumnSpan, colGap);
             var cellH = GetSpanSize(rowHeights, p.Row, p.RowSpan, rowGap);
 
-            child.Arrange(new Rectangle(cellX, cellY, cellW, cellH));
+            cell.Arrange(new Rectangle(cellX, cellY, cellW, cellH));
         }
     }
 
@@ -318,10 +341,10 @@ public sealed partial class Grid : Panel
         var requiredRows = minRows;
         var requiredCols = minCols;
 
-        for (var i = 0; i < Children.Count; i++)
+        for (var i = 0; i < _cells.Count; i++)
         {
-            var child = Children[i];
-            var p = GetPlacement(child);
+            var cell = _cells[i];
+            var p = GetPlacement(cell);
             requiredRows = Math.Max(requiredRows, p.Row + p.RowSpan);
             requiredCols = Math.Max(requiredCols, p.Column + p.ColumnSpan);
         }
@@ -337,6 +360,20 @@ public sealed partial class Grid : Panel
         }
 
         return (requiredRows, requiredCols);
+    }
+
+    private readonly record struct GridPlacement(int Row, int Column, int RowSpan, int ColumnSpan);
+
+    private static GridPlacement GetPlacement(GridCell cell)
+        => new(cell.Row, cell.Column, cell.RowSpan, cell.ColumnSpan);
+
+    private static GridPlacement GetPlacementForLayout(GridCell cell, int maxRows, int maxCols)
+    {
+        var row = Math.Clamp(cell.Row, 0, Math.Max(0, maxRows - 1));
+        var col = Math.Clamp(cell.Column, 0, Math.Max(0, maxCols - 1));
+        var rowSpan = Math.Clamp(cell.RowSpan, 1, Math.Max(1, maxRows - row));
+        var colSpan = Math.Clamp(cell.ColumnSpan, 1, Math.Max(1, maxCols - col));
+        return new GridPlacement(row, col, rowSpan, colSpan);
     }
 
     private ColumnDefinition[] GetEffectiveColumnDefinitions(int columns)
@@ -563,4 +600,8 @@ public sealed partial class Grid : Panel
         max = Math.Max(min, max == int.MaxValue ? int.MaxValue : Math.Max(0, max));
         return Math.Clamp(value, min, max);
     }
+
+    protected override int ChildrenCount => _cells.Count;
+
+    protected override Visual GetChild(int index) => _cells[index];
 }
