@@ -242,6 +242,13 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         return key.DefaultValue;
     }
 
+    internal bool HasLocal<T>(StyleKey<T> key)
+    {
+        VerifyAccess();
+        ArgumentNullException.ThrowIfNull(key);
+        return _environment is not null && _environment.ContainsKey(key);
+    }
+
     public Theme GetTheme() => Get<Theme>();
 
     public void RegisterDynamicUpdate(Action<Visual> configure)

@@ -8,32 +8,32 @@ namespace XenoAtom.Terminal.UI.Styling;
 
 public sealed class Theme : IStyle<Theme>
 {
-    public static Theme Default { get; } = FromPalette(Ansi16Palette.RootLoops);
+    public static Theme Default { get; } = FromScheme(AnsiColorScheme.RootLoops);
 
-    public static Theme Terminal { get; } = FromPalette(Ansi16Palette.Terminal);
+    public static Theme Terminal { get; } = FromScheme(AnsiColorScheme.Terminal);
 
     public static StyleKey<Theme> Key { get; } = new("Theme", Default);
 
-    public static Theme FromPalette(Ansi16Palette palette)
+    public static Theme FromScheme(AnsiColorScheme scheme)
     {
-        ArgumentNullException.ThrowIfNull(palette);
+        ArgumentNullException.ThrowIfNull(scheme);
 
         return new Theme
         {
-            Foreground = palette.Foreground,
-            Background = palette.Background,
-            Surface = palette.Black,
-            SurfaceAlt = palette.BrightBlack,
-            Border = palette.BrightBlack,
-            FocusBorder = palette.CursorColor,
-            Accent = palette.Purple,
-            Selection = palette.SelectionBackground,
-            Disabled = palette.BrightBlack,
-            Primary = palette.Blue,
-            Success = palette.Green,
-            Warning = palette.Yellow,
-            Error = palette.Red,
-            Muted = palette.White,
+            Foreground = scheme.Foreground,
+            Background = scheme.Background,
+            Surface = scheme.Black,
+            SurfaceAlt = scheme.BrightBlack,
+            Border = scheme.BrightBlack,
+            FocusBorder = scheme.CursorColor,
+            Accent = scheme.Purple,
+            Selection = scheme.SelectionBackground,
+            Disabled = scheme.BrightBlack,
+            Primary = scheme.Blue,
+            Success = scheme.Green,
+            Warning = scheme.Yellow,
+            Error = scheme.Red,
+            Muted = scheme.White,
             Lines = LineGlyphs.Single,
             ScrollBars = ScrollBarGlyphs.Default,
         };

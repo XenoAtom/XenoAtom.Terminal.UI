@@ -22,105 +22,123 @@ internal static class TerminalVisualWriter
             throw new InvalidOperationException("A visual that is already in the UI tree cannot be written as flow output.");
         }
 
+        ThemedHost? themedHost = null;
+        var root = visual;
+        if (!visual.HasLocal(Theme.Key))
+        {
+            themedHost = new ThemedHost(visual, Theme.Terminal);
+            root = themedHost;
+        }
+
         var width = Math.Max(1, terminal.Size.Columns);
 
-        visual.Measure(new LayoutConstraints(0, width, 0, LayoutConstants.Infinite));
-        visual.Arrange(new Rectangle(0, 0, width, visual.DesiredSize.Height));
-
-        var height = Math.Max(1, visual.DesiredSize.Height);
-        var buffer = new CellBuffer(width, height);
-        buffer.Clear(visual.GetTheme().BaseTextStyle());
-        visual.RenderTree(buffer);
-
-        var caps = CreateAnsiCapabilities(terminal.Capabilities);
-        using var builder = new AnsiBuilder(initialCapacity: (width * height) + 128);
-        var writer = new AnsiWriter(builder, caps);
-
-        writer.PrivateMode(2026, enabled: true);
-
-        var currentStyle = AnsiStyle.Default;
-        ulong currentHyperlink = 0;
-        Span<char> runeBuffer = stackalloc char[2];
-
-        var scalars = buffer.UnsafeScalars;
-        var cells = buffer.UnsafeCells;
-        var hyperlinks = buffer.UnsafeHyperlinks;
-
-        for (var y = 0; y < height; y++)
+        try
         {
-            var rowIndex = y * width;
-            var xPos = 0;
-            while (xPos < width)
+            root.Measure(new LayoutConstraints(0, width, 0, LayoutConstants.Infinite));
+            root.Arrange(new Rectangle(0, 0, width, root.DesiredSize.Height));
+
+            var height = Math.Max(1, root.DesiredSize.Height);
+            var buffer = new CellBuffer(width, height);
+            buffer.Clear(root.GetTheme().BaseTextStyle());
+            root.RenderTree(buffer);
+
+            var caps = CreateAnsiCapabilities(terminal.Capabilities);
+            using var builder = new AnsiBuilder(initialCapacity: (width * height) + 128);
+            var writer = new AnsiWriter(builder, caps);
+
+            writer.PrivateMode(2026, enabled: true);
+
+            var currentStyle = AnsiStyle.Default;
+            ulong currentHyperlink = 0;
+            Span<char> runeBuffer = stackalloc char[2];
+
+            var scalars = buffer.UnsafeScalars;
+            var cells = buffer.UnsafeCells;
+            var hyperlinks = buffer.UnsafeHyperlinks;
+
+            for (var y = 0; y < height; y++)
             {
-                var i = rowIndex + xPos;
-                var cell = cells[i];
-                if (cell.IsContinuation)
+                var rowIndex = y * width;
+                var xPos = 0;
+                while (xPos < width)
                 {
-                    xPos++;
-                    continue;
-                }
-
-                var nextStyle = MapStyle(cell);
-                if (nextStyle != currentStyle)
-                {
-                    writer.StyleTransition(currentStyle, nextStyle);
-                    currentStyle = nextStyle;
-                }
-
-                var nextHyperlink = hyperlinks[i];
-                if (nextHyperlink != currentHyperlink)
-                {
-                    if (currentHyperlink != 0)
+                    var i = rowIndex + xPos;
+                    var cell = cells[i];
+                    if (cell.IsContinuation)
                     {
-                        writer.EndLink();
+                        xPos++;
+                        continue;
                     }
 
+                    var nextStyle = MapStyle(cell);
+                    if (nextStyle != currentStyle)
+                    {
+                        writer.StyleTransition(currentStyle, nextStyle);
+                        currentStyle = nextStyle;
+                    }
+
+                    var nextHyperlink = hyperlinks[i];
+                    if (nextHyperlink != currentHyperlink)
+                    {
+                        if (currentHyperlink != 0)
+                        {
+                            writer.EndLink();
+                        }
+
+                        currentHyperlink = 0;
+                        if (nextHyperlink != 0 && buffer.TryGetHyperlinkUri(nextHyperlink, out var uri))
+                        {
+                            writer.BeginLink(uri);
+                            currentHyperlink = nextHyperlink;
+                        }
+                    }
+
+                    var scalar = scalars[i];
+                    if (scalar == 0)
+                    {
+                        writer.Write(" ");
+                        xPos++;
+                        continue;
+                    }
+
+                    var rune = new Rune(scalar);
+                    var written = rune.EncodeToUtf16(runeBuffer);
+                    writer.Write(runeBuffer[..written]);
+
+                    var runeWidth = TerminalTextUtility.GetRuneWidth(rune);
+                    xPos += Math.Max(1, runeWidth);
+                }
+
+                if (currentHyperlink != 0)
+                {
+                    writer.EndLink();
                     currentHyperlink = 0;
-                    if (nextHyperlink != 0 && buffer.TryGetHyperlinkUri(nextHyperlink, out var uri))
-                    {
-                        writer.BeginLink(uri);
-                        currentHyperlink = nextHyperlink;
-                    }
                 }
 
-                var scalar = scalars[i];
-                if (scalar == 0)
-                {
-                    writer.Write(" ");
-                    xPos++;
-                    continue;
-                }
-
-                var rune = new Rune(scalar);
-                var written = rune.EncodeToUtf16(runeBuffer);
-                writer.Write(runeBuffer[..written]);
-
-                var runeWidth = TerminalTextUtility.GetRuneWidth(rune);
-                xPos += Math.Max(1, runeWidth);
+                writer.Write("\n");
             }
 
             if (currentHyperlink != 0)
             {
                 writer.EndLink();
-                currentHyperlink = 0;
             }
 
-            writer.Write("\n");
-        }
+            if (currentStyle != AnsiStyle.Default)
+            {
+                writer.StyleTransition(currentStyle, AnsiStyle.Default);
+            }
 
-        if (currentHyperlink != 0)
+            writer.PrivateMode(2026, enabled: false);
+
+            terminal.WriteAtomic((TextWriter w) => w.Write(builder.UnsafeAsSpan()));
+        }
+        finally
         {
-            writer.EndLink();
+            if (themedHost is not null)
+            {
+                themedHost.Content = null;
+            }
         }
-
-        if (currentStyle != AnsiStyle.Default)
-        {
-            writer.StyleTransition(currentStyle, AnsiStyle.Default);
-        }
-
-        writer.PrivateMode(2026, enabled: false);
-
-        terminal.WriteAtomic((TextWriter w) => w.Write(builder.UnsafeAsSpan()));
     }
 
     private static AnsiStyle MapStyle(CellStyle cellStyle)

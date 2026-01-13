@@ -87,6 +87,11 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
             Root = root;
         }
 
+        if (_options.HostKind == TerminalHostKind.Inline && !Root.HasLocal(Theme.Key))
+        {
+            Root.Set(Theme.Key, Theme.Terminal);
+        }
+
         if (_options.HostKind == TerminalHostKind.Fullscreen)
         {
             _fullscreenHost = new FullscreenHost(_terminal);
@@ -180,21 +185,33 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
         var width = Math.Max(1, _terminal.Size.Columns);
 
-        block.AttachToApp(this);
+        ThemedHost? themedHost = null;
+        var renderRoot = block;
+        if (_options.HostKind == TerminalHostKind.Inline && !block.HasLocal(Theme.Key))
+        {
+            themedHost = new ThemedHost(block, Theme.Terminal);
+            renderRoot = themedHost;
+        }
+
+        renderRoot.AttachToApp(this);
         try
         {
-            block.Measure(new LayoutConstraints(0, width, 0, LayoutConstants.Infinite));
-            block.Arrange(new Rectangle(0, 0, width, block.DesiredSize.Height));
+            renderRoot.Measure(new LayoutConstraints(0, width, 0, LayoutConstants.Infinite));
+            renderRoot.Arrange(new Rectangle(0, 0, width, renderRoot.DesiredSize.Height));
 
             // Flow output can allocate (it's not per-frame). Keep it simple for now.
-            var buffer = new CellBuffer(width, Math.Max(1, block.DesiredSize.Height));
-            buffer.Clear(block.GetTheme().BaseTextStyle());
-            block.RenderTree(buffer);
+            var buffer = new CellBuffer(width, Math.Max(1, renderRoot.DesiredSize.Height));
+            buffer.Clear(renderRoot.GetTheme().BaseTextStyle());
+            renderRoot.RenderTree(buffer);
             _inlineHost.WriteMarkupLines(buffer.ToMarkupLines());
         }
         finally
         {
-            block.DetachFromApp();
+            renderRoot.DetachFromApp();
+            if (themedHost is not null)
+            {
+                themedHost.Content = null;
+            }
         }
 
         RequestRender();

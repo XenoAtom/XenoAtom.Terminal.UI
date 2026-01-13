@@ -11,19 +11,26 @@ namespace XenoAtom.Terminal.UI.Styling;
 /// </summary>
 /// <remarks>
 /// This type is a lightweight, value-type container optimized for cell buffers.
-/// It encodes colors as 24-bit RGB (assuming truecolor is available).
+/// It preserves the kind of ANSI colors (default / 16 / 256 / RGB) so renderers can
+/// emit the most appropriate escape sequences for the target terminal.
 /// </remarks>
 public readonly struct CellStyle : IEquatable<CellStyle>
 {
     // Layout:
     // - Bits [0..7]   : TextStyle flags (matches AnsiDecorations bit positions)
     // - Bit  [8]      : Continuation (wide glyph trailing cell)
-    // - Bits [14..38] : Foreground encoded RGB (25 bits, 0=unset, otherwise packedRgb+1)
-    // - Bits [39..63] : Background encoded RGB (25 bits, 0=unset, otherwise packedRgb+1)
-    private const int BitsPerColor = 25;
+    // - Bits [9..34]  : Foreground (26 bits): [kind:2][value:24]
+    // - Bits [35..60] : Background (26 bits): [kind:2][value:24]
+    //
+    // Color kind encoding (2 bits):
+    // - 0: unset (terminal default color)
+    // - 1: Basic16 index (value in [0..15])
+    // - 2: Indexed256 index (value in [0..255])
+    // - 3: RGB (value is packed 0xRRGGBB)
+    private const int BitsPerColor = 26;
     private const int ContinuationBit = 8;
 
-    private const int ForegroundShift = 14;
+    private const int ForegroundShift = 9;
     private const int BackgroundShift = ForegroundShift + BitsPerColor;
 
     private const ulong TextStyleMask = 0xFFul;
@@ -32,6 +39,10 @@ public readonly struct CellStyle : IEquatable<CellStyle>
     private const ulong ColorMask = (1ul << BitsPerColor) - 1ul;
     private const ulong ForegroundMask = ColorMask << ForegroundShift;
     private const ulong BackgroundMask = ColorMask << BackgroundShift;
+
+    private const int ColorKindBits = 2;
+    private const int ColorValueBits = 24;
+    private const uint ColorValueMask = (1u << ColorValueBits) - 1u;
 
     internal readonly ulong Value;
 
@@ -88,27 +99,15 @@ public readonly struct CellStyle : IEquatable<CellStyle>
 
     public CellStyle WithForeground(AnsiColor color)
     {
-        if (!TryGetRgb(color, out var packedRgb))
-        {
-            return ClearForeground();
-        }
-
-        var encoded = Encode(packedRgb);
         var value = Value;
-        value = (value & ~ForegroundMask) | ((encoded & ColorMask) << ForegroundShift);
+        value = (value & ~ForegroundMask) | (Encode(color) << ForegroundShift);
         return new CellStyle(value);
     }
 
     public CellStyle WithBackground(AnsiColor color)
     {
-        if (!TryGetRgb(color, out var packedRgb))
-        {
-            return ClearBackground();
-        }
-
-        var encoded = Encode(packedRgb);
         var value = Value;
-        value = (value & ~BackgroundMask) | ((encoded & ColorMask) << BackgroundShift);
+        value = (value & ~BackgroundMask) | (Encode(color) << BackgroundShift);
         return new CellStyle(value);
     }
 
@@ -121,8 +120,7 @@ public readonly struct CellStyle : IEquatable<CellStyle>
             return false;
         }
 
-        color = DecodeToAnsiColor(encoded);
-        return true;
+        return TryDecodeToAnsiColor(encoded, out color);
     }
 
     public bool TryGetBackground(out AnsiColor color)
@@ -134,8 +132,7 @@ public readonly struct CellStyle : IEquatable<CellStyle>
             return false;
         }
 
-        color = DecodeToAnsiColor(encoded);
-        return true;
+        return TryDecodeToAnsiColor(encoded, out color);
     }
 
     public static CellStyle operator |(CellStyle a, CellStyle b) => new(a.Value | b.Value);
@@ -157,43 +154,59 @@ public readonly struct CellStyle : IEquatable<CellStyle>
     internal AnsiDecorations ToAnsiDecorations()
         => (AnsiDecorations)((int)TextStyle);
 
-    private static bool TryGetRgb(AnsiColor color, out uint packedRgb)
+    private static ulong Encode(AnsiColor color)
     {
         switch (color.Kind)
         {
             case AnsiColorKind.Default:
-                packedRgb = 0;
-                return false;
-            case AnsiColorKind.Rgb:
-                packedRgb = (uint)((color.R << 16) | (color.G << 8) | color.B);
-                return true;
+                return 0;
             case AnsiColorKind.Basic16:
-            {
-                var (r, g, b) = AnsiPalettes.GetBasic16Rgb(color.Index);
-                packedRgb = (uint)((r << 16) | (g << 8) | b);
-                return true;
-            }
+                return EncodeColor(kind: 1u, value: (uint)color.Index);
             case AnsiColorKind.Indexed256:
-            {
-                var (r, g, b) = AnsiPalettes.GetXterm256Rgb(color.Index);
-                packedRgb = (uint)((r << 16) | (g << 8) | b);
-                return true;
-            }
+                return EncodeColor(kind: 2u, value: (uint)color.Index);
+            case AnsiColorKind.Rgb:
+                return EncodeColor(kind: 3u, value: (uint)((color.R << 16) | (color.G << 8) | color.B));
             default:
-                packedRgb = 0;
-                return false;
+                return 0;
         }
     }
 
-    private static ulong Encode(uint packedRgb) => (ulong)packedRgb + 1ul;
-
-    private static AnsiColor DecodeToAnsiColor(ulong encoded)
+    private static ulong EncodeColor(uint kind, uint value)
     {
-        var packed = (uint)(encoded - 1ul);
-        var r = (byte)((packed >> 16) & 0xFF);
-        var g = (byte)((packed >> 8) & 0xFF);
-        var b = (byte)(packed & 0xFF);
-        return AnsiColor.Rgb(r, g, b);
+        if ((kind & ((1u << ColorKindBits) - 1u)) == 0)
+        {
+            return 0;
+        }
+
+        value &= ColorValueMask;
+        return (ulong)((kind << ColorValueBits) | value);
+    }
+
+    private static bool TryDecodeToAnsiColor(ulong encoded, out AnsiColor color)
+    {
+        var kind = (uint)((encoded >> ColorValueBits) & 0b11);
+        var value = (uint)encoded & ColorValueMask;
+
+        switch (kind)
+        {
+            case 1:
+                color = AnsiColor.Basic16((int)(value & 0xF));
+                return true;
+            case 2:
+                color = AnsiColor.Indexed256((int)(value & 0xFF));
+                return true;
+            case 3:
+            {
+                var r = (byte)((value >> 16) & 0xFF);
+                var g = (byte)((value >> 8) & 0xFF);
+                var b = (byte)(value & 0xFF);
+                color = AnsiColor.Rgb(r, g, b);
+                return true;
+            }
+            default:
+                color = default;
+                return false;
+        }
     }
 }
 

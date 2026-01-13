@@ -7,9 +7,9 @@ using XenoAtom.Ansi;
 namespace XenoAtom.Terminal.UI.Styling;
 
 /// <summary>
-/// A 16-color ANSI palette (8 normal + 8 bright) with a foreground/background baseline.
+/// A 16-color ANSI scheme (8 normal + 8 bright) with a foreground/background baseline.
 /// </summary>
-public sealed record Ansi16Palette
+public sealed record AnsiColorScheme
 {
     public required string Name { get; init; }
 
@@ -17,9 +17,9 @@ public sealed record Ansi16Palette
 
     public required AnsiColor SelectionBackground { get; init; }
 
-    public required AnsiColor Background { get; init; }
+    public AnsiColor? Background { get; init; }
 
-    public required AnsiColor Foreground { get; init; }
+    public AnsiColor? Foreground { get; init; }
 
     public required AnsiColor Black { get; init; }
 
@@ -53,13 +53,13 @@ public sealed record Ansi16Palette
 
     public required AnsiColor BrightYellow { get; init; }
 
-    public static Ansi16Palette Terminal { get; } = new Ansi16Palette
+    public static AnsiColorScheme Terminal { get; } = new AnsiColorScheme
     {
         Name = "Terminal",
         CursorColor = AnsiColor.Basic16(7),           // white
         SelectionBackground = AnsiColor.Basic16(12),  // bright blue
-        Background = AnsiColor.Basic16(0),            // black
-        Foreground = AnsiColor.Basic16(7),            // white
+        Background = null,                            // terminal default
+        Foreground = null,                            // terminal default
         Black = AnsiColor.Basic16(0),
         Red = AnsiColor.Basic16(1),
         Green = AnsiColor.Basic16(2),
@@ -78,7 +78,7 @@ public sealed record Ansi16Palette
         BrightWhite = AnsiColor.Basic16(15),
     };
 
-    public static Ansi16Palette RootLoops { get; } = new Ansi16Palette
+    public static AnsiColorScheme RootLoops { get; } = new AnsiColorScheme
     {
         Name = "Root Loops",
         CursorColor = AnsiColor.Rgb(0x8C, 0x9E, 0xD6),
@@ -103,4 +103,3 @@ public sealed record Ansi16Palette
         BrightYellow = AnsiColor.Rgb(0xF9, 0xB6, 0x4D),
     };
 }
-
