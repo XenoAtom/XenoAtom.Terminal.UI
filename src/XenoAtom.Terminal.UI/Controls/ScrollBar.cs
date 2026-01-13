@@ -51,26 +51,6 @@ public sealed partial class ScrollBar : Visual
     [Bindable]
     public partial int LargeChange { get; set; }
 
-    partial void OnMinimumChanged(int value)
-    {
-        _ = value;
-        if (Maximum < Minimum)
-        {
-            Maximum = Minimum;
-        }
-        Value = Clamp(Value);
-    }
-
-    partial void OnMaximumChanged(int value)
-    {
-        _ = value;
-        if (Maximum < Minimum)
-        {
-            Minimum = Maximum;
-        }
-        Value = Clamp(Value);
-    }
-
     partial void OnViewportSizeChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
 
     partial void OnSmallChangeChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);

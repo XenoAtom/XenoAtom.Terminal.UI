@@ -43,21 +43,8 @@ public sealed partial class ScrollViewer : Visual
             .VerticalAlignment(VerticalAlignment.Stretch);
         _corner = new ScrollCornerVisual(this);
 
-        _verticalBar.ValueChanged(static (s, e) =>
-        {
-            if (s is ScrollBar { Parent: ScrollViewer owner })
-            {
-                owner.VerticalOffset = e.NewValue;
-            }
-        });
-
-        _horizontalBar.ValueChanged(static (s, e) =>
-        {
-            if (s is ScrollBar { Parent: ScrollViewer owner })
-            {
-                owner.HorizontalOffset = e.NewValue;
-            }
-        });
+        this.VerticalOffset(_verticalBar.@ref.Value);
+        this.HorizontalOffset(_horizontalBar.@ref.Value);
 
         AttachChild(_contentHost);
         AttachChild(_verticalBar);
@@ -184,16 +171,16 @@ public sealed partial class ScrollViewer : Visual
         if (hOffset != HorizontalOffset) HorizontalOffset = hOffset;
 
         // Keep scrollbars in sync with the viewport/content model (two-way via ValueChanged).
-        _verticalBar.Minimum(0);
-        _verticalBar.Maximum(maxVerticalOffset);
-        _verticalBar.ViewportSize(contentViewportHeight);
-        _verticalBar.Value(v);
+        _verticalBar.Minimum = 0;
+        _verticalBar.Maximum = maxVerticalOffset;
+        _verticalBar.ViewportSize = contentViewportHeight;
+        _verticalBar.Value = v;
         _verticalBar.IsVisible = _showVerticalBar;
 
-        _horizontalBar.Minimum(0);
-        _horizontalBar.Maximum(maxHorizontalOffset);
-        _horizontalBar.ViewportSize(contentViewportWidth);
-        _horizontalBar.Value(hOffset);
+        _horizontalBar.Minimum = 0;
+        _horizontalBar.Maximum = maxHorizontalOffset;
+        _horizontalBar.ViewportSize = contentViewportWidth;
+        _horizontalBar.Value = hOffset;
         _horizontalBar.IsVisible = _showHorizontalBar;
 
         // Bridge ScrollViewerStyle to ScrollBarStyle for internal bars.
