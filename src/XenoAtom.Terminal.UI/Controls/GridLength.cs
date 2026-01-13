@@ -29,21 +29,27 @@ public readonly record struct GridLength(GridUnitType Type, double Value)
         };
 }
 
-public sealed record RowDefinition
+public sealed partial class RowDefinition
 {
-    public GridLength Height { get; init; } = GridLength.Star(1);
+    [Bindable]
+    public GridLength Height { get; set; } = GridLength.Star(1);
 
-    public int MinHeight { get; init; }
+    [Bindable]
+    public int MinHeight { get; set; }
 
-    public int MaxHeight { get; init; } = int.MaxValue;
+    [Bindable]
+    public int MaxHeight { get; set; } = int.MaxValue;
 }
 
-public sealed record ColumnDefinition
+public sealed partial class ColumnDefinition
 {
-    public GridLength Width { get; init; } = GridLength.Star(1);
+    [Bindable]
+    public GridLength Width { get; set; } = GridLength.Star(1);
 
-    public int MinWidth { get; init; }
+    [Bindable]
+    public int MinWidth { get; set; }
 
-    public int MaxWidth { get; init; } = int.MaxValue;
+    [Bindable]
+    public int MaxWidth { get; set; } = int.MaxValue;
 }
 

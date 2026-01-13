@@ -18,8 +18,8 @@ public sealed partial class Grid : Panel
     {
         RowDefinitions = new BindableList<RowDefinition>(this, "RowDefinitions");
         ColumnDefinitions = new BindableList<ColumnDefinition>(this, "ColumnDefinitions");
-        this.AutoGrowRows(true);
-        this.AutoGrowColumns(true);
+        AutoGrowRows = true;
+        AutoGrowColumns = true;
     }
 
     [Bindable]
