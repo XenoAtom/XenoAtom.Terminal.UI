@@ -122,29 +122,41 @@ internal static class FlexAllocator
             return;
         }
 
-        for (var i = 0; i < count && remaining > 0; i++)
+        while (remaining > 0)
         {
-            if (grow[i] <= 0)
+            var progressed = false;
+
+            for (var i = 0; i < count && remaining > 0; i++)
             {
-                continue;
+                if (grow[i] <= 0)
+                {
+                    continue;
+                }
+
+                var current = result[i];
+                var maxI = max[i];
+                if (!LayoutConstants.IsInfinite(maxI) && current >= maxI)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    result[i] = LayoutConstants.ClampFinite(checked(current + 1));
+                }
+                catch (OverflowException ex)
+                {
+                    throw new LayoutException("Flex allocation overflow while distributing grow remainder.", ex);
+                }
+
+                remaining--;
+                progressed = true;
             }
 
-            var current = result[i];
-            var maxI = max[i];
-            if (!LayoutConstants.IsInfinite(maxI) && current >= maxI)
+            if (!progressed)
             {
-                continue;
+                break;
             }
-
-            try
-            {
-                result[i] = LayoutConstants.ClampFinite(checked(current + 1));
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Flex allocation overflow while distributing grow remainder.", ex);
-            }
-            remaining--;
         }
     }
 
@@ -222,22 +234,33 @@ internal static class FlexAllocator
             return;
         }
 
-        for (var i = 0; i < count && remaining > 0; i++)
+        while (remaining > 0)
         {
-            if (shrink[i] <= 0)
+            var progressed = false;
+
+            for (var i = 0; i < count && remaining > 0; i++)
             {
-                continue;
+                if (shrink[i] <= 0)
+                {
+                    continue;
+                }
+
+                var current = result[i];
+                var minI = Math.Max(0, min[i]);
+                if (current <= minI)
+                {
+                    continue;
+                }
+
+                result[i] = current - 1;
+                remaining--;
+                progressed = true;
             }
 
-            var current = result[i];
-            var minI = Math.Max(0, min[i]);
-            if (current <= minI)
+            if (!progressed)
             {
-                continue;
+                break;
             }
-
-            result[i] = current - 1;
-            remaining--;
         }
     }
 }
