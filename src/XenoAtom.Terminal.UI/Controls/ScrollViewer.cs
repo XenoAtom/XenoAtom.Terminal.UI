@@ -127,7 +127,14 @@ public sealed partial class ScrollViewer : Visual
         var min = content is null ? Size.Zero : new Size(1, 1);
         var natural = new Size(desiredWidth, desiredHeight);
         var max = new Size(LayoutConstants.Infinite, LayoutConstants.Infinite);
-        return SizeHints.Flex(min, natural, max, growX: 0, growY: 0, shrinkX: 1, shrinkY: 1);
+        return SizeHints.Flex(
+            min,
+            natural,
+            max,
+            growX: HorizontalAlignment == HorizontalAlignment.Stretch ? 1 : 0,
+            growY: VerticalAlignment == VerticalAlignment.Stretch ? 1 : 0,
+            shrinkX: 1,
+            shrinkY: 1);
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)
@@ -144,26 +151,67 @@ public sealed partial class ScrollViewer : Visual
         var viewportWidth = Math.Max(1, finalRect.Width);
         var viewportHeight = Math.Max(1, finalRect.Height);
 
-        var showV = _contentHeight > viewportHeight;
-        var showH = _contentWidth > viewportWidth;
+        var extentWidth = _contentWidth;
+        var extentHeight = _contentHeight;
+        var lastMeasuredViewportWidth = -1;
 
-        // account for bars and re-evaluate.
-        for (var i = 0; i < 2; i++)
+        var showV = extentHeight > viewportHeight;
+        var showH = extentWidth > viewportWidth;
+
+        var contentViewportWidth = viewportWidth;
+        var contentViewportHeight = viewportHeight;
+
+        // Determine which bars to show. If horizontal scrolling isn't needed, re-measure the content
+        // using the final viewport width so wrapping content can report a correct height/extent.
+        for (var pass = 0; pass < 3; pass++)
         {
-            var w = viewportWidth - (showV ? thickness : 0);
-            var hViewport = viewportHeight - (showH ? thickness : 0);
-            showV = _contentHeight > Math.Max(1, hViewport);
-            showH = _contentWidth > Math.Max(1, w);
+            // account for bars and re-evaluate.
+            for (var i = 0; i < 2; i++)
+            {
+                var w = viewportWidth - (showV ? thickness : 0);
+                var hViewport = viewportHeight - (showH ? thickness : 0);
+                showV = extentHeight > Math.Max(1, hViewport);
+                showH = extentWidth > Math.Max(1, w);
+            }
+
+            contentViewportWidth = Math.Max(1, viewportWidth - (showV ? thickness : 0));
+            contentViewportHeight = Math.Max(1, viewportHeight - (showH ? thickness : 0));
+
+            if (showH)
+            {
+                break;
+            }
+
+            if (lastMeasuredViewportWidth == contentViewportWidth)
+            {
+                break;
+            }
+
+            lastMeasuredViewportWidth = contentViewportWidth;
+
+            var content = Content;
+            if (content is null)
+            {
+                break;
+            }
+
+            var forWidthHints = content.Measure(new LayoutConstraints(0, contentViewportWidth, 0, LayoutConstants.Infinite));
+            extentWidth = forWidthHints.Natural.Width;
+            extentHeight = forWidthHints.Natural.Height;
+
+            _contentWidth = extentWidth;
+            _contentHeight = extentHeight;
+
+            // Continue loop to re-evaluate vertical bar visibility (height may have changed due to wrapping).
+            showV = extentHeight > viewportHeight;
+            showH = extentWidth > viewportWidth;
         }
 
         _showVerticalBar = showV;
         _showHorizontalBar = showH;
 
-        var contentViewportWidth = Math.Max(1, viewportWidth - (showV ? thickness : 0));
-        var contentViewportHeight = Math.Max(1, viewportHeight - (showH ? thickness : 0));
-
-        var maxVerticalOffset = Math.Max(0, _contentHeight - contentViewportHeight);
-        var maxHorizontalOffset = Math.Max(0, _contentWidth - contentViewportWidth);
+        var maxVerticalOffset = Math.Max(0, extentHeight - contentViewportHeight);
+        var maxHorizontalOffset = Math.Max(0, extentWidth - contentViewportWidth);
 
         var v = Math.Clamp(VerticalOffset, 0, maxVerticalOffset);
         var hOffset = Math.Clamp(HorizontalOffset, 0, maxHorizontalOffset);
@@ -194,10 +242,13 @@ public sealed partial class ScrollViewer : Visual
         {
             _internalScrollBarStyle = scrollBarStyle;
             _verticalBar.Set(scrollBarStyle);
-            _horizontalBar.Set(scrollBarStyle);
+        _horizontalBar.Set(scrollBarStyle);
         }
 
-        _contentHost.UpdateLayout(_contentWidth, _contentHeight, hOffset, v);
+        var contentArrangeWidth = showH ? extentWidth : contentViewportWidth;
+        var contentArrangeHeight = showV ? extentHeight : contentViewportHeight;
+
+        _contentHost.UpdateLayout(contentArrangeWidth, contentArrangeHeight, hOffset, v);
         _contentHost.Arrange(new Rectangle(finalRect.X, finalRect.Y, contentViewportWidth, contentViewportHeight));
 
         if (_showVerticalBar)
