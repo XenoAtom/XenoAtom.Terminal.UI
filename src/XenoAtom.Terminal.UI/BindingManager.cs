@@ -2,6 +2,8 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Collections.ObjectModel;
+
 namespace XenoAtom.Terminal.UI;
 
 /// <summary>
@@ -26,12 +28,7 @@ public sealed class BindingManager
 
     public T GetValue<T>(object owner, ref T backingField, BindingAccessor<T> accessor)
     {
-        if (owner is Threading.DispatcherObject dispatcherObject)
-        {
-            dispatcherObject.VerifyAccess();
-        }
-
-        _tracking?.RegisterRead(owner, accessor);
+        RegisterRead(owner, accessor);
         return backingField;
     }
 
@@ -68,7 +65,7 @@ public sealed class BindingManager
     {
         var previous = _tracking;
         _tracking = null;
-        return new TrackingSession(previous, Array.Empty<Binding>());
+        return new TrackingSession(previous, ReadOnlySet<Binding>.Empty);
     }
 
     internal DynamicUpdateSession BeginDynamicUpdate(object owner)
@@ -112,6 +109,12 @@ public sealed class BindingManager
             dispatcherObject.VerifyAccess();
         }
 
+        // Ensure the visual element is loaded to avoid tracking reads on unloaded elements
+        if (owner is IVisualElement { App: null })
+        {
+            return;
+        }
+        
         _tracking?.RegisterRead(owner, accessor);
     }
 
@@ -133,13 +136,13 @@ public sealed class BindingManager
     {
         private readonly TrackingContext? _previous;
 
-        internal TrackingSession(object? previous, IReadOnlyCollection<Binding> dependencies)
+        internal TrackingSession(object? previous, IReadOnlySet<Binding> dependencies)
         {
             _previous = (TrackingContext?)previous;
             Dependencies = dependencies;
         }
 
-        public IReadOnlyCollection<Binding> Dependencies { get; }
+        public IReadOnlySet<Binding> Dependencies { get; }
 
         public void Dispose()
         {
@@ -151,7 +154,7 @@ public sealed class BindingManager
     {
         private readonly HashSet<Binding> _dependencies = new(BindingReferenceComparer.Instance);
 
-        public IReadOnlyCollection<Binding> Dependencies => _dependencies;
+        public IReadOnlySet<Binding> Dependencies => _dependencies;
 
         public void RegisterRead(object owner, BindingAccessor accessor)
         {
