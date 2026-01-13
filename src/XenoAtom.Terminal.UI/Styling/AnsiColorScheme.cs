@@ -56,10 +56,10 @@ public sealed record AnsiColorScheme
     public static AnsiColorScheme Terminal { get; } = new AnsiColorScheme
     {
         Name = "Terminal",
-        CursorColor = AnsiColor.Basic16(7),           // white
-        SelectionBackground = AnsiColor.Basic16(12),  // bright blue
-        Background = null,                            // terminal default
-        Foreground = null,                            // terminal default
+        CursorColor = AnsiColor.Basic16(7), // white
+        SelectionBackground = AnsiColor.Basic16(12), // bright blue
+        Background = null, // terminal default
+        Foreground = null, // terminal default
         Black = AnsiColor.Basic16(0),
         Red = AnsiColor.Basic16(1),
         Green = AnsiColor.Basic16(2),
@@ -81,25 +81,25 @@ public sealed record AnsiColorScheme
     public static AnsiColorScheme RootLoops { get; } = new AnsiColorScheme
     {
         Name = "Root Loops",
-        CursorColor = AnsiColor.Rgb(0x8C, 0x9E, 0xD6),
-        SelectionBackground = AnsiColor.Rgb(0x8C, 0x9E, 0xD6),
-        Background = AnsiColor.Rgb(0x17, 0x1F, 0x3C),
-        Foreground = AnsiColor.Rgb(0xCC, 0xD5, 0xEF),
-        Black = AnsiColor.Rgb(0x28, 0x34, 0x5C),
-        Blue = AnsiColor.Rgb(0x77, 0xB1, 0xFB),
-        Cyan = AnsiColor.Rgb(0x24, 0xC6, 0xC6),
-        Green = AnsiColor.Rgb(0x75, 0xC7, 0x3B),
-        Purple = AnsiColor.Rgb(0xD6, 0x8A, 0xF7),
-        Red = AnsiColor.Rgb(0xFB, 0x85, 0x90),
-        White = AnsiColor.Rgb(0x8C, 0x9E, 0xD6),
-        Yellow = AnsiColor.Rgb(0xE4, 0x9F, 0x27),
-        BrightBlack = AnsiColor.Rgb(0x46, 0x58, 0x92),
-        BrightBlue = AnsiColor.Rgb(0x9E, 0xC7, 0xFC),
-        BrightCyan = AnsiColor.Rgb(0x31, 0xDE, 0xDE),
-        BrightGreen = AnsiColor.Rgb(0x84, 0xE0, 0x41),
-        BrightPurple = AnsiColor.Rgb(0xE1, 0xAC, 0xF9),
-        BrightRed = AnsiColor.Rgb(0xFD, 0xAA, 0xAF),
-        BrightWhite = AnsiColor.Rgb(0xBE, 0xCA, 0xEB),
-        BrightYellow = AnsiColor.Rgb(0xF9, 0xB6, 0x4D),
+        CursorColor = AnsiColor.Rgb(0x72, 0xAA, 0xD1),
+        SelectionBackground = AnsiColor.Rgb(0x72, 0xAA, 0xD1),
+        Background = AnsiColor.Rgb(0x0C, 0x1E, 0x2A),
+        Foreground = AnsiColor.Rgb(0xC8, 0xE0, 0xF1),
+        Black = AnsiColor.Rgb(0x1A, 0x36, 0x48),
+        Blue = AnsiColor.Rgb(0x50, 0x9A, 0xF6),
+        Cyan = AnsiColor.Rgb(0x1F, 0xAE, 0xAE),
+        Green = AnsiColor.Rgb(0x67, 0xAF, 0x34),
+        Purple = AnsiColor.Rgb(0xCA, 0x64, 0xF3),
+        Red = AnsiColor.Rgb(0xF7, 0x5B, 0x72),
+        White = AnsiColor.Rgb(0x72, 0xAA, 0xD1),
+        Yellow = AnsiColor.Rgb(0xC9, 0x8B, 0x1A),
+        BrightBlack = AnsiColor.Rgb(0x34, 0x5F, 0x7C),
+        BrightBlue = AnsiColor.Rgb(0x77, 0xB1, 0xFB),
+        BrightCyan = AnsiColor.Rgb(0x24, 0xC6, 0xC6),
+        BrightGreen = AnsiColor.Rgb(0x75, 0xC7, 0x3B),
+        BrightPurple = AnsiColor.Rgb(0xD6, 0x8A, 0xF7),
+        BrightRed = AnsiColor.Rgb(0xFB, 0x85, 0x90),
+        BrightWhite = AnsiColor.Rgb(0xB4, 0xD4, 0xEC),
+        BrightYellow = AnsiColor.Rgb(0xE4, 0x9F, 0x27),
     };
 }
