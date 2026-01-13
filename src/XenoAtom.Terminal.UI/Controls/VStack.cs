@@ -30,15 +30,7 @@ public sealed partial class VStack : Panel
             return SizeHints.Fixed(Size.Zero);
         }
 
-        int totalSpacing;
-        try
-        {
-            totalSpacing = checked(spacing * Math.Max(0, childCount - 1));
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Overflow while computing total spacing for VStack.", ex);
-        }
+        var totalSpacing = spacing * Math.Max(0, childCount - 1);
         var childConstraints = new LayoutConstraints(constraints.MinWidth, constraints.MaxWidth, 0, constraints.MaxHeight);
 
         var minW = 0;
@@ -69,18 +61,8 @@ public sealed partial class VStack : Panel
                 maxW = Math.Max(maxW, hints.Max.Width);
             }
 
-            try
-            {
-                checked
-                {
-                    minH += hints.Min.Height;
-                    natH += hints.Natural.Height;
-                }
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Overflow while summing child heights in VStack.Measure.", ex);
-            }
+            minH += hints.Min.Height;
+            natH += hints.Natural.Height;
 
             if (LayoutConstants.IsInfinite(hints.Max.Height))
             {
@@ -88,28 +70,11 @@ public sealed partial class VStack : Panel
             }
             else if (maxH != LayoutConstants.Infinite)
             {
-                try
-                {
-                    maxH = checked(maxH + hints.Max.Height);
-                }
-                catch (OverflowException ex)
-                {
-                    throw new LayoutException("Overflow while summing child Max.Height in VStack.Measure.", ex);
-                }
+                maxH += hints.Max.Height;
             }
 
-            try
-            {
-                checked
-                {
-                    growY += hints.FlexGrowY;
-                    shrinkY += hints.FlexShrinkY;
-                }
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Overflow while summing child flex values in VStack.Measure.", ex);
-            }
+            growY += hints.FlexGrowY;
+            shrinkY += hints.FlexShrinkY;
         }
 
         var maxSize = new Size(
@@ -137,15 +102,7 @@ public sealed partial class VStack : Panel
             return;
         }
 
-        int totalSpacing;
-        try
-        {
-            totalSpacing = checked(spacing * Math.Max(0, childCount - 1));
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Overflow while computing total spacing for VStack.Arrange.", ex);
-        }
+        var totalSpacing = spacing * Math.Max(0, childCount - 1);
         var available = Math.Max(0, finalRect.Height - totalSpacing);
 
         var mins = new int[childCount];

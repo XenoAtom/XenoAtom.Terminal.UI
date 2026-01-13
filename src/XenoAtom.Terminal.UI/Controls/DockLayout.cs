@@ -60,19 +60,8 @@ public sealed partial class DockLayout : Visual
             ? LayoutConstants.Infinite
             : Math.Max(topHints.Max.Width, Math.Max(contentHints.Max.Width, bottomHints.Max.Width));
 
-        int minH, natH;
-        try
-        {
-            checked
-            {
-                minH = topHints.Min.Height + contentHints.Min.Height + bottomHints.Min.Height;
-                natH = topHints.Natural.Height + contentHints.Natural.Height + bottomHints.Natural.Height;
-            }
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Overflow while computing DockLayout Min/Natural height.", ex);
-        }
+        var minH = topHints.Min.Height + contentHints.Min.Height + bottomHints.Min.Height;
+        var natH = topHints.Natural.Height + contentHints.Natural.Height + bottomHints.Natural.Height;
 
         int maxHeight;
         if (LayoutConstants.IsInfinite(topHints.Max.Height) || LayoutConstants.IsInfinite(contentHints.Max.Height) || LayoutConstants.IsInfinite(bottomHints.Max.Height))
@@ -81,15 +70,7 @@ public sealed partial class DockLayout : Visual
         }
         else
         {
-            try
-            {
-                maxHeight = checked(topHints.Max.Height + contentHints.Max.Height + bottomHints.Max.Height);
-                maxHeight = LayoutConstants.ClampOrInfinite(maxHeight);
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Overflow while computing DockLayout Max.Height.", ex);
-            }
+            maxHeight = LayoutConstants.ClampOrInfinite(topHints.Max.Height + contentHints.Max.Height + bottomHints.Max.Height);
         }
 
         return SizeHints.Flex(

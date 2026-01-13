@@ -18,64 +18,37 @@ public sealed partial class Border : ContentVisual
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var padding = Padding;
+        var padH = LayoutConstants.ClampFinite(Math.Max(0, padding.Horizontal));
+        var padV = LayoutConstants.ClampFinite(Math.Max(0, padding.Vertical));
 
         var maxW = constraints.MaxWidth == LayoutConstants.Infinite
             ? LayoutConstants.Infinite
-            : Math.Max(0, constraints.MaxWidth - 2 - padding.Horizontal);
+            : Math.Max(0, constraints.MaxWidth - 2 - padH);
         var maxH = constraints.MaxHeight == LayoutConstants.Infinite
             ? LayoutConstants.Infinite
-            : Math.Max(0, constraints.MaxHeight - 2 - padding.Vertical);
+            : Math.Max(0, constraints.MaxHeight - 2 - padV);
 
         var childConstraints = new LayoutConstraints(0, maxW, 0, maxH);
 
         var content = Content;
         var contentHints = content is null ? SizeHints.Fixed(Size.Zero) : content.Measure(childConstraints);
 
-        int addW, addH;
-        try
-        {
-            checked
-            {
-                addW = 2 + padding.Horizontal;
-                addH = 2 + padding.Vertical;
-            }
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Overflow while computing Border padding/border contribution.", ex);
-        }
+        var addW = LayoutConstants.ClampFinite(2 + padH);
+        var addH = LayoutConstants.ClampFinite(2 + padV);
 
-        int minW, minH, natW, natH, maxWidth, maxHeight;
-        try
-        {
-            checked
-            {
-                minW = LayoutConstants.ClampFinite(contentHints.Min.Width + addW);
-                minH = LayoutConstants.ClampFinite(contentHints.Min.Height + addH);
+        var minW = LayoutConstants.ClampFinite(contentHints.Min.Width + addW);
+        var minH = LayoutConstants.ClampFinite(contentHints.Min.Height + addH);
+        var natW = LayoutConstants.ClampFinite(contentHints.Natural.Width + addW);
+        var natH = LayoutConstants.ClampFinite(contentHints.Natural.Height + addH);
 
-                natW = LayoutConstants.ClampFinite(contentHints.Natural.Width + addW);
-                natH = LayoutConstants.ClampFinite(contentHints.Natural.Height + addH);
-            }
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Overflow while computing Border Min/Natural size.", ex);
-        }
-
+        int maxWidth, maxHeight;
         if (LayoutConstants.IsInfinite(contentHints.Max.Width))
         {
             maxWidth = LayoutConstants.Infinite;
         }
         else
         {
-            try
-            {
-                maxWidth = LayoutConstants.ClampOrInfinite(checked(contentHints.Max.Width + addW));
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Overflow while computing Border Max.Width.", ex);
-            }
+            maxWidth = LayoutConstants.ClampOrInfinite(contentHints.Max.Width + addW);
         }
 
         if (LayoutConstants.IsInfinite(contentHints.Max.Height))
@@ -84,14 +57,7 @@ public sealed partial class Border : ContentVisual
         }
         else
         {
-            try
-            {
-                maxHeight = LayoutConstants.ClampOrInfinite(checked(contentHints.Max.Height + addH));
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Overflow while computing Border Max.Height.", ex);
-            }
+            maxHeight = LayoutConstants.ClampOrInfinite(contentHints.Max.Height + addH);
         }
 
         return SizeHints.Flex(
@@ -109,6 +75,8 @@ public sealed partial class Border : ContentVisual
         Bounds = finalRect;
 
         var padding = Padding;
+        var padH = Math.Max(0, padding.Horizontal);
+        var padV = Math.Max(0, padding.Vertical);
 
         var content = Content;
         if (content is not null)
@@ -116,8 +84,8 @@ public sealed partial class Border : ContentVisual
             var inner = new Rectangle(
                 finalRect.X + 1 + padding.Left,
                 finalRect.Y + 1 + padding.Top,
-                Math.Max(0, finalRect.Width - 2 - padding.Horizontal),
-                Math.Max(0, finalRect.Height - 2 - padding.Vertical));
+                Math.Max(0, finalRect.Width - 2 - padH),
+                Math.Max(0, finalRect.Height - 2 - padV));
 
             content.Arrange(inner);
         }

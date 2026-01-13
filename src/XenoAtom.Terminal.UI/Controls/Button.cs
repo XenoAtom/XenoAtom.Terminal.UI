@@ -35,50 +35,30 @@ public partial class Button : ContentVisual
     {
         var style = Get<ButtonStyle>();
         var padding = style.Padding;
+        var padH = LayoutConstants.ClampFinite(Math.Max(0, padding.Horizontal));
+        var padV = LayoutConstants.ClampFinite(Math.Max(0, padding.Vertical));
 
         var borderPad = style.ShowBorder ? 1 : 0;
 
         var innerMaxW = constraints.MaxWidth == LayoutConstants.Infinite
             ? LayoutConstants.Infinite
-            : Math.Max(0, constraints.MaxWidth - padding.Horizontal - (borderPad * 2));
+            : Math.Max(0, constraints.MaxWidth - padH - (borderPad * 2));
         var innerMaxH = constraints.MaxHeight == LayoutConstants.Infinite
             ? LayoutConstants.Infinite
-            : Math.Max(0, constraints.MaxHeight - padding.Vertical - (borderPad * 2));
+            : Math.Max(0, constraints.MaxHeight - padV - (borderPad * 2));
 
         var innerConstraints = new LayoutConstraints(0, innerMaxW, 0, innerMaxH);
 
         var content = Content;
         var contentHints = content is null ? SizeHints.Fixed(Size.Zero) : content.Measure(innerConstraints);
 
-        int addW, addH;
-        try
-        {
-            checked
-            {
-                addW = padding.Horizontal + (borderPad * 2);
-                addH = padding.Vertical + (borderPad * 2);
-            }
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Overflow while computing Button padding/border contribution.", ex);
-        }
+        var addW = LayoutConstants.ClampFinite(padH + (borderPad * 2));
+        var addH = LayoutConstants.ClampFinite(padV + (borderPad * 2));
 
-        int minW, minH, natW, natH;
-        try
-        {
-            checked
-            {
-                minW = LayoutConstants.ClampFinite(contentHints.Min.Width + addW);
-                minH = LayoutConstants.ClampFinite(contentHints.Min.Height + addH);
-                natW = LayoutConstants.ClampFinite(contentHints.Natural.Width + addW);
-                natH = LayoutConstants.ClampFinite(contentHints.Natural.Height + addH);
-            }
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Overflow while computing Button Min/Natural size.", ex);
-        }
+        var minW = LayoutConstants.ClampFinite(contentHints.Min.Width + addW);
+        var minH = LayoutConstants.ClampFinite(contentHints.Min.Height + addH);
+        var natW = LayoutConstants.ClampFinite(contentHints.Natural.Width + addW);
+        var natH = LayoutConstants.ClampFinite(contentHints.Natural.Height + addH);
 
         if (borderPad != 0)
         {
@@ -95,14 +75,7 @@ public partial class Button : ContentVisual
         }
         else
         {
-            try
-            {
-                maxW = LayoutConstants.ClampOrInfinite(checked(contentHints.Max.Width + addW));
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Overflow while computing Button Max.Width.", ex);
-            }
+            maxW = LayoutConstants.ClampOrInfinite(contentHints.Max.Width + addW);
         }
 
         if (LayoutConstants.IsInfinite(contentHints.Max.Height))
@@ -111,14 +84,7 @@ public partial class Button : ContentVisual
         }
         else
         {
-            try
-            {
-                maxH = LayoutConstants.ClampOrInfinite(checked(contentHints.Max.Height + addH));
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Overflow while computing Button Max.Height.", ex);
-            }
+            maxH = LayoutConstants.ClampOrInfinite(contentHints.Max.Height + addH);
         }
 
         return SizeHints.Flex(

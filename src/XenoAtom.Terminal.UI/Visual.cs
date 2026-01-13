@@ -446,32 +446,21 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
     private static SizeHints Inflate(SizeHints hints, Thickness thickness)
     {
-        var horizontal = thickness.Horizontal;
-        var vertical = thickness.Vertical;
+        var horizontal = Math.Max(0, thickness.Horizontal);
+        var vertical = Math.Max(0, thickness.Vertical);
 
-        int minW, minH, natW, natH, maxW, maxH;
-        try
-        {
-            checked
-            {
-                minW = LayoutConstants.ClampFinite(hints.Min.Width + horizontal);
-                minH = LayoutConstants.ClampFinite(hints.Min.Height + vertical);
+        var minW = LayoutConstants.ClampFinite(hints.Min.Width + horizontal);
+        var minH = LayoutConstants.ClampFinite(hints.Min.Height + vertical);
 
-                natW = LayoutConstants.ClampFinite(hints.Natural.Width + horizontal);
-                natH = LayoutConstants.ClampFinite(hints.Natural.Height + vertical);
+        var natW = LayoutConstants.ClampFinite(hints.Natural.Width + horizontal);
+        var natH = LayoutConstants.ClampFinite(hints.Natural.Height + vertical);
 
-                maxW = hints.Max.Width == LayoutConstants.Infinite
-                    ? LayoutConstants.Infinite
-                    : LayoutConstants.ClampFinite(hints.Max.Width + horizontal);
-                maxH = hints.Max.Height == LayoutConstants.Infinite
-                    ? LayoutConstants.Infinite
-                    : LayoutConstants.ClampFinite(hints.Max.Height + vertical);
-            }
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Overflow while inflating SizeHints by margin.", ex);
-        }
+        var maxW = hints.Max.Width == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : LayoutConstants.ClampOrInfinite(hints.Max.Width + horizontal);
+        var maxH = hints.Max.Height == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : LayoutConstants.ClampOrInfinite(hints.Max.Height + vertical);
 
         return hints with
         {

@@ -83,48 +83,32 @@ public sealed partial class Group : Visual
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var padding = Padding;
+        var padLeft = Math.Max(0, padding.Left);
+        var padRight = Math.Max(0, padding.Right);
+        var padTop = Math.Max(0, padding.Top);
+        var padBottom = Math.Max(0, padding.Bottom);
+        var padH = LayoutConstants.ClampFinite(padLeft + padRight);
+        var padV = LayoutConstants.ClampFinite(padTop + padBottom);
 
         var innerMaxW = constraints.MaxWidth == LayoutConstants.Infinite
             ? LayoutConstants.Infinite
-            : Math.Max(0, constraints.MaxWidth - 2 - padding.Horizontal);
+            : Math.Max(0, constraints.MaxWidth - 2 - padH);
         var innerMaxH = constraints.MaxHeight == LayoutConstants.Infinite
             ? LayoutConstants.Infinite
-            : Math.Max(0, constraints.MaxHeight - 2 - padding.Vertical);
+            : Math.Max(0, constraints.MaxHeight - 2 - padV);
 
         var innerConstraints = new LayoutConstraints(0, innerMaxW, 0, innerMaxH);
 
         var content = Content;
         var contentHints = content is null ? SizeHints.Fixed(Size.Zero) : content.Measure(innerConstraints);
 
-        int addW, addH;
-        try
-        {
-            checked
-            {
-                addW = 2 + padding.Horizontal;
-                addH = 2 + padding.Vertical;
-            }
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Overflow while computing Group padding/border contribution.", ex);
-        }
+        var addW = LayoutConstants.ClampFinite(2 + padH);
+        var addH = LayoutConstants.ClampFinite(2 + padV);
 
-        int minW, minH, natW, natH;
-        try
-        {
-            checked
-            {
-                minW = LayoutConstants.ClampFinite(contentHints.Min.Width + addW);
-                minH = LayoutConstants.ClampFinite(contentHints.Min.Height + addH);
-                natW = LayoutConstants.ClampFinite(contentHints.Natural.Width + addW);
-                natH = LayoutConstants.ClampFinite(contentHints.Natural.Height + addH);
-            }
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Overflow while computing Group Min/Natural size.", ex);
-        }
+        var minW = LayoutConstants.ClampFinite(contentHints.Min.Width + addW);
+        var minH = LayoutConstants.ClampFinite(contentHints.Min.Height + addH);
+        var natW = LayoutConstants.ClampFinite(contentHints.Natural.Width + addW);
+        var natH = LayoutConstants.ClampFinite(contentHints.Natural.Height + addH);
 
         var topLeft = TopLeftText;
         var topRight = TopRightText;
@@ -154,14 +138,7 @@ public sealed partial class Group : Visual
         }
         else
         {
-            try
-            {
-                maxW = LayoutConstants.ClampOrInfinite(checked(contentHints.Max.Width + addW));
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Overflow while computing Group Max.Width.", ex);
-            }
+            maxW = LayoutConstants.ClampOrInfinite(contentHints.Max.Width + addW);
         }
 
         if (LayoutConstants.IsInfinite(contentHints.Max.Height))
@@ -170,14 +147,7 @@ public sealed partial class Group : Visual
         }
         else
         {
-            try
-            {
-                maxH = LayoutConstants.ClampOrInfinite(checked(contentHints.Max.Height + addH));
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Overflow while computing Group Max.Height.", ex);
-            }
+            maxH = LayoutConstants.ClampOrInfinite(contentHints.Max.Height + addH);
         }
 
         if (labelRequired > 0 && maxW != LayoutConstants.Infinite)
@@ -208,11 +178,17 @@ public sealed partial class Group : Visual
         }
 
         var padding = Padding;
+        var padLeft = Math.Max(0, padding.Left);
+        var padRight = Math.Max(0, padding.Right);
+        var padTop = Math.Max(0, padding.Top);
+        var padBottom = Math.Max(0, padding.Bottom);
+        var padH = padLeft + padRight;
+        var padV = padTop + padBottom;
         var inner = new Rectangle(
-            finalRect.X + 1 + padding.Left,
-            finalRect.Y + 1 + padding.Top,
-            Math.Max(0, finalRect.Width - 2 - padding.Horizontal),
-            Math.Max(0, finalRect.Height - 2 - padding.Vertical));
+            finalRect.X + 1 + padLeft,
+            finalRect.Y + 1 + padTop,
+            Math.Max(0, finalRect.Width - 2 - padH),
+            Math.Max(0, finalRect.Height - 2 - padV));
 
         content.Arrange(inner);
     }

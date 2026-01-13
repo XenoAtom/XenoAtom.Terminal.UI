@@ -15,22 +15,12 @@ internal static class FlexAllocator
         available = Math.Max(0, available);
 
         var count = result.Length;
-        int sum = 0;
-        try
+        var sum = 0;
+        for (var i = 0; i < count; i++)
         {
-            checked
-            {
-                for (var i = 0; i < count; i++)
-                {
-                    var n = Math.Max(0, natural[i]);
-                    result[i] = n;
-                    sum += n;
-                }
-            }
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Flex allocation overflow while summing natural sizes.", ex);
+            var n = Math.Max(0, natural[i]);
+            result[i] = n;
+            sum += n;
         }
 
         if (sum == available)
@@ -56,19 +46,9 @@ internal static class FlexAllocator
 
         var count = result.Length;
         var totalGrow = 0;
-        try
+        for (var i = 0; i < count; i++)
         {
-            checked
-            {
-                for (var i = 0; i < count; i++)
-                {
-                    totalGrow += Math.Max(0, grow[i]);
-                }
-            }
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Flex allocation overflow while summing grow weights.", ex);
+            totalGrow += Math.Max(0, grow[i]);
         }
 
         if (totalGrow <= 0)
@@ -86,14 +66,7 @@ internal static class FlexAllocator
             }
 
             int share;
-            try
-            {
-                share = checked((extra * g) / totalGrow);
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Flex allocation overflow while computing grow share.", ex);
-            }
+            share = (extra * g) / totalGrow;
 
             var current = result[i];
             var maxI = max[i];
@@ -105,15 +78,8 @@ internal static class FlexAllocator
                 continue;
             }
 
-            try
-            {
-                result[i] = LayoutConstants.ClampFinite(checked(current + add));
-                distributed = checked(distributed + add);
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Flex allocation overflow while applying grow share.", ex);
-            }
+            result[i] = LayoutConstants.ClampFinite(current + add);
+            distributed += add;
         }
 
         var remaining = extra - distributed;
@@ -140,14 +106,7 @@ internal static class FlexAllocator
                     continue;
                 }
 
-                try
-                {
-                    result[i] = LayoutConstants.ClampFinite(checked(current + 1));
-                }
-                catch (OverflowException ex)
-                {
-                    throw new LayoutException("Flex allocation overflow while distributing grow remainder.", ex);
-                }
+                result[i] = LayoutConstants.ClampFinite(current + 1);
 
                 remaining--;
                 progressed = true;
@@ -169,19 +128,9 @@ internal static class FlexAllocator
 
         var count = result.Length;
         var totalShrink = 0;
-        try
+        for (var i = 0; i < count; i++)
         {
-            checked
-            {
-                for (var i = 0; i < count; i++)
-                {
-                    totalShrink += Math.Max(0, shrink[i]);
-                }
-            }
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Flex allocation overflow while summing shrink weights.", ex);
+            totalShrink += Math.Max(0, shrink[i]);
         }
 
         if (totalShrink <= 0)
@@ -199,14 +148,7 @@ internal static class FlexAllocator
             }
 
             int share;
-            try
-            {
-                share = checked((deficit * s) / totalShrink);
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Flex allocation overflow while computing shrink share.", ex);
-            }
+            share = (deficit * s) / totalShrink;
 
             var current = result[i];
             var minI = Math.Max(0, min[i]);
@@ -218,14 +160,7 @@ internal static class FlexAllocator
             }
 
             result[i] = current - sub;
-            try
-            {
-                removed = checked(removed + sub);
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Flex allocation overflow while applying shrink share.", ex);
-            }
+            removed += sub;
         }
 
         var remaining = deficit - removed;

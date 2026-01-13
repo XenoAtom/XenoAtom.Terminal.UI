@@ -155,19 +155,8 @@ public sealed partial class Collapsible : Visual
             ? LayoutConstants.Infinite
             : Math.Max(headerHints.Max.Width, contentHints.Max.Width);
 
-        int minH, natH;
-        try
-        {
-            checked
-            {
-                minH = headerHints.Min.Height + spacing + contentHints.Min.Height;
-                natH = headerHints.Natural.Height + spacing + contentHints.Natural.Height;
-            }
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Overflow while computing Collapsible heights.", ex);
-        }
+        var minH = headerHints.Min.Height + spacing + contentHints.Min.Height;
+        var natH = headerHints.Natural.Height + spacing + contentHints.Natural.Height;
 
         int maxH;
         if (LayoutConstants.IsInfinite(headerHints.Max.Height) || LayoutConstants.IsInfinite(contentHints.Max.Height))
@@ -176,14 +165,7 @@ public sealed partial class Collapsible : Visual
         }
         else
         {
-            try
-            {
-                maxH = checked(headerHints.Max.Height + spacing + contentHints.Max.Height);
-            }
-            catch (OverflowException ex)
-            {
-                throw new LayoutException("Overflow while computing Collapsible Max.Height.", ex);
-            }
+            maxH = LayoutConstants.ClampOrInfinite(headerHints.Max.Height + spacing + contentHints.Max.Height);
         }
 
         return SizeHints.Flex(

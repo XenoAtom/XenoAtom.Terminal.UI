@@ -429,21 +429,10 @@ public sealed partial class Table : Visual
         var separators = (showOuterBorder ? 2 : 0) + (showVerticalLines ? Math.Max(0, columns - 1) : 0);
         var pad = Math.Max(0, paddingHorizontal);
 
-        int total;
-        try
+        var total = separators + (columns * pad);
+        for (var c = 0; c < columns; c++)
         {
-            checked
-            {
-                total = separators + (columns * pad);
-                for (var c = 0; c < columns; c++)
-                {
-                    total += Math.Max(0, widths[c]);
-                }
-            }
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Overflow while computing required width for Table.", ex);
+            total += Math.Max(0, widths[c]);
         }
 
         return LayoutConstants.ClampFinite(total);

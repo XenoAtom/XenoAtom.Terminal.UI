@@ -626,7 +626,7 @@ public sealed class InlineInteractiveHost : IDisposable
 
     private void EnsureLastBuffers(int width, int height)
     {
-        var length = checked(width * height);
+        var length = width * height;
         if (_lastScalars is null || _lastCells is null || _lastHyperlinks is null || _lastScalars.Length != length)
         {
             _lastScalars = new int[length];

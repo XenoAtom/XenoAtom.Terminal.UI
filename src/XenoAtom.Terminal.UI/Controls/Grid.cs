@@ -122,7 +122,7 @@ public sealed partial class Grid : Visual
         // Allocate column widths (for measuring width-dependent heights), without changing intrinsic Natural sizes.
         var allocatedColWidths = new int[cols];
         var availableForColumns = innerAvailW == LayoutConstants.Infinite
-            ? SumChecked(colNat, "Grid.Measure: summing column natural widths for unbounded allocation")
+            ? Sum(colNat)
             : innerAvailW;
         FlexAllocator.Allocate(availableForColumns, colMin, colNat, colMax, colGrow, colShrink, allocatedColWidths);
 
@@ -152,28 +152,16 @@ public sealed partial class Grid : Visual
 
         int gridMinW, gridNatW, gridMaxW;
         int gridMinH, gridNatH, gridMaxH;
+        var padH = Math.Max(0, padding.Horizontal);
+        var padV = Math.Max(0, padding.Vertical);
 
-        try
-        {
-            checked
-            {
-                gridMinW = padding.Horizontal + totalColGaps + SumChecked(colMin, "Grid.Measure: summing column min widths");
-                gridNatW = padding.Horizontal + totalColGaps + SumChecked(colNat, "Grid.Measure: summing column natural widths");
-                gridMaxW = HasInfinite(colMax)
-                    ? LayoutConstants.Infinite
-                    : padding.Horizontal + totalColGaps + SumChecked(colMax, "Grid.Measure: summing column max widths");
+        gridMinW = padH + totalColGaps + Sum(colMin);
+        gridNatW = padH + totalColGaps + Sum(colNat);
+        gridMaxW = HasInfinite(colMax) ? LayoutConstants.Infinite : padH + totalColGaps + Sum(colMax);
 
-                gridMinH = padding.Vertical + totalRowGaps + SumChecked(rowMin, "Grid.Measure: summing row min heights");
-                gridNatH = padding.Vertical + totalRowGaps + SumChecked(rowNat, "Grid.Measure: summing row natural heights");
-                gridMaxH = HasInfinite(rowMax)
-                    ? LayoutConstants.Infinite
-                    : padding.Vertical + totalRowGaps + SumChecked(rowMax, "Grid.Measure: summing row max heights");
-            }
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException("Overflow while computing Grid SizeHints from tracks.", ex);
-        }
+        gridMinH = padV + totalRowGaps + Sum(rowMin);
+        gridNatH = padV + totalRowGaps + Sum(rowNat);
+        gridMaxH = HasInfinite(rowMax) ? LayoutConstants.Infinite : padV + totalRowGaps + Sum(rowMax);
 
         var minSize = new Size(LayoutConstants.ClampFinite(gridMinW), LayoutConstants.ClampFinite(gridMinH));
         var naturalSize = new Size(LayoutConstants.ClampFinite(gridNatW), LayoutConstants.ClampFinite(gridNatH));
@@ -181,11 +169,11 @@ public sealed partial class Grid : Visual
             gridMaxW == LayoutConstants.Infinite ? LayoutConstants.Infinite : LayoutConstants.ClampFinite(gridMaxW),
             gridMaxH == LayoutConstants.Infinite ? LayoutConstants.Infinite : LayoutConstants.ClampFinite(gridMaxH));
 
-        var growX = SumChecked(colGrow, "Grid.Measure: summing column grow weights");
-        var growY = SumChecked(rowGrow, "Grid.Measure: summing row grow weights");
+        var growX = Sum(colGrow);
+        var growY = Sum(rowGrow);
 
-        var shrinkX = naturalSize.Width > minSize.Width ? SumChecked(colShrink, "Grid.Measure: summing column shrink weights") : 0;
-        var shrinkY = naturalSize.Height > minSize.Height ? SumChecked(rowShrink, "Grid.Measure: summing row shrink weights") : 0;
+        var shrinkX = naturalSize.Width > minSize.Width ? Sum(colShrink) : 0;
+        var shrinkY = naturalSize.Height > minSize.Height ? Sum(rowShrink) : 0;
 
         return SizeHints.Flex(minSize, naturalSize, maxSize, growX: growX, growY: growY, shrinkX: shrinkX, shrinkY: shrinkY).Normalize();
     }
@@ -554,22 +542,12 @@ public sealed partial class Grid : Visual
         }
     }
 
-    private static int SumChecked(int[] sizes, string context)
+    private static int Sum(int[] sizes)
     {
         var sum = 0;
-        try
+        for (var i = 0; i < sizes.Length; i++)
         {
-            checked
-            {
-                for (var i = 0; i < sizes.Length; i++)
-                {
-                    sum += Math.Max(0, sizes[i]);
-                }
-            }
-        }
-        catch (OverflowException ex)
-        {
-            throw new LayoutException(context, ex);
+            sum += Math.Max(0, sizes[i]);
         }
 
         return sum;
