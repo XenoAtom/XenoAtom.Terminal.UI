@@ -14,7 +14,7 @@ var name = new TextBox();
 var accept = new CheckBox("Accept terms");
 var list = new ListBox()
     .Items(["First", "Second", "Third", "Fourth", "Fifth"])
-    .Height(4);
+    .MinHeight(4).MaxHeight(4);
 var status = new State<string>("ready");
 var progressState = new State<double>(0.0);
 

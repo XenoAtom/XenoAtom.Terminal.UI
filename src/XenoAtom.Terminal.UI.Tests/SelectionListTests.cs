@@ -17,7 +17,7 @@ public sealed class SelectionListTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        var list = new SelectionList { Height = 4 };
+        var list = new SelectionList { MinHeight = 4, MaxHeight = 4 };
         for (var i = 0; i < 6; i++)
         {
             list.Items.Add(new SelectionListItem($"Item {i}"));
@@ -52,7 +52,7 @@ public sealed class SelectionListTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(20, 6));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        var list = new SelectionList { Height = 4 };
+        var list = new SelectionList { MinHeight = 4, MaxHeight = 4 };
         for (var i = 0; i < 10; i++)
         {
             list.Items.Add(new SelectionListItem($"Item {i}"));
@@ -83,4 +83,3 @@ public sealed class SelectionListTests
         Assert.IsFalse(rendered.Contains("Item 0", StringComparison.Ordinal), "After scrolling down, Item 0 should no longer be visible in the viewport.");
     }
 }
-

@@ -31,14 +31,10 @@ public sealed partial class OptionList : Visual
     {
         Items = new VisualList<OptionListItem>(this, "Items");
         Focusable = true;
-        this.Height(8);
     }
 
     [Bindable]
     public partial int SelectedIndex { get; set; }
-
-    [Bindable]
-    public partial int Height { get; set; }
 
     [Bindable]
     public partial bool ActivateOnClick { get; set; }
@@ -68,7 +64,6 @@ public sealed partial class OptionList : Visual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var height = Math.Max(1, Height);
         var style = Get<OptionListStyle>();
         var showBorder = style.ShowBorder;
 
@@ -87,7 +82,7 @@ public sealed partial class OptionList : Visual
         _itemHeight = itemHeight;
 
         var width = prefixWidth + itemWidth;
-        var desiredHeight = height;
+        var desiredHeight = Math.Max(1, Items.Count * itemHeight);
 
         if (showBorder)
         {
@@ -95,17 +90,10 @@ public sealed partial class OptionList : Visual
             desiredHeight += 2;
         }
 
-        var natural = constraints.Clamp(new Size(width, desiredHeight));
-        return new SizeHints
-        {
-            Min = new Size(0, 0),
-            Natural = natural,
-            Max = natural,
-            FlexGrowX = HorizontalAlignment == HorizontalAlignment.Stretch ? 1 : 0,
-            FlexGrowY = VerticalAlignment == VerticalAlignment.Stretch ? 1 : 0,
-            FlexShrinkX = 1,
-            FlexShrinkY = 1,
-        }.Normalize();
+        var min = new Size(showBorder ? 3 : 1, showBorder ? 3 : 1);
+        var natural = new Size(Math.Max(min.Width, width), Math.Max(min.Height, desiredHeight));
+        var max = new Size(LayoutConstants.Infinite, LayoutConstants.Infinite);
+        return SizeHints.Flex(min, natural, max, growX: 1, growY: 1, shrinkX: 1, shrinkY: 1);
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)

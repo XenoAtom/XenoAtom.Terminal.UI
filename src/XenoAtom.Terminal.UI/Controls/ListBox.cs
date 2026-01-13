@@ -24,14 +24,10 @@ public sealed partial class ListBox : Visual
         Focusable = true;
         HorizontalAlignment = HorizontalAlignment.Stretch;
         VerticalAlignment = VerticalAlignment.Stretch;
-        this.Height(6);
     }
 
     [Bindable]
     public partial int SelectedIndex { get; set; }
-
-    [Bindable]
-    public partial int Height { get; set; }
 
     protected override int ChildrenCount => Items.Count;
 
@@ -39,7 +35,6 @@ public sealed partial class ListBox : Visual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var height = Math.Max(1, Height);
         var listBoxStyle = Get<ListBoxStyle>();
         var showBorder = listBoxStyle.ShowBorder;
 
@@ -58,7 +53,7 @@ public sealed partial class ListBox : Visual
 
         // Marker + space.
         var width = itemWidth + 2;
-        var desiredHeight = height;
+        var desiredHeight = Math.Max(1, items.Count);
         if (showBorder)
         {
             width += 2;

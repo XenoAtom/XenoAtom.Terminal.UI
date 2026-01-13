@@ -15,7 +15,6 @@ public sealed class OptionListDemo : ControlsDemoBase
         var selected = new State<int>(0);
 
         var list = new OptionList()
-            .Height(8)
             .ActivateOnClick(true)
             .SelectedIndex(selected);
 
@@ -34,4 +33,3 @@ public sealed class OptionListDemo : ControlsDemoBase
             .Spacing(1);
     }
 }
-

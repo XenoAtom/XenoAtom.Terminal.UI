@@ -17,7 +17,7 @@ public sealed class OptionListTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        var list = new OptionList { Height = 4 };
+        var list = new OptionList { MinHeight = 4, MaxHeight = 4 };
         list.Items.AddRange(
             new OptionListItem("First"),
             new OptionListItem("Second"),
@@ -48,7 +48,7 @@ public sealed class OptionListTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        var list = new OptionList { Height = 4 };
+        var list = new OptionList { MinHeight = 4, MaxHeight = 4 };
         list.Items.AddRange(
             new OptionListItem("First"),
             new OptionListItem("Second"),
@@ -80,7 +80,7 @@ public sealed class OptionListTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        var list = new OptionList { Height = 4 };
+        var list = new OptionList { MinHeight = 4, MaxHeight = 4 };
         list.Items.AddRange(
             new OptionListItem("Build", "Ctrl+B") { Description = "Build the project" },
             new OptionListItem("Run", "F5") { Description = "Run the app" });
@@ -103,4 +103,3 @@ public sealed class OptionListTests
         StringAssert.Contains(rendered, "Run the app");
     }
 }
-

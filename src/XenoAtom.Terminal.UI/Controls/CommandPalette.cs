@@ -20,6 +20,7 @@ public sealed class CommandPalette : Visual
 
     private Popup? _hostPopup;
     private readonly List<CommandPaletteItem> _visibleItems;
+    private int _resultsHeight = 8;
 
     public CommandPalette()
     {
@@ -33,9 +34,10 @@ public sealed class CommandPalette : Visual
             .HorizontalAlignment(HorizontalAlignment.Stretch);
 
         _results = new OptionList()
-            .Height(8)
             .ActivateOnClick(true)
             .HorizontalAlignment(HorizontalAlignment.Stretch);
+        _results.MinHeight = _resultsHeight;
+        _results.MaxHeight = _resultsHeight;
 
         _results.ItemActivated((_, e) => InvokeIndex(e.Index));
 
@@ -61,8 +63,13 @@ public sealed class CommandPalette : Visual
 
     public int ResultsHeight
     {
-        get => _results.Height;
-        set => _results.Height = value;
+        get => _resultsHeight;
+        set
+        {
+            _resultsHeight = Math.Max(1, value);
+            _results.MinHeight = _resultsHeight;
+            _results.MaxHeight = _resultsHeight;
+        }
     }
 
     public void Show()

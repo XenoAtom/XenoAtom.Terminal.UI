@@ -20,7 +20,6 @@ public sealed partial class SelectionList : Visual
     {
         Items = new VisualList<SelectionListItem>(this, "SelectionList.Items");
         Focusable = true;
-        this.Height(6);
     }
 
     public VisualList<SelectionListItem> Items { get; }
@@ -28,16 +27,12 @@ public sealed partial class SelectionList : Visual
     [Bindable]
     public partial int SelectedIndex { get; set; }
 
-    [Bindable]
-    public partial int Height { get; set; }
-
     protected override int ChildrenCount => Items.Count;
 
     protected override Visual GetChild(int index) => Items[index];
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var height = Math.Max(1, Height);
         var style = Get<SelectionListStyle>();
         var showBorder = style.ShowBorder;
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
@@ -55,24 +50,17 @@ public sealed partial class SelectionList : Visual
         }
 
         var width = itemWidth + prefixWidth;
-        var desiredHeight = height;
+        var desiredHeight = Math.Max(1, Items.Count);
         if (showBorder)
         {
             width += 2;
             desiredHeight += 2;
         }
 
-        var natural = constraints.Clamp(new Size(width, desiredHeight));
-        return new SizeHints
-        {
-            Min = new Size(0, 0),
-            Natural = natural,
-            Max = natural,
-            FlexGrowX = HorizontalAlignment == HorizontalAlignment.Stretch ? 1 : 0,
-            FlexGrowY = VerticalAlignment == VerticalAlignment.Stretch ? 1 : 0,
-            FlexShrinkX = 1,
-            FlexShrinkY = 1,
-        }.Normalize();
+        var min = new Size(showBorder ? 3 : 1, showBorder ? 3 : 1);
+        var natural = new Size(Math.Max(min.Width, width), Math.Max(min.Height, desiredHeight));
+        var max = new Size(LayoutConstants.Infinite, LayoutConstants.Infinite);
+        return SizeHints.Flex(min, natural, max, growX: 1, growY: 1, shrinkX: 1, shrinkY: 1);
     }
 
     protected override void ArrangeCore(in Rectangle finalRect)

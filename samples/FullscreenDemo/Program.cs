@@ -23,7 +23,7 @@ select.Items.AddRange(
     new SelectItem("Fourth"));
 
 var selectionList = new SelectionList()
-    .Height(5);
+    .MinHeight(5).MaxHeight(5);
 selectionList.Items.AddRange(
     new SelectionListItem("Arrakis", isChecked: true),
     new SelectionListItem("Caladan"),
@@ -33,7 +33,7 @@ selectionList.Items.AddRange(
     new SelectionListItem("Grumman"),
     new SelectionListItem("Kaitain"));
 
-var optionList = new OptionList().Height(6);
+var optionList = new OptionList().MinHeight(6).MaxHeight(6);
 optionList.Items.AddRange(
     new OptionListItem("Build", "Ctrl+B") { Description = "Build the project" },
     new OptionListItem("Run", "F5") { Description = "Run the app" },

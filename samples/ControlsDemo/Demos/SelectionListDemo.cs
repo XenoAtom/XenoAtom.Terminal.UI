@@ -13,7 +13,7 @@ public sealed class SelectionListDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
-        var list = new SelectionList().Height(8);
+        var list = new SelectionList();
         list.Items.Add(new SelectionListItem("Alpha"));
         list.Items.Add(new SelectionListItem("Beta"));
         list.Items.Add(new SelectionListItem("Gamma"));

@@ -1110,7 +1110,8 @@ public sealed class TerminalAppTests
         var listBox = new ListBox
         {
             SelectedIndex = 0,
-            Height = 3,
+            MinHeight = 3,
+            MaxHeight = 3,
         };
         listBox.Items.AddRange("A", "B", "C");
 
