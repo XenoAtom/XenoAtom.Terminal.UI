@@ -10,7 +10,7 @@ public sealed record ScrollBarStyle : IStyle<ScrollBarStyle>
 
     public static StyleKey<ScrollBarStyle> Key { get; } = new("ScrollBarStyle", Default);
 
-    public int Thickness { get; init; } = 2;
+    public int Thickness { get; init; } = 1;
 
     public int MinThumbLength { get; init; } = 1;
 
