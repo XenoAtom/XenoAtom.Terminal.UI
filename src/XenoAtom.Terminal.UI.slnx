@@ -1,5 +1,5 @@
 <Solution>
-  <Folder Name="/Solution Items/">
+  <Folder Name="/general/">
     <File Path="../.editorconfig" />
     <File Path="../.gitattributes" />
     <File Path="../.github/workflows/ci.yml" />
@@ -11,11 +11,13 @@
     <File Path="dotnet-releaser.toml" />
     <File Path="global.json" />
   </Folder>
+  <Folder Name="/samples/">
+    <Project Path="../samples/ControlsDemo/ControlsDemo.csproj" />
+    <Project Path="../samples/FullscreenDemo/FullscreenDemo.csproj" />
+    <Project Path="../samples/MvpDemo/MvpDemo.csproj" />
+    <Project Path="../samples/Playground/Playground.csproj" Id="45880fed-b308-4d0c-8ee1-cc6e732d9873" />
+  </Folder>
   <Project Path="XenoAtom.Terminal.UI.Tests/XenoAtom.Terminal.UI.Tests.csproj" />
-  <Project Path="../samples/Playground/Playground.csproj" Id="45880fed-b308-4d0c-8ee1-cc6e732d9873" />
   <Project Path="XenoAtom.Terminal.UI.SourceGen/XenoAtom.Terminal.UI.SourceGen.csproj" />
   <Project Path="XenoAtom.Terminal.UI/XenoAtom.Terminal.UI.csproj" />
-  <Project Path="../samples/MvpDemo/MvpDemo.csproj" />
-  <Project Path="../samples/FullscreenDemo/FullscreenDemo.csproj" />
-  <Project Path="../samples/ControlsDemo/ControlsDemo.csproj" />
 </Solution>

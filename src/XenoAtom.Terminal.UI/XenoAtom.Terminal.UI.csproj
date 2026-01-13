@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>net10.0</TargetFramework>
@@ -15,10 +15,10 @@
     <NeutralLanguage>en-US</NeutralLanguage>
     <Authors>Alexandre Mutel</Authors>
     <PackageTags>tag1;tag2;tag3</PackageTags>
-    <PackageReadmeFile>readme.md</PackageReadmeFile>
-    <PackageIcon>XenoAtom.Terminal.UI.png</PackageIcon>
     <PackageProjectUrl>https://github.com/XenoAtom/XenoAtom.Terminal.UI</PackageProjectUrl>
     <PackageLicenseExpression>BSD-2-Clause</PackageLicenseExpression>
+    <PackageReadmeFile>readme.md</PackageReadmeFile>
+    <PackageIcon>XenoAtom.Terminal.UI.png</PackageIcon>
     <!--Add support for sourcelink-->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
