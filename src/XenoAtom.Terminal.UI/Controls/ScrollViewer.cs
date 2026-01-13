@@ -21,6 +21,7 @@ public sealed partial class ScrollViewer : Visual
 
     private int _contentWidth;
     private int _contentHeight;
+    private SizeHints _extentHints;
 
     private bool _showHorizontalBar;
     private bool _showVerticalBar;
@@ -108,11 +109,13 @@ public sealed partial class ScrollViewer : Visual
             var hints = content.Measure(childConstraints);
             _contentWidth = hints.Natural.Width;
             _contentHeight = hints.Natural.Height;
+            _extentHints = hints;
         }
         else
         {
             _contentWidth = 0;
             _contentHeight = 0;
+            _extentHints = SizeHints.Fixed(Size.Zero);
         }
 
         var desiredWidth = constraints.IsWidthBounded ? Math.Min(_contentWidth, constraints.MaxWidth) : _contentWidth;
@@ -151,19 +154,23 @@ public sealed partial class ScrollViewer : Visual
         var viewportWidth = Math.Max(1, finalRect.Width);
         var viewportHeight = Math.Max(1, finalRect.Height);
 
-        var extentWidth = _contentWidth;
-        var extentHeight = _contentHeight;
+        var extentHints = _extentHints;
+        var extentWidth = extentHints.Natural.Width;
+        var extentHeight = extentHints.Natural.Height;
+
+        bool CanShrinkToWidth(int width)
+            => extentHints.FlexShrinkX > 0 && extentHints.Min.Width <= Math.Max(0, width);
         var lastMeasuredViewportWidth = -1;
 
         var showV = extentHeight > viewportHeight;
-        var showH = extentWidth > viewportWidth;
+        var showH = extentWidth > viewportWidth && !CanShrinkToWidth(viewportWidth);
 
         var contentViewportWidth = viewportWidth;
         var contentViewportHeight = viewportHeight;
 
         // Determine which bars to show. If horizontal scrolling isn't needed, re-measure the content
-        // using the final viewport width so wrapping content can report a correct height/extent.
-        for (var pass = 0; pass < 3; pass++)
+        // using the final viewport width so width-dependent layout (e.g. wrapping) can report a correct height.
+        for (var pass = 0; pass < 4; pass++)
         {
             // account for bars and re-evaluate.
             for (var i = 0; i < 2; i++)
@@ -171,7 +178,7 @@ public sealed partial class ScrollViewer : Visual
                 var w = viewportWidth - (showV ? thickness : 0);
                 var hViewport = viewportHeight - (showH ? thickness : 0);
                 showV = extentHeight > Math.Max(1, hViewport);
-                showH = extentWidth > Math.Max(1, w);
+                showH = extentWidth > Math.Max(1, w) && !CanShrinkToWidth(Math.Max(1, w));
             }
 
             contentViewportWidth = Math.Max(1, viewportWidth - (showV ? thickness : 0));
@@ -204,7 +211,7 @@ public sealed partial class ScrollViewer : Visual
 
             // Continue loop to re-evaluate vertical bar visibility (height may have changed due to wrapping).
             showV = extentHeight > viewportHeight;
-            showH = extentWidth > viewportWidth;
+            showH = extentWidth > viewportWidth && !CanShrinkToWidth(viewportWidth);
         }
 
         _showVerticalBar = showV;
@@ -408,7 +415,7 @@ public sealed partial class ScrollViewer : Visual
             _horizontalOffset = horizontalOffset;
             _verticalOffset = verticalOffset;
 
-            MarkArrangeDirty();
+            MarkArrangeDirtyLocal();
         }
 
         protected override void ArrangeCore(in Rectangle finalRect)

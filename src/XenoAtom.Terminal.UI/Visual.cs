@@ -823,6 +823,13 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         Parent?.MarkArrangeDirtyFromChild();
     }
 
+    internal void MarkArrangeDirtyLocal()
+    {
+        _arrangeDirty = true;
+        _hasLastArrange = false;
+        _arrangeDeps = null;
+    }
+
     internal void MarkRenderDirty()
     {
         // Rendering is currently full-frame, so we only request a redraw from the app.
