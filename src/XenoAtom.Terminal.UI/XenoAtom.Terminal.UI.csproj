@@ -35,10 +35,12 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+
+    <PackageReference Include="XenoAtom.Terminal" />
+    <!--<ProjectReference Include="..\..\..\XenoAtom.Terminal\src\XenoAtom.Terminal\XenoAtom.Terminal.csproj" />-->
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\XenoAtom.Terminal.UI.SourceGen\XenoAtom.Terminal.UI.SourceGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-    <ProjectReference Include="..\..\..\XenoAtom.Terminal\src\XenoAtom.Terminal\XenoAtom.Terminal.csproj" />
   </ItemGroup>
 </Project>
