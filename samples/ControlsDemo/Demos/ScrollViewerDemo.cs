@@ -12,17 +12,17 @@ public sealed class ScrollViewerDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
-        _ = context;
-
         var content = new VStack().Spacing(0);
-        for (var i = 0; i < 40; i++)
+        for (var i = 0; i < 100; i++)
         {
             content.Add($"Log line {i}");
         }
 
         return new VStack(
                 DemoUi.Hint("Use the mouse wheel to scroll. Scrollbars appear when content overflows."),
-                new ScrollViewer { Content = content }.MinHeight(10).MaxHeight(10))
+                new Group("ScrollViewer")
+                    .Content(new ScrollViewer { Content = content }.MinHeight(10).MaxHeight(10))
+                )
             .Spacing(1);
     }
 }
