@@ -36,34 +36,4 @@ public sealed class RuleLayoutTests
         Assert.AreEqual(8, rule.EndLabel.Bounds.X);
         Assert.AreEqual(1, rule.EndLabel.Bounds.Width);
     }
-
-    [TestMethod]
-    public void Vertical_Defaults_To_One_Column()
-    {
-        var rule = new Rule { Orientation = Orientation.Vertical };
-        rule.Measure(new Size(10, 5));
-        Assert.AreEqual(1, rule.DesiredSize.Width);
-        Assert.AreEqual(1, rule.DesiredSize.Height);
-    }
-
-    [TestMethod]
-    public void Vertical_Expands_When_Label_Requires_More_Columns()
-    {
-        var rule = new Rule
-        {
-            Orientation = Orientation.Vertical,
-            VerticalAlignment = VerticalAlignment.Stretch,
-            CenterLabel = "ABC",
-        };
-
-        rule.Measure(new Size(10, 5));
-        Assert.AreEqual(5, rule.DesiredSize.Width);
-        Assert.AreEqual(1, rule.DesiredSize.Height);
-
-        rule.Arrange(new Rectangle(0, 0, 5, 5));
-        Assert.IsNotNull(rule.CenterLabel);
-        Assert.AreEqual(1, rule.CenterLabel.Bounds.X);
-        Assert.AreEqual(3, rule.CenterLabel.Bounds.Width);
-        Assert.AreEqual(2, rule.CenterLabel.Bounds.Y);
-    }
 }

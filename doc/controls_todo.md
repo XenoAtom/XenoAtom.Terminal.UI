@@ -136,7 +136,7 @@ Beyond the following specs, if there are improvements or features that would mak
 
 ## Rule (or Divider)
 
-* **Orientation**: horizontal + vertical
+* **Orientation**: horizontal
 * **Variants**: Provide as many styles as possible (from ascii to modern unicode)
 * **Layout**: can have labels at start/center/end. Use similar API than the Group control. (Always use Visual for labels, not strings)
 * **Theming**: glyph set and style from theme

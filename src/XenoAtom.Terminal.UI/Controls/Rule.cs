@@ -18,9 +18,6 @@ public sealed partial class Rule : Visual
     }
 
     [Bindable]
-    public partial Orientation Orientation { get; set; }
-
-    [Bindable]
     public partial Visual? StartLabel { get; set; }
 
     [Bindable]
@@ -68,14 +65,6 @@ public sealed partial class Rule : Visual
         center?.Measure(labelConstraints);
         end?.Measure(labelConstraints);
 
-        if (Orientation == Orientation.Vertical)
-        {
-            var maxLabel = Math.Max(GetLabelWidth(start), Math.Max(GetLabelWidth(center), GetLabelWidth(end)));
-            var requiredWidth = Math.Max(1, maxLabel == 0 ? 1 : (maxLabel + (pad * 2)));
-            var w = LayoutConstants.ClampFinite(requiredWidth);
-            return SizeHints.FlexY(min: new Size(w, 1), natural: new Size(w, 1), growY: 1, shrinkY: 1);
-        }
-
         var startTotal = GetTotalWidth(start, LayoutConstants.Infinite, pad);
         var endTotal = GetTotalWidth(end, LayoutConstants.Infinite, pad);
         var centerTotal = GetTotalWidth(center, LayoutConstants.Infinite, pad);
@@ -98,12 +87,6 @@ public sealed partial class Rule : Visual
 
         var style = Get<RuleStyle>();
         var pad = Math.Max(0, style.LabelPadding);
-
-        if (Orientation == Orientation.Vertical)
-        {
-            ArrangeVertical(finalRect, pad);
-            return;
-        }
 
         ArrangeHorizontal(finalRect, pad);
     }
@@ -146,38 +129,6 @@ public sealed partial class Rule : Visual
         }
     }
 
-    private void ArrangeVertical(Rectangle rect, int pad)
-    {
-        var height = rect.Height;
-        var width = rect.Width;
-        if (height <= 0 || width <= 0)
-        {
-            return;
-        }
-
-        ArrangeVerticalLabel(StartLabel, rect, pad, rect.Y);
-        ArrangeVerticalLabel(CenterLabel, rect, pad, rect.Y + (height - 1) / 2);
-        ArrangeVerticalLabel(EndLabel, rect, pad, rect.Y + height - 1);
-    }
-
-    private static void ArrangeVerticalLabel(Visual? label, Rectangle rect, int pad, int y)
-    {
-        if (label is null)
-        {
-            return;
-        }
-
-        var total = Math.Min(rect.Width, label.DesiredSize.Width + (pad * 2));
-        if (total <= 0)
-        {
-            label.Arrange(new Rectangle(rect.X, y, 0, 1));
-            return;
-        }
-
-        var startX = rect.X + Math.Max(0, (rect.Width - total) / 2);
-        label.Arrange(new Rectangle(startX + pad, y, Math.Max(0, total - (pad * 2)), 1));
-    }
-
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
@@ -191,20 +142,6 @@ public sealed partial class Rule : Visual
         var pad = Math.Max(0, style.LabelPadding);
         var glyphs = style.ResolveGlyphs(theme);
         var lineStyle = style.ResolveLineStyle(theme);
-
-        if (Orientation == Orientation.Vertical)
-        {
-            var x = rect.X + (rect.Width / 2);
-            for (var y = rect.Y; y < rect.Y + rect.Height; y++)
-            {
-                buffer.SetCell(x, y, glyphs.Vertical, lineStyle);
-            }
-
-            RenderVerticalLabelGap(buffer, rect, StartLabel, pad, rect.Y);
-            RenderVerticalLabelGap(buffer, rect, CenterLabel, pad, rect.Y + (rect.Height - 1) / 2);
-            RenderVerticalLabelGap(buffer, rect, EndLabel, pad, rect.Y + rect.Height - 1);
-            return;
-        }
 
         var y0 = rect.Y;
         for (var x = rect.X; x < rect.X + rect.Width; x++)
@@ -231,23 +168,6 @@ public sealed partial class Rule : Visual
         for (var x = startX; x < endX; x++)
         {
             buffer.SetCell(x, rect.Y, new Rune(' '), style);
-        }
-    }
-
-    private static void RenderVerticalLabelGap(CellBuffer buffer, Rectangle rect, Visual? label, int pad, int y)
-    {
-        if (label is null || label.Bounds.Width <= 0)
-        {
-            return;
-        }
-
-        var startX = Math.Max(rect.X, label.Bounds.X - pad);
-        var endX = Math.Min(rect.X + rect.Width, label.Bounds.X + label.Bounds.Width + pad);
-        var style = CellStyle.None | TextStyle.Bold;
-
-        for (var x = startX; x < endX; x++)
-        {
-            buffer.SetCell(x, y, new Rune(' '), style);
         }
     }
 
