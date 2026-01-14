@@ -4,6 +4,7 @@
 
 using System.Collections;
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace XenoAtom.Terminal.UI.Collections;
 
@@ -56,7 +57,10 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
         }
         set
         {
-            ArgumentNullException.ThrowIfNull(value);
+            if (typeof(T).IsClass)
+            {
+                ArgumentNullException.ThrowIfNull(value);
+            }
 
             var old = _items[index];
             if (ReferenceEquals(old, value))
@@ -75,10 +79,33 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
 
     public void Add(T item)
     {
-        ArgumentNullException.ThrowIfNull(item);
+        if (typeof(T).IsClass)
+        {
+            ArgumentNullException.ThrowIfNull(item);
+        }
+
         TrackMutation();
         _onAdding?.Invoke(item);
         _items.Add(item);
+        BindingManager.Current.NotifyValueChanged(_owner, _accessor);
+    }
+
+    public void AddRange(IEnumerable<T> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        TrackMutation();
+        foreach(var item in items)
+        {
+            if (typeof(T).IsClass)
+            {
+                ArgumentNullException.ThrowIfNull(item);
+            }
+
+            _onAdding?.Invoke(item);
+            _items.Add(item);
+        }
+
         BindingManager.Current.NotifyValueChanged(_owner, _accessor);
     }
 
@@ -94,7 +121,11 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
         for (var i = 0; i < items.Length; i++)
         {
             var item = items[i];
-            ArgumentNullException.ThrowIfNull(item);
+            if (typeof(T).IsClass)
+            {
+                ArgumentNullException.ThrowIfNull(item);
+            }
+
             _onAdding?.Invoke(item);
             _items.Add(item);
         }
@@ -152,7 +183,11 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
 
     public void Insert(int index, T item)
     {
-        ArgumentNullException.ThrowIfNull(item);
+        if (typeof(T).IsClass)
+        {
+            ArgumentNullException.ThrowIfNull(item);
+        }
+
         TrackMutation();
         _onAdding?.Invoke(item);
         _items.Insert(index, item);

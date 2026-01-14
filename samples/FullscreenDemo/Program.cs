@@ -376,10 +376,10 @@ var rightColumn = new VStack(
                                 .Padding(Thickness.Zero)
                                 .HorizontalAlignment(HorizontalAlignment.Stretch)
                                 .Content(new Sparkline()
-                                    .Values(() =>
+                                    .Update(x =>
                                     {
+                                        x.Values(chartValues);
                                         _ = chartTickState.Value;
-                                        return chartValues;
                                     })
                                     .HorizontalAlignment(HorizontalAlignment.Stretch)
                                     .Style(SparklineStyle.Default with { Glyphs = SparklineGlyphs.Blocks8 })),
@@ -402,10 +402,10 @@ var rightColumn = new VStack(
                                 .Padding(Thickness.Zero)
                                 .HorizontalAlignment(HorizontalAlignment.Stretch)
                                 .Content(new LineChart()
-                                    .Values(() =>
+                                    .Update(x =>
                                     {
+                                        x.Values(chartValues);
                                         _ = chartTickState.Value;
-                                        return chartValues;
                                     })
                                     .MinHeight(4)
                                     .MaxHeight(4)

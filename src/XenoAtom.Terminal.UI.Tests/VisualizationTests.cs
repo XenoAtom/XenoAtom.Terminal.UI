@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using Newtonsoft.Json.Linq;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI.Controls;
@@ -17,12 +18,7 @@ public sealed class VisualizationTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(10, 2));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        session.Instance.Write(new Sparkline
-        {
-            Values = new[] { 0.0, 0.5, 1.0 },
-            Minimum = 0.0,
-            Maximum = 1.0,
-        });
+        session.Instance.Write(new Sparkline().Minimum(0.0).Maximum(1.0).Values([0.0, 0.5, 1.0]));
 
         var screen = new AnsiTestScreen(10, 2);
         screen.Apply(backend.GetOutText());
@@ -63,12 +59,11 @@ public sealed class VisualizationTests
 
         session.Instance.Write(new LineChart
         {
-            Values = new[] { 0.0, 1.0, 0.0 },
             Minimum = 0.0,
             Maximum = 1.0,
             MinHeight = 4,
             MaxHeight = 4,
-        });
+        }.Values([0.0, 1.0, 0.0]));
 
         var screen = new AnsiTestScreen(10, 6);
         screen.Apply(backend.GetOutText());

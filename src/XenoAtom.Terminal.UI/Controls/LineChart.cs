@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
@@ -11,8 +12,12 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class LineChart : Visual
 {
-    [Bindable]
-    public partial IReadOnlyList<double>? Values { get; set; }
+    public LineChart()
+    {
+        Values = new BindableList<double>(this, "LineCharValues");
+    }
+
+    public BindableList<double> Values { get; }
 
     [Bindable]
     public partial double? Minimum { get; set; }

@@ -14,11 +14,9 @@ public sealed class LineChartDemo : ControlsDemoBase
     {
         _ = context;
 
-        var values = new double[] { 1, 4, 2, 5, 3, 6, 4, 7 };
-
         return new VStack(
                 DemoUi.Hint("LineChart renders a trend line."),
-                new LineChart { Values = values }.MinHeight(4).MaxHeight(4))
+                new LineChart().Values([1, 4, 2, 5, 3, 6, 4, 7]).MinHeight(4).MaxHeight(4))
             .Spacing(1);
     }
 }

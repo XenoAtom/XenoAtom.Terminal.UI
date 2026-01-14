@@ -2,15 +2,18 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Terminal.UI.Collections;
+
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed class MenuItem
+public sealed partial class MenuItem
 {
     public MenuItem(Visual header, Action? action = null)
     {
-        Header = header ?? throw new ArgumentNullException(nameof(header));
+        Header = header;
         Action = action;
-        Items = new List<MenuItem>();
+        Items = new BindableList<MenuItem>(this, "MenuItemList");
+        IsEnabled = true;
     }
 
     public static MenuItem CreateSeparator()
@@ -20,17 +23,22 @@ public sealed class MenuItem
             IsEnabled = false,
         };
 
-    public bool IsSeparator { get; init; }
+    public BindableList<MenuItem> Items { get; }
 
-    public bool IsEnabled { get; init; } = true;
+    public Visual Header { get; }
 
-    public Visual Header { get; init; }
+    [Bindable]
+    public partial bool IsSeparator { get; set; }
 
-    public Visual? Icon { get; init; }
+    [Bindable]
+    public partial bool IsEnabled { get; set; }
 
-    public Visual? Shortcut { get; init; }
+    [Bindable]
+    public partial Visual? Icon { get; set; }
 
-    public Action? Action { get; init; }
+    [Bindable]
+    public partial Visual? Shortcut { get; set; }
 
-    public List<MenuItem> Items { get; }
+    [Bindable]
+    public partial Action? Action { get; set; }
 }
