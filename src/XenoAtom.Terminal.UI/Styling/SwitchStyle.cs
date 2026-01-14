@@ -27,6 +27,10 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
 
     public CellStyle? TrackOn { get; init; }
     public CellStyle? TrackOff { get; init; }
+    public CellStyle? TrackOnActive { get; init; }
+    public CellStyle? TrackOnInactive { get; init; }
+    public CellStyle? TrackOffActive { get; init; }
+    public CellStyle? TrackOffInactive { get; init; }
     public CellStyle? TrackHovered { get; init; }
     public CellStyle? TrackPressed { get; init; }
     public CellStyle? TrackFocused { get; init; }
@@ -37,6 +41,9 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
     public CellStyle? ThumbDisabled { get; init; }
 
     public CellStyle ResolveTrack(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, bool isOn)
+        => ResolveTrackPart(theme, enabled, focused, hovered, pressed, isOn, activePart: true);
+
+    public CellStyle ResolveTrackPart(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, bool isOn, bool activePart)
     {
         ArgumentNullException.ThrowIfNull(theme);
 
@@ -46,7 +53,7 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
             return disabled | TextStyle.Dim;
         }
 
-        var style = isOn ? (TrackOn ?? ResolveDefaultTrackOn(theme)) : (TrackOff ?? ResolveDefaultTrackOff(theme));
+        var style = ResolveBaseTrack(theme, isOn, activePart);
 
         if (pressed)
         {
@@ -64,6 +71,26 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
         }
 
         return style;
+    }
+
+    private CellStyle ResolveBaseTrack(Theme theme, bool isOn, bool activePart)
+    {
+        if (isOn)
+        {
+            if (activePart)
+            {
+                return TrackOnActive ?? TrackOn ?? ResolveDefaultTrackOnActive(theme);
+            }
+
+            return TrackOnInactive ?? TrackOn ?? ResolveDefaultTrackOnInactive(theme);
+        }
+
+        if (activePart)
+        {
+            return TrackOffActive ?? TrackOff ?? ResolveDefaultTrackOffActive(theme);
+        }
+
+        return TrackOffInactive ?? TrackOff ?? ResolveDefaultTrackOffInactive(theme);
     }
 
     public CellStyle ResolveThumb(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, bool isOn)
@@ -104,6 +131,23 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
         return style;
     }
 
+    private static CellStyle ResolveDefaultTrackOnActive(Theme theme)
+        => ResolveDefaultTrackOn(theme);
+
+    private static CellStyle ResolveDefaultTrackOnInactive(Theme theme)
+    {
+        var style = CellStyle.None;
+        if (theme.Foreground is { } fg)
+        {
+            style = style.WithForeground(fg);
+        }
+        if (theme.SurfaceAlt is { } bg)
+        {
+            style = style.WithBackground(bg);
+        }
+        return style;
+    }
+
     private static CellStyle ResolveDefaultTrackOff(Theme theme)
     {
         var style = CellStyle.None;
@@ -117,6 +161,23 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
         }
         return style;
     }
+
+    private static CellStyle ResolveDefaultTrackOffActive(Theme theme)
+    {
+        var style = CellStyle.None;
+        if (theme.Foreground is { } fg)
+        {
+            style = style.WithForeground(fg);
+        }
+        if (theme.Surface is { } bg)
+        {
+            style = style.WithBackground(bg);
+        }
+        return style;
+    }
+
+    private static CellStyle ResolveDefaultTrackOffInactive(Theme theme)
+        => ResolveDefaultTrackOff(theme);
 
     private static CellStyle ResolveDefaultTrackHovered(Theme theme, CellStyle baseStyle)
     {

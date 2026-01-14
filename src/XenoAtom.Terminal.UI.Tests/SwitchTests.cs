@@ -6,6 +6,10 @@ using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI.Hosting;
+using System.Reflection;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -46,5 +50,43 @@ public sealed class SwitchTests
 
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));
         Assert.AreEqual(true, sw.IsOn);
+    }
+
+    [TestMethod]
+    public void Switch_Renders_Segmented_Track_With_Different_Left_And_Right_Backgrounds()
+    {
+        var theme = Theme.FromScheme(XenoAtom.Terminal.UI.Styling.AnsiColorScheme.RootLoopsDark);
+
+        var sw = new Switch();
+        sw.Set(Theme.Key, theme);
+
+        sw.Measure(new Size(10, 1));
+        sw.Arrange(new Rectangle(0, 0, 10, 1));
+
+        var buffer = new CellBuffer(10, 1);
+        buffer.Clear();
+        typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(sw, new object[] { buffer });
+
+        var cells = (CellStyle[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
+
+        Assert.IsTrue(cells[0].TryGetBackground(out var leftOffBg));
+        Assert.IsTrue(cells[3].TryGetBackground(out var rightOffBg));
+        Assert.AreNotEqual(leftOffBg, rightOffBg);
+
+        // Thumb cell should keep the underlying track background.
+        Assert.IsTrue(cells[1].TryGetBackground(out var thumbOffBg));
+        Assert.AreEqual(leftOffBg, thumbOffBg);
+
+        sw.IsOn = true;
+        buffer.Clear();
+        typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(sw, new object[] { buffer });
+        cells = (CellStyle[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
+
+        Assert.IsTrue(cells[0].TryGetBackground(out var leftOnBg));
+        Assert.IsTrue(cells[3].TryGetBackground(out var rightOnBg));
+        Assert.AreNotEqual(leftOnBg, rightOnBg);
+
+        Assert.IsTrue(cells[2].TryGetBackground(out var thumbOnBg));
+        Assert.AreEqual(rightOnBg, thumbOnBg);
     }
 }

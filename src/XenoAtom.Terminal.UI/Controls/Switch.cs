@@ -75,41 +75,52 @@ public sealed partial class Switch : ContentVisual
         var theme = GetTheme();
         var focused = ReferenceEquals(App?.FocusedElement, this);
 
-        var trackStyle = style.ResolveTrack(theme, IsEnabled, focused, IsHovered, _pressed, IsOn);
         var thumbStyle = style.ResolveThumb(theme, IsEnabled, focused, IsHovered, _pressed, IsOn);
 
         var x = rect.X;
         var y = rect.Y + Math.Max(0, (rect.Height - 1) / 2);
         var trackCells = Math.Min(TrackWidth, rect.Width);
 
-        // Track background.
-        for (var i = 0; i < trackCells; i++)
-        {
-            buffer.SetCell(x + i, y, new Rune(' '), trackStyle);
-        }
-
-        if (trackCells >= 1)
-        {
-            buffer.SetCell(x, y, style.TrackLeft, trackStyle);
-        }
-        if (trackCells >= 2)
-        {
-            buffer.SetCell(x + trackCells - 1, y, style.TrackRight, trackStyle);
-        }
-
+        var thumbIndex = 0;
         if (trackCells >= 4)
         {
-            var thumbX = IsOn ? x + 2 : x + 1;
-            if (thumbX >= x && thumbX < x + trackCells - 1)
-            {
-                buffer.SetCell(thumbX, y, style.ThumbGlyph, thumbStyle);
-            }
+            thumbIndex = IsOn ? 2 : 1;
         }
         else if (trackCells >= 2)
         {
-            // Narrow fallback.
-            var thumbX = x + Math.Min(1, trackCells - 2);
-            buffer.SetCell(thumbX, y, style.ThumbGlyph, thumbStyle);
+            thumbIndex = Math.Min(1, trackCells - 2);
+        }
+
+        var thumbTrackStyle = CellStyle.None;
+
+        // Track background (segmented).
+        for (var i = 0; i < trackCells; i++)
+        {
+            var activePart = IsOn ? i >= thumbIndex : i <= thumbIndex;
+            var trackStyle = style.ResolveTrackPart(theme, IsEnabled, focused, IsHovered, _pressed, IsOn, activePart);
+
+            var glyph = new Rune(' ');
+            if (i == 0)
+            {
+                glyph = style.TrackLeft;
+            }
+            else if (i == trackCells - 1)
+            {
+                glyph = style.TrackRight;
+            }
+
+            buffer.SetCell(x + i, y, glyph, trackStyle);
+
+            if (i == thumbIndex)
+            {
+                thumbTrackStyle = trackStyle;
+            }
+        }
+
+        if ((uint)thumbIndex < (uint)trackCells)
+        {
+            var mergedThumb = thumbStyle.MergeUnspecified(thumbTrackStyle);
+            buffer.SetCell(x + thumbIndex, y, style.ThumbGlyph, mergedThumb);
         }
     }
 
