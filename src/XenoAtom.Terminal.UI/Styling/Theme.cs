@@ -6,6 +6,13 @@ using XenoAtom.Ansi;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
+public enum ThemeSchemeBrightness
+{
+    Auto,
+    Dark,
+    Light,
+}
+
 public sealed class Theme : IStyle<Theme>
 {
     public static Theme Default { get; } = FromScheme(AnsiColorScheme.RootLoopsDark);
@@ -16,26 +23,48 @@ public sealed class Theme : IStyle<Theme>
 
     public static StyleKey<Theme> Key { get; } = new("Theme", Default);
 
-    public static Theme FromScheme(AnsiColorScheme scheme)
+    public static Theme FromScheme(AnsiColorScheme scheme, ThemeSchemeBrightness brightness = ThemeSchemeBrightness.Auto)
     {
         ArgumentNullException.ThrowIfNull(scheme);
+
+        var isLight = brightness switch
+        {
+            ThemeSchemeBrightness.Light => true,
+            ThemeSchemeBrightness.Dark => false,
+            _ => DetectLightScheme(scheme),
+        };
+
+        AnsiColor? surface = scheme.Black;
+        AnsiColor? surfaceAlt = scheme.BrightBlack;
+        AnsiColor? disabled = scheme.BrightBlack;
+        AnsiColor? muted = scheme.White;
+
+        if (isLight && TryGetRgb(scheme.Background, out _) && TryGetRgb(scheme.Foreground, out _))
+        {
+            // For light schemes, derive neutrals close to the background so the overall UI keeps a "light" feel.
+            // This avoids using palette entries like Black/BrightBlack as large surfaces, which can be too saturated.
+            surface = Blend(scheme.Background!.Value, scheme.Foreground!.Value, t: 0.04f);
+            surfaceAlt = Blend(scheme.Background!.Value, scheme.Foreground!.Value, t: 0.08f);
+            disabled = Blend(scheme.Background!.Value, scheme.Foreground!.Value, t: 0.35f);
+            muted = Blend(scheme.Foreground!.Value, scheme.Background!.Value, t: 0.55f);
+        }
 
         return new Theme
         {
             Foreground = scheme.Foreground,
             Background = scheme.Background,
-            Surface = scheme.Black,
-            SurfaceAlt = scheme.BrightBlack,
+            Surface = surface,
+            SurfaceAlt = surfaceAlt,
             Border = scheme.CursorColor,
             FocusBorder = scheme.BrightWhite,
             Accent = scheme.Purple,
             Selection = scheme.SelectionBackground,
-            Disabled = scheme.BrightBlack,
+            Disabled = disabled,
             Primary = scheme.Blue,
             Success = scheme.Green,
             Warning = scheme.Yellow,
             Error = scheme.Red,
-            Muted = scheme.White,
+            Muted = muted,
             Lines = LineGlyphs.Single,
             ScrollBars = ScrollBarGlyphs.Default,
         };
@@ -141,5 +170,66 @@ public sealed class Theme : IStyle<Theme>
         }
         style |= TextStyle.Bold;
         return style;
+    }
+
+    private static bool DetectLightScheme(AnsiColorScheme scheme)
+    {
+        if (scheme.Background is not { } bg || scheme.Foreground is not { } fg)
+        {
+            return false;
+        }
+
+        if (!TryGetRelativeLuminance(bg, out var bgLum) || !TryGetRelativeLuminance(fg, out var fgLum))
+        {
+            return false;
+        }
+
+        // We consider it a light scheme when the background is substantially lighter than the foreground.
+        return bgLum > fgLum && bgLum >= 0.55f;
+    }
+
+    private static bool TryGetRgb(AnsiColor? color, out (byte r, byte g, byte b) rgb)
+    {
+        if (color is not { } c || c.Kind != AnsiColorKind.Rgb)
+        {
+            rgb = default;
+            return false;
+        }
+
+        rgb = (c.R, c.G, c.B);
+        return true;
+    }
+
+    private static bool TryGetRelativeLuminance(AnsiColor color, out float luma)
+    {
+        if (color.Kind != AnsiColorKind.Rgb)
+        {
+            luma = 0;
+            return false;
+        }
+
+        // Relative luminance using linearized sRGB components.
+        // https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
+        static float ToLinear(byte channel)
+        {
+            var v = channel / 255f;
+            return v <= 0.04045f ? v / 12.92f : MathF.Pow((v + 0.055f) / 1.055f, 2.4f);
+        }
+
+        var r = ToLinear(color.R);
+        var g = ToLinear(color.G);
+        var b = ToLinear(color.B);
+        luma = (0.2126f * r) + (0.7152f * g) + (0.0722f * b);
+        return true;
+    }
+
+    private static AnsiColor Blend(AnsiColor a, AnsiColor b, float t)
+    {
+        // Caller ensures both colors are RGB.
+        t = Math.Clamp(t, 0f, 1f);
+        var r = (byte)Math.Clamp((int)MathF.Round(a.R + ((b.R - a.R) * t)), 0, 255);
+        var g = (byte)Math.Clamp((int)MathF.Round(a.G + ((b.G - a.G) * t)), 0, 255);
+        var bl = (byte)Math.Clamp((int)MathF.Round(a.B + ((b.B - a.B) * t)), 0, 255);
+        return AnsiColor.Rgb(r, g, bl);
     }
 }
