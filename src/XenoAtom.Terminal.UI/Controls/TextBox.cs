@@ -12,7 +12,7 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class TextBox : Visual, ICursorProvider
+public partial class TextBox : Visual, ICursorProvider
 {
     private int _caretIndex;
     private int _scrollCellOffset;
@@ -48,11 +48,19 @@ public sealed partial class TextBox : Visual, ICursorProvider
 
     private bool HasSelection => _selectionAnchor >= 0 && _selectionEnd >= 0 && _selectionAnchor != _selectionEnd;
 
+    protected virtual TextBoxStyle GetTextBoxStyle() => Get<TextBoxStyle>();
+
+    protected virtual void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, CellStyle cellStyle, bool isPlaceholder)
+    {
+        _ = isPlaceholder;
+        buffer.WriteText(x, y, text, cellStyle);
+    }
+
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var width = Math.Max(10, Math.Min(availableSize.Width, 24));
-        var height = Get<TextBoxStyle>().ShowBorder ? 3 : 1;
+        var height = GetTextBoxStyle().ShowBorder ? 3 : 1;
         return SizeHints.Fixed(new Size(width, Math.Min(availableSize.Height, height)));
     }
 
@@ -71,7 +79,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
 
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var textBoxStyle = Get<TextBoxStyle>();
+        var textBoxStyle = GetTextBoxStyle();
         var borderStyle = textBoxStyle.BorderStyle(theme, isFocused);
         var selectionStyle = textBoxStyle.SelectionStyle(theme);
         var backgroundStyle = textBoxStyle.BackgroundStyle(theme);
@@ -191,11 +199,11 @@ public sealed partial class TextBox : Visual, ICursorProvider
                     }
                 }
 
-                buffer.WriteText(contentXAligned, textRowY, placeholder, placeholderStyle);
+                WriteTextSegment(buffer, contentXAligned, textRowY, placeholder, placeholderStyle, isPlaceholder: true);
             }
             else
             {
-                buffer.WriteText(contentXAligned, textRowY, text.AsSpan(startIndex, endIndex - startIndex), backgroundStyle);
+                WriteTextSegment(buffer, contentXAligned, textRowY, text.AsSpan(startIndex, endIndex - startIndex), backgroundStyle, isPlaceholder: false);
             }
         }
         else
@@ -206,19 +214,19 @@ public sealed partial class TextBox : Visual, ICursorProvider
 
             if (visSelStart > startIndex)
             {
-                buffer.WriteText(contentXAligned, textRowY, text.AsSpan(startIndex, visSelStart - startIndex), backgroundStyle);
+                WriteTextSegment(buffer, contentXAligned, textRowY, text.AsSpan(startIndex, visSelStart - startIndex), backgroundStyle, isPlaceholder: false);
             }
 
             if (visSelEnd > visSelStart)
             {
                 var selStartCell = TerminalTextUtility.GetWidth(text.AsSpan(startIndex, visSelStart - startIndex));
-                buffer.WriteText(contentXAligned + selStartCell, textRowY, text.AsSpan(visSelStart, visSelEnd - visSelStart), selectionStyle);
+                WriteTextSegment(buffer, contentXAligned + selStartCell, textRowY, text.AsSpan(visSelStart, visSelEnd - visSelStart), selectionStyle, isPlaceholder: false);
             }
 
             if (endIndex > visSelEnd)
             {
                 var selEndCell = TerminalTextUtility.GetWidth(text.AsSpan(startIndex, visSelEnd - startIndex));
-                buffer.WriteText(contentXAligned + selEndCell, textRowY, text.AsSpan(visSelEnd, endIndex - visSelEnd), backgroundStyle);
+                WriteTextSegment(buffer, contentXAligned + selEndCell, textRowY, text.AsSpan(visSelEnd, endIndex - visSelEnd), backgroundStyle, isPlaceholder: false);
             }
         }
     }
@@ -433,7 +441,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
             return;
         }
 
-        var style = Get<TextBoxStyle>();
+        var style = GetTextBoxStyle();
         var padding = style.Padding;
 
         var showBorder = style.ShowBorder;
@@ -710,7 +718,7 @@ public sealed partial class TextBox : Visual, ICursorProvider
             return false;
         }
 
-        var style = Get<TextBoxStyle>();
+        var style = GetTextBoxStyle();
         var padding = style.Padding;
         var showBorder = style.ShowBorder;
 
