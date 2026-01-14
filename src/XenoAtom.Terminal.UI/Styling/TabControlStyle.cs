@@ -19,16 +19,21 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     public CellStyle? StripStyle { get; init; }
     public CellStyle? TabStyle { get; init; }
     public CellStyle? TabHoveredStyle { get; init; }
+    public CellStyle? TabPressedStyle { get; init; }
     public CellStyle? TabSelectedStyle { get; init; }
     public CellStyle? TabDisabledStyle { get; init; }
 
-    public CellStyle ResolveStripStyle(Theme theme) => StripStyle ?? theme.ForegroundTextStyle();
+    public CellStyle ResolveStripStyle(Theme theme) => StripStyle ?? theme.BaseTextStyle();
 
-    public CellStyle ResolveTabStyle(Theme theme, bool enabled, bool selected, bool hovered)
+    public CellStyle ResolveTabStyle(Theme theme, bool enabled, bool focused, bool selected, bool hovered, bool pressed)
     {
+        ArgumentNullException.ThrowIfNull(theme);
+
+        var normal = TabStyle ?? theme.SurfaceStyle();
+
         if (!enabled)
         {
-            var disabled = theme.ForegroundTextStyle() | TextStyle.Dim;
+            var disabled = normal | TextStyle.Dim;
             if (theme.Disabled is { } c)
             {
                 disabled = disabled.WithForeground(c);
@@ -36,16 +41,66 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
             return TabDisabledStyle ?? disabled;
         }
 
+        if (pressed)
+        {
+            return TabPressedStyle ?? ResolveDefaultPressed(theme, normal);
+        }
+
         if (selected)
         {
-            return TabSelectedStyle ?? (theme.BorderStyle(focused: true) | TextStyle.Bold);
+            var resolved = TabSelectedStyle ?? ResolveDefaultSelected(theme, normal);
+            if (focused)
+            {
+                resolved = ResolveDefaultFocused(theme, resolved);
+            }
+            return resolved;
         }
 
         if (hovered)
         {
-            return TabHoveredStyle ?? (theme.BorderStyle(focused: true) | TextStyle.Bold);
+            return TabHoveredStyle ?? ResolveDefaultHovered(theme, normal);
         }
 
-        return TabStyle ?? theme.ForegroundTextStyle();
+        return normal;
+    }
+
+    private static CellStyle ResolveDefaultHovered(Theme theme, CellStyle normal)
+    {
+        if (theme.SurfaceAlt is { } hoverBg)
+        {
+            normal = normal.WithBackground(hoverBg);
+        }
+
+        return normal | TextStyle.Bold;
+    }
+
+    private static CellStyle ResolveDefaultPressed(Theme theme, CellStyle normal)
+    {
+        if (theme.Selection is { } selectionBg)
+        {
+            normal = normal.WithBackground(selectionBg);
+        }
+
+        return normal | TextStyle.Bold;
+    }
+
+    private static CellStyle ResolveDefaultSelected(Theme theme, CellStyle normal)
+    {
+        var style = normal | TextStyle.Bold;
+        if (theme.Accent is { } accent)
+        {
+            style = style.WithForeground(accent);
+        }
+        return style;
+    }
+
+    private static CellStyle ResolveDefaultFocused(Theme theme, CellStyle style)
+    {
+        if (theme.FocusBorder is { } focus)
+        {
+            style = style.WithForeground(focus);
+        }
+
+        return style | TextStyle.Underline;
     }
 }

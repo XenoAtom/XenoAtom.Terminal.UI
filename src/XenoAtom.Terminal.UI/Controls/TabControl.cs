@@ -16,6 +16,8 @@ public sealed partial class TabControl : Visual
     private readonly List<TabPage> _tabs = new();
     private readonly List<TabHitRange> _hitRanges = new();
     private int _hoveredIndex = -1;
+    private int _pressedIndex = -1;
+    private bool _pressedInside;
     private int _headerHeight = 1;
 
     public TabControl()
@@ -237,6 +239,7 @@ public sealed partial class TabControl : Visual
         var theme = GetTheme();
         var style = Get<TabControlStyle>();
         var showBorder = style.ShowBorder;
+        var focused = ReferenceEquals(App?.FocusedElement, this);
 
         var headerHeight = Math.Min(Math.Max(1, _headerHeight), rect.Height);
         var stripStyle = style.ResolveStripStyle(theme);
@@ -261,7 +264,8 @@ public sealed partial class TabControl : Visual
             var tab = _tabs[range.Index];
             var selected = range.Index == SelectedIndex;
             var hovered = range.Index == _hoveredIndex;
-            var tabStyle = style.ResolveTabStyle(theme, tab.Content.IsEnabled, selected, hovered);
+            var pressed = range.Index == _pressedIndex && _pressedInside;
+            var tabStyle = style.ResolveTabStyle(theme, tab.Content.IsEnabled, focused, selected, hovered, pressed);
 
             var xStart = rect.X + range.Start;
             var xEnd = rect.X + range.End;
@@ -336,11 +340,13 @@ public sealed partial class TabControl : Visual
         if (localY < 0 || localY >= _headerHeight)
         {
             UpdateHoveredIndex(-1);
+            UpdatePressedInside(false);
             return;
         }
 
         var index = HitTestTabIndex(localX);
         UpdateHoveredIndex(index);
+        UpdatePressedInside(index >= 0 && index == _pressedIndex);
     }
 
     protected override void OnPointerPressed(PointerEventArgs e)
@@ -359,6 +365,40 @@ public sealed partial class TabControl : Visual
 
         var index = HitTestTabIndex(localX);
         if (index >= 0)
+        {
+            _pressedIndex = index;
+            _pressedInside = true;
+            UpdateHoveredIndex(index);
+            Invalidate();
+            e.Handled = true;
+        }
+    }
+
+    protected override void OnPointerReleased(PointerEventArgs e)
+    {
+        if (e.Button != TerminalMouseButton.Left)
+        {
+            return;
+        }
+
+        if (_pressedIndex < 0)
+        {
+            return;
+        }
+
+        var localX = e.UiX - Bounds.X;
+        var localY = e.UiY - Bounds.Y;
+
+        var overHeader = localY >= 0 && localY < _headerHeight;
+        var index = overHeader ? HitTestTabIndex(localX) : -1;
+        var activate = _pressedInside && index == _pressedIndex;
+
+        _pressedIndex = -1;
+        _pressedInside = false;
+        UpdateHoveredIndex(index);
+        Invalidate();
+
+        if (activate)
         {
             SelectedIndex = index;
             e.Handled = true;
@@ -387,6 +427,17 @@ public sealed partial class TabControl : Visual
         }
 
         _hoveredIndex = index;
+        Invalidate();
+    }
+
+    private void UpdatePressedInside(bool value)
+    {
+        if (_pressedInside == value)
+        {
+            return;
+        }
+
+        _pressedInside = value;
         Invalidate();
     }
 
