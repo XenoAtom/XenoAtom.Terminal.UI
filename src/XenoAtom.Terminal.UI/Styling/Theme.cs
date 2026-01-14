@@ -8,7 +8,9 @@ namespace XenoAtom.Terminal.UI.Styling;
 
 public sealed class Theme : IStyle<Theme>
 {
-    public static Theme Default { get; } = FromScheme(AnsiColorScheme.RootLoops);
+    public static Theme Default { get; } = FromScheme(AnsiColorScheme.RootLoopsDark);
+
+    public static Theme DefaultLight { get; } = FromScheme(AnsiColorScheme.RootLoopsLight);
 
     public static Theme Terminal { get; } = FromScheme(AnsiColorScheme.Terminal);
 

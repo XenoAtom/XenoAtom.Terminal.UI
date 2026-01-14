@@ -78,28 +78,55 @@ public sealed record AnsiColorScheme
         BrightWhite = AnsiColor.Basic16(15),
     };
 
-    public static AnsiColorScheme RootLoops { get; } = new AnsiColorScheme
+    // https://rootloops.sh/?sugar=7&colors=9&sogginess=4&flavor=1&milk=0.94&fruit=8
+    public static AnsiColorScheme RootLoopsDark { get; } = new AnsiColorScheme
     {
-        Name = "Root Loops",
-        CursorColor = AnsiColor.Rgb(0x72, 0xAA, 0xD1),
-        SelectionBackground = AnsiColor.Rgb(0x72, 0xAA, 0xD1),
-        Background = AnsiColor.Rgb(0x0C, 0x1E, 0x2A),
-        Foreground = AnsiColor.Rgb(0xC8, 0xE0, 0xF1),
-        Black = AnsiColor.Rgb(0x1A, 0x36, 0x48),
+        Name = "Root Loops (Dark)",
+        CursorColor = AnsiColor.Rgb(0x7D, 0xA9, 0xC9),
+        SelectionBackground = AnsiColor.Rgb(0x7D, 0xA9, 0xC9),
+        Background = AnsiColor.Rgb(0x0F, 0x1D, 0x27),
+        Foreground = AnsiColor.Rgb(0xCD, 0xE0, 0xEE),
+        Black = AnsiColor.Rgb(0x1F, 0x35, 0x44),
         Blue = AnsiColor.Rgb(0x50, 0x9A, 0xF6),
         Cyan = AnsiColor.Rgb(0x1F, 0xAE, 0xAE),
         Green = AnsiColor.Rgb(0x67, 0xAF, 0x34),
         Purple = AnsiColor.Rgb(0xCA, 0x64, 0xF3),
         Red = AnsiColor.Rgb(0xF7, 0x5B, 0x72),
-        White = AnsiColor.Rgb(0x72, 0xAA, 0xD1),
+        White = AnsiColor.Rgb(0x7D, 0xA9, 0xC9),
         Yellow = AnsiColor.Rgb(0xC9, 0x8B, 0x1A),
-        BrightBlack = AnsiColor.Rgb(0x34, 0x5F, 0x7C),
+        BrightBlack = AnsiColor.Rgb(0x3B, 0x5E, 0x76),
         BrightBlue = AnsiColor.Rgb(0x77, 0xB1, 0xFB),
         BrightCyan = AnsiColor.Rgb(0x24, 0xC6, 0xC6),
         BrightGreen = AnsiColor.Rgb(0x75, 0xC7, 0x3B),
         BrightPurple = AnsiColor.Rgb(0xD6, 0x8A, 0xF7),
         BrightRed = AnsiColor.Rgb(0xFB, 0x85, 0x90),
-        BrightWhite = AnsiColor.Rgb(0xB4, 0xD4, 0xEC),
+        BrightWhite = AnsiColor.Rgb(0xBA, 0xD4, 0xE8),
+        BrightYellow = AnsiColor.Rgb(0xE4, 0x9F, 0x27),
+    };
+
+    // https://rootloops.sh/?sugar=7&colors=9&sogginess=4&flavor=1&milk=3&fruit=8
+    public static AnsiColorScheme RootLoopsLight { get; } = new AnsiColorScheme
+    {
+        Name = "Root Loops (Light)",
+        CursorColor = AnsiColor.Rgb(0x36, 0x56, 0x6C),
+        SelectionBackground = AnsiColor.Rgb(0x36, 0x56, 0x6C),
+        Background = AnsiColor.Rgb(0xEE, 0xF5, 0xF9),
+        Foreground = AnsiColor.Rgb(0x02, 0x06, 0x0B),
+        Black = AnsiColor.Rgb(0xD5, 0xE5, 0xF1),
+        Blue = AnsiColor.Rgb(0x50, 0x9A, 0xF6),
+        Cyan = AnsiColor.Rgb(0x1F, 0xAE, 0xAE),
+        Green = AnsiColor.Rgb(0x67, 0xAF, 0x34),
+        Purple = AnsiColor.Rgb(0xCA, 0x64, 0xF3),
+        Red = AnsiColor.Rgb(0xF7, 0x5B, 0x72),
+        White = AnsiColor.Rgb(0x36, 0x56, 0x6C),
+        Yellow = AnsiColor.Rgb(0xC9, 0x8B, 0x1A),
+        BrightBlack = AnsiColor.Rgb(0x87, 0xB1, 0xD0),
+        BrightBlue = AnsiColor.Rgb(0x77, 0xB1, 0xFB),
+        BrightCyan = AnsiColor.Rgb(0x24, 0xC6, 0xC6),
+        BrightGreen = AnsiColor.Rgb(0x75, 0xC7, 0x3B),
+        BrightPurple = AnsiColor.Rgb(0xD6, 0x8A, 0xF7),
+        BrightRed = AnsiColor.Rgb(0xFB, 0x85, 0x90),
+        BrightWhite = AnsiColor.Rgb(0x14, 0x25, 0x30),
         BrightYellow = AnsiColor.Rgb(0xE4, 0x9F, 0x27),
     };
 }

@@ -20,7 +20,7 @@ public sealed class TabControlRenderingTests
             new TabPage("One", new TextBlock("A")),
             new TabPage("Two", new TextBlock("B")));
 
-        var theme = Theme.FromScheme(AnsiColorScheme.RootLoops);
+        var theme = Theme.FromScheme(AnsiColorScheme.RootLoopsDark);
         tabControl.Set(Theme.Key, theme);
 
         tabControl.Measure(new Size(40, 6));
