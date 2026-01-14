@@ -413,6 +413,44 @@ public sealed class TerminalAppTests
     }
 
     [TestMethod]
+    public async Task TabControl_Switches_Content_On_Mouse_Click()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(30, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var tabs = new TabControl(
+            new TabPage("Tab1", new TextBlock("ContentTab1")),
+            new TabPage("Tab2", new TextBlock("ContentTab2")));
+
+        var app = new TerminalApp(tabs, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunInBackgroundAsync();
+
+        await Task.Delay(50);
+
+        {
+            var screen = new AnsiTestScreen(30, 10);
+            screen.Apply(backend.GetOutText());
+            var rendered = screen.GetText();
+            StringAssert.Contains(rendered, "ContentTab1");
+        }
+
+        // Click on the second tab header (x is approximate; header is at y=0).
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 12, Y = 0 });
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 12, Y = 0 });
+
+        await WaitUntilUi(app, () => tabs.SelectedIndex == 1);
+        await Task.Delay(50);
+
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var finalScreen = new AnsiTestScreen(30, 10);
+        finalScreen.Apply(backend.GetOutText());
+        var finalRendered = finalScreen.GetText();
+        StringAssert.Contains(finalRendered, "ContentTab2");
+    }
+
+    [TestMethod]
     public async Task RoutedEventArgs_Sets_Source_And_OriginalSource()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(20, 10));

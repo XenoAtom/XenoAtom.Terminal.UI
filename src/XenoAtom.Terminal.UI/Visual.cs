@@ -336,6 +336,8 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             return MeasureHints;
         }
 
+        var previousDesiredWithoutMargin = _desiredSizeWithoutMargin;
+
         using var session = BindingManager.Current.StartTracking();
         var margin = Margin;
         var innerConstraints = ApplyMeasureConstraints(Deflate(constraints, margin));
@@ -351,6 +353,11 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
         MeasureHints = inflatedHints;
         DesiredSize = inflatedHints.Natural;
+
+        if (!previousDesiredWithoutMargin.Equals(_desiredSizeWithoutMargin))
+        {
+            MarkArrangeDirtyLocal();
+        }
 
         if (UnionDependencies(ref _measureDeps, session.Dependencies) && App is not null)
         {

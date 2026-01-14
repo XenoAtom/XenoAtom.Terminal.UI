@@ -48,6 +48,7 @@ public sealed partial class TabControl : Visual
     {
         _ = value;
         UpdateTabVisibility();
+        Invalidate();
     }
 
     public IReadOnlyList<TabPage> Tabs => _tabs;
