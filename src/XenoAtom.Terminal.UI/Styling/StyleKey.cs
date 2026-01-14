@@ -10,13 +10,13 @@ public sealed class StyleKey<T>
     {
         ArgumentNullException.ThrowIfNull(name);
         Name = string.Intern(name);
-        DependencyAccessor = new EnvironmentBindingAccessor(string.Intern("$env$" + Name));
+        BindingAccessor = new EnvironmentBindingAccessor(string.Intern("$env$" + Name));
         DefaultValue = defaultValue;
     }
 
     public string Name { get; }
 
-    internal BindingAccessor DependencyAccessor { get; }
+    internal BindingAccessor BindingAccessor { get; }
 
     public T DefaultValue { get; }
 

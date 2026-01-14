@@ -198,8 +198,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         ArgumentNullException.ThrowIfNull(key);
         StyleEnvironment ??= new Dictionary<object, object?>();
         StyleEnvironment[key] = value;
-        // We need to re-evaluate styles down the tree.
-        MarkDirtyUpAndDown();
+        BindingManager.Current.NotifyValueChanged(this, key.BindingAccessor);
     }
 
     public T Get<T>() where T : IStyle<T> => Get(T.Key);
@@ -209,14 +208,19 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(key);
 
+        Visual? root = null;
+
         for (var v = this; v is not null; v = v.Parent)
         {
+            root = v;
             if (v.StyleEnvironment is not null && v.StyleEnvironment.TryGetValue(key, out var boxed))
             {
+                BindingManager.Current.RegisterRead(v, key.BindingAccessor);
                 return boxed is T typed ? typed : key.DefaultValue;
             }
         }
 
+        BindingManager.Current.RegisterRead(root ?? this, key.BindingAccessor);
         return key.DefaultValue;
     }
 
@@ -773,19 +777,18 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     {
         _dynamicUpdatesDirty = true;
         _dynamicUpdateDeps = null;
-        MarkDirty();
+        MarkMeasureDirty();
     }
 
-    internal void MarkDirtyUpAndDown()
+    internal void MarkMeasureDirtyUpAndDown()
     {
-        MarkDirty();
+        MarkMeasureDirty();
         MarkDirtyDown();
     }
 
     internal void MarkDirtyDown()
     {
         MarkMeasureDirtyLocal();
-        MarkArrangeDirtyLocal();
         for (var i = 0; i < ChildrenCount; i++)
         {
             var child = GetChild(i);
@@ -798,6 +801,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         _measureDirty = true;
         _hasLastMeasure = false;
         _measureDeps = null;
+        MarkArrangeDirtyLocal();
     }
 
     internal void MarkMeasureDirty()
@@ -825,21 +829,8 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             return;
         }
 
-
         MarkArrangeDirtyLocal();
         Parent?.MarkArrangeDirty();
-    }
-
-    internal void MarkDirty()
-    {
-        if (_measureDirty && _arrangeDirty)
-        {
-            return;
-        }
-
-        MarkMeasureDirtyLocal();
-        MarkArrangeDirtyLocal();
-        Parent?.MarkDirty();
     }
     
     internal void MarkRenderDirty()
