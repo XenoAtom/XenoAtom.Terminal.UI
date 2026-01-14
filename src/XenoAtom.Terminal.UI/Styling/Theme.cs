@@ -38,6 +38,8 @@ public sealed class Theme : IStyle<Theme>
         AnsiColor? surfaceAlt = scheme.BrightBlack;
         AnsiColor? disabled = scheme.BrightBlack;
         AnsiColor? muted = scheme.White;
+        AnsiColor? border = scheme.CursorColor;
+        AnsiColor? focusBorder = scheme.BrightWhite;
 
         if (isLight && TryGetRgb(scheme.Background, out _) && TryGetRgb(scheme.Foreground, out _))
         {
@@ -47,6 +49,12 @@ public sealed class Theme : IStyle<Theme>
             surfaceAlt = Blend(scheme.Background!.Value, scheme.Foreground!.Value, t: 0.08f);
             disabled = Blend(scheme.Background!.Value, scheme.Foreground!.Value, t: 0.35f);
             muted = Blend(scheme.Foreground!.Value, scheme.Background!.Value, t: 0.55f);
+            border = Blend(scheme.Background!.Value, scheme.Foreground!.Value, t: 0.15f);
+            focusBorder = scheme.CursorColor;
+        }
+        else if (isLight)
+        {
+            focusBorder = scheme.CursorColor;
         }
 
         return new Theme
@@ -55,8 +63,8 @@ public sealed class Theme : IStyle<Theme>
             Background = scheme.Background,
             Surface = surface,
             SurfaceAlt = surfaceAlt,
-            Border = scheme.CursorColor,
-            FocusBorder = scheme.BrightWhite,
+            Border = border,
+            FocusBorder = focusBorder,
             Accent = scheme.Purple,
             Selection = scheme.SelectionBackground,
             Disabled = disabled,
