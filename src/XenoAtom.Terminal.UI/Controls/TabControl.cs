@@ -52,12 +52,6 @@ public sealed partial class TabControl : Visual
 
     public IReadOnlyList<TabPage> Tabs => _tabs;
 
-    public void AddTab(string header, Visual content)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(header);
-        AddTab(new TextBlock(header), content);
-    }
-
     public void AddTab(Visual header, Visual content)
     {
         ArgumentNullException.ThrowIfNull(header);
