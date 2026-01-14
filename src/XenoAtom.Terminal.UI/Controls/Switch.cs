@@ -14,8 +14,6 @@ namespace XenoAtom.Terminal.UI.Controls;
 public sealed partial class Switch : ContentVisual
 {
     private const int TrackWidth = 4;
-
-    private bool _pressed;
     private bool _oldValueForEvent;
 
     public Switch()
@@ -30,6 +28,9 @@ public sealed partial class Switch : ContentVisual
 
     [Bindable]
     public partial bool IsOn { get; set; }
+
+    [Bindable]
+    public partial bool IsPressed { get; private set; }
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
@@ -75,7 +76,7 @@ public sealed partial class Switch : ContentVisual
         var theme = GetTheme();
         var focused = ReferenceEquals(App?.FocusedElement, this);
 
-        var thumbStyle = style.ResolveThumb(theme, IsEnabled, focused, IsHovered, _pressed, IsOn);
+        var thumbStyle = style.ResolveThumb(theme, IsEnabled, focused, IsHovered, IsPressed, IsOn);
 
         var x = rect.X;
         var y = rect.Y + Math.Max(0, (rect.Height - 1) / 2);
@@ -97,7 +98,7 @@ public sealed partial class Switch : ContentVisual
         for (var i = 0; i < trackCells; i++)
         {
             var activePart = IsOn ? i >= thumbIndex : i <= thumbIndex;
-            var trackStyle = style.ResolveTrackPart(theme, IsEnabled, focused, IsHovered, _pressed, IsOn, activePart);
+            var trackStyle = style.ResolveTrackPart(theme, IsEnabled, focused, IsHovered, IsPressed, IsOn, activePart);
 
             var glyph = new Rune(' ');
             if (i == 0)
@@ -156,20 +157,20 @@ public sealed partial class Switch : ContentVisual
             return;
         }
 
-        _pressed = true;
+        IsPressed = true;
         e.Handled = true;
         Invalidate();
     }
 
     protected override void OnPointerReleased(PointerEventArgs e)
     {
-        if (e.Button != TerminalMouseButton.Left)
+        if (!IsEnabled || e.Button != TerminalMouseButton.Left)
         {
             return;
         }
 
-        var wasPressed = _pressed;
-        _pressed = false;
+        var wasPressed = IsPressed;
+        IsPressed = false;
 
         if (wasPressed && IsEnabled && Bounds.Contains(e.UiX, e.UiY))
         {
@@ -180,10 +181,7 @@ public sealed partial class Switch : ContentVisual
         Invalidate();
     }
 
-    partial void OnIsOnChanging(ref bool value)
-    {
-        _oldValueForEvent = _isOn;
-    }
+    partial void OnIsOnChanging(ref bool value) => _oldValueForEvent = _isOn;
 
     partial void OnIsOnChanged(bool value)
     {

@@ -94,6 +94,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
         string GetAccessorModifier,
         string SetAccessorModifier,
         string SetAccessorKeyword,
+        bool SetPrivateOrInternal,
         string BackingFieldName,
         string AccessorClassName)
     {
@@ -143,6 +144,8 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 }
             }
 
+            bool privateOrInternalSet = propertySymbol.SetMethod is not null && (propertySymbol.SetMethod.DeclaredAccessibility == Accessibility.Private || propertySymbol.SetMethod.DeclaredAccessibility == Accessibility.Internal);
+
             if (propertySymbol.IsStatic)
             {
                 diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.BindablePropertyMustBePartialDeclaration, propertySyntax.Identifier.GetLocation(), propertySymbol.Name));
@@ -186,6 +189,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 GetAccessorModifier: getAccessorModifier,
                 SetAccessorModifier: setAccessorModifier,
                 SetAccessorKeyword: setAccessorKeyword,
+                SetPrivateOrInternal: privateOrInternalSet,
                 BackingFieldName: backingFieldName,
                 AccessorClassName: accessorClassName), diagnostics.ToImmutable());
         }
@@ -410,6 +414,11 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 var propName = p.PropertyName;
                 var argName = ToLowerCamel(propName);
                 var argType = p.PropertyTypeFullyQualified;
+
+                if (p.SetPrivateOrInternal)
+                {
+                    continue;
+                }
 
                 sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                 if (canUseGeneric)

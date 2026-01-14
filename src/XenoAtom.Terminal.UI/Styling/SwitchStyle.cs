@@ -60,7 +60,7 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
             return TrackPressed ?? ResolveDefaultTrackPressed(theme, style);
         }
 
-        if (hovered)
+        if (hovered && !activePart)
         {
             style = TrackHovered ?? ResolveDefaultTrackHovered(theme, style);
         }
