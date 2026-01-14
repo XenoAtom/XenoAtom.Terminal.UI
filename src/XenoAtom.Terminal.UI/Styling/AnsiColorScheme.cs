@@ -9,7 +9,7 @@ namespace XenoAtom.Terminal.UI.Styling;
 /// <summary>
 /// A 16-color ANSI scheme (8 normal + 8 bright) with a foreground/background baseline.
 /// </summary>
-public sealed record AnsiColorScheme
+public sealed partial record AnsiColorScheme
 {
     public required string Name { get; init; }
 
