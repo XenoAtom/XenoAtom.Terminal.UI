@@ -16,11 +16,11 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 {
     private Dictionary<object, Delegate?>? _handlers;
     private List<KeyBinding>? _keyBindings;
-    private Dictionary<object, object?>? _environment;
+    internal Dictionary<object, object?>? StyleEnvironment;
     private List<Action<Visual>>? _dynamicUpdates;
     private List<Collections.IDynamicUpdateResettable>? _dynamicUpdateLists;
 
-    private Size _desiredSizeWithoutMargin;
+    private Size _lastDesiredSizeWithoutMargin;
 
     private bool _dynamicUpdatesDirty;
     private bool _measureDirty = true;
@@ -43,32 +43,14 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
     public SizeHints MeasureHints { get; private set; }
 
-    internal Size DesiredSizeWithoutMargin => _desiredSizeWithoutMargin;
-
     public TerminalApp? App { get; private set; }
 
     public bool Focusable { get; protected init; }
-
-    private sealed class __Invalidation__BindingAccessor : BindingAccessor
-    {
-        public static __Invalidation__BindingAccessor Instance { get; } = new();
-
-        private __Invalidation__BindingAccessor() : base(string.Intern("$invalidate$"))
-        {
-        }
-
-        public override object? GetValue(object instance) => null;
-
-        public override void SetValue(object instance, object? value)
-        {
-        }
-    }
 
     protected void Invalidate()
     {
         VerifyAccess();
         MarkMeasureDirty();
-        BindingManager.Current.NotifyValueChanged(this, __Invalidation__BindingAccessor.Instance);
     }
 
     protected Visual()
@@ -214,9 +196,10 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     {
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(key);
-        _environment ??= new Dictionary<object, object?>();
-        _environment[key] = value;
-        BindingManager.Current.NotifyValueChanged(this, key.DependencyAccessor);
+        StyleEnvironment ??= new Dictionary<object, object?>();
+        StyleEnvironment[key] = value;
+        // We need to re-evaluate styles down the tree.
+        MarkDirtyUpAndDown();
     }
 
     public T Get<T>() where T : IStyle<T> => Get(T.Key);
@@ -226,19 +209,14 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(key);
 
-        Visual? root = null;
-
         for (var v = this; v is not null; v = v.Parent)
         {
-            root = v;
-            if (v._environment is not null && v._environment.TryGetValue(key, out var boxed))
+            if (v.StyleEnvironment is not null && v.StyleEnvironment.TryGetValue(key, out var boxed))
             {
-                BindingManager.Current.RegisterRead(v, key.DependencyAccessor);
                 return boxed is T typed ? typed : key.DefaultValue;
             }
         }
 
-        BindingManager.Current.RegisterRead(root ?? this, key.DependencyAccessor);
         return key.DefaultValue;
     }
 
@@ -246,7 +224,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     {
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(key);
-        return _environment is not null && _environment.ContainsKey(key);
+        return StyleEnvironment is not null && StyleEnvironment.ContainsKey(key);
     }
 
     public Theme GetTheme() => Get<Theme>();
@@ -336,7 +314,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             return MeasureHints;
         }
 
-        var previousDesiredWithoutMargin = _desiredSizeWithoutMargin;
+        var previousDesiredWithoutMargin = _lastDesiredSizeWithoutMargin;
 
         using var session = BindingManager.Current.StartTracking();
         var margin = Margin;
@@ -345,7 +323,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         var hints = MeasureCore(innerConstraints).Normalize();
         hints = ClampHintsToConstraints(hints, innerConstraints);
 
-        _desiredSizeWithoutMargin = hints.Natural;
+        _lastDesiredSizeWithoutMargin = hints.Natural;
 
         // Inflate hints by margin for the parent's perspective.
         var inflatedHints = Inflate(hints, margin).Normalize();
@@ -354,7 +332,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         MeasureHints = inflatedHints;
         DesiredSize = inflatedHints.Natural;
 
-        if (!previousDesiredWithoutMargin.Equals(_desiredSizeWithoutMargin))
+        if (!previousDesiredWithoutMargin.Equals(_lastDesiredSizeWithoutMargin))
         {
             MarkArrangeDirtyLocal();
         }
@@ -580,7 +558,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         var maxW = Math.Max(Math.Max(0, MaxWidth), MinWidth);
         var maxH = Math.Max(Math.Max(0, MaxHeight), MinHeight);
 
-        var desired = _desiredSizeWithoutMargin;
+        var desired = _lastDesiredSizeWithoutMargin;
         var desiredW = Math.Clamp(desired.Width, Math.Max(0, MinWidth), maxW);
         var desiredH = Math.Clamp(desired.Height, Math.Max(0, MinHeight), maxH);
 
@@ -795,28 +773,42 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     {
         _dynamicUpdatesDirty = true;
         _dynamicUpdateDeps = null;
-        MarkMeasureDirty();
+        MarkDirty();
+    }
+
+    internal void MarkDirtyUpAndDown()
+    {
+        MarkDirty();
+        MarkDirtyDown();
+    }
+
+    internal void MarkDirtyDown()
+    {
+        MarkMeasureDirtyLocal();
+        MarkArrangeDirtyLocal();
+        for (var i = 0; i < ChildrenCount; i++)
+        {
+            var child = GetChild(i);
+            child.MarkDirtyDown();
+        }
+    }
+
+    internal void MarkMeasureDirtyLocal()
+    {
+        _measureDirty = true;
+        _hasLastMeasure = false;
+        _measureDeps = null;
     }
 
     internal void MarkMeasureDirty()
     {
-        _measureDirty = true;
-        _arrangeDirty = true;
-        _hasLastMeasure = false;
-        _hasLastArrange = false;
-        _measureDeps = null;
-        _arrangeDeps = null;
+        if (_measureDirty)
+        {
+            return;
+        }
 
-        Parent?.MarkMeasureDirtyFromChild();
-    }
-
-    internal void MarkArrangeDirty()
-    {
-        _arrangeDirty = true;
-        _hasLastArrange = false;
-        _arrangeDeps = null;
-
-        Parent?.MarkArrangeDirtyFromChild();
+        MarkMeasureDirtyLocal();
+        Parent?.MarkMeasureDirty();
     }
 
     internal void MarkArrangeDirtyLocal()
@@ -825,42 +817,35 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         _hasLastArrange = false;
         _arrangeDeps = null;
     }
-
-    internal void MarkRenderDirty()
-    {
-        // Rendering is currently full-frame, so we only request a redraw from the app.
-        // Layout caching uses measure/arrange dirtiness; render dirtiness is tracked by TerminalApp.
-    }
-
-    private void MarkMeasureDirtyFromChild()
-    {
-        if (_measureDirty && _arrangeDirty)
-        {
-            return;
-        }
-
-        _measureDirty = true;
-        _arrangeDirty = true;
-        _hasLastMeasure = false;
-        _hasLastArrange = false;
-        _measureDeps = null;
-        _arrangeDeps = null;
-
-        Parent?.MarkMeasureDirtyFromChild();
-    }
-
-    private void MarkArrangeDirtyFromChild()
+    
+    internal void MarkArrangeDirty()
     {
         if (_arrangeDirty)
         {
             return;
         }
 
-        _arrangeDirty = true;
-        _hasLastArrange = false;
-        _arrangeDeps = null;
 
-        Parent?.MarkArrangeDirtyFromChild();
+        MarkArrangeDirtyLocal();
+        Parent?.MarkArrangeDirty();
+    }
+
+    internal void MarkDirty()
+    {
+        if (_measureDirty && _arrangeDirty)
+        {
+            return;
+        }
+
+        MarkMeasureDirtyLocal();
+        MarkArrangeDirtyLocal();
+        Parent?.MarkDirty();
+    }
+    
+    internal void MarkRenderDirty()
+    {
+        // Rendering is currently full-frame, so we only request a redraw from the app.
+        // Layout caching uses measure/arrange dirtiness; render dirtiness is tracked by TerminalApp.
     }
 
     protected void AddHandler<TArgs>(RoutedEvent<TArgs> routedEvent, EventHandler<TArgs> handler)

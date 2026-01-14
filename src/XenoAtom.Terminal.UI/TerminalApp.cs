@@ -81,6 +81,14 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
                 _windowLayer = new WindowLayer { Content = root };
                 Root = _windowLayer;
             }
+
+            // When we wrap the user root with an internal WindowLayer, propagate the Theme so that
+            // fullscreen clear/background uses the expected theme even if the user set it on the root visual.
+            if (!ReferenceEquals(ContentRoot, _windowLayer))
+            {
+                ContentRoot.StyleEnvironment ??= new();
+                _windowLayer.StyleEnvironment = ContentRoot.StyleEnvironment;
+            }
         }
         else
         {
