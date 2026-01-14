@@ -12,8 +12,8 @@ public sealed record RadioButtonStyle : IStyle<RadioButtonStyle>
 
     public static StyleKey<RadioButtonStyle> Key { get; } = new("RadioButtonStyle", Default);
 
-    public Rune CheckedGlyph { get; init; } = new(0x25C9);
-    public Rune UncheckedGlyph { get; init; } = new(0x25CB);
+    public Rune CheckedGlyph { get; init; } = new('◉');
+    public Rune UncheckedGlyph { get; init; } = new('◯');
 
     public CellStyle? Normal { get; init; }
     public CellStyle? Hovered { get; init; }

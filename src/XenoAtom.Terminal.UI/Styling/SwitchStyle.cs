@@ -10,15 +10,20 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
 {
     public static SwitchStyle Default { get; } = new();
 
+    public static SwitchStyle Round { get; } = new()
+    {
+        ThumbGlyph = new('⬤'),
+    };
+
     public static StyleKey<SwitchStyle> Key { get; } = new("SwitchStyle", Default);
 
     public int SpaceBetweenGlyphAndText { get; init; } = 2;
 
-    public Rune TrackLeft { get; init; } = new('▕');
+    public Rune TrackLeft { get; init; } = new(' '); 
 
-    public Rune TrackRight { get; init; } = new('▏');
+    public Rune TrackRight { get; init; } = new(' ');
 
-    public Rune ThumbGlyph { get; init; } = new('●');
+    public Rune ThumbGlyph { get; init; } = new('⬛');
 
     public CellStyle? TrackOn { get; init; }
     public CellStyle? TrackOff { get; init; }
