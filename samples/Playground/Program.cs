@@ -1,17 +1,18 @@
+using System.Linq;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 
-var progress = new State<float>(0.0f);
+var text = string.Join(
+    "\n",
+    Enumerable.Range(1, 50).Select(i => $"Line {i:00} - ScrollViewer + TextArea"));
 
-var tabs = new TabControl(
-    new TabPage(
-        header: "Tab1",
-        content: "ContentTab1"
-        ),
-    new TabPage(
-        header: "Tab2",
-        content: "ContentTab2"));
+var editor = new TextArea { Text = text };
 
-Terminal.Run(tabs
-    , () => true);
+var view = new ScrollViewer
+{
+    ContentMode = ScrollViewerContentMode.UseContentScrollModel,
+    Content = editor,
+};
+
+Terminal.Run(view, () => true);
