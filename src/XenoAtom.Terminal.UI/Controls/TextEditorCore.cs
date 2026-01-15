@@ -46,8 +46,11 @@ internal interface ITextEditorHost
 internal sealed class TextEditorCore
 {
     private readonly ITextEditorHost _host;
-    private readonly TextDocument _document;
+    private ITextDocument _document;
     private readonly ScrollModel _scroll;
+
+    private string _cachedText = string.Empty;
+    private int _cachedVersion = -1;
 
     private int _caretIndex;
     private int _selectionAnchor = -1;
@@ -62,11 +65,18 @@ internal sealed class TextEditorCore
 
     private bool _draggingSelection;
 
-    public TextEditorCore(ITextEditorHost host, TextDocument document, ScrollModel scroll)
+    public TextEditorCore(ITextEditorHost host, ITextDocument document, ScrollModel scroll)
     {
         _host = host;
         _document = document;
         _scroll = scroll;
+    }
+
+    public void SetDocument(ITextDocument document)
+    {
+        _document = document;
+        _cachedVersion = -1;
+        OnDocumentChanged();
     }
 
     public int CaretIndex
@@ -74,13 +84,25 @@ internal sealed class TextEditorCore
         get => _caretIndex;
         set
         {
-            var textLength = _document.GetText().Length;
+            var textLength = GetText().Length;
             _caretIndex = Math.Clamp(value, 0, textLength);
             ClearSelection();
             _preferredColumn = -1;
             EnsureCaretVisible(default);
             _host.InvalidateEditor();
         }
+    }
+
+    private string GetText()
+    {
+        var version = _document.Version;
+        if (version != _cachedVersion)
+        {
+            _cachedText = TextDocumentUtility.GetText(_document);
+            _cachedVersion = version;
+        }
+
+        return _cachedText;
     }
 
     private bool HasSelection => _selectionAnchor >= 0 && _selectionEnd >= 0 && _selectionAnchor != _selectionEnd;
@@ -106,7 +128,7 @@ internal sealed class TextEditorCore
 
         if (options.SingleLine)
         {
-            var text = _document.GetText();
+            var text = GetText();
             var totalCells = GetTextCells(text.AsSpan(), options.TabSize);
             _scroll.SetExtent(Math.Max(totalCells, _contentWidth), 1);
             if (totalCells <= _contentWidth)
@@ -118,7 +140,7 @@ internal sealed class TextEditorCore
             return;
         }
 
-        var snapshot = (TextSnapshot)_document.CurrentSnapshot;
+        var snapshot = _document.CurrentSnapshot;
         var totalRows = ComputeExtent(snapshot, options, out var extentWidth);
         _scroll.SetExtent(extentWidth, totalRows);
         if (options.WordWrap)
@@ -131,7 +153,7 @@ internal sealed class TextEditorCore
 
     public void OnDocumentChanged()
     {
-        var textLength = _document.GetText().Length;
+        var textLength = GetText().Length;
         if (_caretIndex > textLength)
         {
             _caretIndex = textLength;
@@ -174,7 +196,7 @@ internal sealed class TextEditorCore
             return false;
         }
 
-        var text = _document.GetText();
+        var text = GetText();
         var caret = Math.Clamp(_caretIndex, 0, text.Length);
 
         if (options.SingleLine)
@@ -296,7 +318,7 @@ internal sealed class TextEditorCore
 
     public void OnKeyDown(KeyEventArgs e, in TextEditorOptions options)
     {
-        var text = _document.GetText();
+        var text = GetText();
         _caretIndex = Math.Clamp(_caretIndex, 0, text.Length);
 
         var ctrl = (e.Modifiers & TerminalModifiers.Ctrl) != 0;
@@ -524,7 +546,7 @@ internal sealed class TextEditorCore
 
     private void RenderSingleLine(in TextEditorRenderContext context, in TextEditorOptions options)
     {
-        var text = _document.GetText();
+        var text = GetText();
         var contentWidth = _contentWidth;
         if (contentWidth <= 0)
         {
@@ -597,7 +619,7 @@ internal sealed class TextEditorCore
     }
     private void RenderMultiLine(in TextEditorRenderContext context, in TextEditorOptions options)
     {
-        var text = _document.GetText();
+        var text = GetText();
         if (_contentWidth <= 0 || _contentHeight <= 0)
         {
             return;
@@ -609,7 +631,7 @@ internal sealed class TextEditorCore
             return;
         }
 
-        var snapshot = (TextSnapshot)_document.CurrentSnapshot;
+        var snapshot = _document.CurrentSnapshot;
 
         var startRow = _scroll.OffsetY;
         var endRow = startRow + _contentHeight;
@@ -824,9 +846,9 @@ internal sealed class TextEditorCore
             context.SegmentWriter(context.Buffer, _contentX + leftCells + selCells, y, right, context.TextStyle, isPlaceholder: false);
         }
     }
-    private int ComputeExtent(TextSnapshot snapshot, in TextEditorOptions options, out int extentWidth)
+    private int ComputeExtent(ITextSnapshot snapshot, in TextEditorOptions options, out int extentWidth)
     {
-        var text = snapshot.Text;
+        var text = GetText();
         var maxWidth = 0;
         var totalRows = 0;
 
@@ -875,7 +897,7 @@ internal sealed class TextEditorCore
         }
 
         var insertText = text.AsSpan();
-        _document.Insert(Math.Clamp(_caretIndex, 0, _document.GetText().Length), insertText);
+        _document.Insert(Math.Clamp(_caretIndex, 0, GetText().Length), insertText);
         _caretIndex += insertText.Length;
         _preferredColumn = -1;
         EnsureCaretVisible(options);
@@ -890,7 +912,7 @@ internal sealed class TextEditorCore
             return;
         }
 
-        var text = _document.GetText();
+        var text = GetText();
         if (_caretIndex <= 0 || text.Length == 0)
         {
             return;
@@ -912,7 +934,7 @@ internal sealed class TextEditorCore
             return;
         }
 
-        var text = _document.GetText();
+        var text = GetText();
         if (_caretIndex >= text.Length)
         {
             return;
@@ -927,7 +949,7 @@ internal sealed class TextEditorCore
 
     private void MoveCaretTo(int index, bool extendSelection, in TextEditorOptions options)
     {
-        index = Math.Clamp(index, 0, _document.GetText().Length);
+        index = Math.Clamp(index, 0, GetText().Length);
         if (extendSelection)
         {
             ExtendSelection(index);
@@ -945,14 +967,14 @@ internal sealed class TextEditorCore
 
     private void MoveCaretHorizontal(int delta, bool extendSelection, in TextEditorOptions options)
     {
-        var text = _document.GetText();
+        var text = GetText();
         var next = Math.Clamp(_caretIndex + delta, 0, text.Length);
         MoveCaretTo(next, extendSelection, options);
     }
 
     private void MoveCaretVertical(int deltaLines, bool extendSelection, in TextEditorOptions options)
     {
-        var text = _document.GetText();
+        var text = GetText();
         if (options.WordWrap)
         {
             var (row, visualCol) = GetVisualPosition(text.AsSpan(), _caretIndex, options);
@@ -980,7 +1002,7 @@ internal sealed class TextEditorCore
 
     private void MoveCaretToLineBoundary(bool start, bool extendSelection, in TextEditorOptions options)
     {
-        var text = _document.GetText().AsSpan();
+        var text = GetText().AsSpan();
         if (options.WordWrap)
         {
             var (row, _) = GetVisualPosition(text, _caretIndex, options);
@@ -1010,7 +1032,7 @@ internal sealed class TextEditorCore
             return;
         }
 
-        var text = _document.GetText().AsSpan();
+        var text = GetText().AsSpan();
         if (options.SingleLine)
         {
             var caretCells = GetCellOffsetAtIndex(text, _caretIndex, options.TabSize);
@@ -1058,7 +1080,7 @@ internal sealed class TextEditorCore
     }
     private int GetIndexFromPointer(int uiX, int uiY, in TextEditorOptions options)
     {
-        var text = _document.GetText().AsSpan();
+        var text = GetText().AsSpan();
         var localX = Math.Clamp(uiX - _contentX, 0, _contentWidth);
         var localY = Math.Clamp(uiY - _contentY, 0, _contentHeight);
 
@@ -1161,7 +1183,7 @@ internal sealed class TextEditorCore
             return;
         }
 
-        var text = _document.GetText();
+        var text = GetText();
         var (start, end) = GetOrderedSelection();
         start = Math.Clamp(start, 0, text.Length);
         end = Math.Clamp(end, 0, text.Length);
@@ -1178,7 +1200,7 @@ internal sealed class TextEditorCore
 
     private void SelectAll()
     {
-        var text = _document.GetText();
+        var text = GetText();
         if (text.Length == 0)
         {
             return;

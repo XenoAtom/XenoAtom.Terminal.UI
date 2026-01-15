@@ -14,7 +14,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrollable, ITextEditorHost
 {
-    private readonly TextDocument _textDocument;
+    private ITextDocument _textDocument;
     private readonly ScrollModel _scroll;
     private readonly TextEditorCore _core;
 
@@ -31,7 +31,11 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
         _textDocument.Changed += OnDocumentChanged;
     }
 
-    public ITextDocument TextDocument => _textDocument;
+    public ITextDocument TextDocument
+    {
+        get => _textDocument;
+        set => SetTextDocument(value);
+    }
 
     public ScrollModel Scroll => _scroll;
 
@@ -46,6 +50,34 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
 
     [Bindable]
     public partial bool WordWrap { get; set; }
+
+    private void SetTextDocument(ITextDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        if (ReferenceEquals(_textDocument, document))
+        {
+            return;
+        }
+
+        _textDocument.Changed -= OnDocumentChanged;
+        _textDocument = document;
+        _textDocument.Changed += OnDocumentChanged;
+        _core.SetDocument(_textDocument);
+
+        _updatingTextFromDocument = true;
+        try
+        {
+            Text = TextDocumentUtility.GetText(_textDocument);
+        }
+        finally
+        {
+            _updatingTextFromDocument = false;
+        }
+
+        MarkArrangeDirty();
+        Invalidate();
+    }
 
     public int CaretIndex
     {
@@ -151,7 +183,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
             return;
         }
 
-        var text = _textDocument.GetText();
+        var text = TextDocumentUtility.GetText(_textDocument);
         if (_updatingTextFromDocument)
         {
             return;
@@ -196,12 +228,13 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
             return;
         }
 
-        if (!string.Equals(_textDocument.GetText(), normalized, StringComparison.Ordinal))
+        if (!string.Equals(TextDocumentUtility.GetText(_textDocument), normalized, StringComparison.Ordinal))
         {
             _updatingDocumentFromText = true;
             try
             {
-                _textDocument.SetText(normalized);
+                var snapshot = _textDocument.CurrentSnapshot;
+                _textDocument.Replace(0, snapshot.Length, normalized.AsSpan());
             }
             finally
             {
