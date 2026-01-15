@@ -50,6 +50,42 @@ The architecture must support:
   * **Chrome** (scrollbars/gutter)
   * **Services** (highlighting/diagnostics/completion/folding)
 
+### 1.4 Alignment with XenoAtom.Terminal.UI
+
+This architecture must fit the current UI framework:
+
+* All controls are retained `Visual` elements.
+* Layout uses the `Measure(in LayoutConstraints)` / `Arrange(Rectangle)` protocol and `SizeHints`.
+* Property usage drives dependency tracking. Any property read during measure/arrange/render must go through the property getter, not a backing field.
+* Internal mutable state (caret, selection, scroll offsets) is not bindable today; it must call `Invalidate()` to trigger re-measure/re-render.
+* Cursor rendering is done via `ICursorProvider` + terminal cursor, not by in-buffer reverse-video glyphs.
+* Input is routed events (`OnKeyDown`, `OnTextInput`, `OnPointerPressed`, etc.).
+* Clipboard uses `Terminal.Clipboard`.
+
+These constraints shape a staged approach below.
+
+### 1.5 Phased delivery
+
+**V1 foundations (must land)**
+
+* Shared internal core for editing, selection, and rendering (TextBox/TextArea use the same code paths).
+* A line index cache with normalized line endings (LF) and minimal allocations.
+* A presenter that can:
+  * map `Text` to cell coordinates
+  * compute caret X in cells
+  * render selection/background/text for a viewport only
+* Integration points for the binding system (no manual `RequestRender`).
+* A public `ITextDocument` available from the editor base (read-only in V1), kept in sync with `Text`.
+* `TextEditorBase` as the shared Visual base class for TextBox/TextArea/CodeEditor.
+
+**V2 evolution (design now, implement later)**
+
+* Pluggable text document (`ITextDocument` + snapshots).
+* Syntax highlighting/diagnostics via snapshot-based services.
+* Code editor chrome (gutter, folding, completion).
+* Multi-caret, rectangular selection, and virtual space.
+* Advanced wrapping and token-aware layout.
+
 ---
 
 # 2. Module overview
@@ -77,6 +113,7 @@ The architecture must support:
 6. **Editor Views / Shells**
 
 * `EditorView` (shared internal component)
+* `TextEditorBase` (shared Visual base for editor shells)
 * `TextBox`, `TextArea`, `CodeEditor` compose around `EditorView`
 
 7. **Language / Editor Services**
@@ -123,6 +160,8 @@ public sealed class RectSelectionState
 ```
 
 Indexing is UTF-16 for .NET ergonomics. The presenter is responsible for graphemes and terminal cell widths.
+
+Practical note for V1: the public API can continue to expose simple `int` indices (caret/selection) while the internal core uses `TextPosition`. This keeps compatibility with existing TextBox/TextArea while allowing a future migration to richer positions.
 
 ---
 
@@ -340,7 +379,15 @@ Presenter must use a cell width function (wcwidth-like):
 Rules:
 
 * Never split a double-width glyph across the viewport edge.
-* Combining marks must not render “alone” if base glyph is clipped.
+* Combining marks must not render "alone" if base glyph is clipped.
+
+V1 practicality: a single presenter implementation is acceptable (e.g. `PlainTextPresenter`) that:
+
+* handles LF line breaks
+* does not support soft wrapping initially (optional)
+* uses `TerminalTextUtility` for rune width and index navigation
+
+The API still stays as an interface so that a wrapping presenter can land later without breaking TextBox/TextArea.
 
 ---
 
@@ -390,6 +437,84 @@ After any caret move or edit, the shell/view must:
 3. invalidate render
 
 This must be driven by the editor view (not generic scroll chrome), because it is editor semantics.
+
+## 7.4 ScrollViewer integration (current UI framework)
+
+XenoAtom.Terminal.UI already has a `ScrollViewer` visual with its own scrolling chrome. To support advanced text scenarios cleanly:
+
+* `ScrollViewer` must support hosting a child that implements `IScrollable`.
+* When the child implements `IScrollable`, `ScrollViewer` should:
+  * read `ScrollModel.ViewportWidth/Height` from the arranged size
+  * read `ScrollModel.ExtentWidth/Height` from the child’s presenter (or expose setters called by the child)
+  * update its scrollbars based on the model (no duplicate scroll state)
+* `ScrollViewer` must not override the child’s scroll offsets. It should translate user input (wheel/drag/track clicks) into `ScrollModel.SetOffset(...)`.
+* `ScrollViewer` should forward pointer wheel events to the child if:
+  * the child can still scroll in that direction
+  * otherwise bubble to parent (existing routed events will do this)
+
+Practical V1 integration:
+
+* `TextArea` should expose `IScrollable` and can be wrapped in `ScrollViewer` for visible scrollbars.
+* `TextBox` uses an internal horizontal `ScrollModel` but is not expected to be wrapped in a `ScrollViewer` by default.
+* If `ScrollViewer` is used with text controls, it should:
+  * not impose its own padding on content
+  * avoid re-measuring the content with infinite size for the non-scrolling axis
+  * only clip and translate the content rectangle (the text control decides extent)
+
+If the current `ScrollViewer` cannot consume `IScrollable` yet, it should be extended rather than duplicated so that text and non-text scrolling share one chrome and interaction model.
+
+### 7.4.1 ScrollViewer API additions (concrete)
+
+Add an opt-in integration layer to avoid breaking existing usages:
+
+```csharp
+public enum ScrollViewerContentMode
+{
+    /// Uses the existing internal scroll state (current behavior).
+    OwnsScrollModel,
+
+    /// Reads/writes scroll state from the child if it implements IScrollable.
+    UseContentScrollModel,
+}
+```
+
+```csharp
+public sealed partial class ScrollViewer : ContentVisual
+{
+    [Bindable]
+    public partial ScrollViewerContentMode ContentMode { get; set; } = ScrollViewerContentMode.OwnsScrollModel;
+
+    public IScrollable? ContentScrollable { get; }
+
+    // When ContentMode = UseContentScrollModel and Content implements IScrollable:
+    // - ContentScrollable exposes the model.
+    // - ScrollViewer does not maintain a separate scroll model.
+}
+```
+
+Behavior rules:
+
+* `ContentScrollable` is non-null when `Content` implements `IScrollable`.
+* In `ArrangeCore`, if `ContentMode == UseContentScrollModel`:
+  * set `ContentScrollable.Scroll.SetViewport(viewportW, viewportH)`
+  * read `ExtentWidth/Height` from the model to update scrollbar thumb size/visibility
+* User input (wheel, scrollbar drag, track click) updates `ContentScrollable.Scroll` offsets.
+* When `ContentMode == OwnsScrollModel`, preserve current behavior (backward compatible).
+
+### 7.4.2 Scrollbar visibility rule
+
+When `ContentMode == UseContentScrollModel`:
+
+* horizontal scrollbar visible iff `ExtentWidth > ViewportWidth`
+* vertical scrollbar visible iff `ExtentHeight > ViewportHeight`
+
+Scrollbars must never force infinite measure. They are chrome that consumes space only when visible, and the content should be arranged in the remaining viewport.
+
+### 7.4.3 Event ownership
+
+* Mouse wheel events should first attempt to scroll the content model if it can scroll further.
+* If the content is at the boundary (no more scrolling), events should bubble.
+* Pointer drag on the scrollbar should capture and update the model directly.
 
 ---
 
@@ -469,6 +594,8 @@ public sealed class EditorView : Visual, IScrollable
 }
 ```
 
+Implementation alignment: `EditorView` can be an internal helper (not necessarily a `Visual`) in V1. TextBox/TextArea may compose a shared `TextEditorCore` while remaining `Visual` themselves. The interface above still describes the responsibilities and state that must exist.
+
 ## 9.2 Rendering flow
 
 On render:
@@ -511,6 +638,8 @@ Composes `EditorView` with policy:
 
   * wrap ON: horizontal extent follows viewport, horizontal scrolling typically disabled
   * wrap OFF: horizontal scrolling enabled, extent width is max visual line width
+
+Default: wrap ON (soft-wrapping) in V1.
 
 May expose scrollbars:
 
@@ -711,3 +840,49 @@ Folding model:
 * EditorView: `TextEditorController + ITextPresenter + ScrollModel + DecorationManager`
 * TextBox/TextArea/CodeEditor: thin shells configuring options and adding chrome
 * Services: background tokenizer + diagnostics with snapshot version gating
+
+---
+
+# 17. V1 implementation notes (concrete for this codebase)
+
+To minimize disruption while sharing logic:
+
+* Introduce `TextEditorCore` (internal class, not a `Visual`):
+  * owns caret, selection, scroll offsets
+  * exposes `OnKeyDown`, `OnTextInput`, `OnPointerPressed`, `OnPointerMoved`, `OnPointerReleased`, `OnPointerWheel`
+  * exposes `Render(...)` to draw into a `CellBuffer`
+  * exposes `TryGetCursorCell(...)` for `ICursorProvider`
+* Introduce `TextEditorBase : Visual, ICursorProvider`:
+  * shared bindable `Text`, `Placeholder`, and common editor options
+  * exposes public `ITextDocument TextDocument { get; }` (read-only in V1)
+  * bridges `Text` <-> `Document` with clear ownership rules (see below)
+* TextBox and TextArea become thin shells derived from `TextEditorBase`:
+  * bindable properties stay on the Visual (`Text`, `Placeholder`, `TextAlignment`, `AcceptTab`, etc.)
+  * each shell forwards to `TextEditorCore`, passing:
+    * current `Text`/`Placeholder` values (through property getters to participate in binding tracking)
+    * styling (TextBoxStyle/TextAreaStyle)
+    * layout rectangle and padding
+* `TextEditorCore` keeps a small line index cache for LF-normalized text:
+  * only rebuild when `Text` reference or version changes
+  * uses `List<int>` to store line starts (V1)
+* `TextEditorCore` does not own the `Text` property:
+  * edits are applied by setting the `Text` property on the Visual
+  * this preserves two-way binding and dependency tracking
+* Selection state remains internal (not bindable) in V1:
+  * caret/selection changes call `Visual.Invalidate()` to update render
+* The caret uses the terminal cursor only via `ICursorProvider`.
+
+## 17.1 Text <-> TextDocument synchronization rules (V1)
+
+`TextEditorBase` exposes a read-only `TextDocument` while keeping `Text` as the bindable property. The sync rules are:
+
+* The `TextDocument` instance is created internally by `TextEditorBase` and does **not** change in V1.
+* Setting `Text` (from bindings or code) replaces the entire document content.
+  * This keeps existing bindings intact and allows `Text` to remain the source of truth for external code.
+* Editing interactions update the document, which in turn updates `Text`.
+  * This ensures two-way binding works without requiring a new public API.
+* To avoid feedback loops, internal updates should use an “updating” guard:
+  * If `Document` changes are applying `Text`, do not re-apply the same text back into the document.
+  * If `Text` setter triggers a document replace, do not re-emit the same change.
+
+In V2, `Text` can become a convenience wrapper over `TextDocument` (or removed), but V1 keeps it primary for compatibility.
