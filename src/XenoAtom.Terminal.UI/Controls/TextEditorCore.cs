@@ -1,0 +1,1815 @@
+// Copyright (c) Alexandre Mutel. All rights reserved.
+// Licensed under the BSD-Clause 2 license.
+// See license.txt file in the project root for full license information.
+
+using System.Buffers;
+using System.Text;
+using XenoAtom.Terminal.UI;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Scrolling;
+using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Text;
+
+namespace XenoAtom.Terminal.UI.Controls;
+
+internal delegate void TextSegmentWriter(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, CellStyle style, bool isPlaceholder);
+
+internal readonly record struct TextEditorOptions(
+    bool SingleLine,
+    bool AcceptsReturn,
+    bool AcceptsTab,
+    bool WordWrap,
+    int TabSize,
+    TextAlignment Alignment,
+    bool ShowPlaceholderWhenUnfocusedOnly);
+
+internal readonly record struct TextEditorRenderContext(
+    CellBuffer Buffer,
+    Rectangle ContentRect,
+    CellStyle TextStyle,
+    CellStyle SelectionStyle,
+    CellStyle PlaceholderStyle,
+    string? Placeholder,
+    bool IsFocused,
+    TextSegmentWriter SegmentWriter);
+
+internal interface ITextEditorHost
+{
+    TerminalApp? App { get; }
+    bool IsFocused { get; }
+    void InvalidateEditor();
+    void MarkEditorArrangeDirty();
+}
+
+internal sealed class TextEditorCore
+{
+    private readonly ITextEditorHost _host;
+    private readonly TextDocument _document;
+    private readonly ScrollModel _scroll;
+
+    private int _caretIndex;
+    private int _selectionAnchor = -1;
+    private int _selectionEnd = -1;
+    private int _preferredColumn = -1;
+    private string? _killBuffer;
+
+    private int _contentX;
+    private int _contentY;
+    private int _contentWidth;
+    private int _contentHeight;
+
+    private bool _draggingSelection;
+
+    public TextEditorCore(ITextEditorHost host, TextDocument document, ScrollModel scroll)
+    {
+        _host = host;
+        _document = document;
+        _scroll = scroll;
+    }
+
+    public int CaretIndex
+    {
+        get => _caretIndex;
+        set
+        {
+            var textLength = _document.GetText().Length;
+            _caretIndex = Math.Clamp(value, 0, textLength);
+            ClearSelection();
+            _preferredColumn = -1;
+            EnsureCaretVisible(default);
+            _host.InvalidateEditor();
+        }
+    }
+
+    private bool HasSelection => _selectionAnchor >= 0 && _selectionEnd >= 0 && _selectionAnchor != _selectionEnd;
+
+    public void UpdateViewport(Rectangle contentRect)
+    {
+        _contentX = contentRect.X;
+        _contentY = contentRect.Y;
+        _contentWidth = Math.Max(0, contentRect.Width);
+        _contentHeight = Math.Max(0, contentRect.Height);
+        _scroll.SetViewport(_contentWidth, _contentHeight);
+    }
+
+    public void UpdateLayout(Rectangle contentRect, in TextEditorOptions options)
+    {
+        UpdateViewport(contentRect);
+
+        if (_contentWidth <= 0 || _contentHeight <= 0)
+        {
+            _scroll.SetExtent(0, 0);
+            return;
+        }
+
+        if (options.SingleLine)
+        {
+            var text = _document.GetText();
+            var totalCells = GetTextCells(text.AsSpan(), options.TabSize);
+            _scroll.SetExtent(Math.Max(totalCells, _contentWidth), 1);
+            if (totalCells <= _contentWidth)
+            {
+                _scroll.SetOffset(0, 0);
+            }
+
+            EnsureCaretVisible(options);
+            return;
+        }
+
+        var snapshot = (TextSnapshot)_document.CurrentSnapshot;
+        var totalRows = ComputeExtent(snapshot, options, out var extentWidth);
+        _scroll.SetExtent(extentWidth, totalRows);
+        if (options.WordWrap)
+        {
+            _scroll.SetOffset(0, _scroll.OffsetY);
+        }
+
+        EnsureCaretVisible(options);
+    }
+
+    public void OnDocumentChanged()
+    {
+        var textLength = _document.GetText().Length;
+        if (_caretIndex > textLength)
+        {
+            _caretIndex = textLength;
+            _preferredColumn = -1;
+        }
+
+        if (_selectionAnchor > textLength) _selectionAnchor = textLength;
+        if (_selectionEnd > textLength) _selectionEnd = textLength;
+    }
+
+    public void Render(in TextEditorRenderContext context, in TextEditorOptions options)
+    {
+        if (_contentWidth <= 0 || _contentHeight <= 0)
+        {
+            return;
+        }
+
+        if (options.SingleLine)
+        {
+            RenderSingleLine(context, options);
+        }
+        else
+        {
+            RenderMultiLine(context, options);
+        }
+    }
+
+    public bool TryGetCursorCell(in TextEditorOptions options, out int x, out int y)
+    {
+        x = 0;
+        y = 0;
+
+        if (!options.SingleLine && _contentHeight <= 0)
+        {
+            return false;
+        }
+
+        if (_contentWidth <= 0)
+        {
+            return false;
+        }
+
+        var text = _document.GetText();
+        var caret = Math.Clamp(_caretIndex, 0, text.Length);
+
+        if (options.SingleLine)
+        {
+            var caretCells = GetCellOffsetAtIndex(text.AsSpan(), caret, options.TabSize);
+            var xCell = caretCells - _scroll.OffsetX;
+            xCell = Math.Clamp(xCell, 0, _contentWidth);
+
+            var alignedOffset = 0;
+            if (_scroll.OffsetX == 0)
+            {
+                var totalCells = GetTextCells(text.AsSpan(), options.TabSize);
+                if (totalCells <= _contentWidth && options.Alignment is TextAlignment.Center or TextAlignment.Right)
+                {
+                    alignedOffset = options.Alignment == TextAlignment.Center
+                        ? (_contentWidth - totalCells) / 2
+                        : (_contentWidth - totalCells);
+                }
+            }
+
+            x = _contentX + alignedOffset + xCell;
+            y = _contentY;
+            return true;
+        }
+
+        var (row, col) = GetVisualPosition(text.AsSpan(), caret, options);
+        var visibleRow = row - _scroll.OffsetY;
+        var visibleCol = col - (options.WordWrap ? 0 : _scroll.OffsetX);
+        if ((uint)visibleRow >= (uint)_contentHeight || (uint)visibleCol >= (uint)_contentWidth)
+        {
+            return false;
+        }
+
+        x = _contentX + visibleCol;
+        y = _contentY + visibleRow;
+        return true;
+    }
+
+    public void OnTextInput(TextInputEventArgs e, in TextEditorOptions options)
+    {
+        if (string.IsNullOrEmpty(e.Text))
+        {
+            return;
+        }
+
+        InsertText(e.Text, options);
+        e.Handled = true;
+    }
+
+    public void OnPaste(PasteEventArgs e, in TextEditorOptions options)
+    {
+        if (string.IsNullOrEmpty(e.Text))
+        {
+            return;
+        }
+
+        InsertText(e.Text, options);
+        e.Handled = true;
+    }
+    public void OnPointerPressed(PointerEventArgs e, in TextEditorOptions options)
+    {
+        if (e.Button != TerminalMouseButton.Left)
+        {
+            return;
+        }
+
+        if (_contentWidth <= 0 || _contentHeight <= 0)
+        {
+            return;
+        }
+
+        var index = GetIndexFromPointer(e.UiX, e.UiY, options);
+        _draggingSelection = true;
+        if ((e.Modifiers & TerminalModifiers.Shift) != 0)
+        {
+            ExtendSelection(index);
+        }
+        else
+        {
+            ClearSelection();
+        }
+
+        _caretIndex = index;
+        _preferredColumn = -1;
+        EnsureCaretVisible(options);
+        _host.InvalidateEditor();
+        e.Handled = true;
+    }
+
+    public void OnPointerMoved(PointerEventArgs e, in TextEditorOptions options)
+    {
+        if (!_draggingSelection)
+        {
+            return;
+        }
+
+        var index = GetIndexFromPointer(e.UiX, e.UiY, options);
+        ExtendSelection(index);
+        _caretIndex = index;
+        _preferredColumn = -1;
+        EnsureCaretVisible(options);
+        _host.InvalidateEditor();
+        e.Handled = true;
+    }
+
+    public void OnPointerReleased(PointerEventArgs e)
+    {
+        if (e.Button != TerminalMouseButton.Left)
+        {
+            return;
+        }
+
+        if (_draggingSelection)
+        {
+            _draggingSelection = false;
+            e.Handled = true;
+        }
+    }
+
+    public void OnKeyDown(KeyEventArgs e, in TextEditorOptions options)
+    {
+        var text = _document.GetText();
+        _caretIndex = Math.Clamp(_caretIndex, 0, text.Length);
+
+        var ctrl = (e.Modifiers & TerminalModifiers.Ctrl) != 0;
+        var shift = (e.Modifiers & TerminalModifiers.Shift) != 0;
+
+        if (!shift && HasSelection && e.Key is TerminalKey.Left or TerminalKey.Right or TerminalKey.Home or TerminalKey.End
+            or TerminalKey.Up or TerminalKey.Down)
+        {
+            ClearSelection();
+        }
+
+        if (ctrl)
+        {
+            if (e.Char is 'a' or 'A')
+            {
+                SelectAll();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Char is 'v' or 'V')
+            {
+                var clip = _host.App?.Terminal.Clipboard.Text;
+                if (!string.IsNullOrEmpty(clip))
+                {
+                    InsertText(clip, options);
+                }
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Char is 'c' or 'C')
+            {
+                var span = GetSelectedTextSpan(text.AsSpan());
+                if (!span.IsEmpty)
+                {
+                    _host.App?.Terminal.Clipboard.TrySetText(span);
+                }
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Char is 'x' or 'X')
+            {
+                if (HasSelection)
+                {
+                    var span = GetSelectedTextSpan(text.AsSpan());
+                    if (!span.IsEmpty)
+                    {
+                        _host.App?.Terminal.Clipboard.TrySetText(span);
+                    }
+                    DeleteSelection();
+                }
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Char is 'k' or 'K')
+            {
+                KillToEnd(text.AsSpan());
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Char is 'u' or 'U')
+            {
+                KillToStart(text.AsSpan());
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Char is 'w' or 'W')
+            {
+                KillPreviousWord(text.AsSpan());
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Char is 'y' or 'Y')
+            {
+                if (!string.IsNullOrEmpty(_killBuffer))
+                {
+                    InsertText(_killBuffer, options);
+                }
+                e.Handled = true;
+                return;
+            }
+        }
+
+        if (options.SingleLine)
+        {
+            HandleSingleLineKeyDown(e, options, text.AsSpan());
+        }
+        else
+        {
+            HandleMultiLineKeyDown(e, options, text.AsSpan());
+        }
+    }
+
+    private void HandleSingleLineKeyDown(KeyEventArgs e, in TextEditorOptions options, ReadOnlySpan<char> text)
+    {
+        switch (e.Key)
+        {
+            case TerminalKey.Left:
+                var oldCaretLeft = _caretIndex;
+                _caretIndex = (e.Modifiers & TerminalModifiers.Ctrl) != 0
+                    ? GetPreviousWordIndex(text, _caretIndex)
+                    : TerminalTextUtility.GetPreviousRuneIndex(text, _caretIndex);
+                UpdateSelectionAfterCaretMove((e.Modifiers & TerminalModifiers.Shift) != 0, oldCaretLeft);
+                e.Handled = true;
+                return;
+            case TerminalKey.Right:
+                var oldCaretRight = _caretIndex;
+                _caretIndex = (e.Modifiers & TerminalModifiers.Ctrl) != 0
+                    ? GetNextWordIndex(text, _caretIndex)
+                    : TerminalTextUtility.GetNextRuneIndex(text, _caretIndex);
+                UpdateSelectionAfterCaretMove((e.Modifiers & TerminalModifiers.Shift) != 0, oldCaretRight);
+                e.Handled = true;
+                return;
+            case TerminalKey.Home:
+                var oldCaretHome = _caretIndex;
+                _caretIndex = 0;
+                UpdateSelectionAfterCaretMove((e.Modifiers & TerminalModifiers.Shift) != 0, oldCaretHome);
+                e.Handled = true;
+                return;
+            case TerminalKey.End:
+                var oldCaretEnd = _caretIndex;
+                _caretIndex = text.Length;
+                UpdateSelectionAfterCaretMove((e.Modifiers & TerminalModifiers.Shift) != 0, oldCaretEnd);
+                e.Handled = true;
+                return;
+            case TerminalKey.Backspace:
+                if (HasSelection)
+                {
+                    DeleteSelection();
+                }
+                else if (_caretIndex > 0)
+                {
+                    var prev = (e.Modifiers & TerminalModifiers.Ctrl) != 0
+                        ? GetPreviousWordIndex(text, _caretIndex)
+                        : TerminalTextUtility.GetPreviousRuneIndex(text, _caretIndex);
+                    _document.Replace(prev, _caretIndex - prev, ReadOnlySpan<char>.Empty);
+                    _caretIndex = prev;
+                }
+                _host.InvalidateEditor();
+                e.Handled = true;
+                return;
+            case TerminalKey.Delete:
+                if (HasSelection)
+                {
+                    DeleteSelection();
+                }
+                else if (_caretIndex < text.Length)
+                {
+                    var next = (e.Modifiers & TerminalModifiers.Ctrl) != 0
+                        ? GetNextWordIndex(text, _caretIndex)
+                        : TerminalTextUtility.GetNextRuneIndex(text, _caretIndex);
+                    _document.Replace(_caretIndex, next - _caretIndex, ReadOnlySpan<char>.Empty);
+                }
+                _host.InvalidateEditor();
+                e.Handled = true;
+                return;
+        }
+    }
+    private void HandleMultiLineKeyDown(KeyEventArgs e, in TextEditorOptions options, ReadOnlySpan<char> text)
+    {
+        switch (e.Key)
+        {
+            case TerminalKey.Left:
+                MoveCaretHorizontal(-1, (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                e.Handled = true;
+                return;
+            case TerminalKey.Right:
+                MoveCaretHorizontal(1, (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                e.Handled = true;
+                return;
+            case TerminalKey.Up:
+                MoveCaretVertical(-1, (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                e.Handled = true;
+                return;
+            case TerminalKey.Down:
+                MoveCaretVertical(1, (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                e.Handled = true;
+                return;
+            case TerminalKey.Home:
+                MoveCaretToLineBoundary(start: true, (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                e.Handled = true;
+                return;
+            case TerminalKey.End:
+                MoveCaretToLineBoundary(start: false, (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                e.Handled = true;
+                return;
+            case TerminalKey.PageUp:
+                MoveCaretVertical(-Math.Max(1, _contentHeight), (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                e.Handled = true;
+                return;
+            case TerminalKey.PageDown:
+                MoveCaretVertical(Math.Max(1, _contentHeight), (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                e.Handled = true;
+                return;
+            case TerminalKey.Backspace:
+                Backspace(options);
+                e.Handled = true;
+                return;
+            case TerminalKey.Delete:
+                Delete(options);
+                e.Handled = true;
+                return;
+            case TerminalKey.Enter:
+                if (options.AcceptsReturn)
+                {
+                    InsertText("\n", options);
+                    e.Handled = true;
+                }
+                return;
+            case TerminalKey.Tab:
+                if (options.AcceptsTab)
+                {
+                    InsertText("\t", options);
+                    e.Handled = true;
+                }
+                return;
+        }
+    }
+
+    private void RenderSingleLine(in TextEditorRenderContext context, in TextEditorOptions options)
+    {
+        var text = _document.GetText();
+        var contentWidth = _contentWidth;
+        if (contentWidth <= 0)
+        {
+            return;
+        }
+
+        var totalTextCells = GetTextCells(text.AsSpan(), options.TabSize);
+        var scrollX = totalTextCells <= contentWidth ? 0 : _scroll.OffsetX;
+
+        var startIndex = GetIndexAtCell(text.AsSpan(), scrollX, options.TabSize);
+        var endIndex = GetIndexAtCell(text.AsSpan(), scrollX + contentWidth, options.TabSize);
+
+        var contentXAligned = _contentX;
+        if (scrollX == 0 && totalTextCells <= contentWidth && options.Alignment is TextAlignment.Center or TextAlignment.Right)
+        {
+            var shift = options.Alignment == TextAlignment.Center ? (contentWidth - totalTextCells) / 2 : (contentWidth - totalTextCells);
+            contentXAligned += Math.Max(0, shift);
+        }
+
+        if (!HasSelection)
+        {
+            if (text.Length == 0 && !string.IsNullOrEmpty(context.Placeholder)
+                && (!options.ShowPlaceholderWhenUnfocusedOnly || !context.IsFocused))
+            {
+                var placeholder = context.Placeholder.AsSpan();
+                if (options.Alignment is TextAlignment.Center or TextAlignment.Right)
+                {
+                    var placeholderCells = GetTextCells(placeholder, options.TabSize);
+                    if (placeholderCells < contentWidth)
+                    {
+                        var shift = options.Alignment == TextAlignment.Center ? (contentWidth - placeholderCells) / 2 : (contentWidth - placeholderCells);
+                        contentXAligned = _contentX + Math.Max(0, shift);
+                    }
+                    else
+                    {
+                        contentXAligned = _contentX;
+                    }
+                }
+
+                context.SegmentWriter(context.Buffer, contentXAligned, _contentY, placeholder, context.PlaceholderStyle, isPlaceholder: true);
+            }
+            else if (endIndex > startIndex)
+            {
+                context.SegmentWriter(context.Buffer, contentXAligned, _contentY, text.AsSpan(startIndex, endIndex - startIndex), context.TextStyle, isPlaceholder: false);
+            }
+        }
+        else
+        {
+            var (selStart, selEnd) = GetOrderedSelection();
+            var visSelStart = Math.Clamp(selStart, startIndex, endIndex);
+            var visSelEnd = Math.Clamp(selEnd, startIndex, endIndex);
+
+            if (visSelStart > startIndex)
+            {
+                context.SegmentWriter(context.Buffer, contentXAligned, _contentY, text.AsSpan(startIndex, visSelStart - startIndex), context.TextStyle, isPlaceholder: false);
+            }
+
+            if (visSelEnd > visSelStart)
+            {
+                var selStartCells = GetTextCells(text.AsSpan(startIndex, visSelStart - startIndex), options.TabSize);
+                context.SegmentWriter(context.Buffer, contentXAligned + selStartCells, _contentY, text.AsSpan(visSelStart, visSelEnd - visSelStart), context.SelectionStyle, isPlaceholder: false);
+            }
+
+            if (endIndex > visSelEnd)
+            {
+                var selEndCells = GetTextCells(text.AsSpan(startIndex, visSelEnd - startIndex), options.TabSize);
+                context.SegmentWriter(context.Buffer, contentXAligned + selEndCells, _contentY, text.AsSpan(visSelEnd, endIndex - visSelEnd), context.TextStyle, isPlaceholder: false);
+            }
+        }
+    }
+    private void RenderMultiLine(in TextEditorRenderContext context, in TextEditorOptions options)
+    {
+        var text = _document.GetText();
+        if (_contentWidth <= 0 || _contentHeight <= 0)
+        {
+            return;
+        }
+
+        if (text.Length == 0 && !string.IsNullOrEmpty(context.Placeholder))
+        {
+            context.SegmentWriter(context.Buffer, _contentX, _contentY, context.Placeholder.AsSpan(), context.PlaceholderStyle, isPlaceholder: true);
+            return;
+        }
+
+        var snapshot = (TextSnapshot)_document.CurrentSnapshot;
+
+        var startRow = _scroll.OffsetY;
+        var endRow = startRow + _contentHeight;
+        var row = 0;
+
+        var selectionStart = 0;
+        var selectionEnd = 0;
+        if (HasSelection)
+        {
+            selectionStart = Math.Min(_selectionAnchor, _selectionEnd);
+            selectionEnd = Math.Max(_selectionAnchor, _selectionEnd);
+        }
+
+        for (var lineIndex = 0; lineIndex < snapshot.LineCount; lineIndex++)
+        {
+            var line = snapshot.GetLine(lineIndex);
+            var lineSpan = text.AsSpan(line.Start, line.Length);
+
+            if (!options.WordWrap)
+            {
+                if (row >= endRow)
+                {
+                    return;
+                }
+
+                if (row >= startRow)
+                {
+                    RenderSingleLineSegment(
+                        context,
+                        options,
+                        lineSpan,
+                        line.Start,
+                        row - startRow,
+                        selectionStart,
+                        selectionEnd);
+                }
+
+                row++;
+                continue;
+            }
+
+            if (lineSpan.IsEmpty)
+            {
+                if (row >= endRow)
+                {
+                    return;
+                }
+
+                if (row >= startRow)
+                {
+                    var y = _contentY + (row - startRow);
+                    context.SegmentWriter(context.Buffer, _contentX, y, ReadOnlySpan<char>.Empty, context.TextStyle, isPlaceholder: false);
+                }
+
+                row++;
+                continue;
+            }
+
+            var segmentStart = 0;
+            while (segmentStart < lineSpan.Length)
+            {
+                var segmentLength = GetWrapSegmentLength(lineSpan, segmentStart, _contentWidth, options.TabSize);
+                if (segmentLength <= 0)
+                {
+                    break;
+                }
+
+                if (row >= endRow)
+                {
+                    return;
+                }
+
+                if (row >= startRow)
+                {
+                    RenderWrappedSegment(
+                        context,
+                        options,
+                        lineSpan,
+                        line.Start,
+                        segmentStart,
+                        segmentLength,
+                        row - startRow,
+                        selectionStart,
+                        selectionEnd);
+                }
+
+                row++;
+                segmentStart += segmentLength;
+            }
+        }
+    }
+
+    private void RenderSingleLineSegment(
+        in TextEditorRenderContext context,
+        in TextEditorOptions options,
+        ReadOnlySpan<char> lineSpan,
+        int lineStartIndex,
+        int visualRow,
+        int selectionStart,
+        int selectionEnd)
+    {
+        var scrollX = options.WordWrap ? 0 : _scroll.OffsetX;
+        var startIndex = GetIndexAtCell(lineSpan, scrollX, options.TabSize);
+        var endIndex = GetIndexAtCell(lineSpan, scrollX + _contentWidth, options.TabSize);
+
+        var y = _contentY + visualRow;
+        if (!HasSelection)
+        {
+            if (endIndex > startIndex)
+            {
+                context.SegmentWriter(context.Buffer, _contentX, y, lineSpan.Slice(startIndex, endIndex - startIndex), context.TextStyle, isPlaceholder: false);
+            }
+
+            return;
+        }
+
+        var selStart = Math.Clamp(selectionStart, lineStartIndex, lineStartIndex + lineSpan.Length);
+        var selEnd = Math.Clamp(selectionEnd, lineStartIndex, lineStartIndex + lineSpan.Length);
+
+        if (selEnd <= selStart)
+        {
+            if (endIndex > startIndex)
+            {
+                context.SegmentWriter(context.Buffer, _contentX, y, lineSpan.Slice(startIndex, endIndex - startIndex), context.TextStyle, isPlaceholder: false);
+            }
+            return;
+        }
+
+        var localSelStart = selStart - lineStartIndex;
+        var localSelEnd = selEnd - lineStartIndex;
+
+        var visSelStart = Math.Clamp(localSelStart - startIndex, 0, endIndex - startIndex);
+        var visSelEnd = Math.Clamp(localSelEnd - startIndex, 0, endIndex - startIndex);
+
+        var left = lineSpan.Slice(startIndex, visSelStart);
+        var sel = lineSpan.Slice(startIndex + visSelStart, Math.Max(0, visSelEnd - visSelStart));
+        var right = lineSpan.Slice(startIndex + visSelEnd, Math.Max(0, endIndex - (startIndex + visSelEnd)));
+
+        if (!left.IsEmpty)
+        {
+            context.SegmentWriter(context.Buffer, _contentX, y, left, context.TextStyle, isPlaceholder: false);
+        }
+
+        if (!sel.IsEmpty)
+        {
+            var selStartCells = GetTextCells(left, options.TabSize);
+            context.SegmentWriter(context.Buffer, _contentX + selStartCells, y, sel, context.SelectionStyle, isPlaceholder: false);
+        }
+
+        if (!right.IsEmpty)
+        {
+            var leftCells = GetTextCells(left, options.TabSize);
+            var selCells = GetTextCells(sel, options.TabSize);
+            context.SegmentWriter(context.Buffer, _contentX + leftCells + selCells, y, right, context.TextStyle, isPlaceholder: false);
+        }
+    }
+
+    private void RenderWrappedSegment(
+        in TextEditorRenderContext context,
+        in TextEditorOptions options,
+        ReadOnlySpan<char> lineSpan,
+        int lineStartIndex,
+        int segmentStart,
+        int segmentLength,
+        int visualRow,
+        int selectionStart,
+        int selectionEnd)
+    {
+        var segment = lineSpan.Slice(segmentStart, segmentLength);
+        var y = _contentY + visualRow;
+
+        if (!HasSelection)
+        {
+            context.SegmentWriter(context.Buffer, _contentX, y, segment, context.TextStyle, isPlaceholder: false);
+            return;
+        }
+
+        var segStartIndex = lineStartIndex + segmentStart;
+        var segEndIndex = segStartIndex + segmentLength;
+
+        var selStart = Math.Clamp(selectionStart, segStartIndex, segEndIndex);
+        var selEnd = Math.Clamp(selectionEnd, segStartIndex, segEndIndex);
+
+        if (selEnd <= selStart)
+        {
+            context.SegmentWriter(context.Buffer, _contentX, y, segment, context.TextStyle, isPlaceholder: false);
+            return;
+        }
+
+        var localSelStart = selStart - segStartIndex;
+        var localSelEnd = selEnd - segStartIndex;
+
+        var left = segment[..localSelStart];
+        var sel = segment.Slice(localSelStart, localSelEnd - localSelStart);
+        var right = segment[localSelEnd..];
+
+        if (!left.IsEmpty)
+        {
+            context.SegmentWriter(context.Buffer, _contentX, y, left, context.TextStyle, isPlaceholder: false);
+        }
+
+        if (!sel.IsEmpty)
+        {
+            var selStartCells = GetTextCells(left, options.TabSize);
+            context.SegmentWriter(context.Buffer, _contentX + selStartCells, y, sel, context.SelectionStyle, isPlaceholder: false);
+        }
+
+        if (!right.IsEmpty)
+        {
+            var leftCells = GetTextCells(left, options.TabSize);
+            var selCells = GetTextCells(sel, options.TabSize);
+            context.SegmentWriter(context.Buffer, _contentX + leftCells + selCells, y, right, context.TextStyle, isPlaceholder: false);
+        }
+    }
+    private int ComputeExtent(TextSnapshot snapshot, in TextEditorOptions options, out int extentWidth)
+    {
+        var text = snapshot.Text;
+        var maxWidth = 0;
+        var totalRows = 0;
+
+        for (var i = 0; i < snapshot.LineCount; i++)
+        {
+            var line = snapshot.GetLine(i);
+            var span = text.AsSpan(line.Start, line.Length);
+            if (options.WordWrap)
+            {
+                var lineRows = GetWrapLineCount(span, _contentWidth, options.TabSize);
+                totalRows += Math.Max(1, lineRows);
+                maxWidth = Math.Max(maxWidth, _contentWidth);
+            }
+            else
+            {
+                var width = GetTextCells(span, options.TabSize);
+                maxWidth = Math.Max(maxWidth, width);
+                totalRows++;
+            }
+        }
+
+        if (totalRows == 0)
+        {
+            totalRows = 1;
+        }
+
+        extentWidth = Math.Max(0, maxWidth);
+        return totalRows;
+    }
+
+    private void InsertText(string text, in TextEditorOptions options)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        if (!options.AcceptsReturn)
+        {
+            text = text.Replace("\r", string.Empty, StringComparison.Ordinal);
+        }
+
+        if (HasSelection)
+        {
+            DeleteSelection();
+        }
+
+        var insertText = text.AsSpan();
+        _document.Insert(Math.Clamp(_caretIndex, 0, _document.GetText().Length), insertText);
+        _caretIndex += insertText.Length;
+        _preferredColumn = -1;
+        EnsureCaretVisible(options);
+        _host.InvalidateEditor();
+    }
+
+    private void Backspace(in TextEditorOptions options)
+    {
+        if (HasSelection)
+        {
+            DeleteSelection();
+            return;
+        }
+
+        var text = _document.GetText();
+        if (_caretIndex <= 0 || text.Length == 0)
+        {
+            return;
+        }
+
+        var prev = TerminalTextUtility.GetPreviousRuneIndex(text.AsSpan(), _caretIndex);
+        _document.Remove(prev, _caretIndex - prev);
+        _caretIndex = prev;
+        _preferredColumn = -1;
+        EnsureCaretVisible(options);
+        _host.InvalidateEditor();
+    }
+
+    private void Delete(in TextEditorOptions options)
+    {
+        if (HasSelection)
+        {
+            DeleteSelection();
+            return;
+        }
+
+        var text = _document.GetText();
+        if (_caretIndex >= text.Length)
+        {
+            return;
+        }
+
+        var next = TerminalTextUtility.GetNextRuneIndex(text.AsSpan(), _caretIndex);
+        _document.Remove(_caretIndex, next - _caretIndex);
+        _preferredColumn = -1;
+        EnsureCaretVisible(options);
+        _host.InvalidateEditor();
+    }
+
+    private void MoveCaretTo(int index, bool extendSelection, in TextEditorOptions options)
+    {
+        index = Math.Clamp(index, 0, _document.GetText().Length);
+        if (extendSelection)
+        {
+            ExtendSelection(index);
+        }
+        else
+        {
+            ClearSelection();
+        }
+
+        _caretIndex = index;
+        _preferredColumn = -1;
+        EnsureCaretVisible(options);
+        _host.InvalidateEditor();
+    }
+
+    private void MoveCaretHorizontal(int delta, bool extendSelection, in TextEditorOptions options)
+    {
+        var text = _document.GetText();
+        var next = Math.Clamp(_caretIndex + delta, 0, text.Length);
+        MoveCaretTo(next, extendSelection, options);
+    }
+
+    private void MoveCaretVertical(int deltaLines, bool extendSelection, in TextEditorOptions options)
+    {
+        var text = _document.GetText();
+        if (options.WordWrap)
+        {
+            var (row, visualCol) = GetVisualPosition(text.AsSpan(), _caretIndex, options);
+            if (_preferredColumn < 0)
+            {
+                _preferredColumn = visualCol;
+            }
+
+            var targetRow = Math.Max(0, row + deltaLines);
+            var index = GetIndexFromVisualPosition(text.AsSpan(), targetRow, _preferredColumn, options);
+            MoveCaretTo(index, extendSelection, options);
+            return;
+        }
+
+        var (line, lineCol) = GetLineColumnForIndex(text.AsSpan(), _caretIndex);
+        if (_preferredColumn < 0)
+        {
+            _preferredColumn = lineCol;
+        }
+
+        var newLine = line + deltaLines;
+        var next = GetIndexForLineColumn(text.AsSpan(), newLine, _preferredColumn);
+        MoveCaretTo(next, extendSelection, options);
+    }
+
+    private void MoveCaretToLineBoundary(bool start, bool extendSelection, in TextEditorOptions options)
+    {
+        var text = _document.GetText().AsSpan();
+        if (options.WordWrap)
+        {
+            var (row, _) = GetVisualPosition(text, _caretIndex, options);
+            var lineInfo = GetLineFromVisualRow(text, row, options, out var lineStart, out var lineEnd, out var rowInLine);
+            if (!lineInfo)
+            {
+                return;
+            }
+
+            var segmentStart = GetSegmentStartIndex(text.Slice(lineStart, lineEnd - lineStart), rowInLine, _contentWidth, options.TabSize);
+            var segmentLength = GetWrapSegmentLength(text.Slice(lineStart, lineEnd - lineStart), segmentStart, _contentWidth, options.TabSize);
+            var index = start ? lineStart + segmentStart : lineStart + segmentStart + segmentLength;
+            MoveCaretTo(index, extendSelection, options);
+            return;
+        }
+
+        var (line, _) = GetLineColumnForIndex(text, _caretIndex);
+        var lineStartIndex = GetLineStartIndex(text, line);
+        var lineEndIndex = GetLineEndIndex(text, line);
+        MoveCaretTo(start ? lineStartIndex : lineEndIndex, extendSelection, options);
+    }
+
+    private void EnsureCaretVisible(in TextEditorOptions options)
+    {
+        if (_contentWidth <= 0 || _contentHeight <= 0)
+        {
+            return;
+        }
+
+        var text = _document.GetText().AsSpan();
+        if (options.SingleLine)
+        {
+            var caretCells = GetCellOffsetAtIndex(text, _caretIndex, options.TabSize);
+            var targetX = _scroll.OffsetX;
+
+            if (caretCells < targetX)
+            {
+                targetX = caretCells;
+            }
+            else if (caretCells >= targetX + _contentWidth)
+            {
+                targetX = Math.Max(0, caretCells - _contentWidth + 1);
+            }
+
+            _scroll.SetOffset(targetX, 0);
+            return;
+        }
+
+        var (row, col) = GetVisualPosition(text, _caretIndex, options);
+        var offsetX = options.WordWrap ? 0 : _scroll.OffsetX;
+        var offsetY = _scroll.OffsetY;
+
+        if (row < offsetY)
+        {
+            offsetY = row;
+        }
+        else if (row >= offsetY + _contentHeight)
+        {
+            offsetY = Math.Max(0, row - _contentHeight + 1);
+        }
+
+        if (!options.WordWrap)
+        {
+            if (col < offsetX)
+            {
+                offsetX = col;
+            }
+            else if (col >= offsetX + _contentWidth)
+            {
+                offsetX = Math.Max(0, col - _contentWidth + 1);
+            }
+        }
+
+        _scroll.SetOffset(offsetX, offsetY);
+    }
+    private int GetIndexFromPointer(int uiX, int uiY, in TextEditorOptions options)
+    {
+        var text = _document.GetText().AsSpan();
+        var localX = Math.Clamp(uiX - _contentX, 0, _contentWidth);
+        var localY = Math.Clamp(uiY - _contentY, 0, _contentHeight);
+
+        if (options.SingleLine)
+        {
+            var cell = localX + _scroll.OffsetX;
+            return GetIndexAtCell(text, cell, options.TabSize);
+        }
+
+        var row = localY + _scroll.OffsetY;
+        if (options.WordWrap)
+        {
+            return GetIndexFromVisualPosition(text, row, localX, options);
+        }
+
+        var line = Math.Clamp(row, 0, GetLineCount(text) - 1);
+        var lineStart = GetLineStartIndex(text, line);
+        var lineEnd = GetLineEndIndex(text, line);
+        var lineSpan = text.Slice(lineStart, lineEnd - lineStart);
+        var col = localX + _scroll.OffsetX;
+        var indexInLine = GetIndexAtCell(lineSpan, col, options.TabSize);
+        return lineStart + indexInLine;
+    }
+
+    private void KillToEnd(ReadOnlySpan<char> text)
+    {
+        if (HasSelection)
+        {
+            _killBuffer = GetSelectedTextSpan(text).ToString();
+            DeleteSelection();
+        }
+        else if (_caretIndex < text.Length)
+        {
+            _killBuffer = text[_caretIndex..].ToString();
+            _document.Remove(_caretIndex, text.Length - _caretIndex);
+        }
+
+        _host.InvalidateEditor();
+    }
+
+    private void KillToStart(ReadOnlySpan<char> text)
+    {
+        if (HasSelection)
+        {
+            _killBuffer = GetSelectedTextSpan(text).ToString();
+            DeleteSelection();
+        }
+        else if (_caretIndex > 0)
+        {
+            _killBuffer = text[.._caretIndex].ToString();
+            _document.Remove(0, _caretIndex);
+            _caretIndex = 0;
+        }
+
+        _host.InvalidateEditor();
+    }
+
+    private void KillPreviousWord(ReadOnlySpan<char> text)
+    {
+        if (HasSelection)
+        {
+            _killBuffer = GetSelectedTextSpan(text).ToString();
+            DeleteSelection();
+            _host.InvalidateEditor();
+            return;
+        }
+
+        if (_caretIndex <= 0)
+        {
+            return;
+        }
+
+        var prev = GetPreviousWordIndex(text, _caretIndex);
+        _killBuffer = text[prev.._caretIndex].ToString();
+        _document.Remove(prev, _caretIndex - prev);
+        _caretIndex = prev;
+        _host.InvalidateEditor();
+    }
+
+    private void ClearSelection()
+    {
+        _selectionAnchor = -1;
+        _selectionEnd = -1;
+    }
+
+    private void ExtendSelection(int caret)
+    {
+        if (_selectionAnchor < 0)
+        {
+            _selectionAnchor = _caretIndex;
+        }
+
+        _selectionEnd = caret;
+    }
+
+    private void DeleteSelection()
+    {
+        if (!HasSelection)
+        {
+            return;
+        }
+
+        var text = _document.GetText();
+        var (start, end) = GetOrderedSelection();
+        start = Math.Clamp(start, 0, text.Length);
+        end = Math.Clamp(end, 0, text.Length);
+        if (end <= start)
+        {
+            ClearSelection();
+            return;
+        }
+
+        _document.Remove(start, end - start);
+        _caretIndex = start;
+        ClearSelection();
+    }
+
+    private void SelectAll()
+    {
+        var text = _document.GetText();
+        if (text.Length == 0)
+        {
+            return;
+        }
+
+        _selectionAnchor = 0;
+        _selectionEnd = text.Length;
+        _caretIndex = text.Length;
+        _host.InvalidateEditor();
+    }
+
+    private void UpdateSelectionAfterCaretMove(bool shift, int oldCaretIndex)
+    {
+        if (!shift)
+        {
+            ClearSelection();
+            _host.InvalidateEditor();
+            return;
+        }
+
+        if (_selectionAnchor < 0)
+        {
+            _selectionAnchor = oldCaretIndex;
+        }
+
+        _selectionEnd = _caretIndex;
+        _host.InvalidateEditor();
+    }
+
+    private (int Start, int End) GetOrderedSelection()
+    {
+        var start = _selectionAnchor;
+        var end = _selectionEnd;
+        if (start > end)
+        {
+            (start, end) = (end, start);
+        }
+        return (start, end);
+    }
+
+    private ReadOnlySpan<char> GetSelectedTextSpan(ReadOnlySpan<char> text)
+    {
+        if (!HasSelection || text.IsEmpty)
+        {
+            return ReadOnlySpan<char>.Empty;
+        }
+
+        var (start, end) = GetOrderedSelection();
+        start = Math.Clamp(start, 0, text.Length);
+        end = Math.Clamp(end, 0, text.Length);
+        return end > start ? text.Slice(start, end - start) : ReadOnlySpan<char>.Empty;
+    }
+
+    private static int GetLineCount(ReadOnlySpan<char> text)
+    {
+        if (text.IsEmpty)
+        {
+            return 1;
+        }
+
+        var count = 1;
+        for (var i = 0; i < text.Length; i++)
+        {
+            if (text[i] == '\n')
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+    private static int GetLineStartIndex(ReadOnlySpan<char> text, int line)
+    {
+        if (line <= 0)
+        {
+            return 0;
+        }
+
+        var current = 0;
+        var index = 0;
+        while (index < text.Length)
+        {
+            if (text[index] == '\n')
+            {
+                current++;
+                if (current == line)
+                {
+                    return index + 1;
+                }
+            }
+            index++;
+        }
+
+        return text.Length;
+    }
+
+    private static int GetLineEndIndex(ReadOnlySpan<char> text, int line)
+    {
+        var start = GetLineStartIndex(text, line);
+        for (var i = start; i < text.Length; i++)
+        {
+            if (text[i] == '\n')
+            {
+                return i;
+            }
+        }
+
+        return text.Length;
+    }
+
+    private static (int Line, int Column) GetLineColumnForIndex(ReadOnlySpan<char> text, int index)
+    {
+        index = Math.Clamp(index, 0, text.Length);
+        var line = 0;
+        var start = 0;
+        for (var i = 0; i < index; i++)
+        {
+            if (text[i] == '\n')
+            {
+                line++;
+                start = i + 1;
+            }
+        }
+
+        return (line, index - start);
+    }
+
+    private static int GetIndexForLineColumn(ReadOnlySpan<char> text, int line, int column)
+    {
+        line = Math.Max(0, line);
+        var start = GetLineStartIndex(text, line);
+        var end = GetLineEndIndex(text, line);
+        column = Math.Clamp(column, 0, Math.Max(0, end - start));
+        return start + column;
+    }
+
+    private (int Row, int Column) GetVisualPosition(ReadOnlySpan<char> text, int index, in TextEditorOptions options)
+    {
+        index = Math.Clamp(index, 0, text.Length);
+        var row = 0;
+        var remaining = index;
+        var lineIndex = 0;
+        var lineStart = 0;
+
+        while (lineStart <= text.Length)
+        {
+            var lineEnd = GetLineEndIndex(text, lineIndex);
+            var lineLength = lineEnd - lineStart;
+
+            if (remaining <= lineLength)
+            {
+                var lineSpan = text.Slice(lineStart, lineLength);
+                if (!options.WordWrap || _contentWidth <= 0)
+                {
+                    var lineCol = GetTextCells(lineSpan[..remaining], options.TabSize);
+                    return (row, lineCol);
+                }
+
+                var (rowInLine, wrapCol) = GetWrappedPositionInLine(lineSpan, remaining, _contentWidth, options.TabSize);
+                return (row + rowInLine, wrapCol);
+            }
+
+            remaining -= lineLength + 1;
+            if (!options.WordWrap || _contentWidth <= 0)
+            {
+                row++;
+            }
+            else
+            {
+                var lineSpan = text.Slice(lineStart, lineLength);
+                row += GetWrapLineCount(lineSpan, _contentWidth, options.TabSize);
+            }
+
+            lineIndex++;
+            lineStart = lineEnd + 1;
+            if (lineStart > text.Length)
+            {
+                break;
+            }
+        }
+
+        return (row, 0);
+    }
+
+    private int GetIndexFromVisualPosition(ReadOnlySpan<char> text, int targetRow, int targetCol, in TextEditorOptions options)
+    {
+        targetRow = Math.Max(0, targetRow);
+        var row = 0;
+        var lineIndex = 0;
+        var lineStart = 0;
+
+        while (lineStart <= text.Length)
+        {
+            var lineEnd = GetLineEndIndex(text, lineIndex);
+            var lineSpan = text.Slice(lineStart, lineEnd - lineStart);
+
+            if (!options.WordWrap || _contentWidth <= 0)
+            {
+                if (row == targetRow)
+                {
+                    var indexInLine = GetIndexAtCell(lineSpan, targetCol, options.TabSize);
+                    return lineStart + indexInLine;
+                }
+
+                row++;
+            }
+            else
+            {
+                var lineRows = GetWrapLineCount(lineSpan, _contentWidth, options.TabSize);
+                if (targetRow >= row && targetRow < row + lineRows)
+                {
+                    var rowInLine = targetRow - row;
+                    var segmentStart = GetSegmentStartIndex(lineSpan, rowInLine, _contentWidth, options.TabSize);
+                    var segmentLength = GetWrapSegmentLength(lineSpan, segmentStart, _contentWidth, options.TabSize);
+                    var segment = lineSpan.Slice(segmentStart, segmentLength);
+                    var indexInSegment = GetIndexAtCell(segment, targetCol, options.TabSize);
+                    return lineStart + segmentStart + indexInSegment;
+                }
+
+                row += lineRows;
+            }
+
+            lineIndex++;
+            lineStart = lineEnd + 1;
+            if (lineStart > text.Length)
+            {
+                break;
+            }
+        }
+
+        return text.Length;
+    }
+
+    private bool GetLineFromVisualRow(ReadOnlySpan<char> text, int targetRow, in TextEditorOptions options, out int lineStart, out int lineEnd, out int rowInLine)
+    {
+        targetRow = Math.Max(0, targetRow);
+        var row = 0;
+        var lineIndex = 0;
+        lineStart = 0;
+        lineEnd = 0;
+        rowInLine = 0;
+
+        while (lineStart <= text.Length)
+        {
+            lineEnd = GetLineEndIndex(text, lineIndex);
+            var lineSpan = text.Slice(lineStart, lineEnd - lineStart);
+
+            if (!options.WordWrap || _contentWidth <= 0)
+            {
+                if (row == targetRow)
+                {
+                    rowInLine = 0;
+                    return true;
+                }
+
+                row++;
+            }
+            else
+            {
+                var lineRows = GetWrapLineCount(lineSpan, _contentWidth, options.TabSize);
+                if (targetRow >= row && targetRow < row + lineRows)
+                {
+                    rowInLine = targetRow - row;
+                    return true;
+                }
+
+                row += lineRows;
+            }
+
+            lineIndex++;
+            lineStart = lineEnd + 1;
+            if (lineStart > text.Length)
+            {
+                break;
+            }
+        }
+
+        return false;
+    }
+    private static int GetSegmentStartIndex(ReadOnlySpan<char> lineSpan, int rowInLine, int wrapWidth, int tabSize)
+    {
+        if (rowInLine <= 0 || wrapWidth <= 0)
+        {
+            return 0;
+        }
+
+        var offset = 0;
+        for (var i = 0; i < rowInLine && offset < lineSpan.Length; i++)
+        {
+            var segLength = GetWrapSegmentLength(lineSpan, offset, wrapWidth, tabSize);
+            if (segLength <= 0)
+            {
+                break;
+            }
+
+            offset += segLength;
+        }
+
+        return offset;
+    }
+
+    private static int GetWrapSegmentLength(ReadOnlySpan<char> lineSpan, int startIndex, int wrapWidth, int tabSize)
+    {
+        if (wrapWidth <= 0)
+        {
+            return lineSpan.Length - startIndex;
+        }
+
+        if (startIndex >= lineSpan.Length)
+        {
+            return 0;
+        }
+
+        var col = 0;
+        var i = startIndex;
+        var last = i;
+        while (i < lineSpan.Length)
+        {
+            var next = TerminalTextUtility.GetNextRuneIndex(lineSpan, i);
+            if (next <= i)
+            {
+                break;
+            }
+
+            var rune = DecodeRune(lineSpan[i..next]);
+            var width = GetRuneCellWidth(rune, col, tabSize);
+
+            if (col + width > wrapWidth && col > 0)
+            {
+                break;
+            }
+
+            col += width;
+            last = next;
+
+            if (col >= wrapWidth)
+            {
+                break;
+            }
+
+            i = next;
+        }
+
+        return Math.Max(0, last - startIndex);
+    }
+
+    private static int GetWrapLineCount(ReadOnlySpan<char> lineSpan, int wrapWidth, int tabSize)
+    {
+        if (lineSpan.IsEmpty)
+        {
+            return 1;
+        }
+
+        var count = 0;
+        var index = 0;
+        while (index < lineSpan.Length)
+        {
+            var length = GetWrapSegmentLength(lineSpan, index, wrapWidth, tabSize);
+            if (length <= 0)
+            {
+                break;
+            }
+
+            count++;
+            index += length;
+        }
+
+        return Math.Max(1, count);
+    }
+
+    private static (int Row, int Column) GetWrappedPositionInLine(ReadOnlySpan<char> lineSpan, int indexInLine, int wrapWidth, int tabSize)
+    {
+        indexInLine = Math.Clamp(indexInLine, 0, lineSpan.Length);
+
+        var row = 0;
+        var col = 0;
+        var i = 0;
+
+        while (i < indexInLine)
+        {
+            var next = TerminalTextUtility.GetNextRuneIndex(lineSpan, i);
+            if (next <= i)
+            {
+                break;
+            }
+
+            var rune = DecodeRune(lineSpan[i..next]);
+            var width = GetRuneCellWidth(rune, col, tabSize);
+
+            if (wrapWidth > 0 && col + width > wrapWidth && col > 0)
+            {
+                row++;
+                col = 0;
+            }
+
+            col += width;
+            i = next;
+
+            if (wrapWidth > 0 && col >= wrapWidth)
+            {
+                row++;
+                col = 0;
+            }
+        }
+
+        return (row, col);
+    }
+
+    private static int GetTextCells(ReadOnlySpan<char> text, int tabSize)
+    {
+        var col = 0;
+        var i = 0;
+        while (i < text.Length)
+        {
+            var next = TerminalTextUtility.GetNextRuneIndex(text, i);
+            if (next <= i)
+            {
+                break;
+            }
+
+            var rune = DecodeRune(text[i..next]);
+            col += GetRuneCellWidth(rune, col, tabSize);
+            i = next;
+        }
+
+        return col;
+    }
+
+    private static int GetCellOffsetAtIndex(ReadOnlySpan<char> text, int index, int tabSize)
+    {
+        index = Math.Clamp(index, 0, text.Length);
+        var col = 0;
+        var i = 0;
+        while (i < index)
+        {
+            var next = TerminalTextUtility.GetNextRuneIndex(text, i);
+            if (next <= i)
+            {
+                break;
+            }
+
+            var rune = DecodeRune(text[i..next]);
+            col += GetRuneCellWidth(rune, col, tabSize);
+            i = next;
+        }
+
+        return col;
+    }
+
+    private static int GetIndexAtCell(ReadOnlySpan<char> text, int targetCell, int tabSize)
+    {
+        if (targetCell <= 0)
+        {
+            return 0;
+        }
+
+        var col = 0;
+        var i = 0;
+        while (i < text.Length)
+        {
+            var next = TerminalTextUtility.GetNextRuneIndex(text, i);
+            if (next <= i)
+            {
+                break;
+            }
+
+            var rune = DecodeRune(text[i..next]);
+            var width = GetRuneCellWidth(rune, col, tabSize);
+            if (col + width > targetCell)
+            {
+                return i;
+            }
+
+            col += width;
+            i = next;
+        }
+
+        return text.Length;
+    }
+
+    private static int GetRuneCellWidth(Rune rune, int column, int tabSize)
+    {
+        if (rune.Value == '\t')
+        {
+            var size = Math.Max(1, tabSize);
+            return size - (column % size);
+        }
+
+        return Math.Max(1, TerminalTextUtility.GetRuneWidth(rune));
+    }
+
+    private static Rune DecodeRune(ReadOnlySpan<char> span)
+    {
+        if (Rune.DecodeFromUtf16(span, out var rune, out var consumed) == OperationStatus.Done && consumed > 0)
+        {
+            return rune;
+        }
+
+        return Rune.ReplacementChar;
+    }
+
+    private static int GetPreviousWordIndex(ReadOnlySpan<char> text, int caretIndex)
+    {
+        caretIndex = Math.Clamp(caretIndex, 0, text.Length);
+        if (caretIndex == 0)
+        {
+            return 0;
+        }
+
+        var i = caretIndex;
+        while (i > 0)
+        {
+            var prev = TerminalTextUtility.GetPreviousRuneIndex(text, i);
+            if (!IsWhitespace(ReadRuneAt(text, prev)))
+            {
+                i = prev;
+                break;
+            }
+            i = prev;
+        }
+
+        if (i == 0)
+        {
+            return 0;
+        }
+
+        var category = GetCategory(ReadRuneAt(text, i));
+        while (i > 0)
+        {
+            var prev = TerminalTextUtility.GetPreviousRuneIndex(text, i);
+            if (GetCategory(ReadRuneAt(text, prev)) != category)
+            {
+                break;
+            }
+            i = prev;
+        }
+
+        return i;
+    }
+
+    private static int GetNextWordIndex(ReadOnlySpan<char> text, int caretIndex)
+    {
+        caretIndex = Math.Clamp(caretIndex, 0, text.Length);
+        if (caretIndex >= text.Length)
+        {
+            return text.Length;
+        }
+
+        var i = caretIndex;
+        while (i < text.Length)
+        {
+            var rune = ReadRuneAt(text, i);
+            if (!IsWhitespace(rune))
+            {
+                break;
+            }
+            i = TerminalTextUtility.GetNextRuneIndex(text, i);
+        }
+
+        if (i >= text.Length)
+        {
+            return text.Length;
+        }
+
+        var category = GetCategory(ReadRuneAt(text, i));
+        while (i < text.Length)
+        {
+            var next = TerminalTextUtility.GetNextRuneIndex(text, i);
+            if (next >= text.Length)
+            {
+                return text.Length;
+            }
+
+            if (GetCategory(ReadRuneAt(text, next)) != category)
+            {
+                return next;
+            }
+
+            i = next;
+        }
+
+        return text.Length;
+    }
+
+    private enum RuneCategory
+    {
+        Whitespace,
+        Word,
+        Other,
+    }
+
+    private static RuneCategory GetCategory(Rune rune)
+    {
+        if (IsWhitespace(rune))
+        {
+            return RuneCategory.Whitespace;
+        }
+
+        if (IsWord(rune))
+        {
+            return RuneCategory.Word;
+        }
+
+        return RuneCategory.Other;
+    }
+
+    private static bool IsWhitespace(Rune rune) => Rune.IsWhiteSpace(rune);
+
+    private static bool IsWord(Rune rune)
+    {
+        if (rune.Value is < 128)
+        {
+            var ch = (char)rune.Value;
+            return char.IsLetterOrDigit(ch) || ch == '_';
+        }
+
+        return Rune.IsLetterOrDigit(rune) || rune.Value == '_';
+    }
+
+    private static Rune ReadRuneAt(ReadOnlySpan<char> text, int index)
+    {
+        if (index < 0 || index >= text.Length)
+        {
+            return Rune.ReplacementChar;
+        }
+
+        if (Rune.DecodeFromUtf16(text[index..], out var rune, out var consumed) != OperationStatus.Done || consumed <= 0)
+        {
+            return Rune.ReplacementChar;
+        }
+
+        return rune;
+    }
+}

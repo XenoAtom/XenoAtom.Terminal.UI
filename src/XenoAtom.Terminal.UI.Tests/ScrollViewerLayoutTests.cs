@@ -5,6 +5,7 @@
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Layout;
+using XenoAtom.Terminal.UI.Scrolling;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -68,6 +69,33 @@ public sealed class ScrollViewerLayoutTests
         Assert.IsFalse(h.IsVisible, "Horizontal bar should not appear due to the vertical bar reducing viewport width by 1.");
     }
 
+    [TestMethod]
+    public void ScrollViewer_Uses_Content_Scroll_Model_When_Configured()
+    {
+        var content = new ScrollableVisual();
+        var scroll = new ScrollViewer
+        {
+            Content = content,
+            ContentMode = ScrollViewerContentMode.UseContentScrollModel,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+        };
+
+        scroll.Measure(new Size(10, 5));
+        scroll.Arrange(new Rectangle(0, 0, 10, 5));
+
+        var bars = scroll.EnumerateVisualsDepthFirst().OfType<ScrollBar>().ToArray();
+        var v = bars.Single(b => b.Orientation == Orientation.Vertical);
+        var h = bars.Single(b => b.Orientation == Orientation.Horizontal);
+
+        Assert.IsTrue(v.IsVisible, "Expected vertical scroll bar for oversized content.");
+        Assert.IsTrue(h.IsVisible, "Expected horizontal scroll bar for oversized content.");
+
+        content.Scroll.SetOffset(3, 2);
+        Assert.AreEqual(3, scroll.HorizontalOffset);
+        Assert.AreEqual(2, scroll.VerticalOffset);
+    }
+
     private sealed class WrapLikeVisual : Visual
     {
         private readonly int _totalCells;
@@ -111,5 +139,26 @@ public sealed class ScrollViewerLayoutTests
         }
 
         protected override void ArrangeCore(in Rectangle finalRect) => Bounds = finalRect;
+    }
+
+    private sealed class ScrollableVisual : Visual, IScrollable
+    {
+        public ScrollModel Scroll { get; } = new();
+
+        public ScrollableVisual()
+        {
+            HorizontalAlignment = HorizontalAlignment.Stretch;
+            VerticalAlignment = VerticalAlignment.Stretch;
+        }
+
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+            => SizeHints.Fixed(new Size(1, 1));
+
+        protected override void ArrangeCore(in Rectangle finalRect)
+        {
+            Bounds = finalRect;
+            Scroll.SetViewport(finalRect.Width, finalRect.Height);
+            Scroll.SetExtent(30, 20);
+        }
     }
 }

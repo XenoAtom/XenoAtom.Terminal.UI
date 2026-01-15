@@ -58,5 +58,29 @@ public sealed class TextAreaTests
         StringAssert.Contains(rendered, "Hello");
         StringAssert.Contains(rendered, "World");
     }
-}
 
+    [TestMethod]
+    public async Task TextArea_Wraps_Text_By_Default()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(10, 6));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var textArea = new TextArea { Text = "0123456789" };
+        var root = new VStack { textArea };
+
+        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        var runTask = app.RunInBackgroundAsync();
+
+        await Task.Delay(40);
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var screen = new AnsiTestScreen(10, 6);
+        screen.Apply(backend.GetOutText());
+        var rendered = screen.GetText().Split('\n');
+
+        Assert.IsTrue(rendered.Length >= 3, "Expected multiple lines of output.");
+        Assert.IsTrue(rendered[1].Contains("012345", StringComparison.Ordinal), "Expected first wrapped line.");
+        Assert.IsTrue(rendered[2].Contains("6789", StringComparison.Ordinal), "Expected second wrapped line.");
+    }
+}
