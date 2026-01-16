@@ -57,6 +57,16 @@ public sealed partial class ScrollViewer : Visual
         AttachChild(_corner);
     }
 
+    public ScrollViewer(Visual? content) : this()
+    {
+        Content = content;
+    }
+
+    public ScrollViewer(Func<Visual?> contentFactory) : this()
+    {
+        this.Content(contentFactory);
+    }
+
     protected override int ChildrenCount => 4;
 
     protected override Visual GetChild(int index)
