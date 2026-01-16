@@ -4,6 +4,7 @@
 
 using System.Buffers;
 using System.Text;
+using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
@@ -79,18 +80,16 @@ internal sealed class TextEditorCore
         OnDocumentChanged();
     }
 
-    public int CaretIndex
+    public int CaretIndex => _caretIndex;
+
+    public void SetCaretIndex(int value, in TextEditorOptions options)
     {
-        get => _caretIndex;
-        set
-        {
-            var textLength = GetText().Length;
-            _caretIndex = Math.Clamp(value, 0, textLength);
-            ClearSelection();
-            _preferredColumn = -1;
-            EnsureCaretVisible(default);
-            _host.InvalidateEditor();
-        }
+        var textLength = GetText().Length;
+        _caretIndex = Math.Clamp(value, 0, textLength);
+        ClearSelection();
+        _preferredColumn = -1;
+        EnsureCaretVisible(options);
+        _host.InvalidateEditor();
     }
 
     private string GetText()
@@ -160,6 +159,37 @@ internal sealed class TextEditorCore
         {
             EnsureCaretVisible(options);
         }
+    }
+
+    private void UpdateExtent(in TextEditorOptions options)
+    {
+        if (_contentWidth <= 0 || _contentHeight <= 0)
+        {
+            return;
+        }
+
+        if (options.SingleLine)
+        {
+            var text = GetText();
+            var totalCells = GetTextCells(text.AsSpan(), options.TabSize);
+            _scroll.SetExtent(Math.Max(totalCells, _contentWidth), 1);
+            return;
+        }
+
+        var snapshot = _document.CurrentSnapshot;
+        var totalRows = ComputeExtent(snapshot, options, out var extentWidth);
+        _scroll.SetExtent(extentWidth, totalRows);
+        if (options.WordWrap)
+        {
+            _scroll.SetOffset(0, _scroll.OffsetY);
+        }
+    }
+
+    private void UpdateAfterDocumentChange(in TextEditorOptions options)
+    {
+        UpdateExtent(options);
+        EnsureCaretVisible(options);
+        _host.InvalidateEditor();
     }
 
     public void OnDocumentChanged()
@@ -343,14 +373,15 @@ internal sealed class TextEditorCore
 
         if (ctrl)
         {
-            if (e.Char is 'a' or 'A')
+            if (e.Char is TerminalChar.CtrlA)
             {
                 SelectAll();
+                EnsureCaretVisible(options);
                 e.Handled = true;
                 return;
             }
 
-            if (e.Char is 'v' or 'V')
+            if (e.Char is TerminalChar.CtrlV)
             {
                 var clip = _host.App?.Terminal.Clipboard.Text;
                 if (!string.IsNullOrEmpty(clip))
@@ -361,7 +392,7 @@ internal sealed class TextEditorCore
                 return;
             }
 
-            if (e.Char is 'c' or 'C')
+            if (e.Char is TerminalChar.CtrlC)
             {
                 var span = GetSelectedTextSpan(text.AsSpan());
                 if (!span.IsEmpty)
@@ -372,7 +403,7 @@ internal sealed class TextEditorCore
                 return;
             }
 
-            if (e.Char is 'x' or 'X')
+            if (e.Char is TerminalChar.CtrlX)
             {
                 if (HasSelection)
                 {
@@ -382,33 +413,34 @@ internal sealed class TextEditorCore
                         _host.App?.Terminal.Clipboard.TrySetText(span);
                     }
                     DeleteSelection();
+                    UpdateAfterDocumentChange(options);
                 }
                 e.Handled = true;
                 return;
             }
 
-            if (e.Char is 'k' or 'K')
+            if (e.Char is TerminalChar.CtrlK)
             {
-                KillToEnd(text.AsSpan());
+                KillToEnd(text.AsSpan(), options);
                 e.Handled = true;
                 return;
             }
 
-            if (e.Char is 'u' or 'U')
+            if (e.Char is TerminalChar.CtrlU)
             {
-                KillToStart(text.AsSpan());
+                KillToStart(text.AsSpan(), options);
                 e.Handled = true;
                 return;
             }
 
-            if (e.Char is 'w' or 'W')
+            if (e.Char is TerminalChar.CtrlW)
             {
-                KillPreviousWord(text.AsSpan());
+                KillPreviousWord(text.AsSpan(), options);
                 e.Handled = true;
                 return;
             }
 
-            if (e.Char is 'y' or 'Y')
+            if (e.Char is TerminalChar.CtrlY)
             {
                 if (!string.IsNullOrEmpty(_killBuffer))
                 {
@@ -439,6 +471,7 @@ internal sealed class TextEditorCore
                     ? GetPreviousWordIndex(text, _caretIndex)
                     : TerminalTextUtility.GetPreviousRuneIndex(text, _caretIndex);
                 UpdateSelectionAfterCaretMove((e.Modifiers & TerminalModifiers.Shift) != 0, oldCaretLeft);
+                EnsureCaretVisible(options);
                 e.Handled = true;
                 return;
             case TerminalKey.Right:
@@ -447,18 +480,21 @@ internal sealed class TextEditorCore
                     ? GetNextWordIndex(text, _caretIndex)
                     : TerminalTextUtility.GetNextRuneIndex(text, _caretIndex);
                 UpdateSelectionAfterCaretMove((e.Modifiers & TerminalModifiers.Shift) != 0, oldCaretRight);
+                EnsureCaretVisible(options);
                 e.Handled = true;
                 return;
             case TerminalKey.Home:
                 var oldCaretHome = _caretIndex;
                 _caretIndex = 0;
                 UpdateSelectionAfterCaretMove((e.Modifiers & TerminalModifiers.Shift) != 0, oldCaretHome);
+                EnsureCaretVisible(options);
                 e.Handled = true;
                 return;
             case TerminalKey.End:
                 var oldCaretEnd = _caretIndex;
                 _caretIndex = text.Length;
                 UpdateSelectionAfterCaretMove((e.Modifiers & TerminalModifiers.Shift) != 0, oldCaretEnd);
+                EnsureCaretVisible(options);
                 e.Handled = true;
                 return;
             case TerminalKey.Backspace:
@@ -474,7 +510,7 @@ internal sealed class TextEditorCore
                     _document.Replace(prev, _caretIndex - prev, ReadOnlySpan<char>.Empty);
                     _caretIndex = prev;
                 }
-                _host.InvalidateEditor();
+                UpdateAfterDocumentChange(options);
                 e.Handled = true;
                 return;
             case TerminalKey.Delete:
@@ -489,7 +525,7 @@ internal sealed class TextEditorCore
                         : TerminalTextUtility.GetNextRuneIndex(text, _caretIndex);
                     _document.Replace(_caretIndex, next - _caretIndex, ReadOnlySpan<char>.Empty);
                 }
-                _host.InvalidateEditor();
+                UpdateAfterDocumentChange(options);
                 e.Handled = true;
                 return;
         }
@@ -927,8 +963,7 @@ internal sealed class TextEditorCore
         _document.Insert(Math.Clamp(_caretIndex, 0, GetText().Length), insertText);
         _caretIndex += insertText.Length;
         _preferredColumn = -1;
-        EnsureCaretVisible(options);
-        _host.InvalidateEditor();
+        UpdateAfterDocumentChange(options);
     }
 
     private void Backspace(in TextEditorOptions options)
@@ -949,8 +984,7 @@ internal sealed class TextEditorCore
         _document.Remove(prev, _caretIndex - prev);
         _caretIndex = prev;
         _preferredColumn = -1;
-        EnsureCaretVisible(options);
-        _host.InvalidateEditor();
+        UpdateAfterDocumentChange(options);
     }
 
     private void Delete(in TextEditorOptions options)
@@ -970,8 +1004,7 @@ internal sealed class TextEditorCore
         var next = TerminalTextUtility.GetNextRuneIndex(text.AsSpan(), _caretIndex);
         _document.Remove(_caretIndex, next - _caretIndex);
         _preferredColumn = -1;
-        EnsureCaretVisible(options);
-        _host.InvalidateEditor();
+        UpdateAfterDocumentChange(options);
     }
 
     private void MoveCaretTo(int index, bool extendSelection, in TextEditorOptions options)
@@ -1132,7 +1165,7 @@ internal sealed class TextEditorCore
         return lineStart + indexInLine;
     }
 
-    private void KillToEnd(ReadOnlySpan<char> text)
+    private void KillToEnd(ReadOnlySpan<char> text, in TextEditorOptions options)
     {
         if (HasSelection)
         {
@@ -1145,10 +1178,10 @@ internal sealed class TextEditorCore
             _document.Remove(_caretIndex, text.Length - _caretIndex);
         }
 
-        _host.InvalidateEditor();
+        UpdateAfterDocumentChange(options);
     }
 
-    private void KillToStart(ReadOnlySpan<char> text)
+    private void KillToStart(ReadOnlySpan<char> text, in TextEditorOptions options)
     {
         if (HasSelection)
         {
@@ -1162,16 +1195,16 @@ internal sealed class TextEditorCore
             _caretIndex = 0;
         }
 
-        _host.InvalidateEditor();
+        UpdateAfterDocumentChange(options);
     }
 
-    private void KillPreviousWord(ReadOnlySpan<char> text)
+    private void KillPreviousWord(ReadOnlySpan<char> text, in TextEditorOptions options)
     {
         if (HasSelection)
         {
             _killBuffer = GetSelectedTextSpan(text).ToString();
             DeleteSelection();
-            _host.InvalidateEditor();
+            UpdateAfterDocumentChange(options);
             return;
         }
 
@@ -1184,7 +1217,7 @@ internal sealed class TextEditorCore
         _killBuffer = text[prev.._caretIndex].ToString();
         _document.Remove(prev, _caretIndex - prev);
         _caretIndex = prev;
-        _host.InvalidateEditor();
+        UpdateAfterDocumentChange(options);
     }
 
     private void ClearSelection()
@@ -1291,7 +1324,17 @@ internal sealed class TextEditorCore
         var count = 1;
         for (var i = 0; i < text.Length; i++)
         {
-            if (text[i] == '\n')
+            var ch = text[i];
+            if (ch == '\r')
+            {
+                if (i + 1 < text.Length && text[i + 1] == '\n')
+                {
+                    i++;
+                }
+
+                count++;
+            }
+            else if (ch == '\n')
             {
                 count++;
             }
@@ -1310,7 +1353,26 @@ internal sealed class TextEditorCore
         var index = 0;
         while (index < text.Length)
         {
-            if (text[index] == '\n')
+            var ch = text[index];
+            if (ch == '\r')
+            {
+                current++;
+                if (current == line)
+                {
+                    if (index + 1 < text.Length && text[index + 1] == '\n')
+                    {
+                        return index + 2;
+                    }
+
+                    return index + 1;
+                }
+
+                if (index + 1 < text.Length && text[index + 1] == '\n')
+                {
+                    index++;
+                }
+            }
+            else if (ch == '\n')
             {
                 current++;
                 if (current == line)
@@ -1318,6 +1380,7 @@ internal sealed class TextEditorCore
                     return index + 1;
                 }
             }
+
             index++;
         }
 
@@ -1329,7 +1392,8 @@ internal sealed class TextEditorCore
         var start = GetLineStartIndex(text, line);
         for (var i = start; i < text.Length; i++)
         {
-            if (text[i] == '\n')
+            var ch = text[i];
+            if (ch == '\r' || ch == '\n')
             {
                 return i;
             }
@@ -1345,7 +1409,21 @@ internal sealed class TextEditorCore
         var start = 0;
         for (var i = 0; i < index; i++)
         {
-            if (text[i] == '\n')
+            var ch = text[i];
+            if (ch == '\r')
+            {
+                line++;
+                if (i + 1 < index && i + 1 < text.Length && text[i + 1] == '\n')
+                {
+                    i++;
+                    start = i + 1;
+                }
+                else
+                {
+                    start = i + 1;
+                }
+            }
+            else if (ch == '\n')
             {
                 line++;
                 start = i + 1;

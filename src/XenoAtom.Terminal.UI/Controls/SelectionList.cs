@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
+using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
@@ -224,7 +225,7 @@ public sealed partial class SelectionList : Visual
         var selected = Math.Clamp(SelectedIndex, 0, count - 1);
         var ctrl = (e.Modifiers & TerminalModifiers.Ctrl) != 0;
 
-        if (ctrl && (e.Char is 'a' or 'A'))
+        if (ctrl && e.Char is TerminalChar.CtrlA)
         {
             for (var i = 0; i < count; i++)
             {
@@ -234,7 +235,7 @@ public sealed partial class SelectionList : Visual
             return;
         }
 
-        if (ctrl && (e.Char is 'i' or 'I'))
+        if (ctrl && e.Char is TerminalChar.CtrlI)
         {
             for (var i = 0; i < count; i++)
             {

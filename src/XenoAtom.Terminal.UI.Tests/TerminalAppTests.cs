@@ -4,6 +4,7 @@
 
 using System.Reflection;
 using System.Text;
+using XenoAtom.Terminal;
 using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
@@ -67,7 +68,7 @@ public sealed class TerminalAppTests
         public KeyBindingProbe()
         {
             Focusable = true;
-            AddKeyBinding(new Input.TerminalKeyGesture('k', TerminalModifiers.Ctrl), () => Count++);
+            AddKeyBinding(new Input.TerminalKeyGesture(TerminalChar.CtrlK, TerminalModifiers.Ctrl), () => Count++);
         }
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints) => SizeHints.Fixed(constraints.Clamp(new Size(10, 1)));
@@ -603,8 +604,8 @@ public sealed class TerminalAppTests
         var runTask = app.RunInBackgroundAsync();
 
         await Task.Delay(10);
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'k', Modifiers = TerminalModifiers.Ctrl });
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'k', Modifiers = TerminalModifiers.Ctrl });
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlK, Modifiers = TerminalModifiers.Ctrl });
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlK, Modifiers = TerminalModifiers.Ctrl });
 
         await Task.Delay(50);
 
@@ -877,7 +878,7 @@ public sealed class TerminalAppTests
                 backend.PushEvent(new TerminalTextEvent { Text = "c" });
                 backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left });
                 backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Backspace });
-                backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'v', Modifiers = TerminalModifiers.Ctrl });
+                backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlV, Modifiers = TerminalModifiers.Ctrl });
 
                 await reached.Task.WaitAsync(TimeSpan.FromSeconds(2));
                 await app.Dispatcher.InvokeAsync(() => Assert.AreEqual("axyzc", textBox.Text));
@@ -914,7 +915,7 @@ public sealed class TerminalAppTests
         backend.PushEvent(new TerminalTextEvent { Text = "c" });
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left, Modifiers = TerminalModifiers.Shift });
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'c', Modifiers = TerminalModifiers.Ctrl });
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlC, Modifiers = TerminalModifiers.Ctrl });
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));
@@ -975,10 +976,10 @@ public sealed class TerminalAppTests
         var runTask = app.RunInBackgroundAsync();
         await WaitUntilUi(app, () => ReferenceEquals(app.FocusedElement, textBox));
 
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'k', Modifiers = TerminalModifiers.Ctrl });
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlK, Modifiers = TerminalModifiers.Ctrl });
         await WaitUntilUi(app, () => textBox.Text == "hello ");
 
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = 'y', Modifiers = TerminalModifiers.Ctrl });
+        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlY, Modifiers = TerminalModifiers.Ctrl });
         await WaitUntilUi(app, () => textBox.Text == "hello world");
 
         backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });

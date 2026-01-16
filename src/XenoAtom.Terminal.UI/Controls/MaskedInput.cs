@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
+using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
@@ -65,7 +66,7 @@ public sealed partial class MaskedInput : TextBox
     {
         if ((e.Modifiers & TerminalModifiers.Ctrl) != 0 && ClipboardMode != MaskedInputClipboardMode.CopyText)
         {
-            if (e.Char is 'c' or 'C' or 'x' or 'X')
+            if (e.Char is TerminalChar.CtrlC or TerminalChar.CtrlX)
             {
                 e.Handled = true;
                 return;

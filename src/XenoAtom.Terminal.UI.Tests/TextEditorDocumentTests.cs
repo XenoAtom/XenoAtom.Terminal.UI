@@ -24,38 +24,53 @@ public sealed class TextEditorDocumentTests
     }
 
     [TestMethod]
-    public void TextDocument_Normalizes_LineEndings()
+    public void TextDocument_Preserves_LineEndings_And_Computes_Lines()
     {
         var doc = new TextDocument("A\r\nB\rC");
         var text = ReadText(doc);
-        Assert.AreEqual("A\nB\nC", text);
+        Assert.AreEqual("A\r\nB\rC", text);
         Assert.AreEqual(3, doc.CurrentSnapshot.LineCount);
     }
 
     [TestMethod]
-    public void TextEditorBase_Syncs_Text_And_Document()
+    public void TextBox_Uses_Dynamic_TextDocument_By_Default()
     {
         var textBox = new TextBox { Text = "Hello\r\nWorld" };
-        var text = ReadText(textBox.TextDocument);
-        Assert.AreEqual("Hello\nWorld", text);
-        Assert.AreEqual("Hello\nWorld", textBox.Text);
+        var snapshot = textBox.TextDocument.CurrentSnapshot;
+        Assert.AreEqual(2, snapshot.LineCount);
+        Assert.AreEqual("Hello\r\nWorld", ReadText(textBox.TextDocument));
+        Assert.AreEqual("Hello\r\nWorld", textBox.Text);
 
         textBox.TextDocument.Insert(0, "A".AsSpan());
-        Assert.AreEqual("AHello\nWorld", textBox.Text);
+        Assert.AreEqual("AHello\r\nWorld", textBox.Text);
     }
 
     [TestMethod]
-    public void TextEditorBase_Uses_Provided_Document()
+    public void TextBox_TextDocument_Updates_Bound_State()
     {
-        var textBox = new TextBox { Text = "Initial" };
-        var document = new TextDocument("External");
+        var state = new State<string?>("Hello");
+        var textBox = new TextBox().Text(state);
 
-        textBox.TextDocument = document;
+        Assert.AreEqual("Hello", textBox.Text);
 
-        Assert.AreEqual("External", textBox.Text);
-        Assert.AreEqual("External", ReadText(document));
+        textBox.TextDocument.Insert(0, "A".AsSpan());
+        Assert.AreEqual("AHello", state.Value);
 
-        textBox.Text = "Updated";
-        Assert.AreEqual("Updated", ReadText(document));
+        state.Value = "World";
+        Assert.AreEqual("World", textBox.Text);
+        Assert.AreEqual("World", ReadText(textBox.TextDocument));
+    }
+
+    [TestMethod]
+    public void TextArea_TextDocument_Updates_Bound_State()
+    {
+        var state = new State<string?>("Line1\r\nLine2");
+        var textArea = new TextArea().Text(state);
+
+        Assert.AreEqual("Line1\r\nLine2", textArea.Text);
+        Assert.AreEqual("Line1\r\nLine2", ReadText(textArea.TextDocument));
+
+        textArea.TextDocument.Insert(0, "A".AsSpan());
+        Assert.AreEqual("ALine1\r\nLine2", state.Value);
     }
 }

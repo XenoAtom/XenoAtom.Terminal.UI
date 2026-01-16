@@ -806,7 +806,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
     internal void MarkMeasureDirty()
     {
-        if (_measureDirty)
+        if (_measureDirty && !_hasLastMeasure && _measureDeps is null && _arrangeDirty && !_hasLastArrange && _arrangeDeps is null)
         {
             return;
         }
@@ -824,7 +824,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     
     internal void MarkArrangeDirty()
     {
-        if (_arrangeDirty)
+        if (_arrangeDirty && !_hasLastArrange && _arrangeDeps is null)
         {
             return;
         }

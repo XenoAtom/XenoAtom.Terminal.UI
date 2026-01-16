@@ -7,6 +7,7 @@ using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -15,7 +16,13 @@ public partial class TextBox : TextEditorBase
     public TextBox()
     {
         this.HorizontalAlignment(HorizontalAlignment.Stretch);
+        TextDocument = new DynamicTextDocument(
+            getter: () => Text ?? string.Empty,
+            setter: value => Text = value);
     }
+
+    [Bindable]
+    public partial string? Text { get; set; }
 
     [Bindable]
     public partial TextAlignment TextAlignment { get; set; }

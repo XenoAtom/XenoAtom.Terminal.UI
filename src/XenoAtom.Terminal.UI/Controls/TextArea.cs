@@ -7,6 +7,7 @@ using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -18,7 +19,14 @@ public sealed partial class TextArea : TextEditorBase
         this.WordWrap(true);
         this.HorizontalAlignment(HorizontalAlignment.Stretch);
         this.VerticalAlignment(VerticalAlignment.Stretch);
+
+        TextDocument = new DynamicTextDocument(
+            getter: () => Text ?? string.Empty,
+            setter: value => Text = value);
     }
+
+    [Bindable]
+    public partial string? Text { get; set; }
 
     protected override bool IsSingleLine => false;
 

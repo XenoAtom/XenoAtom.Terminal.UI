@@ -8,12 +8,14 @@ internal sealed class TextSnapshot : ITextSnapshot
 {
     private readonly string _text;
     private readonly int[] _lineStarts;
+    private readonly byte[] _lineBreakLengths;
 
-    public TextSnapshot(int version, string text, List<int> lineStarts)
+    public TextSnapshot(int version, string text, List<int> lineStarts, List<byte> lineBreakLengths)
     {
         Version = version;
         _text = text;
         _lineStarts = lineStarts.ToArray();
+        _lineBreakLengths = lineBreakLengths.ToArray();
     }
 
     public int Version { get; }
@@ -32,15 +34,17 @@ internal sealed class TextSnapshot : ITextSnapshot
         }
 
         var start = _lineStarts[lineIndex];
-        var end = lineIndex + 1 < _lineStarts.Length ? _lineStarts[lineIndex + 1] - 1 : _text.Length;
-        if (end < start)
+        if (lineIndex + 1 >= _lineStarts.Length)
         {
-            end = start;
+            var length = Math.Max(0, _text.Length - start);
+            return new TextLine(lineIndex, start, length, 0);
         }
 
-        var length = end - start;
-        var lineBreakLength = lineIndex + 1 < _lineStarts.Length ? 1 : 0;
-        return new TextLine(lineIndex, start, length, lineBreakLength);
+        var breakLen = (int)_lineBreakLengths[lineIndex];
+        var nextStart = _lineStarts[lineIndex + 1];
+        var endExclusive = Math.Max(start, nextStart - breakLen);
+        var lineLength = Math.Max(0, endExclusive - start);
+        return new TextLine(lineIndex, start, lineLength, breakLen);
     }
 
     public int GetLineIndexFromPosition(int position)
