@@ -1,0 +1,67 @@
+# Getting Started
+
+## Prerequisites
+
+- .NET `net10.0` (C# 14) project.
+- Reference `XenoAtom.Terminal.UI` (it pulls `XenoAtom.Terminal` as a dependency).
+
+## Install
+
+```bash
+dotnet add package XenoAtom.Terminal.UI
+```
+
+## Your first visual
+
+XenoAtom.Terminal.UI integrates into `XenoAtom.Terminal` via C# 14 extension members.
+
+```csharp
+using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Controls;
+
+Terminal.Write(new TextBlock("Hello from Terminal.UI"));
+```
+
+## Inline live widget
+
+Use `Terminal.Live` to render a visual that updates repeatedly without clearing previous terminal output.
+
+```csharp
+using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI;
+using XenoAtom.Terminal.UI.Controls;
+
+var progress = new State<double>(0);
+
+Terminal.Live(
+    new ProgressBar()
+        .Label("Work")
+        .Value(progress),
+    onUpdate: () =>
+    {
+        progress.Value = Math.Min(1, progress.Value + 0.01);
+        return progress.Value < 1;
+    });
+```
+
+## Fullscreen app
+
+Use `Terminal.Run` to run a fullscreen app (alternate screen). Your UI is a `Visual` tree.
+
+```csharp
+using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Controls;
+
+Terminal.Run(
+    new VStack(
+        new TextBox("Type here…"),
+        new Button("Exit").Click(() => false)
+    ),
+    onUpdate: () => true);
+```
+
+See also:
+
+- `doc/hosting.md`
+- `doc/controls/index.md`
+
