@@ -11,14 +11,35 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Specifies where a popup is positioned relative to its <see cref="Popup.Anchor"/>.
+/// </summary>
 public enum PopupPlacement
 {
+    /// <summary>
+    /// Places the popup below the anchor.
+    /// </summary>
     Below = 0,
+
+    /// <summary>
+    /// Places the popup above the anchor.
+    /// </summary>
     Above = 1,
+
+    /// <summary>
+    /// Places the popup to the right of the anchor.
+    /// </summary>
     Right = 2,
+
+    /// <summary>
+    /// Places the popup to the left of the anchor.
+    /// </summary>
     Left = 3,
 }
 
+/// <summary>
+/// Displays transient content in an overlay layer positioned relative to an optional anchor.
+/// </summary>
 public sealed partial class Popup : ContentVisual, IModalVisual
 {
     private Rectangle _layoutSlot;
@@ -38,18 +59,31 @@ public sealed partial class Popup : ContentVisual, IModalVisual
     /// </summary>
     public Visual? Anchor { get; set; }
 
+    /// <inheritdoc/>
     public bool IsModal => true;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the popup should match the anchor width.
+    /// </summary>
     [Bindable]
     public partial bool MatchAnchorWidth { get; set; }
     
+    /// <summary>
+    /// Gets or sets additional width to add to the computed popup width.
+    /// </summary>
     [Bindable]
     public partial int AdditionalWidth { get; set; }
 
-
+    /// <summary>
+    /// Gets or sets the popup placement relative to the anchor.
+    /// </summary>
     [Bindable]
     public partial PopupPlacement Placement { get; set; }
 
+    /// <summary>
+    /// Opens the popup by adding it to the active <see cref="TerminalApp"/> window layer.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when called while no terminal app is running.</exception>
     public void Show()
     {
         VerifyAccess();
@@ -69,6 +103,9 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         app.ShowWindow(this);
     }
 
+    /// <summary>
+    /// Closes the popup and raises the <c>Closed</c> routed event.
+    /// </summary>
     public void Close()
     {
         VerifyAccess();
@@ -89,6 +126,7 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         RaiseEvent(ClosedEvent, new PopupClosedEventArgs());
     }
 
+    /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         // Fill the available space so the popup can detect outside clicks.
@@ -108,6 +146,7 @@ public sealed partial class Popup : ContentVisual, IModalVisual
             shrinkY: 0);
     }
 
+    /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         _layoutSlot = finalRect;
@@ -206,6 +245,7 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         }
     }
 
+    /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = _popupRect;
@@ -230,6 +270,7 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         return;
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)
@@ -245,6 +286,7 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (e.Key == TerminalKey.Escape)

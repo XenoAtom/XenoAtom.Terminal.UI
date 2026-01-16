@@ -6,25 +6,68 @@ using System.Text;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
+/// <summary>
+/// Defines rendering and theming options for a <see cref="Controls.SelectionList"/>.
+/// </summary>
 public sealed record SelectionListStyle : IStyle<SelectionListStyle>
 {
+    /// <summary>
+    /// Gets the default selection list style.
+    /// </summary>
     public static SelectionListStyle Default { get; } = new();
 
+    /// <summary>
+    /// Gets the environment key used to resolve a <see cref="SelectionListStyle"/>.
+    /// </summary>
     public static StyleKey<SelectionListStyle> Key { get; } = new("SelectionListStyle", Default);
 
+    /// <summary>
+    /// Gets the number of spaces between the checkbox glyph and the item content.
+    /// </summary>
     public int SpaceBetweenGlyphAndText { get; init; } = 2;
 
+    /// <summary>
+    /// Gets the glyph used to indicate the currently focused row.
+    /// </summary>
     public Rune FocusMarkerGlyph { get; init; } = new('→');
 
+    /// <summary>
+    /// Gets the glyph used for checked items.
+    /// </summary>
     public Rune CheckedGlyph { get; init; } = new(0x2611); // ☑
 
+    /// <summary>
+    /// Gets the glyph used for unchecked items.
+    /// </summary>
     public Rune UncheckedGlyph { get; init; } = new(0x2610); // ☐
 
+    /// <summary>
+    /// Gets the optional style for a normal item.
+    /// </summary>
     public CellStyle? Item { get; init; }
+    
+    /// <summary>
+    /// Gets the optional style for a selected item when focused.
+    /// </summary>
     public CellStyle? SelectedFocused { get; init; }
+    
+    /// <summary>
+    /// Gets the optional style for a selected item when unfocused.
+    /// </summary>
     public CellStyle? SelectedUnfocused { get; init; }
+    
+    /// <summary>
+    /// Gets the optional style for disabled items.
+    /// </summary>
     public CellStyle? Disabled { get; init; }
 
+    /// <summary>
+    /// Resolves the style for an item given its state.
+    /// </summary>
+    /// <param name="theme">The current theme.</param>
+    /// <param name="enabled">Whether the item is enabled.</param>
+    /// <param name="selected">Whether the item is selected.</param>
+    /// <param name="focused">Whether the list is focused.</param>
     public CellStyle ResolveItemStyle(Theme theme, bool enabled, bool selected, bool focused)
     {
         var baseStyle = theme.ForegroundTextStyle();

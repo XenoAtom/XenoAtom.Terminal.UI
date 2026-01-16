@@ -6,26 +6,74 @@ using System.Text;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
+/// <summary>
+/// Defines rendering and theming options for a <see cref="Controls.Collapsible"/>.
+/// </summary>
 public sealed record CollapsibleStyle : IStyle<CollapsibleStyle>
 {
+    /// <summary>
+    /// Gets the default collapsible style.
+    /// </summary>
     public static CollapsibleStyle Default { get; } = new();
 
+    /// <summary>
+    /// Gets the environment key used to resolve a <see cref="CollapsibleStyle"/>.
+    /// </summary>
     public static StyleKey<CollapsibleStyle> Key { get; } = new("CollapsibleStyle", Default);
 
+    /// <summary>
+    /// Gets the number of spaces between the expand/collapse glyph and the header content.
+    /// </summary>
     public int SpaceBetweenGlyphAndHeader { get; init; } = 1;
 
+    /// <summary>
+    /// Gets the number of rows between header and content when expanded.
+    /// </summary>
     public int ContentSpacing { get; init; }
 
+    /// <summary>
+    /// Gets the glyph used for expanded state.
+    /// </summary>
     public Rune ExpandedGlyph { get; init; } = new('▾');
 
+    /// <summary>
+    /// Gets the glyph used for collapsed state.
+    /// </summary>
     public Rune CollapsedGlyph { get; init; } = new('▸');
 
+    /// <summary>
+    /// Gets the optional style for a normal header.
+    /// </summary>
     public CellStyle? Header { get; init; }
+
+    /// <summary>
+    /// Gets the optional style for a hovered header.
+    /// </summary>
     public CellStyle? HeaderHovered { get; init; }
+
+    /// <summary>
+    /// Gets the optional style for a pressed header.
+    /// </summary>
     public CellStyle? HeaderPressed { get; init; }
+
+    /// <summary>
+    /// Gets the optional style for a focused header.
+    /// </summary>
     public CellStyle? HeaderFocused { get; init; }
+
+    /// <summary>
+    /// Gets the optional style for a disabled header.
+    /// </summary>
     public CellStyle? HeaderDisabled { get; init; }
 
+    /// <summary>
+    /// Resolves the header style for the provided state.
+    /// </summary>
+    /// <param name="theme">The current theme.</param>
+    /// <param name="enabled">Whether the control is enabled.</param>
+    /// <param name="focused">Whether the control is focused.</param>
+    /// <param name="hovered">Whether the header is hovered.</param>
+    /// <param name="pressed">Whether the header is pressed.</param>
     public CellStyle ResolveHeader(Theme theme, bool enabled, bool focused, bool hovered, bool pressed)
     {
         ArgumentNullException.ThrowIfNull(theme);

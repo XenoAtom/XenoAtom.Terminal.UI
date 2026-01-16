@@ -11,8 +11,14 @@ namespace XenoAtom.Terminal.UI;
 /// </summary>
 public sealed class BindingManager
 {
+    /// <summary>
+    /// Gets the singleton instance of the binding manager.
+    /// </summary>
     public static BindingManager Current { get; } = new();
 
+    /// <summary>
+    /// Raised when a bindable value has changed and UI invalidation needs to be performed.
+    /// </summary>
     public event Action<Binding>? ValueChanged;
 
     [ThreadStatic]
@@ -26,12 +32,29 @@ public sealed class BindingManager
     [ThreadStatic]
     private static int _suppressNotifications;
 
+    /// <summary>
+    /// Gets the current value of a bindable property.
+    /// </summary>
+    /// <typeparam name="T">The property type.</typeparam>
+    /// <param name="owner">The owner instance.</param>
+    /// <param name="backingField">A reference to the generated backing field.</param>
+    /// <param name="accessor">The accessor describing the property.</param>
+    /// <returns>The current value.</returns>
     public T GetValue<T>(object owner, ref T backingField, BindingAccessor<T> accessor)
     {
         RegisterRead(owner, accessor);
         return backingField;
     }
 
+    /// <summary>
+    /// Sets the current value of a bindable property.
+    /// </summary>
+    /// <typeparam name="T">The property type.</typeparam>
+    /// <param name="owner">The owner instance.</param>
+    /// <param name="backingField">A reference to the generated backing field.</param>
+    /// <param name="value">The new value.</param>
+    /// <param name="accessor">The accessor describing the property.</param>
+    /// <returns><see langword="true"/> when the value changed; otherwise <see langword="false"/>.</returns>
     public bool SetValue<T>(object owner, ref T backingField, T value, BindingAccessor<T> accessor)
     {
         _ = accessor;
@@ -53,6 +76,14 @@ public sealed class BindingManager
         return true;
     }
 
+    /// <summary>
+    /// Starts a dependency tracking scope for binding reads.
+    /// </summary>
+    /// <remarks>
+    /// Tracking is thread-local and is typically used by <see cref="TerminalApp"/> to record which bindings were read
+    /// during dynamic updates, layout and rendering.
+    /// </remarks>
+    /// <returns>A disposable session that restores the previous tracking context on dispose.</returns>
     public TrackingSession StartTracking()
     {
         var previous = _tracking;
@@ -61,6 +92,10 @@ public sealed class BindingManager
         return new TrackingSession(previous, current.Dependencies);
     }
 
+    /// <summary>
+    /// Disables dependency read tracking for the duration of the returned session.
+    /// </summary>
+    /// <returns>A disposable session that restores the previous tracking context on dispose.</returns>
     public TrackingSession DisableReadTracking()
     {
         var previous = _tracking;
@@ -101,6 +136,11 @@ public sealed class BindingManager
         public void Dispose() => _dynamicUpdateOwner = _previous;
     }
 
+    /// <summary>
+    /// Registers a binding read for dependency tracking.
+    /// </summary>
+    /// <param name="owner">The owner instance.</param>
+    /// <param name="accessor">The accessor describing the property.</param>
     public void RegisterRead(object owner, BindingAccessor accessor)
     {
         ArgumentNullException.ThrowIfNull(accessor);
@@ -118,6 +158,11 @@ public sealed class BindingManager
         _tracking?.RegisterRead(owner, accessor);
     }
 
+    /// <summary>
+    /// Notifies the UI that a value has changed without touching a generated backing field.
+    /// </summary>
+    /// <param name="owner">The owner instance.</param>
+    /// <param name="accessor">The accessor describing the property.</param>
     public void NotifyValueChanged(object owner, BindingAccessor accessor)
     {
         ArgumentNullException.ThrowIfNull(accessor);
@@ -132,6 +177,9 @@ public sealed class BindingManager
         }
     }
 
+    /// <summary>
+    /// Represents a dependency tracking scope for binding reads.
+    /// </summary>
     public readonly struct TrackingSession : IDisposable
     {
         private readonly TrackingContext? _previous;
@@ -142,8 +190,14 @@ public sealed class BindingManager
             Dependencies = dependencies;
         }
 
+        /// <summary>
+        /// Gets the dependencies that were read during the tracking session.
+        /// </summary>
         public IReadOnlySet<Binding> Dependencies { get; }
 
+        /// <summary>
+        /// Restores the previous tracking context.
+        /// </summary>
         public void Dispose()
         {
             _tracking = _previous;

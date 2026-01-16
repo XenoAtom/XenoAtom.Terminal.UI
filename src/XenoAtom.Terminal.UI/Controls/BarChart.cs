@@ -10,20 +10,36 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Displays a bar chart for a list of numeric values.
+/// </summary>
 public sealed partial class BarChart : Visual
 {
+    /// <summary>
+    /// Gets or sets the values displayed by the chart.
+    /// </summary>
     [Bindable]
     public partial IReadOnlyList<double>? Values { get; set; }
 
+    /// <summary>
+    /// Gets or sets the optional minimum value used for normalization.
+    /// </summary>
     [Bindable]
     public partial double? Minimum { get; set; }
 
+    /// <summary>
+    /// Gets or sets the optional maximum value used for normalization.
+    /// </summary>
     [Bindable]
     public partial double? Maximum { get; set; }
 
+    /// <summary>
+    /// Gets or sets the chart orientation.
+    /// </summary>
     [Bindable]
     public partial Orientation Orientation { get; set; }
 
+    /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var count = Values?.Count ?? 0;
@@ -39,6 +55,7 @@ public sealed partial class BarChart : Visual
         return SizeHints.Fixed(constraints.Clamp(natural));
     }
 
+    /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;

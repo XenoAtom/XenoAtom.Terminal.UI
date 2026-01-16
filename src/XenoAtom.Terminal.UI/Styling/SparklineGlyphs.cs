@@ -6,6 +6,9 @@ using System.Text;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
+/// <summary>
+/// Defines the glyphs used by <see cref="Controls.Sparkline"/> to represent increasing levels.
+/// </summary>
 public readonly record struct SparklineGlyphs(
     Rune Level0,
     Rune Level1,
@@ -16,6 +19,9 @@ public readonly record struct SparklineGlyphs(
     Rune Level6,
     Rune Level7)
 {
+    /// <summary>
+    /// Gets an 8-level sparkline glyph set based on block elements.
+    /// </summary>
     public static SparklineGlyphs Blocks8 { get; } = new(
         new Rune(0x2581), // U+2581
         new Rune(0x2582), // U+2582
@@ -26,6 +32,9 @@ public readonly record struct SparklineGlyphs(
         new Rune(0x2587), // U+2587
         new Rune(0x2588)); // U+2588
 
+    /// <summary>
+    /// Gets an 8-level ASCII sparkline glyph set.
+    /// </summary>
     public static SparklineGlyphs Ascii8 { get; } = new(
         new Rune(' '),
         new Rune('.'),
@@ -36,6 +45,11 @@ public readonly record struct SparklineGlyphs(
         new Rune('*'),
         new Rune('#'));
 
+    /// <summary>
+    /// Gets a glyph for the specified level.
+    /// </summary>
+    /// <param name="level">The level (typically 0..7).</param>
+    /// <returns>The glyph corresponding to the level.</returns>
     public Rune GetLevel(int level)
         => level switch
         {

@@ -6,34 +6,90 @@ using System.Text;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
+/// <summary>
+/// Defines rendering and theming options for a <see cref="Controls.Slider"/>.
+/// </summary>
 public sealed record SliderStyle : IStyle<SliderStyle>
 {
+    /// <summary>
+    /// Gets the default slider style.
+    /// </summary>
     public static SliderStyle Default { get; } = new();
 
+    /// <summary>
+    /// Gets the environment key used to resolve a <see cref="SliderStyle"/>.
+    /// </summary>
     public static StyleKey<SliderStyle> Key { get; } = new("SliderStyle", Default);
 
+    /// <summary>
+    /// Gets the track glyph for horizontal sliders.
+    /// </summary>
     public Rune Track { get; init; } = new(0x2500); // ─
 
+    /// <summary>
+    /// Gets the track glyph for the active (filled) portion of horizontal sliders.
+    /// </summary>
     public Rune ActiveTrack { get; init; } = new(0x2501); // ━
 
+    /// <summary>
+    /// Gets the track glyph for vertical sliders.
+    /// </summary>
     public Rune VerticalTrack { get; init; } = new(0x2502); // │
 
+    /// <summary>
+    /// Gets the track glyph for the active (filled) portion of vertical sliders.
+    /// </summary>
     public Rune VerticalActiveTrack { get; init; } = new(0x2503); // ┃
 
+    /// <summary>
+    /// Gets the thumb glyph.
+    /// </summary>
     public Rune Thumb { get; init; } = new('●');
 
+    /// <summary>
+    /// Gets the optional style for the inactive track.
+    /// </summary>
     public CellStyle? TrackStyle { get; init; }
+
+    /// <summary>
+    /// Gets the optional style for the active track.
+    /// </summary>
     public CellStyle? ActiveTrackStyle { get; init; }
 
+    /// <summary>
+    /// Gets the optional style for the thumb.
+    /// </summary>
     public CellStyle? ThumbStyle { get; init; }
+
+    /// <summary>
+    /// Gets the optional style for the thumb when hovered.
+    /// </summary>
     public CellStyle? ThumbHoveredStyle { get; init; }
+
+    /// <summary>
+    /// Gets the optional style for the thumb when pressed.
+    /// </summary>
     public CellStyle? ThumbPressedStyle { get; init; }
+
+    /// <summary>
+    /// Gets the optional style for the thumb when focused.
+    /// </summary>
     public CellStyle? ThumbFocusedStyle { get; init; }
+
+    /// <summary>
+    /// Gets the optional style when the slider is disabled.
+    /// </summary>
     public CellStyle? DisabledStyle { get; init; }
 
+    /// <summary>
+    /// Resolves the inactive track style for the provided <paramref name="theme"/>.
+    /// </summary>
     public CellStyle ResolveTrackStyle(Theme theme)
         => TrackStyle ?? theme.BorderStyle(focused: false);
 
+    /// <summary>
+    /// Resolves the active track style for the provided <paramref name="theme"/>.
+    /// </summary>
     public CellStyle ResolveActiveTrackStyle(Theme theme)
     {
         var style = ActiveTrackStyle;
@@ -51,6 +107,14 @@ public sealed record SliderStyle : IStyle<SliderStyle>
         return resolved;
     }
 
+    /// <summary>
+    /// Resolves the thumb style for the provided state.
+    /// </summary>
+    /// <param name="theme">The current theme.</param>
+    /// <param name="enabled">Whether the slider is enabled.</param>
+    /// <param name="focused">Whether the slider is focused.</param>
+    /// <param name="hovered">Whether the thumb is hovered.</param>
+    /// <param name="pressed">Whether the thumb is pressed.</param>
     public CellStyle ResolveThumbStyle(Theme theme, bool enabled, bool focused, bool hovered, bool pressed)
     {
         if (!enabled)
@@ -116,4 +180,3 @@ public sealed record SliderStyle : IStyle<SliderStyle>
         return ResolveActiveTrackStyle(theme);
     }
 }
-

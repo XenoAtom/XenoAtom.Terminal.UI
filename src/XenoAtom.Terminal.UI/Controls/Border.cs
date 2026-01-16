@@ -10,26 +10,44 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Draws a border around a single content visual.
+/// </summary>
 public sealed partial class Border : ContentVisual
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Border"/> control.
+    /// </summary>
     public Border()
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Border"/> control.
+    /// </summary>
+    /// <param name="content">The border content.</param>
     public Border(Visual content)
     {
         Content = content;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Border"/> control with a dynamic content factory.
+    /// </summary>
+    /// <param name="contentFactory">The content factory. It is evaluated as part of dynamic updates.</param>
     public Border(Func<Visual> contentFactory)
     {
         ArgumentNullException.ThrowIfNull(contentFactory);
         this.Content(contentFactory);
     }
 
+    /// <summary>
+    /// Gets or sets the padding between the border and the content.
+    /// </summary>
     [Bindable]
     public partial Thickness Padding { get; set; }
 
+    /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var padding = Padding;
@@ -85,6 +103,7 @@ public sealed partial class Border : ContentVisual
             contentHints.FlexShrinkY).Normalize();
     }
 
+    /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
@@ -106,6 +125,7 @@ public sealed partial class Border : ContentVisual
         }
     }
 
+    /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;

@@ -11,6 +11,9 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Displays one tab page at a time with a clickable header strip.
+/// </summary>
 public sealed partial class TabControl : Visual
 {
     private readonly List<TabPage> _tabs = new();
@@ -27,6 +30,10 @@ public sealed partial class TabControl : Visual
         VerticalAlignment = VerticalAlignment.Stretch;
     }
 
+    /// <summary>
+    /// Initializes a new tab control with the provided tab pages.
+    /// </summary>
+    /// <param name="tabs">The tab pages.</param>
     public TabControl(params TabPage[] tabs) : this()
     {
         ArgumentNullException.ThrowIfNull(tabs);
@@ -36,6 +43,9 @@ public sealed partial class TabControl : Visual
         }
     }
 
+    /// <summary>
+    /// Gets or sets the selected tab index.
+    /// </summary>
     [Bindable]
     public partial int SelectedIndex { get; set; }
 
@@ -51,8 +61,16 @@ public sealed partial class TabControl : Visual
         Invalidate();
     }
 
+    /// <summary>
+    /// Gets the tab pages owned by this control.
+    /// </summary>
     public IReadOnlyList<TabPage> Tabs => _tabs;
 
+    /// <summary>
+    /// Adds a tab page from a header and a content visual.
+    /// </summary>
+    /// <param name="header">The tab header visual.</param>
+    /// <param name="content">The tab content visual.</param>
     public void AddTab(Visual header, Visual content)
     {
         ArgumentNullException.ThrowIfNull(header);
@@ -83,14 +101,20 @@ public sealed partial class TabControl : Visual
         }
     }
 
+    /// <summary>
+    /// Adds a tab page.
+    /// </summary>
+    /// <param name="page">The tab page to add.</param>
     public void AddTab(TabPage page)
     {
         ArgumentNullException.ThrowIfNull(page);
         AddTab(page.Header, page.Content);
     }
 
+    /// <inheritdoc/>
     protected override int ChildrenCount => _tabs.Count * 2;
 
+    /// <inheritdoc/>
     protected override Visual GetChild(int index)
     {
         if ((uint)index >= (uint)ChildrenCount)
@@ -103,6 +127,7 @@ public sealed partial class TabControl : Visual
         return (index % 2) == 0 ? page.Header : page.Content;
     }
 
+    /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = Get<TabControlStyle>();
@@ -155,6 +180,7 @@ public sealed partial class TabControl : Visual
         return SizeHints.Flex(min, natural, max, growX: 1, growY: 1, shrinkX: 1, shrinkY: 1);
     }
 
+    /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
@@ -207,6 +233,7 @@ public sealed partial class TabControl : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
@@ -259,6 +286,7 @@ public sealed partial class TabControl : Visual
 
     }
 
+    /// <inheritdoc/>
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (_tabs.Count == 0)
@@ -279,6 +307,7 @@ public sealed partial class TabControl : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         var localX = e.UiX - Bounds.X;
@@ -295,6 +324,7 @@ public sealed partial class TabControl : Visual
         UpdatePressedInside(index >= 0 && index == _pressedIndex);
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)
@@ -320,6 +350,7 @@ public sealed partial class TabControl : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerReleased(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)

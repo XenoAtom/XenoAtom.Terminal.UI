@@ -11,12 +11,25 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Specifies the direction in which a <see cref="Collapsible"/> expands.
+/// </summary>
 public enum ExpandDirection
 {
+    /// <summary>
+    /// Expands downward (header on top).
+    /// </summary>
     Down = 0,
+
+    /// <summary>
+    /// Expands upward (header on bottom).
+    /// </summary>
     Up = 1,
 }
 
+/// <summary>
+/// Displays a header that can expand/collapse a content region.
+/// </summary>
 public sealed partial class Collapsible : Visual
 {
     private bool _pressedHeader;
@@ -32,27 +45,46 @@ public sealed partial class Collapsible : Visual
         this.Direction(ExpandDirection.Down);
     }
 
+    /// <summary>
+    /// Initializes a new collapsible with a header and content.
+    /// </summary>
+    /// <param name="header">The header visual.</param>
+    /// <param name="content">The content visual.</param>
     public Collapsible(Visual header, Visual content) : this()
     {
         this.Header(header);
         this.Content(content);
     }
 
+    /// <summary>
+    /// Gets or sets the header visual.
+    /// </summary>
     [Bindable]
     public partial Visual? Header { get; set; }
 
+    /// <summary>
+    /// Gets or sets the content visual.
+    /// </summary>
     [Bindable]
     public partial Visual? Content { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the content is expanded.
+    /// </summary>
     [Bindable]
     public partial bool IsExpanded { get; set; }
 
+    /// <summary>
+    /// Gets or sets the expansion direction.
+    /// </summary>
     [Bindable]
     public partial ExpandDirection Direction { get; set; }
 
+    /// <inheritdoc/>
     protected override int ChildrenCount
         => (_header is null ? 0 : 1) + (_isExpanded && _content is not null ? 1 : 0);
 
+    /// <inheritdoc/>
     protected override Visual GetChild(int index)
     {
         if (_header is null)
@@ -78,6 +110,7 @@ public sealed partial class Collapsible : Visual
         throw new ArgumentOutOfRangeException(nameof(index));
     }
 
+    /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = Get<CollapsibleStyle>();
@@ -178,6 +211,7 @@ public sealed partial class Collapsible : Visual
             shrinkY: Math.Max(headerHints.FlexShrinkY, contentHints.FlexShrinkY)).Normalize();
     }
 
+    /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
@@ -227,6 +261,7 @@ public sealed partial class Collapsible : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
@@ -257,6 +292,7 @@ public sealed partial class Collapsible : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (!ReferenceEquals(e.OriginalSource, this) || !IsEnabled)
@@ -271,6 +307,7 @@ public sealed partial class Collapsible : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         var hover = _headerRect.Contains(e.UiX, e.UiY);
@@ -281,6 +318,7 @@ public sealed partial class Collapsible : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         if (!IsEnabled || e.Button != TerminalMouseButton.Left)
@@ -296,6 +334,7 @@ public sealed partial class Collapsible : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerReleased(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)

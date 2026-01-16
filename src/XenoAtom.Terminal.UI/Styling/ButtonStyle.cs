@@ -7,27 +7,75 @@ using XenoAtom.Terminal.UI.Geometry;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
+/// <summary>
+/// Defines rendering and theming options for a <see cref="Controls.Button"/>.
+/// </summary>
 public sealed record ButtonStyle : IStyle<ButtonStyle>
 {
+    /// <summary>
+    /// Gets the default button style.
+    /// </summary>
     public static ButtonStyle Default { get; } = new();
 
+    /// <summary>
+    /// Gets the environment key used to resolve a <see cref="ButtonStyle"/>.
+    /// </summary>
     public static StyleKey<ButtonStyle> Key { get; } = new("ButtonStyle", Default);
 
+    /// <summary>
+    /// Gets the padding applied around the content.
+    /// </summary>
     public Thickness Padding { get; init; } = new(2, 0, 2, 0);
 
+    /// <summary>
+    /// Gets a value indicating whether a border is rendered.
+    /// </summary>
     public bool ShowBorder { get; init; }
 
-
+    /// <summary>
+    /// Gets the glyph used for the top border.
+    /// </summary>
     public Rune BorderTopGlyph { get; init; } = new(' '); // U+2594
 
+    /// <summary>
+    /// Gets the glyph used for the bottom border.
+    /// </summary>
     public Rune BorderBottomGlyph { get; init; } = new('▁'); // U+2581
 
+    /// <summary>
+    /// Gets the optional style for the normal state.
+    /// </summary>
     public CellStyle? Normal { get; init; }
+
+    /// <summary>
+    /// Gets the optional style for the hovered state.
+    /// </summary>
     public CellStyle? Hovered { get; init; }
+
+    /// <summary>
+    /// Gets the optional style for the pressed state.
+    /// </summary>
     public CellStyle? Pressed { get; init; }
+
+    /// <summary>
+    /// Gets the optional style for the focused state.
+    /// </summary>
     public CellStyle? Focused { get; init; }
+
+    /// <summary>
+    /// Gets the optional style for the disabled state.
+    /// </summary>
     public CellStyle? Disabled { get; init; }
 
+    /// <summary>
+    /// Resolves the button style for the provided state.
+    /// </summary>
+    /// <param name="theme">The current theme.</param>
+    /// <param name="enabled">Whether the button is enabled.</param>
+    /// <param name="focused">Whether the button is focused.</param>
+    /// <param name="hovered">Whether the pointer is hovering over the button.</param>
+    /// <param name="pressed">Whether the button is pressed.</param>
+    /// <param name="tone">The semantic tone of the button.</param>
     public CellStyle Resolve(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, ControlTone tone)
     {
         ArgumentNullException.ThrowIfNull(theme);

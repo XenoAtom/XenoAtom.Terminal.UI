@@ -11,12 +11,19 @@ namespace XenoAtom.Terminal.UI.Collections;
 public sealed class VisualList<T> : BindableList<T>
     where T : Visual
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VisualList{T}"/> class.
+    /// </summary>
+    /// <param name="owner">The owning visual that will attach/detach children.</param>
+    /// <param name="name">The name of the list, used for debugging and diagnostics.</param>
     public VisualList(Visual owner, string name)
         : base(owner, name, onAdding: owner.AttachCollectionChild, onRemoving: owner.DetachCollectionChild)
     {
         ArgumentNullException.ThrowIfNull(owner);
     }
 
+    /// <summary>
+    /// Gets the owning visual.
+    /// </summary>
     public Visual VisualOwner => (Visual)Owner;
 }
-

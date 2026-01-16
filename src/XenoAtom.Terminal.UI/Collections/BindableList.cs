@@ -23,6 +23,13 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
     private bool _hasStaticMutations;
     private bool _hasDynamicMutations;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BindableList{T}"/> class.
+    /// </summary>
+    /// <param name="owner">The object that owns this list (used for dependency tracking).</param>
+    /// <param name="name">A stable name used to identify this list for binding tracking.</param>
+    /// <param name="onAdding">Optional callback invoked when an item is attached to the list.</param>
+    /// <param name="onRemoving">Optional callback invoked when an item is detached from the list.</param>
     public BindableList(object owner, string name, Action<T>? onAdding = null, Action<T>? onRemoving = null)
     {
         _owner = owner ?? throw new ArgumentNullException(nameof(owner));
@@ -37,6 +44,7 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
 
     internal BindingAccessor Accessor => _accessor;
 
+    /// <inheritdoc />
     public int Count
     {
         get
@@ -46,8 +54,10 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
         }
     }
 
+    /// <inheritdoc />
     public bool IsReadOnly => false;
 
+    /// <inheritdoc />
     public T this[int index]
     {
         get
@@ -77,6 +87,7 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
         }
     }
 
+    /// <inheritdoc />
     public void Add(T item)
     {
         if (typeof(T).IsClass)
@@ -90,6 +101,10 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
         BindingManager.Current.NotifyValueChanged(_owner, _accessor);
     }
 
+    /// <summary>
+    /// Adds a sequence of items to the list.
+    /// </summary>
+    /// <param name="items">The items to add.</param>
     public void AddRange(IEnumerable<T> items)
     {
         ArgumentNullException.ThrowIfNull(items);
@@ -109,6 +124,10 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
         BindingManager.Current.NotifyValueChanged(_owner, _accessor);
     }
 
+    /// <summary>
+    /// Adds an array of items to the list.
+    /// </summary>
+    /// <param name="items">The items to add.</param>
     public void AddRange(params T[] items)
     {
         ArgumentNullException.ThrowIfNull(items);
@@ -133,6 +152,7 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
         BindingManager.Current.NotifyValueChanged(_owner, _accessor);
     }
 
+    /// <inheritdoc />
     public void Clear()
     {
         if (_items.Count == 0)
@@ -153,18 +173,21 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
         BindingManager.Current.NotifyValueChanged(_owner, _accessor);
     }
 
+    /// <inheritdoc />
     public bool Contains(T item)
     {
         BindingManager.Current.RegisterRead(_owner, _accessor);
         return _items.Contains(item);
     }
 
+    /// <inheritdoc />
     public void CopyTo(T[] array, int arrayIndex)
     {
         BindingManager.Current.RegisterRead(_owner, _accessor);
         _items.CopyTo(array, arrayIndex);
     }
 
+    /// <inheritdoc />
     public List<T>.Enumerator GetEnumerator()
     {
         BindingManager.Current.RegisterRead(_owner, _accessor);
@@ -175,12 +198,14 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+    /// <inheritdoc />
     public int IndexOf(T item)
     {
         BindingManager.Current.RegisterRead(_owner, _accessor);
         return _items.IndexOf(item);
     }
 
+    /// <inheritdoc />
     public void Insert(int index, T item)
     {
         if (typeof(T).IsClass)
@@ -194,6 +219,7 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
         BindingManager.Current.NotifyValueChanged(_owner, _accessor);
     }
 
+    /// <inheritdoc />
     public bool Remove(T item)
     {
         var index = _items.IndexOf(item);
@@ -206,6 +232,7 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
         return true;
     }
 
+    /// <inheritdoc />
     public void RemoveAt(int index)
     {
         var item = _items[index];
@@ -215,6 +242,11 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
         BindingManager.Current.NotifyValueChanged(_owner, _accessor);
     }
 
+    /// <summary>
+    /// Moves an item from one index to another.
+    /// </summary>
+    /// <param name="oldIndex">The old index.</param>
+    /// <param name="newIndex">The new index.</param>
     public void Move(int oldIndex, int newIndex)
     {
         if (oldIndex == newIndex)
@@ -291,6 +323,12 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
         _hasStaticMutations = true;
     }
 
+    /// <summary>
+    /// Copies the items to a new array.
+    /// </summary>
+    /// <remarks>
+    /// This method is hidden from IntelliSense and exists primarily to support generated code and tests.
+    /// </remarks>
     [EditorBrowsable(EditorBrowsableState.Never)]
     public T[] ToArray()
     {

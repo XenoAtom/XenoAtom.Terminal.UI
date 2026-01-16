@@ -10,8 +10,12 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Renders a dimmed full-screen surface, typically used behind modal content.
+/// </summary>
 public sealed partial class Backdrop : Visual
 {
+    /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
         => SizeHints.Flex(
             min: Size.Zero,
@@ -22,8 +26,10 @@ public sealed partial class Backdrop : Visual
             shrinkX: 0,
             shrinkY: 0);
 
+    /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect) => Bounds = finalRect;
 
+    /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;

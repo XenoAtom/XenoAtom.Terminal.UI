@@ -11,26 +11,44 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// A clickable control that raises a <c>Click</c> routed event when activated.
+/// </summary>
 public partial class Button : ContentVisual
 {
     private bool _pressedInside;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Button"/> class.
+    /// </summary>
     public Button()
     {
         Focusable = true;
         Tone = ControlTone.Default;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Button"/> class with string content.
+    /// </summary>
+    /// <param name="text">The button text.</param>
     public Button(string text) : this()
     {
         this.Content(text);
     }
 
+    /// <summary>
+    /// Gets or sets the semantic tone of the button.
+    /// </summary>
     [Bindable]
     public partial ControlTone Tone { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the button is in the pressed state.
+    /// </summary>
     [Bindable]
     public partial bool IsPressed { get; set; }
 
+    /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = Get<ButtonStyle>();
@@ -97,6 +115,7 @@ public partial class Button : ContentVisual
             contentHints.FlexShrinkY).Normalize();
     }
 
+    /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
@@ -128,6 +147,7 @@ public partial class Button : ContentVisual
         content.Arrange(new Rectangle(x, y, w, h));
     }
 
+    /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
@@ -184,6 +204,7 @@ public partial class Button : ContentVisual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (e.Key is TerminalKey.Enter or TerminalKey.Space)
@@ -193,6 +214,7 @@ public partial class Button : ContentVisual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)
@@ -205,6 +227,7 @@ public partial class Button : ContentVisual
         e.Handled = true;
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         if (!IsPressed)
@@ -220,6 +243,7 @@ public partial class Button : ContentVisual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerReleased(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)
@@ -243,6 +267,10 @@ public partial class Button : ContentVisual
         }
     }
 
+    /// <summary>
+    /// Called when the button is activated (clicked or keyboard-invoked).
+    /// </summary>
+    /// <param name="e">The event arguments.</param>
     [RoutedEvent(RoutingStrategy.Bubble)]
     protected virtual void OnClick(ClickEventArgs e) { }
 }

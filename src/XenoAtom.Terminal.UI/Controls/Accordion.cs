@@ -13,23 +13,37 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// </summary>
 public sealed partial class Accordion : Panel
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Accordion"/> class.
+    /// </summary>
     public Accordion()
     {
         this.SingleExpanded = true;
         AddHandler(Collapsible.ExpandedChangedEvent, OnChildExpandedChanged);
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Accordion"/> class with children.
+    /// </summary>
+    /// <param name="children">The collapsible children.</param>
     public Accordion(params Visual[] children) : this()
     {
         AddRange(children);
     }
 
+    /// <summary>
+    /// Gets or sets the spacing (in rows) between items.
+    /// </summary>
     [Bindable]
     public partial int Spacing { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether only one item can be expanded at a time.
+    /// </summary>
     [Bindable]
     public partial bool SingleExpanded { get; set; }
 
+    /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var spacing = Math.Max(0, Spacing);
@@ -100,6 +114,7 @@ public sealed partial class Accordion : Panel
             shrinkY).Normalize();
     }
 
+    /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
