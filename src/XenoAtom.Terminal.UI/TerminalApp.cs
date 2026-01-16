@@ -231,15 +231,16 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    private TerminalScope _testAlternateScope;
-    private TerminalScope _testRawScope;
-    private TerminalScope _testEchoScope;
-    private TerminalScope _testMouseScope;
-    private TerminalScope _testPasteScope;
-    private TerminalScope _testCursorScope;
+    private TerminalScope _alternateScope;
+    private TerminalScope _rawScope;
+    private TerminalScope _echoScope;
+    private TerminalScope _mouseScope;
+    private TerminalScope _pasteScope;
+    private TerminalScope _cursorScope;
 
     /// <summary>
-    /// Starts a deterministic single-threaded run used by unit tests.
+    /// Starts a single-threaded run of this app without blocking the calling thread.
+    /// Intended for deterministic unit tests.
     /// </summary>
     internal void BeginRun()
     {
@@ -249,42 +250,16 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         }
 
         _runTask = Task.CompletedTask;
-
-        Dispatcher.BindToCurrentThread(this);
-
-        Root.AttachToApp(this);
-        BindingManager.Current.ValueChanged += OnValueChanged;
-
-        if (!_terminal.IsInputRunning)
+        try
         {
-            _terminal.StartInput(new TerminalInputOptions { TreatControlCAsInput = true });
+            BeginRunCore(started: null);
         }
-
-        if (_options.HostKind == TerminalHostKind.Fullscreen)
+        catch
         {
-            _testAlternateScope = _terminal.UseAlternateScreen();
+            EndRunCore();
+            _runTask = null;
+            throw;
         }
-
-        _testRawScope = _terminal.UseRawMode(_options.RawMode);
-        if (_options.DisableInputEcho)
-        {
-            _testEchoScope = _terminal.SetInputEcho(false);
-        }
-
-        _testCursorScope = _terminal.HideCursor();
-
-        if (_options.EnableMouse)
-        {
-            _testMouseScope = _terminal.EnableMouseInput(_options.MouseMode);
-        }
-
-        if (_options.EnableBracketedPaste)
-        {
-            _testPasteScope = _terminal.EnableBracketedPasteInput();
-        }
-
-        EnsureInitialFocus();
-        RequestRender();
     }
 
     /// <summary>
@@ -340,7 +315,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     }
 
     /// <summary>
-    /// Ends a deterministic single-threaded run started by <see cref="BeginRun"/>.
+    /// Ends a run started by <see cref="BeginRun"/>.
     /// </summary>
     internal void EndRun()
     {
@@ -351,18 +326,10 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
         try
         {
-            _testPasteScope.Dispose();
-            _testMouseScope.Dispose();
-            _testCursorScope.Dispose();
-            _testEchoScope.Dispose();
-            _testRawScope.Dispose();
-            _testAlternateScope.Dispose();
-            BindingManager.Current.ValueChanged -= OnValueChanged;
-            Root.DetachFromApp();
+            EndRunCore();
         }
         finally
         {
-            Dispatcher.DetachFromThread(this);
             _runTask = null;
         }
     }
@@ -391,51 +358,9 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
         var token = linkedCts.Token;
 
-        Dispatcher.BindToCurrentThread(this);
-        started?.Set();
-
-        Root.AttachToApp(this);
-        BindingManager.Current.ValueChanged += OnValueChanged;
-
-        TerminalScope alternateScope = default;
-        TerminalScope rawScope = default;
-        TerminalScope echoScope = default;
-        TerminalScope mouseScope = default;
-        TerminalScope pasteScope = default;
-        TerminalScope cursorScope = default;
-
         try
         {
-            if (!_terminal.IsInputRunning)
-            {
-                _terminal.StartInput(new TerminalInputOptions { TreatControlCAsInput = true });
-            }
-
-            if (_options.HostKind == TerminalHostKind.Fullscreen)
-            {
-                alternateScope = _terminal.UseAlternateScreen();
-            }
-
-            rawScope = _terminal.UseRawMode(_options.RawMode);
-            if (_options.DisableInputEcho)
-            {
-                echoScope = _terminal.SetInputEcho(false);
-            }
-
-            cursorScope = _terminal.HideCursor();
-
-            if (_options.EnableMouse)
-            {
-                mouseScope = _terminal.EnableMouseInput(_options.MouseMode);
-            }
-
-            if (_options.EnableBracketedPaste)
-            {
-                pasteScope = _terminal.EnableBracketedPasteInput();
-            }
-
-            EnsureInitialFocus();
-            RequestRender();
+            BeginRunCore(started);
 
             while (!token.IsCancellationRequested)
             {
@@ -445,14 +370,73 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         }
         finally
         {
-            pasteScope.Dispose();
-            mouseScope.Dispose();
-            cursorScope.Dispose();
-            echoScope.Dispose();
-            rawScope.Dispose();
-            alternateScope.Dispose();
+            EndRunCore();
+        }
+    }
+
+    private void BeginRunCore(ManualResetEventSlim? started)
+    {
+        Dispatcher.BindToCurrentThread(this);
+        started?.Set();
+
+        Root.AttachToApp(this);
+        BindingManager.Current.ValueChanged += OnValueChanged;
+
+        if (!_terminal.IsInputRunning)
+        {
+            _terminal.StartInput(new TerminalInputOptions { TreatControlCAsInput = true });
+        }
+
+        if (_options.HostKind == TerminalHostKind.Fullscreen)
+        {
+            _alternateScope = _terminal.UseAlternateScreen();
+        }
+
+        _rawScope = _terminal.UseRawMode(_options.RawMode);
+        if (_options.DisableInputEcho)
+        {
+            _echoScope = _terminal.SetInputEcho(false);
+        }
+
+        _cursorScope = _terminal.HideCursor();
+
+        if (_options.EnableMouse)
+        {
+            _mouseScope = _terminal.EnableMouseInput(_options.MouseMode);
+        }
+
+        if (_options.EnableBracketedPaste)
+        {
+            _pasteScope = _terminal.EnableBracketedPasteInput();
+        }
+
+        EnsureInitialFocus();
+        RequestRender();
+    }
+
+    private void EndRunCore()
+    {
+        try
+        {
+            _pasteScope.Dispose();
+            _mouseScope.Dispose();
+            _cursorScope.Dispose();
+            _echoScope.Dispose();
+            _rawScope.Dispose();
+            _alternateScope.Dispose();
+
+            _pasteScope = default;
+            _mouseScope = default;
+            _cursorScope = default;
+            _echoScope = default;
+            _rawScope = default;
+            _alternateScope = default;
+
             BindingManager.Current.ValueChanged -= OnValueChanged;
             Root.DetachFromApp();
+        }
+        finally
+        {
             Dispatcher.DetachFromThread(this);
         }
     }
