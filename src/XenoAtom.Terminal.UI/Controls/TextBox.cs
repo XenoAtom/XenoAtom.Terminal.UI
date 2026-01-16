@@ -21,6 +21,11 @@ public partial class TextBox : TextEditorBase
             setter: value => Text = value);
     }
 
+    public TextBox(string? text) : this()
+    {
+        this.Text(text);
+    }
+
     [Bindable]
     public partial string? Text { get; set; }
 
@@ -41,7 +46,8 @@ public partial class TextBox : TextEditorBase
     {
         var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var width = Math.Max(10, Math.Min(availableSize.Width, 24));
-        var height = GetTextBoxStyle().ShowBorder ? 3 : 1;
+        var padding = GetTextBoxStyle().Padding;
+        var height = Math.Max(1, 1 + padding.Vertical);
         return SizeHints.Fixed(new Size(width, Math.Min(availableSize.Height, height)));
     }
 
@@ -50,20 +56,12 @@ public partial class TextBox : TextEditorBase
         Bounds = finalRect;
 
         var style = GetTextBoxStyle();
-        var showBorder = style.ShowBorder;
         var padding = style.Padding;
 
         var innerLeft = finalRect.X;
         var innerTop = finalRect.Y;
         var innerWidth = finalRect.Width;
         var innerHeight = finalRect.Height;
-        if (showBorder && finalRect.Width >= 2 && finalRect.Height >= 2)
-        {
-            innerLeft++;
-            innerTop++;
-            innerWidth = Math.Max(0, innerWidth - 2);
-            innerHeight = Math.Max(0, innerHeight - 2);
-        }
 
         var contentRect = new Rectangle(
             innerLeft + padding.Left,
@@ -85,47 +83,15 @@ public partial class TextBox : TextEditorBase
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
         var textBoxStyle = GetTextBoxStyle();
-        var borderStyle = textBoxStyle.BorderStyle(theme, isFocused);
         var selectionStyle = textBoxStyle.SelectionStyle(theme);
         var backgroundStyle = textBoxStyle.BackgroundStyle(theme);
         var placeholderStyle = textBoxStyle.PlaceholderStyle(theme);
         var padding = textBoxStyle.Padding;
-        var showBorder = textBoxStyle.ShowBorder;
 
         var innerLeft = rect.X;
         var innerTop = rect.Y;
         var innerWidth = rect.Width;
         var innerHeight = rect.Height;
-        if (showBorder && rect.Width >= 2 && rect.Height >= 2)
-        {
-            var glyphs = theme.Lines;
-            var left = rect.X;
-            var top = rect.Y;
-            var right = rect.X + rect.Width - 1;
-            var bottom = rect.Y + rect.Height - 1;
-
-            buffer.SetCell(left, top, glyphs.TopLeft, borderStyle);
-            buffer.SetCell(right, top, glyphs.TopRight, borderStyle);
-            buffer.SetCell(left, bottom, glyphs.BottomLeft, borderStyle);
-            buffer.SetCell(right, bottom, glyphs.BottomRight, borderStyle);
-
-            for (var x = left + 1; x < right; x++)
-            {
-                buffer.SetCell(x, top, glyphs.Horizontal, borderStyle);
-                buffer.SetCell(x, bottom, glyphs.Horizontal, borderStyle);
-            }
-
-            for (var y = top + 1; y < bottom; y++)
-            {
-                buffer.SetCell(left, y, glyphs.Vertical, borderStyle);
-                buffer.SetCell(right, y, glyphs.Vertical, borderStyle);
-            }
-
-            innerLeft = rect.X + 1;
-            innerTop = rect.Y + 1;
-            innerWidth = Math.Max(0, rect.Width - 2);
-            innerHeight = Math.Max(0, rect.Height - 2);
-        }
 
         var contentRect = new Rectangle(
             innerLeft + padding.Left,

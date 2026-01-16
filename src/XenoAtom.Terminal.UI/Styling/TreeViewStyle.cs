@@ -22,8 +22,6 @@ public sealed record TreeViewStyle : IStyle<TreeViewStyle>
 
     public static StyleKey<TreeViewStyle> Key { get; } = new("TreeViewStyle", Default);
 
-    public bool ShowBorder { get; init; }
-
     public int IndentSize { get; init; } = 2;
 
     public int SpaceBetweenGlyphAndText { get; init; } = 2;

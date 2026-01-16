@@ -25,6 +25,11 @@ public sealed partial class TextArea : TextEditorBase
             setter: value => Text = value);
     }
 
+    public TextArea(string? text) : this()
+    {
+        this.Text(text);
+    }
+
     [Bindable]
     public partial string? Text { get; set; }
 
@@ -36,17 +41,8 @@ public sealed partial class TextArea : TextEditorBase
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var style = Get<TextAreaStyle>();
-        var showBorder = style.ShowBorder;
-
         var width = 32;
         var height = 10;
-
-        if (showBorder)
-        {
-            width = Math.Max(width, 3);
-            height = Math.Max(height, 3);
-        }
 
         return SizeHints.Fixed(constraints.Clamp(new Size(width, height)));
     }
@@ -56,20 +52,12 @@ public sealed partial class TextArea : TextEditorBase
         Bounds = finalRect;
 
         var style = Get<TextAreaStyle>();
-        var showBorder = style.ShowBorder;
         var padding = style.Padding;
 
         var innerLeft = finalRect.X;
         var innerTop = finalRect.Y;
         var innerWidth = finalRect.Width;
         var innerHeight = finalRect.Height;
-        if (showBorder && finalRect.Width >= 2 && finalRect.Height >= 2)
-        {
-            innerLeft++;
-            innerTop++;
-            innerWidth = Math.Max(0, innerWidth - 2);
-            innerHeight = Math.Max(0, innerHeight - 2);
-        }
 
         var contentRect = new Rectangle(
             innerLeft + padding.Left,
@@ -91,8 +79,6 @@ public sealed partial class TextArea : TextEditorBase
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
         var style = Get<TextAreaStyle>();
-        var showBorder = style.ShowBorder;
-        var borderStyle = style.BorderStyle(theme, isFocused);
         var selectionStyle = style.SelectionStyle(theme);
         var backgroundStyle = style.BackgroundStyle(theme);
         var placeholderStyle = style.PlaceholderStyle(theme);
@@ -102,36 +88,6 @@ public sealed partial class TextArea : TextEditorBase
         var innerTop = rect.Y;
         var innerWidth = rect.Width;
         var innerHeight = rect.Height;
-        if (showBorder && rect.Width >= 2 && rect.Height >= 2)
-        {
-            var glyphs = theme.Lines;
-            var left = rect.X;
-            var top = rect.Y;
-            var right = rect.X + rect.Width - 1;
-            var bottom = rect.Y + rect.Height - 1;
-
-            buffer.SetCell(left, top, glyphs.TopLeft, borderStyle);
-            buffer.SetCell(right, top, glyphs.TopRight, borderStyle);
-            buffer.SetCell(left, bottom, glyphs.BottomLeft, borderStyle);
-            buffer.SetCell(right, bottom, glyphs.BottomRight, borderStyle);
-
-            for (var x = left + 1; x < right; x++)
-            {
-                buffer.SetCell(x, top, glyphs.Horizontal, borderStyle);
-                buffer.SetCell(x, bottom, glyphs.Horizontal, borderStyle);
-            }
-
-            for (var y = top + 1; y < bottom; y++)
-            {
-                buffer.SetCell(left, y, glyphs.Vertical, borderStyle);
-                buffer.SetCell(right, y, glyphs.Vertical, borderStyle);
-            }
-
-            innerLeft = rect.X + 1;
-            innerTop = rect.Y + 1;
-            innerWidth = Math.Max(0, rect.Width - 2);
-            innerHeight = Math.Max(0, rect.Height - 2);
-        }
 
         var contentRect = new Rectangle(
             innerLeft + padding.Left,

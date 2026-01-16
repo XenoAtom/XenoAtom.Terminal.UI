@@ -86,7 +86,7 @@ public sealed class CommandPalette : Visual
             Content = this,
             MatchAnchorWidth = false,
             Placement = PopupPlacement.Below,
-        }.Style(PopupStyle.Default with { ShowBorder = false, Padding = Thickness.Zero });
+        }.Style(PopupStyle.Default with { Padding = Thickness.Zero });
 
         _hostPopup.Show();
     }

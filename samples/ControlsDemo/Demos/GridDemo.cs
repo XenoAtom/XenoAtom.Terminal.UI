@@ -25,7 +25,7 @@ public sealed class GridDemo : ControlsDemoBase
 
         grid
             .Cell("Name:", 0, 0)
-            .Cell(new TextBox().Text("Alex").HorizontalAlignment(HorizontalAlignment.Stretch), 0, 1)
+            .Cell(new TextBox("Alex").HorizontalAlignment(HorizontalAlignment.Stretch), 0, 1)
             .Cell("Mode:", 1, 0)
             .Cell(new Select
                 {
@@ -37,11 +37,11 @@ public sealed class GridDemo : ControlsDemoBase
                     }
                 }.HorizontalAlignment(HorizontalAlignment.Stretch), 1, 1)
             .Cell("Notes:", 2, 0)
-            .Cell(new TextBox().Text("Grid uses GridCell objects instead of attached properties.").HorizontalAlignment(HorizontalAlignment.Stretch), 2, 1);
+            .Cell(new TextBox("Grid uses GridCell objects instead of attached properties.").HorizontalAlignment(HorizontalAlignment.Stretch), 2, 1);
 
         return new VStack(
                 DemoUi.Hint("Grid uses explicit GridCell entries (row/column definitions + Cells list)."),
-                new Border().Padding(1).Content(grid))
+                new Border(grid).Padding(1))
             .Spacing(1);
     }
 }

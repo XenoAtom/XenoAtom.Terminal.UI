@@ -12,8 +12,6 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
 
     public static StyleKey<TabControlStyle> Key { get; } = new("TabControlStyle", Default);
 
-    public bool ShowBorder { get; init; } = true;
-
     public Thickness TabPadding { get; init; } = new(Left: 2, Top: 0, Right: 2, Bottom: 0);
 
     public CellStyle? StripStyle { get; init; }

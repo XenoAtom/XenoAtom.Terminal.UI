@@ -12,8 +12,6 @@ public sealed record ListBoxStyle : IStyle<ListBoxStyle>
 
     public static StyleKey<ListBoxStyle> Key { get; } = new("ListBoxStyle", Default);
 
-    public bool ShowBorder { get; init; }
-
     public Rune MarkerGlyph { get; init; } = new('→');
 
     public CellStyle? Item { get; init; }

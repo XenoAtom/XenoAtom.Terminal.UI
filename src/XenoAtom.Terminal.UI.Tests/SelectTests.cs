@@ -37,8 +37,8 @@ public sealed class SelectTests
         await Task.Delay(80);
 
         // Click the second item in the popup list (roughly below the select).
-        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 2, Y = 3 });
-        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 2, Y = 3 });
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 2, Y = 2 });
+        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 2, Y = 2 });
 
         await Task.Delay(80);
 
@@ -53,4 +53,3 @@ public sealed class SelectTests
         StringAssert.Contains(rendered, "Second");
     }
 }
-

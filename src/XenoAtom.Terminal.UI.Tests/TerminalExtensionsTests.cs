@@ -61,7 +61,7 @@ public sealed class TerminalExtensionsTests
 
         session.Instance.WriteLine("TOP");
 
-        var root = new TextBox().Text("abc");
+        var root = new TextBox("abc");
         session.Instance.Live(root, () => false, new TerminalLiveOptions(RemoveOnEnd: false));
 
         session.Instance.WriteLine("AFTER");
@@ -76,9 +76,9 @@ public sealed class TerminalExtensionsTests
 
         Assert.IsTrue(topLine >= 0);
         Assert.IsTrue(afterLine >= 0);
-        // TextBox renders 3 rows by default (border + content). With the initial TOP line, the live region
-        // starts at row 1 and occupies rows 1..3, so output after Live() should start at row >= 4.
-        Assert.IsTrue(afterLine >= 4, $"Expected output after Live() to appear after the live region. Screen:\n{screen.GetText()}");
+        // TextBox renders a single row by default (content only). With the initial TOP line, the live region
+        // starts at row 1 and occupies row 1, so output after Live() should start at row >= 2.
+        Assert.IsTrue(afterLine >= topLine + 2, $"Expected output after Live() to appear after the live region. Screen:\n{screen.GetText()}");
     }
 
     [TestMethod]
@@ -89,7 +89,7 @@ public sealed class TerminalExtensionsTests
 
         session.Instance.WriteLine("TOP");
 
-        var root = new TextBox().Text("abc");
+        var root = new TextBox("abc");
         session.Instance.Live(root, () => false, new TerminalLiveOptions(RemoveOnEnd: true));
 
         session.Instance.WriteLine("AFTER");

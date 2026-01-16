@@ -88,7 +88,7 @@ public sealed class TextAreaTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(10, 6));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        var textArea = new TextArea { Text = "0123456789" };
+        var textArea = new TextArea("0123456789");
         var root = new VStack { textArea };
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
@@ -102,9 +102,9 @@ public sealed class TextAreaTests
         screen.Apply(backend.GetOutText());
         var rendered = screen.GetText().Split('\n');
 
-        Assert.IsTrue(rendered.Length >= 3, "Expected multiple lines of output.");
-        Assert.IsTrue(rendered[1].Contains("012345", StringComparison.Ordinal), "Expected first wrapped line.");
-        Assert.IsTrue(rendered[2].Contains("6789", StringComparison.Ordinal), "Expected second wrapped line.");
+        Assert.IsTrue(rendered.Length >= 2, "Expected multiple lines of output.");
+        Assert.IsTrue(rendered[0].Contains("01234567", StringComparison.Ordinal), "Expected first wrapped line.");
+        Assert.IsTrue(rendered[1].Contains("89", StringComparison.Ordinal), "Expected second wrapped line.");
     }
 
     [TestMethod]
@@ -113,7 +113,7 @@ public sealed class TextAreaTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        var textArea = new TextArea { Text = "Line 1\nLine 2\nLine 3" };
+        var textArea = new TextArea("Line 1\nLine 2\nLine 3");
         var root = new VStack { textArea };
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
@@ -145,7 +145,7 @@ public sealed class TextAreaTests
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
         var text = string.Join("\n", Enumerable.Range(0, 40).Select(i => $"Line {i:00}"));
-        var textArea = new TextArea { Text = text };
+        var textArea = new TextArea(text);
         var root = new VStack { textArea };
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });

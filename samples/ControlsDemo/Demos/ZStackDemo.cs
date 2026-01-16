@@ -17,11 +17,10 @@ public sealed class ZStackDemo : ControlsDemoBase
         // ZStack draws children in order; later children appear "on top".
         return new VStack(
                 DemoUi.Hint("ZStack overlays children. Use it for backdrops and layers."),
-                new Border().Padding(1).Content(
-                    new ZStack(
+                new Border(new ZStack(
                         new TextBlock("Background"),
-                        new Center().Content("Foreground"))))
+                        new Center().Content("Foreground")))
+                    .Padding(1))
             .Spacing(1);
     }
 }
-

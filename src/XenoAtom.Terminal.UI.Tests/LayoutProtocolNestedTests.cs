@@ -39,7 +39,7 @@ public sealed class LayoutProtocolNestedTests
 
         var root = new HStack(
             new Group { Content = viewer },
-            new Border { Content = new TextBlock("Right") })
+            new Border("Right"))
         {
             Spacing = 1,
         };
@@ -66,4 +66,3 @@ public sealed class LayoutProtocolNestedTests
             => SizeHints.Fixed(constraints.Clamp(_size));
     }
 }
-

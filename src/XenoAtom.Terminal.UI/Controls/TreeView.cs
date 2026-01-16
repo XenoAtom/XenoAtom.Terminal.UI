@@ -117,7 +117,6 @@ public sealed partial class TreeView : Visual
         EnsureVisibleList();
 
         var style = Get<TreeViewStyle>();
-        var showBorder = style.ShowBorder;
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
         var gapAfterIcon = Math.Max(0, style.SpaceBetweenGlyphAndText);
 
@@ -138,13 +137,8 @@ public sealed partial class TreeView : Visual
 
         var width = Math.Max(1, maxWidth);
         var desiredHeight = Math.Max(1, _visible.Count);
-        if (showBorder)
-        {
-            width += 2;
-            desiredHeight += 2;
-        }
 
-        var min = new Size(showBorder ? 3 : 1, showBorder ? 3 : 1);
+        var min = new Size(1, 1);
         var natural = new Size(Math.Max(min.Width, width), Math.Max(min.Height, desiredHeight));
         var max = new Size(LayoutConstants.Infinite, LayoutConstants.Infinite);
         return SizeHints.Flex(min, natural, max, growX: 1, growY: 1, shrinkX: 1, shrinkY: 1);
@@ -156,13 +150,12 @@ public sealed partial class TreeView : Visual
         EnsureVisibleList();
 
         var style = Get<TreeViewStyle>();
-        var showBorder = style.ShowBorder;
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
         var gapAfterIcon = Math.Max(0, style.SpaceBetweenGlyphAndText);
-        var innerLeft = finalRect.X + (showBorder ? 1 : 0);
-        var innerTop = finalRect.Y + (showBorder ? 1 : 0);
-        var innerWidth = Math.Max(0, finalRect.Width - (showBorder ? 2 : 0));
-        var innerHeight = Math.Max(0, finalRect.Height - (showBorder ? 2 : 0));
+        var innerLeft = finalRect.X;
+        var innerTop = finalRect.Y;
+        var innerWidth = Math.Max(0, finalRect.Width);
+        var innerHeight = Math.Max(0, finalRect.Height);
 
         var count = _visible.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
@@ -201,19 +194,16 @@ public sealed partial class TreeView : Visual
         EnsureVisibleList();
 
         var style = Get<TreeViewStyle>();
-        var showBorder = style.ShowBorder;
-        var innerLeft = rect.X + (showBorder ? 1 : 0);
-        var innerTop = rect.Y + (showBorder ? 1 : 0);
-        var innerWidth = Math.Max(0, rect.Width - (showBorder ? 2 : 0));
-        var innerHeight = Math.Max(0, rect.Height - (showBorder ? 2 : 0));
+        var innerLeft = rect.X;
+        var innerTop = rect.Y;
+        var innerWidth = Math.Max(0, rect.Width);
+        var innerHeight = Math.Max(0, rect.Height);
 
         var count = _visible.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
 
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var borderStyle = theme.BorderStyle(isFocused);
-        var glyphs = theme.Lines;
 
         // Fill background.
         var background = CellStyle.None;
@@ -222,31 +212,6 @@ public sealed partial class TreeView : Visual
             for (var x = rect.X; x < rect.X + rect.Width; x++)
             {
                 buffer.SetCell(x, y, new Rune(' '), background);
-            }
-        }
-
-        if (showBorder && rect.Width >= 2 && rect.Height >= 2)
-        {
-            var left = rect.X;
-            var top = rect.Y;
-            var right = rect.X + rect.Width - 1;
-            var bottom = rect.Y + rect.Height - 1;
-
-            buffer.SetCell(left, top, glyphs.TopLeft, borderStyle);
-            buffer.SetCell(right, top, glyphs.TopRight, borderStyle);
-            buffer.SetCell(left, bottom, glyphs.BottomLeft, borderStyle);
-            buffer.SetCell(right, bottom, glyphs.BottomRight, borderStyle);
-
-            for (var x = left + 1; x < right; x++)
-            {
-                buffer.SetCell(x, top, glyphs.Horizontal, borderStyle);
-                buffer.SetCell(x, bottom, glyphs.Horizontal, borderStyle);
-            }
-
-            for (var y = top + 1; y < bottom; y++)
-            {
-                buffer.SetCell(left, y, glyphs.Vertical, borderStyle);
-                buffer.SetCell(right, y, glyphs.Vertical, borderStyle);
             }
         }
 
@@ -319,8 +284,7 @@ public sealed partial class TreeView : Visual
         }
 
         var style = Get<TreeViewStyle>();
-        var showBorder = style.ShowBorder;
-        var viewportHeight = Math.Max(1, Bounds.Height - (showBorder ? 2 : 0));
+        var viewportHeight = Math.Max(1, Bounds.Height);
 
         var count = _visible.Count;
         var selected = Math.Clamp(SelectedIndex, 0, count - 1);
@@ -377,10 +341,9 @@ public sealed partial class TreeView : Visual
         EnsureVisibleList();
 
         var style = Get<TreeViewStyle>();
-        var showBorder = style.ShowBorder;
 
-        var innerY = (e.UiY - Bounds.Y) - (showBorder ? 1 : 0);
-        var innerHeight = Math.Max(0, Bounds.Height - (showBorder ? 2 : 0));
+        var innerY = e.UiY - Bounds.Y;
+        var innerHeight = Math.Max(0, Bounds.Height);
         if ((uint)innerY >= (uint)innerHeight)
         {
             return;
@@ -397,7 +360,7 @@ public sealed partial class TreeView : Visual
         // Click on the expander glyph toggles expansion.
         var depth = _visible[index].Depth;
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
-        var expanderX = (showBorder ? 1 : 0) + markerWidth + depth * style.IndentSize; // marker + indent
+        var expanderX = markerWidth + depth * style.IndentSize; // marker + indent
         if (e.LocalX == expanderX)
         {
             ToggleExpand(index, expand: null);

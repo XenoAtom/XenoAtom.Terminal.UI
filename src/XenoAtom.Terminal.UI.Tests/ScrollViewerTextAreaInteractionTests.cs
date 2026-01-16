@@ -20,10 +20,7 @@ public sealed class ScrollViewerTextAreaInteractionTests
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
         var button = new Button("Top");
-        var textArea = new TextArea
-        {
-            Text = string.Join("\n", Enumerable.Range(0, 50).Select(i => $"Line {i:00}")),
-        };
+        var textArea = new TextArea(string.Join("\n", Enumerable.Range(0, 50).Select(i => $"Line {i:00}")));
 
         var scrollViewer = new ScrollViewer
         {
@@ -88,10 +85,7 @@ public sealed class ScrollViewerTextAreaInteractionTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 12));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        var textArea = new TextArea
-        {
-            Text = string.Join("\n", Enumerable.Range(0, 50).Select(i => $"Line {i:00}")),
-        };
+        var textArea = new TextArea(string.Join("\n", Enumerable.Range(0, 50).Select(i => $"Line {i:00}")));
 
         var scrollViewer = new ScrollViewer
         {
@@ -153,10 +147,7 @@ public sealed class ScrollViewerTextAreaInteractionTests
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
         var button = new Button("Top");
-        var textArea = new TextArea
-        {
-            Text = string.Join("\n", Enumerable.Range(0, 50).Select(i => $"Line {i:00}")),
-        };
+        var textArea = new TextArea(string.Join("\n", Enumerable.Range(0, 50).Select(i => $"Line {i:00}")));
 
         var scrollViewer = new ScrollViewer
         {
@@ -228,7 +219,7 @@ public sealed class ScrollViewerTextAreaInteractionTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 12));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        var textArea = new TextArea { Text = "Hello\nWorld\nAgain" };
+        var textArea = new TextArea("Hello\nWorld\nAgain");
         var root = new VStack(textArea).Spacing(0);
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });

@@ -20,13 +20,6 @@ public sealed class BorderDefaultsTests
     }
 
     [TestMethod]
-    public void ListBox_Defaults_To_No_Border()
-    {
-        Assert.IsFalse(ListBoxStyle.Default.ShowBorder);
-        Assert.IsFalse(new ListBox().Get<ListBoxStyle>().ShowBorder);
-    }
-
-    [TestMethod]
     public async Task Button_Border_Is_OptIn_Via_Style()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(24, 6));

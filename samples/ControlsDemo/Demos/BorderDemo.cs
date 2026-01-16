@@ -16,9 +16,8 @@ public sealed class BorderDemo : ControlsDemoBase
 
         return new VStack(
                 DemoUi.Hint("Border provides a simple padded container."),
-                new Border().Padding(1).Content("Padded content"),
-                new Border().Padding(2).Content(new VStack("Line 1", "Line 2").Spacing(0)))
+                new Border("Padded content").Padding(1),
+                new Border(new VStack("Line 1", "Line 2").Spacing(0)).Padding(2))
             .Spacing(1);
     }
 }
-

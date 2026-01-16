@@ -7,7 +7,7 @@ var text = string.Join(
     "\n",
     Enumerable.Range(1, 100).Select(i => $"Line {i:00} - ScrollViewer + TextArea"));
 
-var editor = new TextArea { Text = text };
+var editor = new TextArea(text);
 
 var view = new ScrollViewer
 {

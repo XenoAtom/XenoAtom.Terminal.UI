@@ -35,7 +35,7 @@ public sealed class TextEditorDocumentTests
     [TestMethod]
     public void TextBox_Uses_Dynamic_TextDocument_By_Default()
     {
-        var textBox = new TextBox { Text = "Hello\r\nWorld" };
+        var textBox = new TextBox("Hello\r\nWorld");
         var snapshot = textBox.TextDocument.CurrentSnapshot;
         Assert.AreEqual(2, snapshot.LineCount);
         Assert.AreEqual("Hello\r\nWorld", ReadText(textBox.TextDocument));

@@ -12,8 +12,6 @@ public sealed record SelectionListStyle : IStyle<SelectionListStyle>
 
     public static StyleKey<SelectionListStyle> Key { get; } = new("SelectionListStyle", Default);
 
-    public bool ShowBorder { get; init; }
-
     public int SpaceBetweenGlyphAndText { get; init; } = 2;
 
     public Rune FocusMarkerGlyph { get; init; } = new('→');

@@ -65,7 +65,6 @@ public sealed partial class OptionList : Visual
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = Get<OptionListStyle>();
-        var showBorder = style.ShowBorder;
 
         var prefixWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.MarkerGlyph)) + Math.Max(0, style.SpaceBetweenGlyphAndText);
 
@@ -84,13 +83,7 @@ public sealed partial class OptionList : Visual
         var width = prefixWidth + itemWidth;
         var desiredHeight = Math.Max(1, Items.Count * itemHeight);
 
-        if (showBorder)
-        {
-            width += 2;
-            desiredHeight += 2;
-        }
-
-        var min = new Size(showBorder ? 3 : 1, showBorder ? 3 : 1);
+        var min = new Size(1, 1);
         var natural = new Size(Math.Max(min.Width, width), Math.Max(min.Height, desiredHeight));
         var max = new Size(LayoutConstants.Infinite, LayoutConstants.Infinite);
         return SizeHints.Flex(min, natural, max, growX: 1, growY: 1, shrinkX: 1, shrinkY: 1);
@@ -105,11 +98,10 @@ public sealed partial class OptionList : Visual
         }
 
         var style = Get<OptionListStyle>();
-        var showBorder = style.ShowBorder;
-        var innerLeft = rect.X + (showBorder ? 1 : 0);
-        var innerTop = rect.Y + (showBorder ? 1 : 0);
-        var innerWidth = Math.Max(0, rect.Width - (showBorder ? 2 : 0));
-        var innerHeight = Math.Max(0, rect.Height - (showBorder ? 2 : 0));
+        var innerLeft = rect.X;
+        var innerTop = rect.Y;
+        var innerWidth = Math.Max(0, rect.Width);
+        var innerHeight = Math.Max(0, rect.Height);
         var itemHeight = Math.Max(1, _itemHeight);
         var viewportItems = Math.Max(1, innerHeight / itemHeight);
 
@@ -146,12 +138,11 @@ public sealed partial class OptionList : Visual
 
         var theme = GetTheme();
         var style = Get<OptionListStyle>();
-        var showBorder = style.ShowBorder;
 
-        var innerLeft = rect.X + (showBorder ? 1 : 0);
-        var innerTop = rect.Y + (showBorder ? 1 : 0);
-        var innerWidth = Math.Max(0, rect.Width - (showBorder ? 2 : 0));
-        var innerHeight = Math.Max(0, rect.Height - (showBorder ? 2 : 0));
+        var innerLeft = rect.X;
+        var innerTop = rect.Y;
+        var innerWidth = Math.Max(0, rect.Width);
+        var innerHeight = Math.Max(0, rect.Height);
         var itemHeight = Math.Max(1, _itemHeight);
         var viewportItems = Math.Max(1, innerHeight / itemHeight);
 
@@ -165,33 +156,6 @@ public sealed partial class OptionList : Visual
             for (var x = rect.X; x < rect.X + rect.Width; x++)
             {
                 buffer.SetCell(x, y, new Rune(' '), CellStyle.None);
-            }
-        }
-
-        if (showBorder && rect.Width >= 2 && rect.Height >= 2)
-        {
-            var border = theme.BorderStyle(isFocused);
-            var glyphs = theme.Lines;
-            var left = rect.X;
-            var top = rect.Y;
-            var right = rect.Right - 1;
-            var bottom = rect.Bottom - 1;
-
-            buffer.SetCell(left, top, glyphs.TopLeft, border);
-            buffer.SetCell(right, top, glyphs.TopRight, border);
-            buffer.SetCell(left, bottom, glyphs.BottomLeft, border);
-            buffer.SetCell(right, bottom, glyphs.BottomRight, border);
-
-            for (var x = left + 1; x < right; x++)
-            {
-                buffer.SetCell(x, top, glyphs.Horizontal, border);
-                buffer.SetCell(x, bottom, glyphs.Horizontal, border);
-            }
-
-            for (var y = top + 1; y < bottom; y++)
-            {
-                buffer.SetCell(left, y, glyphs.Vertical, border);
-                buffer.SetCell(right, y, glyphs.Vertical, border);
             }
         }
 
@@ -319,8 +283,7 @@ public sealed partial class OptionList : Visual
             return;
         }
 
-        var showBorder = Get<OptionListStyle>().ShowBorder;
-        var viewportHeight = Math.Max(1, Bounds.Height - (showBorder ? 2 : 0));
+        var viewportHeight = Math.Max(1, Bounds.Height);
         var selected = Math.Clamp(SelectedIndex, 0, count - 1);
 
         switch (e.Key)
@@ -386,9 +349,8 @@ public sealed partial class OptionList : Visual
     {
         var rect = Bounds;
         var style = Get<OptionListStyle>();
-        var showBorder = style.ShowBorder;
-        var innerTop = rect.Y + (showBorder ? 1 : 0);
-        var innerHeight = Math.Max(0, rect.Height - (showBorder ? 2 : 0));
+        var innerTop = rect.Y;
+        var innerHeight = Math.Max(0, rect.Height);
         var itemHeight = Math.Max(1, _itemHeight);
 
         if (y < innerTop || y >= innerTop + innerHeight)

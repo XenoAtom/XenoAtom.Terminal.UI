@@ -17,19 +17,18 @@ public sealed class SplitterDemo : ControlsDemoBase
         return new VStack(
                 DemoUi.Hint("Drag the splitter bar with the mouse."),
                 new HSplitter(
-                        new Border().Padding(1).Content("Left"),
-                        new Border().Padding(1).Content("Right"))
+                        new Border("Left").Padding(1),
+                        new Border("Right").Padding(1))
                     .Ratio(0.35)
                     .MinHeight(6)
                     .MaxHeight(6),
                 new Rule(),
                 new VSplitter(
-                        new Border().Padding(1).Content("Top"),
-                        new Border().Padding(1).Content("Bottom"))
+                        new Border("Top").Padding(1),
+                        new Border("Bottom").Padding(1))
                     .Ratio(0.5)
                     .MinHeight(8)
                     .MaxHeight(8))
             .Spacing(1);
     }
 }
-

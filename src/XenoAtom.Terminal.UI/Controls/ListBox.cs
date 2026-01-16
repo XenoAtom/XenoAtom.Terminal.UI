@@ -35,9 +35,6 @@ public sealed partial class ListBox : Visual
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var listBoxStyle = Get<ListBoxStyle>();
-        var showBorder = listBoxStyle.ShowBorder;
-
         var items = Items;
         var itemWidth = 0;
         if (items.Count > 0)
@@ -54,13 +51,8 @@ public sealed partial class ListBox : Visual
         // Marker + space.
         var width = itemWidth + 2;
         var desiredHeight = Math.Max(1, items.Count);
-        if (showBorder)
-        {
-            width += 2;
-            desiredHeight += 2;
-        }
 
-        var min = new Size(showBorder ? 3 : 1, showBorder ? 3 : 1);
+        var min = new Size(2, 1);
         var natural = new Size(Math.Max(min.Width, width), Math.Max(min.Height, desiredHeight));
         var max = new Size(LayoutConstants.Infinite, LayoutConstants.Infinite);
         return SizeHints.Flex(min, natural, max, growX: 1, growY: 1, shrinkX: 1, shrinkY: 1);
@@ -78,11 +70,10 @@ public sealed partial class ListBox : Visual
         }
 
         var listBoxStyle = Get<ListBoxStyle>();
-        var showBorder = listBoxStyle.ShowBorder;
-        var innerLeft = rect.X + (showBorder ? 1 : 0);
-        var innerTop = rect.Y + (showBorder ? 1 : 0);
-        var innerWidth = Math.Max(0, rect.Width - (showBorder ? 2 : 0));
-        var innerHeight = Math.Max(0, rect.Height - (showBorder ? 2 : 0));
+        var innerLeft = rect.X;
+        var innerTop = rect.Y;
+        var innerWidth = Math.Max(0, rect.Width);
+        var innerHeight = Math.Max(0, rect.Height);
 
         var count = items.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
@@ -115,19 +106,16 @@ public sealed partial class ListBox : Visual
         }
 
         var listBoxStyle = Get<ListBoxStyle>();
-        var showBorder = listBoxStyle.ShowBorder;
-        var innerLeft = rect.X + (showBorder ? 1 : 0);
-        var innerTop = rect.Y + (showBorder ? 1 : 0);
-        var innerWidth = Math.Max(0, rect.Width - (showBorder ? 2 : 0));
-        var innerHeight = Math.Max(0, rect.Height - (showBorder ? 2 : 0));
+        var innerLeft = rect.X;
+        var innerTop = rect.Y;
+        var innerWidth = Math.Max(0, rect.Width);
+        var innerHeight = Math.Max(0, rect.Height);
 
         var count = items.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
 
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var border = theme.BorderStyle(isFocused);
-        var glyphs = theme.Lines;
 
         // Fill background.
         var background = CellStyle.None;
@@ -136,31 +124,6 @@ public sealed partial class ListBox : Visual
             for (var x = rect.X; x < rect.X + rect.Width; x++)
             {
                 buffer.SetCell(x, y, new Rune(' '), background);
-            }
-        }
-
-        if (showBorder && rect.Width >= 2 && rect.Height >= 2)
-        {
-            var left = rect.X;
-            var top = rect.Y;
-            var right = rect.X + rect.Width - 1;
-            var bottom = rect.Y + rect.Height - 1;
-
-            buffer.SetCell(left, top, glyphs.TopLeft, border);
-            buffer.SetCell(right, top, glyphs.TopRight, border);
-            buffer.SetCell(left, bottom, glyphs.BottomLeft, border);
-            buffer.SetCell(right, bottom, glyphs.BottomRight, border);
-
-            for (var x = left + 1; x < right; x++)
-            {
-                buffer.SetCell(x, top, glyphs.Horizontal, border);
-                buffer.SetCell(x, bottom, glyphs.Horizontal, border);
-            }
-
-            for (var y = top + 1; y < bottom; y++)
-            {
-                buffer.SetCell(left, y, glyphs.Vertical, border);
-                buffer.SetCell(right, y, glyphs.Vertical, border);
             }
         }
 
@@ -204,8 +167,7 @@ public sealed partial class ListBox : Visual
             return;
         }
 
-        var showBorder = Get<ListBoxStyle>().ShowBorder;
-        var viewportHeight = Math.Max(1, Bounds.Height - (showBorder ? 2 : 0));
+        var viewportHeight = Math.Max(1, Bounds.Height);
         var selected = Math.Clamp(SelectedIndex, 0, count - 1);
         switch (e.Key)
         {
@@ -249,9 +211,8 @@ public sealed partial class ListBox : Visual
             return;
         }
 
-        var showBorder = Get<ListBoxStyle>().ShowBorder;
-        var innerY = (e.UiY - Bounds.Y) - (showBorder ? 1 : 0);
-        var innerHeight = Math.Max(0, Bounds.Height - (showBorder ? 2 : 0));
+        var innerY = e.UiY - Bounds.Y;
+        var innerHeight = Math.Max(0, Bounds.Height);
         if ((uint)innerY >= (uint)innerHeight)
         {
             return;

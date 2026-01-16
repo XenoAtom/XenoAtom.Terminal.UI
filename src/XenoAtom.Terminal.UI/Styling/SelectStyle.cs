@@ -15,8 +15,6 @@ public sealed record SelectStyle : IStyle<SelectStyle>
 
     public Thickness Padding { get; init; } = new(Left: 1, Top: 0, Right: 2, Bottom: 0);
 
-    public bool ShowBorder { get; init; }
-
     public Rune ArrowGlyph { get; init; } = new('▾');
 
     public CellStyle? NormalStyle { get; init; }

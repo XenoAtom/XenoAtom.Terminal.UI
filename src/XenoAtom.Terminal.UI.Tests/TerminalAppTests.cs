@@ -579,7 +579,7 @@ public sealed class TerminalAppTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 8));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        var textBox = new TextBox().Text("Hello");
+        var textBox = new TextBox("Hello");
         var root = new VStack(textBox).Spacing(2);
 
         var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
@@ -968,7 +968,7 @@ public sealed class TerminalAppTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        var textBox = new TextBox { Text = "hello world", CaretIndex = 6 };
+        var textBox = new TextBox("hello world") { CaretIndex = 6 };
         var root = new VStack();
         root.Add(textBox);
 
@@ -992,7 +992,7 @@ public sealed class TerminalAppTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        var model = new TextBox { Text = "A" };
+        var model = new TextBox("A");
         var computed = new ComputedVisual(() => new TextBlock($"Computed:{model.Text}"));
 
         var root = new VStack { Spacing = 1 };

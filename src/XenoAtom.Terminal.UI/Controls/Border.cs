@@ -12,6 +12,21 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public sealed partial class Border : ContentVisual
 {
+    public Border()
+    {
+    }
+
+    public Border(Visual content)
+    {
+        Content = content;
+    }
+
+    public Border(Func<Visual> contentFactory)
+    {
+        ArgumentNullException.ThrowIfNull(contentFactory);
+        this.Content(contentFactory);
+    }
+
     [Bindable]
     public partial Thickness Padding { get; set; }
 

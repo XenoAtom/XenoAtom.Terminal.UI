@@ -12,8 +12,6 @@ public record TextBoxStyle : IStyle<TextBoxStyle>
 
     public static StyleKey<TextBoxStyle> Key { get; } = new("TextBoxStyle", Default);
 
-    public bool ShowBorder { get; init; } = true;
-
     public Thickness Padding { get; init; } = new(1, 0, 1, 0);
 
     public XenoAtom.Ansi.AnsiColor? Border { get; init; }

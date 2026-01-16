@@ -28,24 +28,29 @@ public sealed class MaskedInputTests
 
         var foundCursor = false;
         var deadline = DateTime.UtcNow.AddSeconds(1);
-        while (DateTime.UtcNow < deadline)
+        try
         {
-            var output = backend.GetOutText();
-            var screen = new AnsiTestScreen(40, 6);
-            screen.Apply(output);
-            if (screen.CursorRow == 1 && screen.CursorCol == 2)
+            while (DateTime.UtcNow < deadline)
             {
-                foundCursor = true;
-                break;
+                var output = backend.GetOutText();
+                var screen = new AnsiTestScreen(40, 6);
+                screen.Apply(output);
+                if (screen.CursorRow == 0 && screen.CursorCol == 1)
+                {
+                    foundCursor = true;
+                    break;
+                }
+
+                await Task.Delay(20);
             }
 
-            await Task.Delay(20);
+            Assert.IsTrue(foundCursor, "Expected the focused input to drive the terminal cursor position.");
         }
-
-        Assert.IsTrue(foundCursor, "Expected the focused input to drive the terminal cursor position.");
-
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+        finally
+        {
+            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+            await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+        }
     }
 
     [TestMethod]

@@ -32,9 +32,8 @@ var content = new VStack(
     new TextBlock().Text(() => $"Status: {status.Value}")).Spacing(1);
 
 var root = new VStack(
-    new Border()
-        .Padding(new Thickness(1))
-        .Content(content)).Spacing(1);
+    new Border(content)
+        .Padding(new Thickness(1))).Spacing(1);
 
 var lastTick = Stopwatch.GetTimestamp();
 Terminal.Live(root, () =>

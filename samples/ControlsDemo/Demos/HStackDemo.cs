@@ -21,10 +21,9 @@ public sealed class HStackDemo : ControlsDemoBase
                 DemoUi.Title("Mixed controls"),
                 new HStack(
                         new Button("Left"),
-                        new TextBox().Text("Middle"),
+                        new TextBox("Middle"),
                         new Button("Right"))
                     .Spacing(1))
             .Spacing(1);
     }
 }
-

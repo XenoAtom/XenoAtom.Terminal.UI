@@ -42,8 +42,7 @@ optionList.Items.AddRange(
     new OptionListItem("Help", "F1") { Description = "Show help" });
 optionList.ItemActivated((_, e) => statusState.Value = $"option[{e.Index}] activated");
 
-var textArea = new TextArea()
-    .Text("Line 1\nLine 2\nLine 3")
+var textArea = new TextArea("Line 1\nLine 2\nLine 3")
     .Placeholder("Type multi-line text here...");
 
 var tree = new TreeView();
@@ -155,8 +154,7 @@ var progressBars = new VStack(
     .HorizontalAlignment(HorizontalAlignment.Stretch);
 
 var leftColumn = new VStack(
-        new TextBox()
-            .Text("Type here (Ctrl+A, Shift+Arrows, Ctrl+Left/Right)")
+        new TextBox("Type here (Ctrl+A, Shift+Arrows, Ctrl+Left/Right)")
             .HorizontalAlignment(HorizontalAlignment.Stretch),
         new CheckBox().Text("Accept terms"),
         showDialog,
@@ -244,7 +242,7 @@ var rightColumn = new VStack(
                                             new RowDefinition { Height = GridLength.Auto })
                                         .ColumnGap(1)
                                         .Cell("User:", 0, 0)
-                                        .Cell(new TextBox().Text("alex").HorizontalAlignment(HorizontalAlignment.Stretch), 0, 1)
+                                        .Cell(new TextBox("alex").HorizontalAlignment(HorizontalAlignment.Stretch), 0, 1)
                                         .Cell("Password:", 1, 0)
                                         .Cell(new MaskedInput().Text("hunter2").RevealMode(MaskedInputRevealMode.WhileFocused).HorizontalAlignment(HorizontalAlignment.Stretch), 1, 1)
                                         .Cell("Status:", 2, 0)

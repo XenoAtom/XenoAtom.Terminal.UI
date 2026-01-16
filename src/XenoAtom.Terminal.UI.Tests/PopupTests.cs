@@ -58,7 +58,7 @@ public sealed class PopupTests
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
         var anchor = new Button("Anchor");
-        var root = new VStack { anchor, new TextBox { Text = "after" } };
+        var root = new VStack { anchor, new TextBox("after") };
 
         var popup = new Popup
         {
@@ -88,4 +88,3 @@ public sealed class PopupTests
         Assert.IsFalse(rendered.Contains("PopupContent", StringComparison.Ordinal));
     }
 }
-

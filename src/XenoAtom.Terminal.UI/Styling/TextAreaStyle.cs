@@ -12,8 +12,6 @@ public sealed record TextAreaStyle : IStyle<TextAreaStyle>
 
     public static StyleKey<TextAreaStyle> Key { get; } = new("TextAreaStyle", Default);
 
-    public bool ShowBorder { get; init; } = true;
-
     public Thickness Padding { get; init; } = new(1, 0, 1, 0);
 
     public XenoAtom.Ansi.AnsiColor? Border { get; init; }
@@ -62,4 +60,3 @@ public sealed record TextAreaStyle : IStyle<TextAreaStyle>
         return style;
     }
 }
-

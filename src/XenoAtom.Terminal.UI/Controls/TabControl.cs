@@ -107,7 +107,6 @@ public sealed partial class TabControl : Visual
     {
         var style = Get<TabControlStyle>();
         var pad = style.TabPadding;
-        var showBorder = style.ShowBorder;
 
         var headerHeight = 1;
         var headerTotalWidth = 0;
@@ -131,10 +130,10 @@ public sealed partial class TabControl : Visual
 
         var contentMaxW = constraints.MaxWidth == LayoutConstants.Infinite
             ? LayoutConstants.Infinite
-            : Math.Max(0, constraints.MaxWidth - (showBorder ? 2 : 0));
+            : Math.Max(0, constraints.MaxWidth);
         var contentMaxH = constraints.MaxHeight == LayoutConstants.Infinite
             ? LayoutConstants.Infinite
-            : Math.Max(0, constraints.MaxHeight - headerHeight - (showBorder ? 2 : 0));
+            : Math.Max(0, constraints.MaxHeight - headerHeight);
 
         var contentWidth = 0;
         var contentHeight = 0;
@@ -145,12 +144,6 @@ public sealed partial class TabControl : Visual
             var contentHints = content.Measure(new LayoutConstraints(0, contentMaxW, 0, contentMaxH));
             contentWidth = contentHints.Natural.Width;
             contentHeight = contentHints.Natural.Height;
-        }
-
-        if (showBorder)
-        {
-            contentWidth += 2;
-            contentHeight += 2;
         }
 
         var width = Math.Max(headerTotalWidth, contentWidth);
@@ -168,7 +161,6 @@ public sealed partial class TabControl : Visual
 
         var style = Get<TabControlStyle>();
         var pad = style.TabPadding;
-        var showBorder = style.ShowBorder;
 
         var headerHeight = 1;
         for (var i = 0; i < _tabs.Count; i++)
@@ -208,14 +200,6 @@ public sealed partial class TabControl : Visual
         var contentHeight = Math.Max(0, finalRect.Height - _headerHeight);
 
         var inner = new Rectangle(finalRect.X, contentTop, finalRect.Width, contentHeight);
-        if (showBorder)
-        {
-            inner = new Rectangle(
-                inner.X + 1,
-                inner.Y + 1,
-                Math.Max(0, inner.Width - 2),
-                Math.Max(0, inner.Height - 2));
-        }
 
         for (var i = 0; i < _tabs.Count; i++)
         {
@@ -233,7 +217,6 @@ public sealed partial class TabControl : Visual
 
         var theme = GetTheme();
         var style = Get<TabControlStyle>();
-        var showBorder = style.ShowBorder;
         var focused = ReferenceEquals(App?.FocusedElement, this);
 
         var headerHeight = Math.Min(Math.Max(1, _headerHeight), rect.Height);
@@ -274,38 +257,6 @@ public sealed partial class TabControl : Visual
             }
         }
 
-        if (showBorder && rect.Height >= headerHeight + 2)
-        {
-            RenderBorder(buffer, rect, headerHeight, theme);
-        }
-    }
-
-    private static void RenderBorder(CellBuffer buffer, Rectangle rect, int headerHeight, Theme theme)
-    {
-        var glyphs = theme.Lines;
-        var border = theme.BorderStyle(focused: false);
-
-        var left = rect.X;
-        var top = rect.Y + headerHeight;
-        var right = rect.X + rect.Width - 1;
-        var bottom = rect.Y + rect.Height - 1;
-
-        buffer.SetCell(left, top, glyphs.TopLeft, border);
-        buffer.SetCell(right, top, glyphs.TopRight, border);
-        buffer.SetCell(left, bottom, glyphs.BottomLeft, border);
-        buffer.SetCell(right, bottom, glyphs.BottomRight, border);
-
-        for (var x = left + 1; x < right; x++)
-        {
-            buffer.SetCell(x, top, glyphs.Horizontal, border);
-            buffer.SetCell(x, bottom, glyphs.Horizontal, border);
-        }
-
-        for (var y = top + 1; y < bottom; y++)
-        {
-            buffer.SetCell(left, y, glyphs.Vertical, border);
-            buffer.SetCell(right, y, glyphs.Vertical, border);
-        }
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

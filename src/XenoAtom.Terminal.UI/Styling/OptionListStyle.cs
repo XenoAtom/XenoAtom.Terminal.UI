@@ -13,8 +13,6 @@ public sealed record OptionListStyle : IStyle<OptionListStyle>
 
     public static StyleKey<OptionListStyle> Key { get; } = new("OptionListStyle", Default);
 
-    public bool ShowBorder { get; init; }
-
     public int SpaceBetweenGlyphAndText { get; init; } = 1;
 
     public int SpaceBetweenContentAndShortcut { get; init; } = 2;

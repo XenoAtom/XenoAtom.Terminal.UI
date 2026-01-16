@@ -14,8 +14,6 @@ public sealed record PopupStyle : IStyle<PopupStyle>
 
     public Thickness Padding { get; init; } = new(0);
 
-    public bool ShowBorder { get; init; } = true;
-
     public CellStyle? SurfaceStyle { get; init; }
 
     public CellStyle? BorderStyle { get; init; }

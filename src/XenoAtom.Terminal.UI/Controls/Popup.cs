@@ -114,15 +114,13 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         Bounds = finalRect;
 
         var style = Get<PopupStyle>();
-        var showBorder = style.ShowBorder;
         var padding = style.Padding;
 
         var content = Content;
         var contentDesired = content?.DesiredSize ?? default;
 
-        var border = showBorder ? 1 : 0;
-        var desiredWidth = Math.Max(1, border * 2 + padding.Horizontal + contentDesired.Width);
-        var desiredHeight = Math.Max(1, border * 2 + padding.Vertical + contentDesired.Height);
+        var desiredWidth = Math.Max(1, padding.Horizontal + contentDesired.Width);
+        var desiredHeight = Math.Max(1, padding.Vertical + contentDesired.Height);
 
         var anchor = Anchor;
         var width = desiredWidth;
@@ -199,10 +197,10 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         if (content is not null)
         {
             var inner = new Rectangle(
-                _popupRect.X + border + padding.Left,
-                _popupRect.Y + border + padding.Top,
-                Math.Max(0, _popupRect.Width - border * 2 - padding.Horizontal),
-                Math.Max(0, _popupRect.Height - border * 2 - padding.Vertical));
+                _popupRect.X + padding.Left,
+                _popupRect.Y + padding.Top,
+                Math.Max(0, _popupRect.Width - padding.Horizontal),
+                Math.Max(0, _popupRect.Height - padding.Vertical));
 
             content.Arrange(inner);
         }
@@ -218,9 +216,7 @@ public sealed partial class Popup : ContentVisual, IModalVisual
 
         var theme = GetTheme();
         var style = Get<PopupStyle>();
-        var showBorder = style.ShowBorder && rect.Width >= 2 && rect.Height >= 2;
         var surface = style.ResolveSurfaceStyle(theme);
-        var border = style.ResolveBorderStyle(theme);
 
         // Fill popup surface.
         for (var y = rect.Y; y < rect.Y + rect.Height; y++)
@@ -231,34 +227,7 @@ public sealed partial class Popup : ContentVisual, IModalVisual
             }
         }
 
-        if (!showBorder)
-        {
-            return;
-        }
-
-        var glyphs = theme.Lines;
-
-        var left = rect.X;
-        var top = rect.Y;
-        var right = rect.Right - 1;
-        var bottom = rect.Bottom - 1;
-
-        buffer.SetCell(left, top, glyphs.TopLeft, border);
-        buffer.SetCell(right, top, glyphs.TopRight, border);
-        buffer.SetCell(left, bottom, glyphs.BottomLeft, border);
-        buffer.SetCell(right, bottom, glyphs.BottomRight, border);
-
-        for (var x = left + 1; x < right; x++)
-        {
-            buffer.SetCell(x, top, glyphs.Horizontal, border);
-            buffer.SetCell(x, bottom, glyphs.Horizontal, border);
-        }
-
-        for (var y = top + 1; y < bottom; y++)
-        {
-            buffer.SetCell(left, y, glyphs.Vertical, border);
-            buffer.SetCell(right, y, glyphs.Vertical, border);
-        }
+        return;
     }
 
     protected override void OnPointerPressed(PointerEventArgs e)

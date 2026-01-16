@@ -35,7 +35,6 @@ public sealed partial class SelectionList : Visual
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = Get<SelectionListStyle>();
-        var showBorder = style.ShowBorder;
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
         var checkWidth = Math.Max(1, Math.Max(TerminalTextUtility.GetRuneWidth(style.CheckedGlyph), TerminalTextUtility.GetRuneWidth(style.UncheckedGlyph)));
@@ -52,13 +51,8 @@ public sealed partial class SelectionList : Visual
 
         var width = itemWidth + prefixWidth;
         var desiredHeight = Math.Max(1, Items.Count);
-        if (showBorder)
-        {
-            width += 2;
-            desiredHeight += 2;
-        }
 
-        var min = new Size(showBorder ? 3 : 1, showBorder ? 3 : 1);
+        var min = new Size(1, 1);
         var natural = new Size(Math.Max(min.Width, width), Math.Max(min.Height, desiredHeight));
         var max = new Size(LayoutConstants.Infinite, LayoutConstants.Infinite);
         return SizeHints.Flex(min, natural, max, growX: 1, growY: 1, shrinkX: 1, shrinkY: 1);
@@ -74,14 +68,13 @@ public sealed partial class SelectionList : Visual
         }
 
         var style = Get<SelectionListStyle>();
-        var showBorder = style.ShowBorder;
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
         var checkWidth = Math.Max(1, Math.Max(TerminalTextUtility.GetRuneWidth(style.CheckedGlyph), TerminalTextUtility.GetRuneWidth(style.UncheckedGlyph)));
-        var innerLeft = rect.X + (showBorder ? 1 : 0);
-        var innerTop = rect.Y + (showBorder ? 1 : 0);
-        var innerWidth = Math.Max(0, rect.Width - (showBorder ? 2 : 0));
-        var innerHeight = Math.Max(0, rect.Height - (showBorder ? 2 : 0));
+        var innerLeft = rect.X;
+        var innerTop = rect.Y;
+        var innerWidth = Math.Max(0, rect.Width);
+        var innerHeight = Math.Max(0, rect.Height);
 
         var count = items.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
@@ -115,22 +108,19 @@ public sealed partial class SelectionList : Visual
 
         var items = Items;
         var style = Get<SelectionListStyle>();
-        var showBorder = style.ShowBorder;
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
         var checkWidth = Math.Max(1, Math.Max(TerminalTextUtility.GetRuneWidth(style.CheckedGlyph), TerminalTextUtility.GetRuneWidth(style.UncheckedGlyph)));
-        var innerLeft = rect.X + (showBorder ? 1 : 0);
-        var innerTop = rect.Y + (showBorder ? 1 : 0);
-        var innerWidth = Math.Max(0, rect.Width - (showBorder ? 2 : 0));
-        var innerHeight = Math.Max(0, rect.Height - (showBorder ? 2 : 0));
+        var innerLeft = rect.X;
+        var innerTop = rect.Y;
+        var innerWidth = Math.Max(0, rect.Width);
+        var innerHeight = Math.Max(0, rect.Height);
 
         var count = items.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
 
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var border = theme.BorderStyle(isFocused);
-        var glyphs = theme.Lines;
 
         // Fill background.
         var background = CellStyle.None;
@@ -139,31 +129,6 @@ public sealed partial class SelectionList : Visual
             for (var x = rect.X; x < rect.X + rect.Width; x++)
             {
                 buffer.SetCell(x, y, new Rune(' '), background);
-            }
-        }
-
-        if (showBorder && rect.Width >= 2 && rect.Height >= 2)
-        {
-            var left = rect.X;
-            var top = rect.Y;
-            var right = rect.X + rect.Width - 1;
-            var bottom = rect.Y + rect.Height - 1;
-
-            buffer.SetCell(left, top, glyphs.TopLeft, border);
-            buffer.SetCell(right, top, glyphs.TopRight, border);
-            buffer.SetCell(left, bottom, glyphs.BottomLeft, border);
-            buffer.SetCell(right, bottom, glyphs.BottomRight, border);
-
-            for (var x = left + 1; x < right; x++)
-            {
-                buffer.SetCell(x, top, glyphs.Horizontal, border);
-                buffer.SetCell(x, bottom, glyphs.Horizontal, border);
-            }
-
-            for (var y = top + 1; y < bottom; y++)
-            {
-                buffer.SetCell(left, y, glyphs.Vertical, border);
-                buffer.SetCell(right, y, glyphs.Vertical, border);
             }
         }
 
@@ -219,8 +184,7 @@ public sealed partial class SelectionList : Visual
         }
 
         var style = Get<SelectionListStyle>();
-        var showBorder = style.ShowBorder;
-        var viewportHeight = Math.Max(1, Bounds.Height - (showBorder ? 2 : 0));
+        var viewportHeight = Math.Max(1, Bounds.Height);
 
         var selected = Math.Clamp(SelectedIndex, 0, count - 1);
         var ctrl = (e.Modifiers & TerminalModifiers.Ctrl) != 0;
@@ -293,9 +257,8 @@ public sealed partial class SelectionList : Visual
         }
 
         var style = Get<SelectionListStyle>();
-        var showBorder = style.ShowBorder;
-        var innerY = (e.UiY - Bounds.Y) - (showBorder ? 1 : 0);
-        var innerHeight = Math.Max(0, Bounds.Height - (showBorder ? 2 : 0));
+        var innerY = e.UiY - Bounds.Y;
+        var innerHeight = Math.Max(0, Bounds.Height);
         if ((uint)innerY >= (uint)innerHeight)
         {
             return;
