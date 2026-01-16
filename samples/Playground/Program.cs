@@ -9,10 +9,6 @@ var text = string.Join(
 
 var editor = new TextArea(text);
 
-var view = new ScrollViewer
-{
-    ContentMode = ScrollViewerContentMode.UseContentScrollModel,
-    Content = editor,
-};
+var view = new ScrollViewer(editor);
 
 Terminal.Run(view, () => true);

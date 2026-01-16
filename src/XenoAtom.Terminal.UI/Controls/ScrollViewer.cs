@@ -104,9 +104,6 @@ public sealed partial class ScrollViewer : Visual
         }
     }
 
-    [Bindable]
-    public partial ScrollViewerContentMode ContentMode { get; set; }
-
     public IScrollable? ContentScrollable => _contentScrollable;
 
 
@@ -123,7 +120,7 @@ public sealed partial class ScrollViewer : Visual
             return;
         }
 
-        if (!_syncingOffsets && ContentMode == ScrollViewerContentMode.UseContentScrollModel && _contentScrollModel is not null)
+        if (_contentScrollModel is not null)
         {
             _contentScrollModel.SetOffset(_contentScrollModel.OffsetX, value);
         }
@@ -138,19 +135,12 @@ public sealed partial class ScrollViewer : Visual
             return;
         }
 
-        if (!_syncingOffsets && ContentMode == ScrollViewerContentMode.UseContentScrollModel && _contentScrollModel is not null)
+        if (_contentScrollModel is not null)
         {
             _contentScrollModel.SetOffset(value, _contentScrollModel.OffsetY);
         }
 
         MarkArrangeDirty();
-    }
-
-    partial void OnContentModeChanged(ScrollViewerContentMode value)
-    {
-        MarkMeasureDirty();
-        MarkArrangeDirty();
-        SyncOffsetsFromContent();
     }
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
@@ -159,7 +149,7 @@ public sealed partial class ScrollViewer : Visual
         if (content is not null)
         {
             SizeHints hints;
-            if (ContentMode == ScrollViewerContentMode.UseContentScrollModel && _contentScrollable is not null)
+            if (_contentScrollModel is not null)
             {
                 hints = content.Measure(constraints);
             }
@@ -216,7 +206,7 @@ public sealed partial class ScrollViewer : Visual
         var viewportWidth = Math.Max(1, finalRect.Width);
         var viewportHeight = Math.Max(1, finalRect.Height);
 
-        var useContentScroll = ContentMode == ScrollViewerContentMode.UseContentScrollModel && _contentScrollModel is not null;
+        var useContentScroll = _contentScrollModel is not null;
         var extentHints = _extentHints;
         var extentWidth = 0;
         var extentHeight = 0;
@@ -423,7 +413,7 @@ public sealed partial class ScrollViewer : Visual
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
-        var useContentScroll = ContentMode == ScrollViewerContentMode.UseContentScrollModel && _contentScrollModel is not null;
+        var useContentScroll = _contentScrollModel is not null;
         var viewportWidth = useContentScroll ? Math.Max(1, _contentScrollModel!.ViewportWidth) : Math.Max(1, _contentHost.Bounds.Width);
         var viewportHeight = useContentScroll ? Math.Max(1, _contentScrollModel!.ViewportHeight) : Math.Max(1, _contentHost.Bounds.Height);
         var extentHeight = useContentScroll ? _contentScrollModel!.ExtentHeight : _contentHeight;
@@ -476,7 +466,7 @@ public sealed partial class ScrollViewer : Visual
             return;
         }
 
-        var useContentScroll = ContentMode == ScrollViewerContentMode.UseContentScrollModel && _contentScrollModel is not null;
+        var useContentScroll = _contentScrollModel is not null;
 
         if ((e.Modifiers & TerminalModifiers.Shift) != 0)
         {
@@ -524,7 +514,7 @@ public sealed partial class ScrollViewer : Visual
 
     private void OnContentScrollChanged()
     {
-        if (ContentMode != ScrollViewerContentMode.UseContentScrollModel || _contentScrollModel is null)
+        if (_contentScrollModel is null)
         {
             return;
         }

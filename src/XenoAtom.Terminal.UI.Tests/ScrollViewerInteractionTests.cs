@@ -19,7 +19,7 @@ public sealed class ScrollViewerInteractionTests
             content.Add(new TextBlock($"Item {i}"));
         }
 
-        var scroll = new ScrollViewer { Content = content };
+        var scroll = new ScrollViewer(content);
         var root = new VStack { Spacing = 1 };
         root.Add(scroll);
 
@@ -30,4 +30,3 @@ public sealed class ScrollViewerInteractionTests
         driver.TickUntil(() => scroll.VerticalOffset > 0);
     }
 }
-

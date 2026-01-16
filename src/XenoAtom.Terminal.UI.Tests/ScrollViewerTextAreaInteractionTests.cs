@@ -18,10 +18,8 @@ public sealed class ScrollViewerTextAreaInteractionTests
         var button = new Button("Top");
         var textArea = new TextArea(string.Join("\n", Enumerable.Range(0, 50).Select(i => $"Line {i:00}")));
 
-        var scrollViewer = new ScrollViewer
+        var scrollViewer = new ScrollViewer(textArea)
         {
-            ContentMode = ScrollViewerContentMode.UseContentScrollModel,
-            Content = textArea,
             MinHeight = 8,
             MaxHeight = 8,
         };
@@ -58,10 +56,8 @@ public sealed class ScrollViewerTextAreaInteractionTests
     {
         var textArea = new TextArea(string.Join("\n", Enumerable.Range(0, 50).Select(i => $"Line {i:00}")));
 
-        var scrollViewer = new ScrollViewer
+        var scrollViewer = new ScrollViewer(textArea)
         {
-            ContentMode = ScrollViewerContentMode.UseContentScrollModel,
-            Content = textArea,
             MinHeight = 8,
             MaxHeight = 8,
         };
@@ -94,10 +90,8 @@ public sealed class ScrollViewerTextAreaInteractionTests
         var button = new Button("Top");
         var textArea = new TextArea(string.Join("\n", Enumerable.Range(0, 50).Select(i => $"Line {i:00}")));
 
-        var scrollViewer = new ScrollViewer
+        var scrollViewer = new ScrollViewer(textArea)
         {
-            ContentMode = ScrollViewerContentMode.UseContentScrollModel,
-            Content = textArea,
             MinHeight = 8,
             MaxHeight = 8,
         };
@@ -157,4 +151,3 @@ public sealed class ScrollViewerTextAreaInteractionTests
         driver.TickUntil(() => (textArea.Text ?? string.Empty) == "Y");
     }
 }
-

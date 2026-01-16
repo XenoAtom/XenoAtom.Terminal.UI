@@ -34,7 +34,6 @@ The goals are:
 - `ScrollModel` (`src/XenoAtom.Terminal.UI/Scrolling/ScrollModel.cs`)
 - `IScrollable` (`src/XenoAtom.Terminal.UI/Scrolling/IScrollable.cs`)
 - `ScrollViewer` (`src/XenoAtom.Terminal.UI/Controls/ScrollViewer.cs`)
-- `ScrollViewerContentMode` (`src/XenoAtom.Terminal.UI/Controls/ScrollViewerContentMode.cs`)
 
 ## 2. Goals (re-stated with current framework constraints)
 
@@ -190,14 +189,10 @@ Recommended composition:
 
 ```csharp
 var editor = new TextArea(text);
-var view = new ScrollViewer
-{
-    ContentMode = ScrollViewerContentMode.UseContentScrollModel,
-    Content = editor,
-};
+var view = new ScrollViewer(editor);
 ```
 
-With `UseContentScrollModel`:
+When the content implements `IScrollable`:
 
 - scrollbars update the editor’s `ScrollModel`
 - `ScrollViewer.HorizontalOffset`/`VerticalOffset` remain in sync with the editor scroll offsets

@@ -21,7 +21,7 @@ public sealed class ScrollViewerDemo : ControlsDemoBase
         return new VStack(
                 DemoUi.Hint("Use the mouse wheel to scroll. Scrollbars appear when content overflows."),
                 new Group("ScrollViewer")
-                    .Content(new ScrollViewer { Content = content }.MinHeight(10).MaxHeight(10))
+                    .Content(new ScrollViewer(content).MinHeight(10).MaxHeight(10))
                 )
             .Spacing(1);
     }

@@ -279,9 +279,8 @@ var rightColumn = new VStack(
                             "Logs",
                             new TextBlock().Text(() => $"({(int)(progressState.Value * 100)}%)"))
                         .Spacing(1),
-                    new ScrollViewer()
-                        .HorizontalAlignment(HorizontalAlignment.Stretch)
-                        .Content(new VStack().Add(Enumerable.Range(0, 12).Select(i => (Visual)new TextBlock($"Log line {i}")).ToArray())))
+                    new ScrollViewer(new VStack().Add(Enumerable.Range(0, 12).Select(i => (Visual)new TextBlock($"Log line {i}")).ToArray()))
+                        .HorizontalAlignment(HorizontalAlignment.Stretch))
                 ,
                 new TabPage(
                     "Switcher",

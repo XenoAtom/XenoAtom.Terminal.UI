@@ -15,7 +15,7 @@ public sealed class LayoutProtocolNestedTests
     public void ScrollViewer_Uses_Extent_When_Unbounded_And_Viewport_When_Bounded()
     {
         var content = new FixedSizeVisual(new Size(100, 50));
-        var viewer = new ScrollViewer { Content = content };
+        var viewer = new ScrollViewer(content);
 
         viewer.Measure(LayoutConstraints.Unbounded);
         Assert.AreEqual(new Size(100, 50), viewer.DesiredSize);
@@ -27,15 +27,13 @@ public sealed class LayoutProtocolNestedTests
     [TestMethod]
     public void Nested_Containers_Measure_And_Arrange_Without_Unbounded_Natural_Sizes()
     {
-        var viewer = new ScrollViewer
-        {
-            Content = new VStack(
+        var viewer = new ScrollViewer(
+            new VStack(
                     new Markup("Line 1\nLine 2\nLine 3").Wrap(true),
                     new Rule(),
                     new TextBlock("Side text"))
                 .Spacing(1)
-                .HorizontalAlignment(HorizontalAlignment.Stretch),
-        };
+                .HorizontalAlignment(HorizontalAlignment.Stretch));
 
         var root = new HStack(
             new Group { Content = viewer },

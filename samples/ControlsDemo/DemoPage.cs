@@ -27,10 +27,7 @@ internal static class DemoPage
             .Left(meta.Name)
             .Right(link);
 
-        var demoContent = new ScrollViewer
-        {
-            Content = content,
-        };
+        var demoContent = new ScrollViewer(content);
 
         var logPanel = BuildLogPanel(log);
 

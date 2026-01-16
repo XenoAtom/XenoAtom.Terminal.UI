@@ -13,9 +13,8 @@ public sealed class ScrollViewerRenderingTests
     [TestMethod]
     public void ScrollViewer_Renders_Content_When_Inside_TabControl()
     {
-        var demoTab = new ScrollViewer
+        var demoTab = new ScrollViewer(new VStack(new TextBlock("Hello from ScrollViewer")).Spacing(1).HorizontalAlignment(HorizontalAlignment.Stretch))
         {
-            Content = new VStack(new TextBlock("Hello from ScrollViewer")).Spacing(1).HorizontalAlignment(HorizontalAlignment.Stretch),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
         };
@@ -47,7 +46,7 @@ public sealed class ScrollViewerRenderingTests
             "Log line 4",
         };
 
-        var root = new ScrollViewer { Content = content };
+        var root = new ScrollViewer(content);
 
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 12));
         driver.Tick();
@@ -65,7 +64,7 @@ public sealed class ScrollViewerRenderingTests
             content.Add($"Item {i}");
         }
 
-        var root = new ScrollViewer { Content = content, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var root = new ScrollViewer(content) { HorizontalAlignment = HorizontalAlignment.Stretch };
 
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(20, 6));
         driver.Tick();
@@ -84,7 +83,7 @@ public sealed class ScrollViewerRenderingTests
     [TestMethod]
     public void ScrollViewer_Renders_Content_When_Set_After_Initial_Render()
     {
-        var root = new ScrollViewer { HorizontalAlignment = HorizontalAlignment.Stretch };
+        var root = new ScrollViewer((Visual?)null) { HorizontalAlignment = HorizontalAlignment.Stretch };
 
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
         driver.Tick();
@@ -105,9 +104,8 @@ public sealed class ScrollViewerRenderingTests
             items.Add($"Hello {i}");
         }
 
-        var root = new ScrollViewer
+        var root = new ScrollViewer(items)
         {
-            Content = items,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
         };

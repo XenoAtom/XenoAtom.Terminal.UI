@@ -16,7 +16,7 @@ public sealed class ScrollViewerLayoutTests
     public void ScrollViewer_Stretches_Content_To_Viewport_When_NoHorizontalScrolling()
     {
         var content = new VStack("Hello");
-        var scroll = new ScrollViewer { Content = content };
+        var scroll = new ScrollViewer(content);
 
         var root = new DockLayout().Content(scroll);
 
@@ -31,7 +31,7 @@ public sealed class ScrollViewerLayoutTests
     public void ScrollViewer_Updates_Viewport_Width_After_Resize()
     {
         var content = new VStack("Hello");
-        var scroll = new ScrollViewer { Content = content };
+        var scroll = new ScrollViewer(content);
 
         var root = new DockLayout().Content(scroll);
 
@@ -49,9 +49,8 @@ public sealed class ScrollViewerLayoutTests
     {
         var content = new WrapLikeVisual(totalCells: 61);
 
-        var scroll = new ScrollViewer
+        var scroll = new ScrollViewer(content)
         {
-            Content = content,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
         };
@@ -70,13 +69,11 @@ public sealed class ScrollViewerLayoutTests
     }
 
     [TestMethod]
-    public void ScrollViewer_Uses_Content_Scroll_Model_When_Configured()
+    public void ScrollViewer_Uses_Content_Scroll_Model_When_Available()
     {
         var content = new ScrollableVisual();
-        var scroll = new ScrollViewer
+        var scroll = new ScrollViewer(content)
         {
-            Content = content,
-            ContentMode = ScrollViewerContentMode.UseContentScrollModel,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
         };
