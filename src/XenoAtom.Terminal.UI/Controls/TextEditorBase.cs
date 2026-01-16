@@ -172,6 +172,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     private void OnScrollChanged()
     {
         MarkArrangeDirty();
+        App?.RequestRender();
     }
 
     private void OnDocumentChanged(object? sender, TextDocumentChangedEventArgs e)
@@ -247,9 +248,13 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
 
     bool ITextEditorHost.IsFocused => ReferenceEquals(App?.FocusedElement, this);
 
-    void ITextEditorHost.InvalidateEditor() => Invalidate();
+    void ITextEditorHost.InvalidateEditor() => App?.RequestRender();
 
-    void ITextEditorHost.MarkEditorArrangeDirty() => MarkArrangeDirty();
+    void ITextEditorHost.MarkEditorArrangeDirty()
+    {
+        MarkArrangeDirty();
+        App?.RequestRender();
+    }
 
     private static string NormalizeText(string? value)
     {

@@ -48,8 +48,8 @@ public sealed partial class ScrollViewer : Visual
             .VerticalAlignment(VerticalAlignment.Stretch);
         _corner = new ScrollCornerVisual(this);
 
-        this.VerticalOffset(_verticalBar.@ref.Value);
-        this.HorizontalOffset(_horizontalBar.@ref.Value);
+        _verticalBar.ValueChanged(OnVerticalBarValueChanged);
+        _horizontalBar.ValueChanged(OnHorizontalBarValueChanged);
 
         AttachChild(_contentHost);
         AttachChild(_verticalBar);
@@ -108,6 +108,11 @@ public sealed partial class ScrollViewer : Visual
 
     partial void OnVerticalOffsetChanged(int value)
     {
+        if (_syncingOffsets)
+        {
+            return;
+        }
+
         if (!_syncingOffsets && ContentMode == ScrollViewerContentMode.UseContentScrollModel && _contentScrollModel is not null)
         {
             _contentScrollModel.SetOffset(_contentScrollModel.OffsetX, value);
@@ -118,6 +123,11 @@ public sealed partial class ScrollViewer : Visual
 
     partial void OnHorizontalOffsetChanged(int value)
     {
+        if (_syncingOffsets)
+        {
+            return;
+        }
+
         if (!_syncingOffsets && ContentMode == ScrollViewerContentMode.UseContentScrollModel && _contentScrollModel is not null)
         {
             _contentScrollModel.SetOffset(value, _contentScrollModel.OffsetY);
@@ -315,13 +325,13 @@ public sealed partial class ScrollViewer : Visual
         _verticalBar.Minimum = 0;
         _verticalBar.Maximum = maxVerticalOffset;
         _verticalBar.ViewportSize = contentViewportHeight;
-        _verticalBar.Value = v;
+        SetBarValue(_verticalBar, v);
         _verticalBar.IsVisible = _showVerticalBar;
 
         _horizontalBar.Minimum = 0;
         _horizontalBar.Maximum = maxHorizontalOffset;
         _horizontalBar.ViewportSize = contentViewportWidth;
-        _horizontalBar.Value = hOffset;
+        SetBarValue(_horizontalBar, hOffset);
         _horizontalBar.IsVisible = _showHorizontalBar;
 
         // Bridge ScrollViewerStyle to ScrollBarStyle for internal bars.
@@ -335,7 +345,7 @@ public sealed partial class ScrollViewer : Visual
         {
             _internalScrollBarStyle = scrollBarStyle;
             _verticalBar.Set(scrollBarStyle);
-        _horizontalBar.Set(scrollBarStyle);
+            _horizontalBar.Set(scrollBarStyle);
         }
 
         var contentArrangeWidth = useContentScroll ? contentViewportWidth : (showH ? extentWidth : contentViewportWidth);
@@ -498,15 +508,46 @@ public sealed partial class ScrollViewer : Visual
         _syncingOffsets = true;
         try
         {
-            if (VerticalOffset != _contentScrollModel.OffsetY)
-            {
-                VerticalOffset = _contentScrollModel.OffsetY;
-            }
+            VerticalOffset = _contentScrollModel.OffsetY;
+            HorizontalOffset = _contentScrollModel.OffsetX;
+        }
+        finally
+        {
+            _syncingOffsets = false;
+        }
+    }
 
-            if (HorizontalOffset != _contentScrollModel.OffsetX)
-            {
-                HorizontalOffset = _contentScrollModel.OffsetX;
-            }
+    private void OnVerticalBarValueChanged(object? sender, ScrollValueChangedEventArgs e)
+    {
+        if (_syncingOffsets)
+        {
+            return;
+        }
+
+        VerticalOffset = e.NewValue;
+    }
+
+    private void OnHorizontalBarValueChanged(object? sender, ScrollValueChangedEventArgs e)
+    {
+        if (_syncingOffsets)
+        {
+            return;
+        }
+
+        HorizontalOffset = e.NewValue;
+    }
+
+    private void SetBarValue(ScrollBar bar, int value)
+    {
+        if (bar.Value == value)
+        {
+            return;
+        }
+
+        _syncingOffsets = true;
+        try
+        {
+            bar.Value = value;
         }
         finally
         {
