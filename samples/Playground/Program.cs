@@ -5,7 +5,7 @@ using XenoAtom.Terminal.UI.Controls;
 
 var text = string.Join(
     "\n",
-    Enumerable.Range(1, 50).Select(i => $"Line {i:00} - ScrollViewer + TextArea"));
+    Enumerable.Range(1, 100).Select(i => $"Line {i:00} - ScrollViewer + TextArea"));
 
 var editor = new TextArea { Text = text };
 

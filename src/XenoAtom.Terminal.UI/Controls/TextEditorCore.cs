@@ -107,18 +107,23 @@ internal sealed class TextEditorCore
 
     private bool HasSelection => _selectionAnchor >= 0 && _selectionEnd >= 0 && _selectionAnchor != _selectionEnd;
 
-    public void UpdateViewport(Rectangle contentRect)
+    public bool UpdateViewport(Rectangle contentRect)
     {
+        var width = Math.Max(0, contentRect.Width);
+        var height = Math.Max(0, contentRect.Height);
+        var viewportChanged = width != _contentWidth || height != _contentHeight;
+
         _contentX = contentRect.X;
         _contentY = contentRect.Y;
-        _contentWidth = Math.Max(0, contentRect.Width);
-        _contentHeight = Math.Max(0, contentRect.Height);
+        _contentWidth = width;
+        _contentHeight = height;
         _scroll.SetViewport(_contentWidth, _contentHeight);
+        return viewportChanged;
     }
 
     public void UpdateLayout(Rectangle contentRect, in TextEditorOptions options)
     {
-        UpdateViewport(contentRect);
+        var viewportChanged = UpdateViewport(contentRect);
 
         if (_contentWidth <= 0 || _contentHeight <= 0)
         {
@@ -136,7 +141,10 @@ internal sealed class TextEditorCore
                 _scroll.SetOffset(0, 0);
             }
 
-            EnsureCaretVisible(options);
+            if (viewportChanged)
+            {
+                EnsureCaretVisible(options);
+            }
             return;
         }
 
@@ -148,7 +156,10 @@ internal sealed class TextEditorCore
             _scroll.SetOffset(0, _scroll.OffsetY);
         }
 
-        EnsureCaretVisible(options);
+        if (viewportChanged)
+        {
+            EnsureCaretVisible(options);
+        }
     }
 
     public void OnDocumentChanged()
@@ -485,6 +496,8 @@ internal sealed class TextEditorCore
     }
     private void HandleMultiLineKeyDown(KeyEventArgs e, in TextEditorOptions options, ReadOnlySpan<char> text)
     {
+        var ctrl = (e.Modifiers & TerminalModifiers.Ctrl) != 0;
+
         switch (e.Key)
         {
             case TerminalKey.Left:
@@ -504,11 +517,25 @@ internal sealed class TextEditorCore
                 e.Handled = true;
                 return;
             case TerminalKey.Home:
-                MoveCaretToLineBoundary(start: true, (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                if (ctrl)
+                {
+                    MoveCaretTo(0, (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                }
+                else
+                {
+                    MoveCaretToLineBoundary(start: true, (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                }
                 e.Handled = true;
                 return;
             case TerminalKey.End:
-                MoveCaretToLineBoundary(start: false, (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                if (ctrl)
+                {
+                    MoveCaretTo(text.Length, (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                }
+                else
+                {
+                    MoveCaretToLineBoundary(start: false, (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                }
                 e.Handled = true;
                 return;
             case TerminalKey.PageUp:
