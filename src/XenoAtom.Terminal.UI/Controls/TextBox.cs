@@ -13,6 +13,10 @@ namespace XenoAtom.Terminal.UI.Controls;
 
 public partial class TextBox : TextEditorBase
 {
+    private Rectangle _editorRect;
+    private bool _showOverflowIndicatorLeft;
+    private bool _showOverflowIndicatorRight;
+
     public TextBox()
     {
         this.HorizontalAlignment(HorizontalAlignment.Stretch);
@@ -63,13 +67,13 @@ public partial class TextBox : TextEditorBase
         var innerWidth = finalRect.Width;
         var innerHeight = finalRect.Height;
 
-        var contentRect = new Rectangle(
+        var baseRect = new Rectangle(
             innerLeft + padding.Left,
             innerTop + padding.Top,
             Math.Max(0, innerWidth - padding.Horizontal),
             Math.Max(0, innerHeight - padding.Vertical));
 
-        UpdateEditorLayout(contentRect);
+        UpdateEditorLayoutForOverflowIndicators(baseRect, style);
     }
 
     protected override void RenderOverride(CellBuffer buffer)
@@ -93,23 +97,86 @@ public partial class TextBox : TextEditorBase
         var innerWidth = rect.Width;
         var innerHeight = rect.Height;
 
-        var contentRect = new Rectangle(
+        var baseRect = new Rectangle(
             innerLeft + padding.Left,
             innerTop + padding.Top,
             Math.Max(0, innerWidth - padding.Horizontal),
             Math.Max(0, innerHeight - padding.Vertical));
 
-        if (contentRect.Width > 0 && contentRect.Height > 0)
+        if (baseRect.Width > 0 && baseRect.Height > 0)
         {
-            for (var y = contentRect.Y; y < contentRect.Y + contentRect.Height; y++)
+            for (var y = baseRect.Y; y < baseRect.Y + baseRect.Height; y++)
             {
-                for (var x = contentRect.X; x < contentRect.X + contentRect.Width; x++)
+                for (var x = baseRect.X; x < baseRect.X + baseRect.Width; x++)
                 {
                     buffer.SetCell(x, y, new Rune(' '), backgroundStyle);
                 }
             }
         }
 
-        RenderEditor(buffer, contentRect, backgroundStyle, selectionStyle, placeholderStyle);
+        var editorRect = _editorRect.Width <= 0 || _editorRect.Height <= 0 ? baseRect : _editorRect;
+        RenderEditor(buffer, editorRect, backgroundStyle, selectionStyle, placeholderStyle);
+
+        if (editorRect.Width > 0 && editorRect.Height > 0)
+        {
+            var y = editorRect.Y;
+            var indicatorStyle = textBoxStyle.OverflowIndicatorStyle(theme);
+
+            if (_showOverflowIndicatorLeft && textBoxStyle.OverflowIndicatorLeft is { } left)
+            {
+                var x = editorRect.X - 1;
+                if (x >= baseRect.X && x < baseRect.X + baseRect.Width)
+                {
+                    buffer.SetCell(x, y, left, indicatorStyle);
+                }
+            }
+
+            if (_showOverflowIndicatorRight && textBoxStyle.OverflowIndicatorRight is { } right)
+            {
+                var x = editorRect.X + editorRect.Width;
+                if (x >= baseRect.X && x < baseRect.X + baseRect.Width)
+                {
+                    buffer.SetCell(x, y, right, indicatorStyle);
+                }
+            }
+        }
+    }
+
+    private void UpdateEditorLayoutForOverflowIndicators(Rectangle baseRect, TextBoxStyle style)
+    {
+        _editorRect = baseRect;
+        _showOverflowIndicatorLeft = false;
+        _showOverflowIndicatorRight = false;
+
+        for (var pass = 0; pass < 3; pass++)
+        {
+            UpdateEditorLayout(_editorRect);
+
+            var canShowLeft = style.OverflowIndicatorLeft is not null;
+            var canShowRight = style.OverflowIndicatorRight is not null;
+
+            var showLeft = canShowLeft && Scroll.OffsetX > 0;
+            var showRight = canShowRight && Scroll.OffsetX + Scroll.ViewportWidth < Scroll.ExtentWidth;
+
+            var nextRect = baseRect;
+            if (showLeft)
+            {
+                nextRect = new Rectangle(nextRect.X + 1, nextRect.Y, Math.Max(0, nextRect.Width - 1), nextRect.Height);
+            }
+
+            if (showRight)
+            {
+                nextRect = new Rectangle(nextRect.X, nextRect.Y, Math.Max(0, nextRect.Width - 1), nextRect.Height);
+            }
+
+            if (nextRect == _editorRect && showLeft == _showOverflowIndicatorLeft && showRight == _showOverflowIndicatorRight)
+            {
+                return;
+            }
+
+            _editorRect = nextRect;
+            _showOverflowIndicatorLeft = showLeft;
+            _showOverflowIndicatorRight = showRight;
+        }
     }
 }

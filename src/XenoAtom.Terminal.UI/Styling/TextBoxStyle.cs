@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.UI.Geometry;
+using System.Text;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
@@ -10,9 +11,25 @@ public record TextBoxStyle : IStyle<TextBoxStyle>
 {
     public static TextBoxStyle Default { get; } = new();
 
+    public static TextBoxStyle Ellipsis { get; } = Default with
+    {
+        OverflowIndicatorLeft = new Rune('…'),
+        OverflowIndicatorRight = new Rune('…'),
+    };
+
+    public static TextBoxStyle DoubleArrows { get; } = Default with
+    {
+        OverflowIndicatorLeft = new Rune('⇦'),
+        OverflowIndicatorRight = new Rune('⇨'),
+    };
+
     public static StyleKey<TextBoxStyle> Key { get; } = new("TextBoxStyle", Default);
 
     public Thickness Padding { get; init; } = new(1, 0, 1, 0);
+
+    public Rune? OverflowIndicatorLeft { get; init; } = new('←');
+
+    public Rune? OverflowIndicatorRight { get; init; } = new('→');
 
     public XenoAtom.Ansi.AnsiColor? Border { get; init; }
     public XenoAtom.Ansi.AnsiColor? FocusBorder { get; init; }
@@ -59,4 +76,7 @@ public record TextBoxStyle : IStyle<TextBoxStyle>
         if (fg is { } c) style = style.WithForeground(c);
         return style;
     }
+
+    public CellStyle OverflowIndicatorStyle(Theme theme)
+        => PlaceholderStyle(theme) | TextStyle.Bold;
 }
