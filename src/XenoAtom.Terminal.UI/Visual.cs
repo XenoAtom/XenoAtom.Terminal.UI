@@ -12,6 +12,18 @@ using XenoAtom.Terminal.UI.Animation;
 
 namespace XenoAtom.Terminal.UI;
 
+/// <summary>
+/// Base class for all UI elements in XenoAtom.Terminal.UI.
+/// </summary>
+/// <remarks>
+/// A <see cref="Visual"/> participates in:
+/// <list type="bullet">
+/// <item><description>Layout via <see cref="Measure(in LayoutConstraints)"/> and <see cref="Arrange(Rectangle)"/>.</description></item>
+/// <item><description>Rendering into the cell buffer.</description></item>
+/// <item><description>Input routing (keyboard/mouse) when enabled and/or focused.</description></item>
+/// </list>
+/// Visuals are retained-mode objects: you build a tree of visuals and the framework updates layout/rendering as tracked bindings change.
+/// </remarks>
 public abstract partial class Visual : DispatcherObject, IVisualElement
 {
     private Dictionary<object, Delegate?>? _handlers;
@@ -35,24 +47,48 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     private bool _hasLastArrange;
     private Rectangle _lastArrangeRect;
 
+    /// <summary>
+    /// Gets the parent visual, or <c>null</c> if this visual is the root of a tree.
+    /// </summary>
     public Visual? Parent { get; private set; }
 
+    /// <summary>
+    /// Gets the arranged bounds of this visual, in cell coordinates, relative to its parent.
+    /// </summary>
     public Rectangle Bounds { get; protected set; }
 
+    /// <summary>
+    /// Gets the desired size computed during the last measure pass.
+    /// </summary>
     public Size DesiredSize { get; private set; }
 
+    /// <summary>
+    /// Gets the last measure hints computed during <see cref="Measure(in LayoutConstraints)"/>.
+    /// </summary>
     public SizeHints MeasureHints { get; private set; }
 
+    /// <summary>
+    /// Gets the owning <see cref="TerminalApp"/> when this visual is attached to an application.
+    /// </summary>
     public TerminalApp? App { get; private set; }
 
+    /// <summary>
+    /// Gets a value indicating whether this visual can receive focus.
+    /// </summary>
     public bool Focusable { get; protected init; }
 
+    /// <summary>
+    /// Invalidates this visual so that it will be re-measured/arranged/rendered as needed.
+    /// </summary>
     protected void Invalidate()
     {
         VerifyAccess();
         MarkMeasureDirty();
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Visual"/> class.
+    /// </summary>
     protected Visual()
     {
         _isVisible = true;
@@ -99,6 +135,14 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
     partial void OnMaxHeightChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
 
+    /// <summary>
+    /// Adds a key binding to this visual.
+    /// </summary>
+    /// <remarks>
+    /// Key bindings are evaluated during key input routing. When the gesture matches, the action is invoked and the event is handled.
+    /// </remarks>
+    /// <param name="gesture">The key gesture.</param>
+    /// <param name="action">The action to invoke when the gesture is triggered.</param>
     public void AddKeyBinding(Input.TerminalKeyGesture gesture, Action action)
     {
         VerifyAccess();
@@ -152,6 +196,10 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
     internal Visual GetChildUnsafe(int index) => GetChild(index);
 
+    /// <summary>
+    /// Attaches a child visual to this instance and connects it to the application if already attached.
+    /// </summary>
+    /// <param name="child">The child to attach.</param>
     protected void AttachChild(Visual child)
     {
         VerifyAccess();
@@ -169,6 +217,10 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         }
     }
 
+    /// <summary>
+    /// Detaches a child visual from this instance and disconnects it from the application if needed.
+    /// </summary>
+    /// <param name="child">The child to detach.</param>
     protected void DetachChild(Visual child)
     {
         VerifyAccess();
@@ -190,8 +242,19 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
     internal void DetachCollectionChild(Visual child) => DetachChild(child);
 
+    /// <summary>
+    /// Sets a style value in the environment of this visual and returns it by type.
+    /// </summary>
+    /// <typeparam name="T">The style type.</typeparam>
+    /// <param name="value">The style value.</param>
     public void Set<T>(T value) where T : IStyle<T> => Set(T.Key, value);
 
+    /// <summary>
+    /// Sets a style value in the environment of this visual.
+    /// </summary>
+    /// <typeparam name="T">The style type.</typeparam>
+    /// <param name="key">The style key.</param>
+    /// <param name="value">The style value.</param>
     public void Set<T>(StyleKey<T> key, T value)
     {
         VerifyAccess();
@@ -201,8 +264,19 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         BindingManager.Current.NotifyValueChanged(this, key.BindingAccessor);
     }
 
+    /// <summary>
+    /// Gets a style value from the environment, using the default key for the style type.
+    /// </summary>
+    /// <typeparam name="T">The style type.</typeparam>
+    /// <returns>The resolved style value.</returns>
     public T Get<T>() where T : IStyle<T> => Get(T.Key);
 
+    /// <summary>
+    /// Gets a style value from the environment.
+    /// </summary>
+    /// <typeparam name="T">The style type.</typeparam>
+    /// <param name="key">The style key.</param>
+    /// <returns>The resolved style value.</returns>
     public T Get<T>(StyleKey<T> key)
     {
         VerifyAccess();
@@ -231,8 +305,19 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         return StyleEnvironment is not null && StyleEnvironment.ContainsKey(key);
     }
 
+    /// <summary>
+    /// Gets the current theme resolved from the environment.
+    /// </summary>
     public Theme GetTheme() => Get<Theme>();
 
+    /// <summary>
+    /// Registers a dynamic update callback for this visual.
+    /// </summary>
+    /// <remarks>
+    /// Dynamic updates are evaluated by the framework; property reads performed inside the callback are tracked so that future changes
+    /// re-trigger the update and any dependent layout/render passes.
+    /// </remarks>
+    /// <param name="configure">A callback invoked during the dynamic update pass.</param>
     public void RegisterDynamicUpdate(Action<Visual> configure)
     {
         VerifyAccess();
@@ -301,13 +386,38 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         OnDetachedFromApp(app);
     }
 
+    /// <summary>
+    /// Called when this visual is attached to a <see cref="TerminalApp"/>.
+    /// </summary>
+    /// <param name="app">The owning application.</param>
     protected virtual void OnAttachedToApp(TerminalApp app) { }
 
+    /// <summary>
+    /// Called when this visual is detached from a <see cref="TerminalApp"/>.
+    /// </summary>
+    /// <param name="app">The owning application.</param>
     protected virtual void OnDetachedFromApp(TerminalApp app) { }
 
+    /// <summary>
+    /// Measures this visual using the provided available size.
+    /// </summary>
+    /// <remarks>
+    /// This overload is a convenience wrapper that converts the size into unbounded constraints as needed.
+    /// Prefer calling <see cref="Measure(in LayoutConstraints)"/> when you need explicit constraints.
+    /// </remarks>
+    /// <param name="availableSize">The available size.</param>
     public void Measure(Size availableSize)
         => Measure(LayoutConstraints.FromMaxSize(availableSize));
 
+    /// <summary>
+    /// Measures this visual under the provided layout constraints.
+    /// </summary>
+    /// <remarks>
+    /// The result is a finite <see cref="SizeHints"/> value. “Fill” behavior is represented by flex and/or alignment during arrange,
+    /// not by returning an infinite desired size.
+    /// </remarks>
+    /// <param name="constraints">The layout constraints.</param>
+    /// <returns>The computed size hints.</returns>
     public SizeHints Measure(in LayoutConstraints constraints)
     {
         VerifyAccess();
@@ -352,6 +462,10 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         return MeasureHints;
     }
 
+    /// <summary>
+    /// Arranges this visual into the provided final rectangle.
+    /// </summary>
+    /// <param name="finalRect">The arranged rectangle.</param>
     public void Arrange(Rectangle finalRect)
     {
         VerifyAccess();
@@ -377,6 +491,15 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         _lastArrangeRect = finalRect;
     }
 
+    /// <summary>
+    /// Performs the core measure logic for this visual.
+    /// </summary>
+    /// <remarks>
+    /// The default implementation measures all children (if any) and computes max natural size. Controls typically override this
+    /// to provide their intrinsic sizing behavior.
+    /// </remarks>
+    /// <param name="constraints">The layout constraints.</param>
+    /// <returns>The computed size hints.</returns>
     protected virtual SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var width = 0;
@@ -409,6 +532,14 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         return SizeHints.Flex(min, natural, new Size(maxW, maxH), growX: growX, growY: growY, shrinkX: shrinkX, shrinkY: shrinkY).Normalize();
     }
 
+    /// <summary>
+    /// Performs the core arrange logic for this visual.
+    /// </summary>
+    /// <remarks>
+    /// The default implementation arranges all children into the same final rectangle. Containers override this
+    /// to position children according to their layout policy.
+    /// </remarks>
+    /// <param name="finalRect">The arranged rectangle.</param>
     protected virtual void ArrangeCore(in Rectangle finalRect)
     {
         for (var i = 0; i < ChildrenCount; i++)
@@ -652,11 +783,22 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         buffer.PopClip();
     }
 
+    /// <summary>
+    /// Renders the visual into the provided buffer.
+    /// </summary>
+    /// <remarks>
+    /// Implementations should render within <see cref="Bounds"/>. Clipping is handled by the framework.
+    /// </remarks>
+    /// <param name="buffer">The target cell buffer.</param>
     protected virtual void RenderOverride(CellBuffer buffer)
     {
         _ = buffer;
     }
 
+    /// <summary>
+    /// Enumerates this visual and its descendants depth-first.
+    /// </summary>
+    /// <returns>A depth-first enumeration of visuals.</returns>
     public IEnumerable<Visual> EnumerateVisualsDepthFirst()
     {
         VerifyAccess();
@@ -672,6 +814,12 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         }
     }
 
+    /// <summary>
+    /// Returns the deepest visible visual that contains the specified point.
+    /// </summary>
+    /// <param name="x">The x coordinate in this visual coordinate space.</param>
+    /// <param name="y">The y coordinate in this visual coordinate space.</param>
+    /// <returns>The visual under the point, or <c>null</c> if none.</returns>
     public Visual? HitTest(int x, int y)
     {
         VerifyAccess();
@@ -839,6 +987,12 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         // Layout caching uses measure/arrange dirtiness; render dirtiness is tracked by TerminalApp.
     }
 
+    /// <summary>
+    /// Registers a handler for a routed event on this visual.
+    /// </summary>
+    /// <typeparam name="TArgs">The routed event args type.</typeparam>
+    /// <param name="routedEvent">The routed event identifier.</param>
+    /// <param name="handler">The handler to add.</param>
     protected void AddHandler<TArgs>(RoutedEvent<TArgs> routedEvent, EventHandler<TArgs> handler)
         where TArgs : EventArgs
     {
@@ -857,6 +1011,12 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         }
     }
 
+    /// <summary>
+    /// Unregisters a handler for a routed event on this visual.
+    /// </summary>
+    /// <typeparam name="TArgs">The routed event args type.</typeparam>
+    /// <param name="routedEvent">The routed event identifier.</param>
+    /// <param name="handler">The handler to remove.</param>
     protected void RemoveHandler<TArgs>(RoutedEvent<TArgs> routedEvent, EventHandler<TArgs> handler)
         where TArgs : EventArgs
     {
@@ -884,6 +1044,12 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         }
     }
 
+    /// <summary>
+    /// Raises a routed event starting from this visual.
+    /// </summary>
+    /// <typeparam name="TArgs">The routed event args type.</typeparam>
+    /// <param name="routedEvent">The routed event identifier.</param>
+    /// <param name="args">The event arguments.</param>
     protected internal void RaiseEvent<TArgs>(RoutedEvent<TArgs> routedEvent, TArgs args)
         where TArgs : EventArgs
     {
@@ -951,24 +1117,45 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         }
     }
 
+    /// <summary>
+    /// Called when a key down event is routed to this visual.
+    /// </summary>
     [RoutedEvent(RoutingStrategy.Bubble)]
     protected virtual void OnKeyDown(KeyEventArgs e) { }
 
+    /// <summary>
+    /// Called when text input is routed to this visual.
+    /// </summary>
     [RoutedEvent(RoutingStrategy.Bubble)]
     protected virtual void OnTextInput(TextInputEventArgs e) { }
 
+    /// <summary>
+    /// Called when paste input is routed to this visual.
+    /// </summary>
     [RoutedEvent(RoutingStrategy.Bubble)]
     protected virtual void OnPaste(PasteEventArgs e) { }
 
+    /// <summary>
+    /// Called when a pointer move event is routed to this visual.
+    /// </summary>
     [RoutedEvent(RoutingStrategy.Preview | RoutingStrategy.Bubble)]
     protected virtual void OnPointerMoved(PointerEventArgs e) { }
 
+    /// <summary>
+    /// Called when a pointer press event is routed to this visual.
+    /// </summary>
     [RoutedEvent(RoutingStrategy.Preview | RoutingStrategy.Bubble)]
     protected virtual void OnPointerPressed(PointerEventArgs e) { }
 
+    /// <summary>
+    /// Called when a pointer release event is routed to this visual.
+    /// </summary>
     [RoutedEvent(RoutingStrategy.Preview | RoutingStrategy.Bubble)]
     protected virtual void OnPointerReleased(PointerEventArgs e) { }
 
+    /// <summary>
+    /// Called when a pointer wheel event is routed to this visual.
+    /// </summary>
     [RoutedEvent(RoutingStrategy.Preview | RoutingStrategy.Bubble)]
     protected virtual void OnPointerWheel(PointerEventArgs e) { }
 }

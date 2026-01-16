@@ -6,43 +6,86 @@ using System.Text;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
+/// <summary>
+/// Defines styling options for the <c>Switch</c> control.
+/// </summary>
 public sealed record SwitchStyle : IStyle<SwitchStyle>
 {
+    /// <summary>
+    /// Gets the default switch style.
+    /// </summary>
     public static SwitchStyle Default { get; } = new();
 
+    /// <summary>
+    /// Gets a rounded switch style variant.
+    /// </summary>
     public static SwitchStyle Round { get; } = new()
     {
         ThumbGlyph = new('⬤'),
     };
 
+    /// <summary>
+    /// Gets the environment key for <see cref="SwitchStyle"/>.
+    /// </summary>
     public static StyleKey<SwitchStyle> Key { get; } = new("SwitchStyle", Default);
 
+    /// <summary>
+    /// Gets the number of spaces inserted between the switch glyph area and the label text.
+    /// </summary>
     public int SpaceBetweenGlyphAndText { get; init; } = 2;
 
-    public Rune TrackLeft { get; init; } = new(' '); 
+    /// <summary>
+    /// Gets the glyph used for the left track segment.
+    /// </summary>
+    public Rune TrackLeft { get; init; } = new(' ');
 
+    /// <summary>
+    /// Gets the glyph used for the right track segment.
+    /// </summary>
     public Rune TrackRight { get; init; } = new(' ');
 
+    /// <summary>
+    /// Gets the glyph used for the thumb.
+    /// </summary>
     public Rune ThumbGlyph { get; init; } = new('⬛');
 
+    /// <summary>Gets the base style for the track when the switch is on.</summary>
     public CellStyle? TrackOn { get; init; }
+    /// <summary>Gets the base style for the track when the switch is off.</summary>
     public CellStyle? TrackOff { get; init; }
+    /// <summary>Gets the style for the active track segment when the switch is on.</summary>
     public CellStyle? TrackOnActive { get; init; }
+    /// <summary>Gets the style for the inactive track segment when the switch is on.</summary>
     public CellStyle? TrackOnInactive { get; init; }
+    /// <summary>Gets the style for the active track segment when the switch is off.</summary>
     public CellStyle? TrackOffActive { get; init; }
+    /// <summary>Gets the style for the inactive track segment when the switch is off.</summary>
     public CellStyle? TrackOffInactive { get; init; }
+    /// <summary>Gets the style applied when the switch is hovered.</summary>
     public CellStyle? TrackHovered { get; init; }
+    /// <summary>Gets the style applied when the switch is pressed.</summary>
     public CellStyle? TrackPressed { get; init; }
+    /// <summary>Gets the style applied when the switch is focused.</summary>
     public CellStyle? TrackFocused { get; init; }
+    /// <summary>Gets the style applied when the switch is disabled.</summary>
     public CellStyle? TrackDisabled { get; init; }
 
+    /// <summary>Gets the thumb style when the switch is on.</summary>
     public CellStyle? ThumbOn { get; init; }
+    /// <summary>Gets the thumb style when the switch is off.</summary>
     public CellStyle? ThumbOff { get; init; }
+    /// <summary>Gets the thumb style when the switch is disabled.</summary>
     public CellStyle? ThumbDisabled { get; init; }
 
+    /// <summary>
+    /// Resolves the final track style for the given state.
+    /// </summary>
     public CellStyle ResolveTrack(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, bool isOn)
         => ResolveTrackPart(theme, enabled, focused, hovered, pressed, isOn, activePart: true);
 
+    /// <summary>
+    /// Resolves the final track style for a specific track segment.
+    /// </summary>
     public CellStyle ResolveTrackPart(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, bool isOn, bool activePart)
     {
         ArgumentNullException.ThrowIfNull(theme);
@@ -93,6 +136,9 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
         return TrackOffInactive ?? TrackOff ?? ResolveDefaultTrackOffInactive(theme);
     }
 
+    /// <summary>
+    /// Resolves the thumb style for the given state.
+    /// </summary>
     public CellStyle ResolveThumb(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, bool isOn)
     {
         ArgumentNullException.ThrowIfNull(theme);

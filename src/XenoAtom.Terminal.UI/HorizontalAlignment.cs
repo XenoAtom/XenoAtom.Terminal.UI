@@ -4,11 +4,25 @@
 
 namespace XenoAtom.Terminal.UI;
 
+/// <summary>
+/// Specifies how a visual is aligned horizontally within its parent.
+/// </summary>
 public enum HorizontalAlignment
 {
+    /// <summary>
+    /// Align to the left.
+    /// </summary>
     Left = 0,
+    /// <summary>
+    /// Center horizontally.
+    /// </summary>
     Center = 1,
+    /// <summary>
+    /// Align to the right.
+    /// </summary>
     Right = 2,
+    /// <summary>
+    /// Stretch to fill the available width.
+    /// </summary>
     Stretch = 3,
 }
-

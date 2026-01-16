@@ -9,6 +9,9 @@ namespace XenoAtom.Terminal.UI;
 /// </summary>
 public readonly record struct Binding(object Owner, BindingAccessor Accessor)
 {
+    /// <summary>
+    /// Gets a value indicating whether this binding is empty.
+    /// </summary>
     public bool IsEmpty => Owner == null || Accessor == null;
 }
 
@@ -18,11 +21,26 @@ public readonly record struct Binding(object Owner, BindingAccessor Accessor)
 /// <typeparam name="T">The property type.</typeparam>
 public readonly record struct Binding<T>(object Owner, BindingAccessor<T> Accessor)
 {
+    /// <summary>
+    /// Gets a value indicating whether this binding is empty.
+    /// </summary>
     public bool IsEmpty => Owner == null || Accessor == null;
 
+    /// <summary>
+    /// Sets the bound property value on the binding owner.
+    /// </summary>
+    /// <param name="value">The value to set.</param>
     public void SetValue(T value) => Accessor.Setter(Owner, value);
 
+    /// <summary>
+    /// Gets the bound property value from the binding owner.
+    /// </summary>
+    /// <returns>The current value.</returns>
     public T GetValue() => Accessor.Getter(Owner);
 
+    /// <summary>
+    /// Converts a typed binding to a non-generic <see cref="Binding"/>.
+    /// </summary>
+    /// <param name="binding">The typed binding.</param>
     public static implicit operator Binding(Binding<T> binding) => new(binding.Owner, binding.Accessor);
 }

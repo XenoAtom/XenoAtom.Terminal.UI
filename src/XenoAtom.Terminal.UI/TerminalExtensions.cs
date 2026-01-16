@@ -15,26 +15,50 @@ public static partial class TerminalExtensions
 {
     extension(XenoAtom.Terminal.Terminal)
     {
+        /// <summary>
+        /// Writes a visual once to the default terminal instance.
+        /// </summary>
         public static TerminalInstance Write(Visual visual) => XenoAtom.Terminal.Terminal.Instance.Write(visual);
 
+        /// <summary>
+        /// Runs an inline live region on the default terminal instance.
+        /// </summary>
         public static TerminalInstance Live(Visual visual, Func<bool> onUpdate) => XenoAtom.Terminal.Terminal.Instance.Live(visual, onUpdate);
 
+        /// <summary>
+        /// Runs an inline live region on the default terminal instance.
+        /// </summary>
         public static TerminalInstance Live(Visual visual, Func<bool> onUpdate, TerminalLiveOptions options) => XenoAtom.Terminal.Terminal.Instance.Live(visual, onUpdate, options);
 
+        /// <summary>
+        /// Runs an inline live region on the default terminal instance.
+        /// </summary>
         public static ValueTask<TerminalInstance> LiveAsync(Visual visual, Func<bool> onUpdate, CancellationToken cancellationToken = default)
             => XenoAtom.Terminal.Terminal.Instance.LiveAsync(visual, onUpdate, cancellationToken);
 
+        /// <summary>
+        /// Runs an inline live region on the default terminal instance.
+        /// </summary>
         public static ValueTask<TerminalInstance> LiveAsync(Visual visual, Func<bool> onUpdate, TerminalLiveOptions options, CancellationToken cancellationToken = default)
             => XenoAtom.Terminal.Terminal.Instance.LiveAsync(visual, onUpdate, options, cancellationToken);
 
+        /// <summary>
+        /// Runs a fullscreen terminal UI application on the default terminal instance.
+        /// </summary>
         public static TerminalInstance Run(Visual visual, Func<bool> onUpdate) => XenoAtom.Terminal.Terminal.Instance.Run(visual, onUpdate);
 
+        /// <summary>
+        /// Runs a fullscreen terminal UI application on the default terminal instance.
+        /// </summary>
         public static ValueTask<TerminalInstance> RunAsync(Visual visual, Func<bool> onUpdate, CancellationToken cancellationToken = default)
             => XenoAtom.Terminal.Terminal.Instance.RunAsync(visual, onUpdate, cancellationToken);
     }
 
     extension(TerminalInstance instance)
     {
+        /// <summary>
+        /// Writes a visual once to this terminal instance.
+        /// </summary>
         public TerminalInstance Write(Visual visual)
         {
             ArgumentNullException.ThrowIfNull(instance);
@@ -44,9 +68,15 @@ public static partial class TerminalExtensions
             return instance;
         }
 
+        /// <summary>
+        /// Runs an inline live region on this terminal instance.
+        /// </summary>
         public TerminalInstance Live(Visual visual, Func<bool> onUpdate)
             => Live(visual, onUpdate, options: default);
 
+        /// <summary>
+        /// Runs an inline live region on this terminal instance.
+        /// </summary>
         public TerminalInstance Live(Visual visual, Func<bool> onUpdate, TerminalLiveOptions options)
         {
             ArgumentNullException.ThrowIfNull(instance);
@@ -82,9 +112,15 @@ public static partial class TerminalExtensions
             return instance;
         }
 
+        /// <summary>
+        /// Runs an inline live region on this terminal instance.
+        /// </summary>
         public async ValueTask<TerminalInstance> LiveAsync(Visual visual, Func<bool> onUpdate, CancellationToken cancellationToken = default)
             => await LiveAsync(visual, onUpdate, options: default, cancellationToken).ConfigureAwait(false);
 
+        /// <summary>
+        /// Runs an inline live region on this terminal instance.
+        /// </summary>
         public async ValueTask<TerminalInstance> LiveAsync(Visual visual, Func<bool> onUpdate, TerminalLiveOptions options, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(instance);
@@ -120,6 +156,9 @@ public static partial class TerminalExtensions
             return instance;
         }
 
+        /// <summary>
+        /// Runs a fullscreen terminal UI application on this terminal instance.
+        /// </summary>
         public TerminalInstance Run(Visual visual, Func<bool> onUpdate)
         {
             ArgumentNullException.ThrowIfNull(instance);
@@ -147,6 +186,9 @@ public static partial class TerminalExtensions
             return instance;
         }
 
+        /// <summary>
+        /// Runs a fullscreen terminal UI application on this terminal instance.
+        /// </summary>
         public async ValueTask<TerminalInstance> RunAsync(Visual visual, Func<bool> onUpdate, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(instance);

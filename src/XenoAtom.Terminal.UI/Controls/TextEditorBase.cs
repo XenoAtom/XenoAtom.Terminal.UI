@@ -11,12 +11,27 @@ using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Base class for text editor controls (TextBox, TextArea, MaskedInput).
+/// </summary>
+/// <remarks>
+/// This type wires together:
+/// <list type="bullet">
+/// <item><description>A <see cref="ITextDocument"/> for content storage.</description></item>
+/// <item><description>A <see cref="ScrollModel"/> for viewport/extent and scrolling.</description></item>
+/// <item><description><see cref="TextEditorCore"/> for input handling, layout, selection, and rendering.</description></item>
+/// </list>
+/// Derived controls typically override editor options (single-line vs multi-line, wrapping, alignment) and style rendering.
+/// </remarks>
 public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrollable, ITextEditorHost
 {
     private ITextDocument _textDocument;
     private readonly ScrollModel _scroll;
     private readonly TextEditorCore _core;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TextEditorBase"/> class.
+    /// </summary>
     protected TextEditorBase()
     {
         Focusable = true;
@@ -27,12 +42,18 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
         _textDocument.Changed += OnDocumentChanged;
     }
 
+    /// <summary>
+    /// Gets or sets the text document backing this editor.
+    /// </summary>
     public ITextDocument TextDocument
     {
         get => _textDocument;
         set => SetTextDocument(value);
     }
 
+    /// <summary>
+    /// Gets the scroll model for this editor.
+    /// </summary>
     public ScrollModel Scroll => _scroll;
 
     [Bindable]
@@ -62,24 +83,51 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
         Invalidate();
     }
 
+    /// <summary>
+    /// Gets or sets the caret index in the document.
+    /// </summary>
     public int CaretIndex
     {
         get => _core.CaretIndex;
         set => _core.SetCaretIndex(value, BuildEditorOptions());
     }
 
+    /// <summary>
+    /// Gets a value indicating whether this editor is the focused element in the application.
+    /// </summary>
     protected bool IsFocused => ReferenceEquals(App?.FocusedElement, this);
 
+    /// <summary>
+    /// Gets a value indicating whether this editor is single-line.
+    /// </summary>
     protected abstract bool IsSingleLine { get; }
 
+    /// <summary>
+    /// Gets a value indicating whether the editor accepts the Return key to insert a newline.
+    /// </summary>
     protected virtual bool AcceptsReturn => false;
 
+    /// <summary>
+    /// Gets the tab size (in spaces) used when inserting or rendering tabs.
+    /// </summary>
     protected virtual int TabSize => 4;
 
+    /// <summary>
+    /// Gets the text alignment used by the editor.
+    /// </summary>
     protected virtual TextAlignment Alignment => TextAlignment.Left;
 
+    /// <summary>
+    /// Gets a value indicating whether placeholder text is shown only when the editor is not focused.
+    /// </summary>
     protected virtual bool ShowPlaceholderWhenUnfocusedOnly => true;
 
+    /// <summary>
+    /// Writes a segment of text into the buffer.
+    /// </summary>
+    /// <remarks>
+    /// Derived controls can override this to customize how characters are rendered (e.g. masking).
+    /// </remarks>
     protected virtual void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, CellStyle style, bool isPlaceholder)
     {
         buffer.WriteText(x, y, text, style);
@@ -98,6 +146,9 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     private TextEditorRenderContext BuildRenderContext(CellBuffer buffer, Rectangle contentRect, CellStyle textStyle, CellStyle selectionStyle, CellStyle placeholderStyle)
         => new(buffer, contentRect, textStyle, selectionStyle, placeholderStyle, Placeholder, IsFocused, WriteTextSegment);
 
+    /// <summary>
+    /// Renders the editor content into the provided buffer.
+    /// </summary>
     protected void RenderEditor(CellBuffer buffer, Rectangle contentRect, CellStyle textStyle, CellStyle selectionStyle, CellStyle placeholderStyle)
     {
         var options = BuildEditorOptions();
@@ -105,41 +156,51 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
         _core.Render(context, options);
     }
 
+    /// <summary>
+    /// Updates the editor layout using the specified content rectangle.
+    /// </summary>
     protected void UpdateEditorLayout(Rectangle contentRect)
     {
         _core.UpdateLayout(contentRect, BuildEditorOptions());
     }
 
+    /// <inheritdoc />
     protected override void OnKeyDown(KeyEventArgs e)
     {
         _core.OnKeyDown(e, BuildEditorOptions());
     }
 
+    /// <inheritdoc />
     protected override void OnTextInput(TextInputEventArgs e)
     {
         _core.OnTextInput(e, BuildEditorOptions());
     }
 
+    /// <inheritdoc />
     protected override void OnPaste(PasteEventArgs e)
     {
         _core.OnPaste(e, BuildEditorOptions());
     }
 
+    /// <inheritdoc />
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         _core.OnPointerPressed(e, BuildEditorOptions());
     }
 
+    /// <inheritdoc />
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         _core.OnPointerMoved(e, BuildEditorOptions());
     }
 
+    /// <inheritdoc />
     protected override void OnPointerReleased(PointerEventArgs e)
     {
         _core.OnPointerReleased(e);
     }
 
+    /// <inheritdoc />
     protected override void OnPointerWheel(PointerEventArgs e)
     {
         if (IsSingleLine || e.WheelDelta == 0)
@@ -177,6 +238,12 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
         App?.RequestRender();
     }
 
+    /// <summary>
+    /// Tries to get the desired terminal cursor position for this editor.
+    /// </summary>
+    /// <param name="x">When this method returns, contains the cursor x coordinate.</param>
+    /// <param name="y">When this method returns, contains the cursor y coordinate.</param>
+    /// <returns><c>true</c> if a cursor position is available; otherwise <c>false</c>.</returns>
     public bool TryGetCursorCell(out int x, out int y)
         => _core.TryGetCursorCell(BuildEditorOptions(), out x, out y);
 }

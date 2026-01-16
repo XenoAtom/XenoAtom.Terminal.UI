@@ -10,8 +10,8 @@ namespace XenoAtom.Terminal.UI.Styling;
 /// <remarks>Implementations of this interface are expected to provide a static environment key that uniquely
 /// identifies the style type. This pattern enables type-safe style retrieval and association within an environment or
 /// context.</remarks>
-/// <typeparam name="T">The type that implements the style interface. Must implement IStyle<T>.</typeparam>
-public interface IStyle<T> where T: IStyle<T>
+/// <typeparam name="T">The type that implements the style interface. Must implement <c>IStyle{T}</c>.</typeparam>
+public interface IStyle<T> where T : IStyle<T>
 {
     /// <summary>
     /// Gets the unique environment key associated with the current type parameter.

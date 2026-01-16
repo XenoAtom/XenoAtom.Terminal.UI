@@ -4,12 +4,19 @@
 
 namespace XenoAtom.Terminal.UI;
 
+/// <summary>
+/// Specifies a rendering variant for a <c>ProgressBar</c>.
+/// </summary>
 public enum ProgressBarVariant
 {
+    /// <summary>Thin bar variant.</summary>
     Thin = 0,
+    /// <summary>Solid bar variant.</summary>
     Solid = 1,
+    /// <summary>Segmented bar variant.</summary>
     Segmented = 2,
+    /// <summary>Shaded bar variant.</summary>
     Shaded = 3,
+    /// <summary>Bracketed bar variant.</summary>
     Bracketed = 4,
 }
-

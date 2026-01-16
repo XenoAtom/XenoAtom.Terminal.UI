@@ -9,15 +9,32 @@ namespace XenoAtom.Terminal.UI;
 /// </summary>
 public abstract class BindingAccessor
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BindingAccessor"/> class.
+    /// </summary>
+    /// <param name="name">The bindable property name.</param>
     protected BindingAccessor(string name)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
     }
 
+    /// <summary>
+    /// Gets the bindable property name.
+    /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// Gets the property value from the specified instance.
+    /// </summary>
+    /// <param name="instance">The property owner.</param>
+    /// <returns>The current value.</returns>
     public abstract object? GetValue(object instance);
 
+    /// <summary>
+    /// Sets the property value on the specified instance.
+    /// </summary>
+    /// <param name="instance">The property owner.</param>
+    /// <param name="value">The value to set.</param>
     public abstract void SetValue(object instance, object? value);
 }
 
@@ -27,17 +44,31 @@ public abstract class BindingAccessor
 /// <typeparam name="T">The property type.</typeparam>
 public abstract class BindingAccessor<T> : BindingAccessor
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BindingAccessor{T}"/> class.
+    /// </summary>
+    /// <param name="name">The bindable property name.</param>
+    /// <param name="getter">A delegate that reads the value from an instance.</param>
+    /// <param name="setter">A delegate that writes the value to an instance.</param>
     protected BindingAccessor(string name, Func<object, T> getter, Action<object, T> setter) : base(name)
     {
         Getter = getter ?? throw new ArgumentNullException(nameof(getter));
         Setter = setter ?? throw new ArgumentNullException(nameof(setter));
     }
 
+    /// <summary>
+    /// Gets the delegate used to read the value.
+    /// </summary>
     public Func<object, T> Getter { get; }
 
+    /// <summary>
+    /// Gets the delegate used to write the value.
+    /// </summary>
     public Action<object, T> Setter { get; }
 
+    /// <inheritdoc />
     public override object? GetValue(object instance) => Getter(instance);
 
+    /// <inheritdoc />
     public override void SetValue(object instance, object? value) => Setter(instance, (T)value!);
 }

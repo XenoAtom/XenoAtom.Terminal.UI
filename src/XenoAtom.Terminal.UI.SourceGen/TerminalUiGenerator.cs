@@ -401,6 +401,11 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             var indent = new string(' ', string.IsNullOrEmpty(ns) ? 0 : 4);
             var extensionClassName = GetExtensionClassName(containingType);
 
+            sb.Append(indent).AppendLine("/// <summary>");
+            sb.Append(indent).Append("/// Fluent extension methods for configuring instances of <see cref=\"")
+                .Append(containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                .AppendLine("\"/>.");
+            sb.Append(indent).AppendLine("/// </summary>");
             sb.Append(indent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
             sb.Append(indent).Append("public static partial class ").Append(extensionClassName).AppendLine();
             sb.Append(indent).AppendLine("{");
@@ -420,6 +425,12 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     continue;
                 }
 
+                sb.Append(methodIndent).AppendLine("/// <summary>");
+                sb.Append(methodIndent).Append("/// Sets <see cref=\"").Append(receiverType).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> and returns the same instance.");
+                sb.Append(methodIndent).AppendLine("/// </summary>");
+                sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
+                sb.Append(methodIndent).Append("/// <param name=\"").Append(EscapeIdentifier(argName)).AppendLine("\">The value to set.</param>");
+                sb.Append(methodIndent).AppendLine("/// <returns>The same instance for chaining.</returns>");
                 sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                 if (canUseGeneric)
                 {
@@ -444,6 +455,12 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
 
                 if (p.GenerateImplementation)
                 {
+                    sb.Append(methodIndent).AppendLine("/// <summary>");
+                    sb.Append(methodIndent).Append("/// Binds <see cref=\"").Append(receiverType).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> to a binding and returns the same instance.");
+                    sb.Append(methodIndent).AppendLine("/// </summary>");
+                    sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
+                    sb.Append(methodIndent).Append("/// <param name=\"").Append(EscapeIdentifier(argName)).AppendLine("\">The binding to attach.</param>");
+                    sb.Append(methodIndent).AppendLine("/// <returns>The same instance for chaining.</returns>");
                     sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                     if (canUseGeneric)
                     {
@@ -469,6 +486,15 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
 
                 if (p.IsParentVisual)
                 {
+                    sb.Append(methodIndent).AppendLine("/// <summary>");
+                    sb.Append(methodIndent).Append("/// Registers a dynamic update that assigns <see cref=\"").Append(receiverType).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> from a computed value and returns the same instance.");
+                    sb.Append(methodIndent).AppendLine("/// </summary>");
+                    sb.Append(methodIndent).AppendLine("/// <remarks>");
+                    sb.Append(methodIndent).AppendLine("/// The delegate is evaluated during the dynamic update pass; accessed bindings are tracked so only affected visuals are refreshed.");
+                    sb.Append(methodIndent).AppendLine("/// </remarks>");
+                    sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
+                    sb.Append(methodIndent).Append("/// <param name=\"").Append(EscapeIdentifier(argName)).AppendLine("\">A delegate that computes the current value.</param>");
+                    sb.Append(methodIndent).AppendLine("/// <returns>The same instance for chaining.</returns>");
                     sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                     if (canUseGeneric)
                     {
@@ -485,6 +511,12 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
 
                     sb.AppendLine();
 
+                    sb.Append(methodIndent).AppendLine("/// <summary>");
+                    sb.Append(methodIndent).Append("/// Configures <see cref=\"").Append(receiverType).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> from a <see cref=\"global::XenoAtom.Terminal.UI.State{T}\"/> and returns the same instance.");
+                    sb.Append(methodIndent).AppendLine("/// </summary>");
+                    sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
+                    sb.Append(methodIndent).Append("/// <param name=\"").Append(EscapeIdentifier(argName)).AppendLine("\">The state providing the current value.</param>");
+                    sb.Append(methodIndent).AppendLine("/// <returns>The same instance for chaining.</returns>");
                     sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                     if (p.GenerateImplementation)
                     {
@@ -589,6 +621,9 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             var baseBindings = FindBaseBindings(containingType, typesWithBindings);
 
             // @ref property
+            sb.Append(baseIndent).AppendLine("/// <summary>");
+            sb.Append(baseIndent).AppendLine("/// Gets a typed view over this instance bindable properties as <see cref=\"global::XenoAtom.Terminal.UI.Binding{T}\"/> values.");
+            sb.Append(baseIndent).AppendLine("/// </summary>");
             sb.Append(baseIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
             sb.Append(baseIndent).Append(string.IsNullOrEmpty(baseBindings) ? "public IBindings @ref => this;" : "public new IBindings @ref => this;").AppendLine();
             sb.AppendLine();
@@ -619,6 +654,9 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     sb.Append(baseIndent).Append("partial void On").Append(p.PropertyName).Append("Changed(").Append(p.PropertyTypeFullyQualified).AppendLine(" value);");
                     sb.AppendLine();
 
+                    sb.Append(baseIndent).AppendLine("/// <summary>");
+                    sb.Append(baseIndent).Append("/// Gets or sets the value of <c>").Append(p.PropertyName).AppendLine("</c>.");
+                    sb.Append(baseIndent).AppendLine("/// </summary>");
                     sb.Append(baseIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                     sb.Append(baseIndent).Append(p.PropertyModifiers).Append(' ').Append(p.PropertyTypeFullyQualified).Append(' ').Append(p.PropertyName).AppendLine();
                     sb.Append(baseIndent).AppendLine("{");
@@ -757,6 +795,13 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     sb.Append(baseIndent).AppendLine("}");
                     sb.AppendLine();
 
+                    sb.Append(baseIndent).AppendLine("/// <summary>");
+                    sb.Append(baseIndent).Append("/// Binds <c>").Append(p.PropertyName).AppendLine("</c> to a binding.");
+                    sb.Append(baseIndent).AppendLine("/// </summary>");
+                    sb.Append(baseIndent).AppendLine("/// <remarks>");
+                    sb.Append(baseIndent).AppendLine("/// When a binding is attached, sets to the property are forwarded to the binding. This method is hidden from IntelliSense.");
+                    sb.Append(baseIndent).AppendLine("/// </remarks>");
+                    sb.Append(baseIndent).AppendLine("/// <param name=\"binding\">The binding to attach.</param>");
                     sb.Append(baseIndent).AppendLine("[global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]");
                     sb.Append(baseIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                     sb.Append(baseIndent).Append("public void Bind").Append(p.PropertyName).Append("(global::XenoAtom.Terminal.UI.Binding<").Append(p.PropertyTypeFullyQualified).Append("> binding)").AppendLine();
@@ -786,6 +831,9 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             }
 
             // IBindings interface
+            sb.Append(baseIndent).AppendLine("/// <summary>");
+            sb.Append(baseIndent).AppendLine("/// Exposes bindable properties of this type as <see cref=\"global::XenoAtom.Terminal.UI.Binding{T}\"/> values.");
+            sb.Append(baseIndent).AppendLine("/// </summary>");
             sb.Append(baseIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
             sb.Append(baseIndent).Append(string.IsNullOrEmpty(baseBindings) ? "public interface IBindings" : "public new interface IBindings");
             if (!string.IsNullOrEmpty(baseBindings))
@@ -796,6 +844,9 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             sb.Append(baseIndent).AppendLine("{");
             foreach (var p in properties)
             {
+                sb.Append(baseIndent).AppendLine("    /// <summary>");
+                sb.Append(baseIndent).Append("    /// Gets a binding representing <c>").Append(p.PropertyName).AppendLine("</c> on this instance.");
+                sb.Append(baseIndent).AppendLine("    /// </summary>");
                 sb.Append(baseIndent).Append("    global::XenoAtom.Terminal.UI.Binding<").Append(p.PropertyTypeFullyQualified).Append("> ").Append(p.PropertyName).AppendLine(" { get; }");
             }
             sb.Append(baseIndent).AppendLine("}");
@@ -1039,6 +1090,9 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             {
                 var routedHandlerName = ev.EventName + "Routed";
 
+                sb.Append(baseIndent).AppendLine("/// <summary>");
+                sb.Append(baseIndent).Append("/// Identifies the <c>").Append(ev.EventName).AppendLine("</c> routed event.");
+                sb.Append(baseIndent).AppendLine("/// </summary>");
                 sb.Append(baseIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                 sb.Append(baseIndent).Append("public static readonly global::XenoAtom.Terminal.UI.RoutedEvent<").Append(ev.EventArgsTypeFullyQualified).Append("> ")
                     .Append(ev.EventName).Append("Event = global::XenoAtom.Terminal.UI.RoutedEvent.Register<")
@@ -1049,6 +1103,9 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     .AppendLine(");");
                 sb.AppendLine();
 
+                sb.Append(baseIndent).AppendLine("/// <summary>");
+                sb.Append(baseIndent).Append("/// Occurs when the <c>").Append(ev.EventName).AppendLine("</c> routed event is raised on this instance.");
+                sb.Append(baseIndent).AppendLine("/// </summary>");
                 sb.Append(baseIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                 sb.Append(baseIndent).Append("public event global::System.EventHandler<").Append(ev.EventArgsTypeFullyQualified).Append("> ").Append(routedHandlerName).AppendLine();
                 sb.Append(baseIndent).AppendLine("{");
@@ -1088,6 +1145,11 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             var indent = new string(' ', string.IsNullOrEmpty(ns) ? 0 : 4);
             var extensionClassName = GetExtensionClassName(containingType);
 
+            sb.Append(indent).AppendLine("/// <summary>");
+            sb.Append(indent).Append("/// Fluent extension methods for registering routed event handlers on <see cref=\"")
+                .Append(containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                .AppendLine("\"/>.");
+            sb.Append(indent).AppendLine("/// </summary>");
             sb.Append(indent).Append("public static partial class ").Append(extensionClassName).AppendLine();
             sb.Append(indent).AppendLine("{");
 
@@ -1101,9 +1163,15 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 var argsType = ev.EventArgsTypeFullyQualified;
                 var routedHandlerName = eventName + "Routed";
                 var escapedRoutedHandlerName = EscapeIdentifier(routedHandlerName);
-
-                sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                 var escapedEventName = EscapeIdentifier(eventName);
+
+                sb.Append(methodIndent).AppendLine("/// <summary>");
+                sb.Append(methodIndent).Append("/// Adds a handler for the <c>").Append(escapedEventName).AppendLine("</c> routed event and returns the same instance.");
+                sb.Append(methodIndent).AppendLine("/// </summary>");
+                sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
+                sb.Append(methodIndent).AppendLine("/// <param name=\"handler\">The event handler to add.</param>");
+                sb.Append(methodIndent).AppendLine("/// <returns>The same instance for chaining.</returns>");
+                sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
 
                 if (canUseGeneric)
                 {
@@ -1127,6 +1195,12 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 }
                 sb.AppendLine();
 
+                sb.Append(methodIndent).AppendLine("/// <summary>");
+                sb.Append(methodIndent).Append("/// Adds a handler for the <c>").Append(escapedEventName).AppendLine("</c> routed event and returns the same instance.");
+                sb.Append(methodIndent).AppendLine("/// </summary>");
+                sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
+                sb.Append(methodIndent).AppendLine("/// <param name=\"handler\">A callback invoked when the event is raised.</param>");
+                sb.Append(methodIndent).AppendLine("/// <returns>The same instance for chaining.</returns>");
                 sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                 if (canUseGeneric)
                 {

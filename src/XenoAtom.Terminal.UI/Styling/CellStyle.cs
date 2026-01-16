@@ -48,8 +48,14 @@ public readonly struct CellStyle : IEquatable<CellStyle>
 
     internal CellStyle(ulong value) => Value = value;
 
+    /// <summary>
+    /// Gets a style with default foreground/background and no decorations.
+    /// </summary>
     public static CellStyle None => default;
 
+    /// <summary>
+    /// Gets the text style flags (decorations) for this cell.
+    /// </summary>
     public TextStyle TextStyle => (TextStyle)(Value & TextStyleMask);
 
     internal bool IsContinuation => (Value & ContinuationMask) != 0;
@@ -82,21 +88,39 @@ public readonly struct CellStyle : IEquatable<CellStyle>
         return new CellStyle(value);
     }
 
+    /// <summary>
+    /// Returns a copy with the specified text style flags (replacing any existing flags).
+    /// </summary>
     public CellStyle WithTextStyle(TextStyle style)
         => new((Value & ~TextStyleMask) | ((ulong)style & TextStyleMask));
 
+    /// <summary>
+    /// Returns a copy with the specified text style flags added.
+    /// </summary>
     public CellStyle AddTextStyle(TextStyle style)
         => new(Value | ((ulong)style & TextStyleMask));
 
+    /// <summary>
+    /// Returns a copy with the specified text style flags removed.
+    /// </summary>
     public CellStyle RemoveTextStyle(TextStyle style)
         => new(Value & ~((ulong)style & TextStyleMask));
 
+    /// <summary>
+    /// Returns a copy with the foreground cleared to terminal default.
+    /// </summary>
     public CellStyle ClearForeground()
         => new(Value & ~ForegroundMask);
 
+    /// <summary>
+    /// Returns a copy with the background cleared to terminal default.
+    /// </summary>
     public CellStyle ClearBackground()
         => new(Value & ~BackgroundMask);
 
+    /// <summary>
+    /// Returns a copy with the specified foreground color.
+    /// </summary>
     public CellStyle WithForeground(AnsiColor color)
     {
         var value = Value;
@@ -104,6 +128,9 @@ public readonly struct CellStyle : IEquatable<CellStyle>
         return new CellStyle(value);
     }
 
+    /// <summary>
+    /// Returns a copy with the specified background color.
+    /// </summary>
     public CellStyle WithBackground(AnsiColor color)
     {
         var value = Value;
@@ -111,6 +138,11 @@ public readonly struct CellStyle : IEquatable<CellStyle>
         return new CellStyle(value);
     }
 
+    /// <summary>
+    /// Tries to get the foreground color.
+    /// </summary>
+    /// <param name="color">When this method returns, contains the foreground color if set.</param>
+    /// <returns><c>true</c> if a foreground is explicitly set; otherwise <c>false</c>.</returns>
     public bool TryGetForeground(out AnsiColor color)
     {
         var encoded = (Value & ForegroundMask) >> ForegroundShift;
@@ -123,6 +155,11 @@ public readonly struct CellStyle : IEquatable<CellStyle>
         return TryDecodeToAnsiColor(encoded, out color);
     }
 
+    /// <summary>
+    /// Tries to get the background color.
+    /// </summary>
+    /// <param name="color">When this method returns, contains the background color if set.</param>
+    /// <returns><c>true</c> if a background is explicitly set; otherwise <c>false</c>.</returns>
     public bool TryGetBackground(out AnsiColor color)
     {
         var encoded = (Value & BackgroundMask) >> BackgroundShift;
@@ -135,20 +172,38 @@ public readonly struct CellStyle : IEquatable<CellStyle>
         return TryDecodeToAnsiColor(encoded, out color);
     }
 
+    /// <summary>
+    /// Combines two styles by OR-ing their packed representation.
+    /// </summary>
     public static CellStyle operator |(CellStyle a, CellStyle b) => new(a.Value | b.Value);
 
+    /// <summary>
+    /// Adds text style flags to a <see cref="CellStyle"/>.
+    /// </summary>
     public static CellStyle operator |(CellStyle a, TextStyle style) => a.AddTextStyle(style);
 
+    /// <summary>
+    /// ANDs the packed value with the provided style flags.
+    /// </summary>
     public static CellStyle operator &(CellStyle a, TextStyle style) => new(a.Value & (ulong)style);
 
+    /// <inheritdoc />
     public bool Equals(CellStyle other) => Value == other.Value;
 
+    /// <inheritdoc />
     public override bool Equals(object? obj) => obj is CellStyle other && Equals(other);
 
+    /// <inheritdoc />
     public override int GetHashCode() => Value.GetHashCode();
 
+    /// <summary>
+    /// Returns whether two <see cref="CellStyle"/> values are equal.
+    /// </summary>
     public static bool operator ==(CellStyle left, CellStyle right) => left.Equals(right);
 
+    /// <summary>
+    /// Returns whether two <see cref="CellStyle"/> values are not equal.
+    /// </summary>
     public static bool operator !=(CellStyle left, CellStyle right) => !left.Equals(right);
 
     internal AnsiDecorations ToAnsiDecorations()

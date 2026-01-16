@@ -11,48 +11,114 @@ namespace XenoAtom.Terminal.UI.Styling;
 /// </summary>
 public sealed partial record AnsiColorScheme
 {
+    /// <summary>
+    /// Gets the human-readable scheme name.
+    /// </summary>
     public required string Name { get; init; }
 
+    /// <summary>
+    /// Gets the suggested cursor color.
+    /// </summary>
     public required AnsiColor CursorColor { get; init; }
 
+    /// <summary>
+    /// Gets the suggested selection background color.
+    /// </summary>
     public required AnsiColor SelectionBackground { get; init; }
 
+    /// <summary>
+    /// Gets the background color, or <c>null</c> to use the terminal default background.
+    /// </summary>
     public AnsiColor? Background { get; init; }
 
+    /// <summary>
+    /// Gets the foreground color, or <c>null</c> to use the terminal default foreground.
+    /// </summary>
     public AnsiColor? Foreground { get; init; }
 
+    /// <summary>
+    /// Gets the black color (ANSI 0).
+    /// </summary>
     public required AnsiColor Black { get; init; }
 
+    /// <summary>
+    /// Gets the blue color (ANSI 4).
+    /// </summary>
     public required AnsiColor Blue { get; init; }
 
+    /// <summary>
+    /// Gets the cyan color (ANSI 6).
+    /// </summary>
     public required AnsiColor Cyan { get; init; }
 
+    /// <summary>
+    /// Gets the green color (ANSI 2).
+    /// </summary>
     public required AnsiColor Green { get; init; }
 
+    /// <summary>
+    /// Gets the purple/magenta color (ANSI 5).
+    /// </summary>
     public required AnsiColor Purple { get; init; }
 
+    /// <summary>
+    /// Gets the red color (ANSI 1).
+    /// </summary>
     public required AnsiColor Red { get; init; }
 
+    /// <summary>
+    /// Gets the white color (ANSI 7).
+    /// </summary>
     public required AnsiColor White { get; init; }
 
+    /// <summary>
+    /// Gets the yellow color (ANSI 3).
+    /// </summary>
     public required AnsiColor Yellow { get; init; }
 
+    /// <summary>
+    /// Gets the bright black color (ANSI 8).
+    /// </summary>
     public required AnsiColor BrightBlack { get; init; }
 
+    /// <summary>
+    /// Gets the bright blue color (ANSI 12).
+    /// </summary>
     public required AnsiColor BrightBlue { get; init; }
 
+    /// <summary>
+    /// Gets the bright cyan color (ANSI 14).
+    /// </summary>
     public required AnsiColor BrightCyan { get; init; }
 
+    /// <summary>
+    /// Gets the bright green color (ANSI 10).
+    /// </summary>
     public required AnsiColor BrightGreen { get; init; }
 
+    /// <summary>
+    /// Gets the bright purple/magenta color (ANSI 13).
+    /// </summary>
     public required AnsiColor BrightPurple { get; init; }
 
+    /// <summary>
+    /// Gets the bright red color (ANSI 9).
+    /// </summary>
     public required AnsiColor BrightRed { get; init; }
 
+    /// <summary>
+    /// Gets the bright white color (ANSI 15).
+    /// </summary>
     public required AnsiColor BrightWhite { get; init; }
 
+    /// <summary>
+    /// Gets the bright yellow color (ANSI 11).
+    /// </summary>
     public required AnsiColor BrightYellow { get; init; }
 
+    /// <summary>
+    /// Gets a scheme that maps to the terminal indexed 16-color palette and uses terminal default background/foreground.
+    /// </summary>
     public static AnsiColorScheme Terminal { get; } = new AnsiColorScheme
     {
         Name = "Terminal",
@@ -79,6 +145,9 @@ public sealed partial record AnsiColorScheme
     };
 
     // https://rootloops.sh/?sugar=7&colors=9&sogginess=4&flavor=1&milk=0.94&fruit=8
+    /// <summary>
+    /// Gets the default dark scheme used by <see cref="Theme.Default"/>.
+    /// </summary>
     public static AnsiColorScheme RootLoopsDark { get; } = new AnsiColorScheme
     {
         Name = "Root Loops (Dark)",
@@ -105,6 +174,9 @@ public sealed partial record AnsiColorScheme
     };
 
     // https://rootloops.sh/?sugar=7&colors=9&sogginess=4&flavor=1&milk=3&fruit=8
+    /// <summary>
+    /// Gets a light variant of the default Root Loops scheme.
+    /// </summary>
     public static AnsiColorScheme RootLoopsLight { get; } = new AnsiColorScheme
     {
         Name = "Root Loops (Light)",

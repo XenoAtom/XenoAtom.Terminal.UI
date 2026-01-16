@@ -6,23 +6,60 @@ using XenoAtom.Ansi;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
+/// <summary>
+/// Specifies how to interpret a color scheme brightness when creating a <see cref="Theme"/>.
+/// </summary>
 public enum ThemeSchemeBrightness
 {
+    /// <summary>
+    /// Automatically detect brightness using scheme background/foreground (when available).
+    /// </summary>
     Auto,
+    /// <summary>
+    /// Force a dark theme interpretation.
+    /// </summary>
     Dark,
+    /// <summary>
+    /// Force a light theme interpretation.
+    /// </summary>
     Light,
 }
 
+/// <summary>
+/// Defines a theme used to style the UI (semantic colors, surfaces, and glyph sets).
+/// </summary>
+/// <remarks>
+/// Themes are stored in the visual environment and are resolved via <see cref="Visual.GetTheme"/>.
+/// A theme is also a style (<see cref="IStyle{T}"/>), so it can be overridden per subtree.
+/// </remarks>
 public sealed class Theme : IStyle<Theme>
 {
+    /// <summary>
+    /// Gets the default theme (Root Loops dark).
+    /// </summary>
     public static Theme Default { get; } = FromScheme(AnsiColorScheme.RootLoopsDark);
 
+    /// <summary>
+    /// Gets the default light theme (Root Loops light).
+    /// </summary>
     public static Theme DefaultLight { get; } = FromScheme(AnsiColorScheme.RootLoopsLight);
 
+    /// <summary>
+    /// Gets a theme that maps to terminal defaults and the indexed 16-color palette.
+    /// </summary>
     public static Theme Terminal { get; } = FromScheme(AnsiColorScheme.Terminal);
 
+    /// <summary>
+    /// Gets the environment key for the theme style.
+    /// </summary>
     public static StyleKey<Theme> Key { get; } = new("Theme", Default);
 
+    /// <summary>
+    /// Creates a <see cref="Theme"/> from a 16-color ANSI scheme.
+    /// </summary>
+    /// <param name="scheme">The color scheme.</param>
+    /// <param name="brightness">How to interpret scheme brightness.</param>
+    /// <returns>The created theme.</returns>
     public static Theme FromScheme(AnsiColorScheme scheme, ThemeSchemeBrightness brightness = ThemeSchemeBrightness.Auto)
     {
         ArgumentNullException.ThrowIfNull(scheme);
@@ -78,38 +115,89 @@ public sealed class Theme : IStyle<Theme>
         };
     }
 
+    /// <summary>
+    /// Gets the default foreground color, or <c>null</c> for terminal default.
+    /// </summary>
     public AnsiColor? Foreground { get; init; }
 
+    /// <summary>
+    /// Gets the default background color, or <c>null</c> for terminal default.
+    /// </summary>
     public AnsiColor? Background { get; init; }
 
+    /// <summary>
+    /// Gets the primary surface background color used for large areas, or <c>null</c>.
+    /// </summary>
     public AnsiColor? Surface { get; init; }
 
+    /// <summary>
+    /// Gets an alternate surface background color, or <c>null</c>.
+    /// </summary>
     public AnsiColor? SurfaceAlt { get; init; }
 
+    /// <summary>
+    /// Gets the default border color, or <c>null</c>.
+    /// </summary>
     public AnsiColor? Border { get; init; }
 
+    /// <summary>
+    /// Gets the focused border color, or <c>null</c>.
+    /// </summary>
     public AnsiColor? FocusBorder { get; init; }
 
+    /// <summary>
+    /// Gets the accent color, or <c>null</c>.
+    /// </summary>
     public AnsiColor? Accent { get; init; }
 
+    /// <summary>
+    /// Gets the selection background color, or <c>null</c>.
+    /// </summary>
     public AnsiColor? Selection { get; init; }
 
+    /// <summary>
+    /// Gets the disabled foreground color, or <c>null</c>.
+    /// </summary>
     public AnsiColor? Disabled { get; init; }
 
+    /// <summary>
+    /// Gets the primary semantic color, or <c>null</c>.
+    /// </summary>
     public AnsiColor? Primary { get; init; }
 
+    /// <summary>
+    /// Gets the success semantic color, or <c>null</c>.
+    /// </summary>
     public AnsiColor? Success { get; init; }
 
+    /// <summary>
+    /// Gets the warning semantic color, or <c>null</c>.
+    /// </summary>
     public AnsiColor? Warning { get; init; }
 
+    /// <summary>
+    /// Gets the error semantic color, or <c>null</c>.
+    /// </summary>
     public AnsiColor? Error { get; init; }
 
+    /// <summary>
+    /// Gets a muted/secondary text color, or <c>null</c>.
+    /// </summary>
     public AnsiColor? Muted { get; init; }
 
+    /// <summary>
+    /// Gets the glyph set used for line borders and separators.
+    /// </summary>
     public LineGlyphs Lines { get; init; } = LineGlyphs.Single;
 
+    /// <summary>
+    /// Gets the glyph set used for scrollbars.
+    /// </summary>
     public ScrollBarGlyphs ScrollBars { get; init; } = ScrollBarGlyphs.Default;
 
+    /// <summary>
+    /// Builds the base text style using theme foreground/background.
+    /// </summary>
     public CellStyle BaseTextStyle()
     {
         var style = CellStyle.None;
@@ -124,6 +212,9 @@ public sealed class Theme : IStyle<Theme>
         return style;
     }
 
+    /// <summary>
+    /// Builds a text style using only the theme foreground.
+    /// </summary>
     public CellStyle ForegroundTextStyle()
     {
         var style = CellStyle.None;
@@ -134,6 +225,9 @@ public sealed class Theme : IStyle<Theme>
         return style;
     }
 
+    /// <summary>
+    /// Builds a surface style using theme foreground and surface background.
+    /// </summary>
     public CellStyle SurfaceStyle()
     {
         var style = CellStyle.None;
@@ -148,6 +242,9 @@ public sealed class Theme : IStyle<Theme>
         return style;
     }
 
+    /// <summary>
+    /// Builds a muted text style using <see cref="Muted"/> on top of <see cref="BaseTextStyle"/>.
+    /// </summary>
     public CellStyle MutedTextStyle()
     {
         var style = BaseTextStyle();
@@ -158,6 +255,10 @@ public sealed class Theme : IStyle<Theme>
         return style;
     }
 
+    /// <summary>
+    /// Builds a border style using either <see cref="Border"/> or <see cref="FocusBorder"/>.
+    /// </summary>
+    /// <param name="focused">Whether the border should use the focused color.</param>
     public CellStyle BorderStyle(bool focused)
     {
         var color = focused ? FocusBorder : Border;
@@ -169,6 +270,9 @@ public sealed class Theme : IStyle<Theme>
         return style;
     }
 
+    /// <summary>
+    /// Builds the selection style used for focused/selected items.
+    /// </summary>
     public CellStyle SelectionStyle()
     {
         var style = CellStyle.None;

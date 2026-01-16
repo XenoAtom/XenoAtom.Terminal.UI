@@ -57,6 +57,17 @@ namespace XenoAtom.Terminal.UI.Styling;
 
 public sealed partial record AnsiColorScheme
 {
+    /// <summary>
+    /// Generates a Root Loops <see cref="AnsiColorScheme"/> from numeric parameters.
+    /// </summary>
+    /// <param name="sugar">Controls accent lightness (0..10).</param>
+    /// <param name="colors">Controls accent saturation (0..10).</param>
+    /// <param name="sogginess">Controls base saturation (0..10).</param>
+    /// <param name="flavor">Controls hue shifting for accents.</param>
+    /// <param name="fruit">Controls the base hue.</param>
+    /// <param name="milk">Controls background/foreground lightness (typically 0..1).</param>
+    /// <param name="name">Optional scheme name override.</param>
+    /// <returns>The generated scheme.</returns>
     public static AnsiColorScheme Generate(
         int sugar,
         int colors,
@@ -67,6 +78,17 @@ public sealed partial record AnsiColorScheme
         string? name = null)
         => Generate(new RootLoopsRecipe(sugar, colors, sogginess, flavor, fruit, milk), name);
 
+    /// <summary>
+    /// Generates a Root Loops <see cref="AnsiColorScheme"/> from numeric parameters and a discrete milk amount.
+    /// </summary>
+    /// <param name="sugar">Controls accent lightness (0..10).</param>
+    /// <param name="colors">Controls accent saturation (0..10).</param>
+    /// <param name="sogginess">Controls base saturation (0..10).</param>
+    /// <param name="flavor">Controls hue shifting for accents.</param>
+    /// <param name="fruit">Controls the base hue.</param>
+    /// <param name="milk">Controls background/foreground lightness using a discrete preset.</param>
+    /// <param name="name">Optional scheme name override.</param>
+    /// <returns>The generated scheme.</returns>
     public static AnsiColorScheme Generate(
         int sugar,
         int colors,
@@ -77,6 +99,12 @@ public sealed partial record AnsiColorScheme
         string? name = null)
         => Generate(new RootLoopsRecipe(sugar, colors, sogginess, flavor, fruit, (int)milk), name);
 
+    /// <summary>
+    /// Generates a Root Loops <see cref="AnsiColorScheme"/> from a recipe.
+    /// </summary>
+    /// <param name="recipe">The recipe.</param>
+    /// <param name="name">Optional scheme name override.</param>
+    /// <returns>The generated scheme.</returns>
     public static AnsiColorScheme Generate(RootLoopsRecipe recipe, string? name = null)
     {
         var sugar = Math.Clamp(recipe.Sugar, 0, 10);
@@ -518,37 +546,88 @@ public sealed partial record AnsiColorScheme
     }
 }
 
+/// <summary>
+/// Discrete presets for the Root Loops “milk” parameter.
+/// </summary>
 public enum RootLoopsMilkAmount
 {
+    /// <summary>
+    /// No milk (darkest background).
+    /// </summary>
     None = 0,
+    /// <summary>
+    /// A small splash of milk.
+    /// </summary>
     Splash = 1,
+    /// <summary>
+    /// A moderate amount of milk.
+    /// </summary>
     Glug = 2,
+    /// <summary>
+    /// A large amount of milk (lightest background).
+    /// </summary>
     Cup = 3,
 }
 
+/// <summary>
+/// Controls the Root Loops accent flavor (hue shift).
+/// </summary>
 public enum RootLoopsFlavor
 {
+    /// <summary>
+    /// Fruity flavor (no hue shift).
+    /// </summary>
     Fruity = 0,
+    /// <summary>
+    /// Classic flavor (small hue shift).
+    /// </summary>
     Classic = 1,
+    /// <summary>
+    /// Intense flavor (larger hue shift).
+    /// </summary>
     Intense = 2,
 }
 
+/// <summary>
+/// Controls the Root Loops base hue.
+/// </summary>
 public enum RootLoopsFruit
 {
+    /// <summary>Cherry.</summary>
     Cherry = 0,
+    /// <summary>Tomato.</summary>
     Tomato = 1,
+    /// <summary>Orange.</summary>
     Orange = 2,
+    /// <summary>Pineapple.</summary>
     Pineapple = 3,
+    /// <summary>Apple.</summary>
     Apple = 4,
+    /// <summary>Kiwi.</summary>
     Kiwi = 5,
+    /// <summary>Kale.</summary>
     Kale = 6,
+    /// <summary>Blueberry.</summary>
     Blueberry = 7,
+    /// <summary>Plum.</summary>
     Plum = 8,
+    /// <summary>Elderberry.</summary>
     Elderberry = 9,
+    /// <summary>Blackberry.</summary>
     Blackberry = 10,
+    /// <summary>Raspberry.</summary>
     Raspberry = 11,
 }
 
+/// <summary>
+/// Represents a Root Loops recipe used to generate an <see cref="AnsiColorScheme"/>.
+/// </summary>
+/// <param name="Sugar">Controls accent lightness (0..10).</param>
+/// <param name="Colors">Controls accent saturation (0..10).</param>
+/// <param name="Sogginess">Controls base saturation (0..10).</param>
+/// <param name="Flavor">Controls hue shifting for accents.</param>
+/// <param name="Fruit">Controls the base hue.</param>
+/// <param name="Milk">Controls background/foreground lightness.</param>
 public readonly record struct RootLoopsRecipe(
     int Sugar,
     int Colors,
@@ -557,8 +636,13 @@ public readonly record struct RootLoopsRecipe(
     RootLoopsFruit Fruit,
     double Milk)
 {
+    /// <summary>
+    /// Gets the milk value clamped to a valid range.
+    /// </summary>
     public double ClampedMilk => Math.Clamp(Milk, 0.0, 3.0);
 
+    /// <summary>
+    /// Gets or initializes a continuous fruit mix (0..1) mapped to the base hue.
+    /// </summary>
     public double FruitMix { get; init; } = Math.Clamp((double)(int)Fruit / 12.0, 0.0, 11.0);
 }
-

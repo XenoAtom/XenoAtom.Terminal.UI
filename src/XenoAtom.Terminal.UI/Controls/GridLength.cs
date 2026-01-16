@@ -4,21 +4,48 @@
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Specifies the sizing mode for a <see cref="GridLength"/>.
+/// </summary>
 public enum GridUnitType
 {
+    /// <summary>
+    /// Size to content.
+    /// </summary>
     Auto = 0,
+    /// <summary>
+    /// Fixed size in cells.
+    /// </summary>
     Fixed = 1,
+    /// <summary>
+    /// Star sizing (proportional distribution).
+    /// </summary>
     Star = 2,
 }
 
+/// <summary>
+/// Represents a grid length (Auto/Fixed/Star).
+/// </summary>
+/// <param name="Type">The unit type.</param>
+/// <param name="Value">The unit value (cells for Fixed, weight for Star).</param>
 public readonly record struct GridLength(GridUnitType Type, double Value)
 {
+    /// <summary>
+    /// Gets an Auto grid length.
+    /// </summary>
     public static GridLength Auto => new(GridUnitType.Auto, 0);
 
+    /// <summary>
+    /// Creates a fixed grid length in cells.
+    /// </summary>
     public static GridLength Fixed(int cells) => new(GridUnitType.Fixed, Math.Max(0, cells));
 
+    /// <summary>
+    /// Creates a star grid length with a weight.
+    /// </summary>
     public static GridLength Star(double weight = 1) => new(GridUnitType.Star, weight <= 0 ? 1 : weight);
 
+    /// <inheritdoc />
     public override string ToString()
         => Type switch
         {
@@ -29,6 +56,9 @@ public readonly record struct GridLength(GridUnitType Type, double Value)
         };
 }
 
+/// <summary>
+/// Defines a row in a <see cref="Grid"/>.
+/// </summary>
 public sealed partial class RowDefinition
 {
     [Bindable]
@@ -41,6 +71,9 @@ public sealed partial class RowDefinition
     public int MaxHeight { get; set; } = int.MaxValue;
 }
 
+/// <summary>
+/// Defines a column in a <see cref="Grid"/>.
+/// </summary>
 public sealed partial class ColumnDefinition
 {
     [Bindable]
@@ -52,4 +85,3 @@ public sealed partial class ColumnDefinition
     [Bindable]
     public int MaxWidth { get; set; } = int.MaxValue;
 }
-

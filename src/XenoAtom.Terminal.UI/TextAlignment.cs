@@ -4,11 +4,17 @@
 
 namespace XenoAtom.Terminal.UI;
 
+/// <summary>
+/// Specifies how text is aligned within an available width.
+/// </summary>
 public enum TextAlignment
 {
+    /// <summary>Left aligned.</summary>
     Left = 0,
+    /// <summary>Centered.</summary>
     Center = 1,
+    /// <summary>Right aligned.</summary>
     Right = 2,
+    /// <summary>Justified (when supported by the renderer).</summary>
     Justify = 3,
 }
-

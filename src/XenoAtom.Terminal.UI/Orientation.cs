@@ -4,9 +4,13 @@
 
 namespace XenoAtom.Terminal.UI;
 
+/// <summary>
+/// Specifies a horizontal or vertical orientation.
+/// </summary>
 public enum Orientation
 {
+    /// <summary>Horizontal orientation.</summary>
     Horizontal = 0,
+    /// <summary>Vertical orientation.</summary>
     Vertical = 1,
 }
-

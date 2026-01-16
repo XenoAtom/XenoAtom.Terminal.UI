@@ -8,8 +8,22 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI;
 
+/// <summary>
+/// Extension methods for building and configuring <see cref="Visual"/> trees fluently.
+/// </summary>
 public static partial class VisualExtensions
 {
+    /// <summary>
+    /// Registers a dynamic update callback for the visual and returns the same instance.
+    /// </summary>
+    /// <remarks>
+    /// Dynamic updates are re-evaluated by the framework when bindings they access change.
+    /// Prefer using the generated fluent APIs for simple property assignments; use this method for custom dynamic logic.
+    /// </remarks>
+    /// <typeparam name="T">The visual type.</typeparam>
+    /// <param name="obj">The instance to configure.</param>
+    /// <param name="configure">A callback invoked during the dynamic update pass.</param>
+    /// <returns>The same instance for chaining.</returns>
     public static T Update<T>(this T obj, Action<T> configure) where T : Visual
     {
         ArgumentNullException.ThrowIfNull(obj);
@@ -18,6 +32,13 @@ public static partial class VisualExtensions
         return obj;
     }
 
+    /// <summary>
+    /// Adds child visuals to a panel and returns the same instance.
+    /// </summary>
+    /// <typeparam name="T">The panel type.</typeparam>
+    /// <param name="obj">The panel to add children to.</param>
+    /// <param name="visuals">The child visuals to add.</param>
+    /// <returns>The same instance for chaining.</returns>
     public static T Add<T>(this T obj, params Visual[] visuals) where T : Panel
     {
         ArgumentNullException.ThrowIfNull(obj);
@@ -26,6 +47,12 @@ public static partial class VisualExtensions
         return obj;
     }
 
+    /// <summary>
+    /// Replaces the items of the list box and returns the same instance.
+    /// </summary>
+    /// <param name="obj">The list box to configure.</param>
+    /// <param name="items">The items to set.</param>
+    /// <returns>The same instance for chaining.</returns>
     public static ListBox Items(this ListBox obj, params Visual[] items)
     {
         ArgumentNullException.ThrowIfNull(obj);
@@ -36,6 +63,12 @@ public static partial class VisualExtensions
         return obj;
     }
 
+    /// <summary>
+    /// Adds a header cell to the table and returns the same instance.
+    /// </summary>
+    /// <param name="obj">The table to configure.</param>
+    /// <param name="header">The header cell to add.</param>
+    /// <returns>The same instance for chaining.</returns>
     public static Table AddHeader(this Table obj, Visual header)
     {
         ArgumentNullException.ThrowIfNull(obj);
@@ -45,6 +78,12 @@ public static partial class VisualExtensions
         return obj;
     }
 
+    /// <summary>
+    /// Replaces the header cells of the table and returns the same instance.
+    /// </summary>
+    /// <param name="obj">The table to configure.</param>
+    /// <param name="headers">The header cells.</param>
+    /// <returns>The same instance for chaining.</returns>
     public static Table Headers(this Table obj, params Visual[] headers)
     {
         ArgumentNullException.ThrowIfNull(obj);
@@ -55,6 +94,12 @@ public static partial class VisualExtensions
         return obj;
     }
 
+    /// <summary>
+    /// Adds a row to the table and returns the same instance.
+    /// </summary>
+    /// <param name="obj">The table to configure.</param>
+    /// <param name="cells">The row cells.</param>
+    /// <returns>The same instance for chaining.</returns>
     public static Table AddRow(this Table obj, params Visual[] cells)
     {
         ArgumentNullException.ThrowIfNull(obj);
@@ -67,6 +112,12 @@ public static partial class VisualExtensions
         return obj;
     }
 
+    /// <summary>
+    /// Replaces the table rows with a single row (if any) and returns the same instance.
+    /// </summary>
+    /// <param name="obj">The table to configure.</param>
+    /// <param name="cells">The row cells.</param>
+    /// <returns>The same instance for chaining.</returns>
     public static Table Rows(this Table obj, params Visual[] cells)
     {
         ArgumentNullException.ThrowIfNull(obj);
@@ -82,6 +133,12 @@ public static partial class VisualExtensions
         return obj;
     }
 
+    /// <summary>
+    /// Replaces the table rows and returns the same instance.
+    /// </summary>
+    /// <param name="obj">The table to configure.</param>
+    /// <param name="rows">The rows to set.</param>
+    /// <returns>The same instance for chaining.</returns>
     public static Table Rows(this Table obj, params Visual[][] rows)
     {
         ArgumentNullException.ThrowIfNull(obj);
@@ -98,6 +155,14 @@ public static partial class VisualExtensions
         return obj;
     }
 
+    /// <summary>
+    /// Applies a style instance to a visual by storing it in the visual environment and returns the same instance.
+    /// </summary>
+    /// <typeparam name="T">The visual type.</typeparam>
+    /// <typeparam name="TStyle">The style type.</typeparam>
+    /// <param name="obj">The visual to style.</param>
+    /// <param name="style">The style instance.</param>
+    /// <returns>The same instance for chaining.</returns>
     public static T Style<T, TStyle>(this T obj, TStyle style) where T : Visual where TStyle : IStyle<TStyle>
     {
         ArgumentNullException.ThrowIfNull(obj);
