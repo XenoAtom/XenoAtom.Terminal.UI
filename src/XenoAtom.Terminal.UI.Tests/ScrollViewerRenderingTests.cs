@@ -2,7 +2,6 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Hosting;
 
@@ -12,11 +11,8 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class ScrollViewerRenderingTests
 {
     [TestMethod]
-    public async Task ScrollViewer_Renders_Content_When_Inside_TabControl()
+    public void ScrollViewer_Renders_Content_When_Inside_TabControl()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(80, 20));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
         var demoTab = new ScrollViewer
         {
             Content = new VStack(new TextBlock("Hello from ScrollViewer")).Spacing(1).HorizontalAlignment(HorizontalAlignment.Stretch),
@@ -32,23 +28,16 @@ public sealed class ScrollViewerRenderingTests
             VerticalAlignment = VerticalAlignment.Stretch,
         };
 
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(80, 20));
+        driver.Tick();
 
-        await Task.Delay(40);
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
-
-        var outText = backend.GetOutText();
+        var outText = driver.Backend.GetOutText();
         StringAssert.Contains(outText, "Hello from ScrollViewer");
     }
 
     [TestMethod]
-    public async Task ScrollViewer_Renders_Content()
+    public void ScrollViewer_Renders_Content()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(60, 12));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
         var content = new VStack
         {
             "Log line 0",
@@ -60,44 +49,32 @@ public sealed class ScrollViewerRenderingTests
 
         var root = new ScrollViewer { Content = content };
 
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 12));
+        driver.Tick();
 
-        await Task.Delay(20);
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
-
-        var outText = backend.GetOutText();
+        var outText = driver.Backend.GetOutText();
         StringAssert.Contains(outText, "Log line 0");
     }
 
     [TestMethod]
-    public async Task ScrollViewer_Scroll_Updates_Rendered_Content()
+    public void ScrollViewer_Scroll_Updates_Rendered_Content()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(20, 6));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
         var content = new VStack();
         for (var i = 0; i < 10; i++)
         {
             content.Add($"Item {i}");
         }
 
-        var root = new ScrollViewer { Content = content, HorizontalAlignment = XenoAtom.Terminal.UI.HorizontalAlignment.Stretch };
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
+        var root = new ScrollViewer { Content = content, HorizontalAlignment = HorizontalAlignment.Stretch };
 
-        await Task.Delay(30);
-        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Wheel, Button = TerminalMouseButton.Wheel, WheelDelta = -1, X = 1, Y = 1 });
-        await Task.Delay(50);
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(20, 6));
+        driver.Tick();
 
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Wheel, Button = TerminalMouseButton.Wheel, WheelDelta = -1, X = 1, Y = 1 });
+        driver.Tick();
 
-        var outText = backend.GetOutText();
         var screen = new AnsiTestScreen(20, 6);
-        screen.Apply(outText);
+        screen.Apply(driver.Backend.GetOutText());
         var rendered = screen.GetText();
 
         StringAssert.Contains(rendered, "Item 1");
@@ -105,37 +82,23 @@ public sealed class ScrollViewerRenderingTests
     }
 
     [TestMethod]
-    public async Task ScrollViewer_Renders_Content_When_Set_After_Initial_Render()
+    public void ScrollViewer_Renders_Content_When_Set_After_Initial_Render()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
         var root = new ScrollViewer { HorizontalAlignment = HorizontalAlignment.Stretch };
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
 
-        await Task.Delay(40);
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
 
-        app.Post(() =>
-        {
-            root.Content = new TextBlock("Late content");
-        });
+        driver.App.Post(() => root.Content = new TextBlock("Late content"));
+        driver.Tick();
 
-        await Task.Delay(80);
-
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
-
-        var outText = backend.GetOutText();
+        var outText = driver.Backend.GetOutText();
         StringAssert.Contains(outText, "Late content");
     }
 
     [TestMethod]
-    public async Task ScrollViewer_Renders_ScrollBars_When_Content_Overflows()
+    public void ScrollViewer_Renders_ScrollBars_When_Content_Overflows()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(30, 10));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
         var items = new VStack();
         for (var i = 0; i < 200; i++)
         {
@@ -149,18 +112,13 @@ public sealed class ScrollViewerRenderingTests
             VerticalAlignment = VerticalAlignment.Stretch,
         };
 
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
-
-        await Task.Delay(60);
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 10));
+        driver.Tick();
 
         var screen = new AnsiTestScreen(30, 10);
-        screen.Apply(backend.GetOutText());
+        screen.Apply(driver.Backend.GetOutText());
         var rendered = screen.GetText();
 
-        // Default ScrollBarGlyphs are ░/█, content is "Hello {i}", so either rune indicates a scrollbar was drawn.
-        Assert.IsTrue(rendered.Contains('░', StringComparison.Ordinal) || rendered.Contains('█', StringComparison.Ordinal), "Expected ScrollViewer to render scrollbars when content overflows.");
+        Assert.IsTrue(rendered.Contains('\u2591', StringComparison.Ordinal) || rendered.Contains('\u2588', StringComparison.Ordinal), "Expected ScrollViewer to render scrollbars when content overflows.");
     }
 }

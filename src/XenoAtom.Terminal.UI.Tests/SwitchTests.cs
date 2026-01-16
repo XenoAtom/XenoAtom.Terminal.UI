@@ -32,23 +32,17 @@ public sealed class SwitchTests
     }
 
     [TestMethod]
-    public async Task Space_Key_Toggles_Switch()
+    public void Space_Key_Toggles_Switch()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(30, 6));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
         var sw = new Switch();
         var root = new VStack { sw };
 
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 6));
+        driver.Tick();
 
-        await Task.Delay(50);
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Space });
-        await Task.Delay(50);
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Space });
+        driver.Tick();
 
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
         Assert.AreEqual(true, sw.IsOn);
     }
 

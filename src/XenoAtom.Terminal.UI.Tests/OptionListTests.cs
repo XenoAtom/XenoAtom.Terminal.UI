@@ -12,89 +12,64 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class OptionListTests
 {
     [TestMethod]
-    public async Task OptionList_ArrowDown_Raises_SelectionChanged()
+    public void OptionList_ArrowDown_Raises_SelectionChanged()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
         var list = new OptionList { MinHeight = 4, MaxHeight = 4 };
         list.Items.AddRange(
             new OptionListItem("First"),
             new OptionListItem("Second"),
             new OptionListItem("Third"));
 
-        var selectionChanged = new TaskCompletionSource<(int OldIndex, int NewIndex)>(TaskCreationOptions.RunContinuationsAsynchronously);
-        list.SelectionChanged((_, e) => selectionChanged.TrySetResult((e.OldIndex, e.NewIndex)));
+        (int OldIndex, int NewIndex)? selectionChanged = null;
+        list.SelectionChanged((_, e) => selectionChanged = (e.OldIndex, e.NewIndex));
 
         var root = new VStack { list };
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
 
-        await Task.Delay(60);
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
+        driver.TickUntil(() => selectionChanged is not null);
 
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
-        var result = await selectionChanged.Task.WaitAsync(TimeSpan.FromSeconds(2));
-
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
-
-        Assert.AreEqual(0, result.OldIndex);
-        Assert.AreEqual(1, result.NewIndex);
+        Assert.AreEqual(0, selectionChanged!.Value.OldIndex);
+        Assert.AreEqual(1, selectionChanged!.Value.NewIndex);
     }
 
     [TestMethod]
-    public async Task OptionList_Enter_Raises_ItemActivated()
+    public void OptionList_Enter_Raises_ItemActivated()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
         var list = new OptionList { MinHeight = 4, MaxHeight = 4 };
         list.Items.AddRange(
             new OptionListItem("First"),
             new OptionListItem("Second"),
             new OptionListItem("Third"));
 
-        var activated = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-        list.ItemActivated((_, e) => activated.TrySetResult(e.Index));
+        int? activated = null;
+        list.ItemActivated((_, e) => activated = e.Index);
 
         var root = new VStack { list };
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
 
-        await Task.Delay(60);
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
+        driver.TickUntil(() => activated is not null);
 
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
-
-        var index = await activated.Task.WaitAsync(TimeSpan.FromSeconds(2));
-
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
-
-        Assert.AreEqual(1, index);
+        Assert.AreEqual(1, activated);
     }
 
     [TestMethod]
-    public async Task OptionList_Renders_Descriptions_On_Second_Line()
+    public void OptionList_Renders_Descriptions_On_Second_Line()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
         var list = new OptionList { MinHeight = 4, MaxHeight = 4 };
         list.Items.AddRange(
             new OptionListItem("Build", "Ctrl+B") { Description = "Build the project" },
             new OptionListItem("Run", "F5") { Description = "Run the app" });
 
         var root = new VStack { list };
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
 
-        await Task.Delay(120);
-
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
-
-        var outText = backend.GetOutText();
+        var outText = driver.Backend.GetOutText();
         var screen = new AnsiTestScreen(40, 10);
         screen.Apply(outText);
         var rendered = screen.GetText();

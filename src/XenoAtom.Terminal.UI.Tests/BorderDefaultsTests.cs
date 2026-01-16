@@ -5,8 +5,6 @@
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Styling;
-using XenoAtom.Terminal.Backends;
-using XenoAtom.Terminal;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -20,36 +18,24 @@ public sealed class BorderDefaultsTests
     }
 
     [TestMethod]
-    public async Task Button_Border_Is_OptIn_Via_Style()
+    public void Button_Border_Is_OptIn_Via_Style()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(24, 6));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+        var button = new Button("OK");
+        var root = new VStack(button);
+        using (var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(24, 6)))
+        {
+            driver.Tick();
+            Assert.AreEqual(1, button.Bounds.Height, "Default ButtonStyle should not draw a border and should stay 1 row tall.");
+        }
 
-        var root = new VStack(new Button("OK"));
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
-
-        await Task.Delay(30);
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
-
-        var outText = backend.GetOutText();
-        Assert.DoesNotContain("▁", outText);
-
-        backend = new InMemoryTerminalBackend(new TerminalSize(24, 6));
-        using var session2 = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
-        var borderedRoot = new VStack(new Button("OK"));
+        var borderedButton = new Button("OK");
+        var borderedRoot = new VStack(borderedButton);
         borderedRoot.Set(ButtonStyle.Key, new ButtonStyle { ShowBorder = true });
 
-        var app2 = new TerminalApp(borderedRoot, session2.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask2 = app2.RunInBackgroundAsync();
-
-        await Task.Delay(30);
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask2.WaitAsync(TimeSpan.FromSeconds(2));
-
-        var outText2 = backend.GetOutText();
-        Assert.Contains("▁", outText2);
+        using (var driver2 = new TerminalAppTestDriver(borderedRoot, TerminalHostKind.Fullscreen, new TerminalSize(24, 6)))
+        {
+            driver2.Tick();
+            Assert.IsTrue(borderedButton.Bounds.Height >= 3, "ButtonStyle.ShowBorder should expand the button to include a border.");
+        }
     }
 }

@@ -14,26 +14,18 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class SpinnerTests
 {
     [TestMethod]
-    public async Task Spinner_Animates_Without_User_Input()
+    public void Spinner_Animates_Without_User_Input()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(10, 3));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
         var spinner = new Spinner();
         spinner.Set(SpinnerStyle.Key, new SpinnerStyle("Test", TimeSpan.FromMilliseconds(10), "a", "b")
         {
             TextStyle = TextStyle.None,
         });
 
-        var app = new TerminalApp(spinner, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+        using var driver = new TerminalAppTestDriver(spinner, TerminalHostKind.Fullscreen, new TerminalSize(10, 3));
+        driver.Tick(30);
 
-        var runTask = app.RunInBackgroundAsync();
-        await Task.Delay(150);
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
-
-        var outText = backend.GetOutText();
+        var outText = driver.Backend.GetOutText();
         StringAssert.Contains(outText, "a");
         StringAssert.Contains(outText, "b");
     }

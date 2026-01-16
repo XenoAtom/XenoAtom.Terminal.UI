@@ -231,51 +231,140 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    public Task RunInBackgroundAsync(CancellationToken cancellationToken = default)
+    private TerminalScope _testAlternateScope;
+    private TerminalScope _testRawScope;
+    private TerminalScope _testEchoScope;
+    private TerminalScope _testMouseScope;
+    private TerminalScope _testPasteScope;
+    private TerminalScope _testCursorScope;
+
+    /// <summary>
+    /// Starts a deterministic single-threaded run used by unit tests.
+    /// </summary>
+    internal void BeginRun()
     {
         if (_runTask is not null)
         {
             throw new InvalidOperationException("The app is already running.");
         }
 
-        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var started = new ManualResetEventSlim(false);
-        _runTask = tcs.Task;
+        _runTask = Task.CompletedTask;
 
-        var thread = new Thread(() =>
-        {
-            try
-            {
-                RunCore(cancellationToken, started);
-                tcs.TrySetResult();
-            }
-            catch (OperationCanceledException)
-            {
-                tcs.TrySetResult();
-            }
-            catch (Exception ex)
-            {
-                tcs.TrySetException(ex);
-            }
-            finally
-            {
-                started.Set();
-                started.Dispose();
-            }
-        })
-        {
-            IsBackground = true,
-            Name = "XenoAtom.Terminal.UI",
-        };
+        Dispatcher.BindToCurrentThread(this);
 
-        thread.Start();
+        Root.AttachToApp(this);
+        BindingManager.Current.ValueChanged += OnValueChanged;
 
-        if (!started.Wait(TimeSpan.FromSeconds(5)))
+        if (!_terminal.IsInputRunning)
         {
-            throw new TimeoutException("Timed out waiting for the UI thread to initialize.");
+            _terminal.StartInput(new TerminalInputOptions { TreatControlCAsInput = true });
         }
 
-        return _runTask;
+        if (_options.HostKind == TerminalHostKind.Fullscreen)
+        {
+            _testAlternateScope = _terminal.UseAlternateScreen();
+        }
+
+        _testRawScope = _terminal.UseRawMode(_options.RawMode);
+        if (_options.DisableInputEcho)
+        {
+            _testEchoScope = _terminal.SetInputEcho(false);
+        }
+
+        _testCursorScope = _terminal.HideCursor();
+
+        if (_options.EnableMouse)
+        {
+            _testMouseScope = _terminal.EnableMouseInput(_options.MouseMode);
+        }
+
+        if (_options.EnableBracketedPaste)
+        {
+            _testPasteScope = _terminal.EnableBracketedPasteInput();
+        }
+
+        EnsureInitialFocus();
+        RequestRender();
+    }
+
+    /// <summary>
+    /// Performs a single frame update without sleeping. Intended for deterministic tests.
+    /// </summary>
+    internal void Tick(long? timestamp = null)
+    {
+        VerifyAccess();
+
+        while (_pendingActions.TryDequeue(out var action))
+        {
+            action();
+        }
+
+        while (_terminal.TryReadEvent(out var ev))
+        {
+            HandleTerminalEvent(ev);
+        }
+
+        AdvanceAnimations(timestamp);
+
+        if (_onUpdate is not null && !_cts.IsCancellationRequested)
+        {
+            var keepGoing = false;
+            using (_terminal.CaptureOutput(_updateOutputBuilder))
+            {
+                keepGoing = _onUpdate();
+            }
+
+            if (_updateOutputBuilder.Length > 0 && _options.HostKind == TerminalHostKind.Inline)
+            {
+                _inlineHost?.PrepareForUserUpdate();
+                _terminal.WriteAtomic((TextWriter w) => w.Write(_updateOutputBuilder.UnsafeAsSpan()));
+                _updateOutputBuilder.Clear();
+                _renderRequested = true;
+            }
+
+            if (!keepGoing)
+            {
+                ProcessPendingBindings();
+                _renderRequested = true;
+                _cts.Cancel();
+            }
+        }
+
+        ProcessPendingBindings();
+
+        if (_renderRequested)
+        {
+            _renderRequested = false;
+            Render();
+        }
+    }
+
+    /// <summary>
+    /// Ends a deterministic single-threaded run started by <see cref="BeginRun"/>.
+    /// </summary>
+    internal void EndRun()
+    {
+        if (_runTask is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _testPasteScope.Dispose();
+            _testMouseScope.Dispose();
+            _testCursorScope.Dispose();
+            _testEchoScope.Dispose();
+            _testRawScope.Dispose();
+            _testAlternateScope.Dispose();
+            BindingManager.Current.ValueChanged -= OnValueChanged;
+            Root.DetachFromApp();
+        }
+        finally
+        {
+            Dispatcher.DetachFromThread(this);
+            _runTask = null;
+        }
     }
 
     public void Run(CancellationToken cancellationToken = default)
@@ -350,56 +439,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
             while (!token.IsCancellationRequested)
             {
-                while (_pendingActions.TryDequeue(out var action))
-                {
-                    action();
-                }
-
-                while (_terminal.TryReadEvent(out var ev))
-                {
-                    HandleTerminalEvent(ev);
-                    if (token.IsCancellationRequested)
-                    {
-                        break;
-                    }
-                }
-
-                AdvanceAnimations();
-
-                if (_onUpdate is not null && !token.IsCancellationRequested)
-                {
-                    var keepGoing = false;
-                    using (_terminal.CaptureOutput(_updateOutputBuilder))
-                    {
-                        keepGoing = _onUpdate();
-                    }
-
-                    if (_updateOutputBuilder.Length > 0 && _options.HostKind == TerminalHostKind.Inline)
-                    {
-                        _inlineHost?.PrepareForUserUpdate();
-                        _terminal.WriteAtomic((TextWriter w) => w.Write(_updateOutputBuilder.UnsafeAsSpan()));
-                        _updateOutputBuilder.Clear();
-                        _renderRequested = true;
-                    }
-
-                    if (!keepGoing)
-                    {
-                        ProcessPendingBindings();
-                        _renderRequested = true;
-                        Render();
-                        _cts.Cancel();
-                        break;
-                    }
-                }
-
-                ProcessPendingBindings();
-
-                if (_renderRequested)
-                {
-                    _renderRequested = false;
-                    Render();
-                }
-
+                Tick();
                 Thread.Sleep(1);
             }
         }
@@ -494,7 +534,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         _nextAnimationTick = 0;
     }
 
-    private void AdvanceAnimations()
+    private void AdvanceAnimations(long? timestamp = null)
     {
         if (_animatedVisuals.Count == 0)
         {
@@ -502,7 +542,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
             return;
         }
 
-        var now = Stopwatch.GetTimestamp();
+        var now = timestamp ?? Stopwatch.GetTimestamp();
         if (_nextAnimationTick != 0 && now < _nextAnimationTick)
         {
             return;

@@ -2,8 +2,6 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using XenoAtom.Terminal;
-using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Hosting;
@@ -14,11 +12,8 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class TextBlockRenderingTests
 {
     [TestMethod]
-    public async Task TextBlock_EndEllipsis_Trims_To_Width()
+    public void TextBlock_EndEllipsis_Trims_To_Width()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(10, 2));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
         var tb = new TextBlock("HelloWorld")
         {
             Wrap = false,
@@ -28,23 +23,16 @@ public sealed class TextBlockRenderingTests
         };
 
         var root = new VStack(tb);
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(10, 2));
+        driver.Tick();
 
-        await Task.Delay(30);
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
-
-        var outText = backend.GetOutText();
+        var outText = driver.Backend.GetOutText();
         StringAssert.Contains(outText, "Hell…");
     }
 
     [TestMethod]
-    public async Task TextBlock_StartEllipsis_Trims_To_Width()
+    public void TextBlock_StartEllipsis_Trims_To_Width()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(10, 2));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
         var tb = new TextBlock("HelloWorld")
         {
             Wrap = false,
@@ -54,23 +42,16 @@ public sealed class TextBlockRenderingTests
         };
 
         var root = new VStack(tb);
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(10, 2));
+        driver.Tick();
 
-        await Task.Delay(30);
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
-
-        var outText = backend.GetOutText();
+        var outText = driver.Backend.GetOutText();
         StringAssert.Contains(outText, "…orld");
     }
 
     [TestMethod]
-    public async Task TextBlock_Can_Center_Align_Text_When_Stretched()
+    public void TextBlock_Can_Center_Align_Text_When_Stretched()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(10, 2));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
         var tb = new TextBlock("Hi")
         {
             Wrap = false,
@@ -79,14 +60,10 @@ public sealed class TextBlockRenderingTests
         };
 
         var root = new VStack(tb);
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(10, 2));
+        driver.Tick();
 
-        await Task.Delay(30);
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
-
-        var outText = backend.GetOutText();
+        var outText = driver.Backend.GetOutText();
         StringAssert.Contains(outText, "    Hi");
     }
 }

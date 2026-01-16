@@ -12,24 +12,17 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class MarkupRenderingTests
 {
     [TestMethod]
-    public async Task Markup_Respects_NewLines()
+    public void Markup_Respects_NewLines()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(60, 8));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
         var root = new Markup("[bold]Markup[/] supports inline styling:\n- [green]success[/]\n- [yellow]warning[/]")
             .HorizontalAlignment(HorizontalAlignment.Stretch)
             .VerticalAlignment(VerticalAlignment.Stretch);
 
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
-
-        await Task.Delay(60);
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 8));
+        driver.Tick();
 
         var screen = new AnsiTestScreen(60, 8);
-        screen.Apply(backend.GetOutText());
+        screen.Apply(driver.Backend.GetOutText());
         var rows = screen.GetText().Split(Environment.NewLine);
 
         Assert.IsTrue(rows[0].Contains("Markup supports inline styling:", StringComparison.Ordinal));
@@ -38,4 +31,3 @@ public sealed class MarkupRenderingTests
         Assert.IsTrue(rows[2].Contains("- warning", StringComparison.Ordinal));
     }
 }
-

@@ -12,11 +12,8 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class AppChromeTests
 {
     [TestMethod]
-    public async Task Header_And_Footer_Render()
+    public void Header_And_Footer_Render()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 6));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
         var header = new Header { Left = "Left", Center = "Center", Right = "Right" };
         var footer = new Footer { Left = "FLeft", Center = "FCenter", Right = "FRight" };
 
@@ -27,14 +24,10 @@ public sealed class AppChromeTests
             Content = new TextBlock("Body"),
         };
 
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
 
-        await Task.Delay(80);
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
-
-        var outText = backend.GetOutText();
+        var outText = driver.Backend.GetOutText();
         var screen = new AnsiTestScreen(40, 6);
         screen.Apply(outText);
         var rendered = screen.GetText();
@@ -48,4 +41,3 @@ public sealed class AppChromeTests
         StringAssert.Contains(rendered, "FRight");
     }
 }
-

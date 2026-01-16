@@ -1,0 +1,12 @@
+global using XenoAtom.Terminal;
+global using XenoAtom.Terminal.Backends;
+global using XenoAtom.Terminal.UI;
+global using XenoAtom.Terminal.UI.Controls;
+global using XenoAtom.Terminal.UI.Geometry;
+global using XenoAtom.Terminal.UI.Hosting;
+global using XenoAtom.Terminal.UI.Input;
+global using XenoAtom.Terminal.UI.Layout;
+global using XenoAtom.Terminal.UI.Rendering;
+global using XenoAtom.Terminal.UI.Styling;
+global using XenoAtom.Terminal.UI.Text;
+global using System.Text;

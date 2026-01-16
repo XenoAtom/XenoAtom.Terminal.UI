@@ -12,64 +12,45 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class MenuTests
 {
     [TestMethod]
-    public async Task MenuBar_Enter_Invokes_Menu_Item_Action()
+    public void MenuBar_Enter_Invokes_Menu_Item_Action()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(50, 12));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
-        var invoked = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var invoked = false;
 
         var file = new MenuItem("File");
-        file.Items.Add(new MenuItem("Open", () => invoked.TrySetResult(true)));
+        file.Items.Add(new MenuItem("Open", () => invoked = true));
 
         var bar = new MenuBar();
         bar.Items.Add(file);
 
         var root = new VStack { bar };
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(50, 12));
+        driver.Tick();
 
-        await Task.Delay(80);
-
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter }); // open
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter }); // invoke first item
-
-        Assert.IsTrue(await invoked.Task.WaitAsync(TimeSpan.FromSeconds(2)));
-
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape }); // exit app
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter }); // open
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter }); // invoke first item
+        driver.TickUntil(() => invoked);
     }
 
     [TestMethod]
-    public async Task MenuBar_Right_Opens_Submenu_And_Invokes_Action()
+    public void MenuBar_Right_Opens_Submenu_And_Invokes_Action()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(60, 14));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
-        var invoked = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var invoked = false;
 
         var file = new MenuItem("File");
         var recent = new MenuItem("Recent");
-        recent.Items.Add(new MenuItem("Entry 1", () => invoked.TrySetResult(true)));
+        recent.Items.Add(new MenuItem("Entry 1", () => invoked = true));
         file.Items.Add(recent);
 
         var bar = new MenuBar();
         bar.Items.Add(file);
 
         var root = new VStack { bar };
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 14));
+        driver.Tick();
 
-        await Task.Delay(80);
-
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter }); // open root menu
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right }); // open submenu
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter }); // invoke submenu item
-
-        Assert.IsTrue(await invoked.Task.WaitAsync(TimeSpan.FromSeconds(2)));
-
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape }); // exit app
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter }); // open root menu
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right }); // open submenu
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter }); // invoke submenu item
+        driver.TickUntil(() => invoked);
     }
 }
-

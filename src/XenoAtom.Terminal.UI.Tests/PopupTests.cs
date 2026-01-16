@@ -12,11 +12,8 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class PopupTests
 {
     [TestMethod]
-    public async Task Popup_Closes_On_Outside_Click()
+    public void Popup_Closes_On_Outside_Click()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
         var anchor = new Button("Anchor");
         var root = new VStack { anchor };
 
@@ -27,23 +24,17 @@ public sealed class PopupTests
             MatchAnchorWidth = true,
         };
 
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
-
-        await Task.Delay(30);
-        app.Post(popup.Show);
-        await Task.Delay(60);
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+        driver.App.Post(popup.Show);
+        driver.Tick();
 
         // Click outside the popup (on the header row where the anchor is).
-        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 1, Y = 0 });
-        backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 1, Y = 0 });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 1, Y = 0 });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 1, Y = 0 });
+        driver.Tick();
 
-        await Task.Delay(60);
-
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
-
-        var outText = backend.GetOutText();
+        var outText = driver.Backend.GetOutText();
         var screen = new AnsiTestScreen(40, 10);
         screen.Apply(outText);
         var rendered = screen.GetText();
@@ -52,11 +43,8 @@ public sealed class PopupTests
     }
 
     [TestMethod]
-    public async Task Popup_Closes_On_Tab()
+    public void Popup_Closes_On_Tab()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(40, 10));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
         var anchor = new Button("Anchor");
         var root = new VStack { anchor, new TextBox("after") };
 
@@ -67,20 +55,15 @@ public sealed class PopupTests
             MatchAnchorWidth = true,
         };
 
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+        driver.App.Post(popup.Show);
+        driver.Tick();
 
-        await Task.Delay(30);
-        app.Post(popup.Show);
-        await Task.Delay(60);
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
+        driver.Tick();
 
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
-        await Task.Delay(60);
-
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
-
-        var outText = backend.GetOutText();
+        var outText = driver.Backend.GetOutText();
         var screen = new AnsiTestScreen(40, 10);
         screen.Apply(outText);
         var rendered = screen.GetText();

@@ -12,30 +12,21 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class CommandPaletteTests
 {
     [TestMethod]
-    public async Task CommandPalette_Filters_Items_Based_On_Query()
+    public void CommandPalette_Filters_Items_Based_On_Query()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(60, 12));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
         var palette = new CommandPalette();
         palette.Items.AddRange(
             new CommandPaletteItem("Open"),
             new CommandPaletteItem("Build"));
 
         var root = new VStack { palette };
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 12));
+        driver.Tick();
 
-        await Task.Delay(80);
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "op" });
+        driver.Tick();
 
-        backend.PushEvent(new TerminalTextEvent { Text = "op" });
-
-        await Task.Delay(150);
-
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
-
-        var outText = backend.GetOutText();
+        var outText = driver.Backend.GetOutText();
         var screen = new AnsiTestScreen(60, 12);
         screen.Apply(outText);
         var rendered = screen.GetText();
@@ -45,32 +36,22 @@ public sealed class CommandPaletteTests
     }
 
     [TestMethod]
-    public async Task CommandPalette_Invokes_Action_On_Activated_Item()
+    public void CommandPalette_Invokes_Action_On_Activated_Item()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(60, 12));
-        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-
-        var invoked = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var invoked = false;
 
         var palette = new CommandPalette();
         palette.Items.AddRange(
-            new CommandPaletteItem("Open", () => invoked.TrySetResult(true)),
+            new CommandPaletteItem("Open", () => invoked = true),
             new CommandPaletteItem("Build"));
 
         var root = new VStack { palette };
-        var app = new TerminalApp(root, session.Instance, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
-        var runTask = app.RunInBackgroundAsync();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 12));
+        driver.Tick();
 
-        await Task.Delay(80);
-
-        backend.PushEvent(new TerminalTextEvent { Text = "op" });
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
-
-        Assert.IsTrue(await invoked.Task.WaitAsync(TimeSpan.FromSeconds(2)));
-
-        backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
-        await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "op" });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
+        driver.TickUntil(() => invoked);
     }
 }
-
