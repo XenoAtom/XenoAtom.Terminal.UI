@@ -40,7 +40,7 @@ public abstract partial class ScrollBar : Visual
 
         this.Minimum(0);
         this.Maximum(0);
-        this.Value(0);
+        this.ScrollValue(0);
         this.ViewportSize(0);
         this.SmallChange(1);
         this.LargeChange(0);
@@ -67,7 +67,7 @@ public abstract partial class ScrollBar : Visual
     /// Gets or sets the current value.
     /// </summary>
     [Bindable]
-    public partial int Value { get; set; }
+    public partial int ScrollValue { get; set; }
 
     /// <summary>
     /// Gets or sets the viewport size, used to compute the thumb length.
@@ -93,13 +93,13 @@ public abstract partial class ScrollBar : Visual
 
     partial void OnLargeChangeChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
 
-    partial void OnValueChanging(ref int value)
+    partial void OnScrollValueChanging(ref int value)
     {
-        _oldValueForEvent = _value;
+        _oldValueForEvent = _scrollValue;
         value = Clamp(value);
     }
 
-    partial void OnValueChanged(int value)
+    partial void OnScrollValueChanged(int value)
     {
         if (_oldValueForEvent != value)
         {
@@ -248,7 +248,7 @@ public abstract partial class ScrollBar : Visual
         thumbLength = Math.Clamp(thumbLength, minThumb, trackLength);
 
         var trackAvail = Math.Max(1, trackLength - thumbLength);
-        var offset = Math.Clamp(Value - min, 0, range);
+        var offset = Math.Clamp(ScrollValue - min, 0, range);
         var thumbStart = (int)Math.Round((double)offset * trackAvail / range);
         thumbStart = Math.Clamp(thumbStart, 0, trackLength - thumbLength);
 
@@ -278,7 +278,7 @@ public abstract partial class ScrollBar : Visual
             _dragging = true;
             _dragStartUiX = e.UiX;
             _dragStartUiY = e.UiY;
-            _dragStartValue = Value;
+            _dragStartValue = ScrollValue;
             e.Handled = true;
             return;
         }
@@ -290,7 +290,7 @@ public abstract partial class ScrollBar : Visual
             page = Math.Max(1, ViewportSize);
         }
 
-        Value = local < thumbStart ? Value - page : Value + page;
+        ScrollValue = local < thumbStart ? ScrollValue - page : ScrollValue + page;
         e.Handled = true;
     }
 
@@ -327,7 +327,7 @@ public abstract partial class ScrollBar : Visual
 
         var delta = Orientation == Orientation.Vertical ? (e.UiY - _dragStartUiY) : (e.UiX - _dragStartUiX);
         var deltaValue = (int)Math.Round((double)delta * range / trackAvail);
-        Value = Math.Clamp(_dragStartValue + deltaValue, min, max);
+        ScrollValue = Math.Clamp(_dragStartValue + deltaValue, min, max);
         e.Handled = true;
     }
 
@@ -355,7 +355,7 @@ public abstract partial class ScrollBar : Visual
         }
 
         var step = Math.Max(1, SmallChange);
-        Value = e.WheelDelta > 0 ? Value - step : Value + step;
+        ScrollValue = e.WheelDelta > 0 ? ScrollValue - step : ScrollValue + step;
         e.Handled = true;
     }
 
@@ -370,27 +370,27 @@ public abstract partial class ScrollBar : Visual
             switch (e.Key)
             {
                 case TerminalKey.Up:
-                    Value -= step;
+                    ScrollValue -= step;
                     e.Handled = true;
                     return;
                 case TerminalKey.Down:
-                    Value += step;
+                    ScrollValue += step;
                     e.Handled = true;
                     return;
                 case TerminalKey.PageUp:
-                    Value -= page;
+                    ScrollValue -= page;
                     e.Handled = true;
                     return;
                 case TerminalKey.PageDown:
-                    Value += page;
+                    ScrollValue += page;
                     e.Handled = true;
                     return;
                 case TerminalKey.Home:
-                    Value = Minimum;
+                    ScrollValue = Minimum;
                     e.Handled = true;
                     return;
                 case TerminalKey.End:
-                    Value = Maximum;
+                    ScrollValue = Maximum;
                     e.Handled = true;
                     return;
             }
@@ -400,27 +400,27 @@ public abstract partial class ScrollBar : Visual
             switch (e.Key)
             {
                 case TerminalKey.Left:
-                    Value -= step;
+                    ScrollValue -= step;
                     e.Handled = true;
                     return;
                 case TerminalKey.Right:
-                    Value += step;
+                    ScrollValue += step;
                     e.Handled = true;
                     return;
                 case TerminalKey.PageUp:
-                    Value -= page;
+                    ScrollValue -= page;
                     e.Handled = true;
                     return;
                 case TerminalKey.PageDown:
-                    Value += page;
+                    ScrollValue += page;
                     e.Handled = true;
                     return;
                 case TerminalKey.Home:
-                    Value = Minimum;
+                    ScrollValue = Minimum;
                     e.Handled = true;
                     return;
                 case TerminalKey.End:
-                    Value = Maximum;
+                    ScrollValue = Maximum;
                     e.Handled = true;
                     return;
             }

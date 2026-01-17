@@ -598,7 +598,7 @@ public sealed partial class ScrollViewer : Visual
 
     private void SetBarValue(ScrollBar bar, int value)
     {
-        if (bar.Value == value)
+        if (bar.ScrollValue == value)
         {
             return;
         }
@@ -606,7 +606,7 @@ public sealed partial class ScrollViewer : Visual
         _syncingOffsets = true;
         try
         {
-            bar.Value = value;
+            bar.ScrollValue = value;
         }
         finally
         {

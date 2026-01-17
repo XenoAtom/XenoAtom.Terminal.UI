@@ -18,13 +18,13 @@ public sealed class ScrollBarDemo : ControlsDemoBase
             .Minimum(0)
             .Maximum(100)
             .ViewportSize(20)
-            .Value(40);
+            .ScrollValue(40);
 
         var h = new HScrollBar(focusable: true)
             .Minimum(0)
             .Maximum(100)
             .ViewportSize(30)
-            .Value(60);
+            .ScrollValue(60);
 
         return new VStack(
                 DemoUi.Hint("ScrollBar exposes Minimum/Maximum/Value and a ValueChanged event."),
@@ -32,7 +32,7 @@ public sealed class ScrollBarDemo : ControlsDemoBase
                         new VStack(v.MinHeight(20).MaxHeight(20)).HorizontalAlignment(HorizontalAlignment.Left).VerticalAlignment(VerticalAlignment.Top),
                         new VStack(h).MinWidth(50).MaxWidth(50).HorizontalAlignment(HorizontalAlignment.Left).VerticalAlignment(VerticalAlignment.Top))
                     .Spacing(2),
-                new TextBlock(() => $"Vertical: {v.Value}, Horizontal: {h.Value}"))
+                new TextBlock(() => $"Vertical: {v.ScrollValue}, Horizontal: {h.ScrollValue}"))
             .Spacing(1);
     }
 }
