@@ -14,7 +14,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// <summary>
 /// Displays a scroll bar for a scrollable extent and viewport.
 /// </summary>
-public sealed partial class ScrollBar : Visual
+public abstract partial class ScrollBar : Visual
 {
     private bool _dragging;
     private int _dragStartUiX;
@@ -26,9 +26,18 @@ public sealed partial class ScrollBar : Visual
     /// Initializes a new instance of the <see cref="ScrollBar"/> control.
     /// </summary>
     /// <param name="focusable">Whether the scroll bar can receive focus.</param>
-    public ScrollBar(bool focusable = true)
+    protected ScrollBar(bool focusable = true)
     {
         Focusable = focusable;
+        if (Orientation == Orientation.Vertical)
+        {
+            VerticalAlignment = VerticalAlignment.Stretch;
+        }
+        else
+        {
+            HorizontalAlignment = HorizontalAlignment.Stretch;
+        }
+
         this.Minimum(0);
         this.Maximum(0);
         this.Value(0);
@@ -40,8 +49,7 @@ public sealed partial class ScrollBar : Visual
     /// <summary>
     /// Gets or sets the scroll bar orientation.
     /// </summary>
-    [Bindable]
-    public partial Orientation Orientation { get; set; }
+    public abstract Orientation Orientation { get; }
 
     /// <summary>
     /// Gets or sets the minimum value.
@@ -421,4 +429,38 @@ public sealed partial class ScrollBar : Visual
 
     [RoutedEvent(RoutingStrategy.Bubble)]
     private void OnValueChanged(ScrollValueChangedEventArgs e) { }
+}
+
+/// <summary>
+/// A vertical scroll bar.
+/// </summary>
+public sealed class VScrollBar : ScrollBar
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VScrollBar"/> control.
+    /// </summary>
+    /// <param name="focusable">Whether the scroll bar can receive focus.</param>
+    public VScrollBar(bool focusable = true) : base(focusable)
+    {
+    }
+
+    /// <inheritdoc/>
+    public override Orientation Orientation => Orientation.Vertical;
+}
+
+/// <summary>
+/// A horizontal scroll bar.
+/// </summary>
+public sealed class HScrollBar : ScrollBar
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HScrollBar"/> control.
+    /// </summary>
+    /// <param name="focusable">Whether the scroll bar can receive focus.</param>
+    public HScrollBar(bool focusable = true) : base(focusable)
+    {
+    }
+
+    /// <inheritdoc/>
+    public override Orientation Orientation => Orientation.Horizontal;
 }

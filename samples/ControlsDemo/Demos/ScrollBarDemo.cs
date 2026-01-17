@@ -14,15 +14,13 @@ public sealed class ScrollBarDemo : ControlsDemoBase
     {
         _ = context;
 
-        var v = new ScrollBar(focusable: true)
-            .Orientation(Orientation.Vertical)
+        var v = new VScrollBar(focusable: true)
             .Minimum(0)
             .Maximum(100)
             .ViewportSize(20)
             .Value(40);
 
-        var h = new ScrollBar(focusable: true)
-            .Orientation(Orientation.Horizontal)
+        var h = new HScrollBar(focusable: true)
             .Minimum(0)
             .Maximum(100)
             .ViewportSize(30)
@@ -38,4 +36,3 @@ public sealed class ScrollBarDemo : ControlsDemoBase
             .Spacing(1);
     }
 }
-

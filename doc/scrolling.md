@@ -23,10 +23,9 @@ If the content is not scrollable, the scroll viewer owns its scroll offsets and 
 
 ## ScrollBar
 
-`ScrollBar` is a standalone control that can be used directly, and is also used by `ScrollViewer`.
+`ScrollBar` is an abstract base for scroll bars. Use `VScrollBar` (vertical) or `HScrollBar` (horizontal) directly, or let `ScrollViewer` create and manage them for you.
 
 See also:
 
 - `doc/controls/scrollviewer.md`
 - `doc/controls/scrollbar.md`
-

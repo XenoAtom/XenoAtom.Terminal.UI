@@ -1,6 +1,8 @@
 # ScrollBar
 
-`ScrollBar` is a standalone scrollbar control (horizontal or vertical).
+`ScrollBar` is the abstract base for standalone scroll bars.
+
+Use `VScrollBar` (vertical) or `HScrollBar` (horizontal).
 
 Screenshot placeholder:
 
@@ -11,8 +13,7 @@ Screenshot placeholder:
 Scrollbars are typically used through `ScrollViewer`, but can be used directly:
 
 ```csharp
-new ScrollBar()
-    .Orientation(Orientation.Vertical)
+new VScrollBar()
     .Minimum(0)
     .Maximum(100)
     .Value(30);
@@ -21,4 +22,3 @@ new ScrollBar()
 ## Styling
 
 `ScrollBarStyle` controls track/thumb rendering and colors.
-

@@ -49,14 +49,11 @@ public sealed partial class ScrollViewer : Visual
         HorizontalAlignment = HorizontalAlignment.Stretch;
 
         _contentHost = new ContentViewportHost(this);
-        _verticalBar = new ScrollBar(focusable: false)
-            .Orientation(Orientation.Vertical)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .VerticalAlignment(VerticalAlignment.Stretch);
-        _horizontalBar = new ScrollBar(focusable: false)
-            .Orientation(Orientation.Horizontal)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .VerticalAlignment(VerticalAlignment.Stretch);
+        // Internal scrollbars may receive their Thickness style during Arrange (when ScrollViewerStyle is bridged to
+        // ScrollBarStyle). Stretch the cross axis so they still fill the allocated slot even if their desired size
+        // was measured with a different thickness.
+        _verticalBar = new VScrollBar(focusable: false).HorizontalAlignment(HorizontalAlignment.Stretch);
+        _horizontalBar = new HScrollBar(focusable: false).VerticalAlignment(VerticalAlignment.Stretch);
         _corner = new ScrollCornerVisual(this);
 
         _verticalBar.ValueChanged(OnVerticalBarValueChanged);

@@ -352,8 +352,8 @@ var rightColumn = new VStack(
                                 .Padding(Thickness.Zero)
                                 .HorizontalAlignment(HorizontalAlignment.Stretch)
                                 .Content(new HStack(
-                                        new ScrollBar().Orientation(Orientation.Vertical).Minimum(0).Maximum(100).ViewportSize(25).Value(() => (int)(progressState.Value * 100)),
-                                        new ScrollBar().Orientation(Orientation.Horizontal).Minimum(0).Maximum(100).ViewportSize(25).Value(() => (int)(progressState.Value * 100)).HorizontalAlignment(HorizontalAlignment.Stretch))
+                                        new VScrollBar().Minimum(0).Maximum(100).ViewportSize(25).Value(() => (int)(progressState.Value * 100)),
+                                        new HScrollBar().Minimum(0).Maximum(100).ViewportSize(25).Value(() => (int)(progressState.Value * 100)).HorizontalAlignment(HorizontalAlignment.Stretch))
                                     .Spacing(2)
                                     .HorizontalAlignment(HorizontalAlignment.Stretch)))
                         .Spacing(1)

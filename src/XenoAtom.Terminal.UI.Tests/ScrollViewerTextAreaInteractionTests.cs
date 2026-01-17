@@ -109,7 +109,7 @@ public sealed class ScrollViewerTextAreaInteractionTests
         var barX = scrollBounds.X + scrollBounds.Width - 1;
         var barY = scrollBounds.Y + 2;
         var hit = root.HitTest(barX, barY)?.GetType().Name ?? "<null>";
-        Assert.AreEqual(nameof(ScrollBar), hit);
+        Assert.AreEqual(nameof(VScrollBar), hit);
 
         driver.Backend.PushEvent(new TerminalMouseEvent
         {
