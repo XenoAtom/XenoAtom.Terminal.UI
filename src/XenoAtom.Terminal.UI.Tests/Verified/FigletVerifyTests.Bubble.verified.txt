@@ -1,0 +1,5 @@
+﻿Font: Bubble, Author: Glenn Chappell, Url: https://www.figlet.org/fonts/bubble.flf
+   _      _      _      _      _      _      _      _  
+  / \    / \    / \    / \    / \    / \    / \    / \ 
+ ( X )  ( e )  ( n )  ( o )  ( A )  ( t )  ( o )  ( m )
+  \_/    \_/    \_/    \_/    \_/    \_/    \_/    \_/ 

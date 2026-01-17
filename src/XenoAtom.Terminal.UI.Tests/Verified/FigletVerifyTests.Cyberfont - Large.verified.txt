@@ -1,0 +1,5 @@
+﻿Font: Cyberfont - Large, Author: Kent Nassen, Lennert Stock, Url: https://www.figlet.org/fonts/cyberlarge.flf
+ _     _  _______  __   _   _____   _______  _______   _____   _______
+  \___/   |______  | \  |  |     |  |_____|     |     |     |  |  |  |
+ _/   \_  |______  |  \_|  |_____|  |     |     |     |_____|  |  |  |
+                                                                      

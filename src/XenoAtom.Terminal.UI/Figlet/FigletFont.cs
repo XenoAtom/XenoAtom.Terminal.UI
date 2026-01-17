@@ -27,10 +27,10 @@ public sealed partial class FigletFont
     private readonly string[][] _asciiGlyphs;
     private readonly Dictionary<int, string[]>? _codeTaggedGlyphs;
 
-    internal FigletFont(string? name, int height, char hardBlank, string[][] asciiGlyphs, Dictionary<int, string[]>? codeTaggedGlyphs)
+    internal FigletFont(FigletFontInfo? fontInfo, int height, char hardBlank, string[][] asciiGlyphs, Dictionary<int, string[]>? codeTaggedGlyphs)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
-        Name = name;
+        Info = fontInfo;
         Height = height;
         HardBlank = hardBlank;
         _asciiGlyphs = asciiGlyphs;
@@ -38,9 +38,9 @@ public sealed partial class FigletFont
     }
 
     /// <summary>
-    /// Gets the font name, when available.
+    /// Gets optional information about the loaded FIGlet font (name, author, URL).
     /// </summary>
-    public string? Name { get; }
+    public FigletFontInfo? Info { get; }
 
     /// <summary>
     /// Gets the glyph height in rows.
@@ -58,30 +58,49 @@ public sealed partial class FigletFont
     /// <summary>
     /// Parses a FIGlet font from a string.
     /// </summary>
-    public static FigletFont Parse(string text)
+    /// <param name="text">The font text.</param>
+    /// <param name="fontInfo">The optional font info.</param>
+    public static FigletFont Parse(string text, FigletFontInfo? fontInfo = null)
     {
         ArgumentNullException.ThrowIfNull(text);
-        return Parse(text.AsSpan());
+        return Parse(text.AsSpan(), fontInfo);
     }
 
     /// <summary>
     /// Parses a FIGlet font from a character span.
     /// </summary>
-    public static FigletFont Parse(ReadOnlySpan<char> text)
-        => FigletFontParser.Parse(text);
+    /// <param name="text">The font text.</param>
+    /// <param name="fontInfo">The optional font info.</param>
+    public static FigletFont Parse(ReadOnlySpan<char> text, FigletFontInfo? fontInfo = null)
+        => FigletFontParser.Parse(text, fontInfo);
+
+    /// <summary>
+    /// Loads a Figlet font from the specified file path.
+    /// </summary>
+    /// <param name="path">The path to the Figlet font file to load. The file must be encoded in UTF-8. Cannot be null.</param>
+    /// <returns>A FigletFont instance representing the font loaded from the specified file.</returns>
+    /// <param name="encoding">The encoding used to read the stream. Default is UTF8.</param>
+    /// <param name="fontInfo">The optional font info.</param>
+    public static FigletFont Load(string path, Encoding? encoding = null, FigletFontInfo? fontInfo = null)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        var content = File.ReadAllText(path, encoding ?? Encoding.UTF8);
+        return Parse(content.AsSpan(), fontInfo);
+    }
 
     /// <summary>
     /// Loads a FIGlet font from a stream.
     /// </summary>
     /// <param name="stream">The font stream.</param>
     /// <param name="encoding">The encoding used to read the stream.</param>
-    public static FigletFont Load(Stream stream, Encoding? encoding = null)
+    /// <param name="fontInfo">The optional font info.</param>
+    public static FigletFont Load(Stream stream, Encoding? encoding = null, FigletFontInfo? fontInfo = null)
     {
         ArgumentNullException.ThrowIfNull(stream);
         encoding ??= Encoding.UTF8;
         using var reader = new StreamReader(stream, encoding, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: true);
         var content = reader.ReadToEnd();
-        return Parse(content.AsSpan());
+        return Parse(content.AsSpan(), fontInfo);
     }
 
     /// <summary>
@@ -108,13 +127,19 @@ public sealed partial class FigletFont
             ascii[c - 32] = lines;
         }
 
-        return new FigletFont(name: "Block", height: height, hardBlank: ' ', asciiGlyphs: ascii, codeTaggedGlyphs: null);
+        return new FigletFont(new($"Block-{width}x{height}"), height, ' ', asciiGlyphs: ascii, codeTaggedGlyphs: null);
     }
 
     /// <summary>
     /// Gets a built-in block font suitable for demos and basic banners.
     /// </summary>
-    public static FigletFont Block { get; } = CreateBlockFont();
+    public static FigletFont Block => FigletFontBlockHolder.Instance;
+
+    // NativeAOT lazy initialization pattern
+    private static class FigletFontBlockHolder
+    {
+        public static readonly FigletFont Instance = CreateBlockFont();
+    }
 
     /// <summary>
     /// Tries to get glyph lines for the specified Unicode code point.

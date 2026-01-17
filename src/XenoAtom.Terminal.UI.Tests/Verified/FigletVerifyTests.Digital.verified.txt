@@ -1,0 +1,4 @@
+﻿Font: Digital, Author: Glenn Chappell, Url: https://www.figlet.org/fonts/digital.flf
+ +-+  +-+  +-+  +-+  +-+  +-+  +-+  +-+
+ |X|  |e|  |n|  |o|  |A|  |t|  |o|  |m|
+ +-+  +-+  +-+  +-+  +-+  +-+  +-+  +-+

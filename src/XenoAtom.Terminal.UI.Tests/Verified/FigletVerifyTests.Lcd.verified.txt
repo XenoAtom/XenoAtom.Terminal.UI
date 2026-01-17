@@ -1,0 +1,7 @@
+﻿Font: Lcd, Author: Karl von Laudermann, Url: https://www.figlet.org/fonts/lcd.flf
+                             ___                       
+ \ /                        |   |    |                 
+  +     -     |-      -     |-+-|   -+-    -     |- -  
+ / \   |/     | |    | |    |   |    |    | |    | | | 
+        --            -               -    -           
+                                                       

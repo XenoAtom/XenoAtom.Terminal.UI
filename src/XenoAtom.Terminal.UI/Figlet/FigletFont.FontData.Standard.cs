@@ -20,7 +20,7 @@ partial class FigletFont
     /// </summary>
     private static class StandardFontHolder
     {
-        public static readonly FigletFont Instance = FigletFont.Parse(StandardFontData);
+        public static readonly FigletFont Instance = FigletFont.Parse(StandardFontData, new("Standard", "Glenn Chappell & Ian Chai", "https://www.figlet.org/fonts/standard.flf"));
 
         // https://www.figlet.org/fonts/standard.flf
         private const string StandardFontData = """
@@ -32,7 +32,7 @@ partial class FigletFont
                                                   to add Latin-{2,3,4,5} support (Unicode U+0100-017F).
                                                 Permission is hereby given to modify this font, as long as the
                                                 modifier's name is placed on a comment line.
-
+                                                
                                                 Modified by Paul Burton <solution@earthlink.net> 12/96 to include new parameter
                                                 supported by FIGlet and FIGWin.  May also be slightly modified for better use
                                                 of new full-width/kern/smush alternatives, but default output is NOT changed.
@@ -2251,7 +2251,6 @@ partial class FigletFont
                                                      $@
                                                      $@
                                                      $@@
-
                                                 """;
     }
 }

@@ -1,0 +1,6 @@
+﻿Font: SmSlant, Author: Glenn Chappell, Url: https://www.figlet.org/fonts/smslant.flf
+   _  __                       ___    __               
+  | |/_/  ___    ___   ___    / _ |  / /_  ___    __ _ 
+ _>  <   / -_)  / _ \ / _ \  / __ | / __/ / _ \  /  ' \
+/_/|_|   \__/  /_//_/ \___/ /_/ |_| \__/  \___/ /_/_/_/
+                                                       

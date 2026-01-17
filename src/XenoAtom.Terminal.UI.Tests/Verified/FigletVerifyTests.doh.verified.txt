@@ -1,0 +1,26 @@
+﻿Font: doh, Author: Curtis Wanner, Url: https://www.figlet.org/fonts/doh.flf
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+XXXXXXX       XXXXXXX                                                                          AAA                         tttt                                                     
+X:::::X       X:::::X                                                                         A:::A                     ttt:::t                                                     
+X:::::X       X:::::X                                                                        A:::::A                    t:::::t                                                     
+X::::::X     X::::::X                                                                       A:::::::A                   t:::::t                                                     
+XXX:::::X   X:::::XXX     eeeeeeeeeeee     nnnn  nnnnnnnn        ooooooooooo               A:::::::::A            ttttttt:::::ttttttt        ooooooooooo       mmmmmmm    mmmmmmm   
+   X:::::X X:::::X      ee::::::::::::ee   n:::nn::::::::nn    oo:::::::::::oo            A:::::A:::::A           t:::::::::::::::::t      oo:::::::::::oo   mm:::::::m  m:::::::mm 
+    X:::::X:::::X      e::::::eeeee:::::ee n::::::::::::::nn  o:::::::::::::::o          A:::::A A:::::A          t:::::::::::::::::t     o:::::::::::::::o m::::::::::mm::::::::::m
+     X:::::::::X      e::::::e     e:::::e nn:::::::::::::::n o:::::ooooo:::::o         A:::::A   A:::::A         tttttt:::::::tttttt     o:::::ooooo:::::o m::::::::::::::::::::::m
+     X:::::::::X      e:::::::eeeee::::::e   n:::::nnnn:::::n o::::o     o::::o        A:::::A     A:::::A              t:::::t           o::::o     o::::o m:::::mmm::::::mmm:::::m
+    X:::::X:::::X     e:::::::::::::::::e    n::::n    n::::n o::::o     o::::o       A:::::AAAAAAAAA:::::A             t:::::t           o::::o     o::::o m::::m   m::::m   m::::m
+   X:::::X X:::::X    e::::::eeeeeeeeeee     n::::n    n::::n o::::o     o::::o      A:::::::::::::::::::::A            t:::::t           o::::o     o::::o m::::m   m::::m   m::::m
+XXX:::::X   X:::::XXX e:::::::e              n::::n    n::::n o::::o     o::::o     A:::::AAAAAAAAAAAAA:::::A           t:::::t    tttttt o::::o     o::::o m::::m   m::::m   m::::m
+X::::::X     X::::::X e::::::::e             n::::n    n::::n o:::::ooooo:::::o    A:::::A             A:::::A          t::::::tttt:::::t o:::::ooooo:::::o m::::m   m::::m   m::::m
+X:::::X       X:::::X  e::::::::eeeeeeee     n::::n    n::::n o:::::::::::::::o   A:::::A               A:::::A         tt::::::::::::::t o:::::::::::::::o m::::m   m::::m   m::::m
+X:::::X       X:::::X   ee:::::::::::::e     n::::n    n::::n  oo:::::::::::oo   A:::::A                 A:::::A          tt:::::::::::tt  oo:::::::::::oo  m::::m   m::::m   m::::m
+XXXXXXX       XXXXXXX     eeeeeeeeeeeeee     nnnnnn    nnnnnn    ooooooooooo    AAAAAAA                   AAAAAAA           ttttttttttt      ooooooooooo    mmmmmm   mmmmmm   mmmmmm
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    

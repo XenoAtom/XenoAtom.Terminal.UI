@@ -1,0 +1,5 @@
+﻿Font: Cyberfont - medium, Author: Kent Nassen, Lennert Stock, Url: https://www.figlet.org/fonts/cybermedium.flf
+_  _  ____  _  _  ____  ____  ___  ____  _  _ 
+ \/   |___  |\ |  |  |  |__|   |   |  |  |\/| 
+_/\_  |___  | \|  |__|  |  |   |   |__|  |  | 
+                                              

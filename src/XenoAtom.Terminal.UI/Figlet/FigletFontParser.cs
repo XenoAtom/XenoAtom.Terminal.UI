@@ -11,7 +11,7 @@ namespace XenoAtom.Terminal.UI.Figlet;
 /// </summary>
 internal static class FigletFontParser
 {
-    public static FigletFont Parse(ReadOnlySpan<char> text)
+    public static FigletFont Parse(ReadOnlySpan<char> text, FigletFontInfo? info)
     {
         if (text.IsEmpty)
         {
@@ -98,7 +98,7 @@ internal static class FigletFontParser
             codeTagged[codePoint.Value] = ReadGlyphLines(ref reader, height, endMark, hardBlank);
         }
 
-        return new FigletFont(name: null, height: height, hardBlank: hardBlank, asciiGlyphs: asciiGlyphs, codeTaggedGlyphs: codeTagged);
+        return new FigletFont(info, height: height, hardBlank: hardBlank, asciiGlyphs: asciiGlyphs, codeTaggedGlyphs: codeTagged);
     }
 
     private static string[] ReadGlyphLines(ref LineReader reader, int height, char endMark, char hardBlank)
