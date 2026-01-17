@@ -86,7 +86,7 @@ public sealed partial class Slider<T> : Visual where T: struct, INumber<T>
     /// Gets or sets a formatter for the value label.
     /// </summary>
     [Bindable]
-    public partial Func<T, string>? ValueFormatter { get; set; }
+    public partial Delegator<Func<T, string>> ValueFormatter { get; set; }
 
     partial void OnMinimumChanging(ref T value)
     {
@@ -324,7 +324,7 @@ public sealed partial class Slider<T> : Visual where T: struct, INumber<T>
 
     private string FormatValue(T value)
     {
-        var formatter = ValueFormatter;
+        var formatter = ValueFormatter.Invoke;
         if (formatter is not null)
         {
             return formatter(value);

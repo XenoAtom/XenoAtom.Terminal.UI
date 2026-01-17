@@ -181,7 +181,7 @@ public sealed class MenuBar : Visual
         var menu = _items[index];
         if (menu.Items.Count == 0)
         {
-            menu.Action?.Invoke();
+            menu.Action.Invoke?.Invoke();
             _openIndex = -1;
             return;
         }
@@ -720,7 +720,7 @@ public sealed class MenuBar : Visual
                 return;
             }
 
-            item.Action?.Invoke();
+            item.Action.Invoke?.Invoke();
             _owner.CloseAllMenus();
         }
 

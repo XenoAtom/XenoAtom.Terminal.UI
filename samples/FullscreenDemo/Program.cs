@@ -189,10 +189,9 @@ var leftColumn = new VStack(
             .HorizontalAlignment(HorizontalAlignment.Stretch),
         new VStack(
                 "Port (1..65535):",
-                new NumberBox<int>
-                {
-                    ValueValidator = v => v is >= 1 and <= 65535 ? null : "Port must be in [1..65535]",
-                }.Value(portState))
+                new NumberBox<int>()
+                    .ValueValidator(v => v is >= 1 and <= 65535 ? null : "Port must be in [1..65535]")
+                    .Value(portState))
             .Spacing(1)
             .HorizontalAlignment(HorizontalAlignment.Stretch),
         progressBars)

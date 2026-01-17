@@ -58,10 +58,9 @@ public sealed class NumberBoxInputTests
     public void NumberBox_Uses_Custom_Value_Validator_Message()
     {
         var state = new State<int>(5);
-        var numberBox = new NumberBox<int>
-        {
-            ValueValidator = v => v is >= 0 and <= 9 ? null : "Must be a single digit",
-        }.Value(state);
+        var numberBox = new NumberBox<int>()
+            .ValueValidator(v => v is >= 0 and <= 9 ? null : "Must be a single digit")
+            .Value(state);
         var root = new VStack { numberBox };
 
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));

@@ -21,10 +21,9 @@ public sealed class NumberBoxDemo : ControlsDemoBase
                 new HStack(
                         new VStack(
                                 "Port (1..65535):",
-                                new NumberBox<int>
-                                {
-                                    ValueValidator = v => v is >= 1 and <= 65535 ? null : "Port must be in [1..65535]",
-                                }.Value(port))
+                                new NumberBox<int>()
+                                    .ValueValidator(v => v is >= 1 and <= 65535 ? null : "Port must be in [1..65535]")
+                                    .Value(port))
                             .Spacing(1),
                         new VStack(
                                 "Factor (invariant culture):",
@@ -39,3 +38,4 @@ public sealed class NumberBoxDemo : ControlsDemoBase
             .Spacing(1);
     }
 }
+

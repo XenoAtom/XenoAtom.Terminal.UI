@@ -30,7 +30,7 @@ public sealed record NumberBoxStyle : IStyle<NumberBoxStyle>
     /// <summary>
     /// Gets the optional prefix displayed before the validation message.
     /// </summary>
-    public string ValidationPrefix { get; init; } = "⚠ ";
+    public string ValidationPrefix { get; init; } = "⚠  ";
 
     /// <summary>
     /// Gets an optional foreground color override for the validation message.

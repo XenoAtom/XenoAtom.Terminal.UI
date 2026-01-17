@@ -22,8 +22,7 @@ public sealed class CanvasDemo : ControlsDemoBase
         return new VStack(
                 DemoUi.Hint("Canvas draws directly into the CellBuffer during render via a Painter callback."),
                 new Canvas()
-                {
-                    Painter = ctx =>
+                    .Painter(ctx =>
                     {
                         var t = tick.Value;
                         var bg = CellStyle.None.WithBackground(AnsiColor.Rgb(0x12, 0x1A, 0x30));
@@ -38,8 +37,12 @@ public sealed class CanvasDemo : ControlsDemoBase
                         ctx.DrawHLine(4, 2, 10, new Rune('='), accent);
                         ctx.DrawCircle(30, 8, 3, new Rune('o'), accent);
                         ctx.WriteText(3, 13, "Custom draw ops: box/line/circle/text", ink);
-                    }
-                }.MinWidth(44).MaxWidth(44).MinHeight(16).MaxHeight(16).Style(CanvasStyle.Default with { DefaultRune = new Rune('█') }),
+                    })
+                    .MinWidth(44)
+                    .MaxWidth(44)
+                    .MinHeight(16)
+                    .MaxHeight(16)
+                    .Style(CanvasStyle.Default with { DefaultRune = new Rune('█') }),
                 new HStack(
                         new Button("Tick").Click(() => tick.Value++),
                         new TextBlock(() => $"Tick: {tick.Value}"))
@@ -47,3 +50,4 @@ public sealed class CanvasDemo : ControlsDemoBase
             .Spacing(1);
     }
 }
+

@@ -73,5 +73,5 @@ public sealed partial class MenuItem
     /// Gets or sets the action to invoke when activated.
     /// </summary>
     [Bindable]
-    public partial Action? Action { get; set; }
+    public partial Delegator<Action> Action { get; set; }
 }

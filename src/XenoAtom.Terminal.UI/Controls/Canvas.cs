@@ -43,7 +43,7 @@ public sealed partial class Canvas : Visual
     /// Use <see cref="CanvasContext.Bounds"/> and coordinates relative to the canvas origin (0,0).
     /// </remarks>
     [Bindable]
-    public partial Action<CanvasContext>? Painter { get; set; }
+    public partial Delegator<Action<CanvasContext>> Painter { get; set; }
 
     /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
@@ -68,7 +68,7 @@ public sealed partial class Canvas : Visual
             return;
         }
 
-        var painter = Painter;
+        var painter = Painter.Invoke;
         if (painter is null)
         {
             return;
@@ -462,4 +462,3 @@ public readonly struct CanvasContext
         SetPixel(cx + x, cy - y, rune, style);
     }
 }
-

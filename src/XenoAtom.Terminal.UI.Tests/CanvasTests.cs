@@ -19,19 +19,17 @@ public sealed class CanvasTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(12, 6));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        var canvas = new Canvas
-        {
-            MinWidth = 12,
-            MaxWidth = 12,
-            MinHeight = 6,
-            MaxHeight = 6,
-            Painter = ctx =>
+        var canvas = new Canvas()
+            .MinWidth(12)
+            .MaxWidth(12)
+            .MinHeight(6)
+            .MaxHeight(6)
+            .Painter(ctx =>
             {
                 ctx.Clear(new Rune(' '), CellStyle.None);
                 ctx.DrawBox(0, 0, 12, 6, LineGlyphs.Single, CellStyle.None);
                 ctx.DrawLine(1, 1, 10, 4, new Rune('*'), CellStyle.None);
-            },
-        };
+            });
 
         session.Instance.Write(canvas);
 
@@ -50,18 +48,16 @@ public sealed class CanvasTests
         var backend = new InMemoryTerminalBackend(new TerminalSize(11, 7));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        var canvas = new Canvas
-        {
-            MinWidth = 11,
-            MaxWidth = 11,
-            MinHeight = 7,
-            MaxHeight = 7,
-            Painter = ctx =>
+        var canvas = new Canvas()
+            .MinWidth(11)
+            .MaxWidth(11)
+            .MinHeight(7)
+            .MaxHeight(7)
+            .Painter(ctx =>
             {
                 ctx.Clear(new Rune(' '), CellStyle.None);
                 ctx.DrawCircle(5, 3, 2, new Rune('o'), CellStyle.None);
-            },
-        };
+            });
 
         session.Instance.Write(canvas);
 
@@ -74,4 +70,3 @@ public sealed class CanvasTests
         Assert.IsGreaterThan(4, count);
     }
 }
-

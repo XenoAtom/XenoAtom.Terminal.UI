@@ -22,10 +22,12 @@ public sealed class SliderDemo : ControlsDemoBase
                     Maximum = 100,
                     Step = 5,
                     ShowValueLabel = true,
-                    ValueFormatter = v => $"{v}%",
-                }.Value(value),
+                }
+                    .ValueFormatter(v => $"{v}%")
+                    .Value(value),
                 new TextBlock(() => $"Value: {value.Value}%"),
                 new Button("Log value").Click(() => context.Log($"Slider: {value.Value}%")))
             .Spacing(1);
     }
 }
+

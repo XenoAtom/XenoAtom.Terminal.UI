@@ -88,6 +88,8 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
         string PropertyName,
         string PropertyTypeFullyQualified,
         bool IsDelegateProperty,
+        bool IsDelegatorProperty,
+        string? DelegatorDelegateTypeFullyQualified,
         bool IsParentVisual,
         bool IsVisualChildProperty,
         bool GenerateImplementation,
@@ -165,6 +167,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
 
             var propertyTypeFullyQualified = propertySymbol.Type.ToDisplayString(typeFormat);
             var isDelegateProperty = propertySymbol.Type.TypeKind == TypeKind.Delegate;
+            var (isDelegatorProperty, delegatorDelegateTypeFullyQualified) = TryGetDelegatorDelegateType(context.SemanticModel.Compilation, propertySymbol.Type, typeFormat);
             var isVisualChildProperty = ComputeIsVisualChildProperty(context.SemanticModel.Compilation, containingType, propertySymbol.Type);
             var isVisual = InheritsFromVisual(context.SemanticModel.Compilation, containingType);
 
@@ -185,6 +188,8 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 PropertyName: propertyName,
                 PropertyTypeFullyQualified: propertyTypeFullyQualified,
                 IsDelegateProperty: isDelegateProperty,
+                IsDelegatorProperty: isDelegatorProperty,
+                DelegatorDelegateTypeFullyQualified: delegatorDelegateTypeFullyQualified,
                 IsParentVisual: isVisual,
                 IsVisualChildProperty: isVisualChildProperty,
                 GenerateImplementation: generateImplementation,
@@ -195,6 +200,45 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 SetPrivateOrInternal: privateOrInternalSet,
                 BackingFieldName: backingFieldName,
                 AccessorClassName: accessorClassName), diagnostics.ToImmutable());
+        }
+
+        private static (bool IsDelegatorProperty, string? DelegatorDelegateTypeFullyQualified) TryGetDelegatorDelegateType(
+            Compilation compilation,
+            ITypeSymbol propertyType,
+            SymbolDisplayFormat format)
+        {
+            var delegatorType = compilation.GetTypeByMetadataName("XenoAtom.Terminal.UI.Delegator`1");
+            if (delegatorType is null)
+            {
+                return (false, null);
+            }
+
+            if (propertyType is not INamedTypeSymbol namedType)
+            {
+                return (false, null);
+            }
+
+            if (!SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, delegatorType))
+            {
+                return (false, null);
+            }
+
+            if (namedType.TypeArguments.Length != 1)
+            {
+                return (false, null);
+            }
+
+            var delegateType = namedType.TypeArguments[0];
+            var delegateTypeFullyQualified = delegateType.ToDisplayString(format);
+
+            // A Delegator<TDelegate> can always be empty, so the fluent API should allow passing null to clear it.
+            if (delegateType.IsReferenceType && delegateType.NullableAnnotation != NullableAnnotation.Annotated &&
+                !delegateTypeFullyQualified.EndsWith("?", StringComparison.Ordinal))
+            {
+                delegateTypeFullyQualified += "?";
+            }
+
+            return (true, delegateTypeFullyQualified);
         }
 
         private static string ComputeAccessorModifier(IPropertySymbol property, IMethodSymbol? accessor)
@@ -428,6 +472,9 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 var propName = p.PropertyName;
                 var argName = ToLowerCamel(propName);
                 var argType = p.PropertyTypeFullyQualified;
+                var setterArgType = p.IsDelegatorProperty && p.DelegatorDelegateTypeFullyQualified is { } delegatorArgType
+                    ? delegatorArgType
+                    : argType;
 
                 if (p.SetPrivateOrInternal)
                 {
@@ -443,7 +490,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                 if (canUseGeneric)
                 {
-                    sb.Append(methodIndent).Append("public static T ").Append(EscapeIdentifier(propName)).Append("<T>(this T obj, ").Append(argType).Append(' ').Append(EscapeIdentifier(argName))
+                    sb.Append(methodIndent).Append("public static T ").Append(EscapeIdentifier(propName)).Append("<T>(this T obj, ").Append(setterArgType).Append(' ').Append(EscapeIdentifier(argName))
                         .Append(") where T : ").Append(receiverType).AppendLine();
                     sb.Append(methodIndent).AppendLine("{");
                     sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
@@ -458,7 +505,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     {
                         AppendTypeParameters(sb, containingType);
                     }
-                    sb.Append("(this ").Append(receiverType).Append(" obj, ").Append(argType).Append(' ').Append(EscapeIdentifier(argName)).Append(')');
+                    sb.Append("(this ").Append(receiverType).Append(" obj, ").Append(setterArgType).Append(' ').Append(EscapeIdentifier(argName)).Append(')');
                     if (needsTypeParameters)
                     {
                         AppendTypeParameterConstraints(sb, containingType, methodIndent);

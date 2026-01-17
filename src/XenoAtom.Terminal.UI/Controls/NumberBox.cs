@@ -107,7 +107,7 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
     /// Gets or sets a formatter used to format <see cref="Value"/> into <see cref="Text"/>.
     /// </summary>
     [Bindable]
-    public partial Func<T, string>? ValueFormatter { get; set; }
+    public partial Delegator<Func<T, string>> ValueFormatter { get; set; }
 
     /// <summary>
     /// Gets or sets the number styles used when parsing input.
@@ -128,7 +128,7 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
     /// The callback should return <c>null</c> when the value is valid, or a non-empty message when the value is invalid.
     /// </remarks>
     [Bindable]
-    public partial Func<T, string?>? ValueValidator { get; set; }
+    public partial Delegator<Func<T, string?>> ValueValidator { get; set; }
 
     /// <inheritdoc />
     protected override bool IsSingleLine => true;
@@ -180,13 +180,13 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
         UpdateTextFromValue();
     }
 
-    partial void OnValueValidatorChanged(Func<T, string?>? value)
+    partial void OnValueValidatorChanged(Delegator<Func<T, string?>> value)
     {
         _ = value;
         ValidateAndUpdateValueFromText();
     }
 
-    partial void OnValueFormatterChanged(Func<T, string>? value)
+    partial void OnValueFormatterChanged(Delegator<Func<T, string>> value)
     {
         _ = value;
         UpdateTextFromValue();
@@ -446,7 +446,7 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
             return;
         }
 
-        var validator = ValueValidator;
+        var validator = ValueValidator.Invoke;
         var message = validator?.Invoke(parsed);
         if (!string.IsNullOrEmpty(message))
         {
@@ -487,7 +487,7 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
         // Otherwise we could end up in an infinite loop of updates between Value and Text during initialization.
         if (App is null) return;
 
-        var formatter = ValueFormatter;
+        var formatter = ValueFormatter.Invoke;
         string text;
         if (formatter is not null)
         {
