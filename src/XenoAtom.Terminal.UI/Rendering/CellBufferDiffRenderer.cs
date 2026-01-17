@@ -9,6 +9,9 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Rendering;
 
+/// <summary>
+/// Renders a cell buffer by diffing against the previous frame.
+/// </summary>
 public sealed class CellBufferDiffRenderer : IDisposable
 {
     private readonly AnsiBuilder _builder = new(initialCapacity: 4096);
@@ -21,6 +24,9 @@ public sealed class CellBufferDiffRenderer : IDisposable
     private int _lastCursorX;
     private int _lastCursorY;
 
+    /// <summary>
+    /// Resets the cached frame state.
+    /// </summary>
     public void Reset()
     {
         _lastScalars = null;
@@ -33,8 +39,17 @@ public sealed class CellBufferDiffRenderer : IDisposable
         _lastCursorY = 0;
     }
 
+    /// <inheritdoc />
     public void Dispose() => _builder.Dispose();
 
+    /// <summary>
+    /// Renders a frame to a fullscreen terminal.
+    /// </summary>
+    /// <param name="terminal">The terminal instance.</param>
+    /// <param name="buffer">The buffer to render.</param>
+    /// <param name="wantsCursor">Whether the cursor should be visible.</param>
+    /// <param name="cursorX">The cursor X position.</param>
+    /// <param name="cursorY">The cursor Y position.</param>
     public void RenderFullscreen(TerminalInstance terminal, CellBuffer buffer, bool wantsCursor, int cursorX, int cursorY)
     {
         ArgumentNullException.ThrowIfNull(terminal);

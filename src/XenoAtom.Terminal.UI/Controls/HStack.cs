@@ -7,20 +7,34 @@ using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Arranges children horizontally in a stack.
+/// </summary>
 public sealed partial class HStack : Panel
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HStack"/> class.
+    /// </summary>
     public HStack()
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HStack"/> class with children.
+    /// </summary>
+    /// <param name="children">The child visuals.</param>
     public HStack(params Visual[] children)
     {
         AddRange(children);
     }
 
+    /// <summary>
+    /// Gets or sets the spacing between children.
+    /// </summary>
     [Bindable]
     public partial int Spacing { get; set; }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var spacing = Math.Max(0, Spacing);
@@ -91,6 +105,7 @@ public sealed partial class HStack : Panel
             0).Normalize();
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;

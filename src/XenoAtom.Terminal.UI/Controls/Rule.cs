@@ -10,25 +10,42 @@ using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents a horizontal rule with optional labels.
+/// </summary>
 public sealed partial class Rule : Visual
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Rule"/> class.
+    /// </summary>
     public Rule()
     {
         HorizontalAlignment = HorizontalAlignment.Stretch;
     }
 
+    /// <summary>
+    /// Gets or sets the start label visual.
+    /// </summary>
     [Bindable]
     public partial Visual? StartLabel { get; set; }
 
+    /// <summary>
+    /// Gets or sets the center label visual.
+    /// </summary>
     [Bindable]
     public partial Visual? CenterLabel { get; set; }
 
+    /// <summary>
+    /// Gets or sets the end label visual.
+    /// </summary>
     [Bindable]
     public partial Visual? EndLabel { get; set; }
 
+    /// <inheritdoc />
     protected override int ChildrenCount
         => (_startLabel is null ? 0 : 1) + (_centerLabel is null ? 0 : 1) + (_endLabel is null ? 0 : 1);
 
+    /// <inheritdoc />
     protected override Visual GetChild(int index)
     {
         if (_startLabel is not null)
@@ -51,6 +68,7 @@ public sealed partial class Rule : Visual
         throw new ArgumentOutOfRangeException(nameof(index));
     }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = Get<RuleStyle>();
@@ -76,6 +94,7 @@ public sealed partial class Rule : Visual
         return SizeHints.Flex(min, natural, max, growX: 1, growY: 0, shrinkX: 1, shrinkY: 0);
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
@@ -129,6 +148,7 @@ public sealed partial class Rule : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;

@@ -4,7 +4,9 @@
 
 namespace XenoAtom.Terminal.UI.Input;
 
+/// <summary>
+/// Provides data for click events.
+/// </summary>
 public sealed class ClickEventArgs : RoutedEventArgs
 {
 }
-

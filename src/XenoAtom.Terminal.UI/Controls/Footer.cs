@@ -10,25 +10,42 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents a footer bar with left, center, and right slots.
+/// </summary>
 public sealed partial class Footer : Visual
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Footer"/> class.
+    /// </summary>
     public Footer()
     {
         HorizontalAlignment = HorizontalAlignment.Stretch;
     }
 
+    /// <summary>
+    /// Gets or sets the left-aligned content.
+    /// </summary>
     [Bindable]
     public partial Visual? Left { get; set; }
 
+    /// <summary>
+    /// Gets or sets the centered content.
+    /// </summary>
     [Bindable]
     public partial Visual? Center { get; set; }
 
+    /// <summary>
+    /// Gets or sets the right-aligned content.
+    /// </summary>
     [Bindable]
     public partial Visual? Right { get; set; }
 
+    /// <inheritdoc />
     protected override int ChildrenCount
         => (_left is null ? 0 : 1) + (_center is null ? 0 : 1) + (_right is null ? 0 : 1);
 
+    /// <inheritdoc />
     protected override Visual GetChild(int index)
     {
         if (_left is not null)
@@ -51,6 +68,7 @@ public sealed partial class Footer : Visual
         throw new ArgumentOutOfRangeException(nameof(index));
     }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var labelConstraints = new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1);
@@ -72,6 +90,7 @@ public sealed partial class Footer : Visual
         return SizeHints.FlexX(min: new Size(0, 1), natural: natural, growX: 1, shrinkX: 1);
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         var left = _left;
@@ -101,6 +120,7 @@ public sealed partial class Footer : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;

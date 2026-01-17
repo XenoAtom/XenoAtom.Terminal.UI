@@ -13,25 +13,40 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents a list control that supports multi-selection via checkboxes.
+/// </summary>
 public sealed partial class SelectionList : Visual
 {
     private int _scrollOffset;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SelectionList"/> class.
+    /// </summary>
     public SelectionList()
     {
         Items = new VisualList<SelectionListItem>(this, "SelectionList.Items");
         Focusable = true;
     }
 
+    /// <summary>
+    /// Gets the collection of selectable items.
+    /// </summary>
     public VisualList<SelectionListItem> Items { get; }
 
+    /// <summary>
+    /// Gets or sets the selected item index.
+    /// </summary>
     [Bindable]
     public partial int SelectedIndex { get; set; }
 
+    /// <inheritdoc />
     protected override int ChildrenCount => Items.Count;
 
+    /// <inheritdoc />
     protected override Visual GetChild(int index) => Items[index];
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = Get<SelectionListStyle>();
@@ -58,6 +73,7 @@ public sealed partial class SelectionList : Visual
         return SizeHints.Flex(min, natural, max, growX: 1, growY: 1, shrinkX: 1, shrinkY: 1);
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         var rect = finalRect;
@@ -98,6 +114,7 @@ public sealed partial class SelectionList : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
@@ -175,6 +192,7 @@ public sealed partial class SelectionList : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override void OnKeyDown(KeyEventArgs e)
     {
         var count = Items.Count;
@@ -243,6 +261,7 @@ public sealed partial class SelectionList : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)
@@ -273,6 +292,7 @@ public sealed partial class SelectionList : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override void OnPointerWheel(PointerEventArgs e)
     {
         var count = Items.Count;

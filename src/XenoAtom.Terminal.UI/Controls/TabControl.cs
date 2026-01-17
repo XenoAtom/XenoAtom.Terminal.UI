@@ -23,6 +23,9 @@ public sealed partial class TabControl : Visual
     private bool _pressedInside;
     private int _headerHeight = 1;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TabControl"/> class.
+    /// </summary>
     public TabControl()
     {
         Focusable = true;

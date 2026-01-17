@@ -4,9 +4,17 @@
 
 namespace XenoAtom.Terminal.UI.Hosting;
 
+/// <summary>
+/// Specifies the hosting mode for a terminal UI.
+/// </summary>
 public enum TerminalHostKind
 {
+    /// <summary>
+    /// Inline rendering within the terminal output stream.
+    /// </summary>
     Inline,
+    /// <summary>
+    /// Fullscreen rendering that owns the terminal viewport.
+    /// </summary>
     Fullscreen,
 }
-

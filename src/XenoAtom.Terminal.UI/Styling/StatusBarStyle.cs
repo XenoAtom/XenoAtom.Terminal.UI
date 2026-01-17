@@ -4,15 +4,36 @@
 
 namespace XenoAtom.Terminal.UI.Styling;
 
+/// <summary>
+/// Defines styling for <see cref="Controls.StatusBar"/>.
+/// </summary>
 public sealed record StatusBarStyle : IStyle<StatusBarStyle>
 {
+    /// <summary>
+    /// Gets the default status bar style.
+    /// </summary>
     public static StatusBarStyle Default { get; } = new();
 
+    /// <summary>
+    /// Gets the style key for status bars.
+    /// </summary>
     public static StyleKey<StatusBarStyle> Key { get; } = new("StatusBarStyle", Default);
 
+    /// <summary>
+    /// Gets the optional background color.
+    /// </summary>
     public XenoAtom.Ansi.AnsiColor? Background { get; init; }
+
+    /// <summary>
+    /// Gets the optional foreground color.
+    /// </summary>
     public XenoAtom.Ansi.AnsiColor? Foreground { get; init; }
 
+    /// <summary>
+    /// Resolves the status bar style for the given theme.
+    /// </summary>
+    /// <param name="theme">The current theme.</param>
+    /// <returns>The resolved cell style.</returns>
     public CellStyle Resolve(Theme theme)
     {
         var style = CellStyle.None;

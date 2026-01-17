@@ -4,10 +4,18 @@
 
 namespace XenoAtom.Terminal.UI.Input;
 
+/// <summary>
+/// Provides data for selection change events.
+/// </summary>
 public sealed class SelectionChangedEventArgs : RoutedEventArgs
 {
+    /// <summary>
+    /// Gets the previously selected index.
+    /// </summary>
     public int OldIndex { get; init; }
 
+    /// <summary>
+    /// Gets the newly selected index.
+    /// </summary>
     public int NewIndex { get; init; }
 }
-

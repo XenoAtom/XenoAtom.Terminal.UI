@@ -4,8 +4,16 @@
 
 namespace XenoAtom.Terminal.UI.Input;
 
+/// <summary>
+/// Represents a key gesture defined by a key or character plus modifiers.
+/// </summary>
 public readonly record struct TerminalKeyGesture
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TerminalKeyGesture"/> struct with a key.
+    /// </summary>
+    /// <param name="key">The terminal key.</param>
+    /// <param name="modifiers">The modifier flags.</param>
     public TerminalKeyGesture(TerminalKey key, TerminalModifiers modifiers = TerminalModifiers.None)
     {
         Key = key;
@@ -13,6 +21,11 @@ public readonly record struct TerminalKeyGesture
         Modifiers = modifiers;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TerminalKeyGesture"/> struct with a character.
+    /// </summary>
+    /// <param name="ch">The character.</param>
+    /// <param name="modifiers">The modifier flags.</param>
     public TerminalKeyGesture(char ch, TerminalModifiers modifiers = TerminalModifiers.None)
     {
         Key = TerminalKey.Unknown;
@@ -20,12 +33,26 @@ public readonly record struct TerminalKeyGesture
         Modifiers = modifiers;
     }
 
+    /// <summary>
+    /// Gets the key if the gesture is key-based; otherwise <see cref="TerminalKey.Unknown"/>.
+    /// </summary>
     public TerminalKey Key { get; }
 
+    /// <summary>
+    /// Gets the character if the gesture is character-based.
+    /// </summary>
     public char? Char { get; }
 
+    /// <summary>
+    /// Gets the modifier flags for the gesture.
+    /// </summary>
     public TerminalModifiers Modifiers { get; }
 
+    /// <summary>
+    /// Determines whether the gesture matches a key event.
+    /// </summary>
+    /// <param name="ev">The key event.</param>
+    /// <returns><see langword="true"/> if the event matches; otherwise <see langword="false"/>.</returns>
     public bool Matches(TerminalKeyEvent ev)
     {
         if (ev.Modifiers != Modifiers)
@@ -58,6 +85,7 @@ public readonly record struct TerminalKeyGesture
         return expected == actual;
     }
 
+    /// <inheritdoc />
     public override string ToString()
     {
         if (Key != TerminalKey.Unknown)
@@ -68,4 +96,3 @@ public readonly record struct TerminalKeyGesture
         return Char is null ? $"{Modifiers}+<none>" : $"{Modifiers}+{Char}";
     }
 }
-

@@ -22,6 +22,9 @@ public sealed class CommandPalette : Visual
     private readonly List<CommandPaletteItem> _visibleItems;
     private int _resultsHeight = 8;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CommandPalette"/> class.
+    /// </summary>
     public CommandPalette()
     {
         Focusable = false;
@@ -59,8 +62,14 @@ public sealed class CommandPalette : Visual
         _results.Update(_ => RebuildResults());
     }
 
+    /// <summary>
+    /// Gets the collection of command palette items.
+    /// </summary>
     public BindableList<CommandPaletteItem> Items { get; }
 
+    /// <summary>
+    /// Gets or sets the number of visible result rows.
+    /// </summary>
     public int ResultsHeight
     {
         get => _resultsHeight;
@@ -72,6 +81,9 @@ public sealed class CommandPalette : Visual
         }
     }
 
+    /// <summary>
+    /// Shows the command palette in a popup.
+    /// </summary>
     public void Show()
     {
         VerifyAccess();
@@ -91,17 +103,24 @@ public sealed class CommandPalette : Visual
         _hostPopup.Show();
     }
 
+    /// <summary>
+    /// Closes the command palette popup if it is open.
+    /// </summary>
     public void Close() => _hostPopup?.Close();
 
+    /// <inheritdoc />
     protected override int ChildrenCount => 1;
 
+    /// <inheritdoc />
     protected override Visual GetChild(int index) => index == 0 ? _frame : throw new ArgumentOutOfRangeException(nameof(index));
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         return _frame.Measure(constraints);
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         _frame.Arrange(finalRect);

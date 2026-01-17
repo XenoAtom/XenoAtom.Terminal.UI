@@ -8,28 +8,48 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents an item in an <see cref="OptionList"/>.
+/// </summary>
 public sealed partial class OptionListItem : Visual
 {
     private Rectangle _contentRect;
     private Rectangle _shortcutRect;
     private Rectangle _descriptionRect;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OptionListItem"/> class.
+    /// </summary>
     public OptionListItem()
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OptionListItem"/> class with content.
+    /// </summary>
+    /// <param name="content">The main content.</param>
+    /// <param name="shortcut">The optional shortcut visual.</param>
     public OptionListItem(Visual content, Visual? shortcut = null)
     {
         this.Content(content);
         this.Shortcut(shortcut);
     }
 
+    /// <summary>
+    /// Gets or sets the main content visual.
+    /// </summary>
     [Bindable]
     public partial Visual? Content { get; set; }
 
+    /// <summary>
+    /// Gets or sets the shortcut visual.
+    /// </summary>
     [Bindable]
     public partial Visual? Shortcut { get; set; }
 
+    /// <summary>
+    /// Gets or sets the description visual.
+    /// </summary>
     [Bindable]
     public partial Visual? Description { get; set; }
 
@@ -39,9 +59,11 @@ public sealed partial class OptionListItem : Visual
     [Bindable]
     public partial string? SearchText { get; set; }
 
+    /// <inheritdoc />
     protected override int ChildrenCount
         => (Content is null ? 0 : 1) + (Shortcut is null ? 0 : 1) + (Description is null ? 0 : 1);
 
+    /// <inheritdoc />
     protected override Visual GetChild(int index)
     {
         var i = index;
@@ -65,6 +87,7 @@ public sealed partial class OptionListItem : Visual
         throw new ArgumentOutOfRangeException(nameof(index));
     }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = Get<OptionListStyle>();
@@ -108,6 +131,7 @@ public sealed partial class OptionListItem : Visual
         return SizeHints.Fixed(constraints.Clamp(new Size(width, height)));
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         var style = Get<OptionListStyle>();

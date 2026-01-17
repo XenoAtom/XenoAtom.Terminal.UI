@@ -6,19 +6,54 @@ using System.Text;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
+/// <summary>
+/// Defines styling for <see cref="Controls.ListBox"/>.
+/// </summary>
 public sealed record ListBoxStyle : IStyle<ListBoxStyle>
 {
+    /// <summary>
+    /// Gets the default list box style.
+    /// </summary>
     public static ListBoxStyle Default { get; } = new();
 
+    /// <summary>
+    /// Gets the style key for list boxes.
+    /// </summary>
     public static StyleKey<ListBoxStyle> Key { get; } = new("ListBoxStyle", Default);
 
+    /// <summary>
+    /// Gets the glyph used to mark the selected item.
+    /// </summary>
     public Rune MarkerGlyph { get; init; } = new('→');
 
+    /// <summary>
+    /// Gets the normal item style.
+    /// </summary>
     public CellStyle? Item { get; init; }
+
+    /// <summary>
+    /// Gets the selected item style when focused.
+    /// </summary>
     public CellStyle? SelectedFocused { get; init; }
+
+    /// <summary>
+    /// Gets the selected item style when unfocused.
+    /// </summary>
     public CellStyle? SelectedUnfocused { get; init; }
+
+    /// <summary>
+    /// Gets the disabled item style.
+    /// </summary>
     public CellStyle? Disabled { get; init; }
 
+    /// <summary>
+    /// Resolves the item style for the given state.
+    /// </summary>
+    /// <param name="theme">The current theme.</param>
+    /// <param name="enabled">Whether the control is enabled.</param>
+    /// <param name="selected">Whether the item is selected.</param>
+    /// <param name="focused">Whether the control is focused.</param>
+    /// <returns>The resolved cell style.</returns>
     public CellStyle ResolveItemStyle(Theme theme, bool enabled, bool selected, bool focused)
     {
         var baseStyle = theme.ForegroundTextStyle();

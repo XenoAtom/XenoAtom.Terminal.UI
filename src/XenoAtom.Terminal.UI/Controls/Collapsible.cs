@@ -39,6 +39,9 @@ public sealed partial class Collapsible : Visual
     private Rectangle _headerRect;
     private Rectangle _contentRect;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Collapsible"/> class.
+    /// </summary>
     public Collapsible()
     {
         Focusable = true;

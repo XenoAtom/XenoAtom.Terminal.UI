@@ -10,35 +10,64 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents a bordered group with optional corner labels and content.
+/// </summary>
 public sealed partial class Group : Visual
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Group"/> class.
+    /// </summary>
     public Group()
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Group"/> class with top-left label.
+    /// </summary>
+    /// <param name="topLeftText">The top-left label visual.</param>
     public Group(Visual topLeftText)
     {
         TopLeftText = topLeftText;
     }
     
+    /// <summary>
+    /// Gets or sets the content padding inside the group border.
+    /// </summary>
     [Bindable]
     public partial Thickness Padding { get; set; }
 
+    /// <summary>
+    /// Gets or sets the top-left label visual.
+    /// </summary>
     [Bindable]
     public partial Visual? TopLeftText { get; set; }
 
+    /// <summary>
+    /// Gets or sets the top-right label visual.
+    /// </summary>
     [Bindable]
     public partial Visual? TopRightText { get; set; }
 
+    /// <summary>
+    /// Gets or sets the bottom-left label visual.
+    /// </summary>
     [Bindable]
     public partial Visual? BottomLeftText { get; set; }
 
+    /// <summary>
+    /// Gets or sets the bottom-right label visual.
+    /// </summary>
     [Bindable]
     public partial Visual? BottomRightText { get; set; }
 
+    /// <summary>
+    /// Gets or sets the content visual.
+    /// </summary>
     [Bindable]
     public partial Visual? Content { get; set; }
 
+    /// <inheritdoc />
     protected override int ChildrenCount
         => (_topLeftText is null ? 0 : 1)
             + (_topRightText is null ? 0 : 1)
@@ -46,6 +75,7 @@ public sealed partial class Group : Visual
             + (_bottomRightText is null ? 0 : 1)
             + (_content is null ? 0 : 1);
 
+    /// <inheritdoc />
     protected override Visual GetChild(int index)
     {
         if (_topLeftText is not null)
@@ -80,6 +110,7 @@ public sealed partial class Group : Visual
         throw new ArgumentOutOfRangeException(nameof(index));
     }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var padding = Padding;
@@ -165,6 +196,7 @@ public sealed partial class Group : Visual
             contentHints.FlexShrinkY).Normalize();
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
@@ -246,6 +278,7 @@ public sealed partial class Group : Visual
         label.Arrange(new Rectangle(startX + 1, y, Math.Max(0, totalWidth - 2), 1));
     }
 
+    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;

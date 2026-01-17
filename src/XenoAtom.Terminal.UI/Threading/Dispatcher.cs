@@ -4,8 +4,14 @@
 
 namespace XenoAtom.Terminal.UI.Threading;
 
+/// <summary>
+/// Provides access to the UI thread for terminal UI operations.
+/// </summary>
 public sealed class Dispatcher
 {
+    /// <summary>
+    /// Gets the application-wide dispatcher instance.
+    /// </summary>
     public static Dispatcher Current { get; } = new();
 
     private int? _threadId;
@@ -56,12 +62,19 @@ public sealed class Dispatcher
         _threadId = null;
     }
 
+    /// <summary>
+    /// Determines whether the caller is running on the UI thread.
+    /// </summary>
+    /// <returns><see langword="true"/> if the caller has access; otherwise <see langword="false"/>.</returns>
     public bool CheckAccess()
     {
         var threadId = _threadId;
         return threadId is null || Environment.CurrentManagedThreadId == threadId.Value;
     }
 
+    /// <summary>
+    /// Throws if the caller is not on the UI thread.
+    /// </summary>
     public void VerifyAccess()
     {
         if (!CheckAccess())
@@ -70,6 +83,10 @@ public sealed class Dispatcher
         }
     }
 
+    /// <summary>
+    /// Posts an action to the UI thread.
+    /// </summary>
+    /// <param name="action">The action to execute.</param>
     public void Post(Action action)
     {
         ArgumentNullException.ThrowIfNull(action);
@@ -77,6 +94,11 @@ public sealed class Dispatcher
         app.Post(action);
     }
 
+    /// <summary>
+    /// Invokes an action on the UI thread.
+    /// </summary>
+    /// <param name="action">The action to execute.</param>
+    /// <returns>A task that completes when the action finishes.</returns>
     public Task InvokeAsync(Action action)
     {
         ArgumentNullException.ThrowIfNull(action);
@@ -103,6 +125,12 @@ public sealed class Dispatcher
         return tcs.Task;
     }
 
+    /// <summary>
+    /// Invokes a function on the UI thread and returns its result.
+    /// </summary>
+    /// <typeparam name="T">The result type.</typeparam>
+    /// <param name="func">The function to execute.</param>
+    /// <returns>A task that completes with the function result.</returns>
     public Task<T> InvokeAsync<T>(Func<T> func)
     {
         ArgumentNullException.ThrowIfNull(func);
@@ -127,6 +155,11 @@ public sealed class Dispatcher
         return tcs.Task;
     }
 
+    /// <summary>
+    /// Invokes an asynchronous delegate on the UI thread.
+    /// </summary>
+    /// <param name="func">The delegate to execute.</param>
+    /// <returns>A task that completes when the delegate finishes.</returns>
     public Task InvokeAsync(Func<Task> func)
     {
         ArgumentNullException.ThrowIfNull(func);
@@ -171,6 +204,12 @@ public sealed class Dispatcher
         return tcs.Task;
     }
 
+    /// <summary>
+    /// Invokes an asynchronous delegate on the UI thread and returns its result.
+    /// </summary>
+    /// <typeparam name="T">The result type.</typeparam>
+    /// <param name="func">The delegate to execute.</param>
+    /// <returns>A task that completes with the result.</returns>
     public Task<T> InvokeAsync<T>(Func<Task<T>> func)
     {
         ArgumentNullException.ThrowIfNull(func);

@@ -12,8 +12,15 @@ using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents a visual whose content is produced by a dynamic builder function.
+/// </summary>
 public sealed partial class ComputedVisual : Visual
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ComputedVisual"/> class.
+    /// </summary>
+    /// <param name="build">The function that builds the child visual.</param>
     public ComputedVisual(Func<Visual?> build)
     {
         this.Child(build);
@@ -23,9 +30,13 @@ public sealed partial class ComputedVisual : Visual
         this.VerticalAlignment(() => _child?.VerticalAlignment ?? VerticalAlignment.Stretch);
     }
 
+    /// <summary>
+    /// Gets or sets the computed child visual.
+    /// </summary>
     [Bindable]
     public partial Visual? Child { get; set; }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var child = Child;
@@ -37,6 +48,7 @@ public sealed partial class ComputedVisual : Visual
         return child.Measure(constraints);
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         var child = Child;
@@ -50,8 +62,10 @@ public sealed partial class ComputedVisual : Visual
         child.Arrange(finalRect);
     }
 
+    /// <inheritdoc />
     protected override int ChildrenCount => _child is null ? 0 : 1;
 
+    /// <inheritdoc />
     protected override Visual GetChild(int index)
     {
         if (index == 0 && _child is not null)

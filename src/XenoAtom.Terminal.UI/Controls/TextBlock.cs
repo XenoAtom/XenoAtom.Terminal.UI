@@ -11,36 +11,63 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents a text display control with optional wrapping and trimming.
+/// </summary>
 public sealed partial class TextBlock : Visual
 {
     private static readonly Rune Ellipsis = new(0x2026);
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TextBlock"/> class.
+    /// </summary>
     public TextBlock()
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TextBlock"/> class with text.
+    /// </summary>
+    /// <param name="text">The text to display.</param>
     public TextBlock(string text)
     {
         Text = text;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TextBlock"/> class with a dynamic text provider.
+    /// </summary>
+    /// <param name="text">The text provider.</param>
     public TextBlock(Func<string> text) : this()
     {
         this.Text(text);
     }
 
+    /// <summary>
+    /// Gets or sets the text content.
+    /// </summary>
     [Bindable]
     public partial string? Text { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether wrapping is enabled.
+    /// </summary>
     [Bindable]
     public partial bool Wrap { get; set; }
 
+    /// <summary>
+    /// Gets or sets the horizontal text alignment.
+    /// </summary>
     [Bindable]
     public partial TextAlignment TextAlignment { get; set; }
 
+    /// <summary>
+    /// Gets or sets the trimming mode when text exceeds available width.
+    /// </summary>
     [Bindable]
     public partial TextTrimming Trimming { get; set; }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
@@ -57,11 +84,13 @@ public sealed partial class TextBlock : Visual
         return SizeHints.Fixed(new Size(width, Math.Min(availableSize.Height, Math.Max(1, height))));
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
     }
 
+    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         var text = Text ?? string.Empty;

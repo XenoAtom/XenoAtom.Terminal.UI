@@ -4,15 +4,36 @@
 
 namespace XenoAtom.Terminal.UI.Styling;
 
+/// <summary>
+/// Defines styling for <see cref="Controls.Footer"/>.
+/// </summary>
 public sealed record FooterStyle : IStyle<FooterStyle>
 {
+    /// <summary>
+    /// Gets the default footer style.
+    /// </summary>
     public static FooterStyle Default { get; } = new();
 
+    /// <summary>
+    /// Gets the style key for footers.
+    /// </summary>
     public static StyleKey<FooterStyle> Key { get; } = new("FooterStyle", Default);
 
+    /// <summary>
+    /// Gets the optional background color.
+    /// </summary>
     public XenoAtom.Ansi.AnsiColor? Background { get; init; }
+
+    /// <summary>
+    /// Gets the optional foreground color.
+    /// </summary>
     public XenoAtom.Ansi.AnsiColor? Foreground { get; init; }
 
+    /// <summary>
+    /// Resolves the footer style for the given theme.
+    /// </summary>
+    /// <param name="theme">The current theme.</param>
+    /// <returns>The resolved cell style.</returns>
     public CellStyle Resolve(Theme theme)
     {
         var style = CellStyle.None;
@@ -25,4 +46,3 @@ public sealed record FooterStyle : IStyle<FooterStyle>
         return style;
     }
 }
-

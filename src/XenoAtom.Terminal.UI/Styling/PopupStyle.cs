@@ -6,18 +6,41 @@ using XenoAtom.Terminal.UI.Geometry;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
+/// <summary>
+/// Defines styling for <see cref="Controls.Popup"/>.
+/// </summary>
 public sealed record PopupStyle : IStyle<PopupStyle>
 {
+    /// <summary>
+    /// Gets the default popup style.
+    /// </summary>
     public static PopupStyle Default { get; } = new();
 
+    /// <summary>
+    /// Gets the style key for popups.
+    /// </summary>
     public static StyleKey<PopupStyle> Key { get; } = new("PopupStyle", Default);
 
+    /// <summary>
+    /// Gets the padding applied inside the popup surface.
+    /// </summary>
     public Thickness Padding { get; init; } = new(0);
 
+    /// <summary>
+    /// Gets the optional surface style.
+    /// </summary>
     public CellStyle? SurfaceStyle { get; init; }
 
+    /// <summary>
+    /// Gets the optional border style.
+    /// </summary>
     public CellStyle? BorderStyle { get; init; }
 
+    /// <summary>
+    /// Resolves the surface style for the given theme.
+    /// </summary>
+    /// <param name="theme">The current theme.</param>
+    /// <returns>The resolved cell style.</returns>
     public CellStyle ResolveSurfaceStyle(Theme theme)
     {
         if (SurfaceStyle is { } surface)
@@ -38,6 +61,11 @@ public sealed record PopupStyle : IStyle<PopupStyle>
         return style;
     }
 
+    /// <summary>
+    /// Resolves the border style for the given theme.
+    /// </summary>
+    /// <param name="theme">The current theme.</param>
+    /// <returns>The resolved cell style.</returns>
     public CellStyle ResolveBorderStyle(Theme theme)
     {
         if (BorderStyle is { } border)

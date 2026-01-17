@@ -4,8 +4,14 @@
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents a grid cell that hosts a single child within a grid.
+/// </summary>
 public sealed partial class GridCell : ContentVisual
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GridCell"/> class.
+    /// </summary>
     public GridCell()
     {
         HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -14,15 +20,27 @@ public sealed partial class GridCell : ContentVisual
         ColumnSpan = 1;
     }
 
+    /// <summary>
+    /// Gets or sets the row index.
+    /// </summary>
     [Bindable]
     public partial int Row { get; set; }
 
+    /// <summary>
+    /// Gets or sets the column index.
+    /// </summary>
     [Bindable]
     public partial int Column { get; set; }
 
+    /// <summary>
+    /// Gets or sets the row span.
+    /// </summary>
     [Bindable]
     public partial int RowSpan { get; set; }
 
+    /// <summary>
+    /// Gets or sets the column span.
+    /// </summary>
     [Bindable]
     public partial int ColumnSpan { get; set; }
 
@@ -34,4 +52,3 @@ public sealed partial class GridCell : ContentVisual
 
     partial void OnColumnSpanChanging(ref int value) => value = Math.Max(1, value);
 }
-

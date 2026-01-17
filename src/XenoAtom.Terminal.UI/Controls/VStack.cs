@@ -7,20 +7,34 @@ using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Arranges children vertically in a stack.
+/// </summary>
 public sealed partial class VStack : Panel
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VStack"/> class.
+    /// </summary>
     public VStack()
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VStack"/> class with children.
+    /// </summary>
+    /// <param name="children">The child visuals.</param>
     public VStack(params Visual[] children)
     {
         AddRange(children);
     }
 
+    /// <summary>
+    /// Gets or sets the spacing between children.
+    /// </summary>
     [Bindable]
     public partial int Spacing { get; set; }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var spacing = Math.Max(0, Spacing);
@@ -91,6 +105,7 @@ public sealed partial class VStack : Panel
             shrinkY).Normalize();
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;

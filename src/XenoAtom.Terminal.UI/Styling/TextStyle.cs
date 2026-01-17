@@ -10,14 +10,40 @@ namespace XenoAtom.Terminal.UI.Styling;
 [Flags]
 public enum TextStyle : byte
 {
+    /// <summary>
+    /// No text decorations.
+    /// </summary>
     None = 0,
+    /// <summary>
+    /// Bold text.
+    /// </summary>
     Bold = 1 << 0,
+    /// <summary>
+    /// Dim text.
+    /// </summary>
     Dim = 1 << 1,
+    /// <summary>
+    /// Italic text.
+    /// </summary>
     Italic = 1 << 2,
+    /// <summary>
+    /// Underlined text.
+    /// </summary>
     Underline = 1 << 3,
+    /// <summary>
+    /// Blinking text.
+    /// </summary>
     Blink = 1 << 4,
+    /// <summary>
+    /// Inverted foreground/background.
+    /// </summary>
     Invert = 1 << 5,
+    /// <summary>
+    /// Hidden text.
+    /// </summary>
     Hidden = 1 << 6,
+    /// <summary>
+    /// Strikethrough text.
+    /// </summary>
     Strikethrough = 1 << 7,
 }
-

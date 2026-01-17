@@ -12,6 +12,9 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents a hierarchical tree view with expandable nodes.
+/// </summary>
 public sealed partial class TreeView : Visual
 {
     private readonly BindableList<TreeNode> _roots;
@@ -21,6 +24,9 @@ public sealed partial class TreeView : Visual
     private readonly List<(TreeNode Node, int Depth)> _visible = new(64);
     private bool _visibleDirty = true;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TreeView"/> class.
+    /// </summary>
     public TreeView()
     {
         Focusable = true;
@@ -35,15 +41,26 @@ public sealed partial class TreeView : Visual
             onRemoving: DetachNode);
     }
 
+    /// <summary>
+    /// Gets the collection of root nodes.
+    /// </summary>
     public BindableList<TreeNode> Roots => _roots;
 
+    /// <summary>
+    /// Gets or sets the selected visible node index.
+    /// </summary>
     [Bindable]
     public partial int SelectedIndex { get; set; }
 
+    /// <inheritdoc />
     protected override int ChildrenCount => _headers.Count;
 
+    /// <inheritdoc />
     protected override Visual GetChild(int index) => _headers[index];
 
+    /// <summary>
+    /// Attaches a node and its header to the visual tree.
+    /// </summary>
     internal void AttachNode(TreeNode node)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -59,6 +76,9 @@ public sealed partial class TreeView : Visual
         Invalidate();
     }
 
+    /// <summary>
+    /// Detaches a node and its header from the visual tree.
+    /// </summary>
     internal void DetachNode(TreeNode node)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -69,6 +89,9 @@ public sealed partial class TreeView : Visual
         Invalidate();
     }
 
+    /// <summary>
+    /// Builds the visible list of nodes based on the expansion state.
+    /// </summary>
     private void EnsureVisibleList()
     {
         if (!_visibleDirty)
@@ -98,6 +121,9 @@ public sealed partial class TreeView : Visual
         }
     }
 
+    /// <summary>
+    /// Adds a node and its expanded descendants to the visible list.
+    /// </summary>
     private void AddVisible(TreeNode node, int depth)
     {
         _visible.Add((node, depth));
@@ -112,6 +138,7 @@ public sealed partial class TreeView : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         EnsureVisibleList();
@@ -144,6 +171,7 @@ public sealed partial class TreeView : Visual
         return SizeHints.Flex(min, natural, max, growX: 1, growY: 1, shrinkX: 1, shrinkY: 1);
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
@@ -183,6 +211,7 @@ public sealed partial class TreeView : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
@@ -275,6 +304,7 @@ public sealed partial class TreeView : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override void OnKeyDown(KeyEventArgs e)
     {
         EnsureVisibleList();
@@ -331,6 +361,7 @@ public sealed partial class TreeView : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)
@@ -369,6 +400,7 @@ public sealed partial class TreeView : Visual
         e.Handled = true;
     }
 
+    /// <inheritdoc />
     protected override void OnPointerWheel(PointerEventArgs e)
     {
         EnsureVisibleList();
@@ -383,6 +415,9 @@ public sealed partial class TreeView : Visual
         e.Handled = true;
     }
 
+    /// <summary>
+    /// Toggles expansion for a visible node index.
+    /// </summary>
     private void ToggleExpand(int visibleIndex, bool? expand)
     {
         EnsureVisibleList();

@@ -12,6 +12,9 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents a menu bar hosting top-level menu items.
+/// </summary>
 public sealed class MenuBar : Visual
 {
     private readonly BindableList<MenuItem> _items;
@@ -23,6 +26,9 @@ public sealed class MenuBar : Visual
     private int _openIndex = -1;
     private int _selectedIndex;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MenuBar"/> class.
+    /// </summary>
     public MenuBar()
     {
         Focusable = true;
@@ -31,16 +37,22 @@ public sealed class MenuBar : Visual
         _presenters = new VisualList<MenuBarItem>(this, "MenuBar.Presenters");
     }
 
+    /// <summary>
+    /// Gets the menu items collection.
+    /// </summary>
     public BindableList<MenuItem> Items => _items;
 
     internal int OpenIndex => _openIndex;
 
     internal int SelectedIndex => _selectedIndex;
 
+    /// <inheritdoc />
     protected override int ChildrenCount => _presenters.Count;
 
+    /// <inheritdoc />
     protected override Visual GetChild(int index) => _presenters[index];
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         EnsurePresenters();
@@ -71,6 +83,7 @@ public sealed class MenuBar : Visual
         return SizeHints.Fixed(constraints.Clamp(new Size(width, height)));
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         EnsurePresenters();
@@ -92,6 +105,7 @@ public sealed class MenuBar : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
@@ -113,6 +127,7 @@ public sealed class MenuBar : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (_items.Count == 0)

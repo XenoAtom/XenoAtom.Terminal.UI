@@ -69,7 +69,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     /// Initializes a new instance of the <see cref="TerminalApp"/> class.
     /// </summary>
     /// <param name="root">The root visual.</param>
-    /// <param name="terminal">The terminal instance to use. When <see langword="null"/>, uses <see cref="Terminal.Terminal.Instance"/>.</param>
+    /// <param name="terminal">The terminal instance to use. When <see langword="null"/>, uses <see cref="Terminal.Instance"/>.</param>
     /// <param name="options">Optional host configuration.</param>
     public TerminalApp(Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
     {

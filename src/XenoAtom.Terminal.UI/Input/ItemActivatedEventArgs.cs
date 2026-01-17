@@ -4,8 +4,13 @@
 
 namespace XenoAtom.Terminal.UI.Input;
 
+/// <summary>
+/// Provides data for item activation events.
+/// </summary>
 public sealed class ItemActivatedEventArgs : RoutedEventArgs
 {
+    /// <summary>
+    /// Gets the activated item index.
+    /// </summary>
     public int Index { get; init; }
 }
-

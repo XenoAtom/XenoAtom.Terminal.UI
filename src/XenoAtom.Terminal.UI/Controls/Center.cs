@@ -12,8 +12,12 @@ using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Centers its content within the available bounds.
+/// </summary>
 public sealed partial class Center : ContentVisual
 {
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var content = Content;
@@ -25,6 +29,7 @@ public sealed partial class Center : ContentVisual
         return content.Measure(constraints);
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;

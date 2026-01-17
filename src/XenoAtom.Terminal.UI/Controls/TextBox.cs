@@ -11,12 +11,18 @@ using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents a single-line text editor with optional overflow indicators.
+/// </summary>
 public partial class TextBox : TextEditorBase
 {
     private Rectangle _editorRect;
     private bool _showOverflowIndicatorLeft;
     private bool _showOverflowIndicatorRight;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TextBox"/> class.
+    /// </summary>
     public TextBox()
     {
         this.HorizontalAlignment(HorizontalAlignment.Stretch);
@@ -25,27 +31,46 @@ public partial class TextBox : TextEditorBase
             setter: value => Text = value);
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TextBox"/> class with initial text.
+    /// </summary>
+    /// <param name="text">The initial text.</param>
     public TextBox(string? text) : this()
     {
         this.Text(text);
     }
 
+    /// <summary>
+    /// Gets or sets the text content.
+    /// </summary>
     [Bindable]
     public partial string? Text { get; set; }
 
+    /// <summary>
+    /// Gets or sets the horizontal alignment of the text within the editor.
+    /// </summary>
     [Bindable]
     public partial TextAlignment TextAlignment { get; set; }
 
+    /// <inheritdoc />
     protected override bool IsSingleLine => true;
 
+    /// <inheritdoc />
     protected override bool AcceptsReturn => false;
 
+    /// <inheritdoc />
     protected override TextAlignment Alignment => TextAlignment;
 
+    /// <inheritdoc />
     protected override bool ShowPlaceholderWhenUnfocusedOnly => true;
 
+    /// <summary>
+    /// Gets the style used to render the text box.
+    /// </summary>
+    /// <returns>The current <see cref="TextBoxStyle"/>.</returns>
     protected virtual TextBoxStyle GetTextBoxStyle() => Get<TextBoxStyle>();
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
@@ -55,6 +80,7 @@ public partial class TextBox : TextEditorBase
         return SizeHints.Fixed(new Size(width, Math.Min(availableSize.Height, height)));
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
@@ -76,6 +102,7 @@ public partial class TextBox : TextEditorBase
         UpdateEditorLayoutForOverflowIndicators(baseRect, style);
     }
 
+    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;

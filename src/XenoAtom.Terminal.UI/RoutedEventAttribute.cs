@@ -10,11 +10,17 @@ namespace XenoAtom.Terminal.UI;
 [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
 public sealed class RoutedEventAttribute : Attribute
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RoutedEventAttribute"/> class.
+    /// </summary>
+    /// <param name="routingStrategy">The routing strategy for the event.</param>
     public RoutedEventAttribute(RoutingStrategy routingStrategy = RoutingStrategy.Bubble)
     {
         RoutingStrategy = routingStrategy;
     }
 
+    /// <summary>
+    /// Gets the routing strategy for the event.
+    /// </summary>
     public RoutingStrategy RoutingStrategy { get; }
 }
-

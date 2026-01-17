@@ -15,9 +15,9 @@ public sealed class RadioButtonDemo : ControlsDemoBase
         // Radio buttons are grouped by an arbitrary key object.
         var group = new object();
 
-        var a = new RadioButton("Choice A").Group(group).IsChecked(true);
-        var b = new RadioButton("Choice B").Group(group);
-        var c = new RadioButton("Choice C").Group(group);
+        var a = new RadioButton("Choice A").GroupBy(group).IsChecked(true);
+        var b = new RadioButton("Choice B").GroupBy(group);
+        var c = new RadioButton("Choice C").GroupBy(group);
 
         string Selected()
         {

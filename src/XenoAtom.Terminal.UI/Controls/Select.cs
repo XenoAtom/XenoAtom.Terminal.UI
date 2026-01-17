@@ -44,6 +44,9 @@ public sealed partial class Select : ContentVisual
     private int _contentIndex = -1;
     private SelectItem? _contentItem;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Select"/> class.
+    /// </summary>
     public Select()
     {
         Focusable = true;

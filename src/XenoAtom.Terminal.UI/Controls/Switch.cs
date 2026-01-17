@@ -11,27 +11,44 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents a toggle switch with optional inline content.
+/// </summary>
 public sealed partial class Switch : ContentVisual
 {
     private const int TrackWidth = 4;
     private bool _oldValueForEvent;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Switch"/> class.
+    /// </summary>
     public Switch()
     {
         Focusable = true;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Switch"/> class with content.
+    /// </summary>
+    /// <param name="content">The content displayed next to the switch.</param>
     public Switch(Visual content) : this()
     {
         this.Content(content);
     }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the switch is on.
+    /// </summary>
     [Bindable]
     public partial bool IsOn { get; set; }
 
+    /// <summary>
+    /// Gets a value indicating whether the switch is currently pressed.
+    /// </summary>
     [Bindable]
     public partial bool IsPressed { get; private set; }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = Get<SwitchStyle>();
@@ -52,6 +69,7 @@ public sealed partial class Switch : ContentVisual
         return SizeHints.Fixed(constraints.Clamp(new Size(TrackWidth, 1)));
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         var style = Get<SwitchStyle>();
@@ -64,6 +82,7 @@ public sealed partial class Switch : ContentVisual
         Content?.Arrange(contentRect);
     }
 
+    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
@@ -125,6 +144,7 @@ public sealed partial class Switch : ContentVisual
         }
     }
 
+    /// <inheritdoc />
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (!IsEnabled)
@@ -150,6 +170,7 @@ public sealed partial class Switch : ContentVisual
         }
     }
 
+    /// <inheritdoc />
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         if (!IsEnabled || e.Button != TerminalMouseButton.Left)
@@ -162,6 +183,7 @@ public sealed partial class Switch : ContentVisual
         Invalidate();
     }
 
+    /// <inheritdoc />
     protected override void OnPointerReleased(PointerEventArgs e)
     {
         if (!IsEnabled || e.Button != TerminalMouseButton.Left)

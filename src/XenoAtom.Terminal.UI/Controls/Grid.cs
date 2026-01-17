@@ -8,16 +8,31 @@ using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Arranges content into rows and columns using grid definitions.
+/// </summary>
 public sealed partial class Grid : Visual
 {
     private readonly VisualList<GridCell> _cells;
 
+    /// <summary>
+    /// Gets the row definitions.
+    /// </summary>
     public BindableList<RowDefinition> RowDefinitions { get; }
 
+    /// <summary>
+    /// Gets the column definitions.
+    /// </summary>
     public BindableList<ColumnDefinition> ColumnDefinitions { get; }
 
+    /// <summary>
+    /// Gets the grid cells collection.
+    /// </summary>
     public BindableList<GridCell> Cells { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Grid"/> class.
+    /// </summary>
     public Grid()
     {
         HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -31,21 +46,37 @@ public sealed partial class Grid : Visual
         AutoGrowColumns = true;
     }
 
+    /// <summary>
+    /// Gets or sets the padding applied around the grid content.
+    /// </summary>
     [Bindable]
     public partial Thickness Padding { get; set; }
 
+    /// <summary>
+    /// Gets or sets the gap between rows.
+    /// </summary>
     [Bindable]
     public partial int RowGap { get; set; }
 
+    /// <summary>
+    /// Gets or sets the gap between columns.
+    /// </summary>
     [Bindable]
     public partial int ColumnGap { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether rows can be auto-added.
+    /// </summary>
     [Bindable]
     public partial bool AutoGrowRows { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether columns can be auto-added.
+    /// </summary>
     [Bindable]
     public partial bool AutoGrowColumns { get; set; }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var padding = Padding;
@@ -178,6 +209,7 @@ public sealed partial class Grid : Visual
         return SizeHints.Flex(minSize, naturalSize, maxSize, growX: growX, growY: growY, shrinkX: shrinkX, shrinkY: shrinkY).Normalize();
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         var padding = Padding;
@@ -603,7 +635,9 @@ public sealed partial class Grid : Visual
         return Math.Clamp(value, min, max);
     }
 
+    /// <inheritdoc />
     protected override int ChildrenCount => _cells.Count;
 
+    /// <inheritdoc />
     protected override Visual GetChild(int index) => _cells[index];
 }

@@ -4,4 +4,8 @@
 
 namespace XenoAtom.Terminal.UI;
 
+/// <summary>
+/// Provides options for live rendering hosted by <see cref="Terminal"/>.
+/// </summary>
+/// <param name="RemoveOnEnd">True to clear the live region when it ends.</param>
 public readonly record struct TerminalLiveOptions(bool RemoveOnEnd = false);

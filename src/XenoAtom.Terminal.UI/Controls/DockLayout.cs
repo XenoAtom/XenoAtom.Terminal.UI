@@ -12,23 +12,39 @@ using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Arranges top, bottom, and content regions in a vertical dock layout.
+/// </summary>
 public sealed partial class DockLayout : Visual
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DockLayout"/> class.
+    /// </summary>
     public DockLayout()
     {
         HorizontalAlignment = HorizontalAlignment.Stretch;
         VerticalAlignment = VerticalAlignment.Stretch;
     }
 
+    /// <summary>
+    /// Gets or sets the top region content.
+    /// </summary>
     [Bindable]
     public partial Visual? Top { get; set; }
 
+    /// <summary>
+    /// Gets or sets the bottom region content.
+    /// </summary>
     [Bindable]
     public partial Visual? Bottom { get; set; }
 
+    /// <summary>
+    /// Gets or sets the main content region.
+    /// </summary>
     [Bindable]
     public partial Visual? Content { get; set; }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var top = Top;
@@ -83,6 +99,7 @@ public sealed partial class DockLayout : Visual
             shrinkY: contentHints.FlexShrinkY).Normalize();
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
@@ -115,6 +132,7 @@ public sealed partial class DockLayout : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override int ChildrenCount
     {
         get
@@ -127,6 +145,7 @@ public sealed partial class DockLayout : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override Visual GetChild(int index)
     {
         if ((uint)index >= (uint)ChildrenCount)

@@ -10,21 +10,37 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Renders a simple line chart for a series of values.
+/// </summary>
 public sealed partial class LineChart : Visual
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LineChart"/> class.
+    /// </summary>
     public LineChart()
     {
         Values = new BindableList<double>(this, "LineCharValues");
     }
 
+    /// <summary>
+    /// Gets the data values to render.
+    /// </summary>
     public BindableList<double> Values { get; }
 
+    /// <summary>
+    /// Gets or sets the minimum value for the chart scale.
+    /// </summary>
     [Bindable]
     public partial double? Minimum { get; set; }
 
+    /// <summary>
+    /// Gets or sets the maximum value for the chart scale.
+    /// </summary>
     [Bindable]
     public partial double? Maximum { get; set; }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
@@ -39,11 +55,13 @@ public sealed partial class LineChart : Visual
         return SizeHints.Fixed(new Size(width, height));
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
     }
 
+    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;

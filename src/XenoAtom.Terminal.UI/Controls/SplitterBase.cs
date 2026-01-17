@@ -117,6 +117,7 @@ public abstract partial class SplitterBase : Visual
         MarkMeasureDirty();
     }
 
+    /// <inheritdoc/>
     protected override int ChildrenCount => (_first is null ? 0 : 1) + (_second is null ? 0 : 1);
 
     /// <inheritdoc/>

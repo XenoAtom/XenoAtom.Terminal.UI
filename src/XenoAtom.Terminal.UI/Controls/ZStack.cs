@@ -9,10 +9,17 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// </summary>
 public sealed partial class ZStack : Panel
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ZStack"/> class.
+    /// </summary>
     public ZStack()
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ZStack"/> class with children.
+    /// </summary>
+    /// <param name="children">The child visuals.</param>
     public ZStack(params Visual[] children)
     {
         AddRange(children);

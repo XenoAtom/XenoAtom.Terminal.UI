@@ -8,10 +8,16 @@ using XenoAtom.Terminal.UI.Collections;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Base class for controls that manage a collection of child visuals.
+/// </summary>
 public abstract partial class Panel : Visual, IEnumerable<Visual>
 {
     private readonly VisualList<Visual> _children;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Panel"/> class.
+    /// </summary>
     protected Panel()
     {
         this.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -19,6 +25,9 @@ public abstract partial class Panel : Visual, IEnumerable<Visual>
         _children = new VisualList<Visual>(this, "Children");
     }
 
+    /// <summary>
+    /// Gets the collection of child visuals.
+    /// </summary>
     public VisualList<Visual> Children => _children;
 
     internal void AddRange(params Visual[] children)
@@ -27,6 +36,7 @@ public abstract partial class Panel : Visual, IEnumerable<Visual>
         _children.AddRange(children);
     }
 
+    /// <inheritdoc />
     [EditorBrowsable(EditorBrowsableState.Never)]
     public IEnumerator<Visual> GetEnumerator() => _children.GetEnumerator();
 
@@ -34,7 +44,9 @@ public abstract partial class Panel : Visual, IEnumerable<Visual>
 
     IEnumerator IEnumerable.GetEnumerator() => _children.GetEnumerator();
 
+    /// <inheritdoc />
     protected override int ChildrenCount => _children.Count;
 
+    /// <inheritdoc />
     protected override Visual GetChild(int index) => _children[index];
 }

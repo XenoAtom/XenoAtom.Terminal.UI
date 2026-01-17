@@ -9,9 +9,18 @@ namespace XenoAtom.Terminal.UI;
 /// </summary>
 public abstract class RoutedEventArgs : EventArgs
 {
+    /// <summary>
+    /// Gets or sets a value indicating whether the event has been handled.
+    /// </summary>
     public bool Handled { get; set; }
 
+    /// <summary>
+    /// Gets the original source of the routed event.
+    /// </summary>
     public Visual? OriginalSource { get; internal set; }
 
+    /// <summary>
+    /// Gets the current source during routing.
+    /// </summary>
     public Visual? Source { get; internal set; }
 }

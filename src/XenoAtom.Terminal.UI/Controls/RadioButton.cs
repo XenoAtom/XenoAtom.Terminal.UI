@@ -30,12 +30,12 @@ public sealed partial class RadioButton : Visual
     /// Initializes a new instance of the <see cref="RadioButton"/> class with label and group.
     /// </summary>
     /// <param name="text">The label text.</param>
-    /// <param name="group">The group identifier.</param>
+    /// <param name="groupBy">The group identifier.</param>
     /// <param name="isChecked">The initial checked state.</param>
-    public RadioButton(string text, object? group = null, bool isChecked = false) : this()
+    public RadioButton(string text, object? groupBy = null, bool isChecked = false) : this()
     {
         Text = text;
-        Group = group;
+        GroupBy = groupBy;
         IsChecked = isChecked;
     }
 
@@ -55,7 +55,7 @@ public sealed partial class RadioButton : Visual
     /// Gets or sets the group identifier used to uncheck other radio buttons in the same group.
     /// </summary>
     [Bindable]
-    public partial object? Group { get; set; }
+    public partial object? GroupBy { get; set; }
 
     /// <inheritdoc/>
     protected override int ChildrenCount => _text is null ? 0 : 1;
@@ -173,7 +173,7 @@ public sealed partial class RadioButton : Visual
 
     private void UncheckOthersInGroup()
     {
-        var group = Group;
+        var group = GroupBy;
         if (group is null)
         {
             return;
@@ -187,7 +187,7 @@ public sealed partial class RadioButton : Visual
 
         foreach (var v in root.EnumerateVisualsDepthFirst())
         {
-            if (!ReferenceEquals(v, this) && v is RadioButton { IsChecked: true } radio && Equals(radio.Group, group))
+            if (!ReferenceEquals(v, this) && v is RadioButton { IsChecked: true } radio && Equals(radio.GroupBy, group))
             {
                 radio.IsChecked = false;
             }

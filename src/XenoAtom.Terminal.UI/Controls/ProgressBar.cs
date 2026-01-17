@@ -10,6 +10,9 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents a horizontal progress bar with optional label and percentage.
+/// </summary>
 public sealed partial class ProgressBar : Visual
 {
     private static readonly Rune[] SegmentGlyphs =
@@ -25,22 +28,34 @@ public sealed partial class ProgressBar : Visual
         new Rune(0x2588),     // █ 8/8
     ];
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProgressBar"/> class.
+    /// </summary>
     public ProgressBar()
     {
         HorizontalAlignment = HorizontalAlignment.Stretch;
     }
 
+    /// <summary>
+    /// Gets or sets the progress value in the range [0..1].
+    /// </summary>
     [Bindable]
     public partial double Value { get; set; }
 
+    /// <summary>
+    /// Gets or sets the label visual displayed before the bar.
+    /// </summary>
     [Bindable]
     public partial Visual? Label { get; set; }
 
+    /// <inheritdoc />
     protected override int ChildrenCount => _label is null ? 0 : 1;
 
+    /// <inheritdoc />
     protected override Visual GetChild(int index)
         => index == 0 && _label is not null ? _label : throw new ArgumentOutOfRangeException(nameof(index));
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var progressStyle = Get<ProgressBarStyle>();
@@ -70,6 +85,7 @@ public sealed partial class ProgressBar : Visual
         return SizeHints.Flex(min, natural, max, growX: 1, growY: 0, shrinkX: 1, shrinkY: 0);
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
@@ -98,6 +114,7 @@ public sealed partial class ProgressBar : Visual
         label.Arrange(new Rectangle(rect.X, rect.Y, labelDesired, 1));
     }
 
+    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;

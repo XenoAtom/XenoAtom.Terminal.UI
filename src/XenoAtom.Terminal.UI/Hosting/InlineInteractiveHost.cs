@@ -10,6 +10,9 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Hosting;
 
+/// <summary>
+/// Hosts inline interactive rendering using a single buffered output.
+/// </summary>
 public sealed class InlineInteractiveHost : IDisposable
 {
     private readonly TerminalInstance _terminal;
@@ -30,13 +33,23 @@ public sealed class InlineInteractiveHost : IDisposable
     private int _lastCursorX;
     private int _lastCursorY;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InlineInteractiveHost"/> class.
+    /// </summary>
+    /// <param name="terminal">The terminal instance.</param>
     public InlineInteractiveHost(TerminalInstance terminal)
     {
         _terminal = terminal ?? throw new ArgumentNullException(nameof(terminal));
     }
 
+    /// <summary>
+    /// Gets the number of reserved rows for the live region.
+    /// </summary>
     public int ReservedHeight => _reservedHeight;
 
+    /// <summary>
+    /// Gets the top row of the live region if known.
+    /// </summary>
     public int? LiveRegionTopRow => _liveRegionTopRow;
 
     internal void PrepareForUserUpdate()
@@ -109,6 +122,7 @@ public sealed class InlineInteractiveHost : IDisposable
         _lastWantsCursor = false;
     }
 
+    /// <inheritdoc />
     public void Dispose()
     {
         try
@@ -131,6 +145,10 @@ public sealed class InlineInteractiveHost : IDisposable
         }
     }
 
+    /// <summary>
+    /// Writes a single markup line above the live region.
+    /// </summary>
+    /// <param name="markup">The markup line.</param>
     public void WriteMarkupLine(string markup)
     {
         ArgumentNullException.ThrowIfNull(markup);
@@ -138,12 +156,23 @@ public sealed class InlineInteractiveHost : IDisposable
         WriteFlowLines([markup]);
     }
 
+    /// <summary>
+    /// Writes markup lines above the live region.
+    /// </summary>
+    /// <param name="markupLines">The markup lines.</param>
     public void WriteMarkupLines(IReadOnlyList<string> markupLines)
     {
         ArgumentNullException.ThrowIfNull(markupLines);
         WriteFlowLines(markupLines);
     }
 
+    /// <summary>
+    /// Renders the live region using a cell buffer.
+    /// </summary>
+    /// <param name="buffer">The buffer to render.</param>
+    /// <param name="wantsCursor">Whether the cursor should be visible.</param>
+    /// <param name="cursorX">The cursor X position.</param>
+    /// <param name="cursorY">The cursor Y position.</param>
     public void Render(CellBuffer buffer, bool wantsCursor, int cursorX, int cursorY)
     {
         ArgumentNullException.ThrowIfNull(buffer);

@@ -13,6 +13,9 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents an animated spinner with optional label.
+/// </summary>
 public sealed partial class Spinner : Visual, IAnimatedVisual
 {
     private SpinnerStyle? _cachedStyle;
@@ -20,33 +23,53 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
     private int _frameIndex;
     private long _nextTick;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Spinner"/> class.
+    /// </summary>
     public Spinner()
     {
         IsActive = true;
         Tone = ControlTone.Primary;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Spinner"/> class with a label.
+    /// </summary>
+    /// <param name="label">The label text.</param>
     public Spinner(string label) : this()
     {
         Label = label;
     }
 
+    /// <summary>
+    /// Gets or sets the label visual.
+    /// </summary>
     [Bindable]
     public partial Visual? Label { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the spinner is active.
+    /// </summary>
     [Bindable]
     public partial bool IsActive { get; set; }
 
+    /// <summary>
+    /// Gets or sets the control tone used for styling.
+    /// </summary>
     [Bindable]
     public partial ControlTone Tone { get; set; }
 
+    /// <inheritdoc />
     protected override int ChildrenCount => _label is null ? 0 : 1;
 
+    /// <inheritdoc />
     protected override Visual GetChild(int index)
         => index == 0 && _label is not null ? _label : throw new ArgumentOutOfRangeException(nameof(index));
 
+    /// <inheritdoc />
     long IAnimatedVisual.NextAnimationTick => _nextTick;
 
+    /// <inheritdoc />
     bool IAnimatedVisual.AdvanceAnimation(long timestamp) => AdvanceAnimation(timestamp);
 
     private bool AdvanceAnimation(long timestamp)
@@ -90,6 +113,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
         return true;
     }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = Get<SpinnerStyle>();
@@ -106,6 +130,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
         return SizeHints.Fixed(constraints.Clamp(new Size(width, 1)));
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
@@ -129,6 +154,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
         label.Arrange(new Rectangle(labelX, finalRect.Y, w, 1));
     }
 
+    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;

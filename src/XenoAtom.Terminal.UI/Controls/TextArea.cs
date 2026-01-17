@@ -11,8 +11,14 @@ using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents a multi-line text editor with word wrapping enabled by default.
+/// </summary>
 public sealed partial class TextArea : TextEditorBase
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TextArea"/> class.
+    /// </summary>
     public TextArea()
     {
         this.AcceptTab(true);
@@ -25,20 +31,31 @@ public sealed partial class TextArea : TextEditorBase
             setter: value => Text = value);
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TextArea"/> class with initial text.
+    /// </summary>
+    /// <param name="text">The initial text.</param>
     public TextArea(string? text) : this()
     {
         this.Text(text);
     }
 
+    /// <summary>
+    /// Gets or sets the text content.
+    /// </summary>
     [Bindable]
     public partial string? Text { get; set; }
 
+    /// <inheritdoc />
     protected override bool IsSingleLine => false;
 
+    /// <inheritdoc />
     protected override bool AcceptsReturn => true;
 
+    /// <inheritdoc />
     protected override bool ShowPlaceholderWhenUnfocusedOnly => false;
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var width = 32;
@@ -47,6 +64,7 @@ public sealed partial class TextArea : TextEditorBase
         return SizeHints.Fixed(constraints.Clamp(new Size(width, height)));
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
@@ -68,6 +86,7 @@ public sealed partial class TextArea : TextEditorBase
         UpdateEditorLayout(contentRect);
     }
 
+    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;

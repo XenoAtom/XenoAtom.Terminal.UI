@@ -4,6 +4,9 @@
 
 namespace XenoAtom.Terminal.UI.Text;
 
+/// <summary>
+/// Provides a simple in-memory text document implementation.
+/// </summary>
 public sealed class TextDocument : ITextDocument
 {
     private readonly List<int> _lineStarts = new(capacity: 32);
@@ -14,6 +17,10 @@ public sealed class TextDocument : ITextDocument
 
     private int _updateDepth;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TextDocument"/> class.
+    /// </summary>
+    /// <param name="text">The initial text.</param>
     public TextDocument(string? text = null)
     {
         _text = text ?? string.Empty;
@@ -21,28 +28,35 @@ public sealed class TextDocument : ITextDocument
         _snapshot = new TextSnapshot(_version, _text, new List<int>(_lineStarts), new List<byte>(_lineBreakLengths));
     }
 
+    /// <inheritdoc />
     public ITextSnapshot CurrentSnapshot => _snapshot;
 
+    /// <inheritdoc />
     public int Version => _version;
 
+    /// <inheritdoc />
     public event EventHandler<TextDocumentChangedEventArgs>? Changed;
 
+    /// <inheritdoc />
     public IDisposable BeginUpdate()
     {
         _updateDepth++;
         return new UpdateScope(this);
     }
 
+    /// <inheritdoc />
     public void Insert(int position, ReadOnlySpan<char> text)
     {
         Replace(position, 0, text);
     }
 
+    /// <inheritdoc />
     public void Remove(int position, int length)
     {
         Replace(position, length, ReadOnlySpan<char>.Empty);
     }
 
+    /// <inheritdoc />
     public void Replace(int position, int length, ReadOnlySpan<char> text)
     {
         if (position < 0 || position > _text.Length)

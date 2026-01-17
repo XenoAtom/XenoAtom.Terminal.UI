@@ -4,7 +4,9 @@
 
 namespace XenoAtom.Terminal.UI.Input;
 
+/// <summary>
+/// Provides data for popup closed events.
+/// </summary>
 public sealed class PopupClosedEventArgs : RoutedEventArgs
 {
 }
-

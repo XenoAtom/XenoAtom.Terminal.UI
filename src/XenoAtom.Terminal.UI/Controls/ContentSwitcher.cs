@@ -16,20 +16,29 @@ public sealed partial class ContentSwitcher : Panel
 {
     private Visual? _active;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentSwitcher"/> class.
+    /// </summary>
     public ContentSwitcher()
     {
         this.SelectedIndex(0);
     }
 
+    /// <summary>
+    /// Gets or sets the index of the active child.
+    /// </summary>
     [Bindable]
     public partial int SelectedIndex { get; set; }
 
+    /// <inheritdoc />
     protected override int ChildrenCount
         => TryGetActiveChild(out _) ? 1 : 0;
 
+    /// <inheritdoc />
     protected override Visual GetChild(int index)
         => index == 0 && TryGetActiveChild(out var child) ? child : throw new ArgumentOutOfRangeException(nameof(index));
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         if (!TryGetActiveChild(out var child))
@@ -40,6 +49,7 @@ public sealed partial class ContentSwitcher : Panel
         return child.Measure(constraints);
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         if (!TryGetActiveChild(out var child))

@@ -4,8 +4,13 @@
 
 namespace XenoAtom.Terminal.UI.Input;
 
+/// <summary>
+/// Provides data for paste events.
+/// </summary>
 public sealed class PasteEventArgs : RoutedEventArgs
 {
+    /// <summary>
+    /// Gets the pasted text.
+    /// </summary>
     public required string Text { get; init; }
 }
-

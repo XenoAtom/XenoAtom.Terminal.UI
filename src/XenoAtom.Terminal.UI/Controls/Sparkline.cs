@@ -10,27 +10,44 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Renders a one-line sparkline for a sequence of values.
+/// </summary>
 public sealed partial class Sparkline : Visual
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Sparkline"/> class.
+    /// </summary>
     public Sparkline()
     {
         Values = new BindableList<double>(this, nameof(Values));
     }
     
+    /// <summary>
+    /// Gets the values to render.
+    /// </summary>
     public BindableList<double>? Values { get; }
 
+    /// <summary>
+    /// Gets or sets the minimum value for scaling.
+    /// </summary>
     [Bindable]
     public partial double? Minimum { get; set; }
 
+    /// <summary>
+    /// Gets or sets the maximum value for scaling.
+    /// </summary>
     [Bindable]
     public partial double? Maximum { get; set; }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var count = Values?.Count ?? 0;
         return SizeHints.Fixed(constraints.Clamp(new Size(Math.Max(0, count), 1)));
     }
 
+    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;

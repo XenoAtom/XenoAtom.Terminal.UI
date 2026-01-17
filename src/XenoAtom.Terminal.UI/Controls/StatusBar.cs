@@ -10,22 +10,36 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents a status bar with left and right aligned content.
+/// </summary>
 public sealed partial class StatusBar : Visual
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StatusBar"/> class.
+    /// </summary>
     public StatusBar()
     {
         HorizontalAlignment = HorizontalAlignment.Stretch;
     }
 
+    /// <summary>
+    /// Gets or sets the left-aligned content.
+    /// </summary>
     [Bindable]
     public partial Visual? LeftText { get; set; }
 
+    /// <summary>
+    /// Gets or sets the right-aligned content.
+    /// </summary>
     [Bindable]
     public partial Visual? RightText { get; set; }
 
+    /// <inheritdoc />
     protected override int ChildrenCount
         => (_leftText is null ? 0 : 1) + (_rightText is null ? 0 : 1);
 
+    /// <inheritdoc />
     protected override Visual GetChild(int index)
     {
         if (_leftText is not null)
@@ -48,6 +62,7 @@ public sealed partial class StatusBar : Visual
         throw new ArgumentOutOfRangeException(nameof(index));
     }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var labelConstraints = new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1);
@@ -59,6 +74,7 @@ public sealed partial class StatusBar : Visual
         return SizeHints.FlexX(min: new Size(0, 1), natural: natural, growX: 1, shrinkX: 1);
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         if (_leftText is not null)
@@ -75,6 +91,7 @@ public sealed partial class StatusBar : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;

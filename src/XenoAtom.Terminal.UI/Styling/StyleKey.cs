@@ -4,8 +4,17 @@
 
 namespace XenoAtom.Terminal.UI.Styling;
 
+/// <summary>
+/// Identifies a style entry in a theme/environment.
+/// </summary>
+/// <typeparam name="T">The style type.</typeparam>
 public sealed class StyleKey<T>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StyleKey{T}"/> class.
+    /// </summary>
+    /// <param name="name">The style name.</param>
+    /// <param name="defaultValue">The default style value.</param>
     public StyleKey(string name, T defaultValue)
     {
         ArgumentNullException.ThrowIfNull(name);
@@ -14,12 +23,19 @@ public sealed class StyleKey<T>
         DefaultValue = defaultValue;
     }
 
+    /// <summary>
+    /// Gets the style name.
+    /// </summary>
     public string Name { get; }
 
     internal BindingAccessor BindingAccessor { get; }
 
+    /// <summary>
+    /// Gets the default style value.
+    /// </summary>
     public T DefaultValue { get; }
 
+    /// <inheritdoc />
     public override string ToString() => Name;
 
     private sealed class EnvironmentBindingAccessor : BindingAccessor

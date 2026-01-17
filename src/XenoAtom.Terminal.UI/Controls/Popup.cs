@@ -46,6 +46,9 @@ public sealed partial class Popup : ContentVisual, IModalVisual
     private Rectangle _popupRect;
     private bool _isOpen;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Popup"/> class.
+    /// </summary>
     public Popup()
     {
         this.HorizontalAlignment(HorizontalAlignment.Stretch);
@@ -59,7 +62,9 @@ public sealed partial class Popup : ContentVisual, IModalVisual
     /// </summary>
     public Visual? Anchor { get; set; }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Gets a value indicating whether the popup is modal.
+    /// </summary>
     public bool IsModal => true;
 
     /// <summary>

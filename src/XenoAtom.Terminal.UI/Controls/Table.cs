@@ -11,10 +11,16 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents a table with header and row cells.
+/// </summary>
 public sealed partial class Table : Visual
 {
     private int[]? _columnWidths;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Table"/> class.
+    /// </summary>
     public Table()
     {
         this.ShowHeaderSeparator(true);
@@ -23,13 +29,23 @@ public sealed partial class Table : Visual
         RowCells = new BindableList<VisualList<Visual>>(this, "Table.RowCells", onAdding: ValidateRowOwner, onRemoving: DetachRow);
     }
 
+    /// <summary>
+    /// Gets the header cells collection.
+    /// </summary>
     public VisualList<Visual> HeaderCells { get; }
 
+    /// <summary>
+    /// Gets the row cells collection.
+    /// </summary>
     public BindableList<VisualList<Visual>> RowCells { get; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the header separator is shown.
+    /// </summary>
     [Bindable]
     public partial bool ShowHeaderSeparator { get; set; }
 
+    /// <inheritdoc />
     protected override int ChildrenCount
     {
         get
@@ -44,6 +60,7 @@ public sealed partial class Table : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override Visual GetChild(int index)
     {
         var headerCount = HeaderCells.Count;
@@ -69,6 +86,7 @@ public sealed partial class Table : Visual
         throw new ArgumentOutOfRangeException(nameof(index));
     }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var columns = GetColumnCount();
@@ -127,6 +145,7 @@ public sealed partial class Table : Visual
         return SizeHints.Fixed(constraints.Clamp(new Size(desiredWidth, desiredHeight)));
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         var widths = _columnWidths;
@@ -169,6 +188,7 @@ public sealed partial class Table : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;

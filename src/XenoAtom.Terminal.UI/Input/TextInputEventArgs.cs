@@ -4,8 +4,13 @@
 
 namespace XenoAtom.Terminal.UI.Input;
 
+/// <summary>
+/// Provides data for text input events.
+/// </summary>
 public sealed class TextInputEventArgs : RoutedEventArgs
 {
+    /// <summary>
+    /// Gets the input text.
+    /// </summary>
     public required string Text { get; init; }
 }
-

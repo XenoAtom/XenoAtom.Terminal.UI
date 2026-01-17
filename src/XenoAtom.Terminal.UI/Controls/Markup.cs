@@ -12,6 +12,9 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents a control that renders ANSI markup into styled text.
+/// </summary>
 public sealed partial class Markup : Visual
 {
     private static readonly Rune Ellipsis = new(0x2026);
@@ -23,44 +26,76 @@ public sealed partial class Markup : Visual
     private string _plainText = string.Empty;
     private StyledRun[] _runs = Array.Empty<StyledRun>();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Markup"/> class.
+    /// </summary>
     public Markup()
     {
         _writer = new MarkupCaptureWriter();
         _markup = new AnsiMarkup(_writer);
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Markup"/> class with markup text.
+    /// </summary>
+    /// <param name="markup">The markup text to render.</param>
     public Markup(string markup) : this()
     {
         Text = markup;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Markup"/> class from an interpolated markup handler.
+    /// </summary>
+    /// <param name="handler">The interpolated handler.</param>
     public Markup(ref AnsiMarkupInterpolatedStringHandler handler) : this()
     {
         Text = handler.WrittenSpan.ToString();
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Markup"/> class with a dynamic markup provider.
+    /// </summary>
+    /// <param name="markup">The markup provider.</param>
     public Markup(Func<string> markup) : this()
     {
         this.Text(markup);
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Markup"/> class with an interpolated markup provider.
+    /// </summary>
+    /// <param name="handler">The interpolated handler provider.</param>
     public Markup(Func<AnsiMarkupInterpolatedStringHandler> handler) : this()
     {
         this.Text(() => handler().WrittenSpan.ToString());
     }
 
+    /// <summary>
+    /// Gets or sets the markup text.
+    /// </summary>
     [Bindable]
     public partial string? Text { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether text should wrap to the available width.
+    /// </summary>
     [Bindable]
     public partial bool Wrap { get; set; }
 
+    /// <summary>
+    /// Gets or sets the horizontal alignment of the rendered text.
+    /// </summary>
     [Bindable]
     public partial TextAlignment TextAlignment { get; set; }
 
+    /// <summary>
+    /// Gets or sets the trimming mode used when text exceeds the available width.
+    /// </summary>
     [Bindable]
     public partial TextTrimming Trimming { get; set; }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
@@ -86,8 +121,10 @@ public sealed partial class Markup : Visual
         return SizeHints.Fixed(new Size(width, Math.Min(availableHeight, Math.Max(1, wrappedHeight))));
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect) => Bounds = finalRect;
 
+    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         EnsureParsed();

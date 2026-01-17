@@ -9,5 +9,8 @@ namespace XenoAtom.Terminal.UI;
 /// </summary>
 public interface IVisualElement
 {
+    /// <summary>
+    /// Gets the owning <see cref="TerminalApp"/> if attached.
+    /// </summary>
     TerminalApp? App { get; }
 }

@@ -4,10 +4,18 @@
 
 namespace XenoAtom.Terminal.UI.Input;
 
+/// <summary>
+/// Provides data for toggle state change events.
+/// </summary>
 public sealed class ToggleChangedEventArgs : RoutedEventArgs
 {
+    /// <summary>
+    /// Gets the previous value.
+    /// </summary>
     public bool OldValue { get; init; }
 
+    /// <summary>
+    /// Gets the new value.
+    /// </summary>
     public bool NewValue { get; init; }
 }
-

@@ -4,10 +4,18 @@
 
 namespace XenoAtom.Terminal.UI.Input;
 
+/// <summary>
+/// Provides data for scroll value change events.
+/// </summary>
 public sealed class ScrollValueChangedEventArgs : RoutedEventArgs
 {
+    /// <summary>
+    /// Gets the previous value.
+    /// </summary>
     public int OldValue { get; init; }
 
+    /// <summary>
+    /// Gets the new value.
+    /// </summary>
     public int NewValue { get; init; }
 }
-

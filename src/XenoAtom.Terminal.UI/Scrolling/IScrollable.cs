@@ -4,7 +4,13 @@
 
 namespace XenoAtom.Terminal.UI.Scrolling;
 
+/// <summary>
+/// Exposes scroll state for scrollable visuals.
+/// </summary>
 public interface IScrollable
 {
+    /// <summary>
+    /// Gets the scroll model for the visual.
+    /// </summary>
     ScrollModel Scroll { get; }
 }

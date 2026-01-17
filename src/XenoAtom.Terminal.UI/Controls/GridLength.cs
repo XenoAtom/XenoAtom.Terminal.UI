@@ -61,12 +61,21 @@ public readonly record struct GridLength(GridUnitType Type, double Value)
 /// </summary>
 public sealed partial class RowDefinition
 {
+    /// <summary>
+    /// Gets or sets the row height.
+    /// </summary>
     [Bindable]
     public GridLength Height { get; set; } = GridLength.Star(1);
 
+    /// <summary>
+    /// Gets or sets the minimum row height.
+    /// </summary>
     [Bindable]
     public int MinHeight { get; set; }
 
+    /// <summary>
+    /// Gets or sets the maximum row height.
+    /// </summary>
     [Bindable]
     public int MaxHeight { get; set; } = int.MaxValue;
 }
@@ -76,12 +85,21 @@ public sealed partial class RowDefinition
 /// </summary>
 public sealed partial class ColumnDefinition
 {
+    /// <summary>
+    /// Gets or sets the column width.
+    /// </summary>
     [Bindable]
     public GridLength Width { get; set; } = GridLength.Star(1);
 
+    /// <summary>
+    /// Gets or sets the minimum column width.
+    /// </summary>
     [Bindable]
     public int MinWidth { get; set; }
 
+    /// <summary>
+    /// Gets or sets the maximum column width.
+    /// </summary>
     [Bindable]
     public int MaxWidth { get; set; } = int.MaxValue;
 }

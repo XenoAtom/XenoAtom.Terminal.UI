@@ -4,8 +4,17 @@
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Provides fluent helpers for <see cref="LineChart"/>.
+/// </summary>
 public static partial class LineChartExtensions
 {
+    /// <summary>
+    /// Sets the chart values.
+    /// </summary>
+    /// <param name="lineChart">The chart.</param>
+    /// <param name="values">The values to set.</param>
+    /// <returns>The chart instance.</returns>
     public static LineChart Values(this LineChart lineChart, IEnumerable<double> values)
     {
         ArgumentNullException.ThrowIfNull(lineChart);

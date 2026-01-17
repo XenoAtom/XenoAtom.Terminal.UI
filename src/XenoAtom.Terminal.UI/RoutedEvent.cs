@@ -9,6 +9,15 @@ namespace XenoAtom.Terminal.UI;
 /// </summary>
 public static class RoutedEvent
 {
+    /// <summary>
+    /// Registers a routed event for the specified owner type.
+    /// </summary>
+    /// <typeparam name="TOwner">The owner type.</typeparam>
+    /// <typeparam name="TArgs">The event args type.</typeparam>
+    /// <param name="name">The event name.</param>
+    /// <param name="dispatch">The dispatch callback.</param>
+    /// <param name="routingStrategy">The routing strategy.</param>
+    /// <returns>The registered routed event metadata.</returns>
     public static RoutedEvent<TArgs> Register<TOwner, TArgs>(
         string name,
         Action<object, TArgs> dispatch,
@@ -34,14 +43,26 @@ public sealed class RoutedEvent<TArgs>
         RoutingStrategy = routingStrategy;
     }
 
+    /// <summary>
+    /// Gets the event name.
+    /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// Gets the owner type of the event.
+    /// </summary>
     public Type OwnerType { get; }
 
+    /// <summary>
+    /// Gets the dispatch callback.
+    /// </summary>
     public Action<object, TArgs> Dispatch { get; }
 
+    /// <summary>
+    /// Gets the routing strategy used by the event.
+    /// </summary>
     public RoutingStrategy RoutingStrategy { get; }
 
+    /// <inheritdoc />
     public override string ToString() => $"{OwnerType.Name}.{Name}";
 }
-

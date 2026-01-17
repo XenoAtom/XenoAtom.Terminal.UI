@@ -11,11 +11,17 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents a slider control that allows selecting a numeric value within a range.
+/// </summary>
 public sealed partial class Slider : Visual
 {
     private bool _dragging;
     private double _oldValueForEvent;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Slider"/> class.
+    /// </summary>
     public Slider()
     {
         Focusable = true;
@@ -27,30 +33,57 @@ public sealed partial class Slider : Visual
         this.SnapToStep(true);
     }
 
+    /// <summary>
+    /// Gets or sets the orientation of the slider.
+    /// </summary>
     [Bindable]
     public partial Orientation Orientation { get; set; }
 
+    /// <summary>
+    /// Gets or sets the minimum value.
+    /// </summary>
     [Bindable]
     public partial double Minimum { get; set; }
 
+    /// <summary>
+    /// Gets or sets the maximum value.
+    /// </summary>
     [Bindable]
     public partial double Maximum { get; set; }
 
+    /// <summary>
+    /// Gets or sets the current value.
+    /// </summary>
     [Bindable]
     public partial double Value { get; set; }
 
+    /// <summary>
+    /// Gets or sets the small step increment.
+    /// </summary>
     [Bindable]
     public partial double Step { get; set; }
 
+    /// <summary>
+    /// Gets or sets the large step increment.
+    /// </summary>
     [Bindable]
     public partial double LargeStep { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the slider snaps to the nearest step.
+    /// </summary>
     [Bindable]
     public partial bool SnapToStep { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether to display a formatted value label.
+    /// </summary>
     [Bindable]
     public partial bool ShowValueLabel { get; set; }
 
+    /// <summary>
+    /// Gets or sets a formatter for the value label.
+    /// </summary>
     [Bindable]
     public partial Func<double, string>? ValueFormatter { get; set; }
 
@@ -145,6 +178,7 @@ public sealed partial class Slider : Visual
         return value;
     }
 
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
@@ -163,8 +197,10 @@ public sealed partial class Slider : Visual
             Math.Max(0, Math.Min(availableSize.Height, 1))));
     }
 
+    /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect) => Bounds = finalRect;
 
+    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
@@ -294,6 +330,7 @@ public sealed partial class Slider : Visual
         return $"{percent * 100:000}%";
     }
 
+    /// <inheritdoc />
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (!IsEnabled)
@@ -351,6 +388,7 @@ public sealed partial class Slider : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left || !IsEnabled)
@@ -363,6 +401,7 @@ public sealed partial class Slider : Visual
         e.Handled = true;
     }
 
+    /// <inheritdoc />
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         if (!_dragging)
@@ -374,6 +413,7 @@ public sealed partial class Slider : Visual
         e.Handled = true;
     }
 
+    /// <inheritdoc />
     protected override void OnPointerReleased(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)
@@ -388,6 +428,7 @@ public sealed partial class Slider : Visual
         }
     }
 
+    /// <inheritdoc />
     protected override void OnPointerWheel(PointerEventArgs e)
     {
         if (!IsEnabled || e.WheelDelta == 0)
