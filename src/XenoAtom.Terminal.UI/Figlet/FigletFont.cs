@@ -22,7 +22,7 @@ namespace XenoAtom.Terminal.UI.Figlet;
 /// <item><description>Optional code-tagged glyphs (additional code points).</description></item>
 /// </list>
 /// </remarks>
-public sealed class FigletFont
+public sealed partial class FigletFont
 {
     private readonly string[][] _asciiGlyphs;
     private readonly Dictionary<int, string[]>? _codeTaggedGlyphs;

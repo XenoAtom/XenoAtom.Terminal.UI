@@ -32,8 +32,8 @@ public sealed class TextFigletDemo : ControlsDemoBase
                 new Border(
                     new TextFiglet()
                         .Text(text)
-                        .Font(FigletFont.Block)
-                        .LetterSpacing(() => spacing.Value)
+                        .Font(FigletFont.Standard)
+                        .LetterSpacing(spacing)
                         .TextAlignment(TextAlignment.Left)
                         .Style(TextFigletStyle.Default with
                         {
