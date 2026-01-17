@@ -175,7 +175,7 @@ var leftColumn = new VStack(
             .HorizontalAlignment(HorizontalAlignment.Stretch),
         new HStack(
                 "Slider:",
-                new Slider()
+                new Slider<double>()
                     .Minimum(0)
                     .Maximum(1)
                     .Step(0.05)

@@ -5,17 +5,28 @@
 namespace XenoAtom.Terminal.UI.Input;
 
 /// <summary>
-/// Provides data for numeric value change events.
+/// Provides data for value change events.
 /// </summary>
-public sealed class ValueChangedEventArgs : RoutedEventArgs
+public sealed class ValueChangedEventArgs<T> : RoutedEventArgs
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ValueChangedEventArgs{T}"/> class.
+    /// </summary>
+    /// <param name="oldValue">The previous value.</param>
+    /// <param name="newValue">The new value.</param>
+    public ValueChangedEventArgs(T oldValue, T newValue)
+    {
+        OldValue = oldValue;
+        NewValue = newValue;
+    }
+
     /// <summary>
     /// Gets the previous value.
     /// </summary>
-    public double OldValue { get; init; }
+    public T OldValue { get; }
 
     /// <summary>
     /// Gets the new value.
     /// </summary>
-    public double NewValue { get; init; }
+    public T NewValue { get; }
 }

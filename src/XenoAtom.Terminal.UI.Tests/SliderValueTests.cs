@@ -11,7 +11,7 @@ public sealed class SliderValueTests
     [TestMethod]
     public void Value_Is_Clamped_To_Range()
     {
-        var slider = new Slider
+        var slider = new Slider<int>
         {
             Minimum = 0,
             Maximum = 10,
@@ -28,7 +28,7 @@ public sealed class SliderValueTests
     [TestMethod]
     public void Value_Snaps_To_Step()
     {
-        var slider = new Slider
+        var slider = new Slider<int>
         {
             Minimum = 0,
             Maximum = 10,
@@ -43,7 +43,7 @@ public sealed class SliderValueTests
     [TestMethod]
     public void Range_Is_Kept_Consistent()
     {
-        var slider = new Slider();
+        var slider = new Slider<int>();
         slider.Maximum = 0;
         slider.Minimum = 5;
 
@@ -52,4 +52,3 @@ public sealed class SliderValueTests
         Assert.AreEqual(5, slider.Value);
     }
 }
-

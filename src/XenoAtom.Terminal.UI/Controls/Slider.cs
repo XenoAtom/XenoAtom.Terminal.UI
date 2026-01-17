@@ -2,7 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using System.Text;
+using System.Numerics;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
@@ -14,22 +14,23 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// <summary>
 /// Represents a slider control that allows selecting a numeric value within a range.
 /// </summary>
-public sealed partial class Slider : Visual
+public sealed partial class Slider<T> : Visual where T: struct, INumber<T>
 {
     private bool _dragging;
-    private double _oldValueForEvent;
+    private T _oldValueForEvent;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Slider"/> class.
+    /// Initializes a new instance of the <see cref="Slider{T}"/> class.
     /// </summary>
     public Slider()
     {
         Focusable = true;
         HorizontalAlignment = HorizontalAlignment.Stretch;
-        this.Minimum(0.0);
-        this.Maximum(1.0);
-        this.Step(0.1);
-        this.LargeStep(0.25);
+        this.Minimum(T.Zero);
+        // 10 (TODO: figure out a better way to express 10 in generic way)
+        this.Maximum(T.One + T.One + T.One + T.One + T.One + T.One + T.One + T.One + T.One + T.One);
+        this.Step(T.One);
+        this.LargeStep(T.One + T.One);
         this.SnapToStep(true);
     }
 
@@ -43,31 +44,31 @@ public sealed partial class Slider : Visual
     /// Gets or sets the minimum value.
     /// </summary>
     [Bindable]
-    public partial double Minimum { get; set; }
+    public partial T Minimum { get; set; }
 
     /// <summary>
     /// Gets or sets the maximum value.
     /// </summary>
     [Bindable]
-    public partial double Maximum { get; set; }
+    public partial T Maximum { get; set; }
 
     /// <summary>
     /// Gets or sets the current value.
     /// </summary>
     [Bindable]
-    public partial double Value { get; set; }
+    public partial T Value { get; set; }
 
     /// <summary>
     /// Gets or sets the small step increment.
     /// </summary>
     [Bindable]
-    public partial double Step { get; set; }
+    public partial T Step { get; set; }
 
     /// <summary>
     /// Gets or sets the large step increment.
     /// </summary>
     [Bindable]
-    public partial double LargeStep { get; set; }
+    public partial T LargeStep { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the slider snaps to the nearest step.
@@ -85,25 +86,26 @@ public sealed partial class Slider : Visual
     /// Gets or sets a formatter for the value label.
     /// </summary>
     [Bindable]
-    public partial Func<double, string>? ValueFormatter { get; set; }
+    public partial Func<T, string>? ValueFormatter { get; set; }
 
-    partial void OnMinimumChanging(ref double value)
+    partial void OnMinimumChanging(ref T value)
     {
-        if (double.IsNaN(value) || double.IsInfinity(value))
+        
+        if (!T.IsFinite(value))
         {
-            value = 0.0;
+            value = T.Zero;
         }
     }
 
-    partial void OnMaximumChanging(ref double value)
+    partial void OnMaximumChanging(ref T value)
     {
-        if (double.IsNaN(value) || double.IsInfinity(value))
+        if (!T.IsFinite(value))
         {
-            value = 1.0;
+            value = T.One;
         }
     }
 
-    partial void OnMinimumChanged(double value)
+    partial void OnMinimumChanged(T value)
     {
         _ = value;
         if (Maximum < Minimum)
@@ -113,7 +115,7 @@ public sealed partial class Slider : Visual
         Value = ClampAndSnap(Value);
     }
 
-    partial void OnMaximumChanged(double value)
+    partial void OnMaximumChanged(T value)
     {
         _ = value;
         if (Maximum < Minimum)
@@ -123,37 +125,39 @@ public sealed partial class Slider : Visual
         Value = ClampAndSnap(Value);
     }
 
-    partial void OnStepChanging(ref double value)
+    partial void OnStepChanging(ref T value)
     {
-        if (double.IsNaN(value) || double.IsInfinity(value) || value < 0)
+        if (!T.IsFinite(value) || value < T.Zero)
         {
-            value = 0.0;
+            value = T.Zero;
         }
     }
 
-    partial void OnLargeStepChanging(ref double value)
+    partial void OnLargeStepChanging(ref T value)
     {
-        if (double.IsNaN(value) || double.IsInfinity(value) || value < 0)
+        if (!T.IsFinite(value) || value < T.Zero)
         {
-            value = 0.0;
+            value = T.Zero;
         }
     }
 
-    partial void OnValueChanging(ref double value)
+    partial void OnValueChanging(ref T value)
     {
         _oldValueForEvent = _value;
         value = ClampAndSnap(value);
     }
 
-    partial void OnValueChanged(double value)
+    partial void OnValueChanged(T value)
     {
         if (!Equals(_oldValueForEvent, value))
         {
-            RaiseEvent(ValueChangedEvent, new ValueChangedEventArgs { OldValue = _oldValueForEvent, NewValue = value });
+            RaiseEvent(ValueChangedEvent, new ValueChangedEventArgs<T>(_oldValueForEvent, value));
         }
     }
 
-    private double ClampAndSnap(double value)
+    private static double ToDouble(T value) => double.CreateChecked(value);
+
+    private T ClampAndSnap(T value)
     {
         var min = Minimum;
         var max = Maximum;
@@ -162,16 +166,16 @@ public sealed partial class Slider : Visual
             (min, max) = (max, min);
         }
 
-        value = Math.Clamp(value, min, max);
+        value = T.Clamp(value, min, max);
 
         if (SnapToStep)
         {
             var step = Step;
-            if (step > 0 && max > min)
+            if (step > T.Zero && max > min)
             {
-                var t = (value - min) / step;
-                var snapped = Math.Round(t) * step + min;
-                value = Math.Clamp(snapped, min, max);
+                var t = (ToDouble(value) - ToDouble(min)) / ToDouble(step);
+                var snapped = T.CreateChecked(Math.Round(t) * ToDouble(step)) + min;
+                value = T.Clamp(snapped, min, max);
             }
         }
 
@@ -297,17 +301,17 @@ public sealed partial class Slider : Visual
         }
 
         var range = Maximum - Minimum;
-        if (range <= 0)
+        if (range <= T.Zero)
         {
             return 0;
         }
 
-        var t = (Value - Minimum) / range;
+        var t = (ToDouble(Value) - ToDouble(Minimum)) / ToDouble(range);
         t = Math.Clamp(t, 0.0, 1.0);
         return (int)Math.Round(t * (trackLength - 1));
     }
 
-    private double GetValueAtCell(int cell, int trackLength)
+    private T GetValueAtCell(int cell, int trackLength)
     {
         if (trackLength <= 1)
         {
@@ -315,10 +319,10 @@ public sealed partial class Slider : Visual
         }
 
         var t = Math.Clamp(cell / (double)(trackLength - 1), 0.0, 1.0);
-        return Minimum + (t * (Maximum - Minimum));
+        return T.CreateChecked(ToDouble(Minimum) + (t * (ToDouble(Maximum) - ToDouble(Minimum))));
     }
 
-    private string FormatValue(double value)
+    private string FormatValue(T value)
     {
         var formatter = ValueFormatter;
         if (formatter is not null)
@@ -326,8 +330,8 @@ public sealed partial class Slider : Visual
             return formatter(value);
         }
 
-        var percent = Maximum > Minimum ? (value - Minimum) / (Maximum - Minimum) : 0.0;
-        return $"{percent * 100:000}%";
+        //var percent = Maximum > Minimum ? (value - Minimum) / (Maximum - Minimum) : T.Zero;
+        return value.ToString() ?? string.Empty;
     }
 
     /// <inheritdoc />
@@ -339,7 +343,7 @@ public sealed partial class Slider : Visual
         }
 
         var step = Step;
-        var large = LargeStep > 0 ? LargeStep : step * 5;
+        var large = LargeStep > T.Zero ? LargeStep : step * (T.One + T.One);
 
         switch (e.Key)
         {
@@ -437,9 +441,9 @@ public sealed partial class Slider : Visual
         }
 
         var delta = Step;
-        if (delta <= 0)
+        if (delta <= T.Zero)
         {
-            delta = 0.05;
+            delta = T.One;
         }
 
         Value = e.WheelDelta > 0 ? Value - delta : Value + delta;
@@ -484,5 +488,5 @@ public sealed partial class Slider : Visual
     }
 
     [RoutedEvent(RoutingStrategy.Bubble)]
-    private void OnValueChanged(ValueChangedEventArgs e) { }
+    private void OnValueChanged(ValueChangedEventArgs<T> e) { }
 }

@@ -7,7 +7,7 @@ using System.Text;
 namespace XenoAtom.Terminal.UI.Styling;
 
 /// <summary>
-/// Defines rendering and theming options for a <see cref="Controls.Slider"/>.
+/// Defines rendering and theming options for a <see cref="Controls.Slider{T}"/>.
 /// </summary>
 public sealed record SliderStyle : IStyle<SliderStyle>
 {

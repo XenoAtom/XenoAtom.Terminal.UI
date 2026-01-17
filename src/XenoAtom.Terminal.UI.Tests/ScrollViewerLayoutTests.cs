@@ -15,7 +15,7 @@ public sealed class ScrollViewerLayoutTests
     [TestMethod]
     public void ScrollViewer_Stretches_Content_To_Viewport_When_NoHorizontalScrolling()
     {
-        var content = new VStack("Hello");
+        var content = new VStack("Hello").VerticalAlignment(VerticalAlignment.Stretch);
         var scroll = new ScrollViewer(content);
 
         var root = new DockLayout().Content(scroll);

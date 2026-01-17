@@ -12,20 +12,20 @@ public sealed class SliderDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
-        var value = new State<double>(0.35);
+        var value = new State<int>(35);
 
         return new VStack(
                 DemoUi.Hint("Slider can be controlled with keyboard or mouse drag."),
-                new Slider
+                new Slider<int>
                 {
-                    Minimum = 0.0,
-                    Maximum = 1.0,
-                    Step = 0.05,
+                    Minimum = 0,
+                    Maximum = 100,
+                    Step = 5,
                     ShowValueLabel = true,
-                    ValueFormatter = v => $"{(int)Math.Round(v * 100)}%",
+                    ValueFormatter = v => $"{v}%",
                 }.Value(value),
-                new TextBlock(() => $"Value: {value.Value:0.00}"),
-                new Button("Log value").Click(() => context.Log($"Slider: {value.Value:0.00}")))
+                new TextBlock(() => $"Value: {value.Value}%"),
+                new Button("Log value").Click(() => context.Log($"Slider: {value.Value}%")))
             .Spacing(1);
     }
 }

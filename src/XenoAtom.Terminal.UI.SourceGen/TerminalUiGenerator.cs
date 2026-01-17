@@ -414,7 +414,11 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
 
             var methodIndent = indent + "    ";
             var receiverType = containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-            var canUseGeneric = containingType.TypeKind == TypeKind.Class && !containingType.IsSealed;
+            // Use a generic receiver only for non-generic, non-sealed classes (so derived types can fluently chain).
+            // For generic controls (e.g. Slider<T>), we must emit the containing type parameters and constraints
+            // on each extension method so it can compile and preserve type safety.
+            var canUseGeneric = containingType.TypeKind == TypeKind.Class && !containingType.IsSealed && containingType.TypeParameters.Length == 0;
+            var needsTypeParameters = containingType.TypeParameters.Length > 0;
 
             foreach (var p in properties)
             {
@@ -447,8 +451,19 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 else
                 {
                     sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName));
-                    AppendTypeParameters(sb, containingType);
-                    sb.Append("(this ").Append(receiverType).Append(" obj, ").Append(argType).Append(' ').Append(EscapeIdentifier(argName)).AppendLine(")");
+                    if (needsTypeParameters)
+                    {
+                        AppendTypeParameters(sb, containingType);
+                    }
+                    sb.Append("(this ").Append(receiverType).Append(" obj, ").Append(argType).Append(' ').Append(EscapeIdentifier(argName)).Append(')');
+                    if (needsTypeParameters)
+                    {
+                        AppendTypeParameterConstraints(sb, containingType, methodIndent);
+                    }
+                    else
+                    {
+                        sb.AppendLine();
+                    }
                     sb.Append(methodIndent).AppendLine("{");
                     sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
                     sb.Append(methodIndent).Append("    obj.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine(";");
@@ -479,8 +494,19 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     else
                     {
                         sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName));
-                        AppendTypeParameters(sb, containingType);
-                        sb.Append("(this ").Append(receiverType).Append(" obj, global::XenoAtom.Terminal.UI.Binding<").Append(argType).Append("> ").Append(EscapeIdentifier(argName)).AppendLine(")");
+                        if (needsTypeParameters)
+                        {
+                            AppendTypeParameters(sb, containingType);
+                        }
+                        sb.Append("(this ").Append(receiverType).Append(" obj, global::XenoAtom.Terminal.UI.Binding<").Append(argType).Append("> ").Append(EscapeIdentifier(argName)).Append(')');
+                        if (needsTypeParameters)
+                        {
+                            AppendTypeParameterConstraints(sb, containingType, methodIndent);
+                        }
+                        else
+                        {
+                            sb.AppendLine();
+                        }
                         sb.Append(methodIndent).AppendLine("{");
                         sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
                         sb.Append(methodIndent).Append("    obj.Bind").Append(propName).Append("(").Append(EscapeIdentifier(argName)).AppendLine(");");
@@ -510,8 +536,21 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     }
                     else
                     {
-                        sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName)).Append("(this ").Append(receiverType).Append(" obj, global::System.Func<").Append(argType)
-                            .Append("> ").Append(EscapeIdentifier(argName)).AppendLine(")");
+                        sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName));
+                        if (needsTypeParameters)
+                        {
+                            AppendTypeParameters(sb, containingType);
+                        }
+                        sb.Append("(this ").Append(receiverType).Append(" obj, global::System.Func<").Append(argType)
+                            .Append("> ").Append(EscapeIdentifier(argName)).Append(')');
+                        if (needsTypeParameters)
+                        {
+                            AppendTypeParameterConstraints(sb, containingType, methodIndent);
+                        }
+                        else
+                        {
+                            sb.AppendLine();
+                        }
                         sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
                     }
 
@@ -534,8 +573,21 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                         }
                         else
                         {
-                            sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName)).Append("(this ").Append(receiverType).Append(" obj, global::XenoAtom.Terminal.UI.State<")
-                                .Append(argType).Append("> ").Append(EscapeIdentifier(argName)).AppendLine(")");
+                            sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName));
+                            if (needsTypeParameters)
+                            {
+                                AppendTypeParameters(sb, containingType);
+                            }
+                            sb.Append("(this ").Append(receiverType).Append(" obj, global::XenoAtom.Terminal.UI.State<")
+                                .Append(argType).Append("> ").Append(EscapeIdentifier(argName)).Append(')');
+                            if (needsTypeParameters)
+                            {
+                                AppendTypeParameterConstraints(sb, containingType, methodIndent);
+                            }
+                            else
+                            {
+                                sb.AppendLine();
+                            }
                             sb.Append(methodIndent).Append("    => ").Append(EscapeIdentifier(propName)).Append("(obj, (global::XenoAtom.Terminal.UI.Binding<").Append(argType).Append(">)").Append(EscapeIdentifier(argName)).AppendLine(");");
                         }
                     }
@@ -549,8 +601,21 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                         }
                         else
                         {
-                            sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName)).Append("(this ").Append(receiverType).Append(" obj, global::XenoAtom.Terminal.UI.State<")
-                                .Append(argType).Append("> ").Append(EscapeIdentifier(argName)).AppendLine(")");
+                            sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName));
+                            if (needsTypeParameters)
+                            {
+                                AppendTypeParameters(sb, containingType);
+                            }
+                            sb.Append("(this ").Append(receiverType).Append(" obj, global::XenoAtom.Terminal.UI.State<")
+                                .Append(argType).Append("> ").Append(EscapeIdentifier(argName)).Append(')');
+                            if (needsTypeParameters)
+                            {
+                                AppendTypeParameterConstraints(sb, containingType, methodIndent);
+                            }
+                            else
+                            {
+                                sb.AppendLine();
+                            }
                             sb.Append(methodIndent).Append("    => ").Append(EscapeIdentifier(propName)).Append("(obj, () => ").Append(EscapeIdentifier(argName)).AppendLine(".Value);");
                         }
                     }
@@ -933,6 +998,75 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             sb.Append('>');
         }
 
+        internal static void AppendTypeParameterConstraints(StringBuilder sb, INamedTypeSymbol type, string indent)
+        {
+            var format = SymbolDisplayFormat.FullyQualifiedFormat.WithMiscellaneousOptions(
+                SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
+
+            var wroteAny = false;
+
+            foreach (var tp in type.TypeParameters)
+            {
+                var first = true;
+
+                void AppendConstraint(string value)
+                {
+                    if (first)
+                    {
+                        if (!wroteAny)
+                        {
+                            sb.Append(' ');
+                        }
+                        else
+                        {
+                            sb.AppendLine();
+                            sb.Append(indent);
+                        }
+
+                        sb.Append("where ").Append(tp.Name).Append(" : ");
+                        first = false;
+                        wroteAny = true;
+                    }
+                    else
+                    {
+                        sb.Append(", ");
+                    }
+
+                    sb.Append(value);
+                }
+
+                if (tp.HasNotNullConstraint)
+                {
+                    AppendConstraint("notnull");
+                }
+
+                if (tp.HasUnmanagedTypeConstraint)
+                {
+                    AppendConstraint("unmanaged");
+                }
+                else if (tp.HasValueTypeConstraint)
+                {
+                    AppendConstraint("struct");
+                }
+                else if (tp.HasReferenceTypeConstraint)
+                {
+                    AppendConstraint(tp.ReferenceTypeConstraintNullableAnnotation == NullableAnnotation.Annotated ? "class?" : "class");
+                }
+
+                foreach (var c in tp.ConstraintTypes)
+                {
+                    AppendConstraint(c.ToDisplayString(format));
+                }
+
+                if (tp.HasConstructorConstraint)
+                {
+                    AppendConstraint("new()");
+                }
+            }
+
+            sb.AppendLine();
+        }
+
         internal static string SanitizeFileName(string fullTypeName)
         {
             if (fullTypeName.StartsWith("global::", StringComparison.Ordinal))
@@ -1152,10 +1286,11 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
 
             var indent = new string(' ', string.IsNullOrEmpty(ns) ? 0 : 4);
             var extensionClassName = GetExtensionClassName(containingType);
+            var receiverTypeXml = DocumentationCommentId.CreateDeclarationId(containingType);
 
             sb.Append(indent).AppendLine("/// <summary>");
             sb.Append(indent).Append("/// Fluent extension methods for registering routed event handlers on <see cref=\"")
-                .Append(containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                .Append(receiverTypeXml)
                 .AppendLine("\"/>.");
             sb.Append(indent).AppendLine("/// </summary>");
             sb.Append(indent).Append("public static partial class ").Append(extensionClassName).AppendLine();
@@ -1163,7 +1298,8 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
 
             var methodIndent = indent + "    ";
             var receiverType = containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-            var canUseGeneric = containingType.TypeKind == TypeKind.Class && !containingType.IsSealed;
+            var canUseGeneric = containingType.TypeKind == TypeKind.Class && !containingType.IsSealed && containingType.TypeParameters.Length == 0;
+            var needsTypeParameters = containingType.TypeParameters.Length > 0;
 
             foreach (var ev in events)
             {
@@ -1193,7 +1329,20 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 }
                 else
                 {
-                    sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(escapedEventName).Append("(this ").Append(receiverType).Append(" obj, global::System.EventHandler<").Append(argsType).AppendLine("> handler)");
+                    sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(escapedEventName);
+                    if (needsTypeParameters)
+                    {
+                        BindableEmitter.AppendTypeParameters(sb, containingType);
+                    }
+                    sb.Append("(this ").Append(receiverType).Append(" obj, global::System.EventHandler<").Append(argsType).Append("> handler)");
+                    if (needsTypeParameters)
+                    {
+                        BindableEmitter.AppendTypeParameterConstraints(sb, containingType, methodIndent);
+                    }
+                    else
+                    {
+                        sb.AppendLine();
+                    }
                     sb.Append(methodIndent).AppendLine("{");
                     sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
                     sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(handler);");
@@ -1222,7 +1371,20 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 }
                 else
                 {
-                    sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(escapedEventName).Append("(this ").Append(receiverType).AppendLine(" obj, global::System.Action handler)");
+                    sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(escapedEventName);
+                    if (needsTypeParameters)
+                    {
+                        BindableEmitter.AppendTypeParameters(sb, containingType);
+                    }
+                    sb.Append("(this ").Append(receiverType).Append(" obj, global::System.Action handler)");
+                    if (needsTypeParameters)
+                    {
+                        BindableEmitter.AppendTypeParameterConstraints(sb, containingType, methodIndent);
+                    }
+                    else
+                    {
+                        sb.AppendLine();
+                    }
                     sb.Append(methodIndent).AppendLine("{");
                     sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
                     sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(handler);");
