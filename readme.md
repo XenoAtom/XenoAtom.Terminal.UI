@@ -5,7 +5,35 @@
 XenoAtom.Terminal.UI is a modern retained-mode terminal UI framework for .NET, built on top of [XenoAtom.Terminal](https://github.com/XenoAtom/XenoAtom.Terminal).
 It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…), a consistent layout system, a styling/theming model, and a binding system designed for smooth live UIs.
 
-## Quick start
+## ✨ Features
+
+- **Two hosting models**:
+  - **Inline** widgets via `Terminal.Write(...)` and `Terminal.Live(...)`
+  - **Fullscreen** apps via `Terminal.Run(...)` (alternate screen + input loop)
+- **Modern control library**:
+  - Buttons, toggles, lists, selection lists, tables, tabs, menus, dialogs/popups, charts, progress, spinners…
+  - Text editing: **TextBox**, **TextArea**, **MaskedInput**
+- **Binding-first UI**:
+  - Bindable properties, `State<T>`, automatic dependency tracking, minimal boilerplate
+- **Layout system**: consistent measure/arrange protocol (integer cell UI), panels and containers
+- **Styling & themes**:
+  - Theme + per-control styles, `AnsiColorScheme` palettes (terminal-native and RGB themes)
+- **Input**:
+  - Keyboard, mouse, resize events; focus navigation; routed events where appropriate
+- **Rendering**:
+  - Cell-buffer renderer + diffing, efficient batched output, synchronized output (DEC 2026)
+- **Cross-platform + AOT-friendly**: `net10.0` and NativeAOT-oriented design (built on XenoAtom.Terminal)
+
+Screenshot placeholder (to be updated):
+
+![XenoAtom.Terminal.UI Fullscreen Demo](https://raw.githubusercontent.com/XenoAtom/XenoAtom.Terminal.UI/main/img/screenshots/fullscreen-demo.png)
+
+> [!NOTE]
+> XenoAtom.Terminal.UI depends on XenoAtom.Terminal. The two libraries are designed to be used together:
+> Terminal handles safe ANSI/markup output and unified input events; Terminal.UI builds a widget/layout system on top.
+
+
+## 🚀 Quick start
 
 ```csharp
 using XenoAtom.Terminal;
@@ -47,48 +75,22 @@ Terminal.Run(
     onUpdate: () => true);
 ```
 
-## Features
 
-- **Two hosting models**:
-  - **Inline** widgets via `Terminal.Write(...)` and `Terminal.Live(...)`
-  - **Fullscreen** apps via `Terminal.Run(...)` (alternate screen + input loop)
-- **Modern control library**:
-  - Buttons, toggles, lists, selection lists, tables, tabs, menus, dialogs/popups, charts, progress, spinners…
-  - Text editing: **TextBox**, **TextArea**, **MaskedInput**
-- **Binding-first UI**:
-  - Bindable properties, `State<T>`, automatic dependency tracking, minimal boilerplate
-- **Layout system**: consistent measure/arrange protocol (integer cell UI), panels and containers
-- **Styling & themes**:
-  - Theme + per-control styles, `AnsiColorScheme` palettes (terminal-native and RGB themes)
-- **Input**:
-  - Keyboard, mouse, resize events; focus navigation; routed events where appropriate
-- **Rendering**:
-  - Cell-buffer renderer + diffing, efficient batched output, synchronized output (DEC 2026)
-- **Cross-platform + AOT-friendly**: `net10.0` and NativeAOT-oriented design (built on XenoAtom.Terminal)
-
-Screenshot placeholder (to be updated):
-
-![XenoAtom.Terminal.UI Fullscreen Demo](https://raw.githubusercontent.com/XenoAtom/XenoAtom.Terminal.UI/main/img/screenshots/fullscreen-demo.png)
-
-> [!NOTE]
-> XenoAtom.Terminal.UI depends on XenoAtom.Terminal. The two libraries are designed to be used together:
-> Terminal handles safe ANSI/markup output and unified input events; Terminal.UI builds a widget/layout system on top.
-
-## User guide
+## 📖 User guide
 
 For details, see `doc/readme.md`.
 
-## Samples
+## 🧪 Samples
 
 - `samples/Playground`: quick manual repros and experiments.
 - `samples/MvpDemo`: inline and fullscreen demos.
 - `samples/FullscreenDemo`: fullscreen UI showcase.
 - `samples/ControlsDemo`: catalog-style demo of controls and styles.
 
-## License
+## 🪪 License
 
 This software is released under the [BSD-2-Clause license](https://opensource.org/licenses/BSD-2-Clause).
 
-## Author
+## 🤗 Author
 
 Alexandre Mutel aka [xoofx](https://xoofx.github.io).
