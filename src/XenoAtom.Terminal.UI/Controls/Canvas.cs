@@ -173,6 +173,16 @@ public readonly struct CanvasContext
             SetPixel(x + i, y, rune, style);
         }
     }
+    
+    /// <summary>
+    /// Draws a horizontal line.
+    /// </summary>
+    public void DrawHLine(int x, int y, int length, CellStyle style) => DrawHLine(x, y, length, _defaultRune, style);
+
+    /// <summary>
+    /// Draws a horizontal line.
+    /// </summary>
+    public void DrawHLine(int x, int y, int length) => DrawHLine(x, y, length, _defaultRune, _defaultStyle);
 
     /// <summary>
     /// Draws a vertical line.
@@ -189,6 +199,16 @@ public readonly struct CanvasContext
             SetPixel(x, y + i, rune, style);
         }
     }
+
+    /// <summary>
+    /// Draws a vertical line.
+    /// </summary>
+    public void DrawVLine(int x, int y, int length, CellStyle style) => DrawVLine(x, y, length, _defaultRune, style);
+
+    /// <summary>
+    /// Draws a vertical line.
+    /// </summary>
+    public void DrawVLine(int x, int y, int length) => DrawVLine(x, y, length, _defaultRune, _defaultStyle);
 
     /// <summary>
     /// Draws a line between two points using an integer Bresenham algorithm.
@@ -222,6 +242,16 @@ public readonly struct CanvasContext
             }
         }
     }
+    
+    /// <summary>
+    /// Draws a line between two points using an integer Bresenham algorithm.
+    /// </summary>
+    public void DrawLine(int x0, int y0, int x1, int y1, CellStyle style) => DrawLine(x0, y0, x1, y1, _defaultRune, style);
+
+    /// <summary>
+    /// Draws a line between two points using an integer Bresenham algorithm.
+    /// </summary>
+    public void DrawLine(int x0, int y0, int x1, int y1) => DrawLine(x0, y0, x1, y1, _defaultRune, _defaultStyle);
 
     /// <summary>
     /// Draws an outline rectangle.
@@ -250,6 +280,16 @@ public readonly struct CanvasContext
         DrawVLine(x, y + 1, height - 2, rune, style);
         DrawVLine(x + width - 1, y + 1, height - 2, rune, style);
     }
+
+    /// <summary>
+    /// Draws an outline rectangle.
+    /// </summary>
+    public void DrawRect(int x, int y, int width, int height, CellStyle style) => DrawRect(x, y, width, height, _defaultRune, style);
+
+    /// <summary>
+    /// Draws an outline rectangle.
+    /// </summary>
+    public void DrawRect(int x, int y, int width, int height) => DrawRect(x, y, width, height, _defaultRune, _defaultStyle);
 
     /// <summary>
     /// Draws a box rectangle using line glyphs (corners + edges).
@@ -299,6 +339,16 @@ public readonly struct CanvasContext
     }
 
     /// <summary>
+    /// Draws a box rectangle using line glyphs (corners + edges).
+    /// </summary>
+    public void DrawBox(int x, int y, int width, int height, CellStyle style) => DrawBox(x, y, width, height, LineGlyphs.Single, style);
+
+    /// <summary>
+    /// Draws a box rectangle using line glyphs (corners + edges).
+    /// </summary>
+    public void DrawBox(int x, int y, int width, int height) => DrawBox(x, y, width, height, LineGlyphs.Single, _defaultStyle);
+
+    /// <summary>
     /// Fills a rectangle.
     /// </summary>
     public void FillRect(int x, int y, int width, int height, Rune rune, CellStyle style)
@@ -316,6 +366,16 @@ public readonly struct CanvasContext
             }
         }
     }
+
+    /// <summary>
+    /// Fills a rectangle.
+    /// </summary>
+    public void FillRect(int x, int y, int width, int height, CellStyle style) => FillRect(x, y, width, height, _defaultRune, style);
+
+    /// <summary>
+    /// Fills a rectangle.
+    /// </summary>
+    public void FillRect(int x, int y, int width, int height) => FillRect(x, y, width, height, _defaultRune, _defaultStyle);
 
     /// <summary>
     /// Draws a circle outline using the midpoint circle algorithm.
@@ -346,6 +406,17 @@ public readonly struct CanvasContext
             }
         }
     }
+    
+    /// <summary>
+    /// Draws a circle outline using the midpoint circle algorithm.
+    /// </summary>
+    public void DrawCircle(int centerX, int centerY, int radius, CellStyle style) => DrawCircle(centerX, centerY, radius, _defaultRune, style);
+
+
+    /// <summary>
+    /// Draws a circle outline using the midpoint circle algorithm.
+    /// </summary>
+    public void DrawCircle(int centerX, int centerY, int radius) => DrawCircle(centerX, centerY, radius, _defaultRune, _defaultStyle);
 
     /// <summary>
     /// Writes plain text at the specified position (clipped to the canvas bounds).
@@ -371,6 +442,7 @@ public readonly struct CanvasContext
 
         _buffer.WriteText(_bounds.X + x, _bounds.Y + y, slice, style);
     }
+
 
     /// <summary>
     /// Writes plain text at the specified position using the default style.

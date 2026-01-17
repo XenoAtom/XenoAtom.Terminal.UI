@@ -27,7 +27,7 @@ public sealed class TextFigletDemo : ControlsDemoBase
                         new TextBlock("Text:"),
                         new TextBox().Text(text).MinWidth(20).MaxWidth(20),
                         new TextBlock("Spacing:"),
-                        new Slider().Minimum(0).Maximum(4).Value(spacing).MinWidth(16).MaxWidth(16))
+                        new Slider().Minimum(1).Maximum(4).Value(spacing).MinWidth(16).MaxWidth(16))
                     .Spacing(1),
                 new Border(
                     new TextFiglet()

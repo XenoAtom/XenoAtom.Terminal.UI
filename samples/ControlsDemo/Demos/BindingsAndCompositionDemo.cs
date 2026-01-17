@@ -26,7 +26,7 @@ public sealed class BindingsAndCompositionDemo : ControlsDemoBase
                     .Spacing(1),
                 new VStack(
                         DemoUi.Title("View 2"),
-                        new ProgressBar().Value(() => Math.Clamp(count / 10.0, 0.0, 1.0)).Label("Count/10"),
+                        new ProgressBar().Value(() => Math.Clamp(count.Value / 10.0, 0.0, 1.0)).Label("Count/10"),
                         new Button("Reset").Click(() => count.Value = 0))
                     .Spacing(1));
 

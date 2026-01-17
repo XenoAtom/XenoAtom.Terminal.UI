@@ -42,7 +42,7 @@ public sealed partial class State<T> : Threading.DispatcherObject
     /// expected. If the State&lt;T> instance is null, the behavior depends on the implementation of the Value property and
     /// the type T.</remarks>
     /// <param name="value">The State&lt;T> instance to convert.</param>
-    public static implicit operator T(State<T> value) => value.Value;
+    public static explicit operator T(State<T> value) => value.Value;
 
     /// <summary>
     /// Converts a State&lt;T> instance to a Binding&lt;T> implicitly.
