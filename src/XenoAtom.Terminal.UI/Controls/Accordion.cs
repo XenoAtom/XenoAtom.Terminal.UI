@@ -18,6 +18,7 @@ public sealed partial class Accordion : Panel
     /// </summary>
     public Accordion()
     {
+        VerticalAlignment = VerticalAlignment.Top;
         this.SingleExpanded = true;
         AddHandler(Collapsible.ExpandedChangedEvent, OnChildExpandedChanged);
     }

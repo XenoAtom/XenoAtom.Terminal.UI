@@ -17,6 +17,7 @@ public sealed partial class HStack : Panel
     /// </summary>
     public HStack()
     {
+        VerticalAlignment = VerticalAlignment.Top;
     }
 
     /// <summary>
@@ -25,6 +26,7 @@ public sealed partial class HStack : Panel
     /// <param name="children">The child visuals.</param>
     public HStack(params Visual[] children)
     {
+        VerticalAlignment = VerticalAlignment.Top;
         AddRange(children);
     }
 
