@@ -10,6 +10,9 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Base class for splitters that arrange two visuals separated by a draggable bar.
+/// </summary>
 public abstract partial class SplitterBase : Visual
 {
     private Rectangle _barRect;
@@ -19,6 +22,9 @@ public abstract partial class SplitterBase : Visual
     private int _dragStartUiY;
     private int _dragStartFirstSize;
 
+    /// <summary>
+    /// Initializes a new splitter.
+    /// </summary>
     protected SplitterBase()
     {
         Focusable = true;
@@ -28,23 +34,44 @@ public abstract partial class SplitterBase : Visual
         _barSize = 1;
     }
 
+    /// <summary>
+    /// Gets the split orientation used by the derived splitter.
+    /// </summary>
     protected abstract Orientation SplitOrientation { get; }
 
+    /// <summary>
+    /// Gets or sets the first pane visual.
+    /// </summary>
     [Bindable]
     public partial Visual? First { get; set; }
 
+    /// <summary>
+    /// Gets or sets the second pane visual.
+    /// </summary>
     [Bindable]
     public partial Visual? Second { get; set; }
 
+    /// <summary>
+    /// Gets or sets the split ratio in the range [0..1].
+    /// </summary>
     [Bindable]
     public partial double Ratio { get; set; }
 
+    /// <summary>
+    /// Gets or sets the bar thickness (in cells).
+    /// </summary>
     [Bindable]
     public partial int BarSize { get; set; }
 
+    /// <summary>
+    /// Gets or sets the minimum size of the first pane (in cells).
+    /// </summary>
     [Bindable]
     public partial int MinFirst { get; set; }
 
+    /// <summary>
+    /// Gets or sets the minimum size of the second pane (in cells).
+    /// </summary>
     [Bindable]
     public partial int MinSecond { get; set; }
 
@@ -92,6 +119,7 @@ public abstract partial class SplitterBase : Visual
 
     protected override int ChildrenCount => (_first is null ? 0 : 1) + (_second is null ? 0 : 1);
 
+    /// <inheritdoc/>
     protected override Visual GetChild(int index)
     {
         if (_first is not null)
@@ -108,6 +136,7 @@ public abstract partial class SplitterBase : Visual
         throw new ArgumentOutOfRangeException(nameof(index));
     }
 
+    /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var first = First;
@@ -185,6 +214,7 @@ public abstract partial class SplitterBase : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         var first = First;
@@ -258,6 +288,7 @@ public abstract partial class SplitterBase : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
         if (_barRect.Width <= 0 || _barRect.Height <= 0)
@@ -281,6 +312,7 @@ public abstract partial class SplitterBase : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         var localX = e.UiX - Bounds.X;
@@ -302,6 +334,7 @@ public abstract partial class SplitterBase : Visual
         e.Handled = true;
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left || !IsEnabled)
@@ -321,6 +354,7 @@ public abstract partial class SplitterBase : Visual
         e.Handled = true;
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerReleased(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)
@@ -372,6 +406,7 @@ public abstract partial class SplitterBase : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (!IsEnabled)

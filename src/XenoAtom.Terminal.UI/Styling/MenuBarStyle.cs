@@ -6,25 +6,69 @@ using XenoAtom.Terminal.UI.Geometry;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
+/// <summary>
+/// Defines rendering and theming options for a <see cref="Controls.MenuBar"/>.
+/// </summary>
 public sealed record MenuBarStyle : IStyle<MenuBarStyle>
 {
+    /// <summary>
+    /// Gets the default menu bar style.
+    /// </summary>
     public static MenuBarStyle Default { get; } = new();
 
+    /// <summary>
+    /// Gets the environment key used to resolve a <see cref="MenuBarStyle"/>.
+    /// </summary>
     public static StyleKey<MenuBarStyle> Key { get; } = new("MenuBarStyle", Default);
 
+    /// <summary>
+    /// Gets the padding applied around the bar.
+    /// </summary>
     public Thickness Padding { get; init; } = new(Left: 1, Top: 0, Right: 1, Bottom: 0);
 
+    /// <summary>
+    /// Gets the padding applied around each top-level item.
+    /// </summary>
     public Thickness ItemPadding { get; init; } = new(Left: 2, Top: 0, Right: 2, Bottom: 0);
 
+    /// <summary>
+    /// Gets the number of spaces between items.
+    /// </summary>
     public int ItemSpacing { get; init; } = 0;
 
+    /// <summary>
+    /// Gets the optional style used for the bar background.
+    /// </summary>
     public CellStyle? BarStyle { get; init; }
+    
+    /// <summary>
+    /// Gets the optional style used for normal items.
+    /// </summary>
     public CellStyle? ItemStyle { get; init; }
+    
+    /// <summary>
+    /// Gets the optional style used for hovered items.
+    /// </summary>
     public CellStyle? ItemHoverStyle { get; init; }
+    
+    /// <summary>
+    /// Gets the optional style used for open items.
+    /// </summary>
     public CellStyle? ItemOpenStyle { get; init; }
+    
+    /// <summary>
+    /// Gets the optional style used for selected items.
+    /// </summary>
     public CellStyle? ItemSelectedStyle { get; init; }
+    
+    /// <summary>
+    /// Gets the optional style used for disabled items.
+    /// </summary>
     public CellStyle? ItemDisabledStyle { get; init; }
 
+    /// <summary>
+    /// Resolves the bar style for the provided <paramref name="theme"/>.
+    /// </summary>
     public CellStyle ResolveBarStyle(Theme theme)
     {
         if (BarStyle is { } s)
@@ -45,6 +89,14 @@ public sealed record MenuBarStyle : IStyle<MenuBarStyle>
         return style;
     }
 
+    /// <summary>
+    /// Resolves the item style for the provided state.
+    /// </summary>
+    /// <param name="theme">The current theme.</param>
+    /// <param name="enabled">Whether the item is enabled.</param>
+    /// <param name="open">Whether the item is open.</param>
+    /// <param name="selected">Whether the item is selected.</param>
+    /// <param name="hovered">Whether the item is hovered.</param>
     public CellStyle ResolveItemStyle(Theme theme, bool enabled, bool open, bool selected, bool hovered)
     {
         if (!enabled)
@@ -75,4 +127,3 @@ public sealed record MenuBarStyle : IStyle<MenuBarStyle>
         return ItemStyle ?? theme.ForegroundTextStyle();
     }
 }
-

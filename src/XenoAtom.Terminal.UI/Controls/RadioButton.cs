@@ -11,15 +11,27 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// A single-choice selection control that can be grouped with other radio buttons.
+/// </summary>
 public sealed partial class RadioButton : Visual
 {
     private bool _isPressed;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RadioButton"/> class.
+    /// </summary>
     public RadioButton()
     {
         Focusable = true;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RadioButton"/> class with label and group.
+    /// </summary>
+    /// <param name="text">The label text.</param>
+    /// <param name="group">The group identifier.</param>
+    /// <param name="isChecked">The initial checked state.</param>
     public RadioButton(string text, object? group = null, bool isChecked = false) : this()
     {
         Text = text;
@@ -27,20 +39,32 @@ public sealed partial class RadioButton : Visual
         IsChecked = isChecked;
     }
 
+    /// <summary>
+    /// Gets or sets the label visual.
+    /// </summary>
     [Bindable]
     public partial Visual? Text { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the radio button is checked.
+    /// </summary>
     [Bindable]
     public partial bool IsChecked { get; set; }
 
+    /// <summary>
+    /// Gets or sets the group identifier used to uncheck other radio buttons in the same group.
+    /// </summary>
     [Bindable]
     public partial object? Group { get; set; }
 
+    /// <inheritdoc/>
     protected override int ChildrenCount => _text is null ? 0 : 1;
 
+    /// <inheritdoc/>
     protected override Visual GetChild(int index)
         => index == 0 && _text is not null ? _text : throw new ArgumentOutOfRangeException(nameof(index));
 
+    /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var textWidth = 0;
@@ -54,6 +78,7 @@ public sealed partial class RadioButton : Visual
         return SizeHints.Fixed(constraints.Clamp(new Size(textWidth + 4, 1)));
     }
 
+    /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         var textVisual = Text;
@@ -68,6 +93,7 @@ public sealed partial class RadioButton : Visual
         textVisual.Arrange(new Rectangle(textX, finalRect.Y, desired, 1));
     }
 
+    /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
@@ -91,6 +117,7 @@ public sealed partial class RadioButton : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (e.Key is TerminalKey.Space or TerminalKey.Enter)
@@ -100,6 +127,7 @@ public sealed partial class RadioButton : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)
@@ -111,6 +139,7 @@ public sealed partial class RadioButton : Visual
         e.Handled = true;
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerReleased(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)

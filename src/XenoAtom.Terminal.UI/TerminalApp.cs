@@ -18,6 +18,9 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI;
 
+/// <summary>
+/// Hosts a retained-mode visual tree and drives input, layout, rendering, and binding invalidation.
+/// </summary>
 public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 {
     private readonly System.Collections.Concurrent.ConcurrentQueue<Action> _pendingActions = new();
@@ -62,6 +65,12 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private readonly DependencyIndex _arrangeIndex = new();
     private readonly DependencyIndex _renderIndex = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TerminalApp"/> class.
+    /// </summary>
+    /// <param name="root">The root visual.</param>
+    /// <param name="terminal">The terminal instance to use. When <see langword="null"/>, uses <see cref="Terminal.Terminal.Instance"/>.</param>
+    /// <param name="options">Optional host configuration.</param>
     public TerminalApp(Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(root);
@@ -110,10 +119,19 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Gets the underlying terminal instance used by this app.
+    /// </summary>
     public TerminalInstance Terminal => _terminal;
 
+    /// <summary>
+    /// Gets the actual root visual rendered by the app.
+    /// </summary>
     public Visual Root { get; }
 
+    /// <summary>
+    /// Gets the user-provided content root visual.
+    /// </summary>
     public Visual ContentRoot { get; }
 
     internal void SetUpdateCallback(Func<bool> onUpdate)
@@ -124,6 +142,9 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
     private Visual? _focusedElement;
 
+    /// <summary>
+    /// Gets the currently focused visual, or <see langword="null"/> if no element is focused.
+    /// </summary>
     public Visual? FocusedElement
     {
         get
@@ -134,6 +155,10 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         private set => _focusedElement = value;
     }
 
+    /// <summary>
+    /// Posts an action to be executed on the UI thread.
+    /// </summary>
+    /// <param name="action">The action to execute.</param>
     public void Post(Action action)
     {
         ArgumentNullException.ThrowIfNull(action);
@@ -141,8 +166,14 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         _wakeUp.Set();
     }
 
+    /// <summary>
+    /// Requests the app loop to stop.
+    /// </summary>
     public void Stop() => _cts.Cancel();
 
+    /// <summary>
+    /// Stops the app and releases resources.
+    /// </summary>
     public async ValueTask DisposeAsync()
     {
         Stop();
@@ -164,6 +195,11 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         await ValueTask.CompletedTask;
     }
 
+    /// <summary>
+    /// Writes a markup line in inline host mode.
+    /// </summary>
+    /// <param name="markup">The markup to write.</param>
+    /// <exception cref="InvalidOperationException">Thrown when used outside of inline host mode.</exception>
     public void WriteMarkupLine(string markup)
     {
         Dispatcher.VerifyAccess();
@@ -176,6 +212,11 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         RequestRender();
     }
 
+    /// <summary>
+    /// Appends a visual as flow output in inline host mode.
+    /// </summary>
+    /// <param name="block">The visual to render and append.</param>
+    /// <exception cref="InvalidOperationException">Thrown when used outside of inline host mode.</exception>
     public void Append(Visual block)
     {
         ArgumentNullException.ThrowIfNull(block);
@@ -225,6 +266,10 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         RequestRender();
     }
 
+    /// <summary>
+    /// Runs the app until it is stopped or the token is canceled.
+    /// </summary>
+    /// <param name="cancellationToken">A cancellation token to stop the run.</param>
     public Task RunAsync(CancellationToken cancellationToken = default)
     {
         Run(cancellationToken);
@@ -334,6 +379,10 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Runs the terminal app synchronously on the current thread.
+    /// </summary>
+    /// <param name="cancellationToken">A cancellation token to stop the run.</param>
     public void Run(CancellationToken cancellationToken = default)
     {
         if (_runTask is not null)
@@ -497,6 +546,10 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return _windowLayer.RemoveWindow(window);
     }
 
+    /// <summary>
+    /// Sets focus to the specified visual.
+    /// </summary>
+    /// <param name="visual">The visual to focus, or <see langword="null"/> to clear focus.</param>
     public void Focus(Visual? visual)
     {
         VerifyAccess();

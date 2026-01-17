@@ -4,20 +4,44 @@
 
 namespace XenoAtom.Terminal.UI.Styling;
 
+/// <summary>
+/// Defines rendering and theming options for a <see cref="Controls.ScrollBar"/>.
+/// </summary>
 public sealed record ScrollBarStyle : IStyle<ScrollBarStyle>
 {
+    /// <summary>
+    /// Gets the default scroll bar style.
+    /// </summary>
     public static ScrollBarStyle Default { get; } = new();
 
+    /// <summary>
+    /// Gets the environment key used to resolve a <see cref="ScrollBarStyle"/>.
+    /// </summary>
     public static StyleKey<ScrollBarStyle> Key { get; } = new("ScrollBarStyle", Default);
 
+    /// <summary>
+    /// Gets the scroll bar thickness in cells.
+    /// </summary>
     public int Thickness { get; init; } = 1;
 
+    /// <summary>
+    /// Gets the minimum thumb length in cells.
+    /// </summary>
     public int MinThumbLength { get; init; } = 1;
 
+    /// <summary>
+    /// Gets the optional style used for the track.
+    /// </summary>
     public CellStyle? TrackStyle { get; init; }
 
+    /// <summary>
+    /// Gets the optional style used for the thumb.
+    /// </summary>
     public CellStyle? ThumbStyle { get; init; }
 
+    /// <summary>
+    /// Resolves the track style for the provided <paramref name="theme"/>.
+    /// </summary>
     public CellStyle ResolveTrackStyle(Theme theme)
     {
         if (TrackStyle is { } track)
@@ -38,6 +62,11 @@ public sealed record ScrollBarStyle : IStyle<ScrollBarStyle>
         return style;
     }
 
+    /// <summary>
+    /// Resolves the thumb style for the provided <paramref name="theme"/>.
+    /// </summary>
+    /// <param name="theme">The current theme.</param>
+    /// <param name="highlighted">Whether the thumb is highlighted (hovered/dragging/focused).</param>
     public CellStyle ResolveThumbStyle(Theme theme, bool highlighted)
     {
         if (ThumbStyle is { } thumb)
@@ -58,4 +87,3 @@ public sealed record ScrollBarStyle : IStyle<ScrollBarStyle>
         return style;
     }
 }
-

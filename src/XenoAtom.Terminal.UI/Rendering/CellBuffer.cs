@@ -10,6 +10,9 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Rendering;
 
+/// <summary>
+/// Represents a 2D buffer of terminal cells (glyph + style + hyperlink) used for rendering.
+/// </summary>
 public sealed class CellBuffer
 {
     private readonly int[] _scalars;
@@ -21,6 +24,11 @@ public sealed class CellBuffer
     private Rectangle[]? _clipStack;
     private int _clipDepth;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CellBuffer"/> class.
+    /// </summary>
+    /// <param name="width">The buffer width in cells.</param>
+    /// <param name="height">The buffer height in cells.</param>
     public CellBuffer(int width, int height)
     {
         if (width < 0) throw new ArgumentOutOfRangeException(nameof(width));
@@ -36,8 +44,14 @@ public sealed class CellBuffer
         Clear();
     }
 
+    /// <summary>
+    /// Gets the buffer width in cells.
+    /// </summary>
     public int Width { get; }
 
+    /// <summary>
+    /// Gets the buffer height in cells.
+    /// </summary>
     public int Height { get; }
 
     internal ReadOnlySpan<int> UnsafeScalars => _scalars;
@@ -46,6 +60,9 @@ public sealed class CellBuffer
 
     internal ReadOnlySpan<ulong> UnsafeHyperlinks => _hyperlinks;
 
+    /// <summary>
+    /// Clears the buffer using a blank glyph and <see cref="CellStyle.None"/>.
+    /// </summary>
     public void Clear()
     {
         Array.Fill(_scalars, ' ');
@@ -54,6 +71,10 @@ public sealed class CellBuffer
         _hyperlinkTable?.Clear();
     }
 
+    /// <summary>
+    /// Clears the buffer using a blank glyph and the specified <paramref name="cellStyle"/>.
+    /// </summary>
+    /// <param name="cellStyle">The style applied to every cell.</param>
     public void Clear(CellStyle cellStyle)
     {
         Array.Fill(_scalars, ' ');
@@ -62,6 +83,10 @@ public sealed class CellBuffer
         _hyperlinkTable?.Clear();
     }
 
+    /// <summary>
+    /// Pushes a clipping rectangle that limits subsequent writes to the intersection with the current clip.
+    /// </summary>
+    /// <param name="rect">The clipping rectangle.</param>
     public void PushClip(Rectangle rect)
     {
         var next = Intersect(_clipRect, rect);
@@ -76,6 +101,9 @@ public sealed class CellBuffer
         _clipRect = next;
     }
 
+    /// <summary>
+    /// Pops the most recent clipping rectangle.
+    /// </summary>
     public void PopClip()
     {
         if (_clipDepth <= 0)
@@ -86,9 +114,24 @@ public sealed class CellBuffer
         _clipRect = _clipStack![--_clipDepth];
     }
 
+    /// <summary>
+    /// Sets a cell at the given position.
+    /// </summary>
+    /// <param name="x">The x coordinate (column).</param>
+    /// <param name="y">The y coordinate (row).</param>
+    /// <param name="rune">The glyph to write.</param>
+    /// <param name="cellStyle">The cell style.</param>
     public void SetCell(int x, int y, Rune rune, CellStyle cellStyle)
         => SetCell(x, y, rune, cellStyle, hyperlinkToken: 0);
 
+    /// <summary>
+    /// Sets a cell at the given position with an associated hyperlink token.
+    /// </summary>
+    /// <param name="x">The x coordinate (column).</param>
+    /// <param name="y">The y coordinate (row).</param>
+    /// <param name="rune">The glyph to write.</param>
+    /// <param name="cellStyle">The cell style.</param>
+    /// <param name="hyperlinkToken">A hyperlink token registered via <see cref="RegisterHyperlink"/>.</param>
     public void SetCell(int x, int y, Rune rune, CellStyle cellStyle, ulong hyperlinkToken)
     {
         if ((uint)x >= (uint)Width || (uint)y >= (uint)Height || !_clipRect.Contains(x, y))
@@ -120,9 +163,24 @@ public sealed class CellBuffer
         }
     }
 
+    /// <summary>
+    /// Writes a UTF-16 text span to the buffer, applying the given style.
+    /// </summary>
+    /// <param name="x">The start x coordinate (column).</param>
+    /// <param name="y">The y coordinate (row).</param>
+    /// <param name="text">The text to write.</param>
+    /// <param name="cellStyle">The cell style.</param>
     public void WriteText(int x, int y, ReadOnlySpan<char> text, CellStyle cellStyle)
         => WriteText(x, y, text, cellStyle, hyperlinkToken: 0);
 
+    /// <summary>
+    /// Writes a UTF-16 text span to the buffer, applying the given style and hyperlink.
+    /// </summary>
+    /// <param name="x">The start x coordinate (column).</param>
+    /// <param name="y">The y coordinate (row).</param>
+    /// <param name="text">The text to write.</param>
+    /// <param name="cellStyle">The cell style.</param>
+    /// <param name="hyperlinkToken">A hyperlink token registered via <see cref="RegisterHyperlink"/>.</param>
     public void WriteText(int x, int y, ReadOnlySpan<char> text, CellStyle cellStyle, ulong hyperlinkToken)
     {
         var posX = x;
@@ -151,6 +209,11 @@ public sealed class CellBuffer
         }
     }
 
+    /// <summary>
+    /// Registers a hyperlink URI and returns a token that can be stored per cell.
+    /// </summary>
+    /// <param name="uri">The hyperlink URI.</param>
+    /// <returns>A non-zero token when a valid URI is provided; otherwise <c>0</c>.</returns>
     public ulong RegisterHyperlink(string uri)
     {
         ArgumentNullException.ThrowIfNull(uri);
@@ -235,6 +298,12 @@ public sealed class CellBuffer
         return new Rectangle(x0, y0, w, h);
     }
 
+    /// <summary>
+    /// Converts the buffer content to ANSI markup lines.
+    /// </summary>
+    /// <remarks>
+    /// This method allocates and is intended primarily for tests and diagnostics.
+    /// </remarks>
     public IReadOnlyList<string> ToMarkupLines()
     {
         var lines = new string[Height];

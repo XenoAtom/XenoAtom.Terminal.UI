@@ -6,22 +6,64 @@ using System.Text;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
+/// <summary>
+/// Defines rendering and theming options for <see cref="Controls.SplitterBase"/> derivatives.
+/// </summary>
 public sealed record SplitterStyle : IStyle<SplitterStyle>
 {
+    /// <summary>
+    /// Gets the default splitter style.
+    /// </summary>
     public static SplitterStyle Default { get; } = new();
 
+    /// <summary>
+    /// Gets the environment key used to resolve a <see cref="SplitterStyle"/>.
+    /// </summary>
     public static StyleKey<SplitterStyle> Key { get; } = new("SplitterStyle", Default);
 
+    /// <summary>
+    /// Gets the glyph used for horizontal split bars.
+    /// </summary>
     public Rune HorizontalGlyph { get; init; } = new(0x2500); // ─
 
+    /// <summary>
+    /// Gets the glyph used for vertical split bars.
+    /// </summary>
     public Rune VerticalGlyph { get; init; } = new(0x2502); // │
 
+    /// <summary>
+    /// Gets the optional base bar style.
+    /// </summary>
     public CellStyle? BarStyle { get; init; }
+    
+    /// <summary>
+    /// Gets the optional style used when hovered.
+    /// </summary>
     public CellStyle? HoverStyle { get; init; }
+    
+    /// <summary>
+    /// Gets the optional style used when focused.
+    /// </summary>
     public CellStyle? FocusStyle { get; init; }
+    
+    /// <summary>
+    /// Gets the optional style used while dragging.
+    /// </summary>
     public CellStyle? DragStyle { get; init; }
+    
+    /// <summary>
+    /// Gets the optional style used when disabled.
+    /// </summary>
     public CellStyle? DisabledStyle { get; init; }
 
+    /// <summary>
+    /// Resolves the splitter bar style for the provided state.
+    /// </summary>
+    /// <param name="theme">The current theme.</param>
+    /// <param name="enabled">Whether the splitter is enabled.</param>
+    /// <param name="focused">Whether the splitter is focused.</param>
+    /// <param name="hovered">Whether the bar is hovered.</param>
+    /// <param name="dragging">Whether the bar is being dragged.</param>
     public CellStyle Resolve(Theme theme, bool enabled, bool focused, bool hovered, bool dragging)
     {
         if (!enabled)
@@ -57,4 +99,3 @@ public sealed record SplitterStyle : IStyle<SplitterStyle>
         return BarStyle ?? theme.BorderStyle(focused: false);
     }
 }
-

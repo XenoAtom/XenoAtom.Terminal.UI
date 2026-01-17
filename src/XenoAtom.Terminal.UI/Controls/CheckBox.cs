@@ -11,30 +11,50 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// A toggle control that represents a boolean value.
+/// </summary>
 public sealed partial class CheckBox : Visual
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CheckBox"/> class.
+    /// </summary>
     public CheckBox()
     {
         Focusable = true;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CheckBox"/> class with content.
+    /// </summary>
+    /// <param name="text">The checkbox label.</param>
+    /// <param name="isChecked">The initial checked state.</param>
     public CheckBox(string text, bool isChecked = false) : this()
     {
         Text = text;
         IsChecked = isChecked;
     }
 
+    /// <summary>
+    /// Gets or sets the label visual.
+    /// </summary>
     [Bindable]
     public partial Visual? Text { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the checkbox is checked.
+    /// </summary>
     [Bindable]
     public partial bool IsChecked { get; set; }
 
+    /// <inheritdoc/>
     protected override int ChildrenCount => _text is null ? 0 : 1;
 
+    /// <inheritdoc/>
     protected override Visual GetChild(int index)
         => index == 0 && _text is not null ? _text : throw new ArgumentOutOfRangeException(nameof(index));
 
+    /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var checkBoxStyle = Get<CheckBoxStyle>();
@@ -54,6 +74,7 @@ public sealed partial class CheckBox : Visual
         return SizeHints.Fixed(constraints.Clamp(new Size(width, 1)));
     }
 
+    /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
@@ -75,6 +96,7 @@ public sealed partial class CheckBox : Visual
         textVisual.Arrange(new Rectangle(textX, finalRect.Y, desired, 1));
     }
 
+    /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
@@ -105,6 +127,7 @@ public sealed partial class CheckBox : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (e.Key is TerminalKey.Space or TerminalKey.Enter)
@@ -114,6 +137,7 @@ public sealed partial class CheckBox : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)

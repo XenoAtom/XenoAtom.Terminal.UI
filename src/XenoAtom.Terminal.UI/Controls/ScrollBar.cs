@@ -11,6 +11,9 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Displays a scroll bar for a scrollable extent and viewport.
+/// </summary>
 public sealed partial class ScrollBar : Visual
 {
     private bool _dragging;
@@ -19,6 +22,10 @@ public sealed partial class ScrollBar : Visual
     private int _dragStartValue;
     private int _oldValueForEvent;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ScrollBar"/> control.
+    /// </summary>
+    /// <param name="focusable">Whether the scroll bar can receive focus.</param>
     public ScrollBar(bool focusable = true)
     {
         Focusable = focusable;
@@ -30,24 +37,45 @@ public sealed partial class ScrollBar : Visual
         this.LargeChange(0);
     }
 
+    /// <summary>
+    /// Gets or sets the scroll bar orientation.
+    /// </summary>
     [Bindable]
     public partial Orientation Orientation { get; set; }
 
+    /// <summary>
+    /// Gets or sets the minimum value.
+    /// </summary>
     [Bindable]
     public partial int Minimum { get; set; }
 
+    /// <summary>
+    /// Gets or sets the maximum value.
+    /// </summary>
     [Bindable]
     public partial int Maximum { get; set; }
 
+    /// <summary>
+    /// Gets or sets the current value.
+    /// </summary>
     [Bindable]
     public partial int Value { get; set; }
 
+    /// <summary>
+    /// Gets or sets the viewport size, used to compute the thumb length.
+    /// </summary>
     [Bindable]
     public partial int ViewportSize { get; set; }
 
+    /// <summary>
+    /// Gets or sets the small change step (e.g. mouse wheel).
+    /// </summary>
     [Bindable]
     public partial int SmallChange { get; set; }
 
+    /// <summary>
+    /// Gets or sets the large change step (e.g. page up/down).
+    /// </summary>
     [Bindable]
     public partial int LargeChange { get; set; }
 
@@ -83,6 +111,7 @@ public sealed partial class ScrollBar : Visual
         return Math.Clamp(value, min, max);
     }
 
+    /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var thickness = Math.Max(1, Get<ScrollBarStyle>().Thickness);
@@ -106,8 +135,10 @@ public sealed partial class ScrollBar : Visual
             shrinkX: 1);
     }
 
+    /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect) => Bounds = finalRect;
 
+    /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
@@ -216,6 +247,7 @@ public sealed partial class ScrollBar : Visual
         return (thumbStart, thumbLength);
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)
@@ -254,6 +286,7 @@ public sealed partial class ScrollBar : Visual
         e.Handled = true;
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         if (!_dragging)
@@ -290,6 +323,7 @@ public sealed partial class ScrollBar : Visual
         e.Handled = true;
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerReleased(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)
@@ -304,6 +338,7 @@ public sealed partial class ScrollBar : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerWheel(PointerEventArgs e)
     {
         if (e.WheelDelta == 0)
@@ -316,6 +351,7 @@ public sealed partial class ScrollBar : Visual
         e.Handled = true;
     }
 
+    /// <inheritdoc/>
     protected override void OnKeyDown(KeyEventArgs e)
     {
         var step = Math.Max(1, SmallChange);

@@ -12,16 +12,31 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Represents an item in a <see cref="Select"/> control.
+/// </summary>
+/// <param name="Value">The value associated with the item.</param>
+/// <param name="ContentFactory">A factory creating the visual used to render the item.</param>
 public sealed record SelectItem(object? Value, Func<Visual> ContentFactory)
 {
+    /// <summary>
+    /// Initializes a new item using a text label.
+    /// </summary>
+    /// <param name="text">The item text.</param>
     public SelectItem(string text)
         : this(text, () => new TextBlock { Text = text })
     {
     }
 
+    /// <summary>
+    /// Creates the visual used to render this item.
+    /// </summary>
     public Visual CreateVisual() => ContentFactory();
 }
 
+/// <summary>
+/// A dropdown/select control that displays a popup list to pick a single item.
+/// </summary>
 public sealed partial class Select : ContentVisual
 {
     private Popup? _popup;
@@ -36,8 +51,14 @@ public sealed partial class Select : ContentVisual
         this.SelectedIndex(0);
     }
 
+    /// <summary>
+    /// Gets the items available for selection.
+    /// </summary>
     public BindableList<SelectItem> Items { get; }
 
+    /// <summary>
+    /// Gets or sets the selected item index.
+    /// </summary>
     [Bindable]
     public partial int SelectedIndex { get; set; }
 
@@ -47,6 +68,7 @@ public sealed partial class Select : ContentVisual
         UpdateSelectedContent();
     }
 
+    /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         // Rebuild selected content before measuring when needed.
@@ -99,6 +121,7 @@ public sealed partial class Select : ContentVisual
             contentHints.FlexShrinkY).Normalize();
     }
 
+    /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
@@ -126,6 +149,7 @@ public sealed partial class Select : ContentVisual
         }
     }
 
+    /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
@@ -155,6 +179,7 @@ public sealed partial class Select : ContentVisual
         buffer.WriteText(arrowX, rect.Y, arrowText.AsSpan(), resolved | TextStyle.Dim);
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)
@@ -166,6 +191,7 @@ public sealed partial class Select : ContentVisual
         e.Handled = true;
     }
 
+    /// <inheritdoc/>
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (e.Key is TerminalKey.Enter or TerminalKey.Space)

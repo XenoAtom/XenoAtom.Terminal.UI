@@ -11,6 +11,9 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// A movable window/dialog visual that can be shown in fullscreen applications.
+/// </summary>
 public sealed partial class Dialog : Visual, IModalVisual
 {
     private Rectangle _layoutSlot;
@@ -21,12 +24,19 @@ public sealed partial class Dialog : Visual, IModalVisual
     private int _dragStartLeft;
     private int _dragStartTop;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Dialog"/> class.
+    /// </summary>
     public Dialog()
     {
         this.HorizontalAlignment(HorizontalAlignment.Stretch);
         this.VerticalAlignment(VerticalAlignment.Stretch);
     }
 
+    /// <summary>
+    /// Shows the dialog by adding it to the current fullscreen <see cref="TerminalApp"/>.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when called while no terminal app is running.</exception>
     public void Show()
     {
         VerifyAccess();
@@ -40,6 +50,9 @@ public sealed partial class Dialog : Visual, IModalVisual
         app.ShowWindow(this);
     }
 
+    /// <summary>
+    /// Closes the dialog if it is currently shown.
+    /// </summary>
     public void Close()
     {
         VerifyAccess();
@@ -53,33 +66,57 @@ public sealed partial class Dialog : Visual, IModalVisual
         app.CloseWindow(this);
     }
 
+    /// <summary>
+    /// Gets or sets the dialog title visual.
+    /// </summary>
     [Bindable]
     public partial Visual? Title { get; set; }
 
+    /// <summary>
+    /// Gets or sets the padding between the border and the content.
+    /// </summary>
     [Bindable]
     public partial Thickness Padding { get; set; }
 
+    /// <summary>
+    /// Gets or sets the optional left position (relative to the layout slot).
+    /// </summary>
     [Bindable]
     public partial int? Left { get; set; }
 
+    /// <summary>
+    /// Gets or sets the optional top position (relative to the layout slot).
+    /// </summary>
     [Bindable]
     public partial int? Top { get; set; }
 
+    /// <summary>
+    /// Gets or sets the optional dialog width.
+    /// </summary>
     [Bindable]
     public partial int? Width { get; set; }
 
+    /// <summary>
+    /// Gets or sets the optional dialog height.
+    /// </summary>
     [Bindable]
     public partial int? Height { get; set; }
 
+    /// <inheritdoc/>
     [Bindable]
     public partial bool IsModal { get; set; }
 
+    /// <summary>
+    /// Gets or sets the dialog content visual.
+    /// </summary>
     [Bindable]
     public partial Visual? Content { get; set; }
 
+    /// <inheritdoc/>
     protected override int ChildrenCount
         => (_title is null ? 0 : 1) + (_content is null ? 0 : 1);
 
+    /// <inheritdoc/>
     protected override Visual GetChild(int index)
     {
         if (_title is not null)
@@ -102,6 +139,7 @@ public sealed partial class Dialog : Visual, IModalVisual
         throw new ArgumentOutOfRangeException(nameof(index));
     }
 
+    /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var padding = Padding;
@@ -130,6 +168,7 @@ public sealed partial class Dialog : Visual, IModalVisual
         return SizeHints.Fixed(constraints.Clamp(new Size(desiredWidth, desiredHeight)));
     }
 
+    /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         _layoutSlot = finalRect;
@@ -167,6 +206,7 @@ public sealed partial class Dialog : Visual, IModalVisual
         }
     }
 
+    /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
@@ -244,6 +284,7 @@ public sealed partial class Dialog : Visual, IModalVisual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)
@@ -272,6 +313,7 @@ public sealed partial class Dialog : Visual, IModalVisual
         e.Handled = true;
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         if (!_dragging)
@@ -291,6 +333,7 @@ public sealed partial class Dialog : Visual, IModalVisual
         e.Handled = true;
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerReleased(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)

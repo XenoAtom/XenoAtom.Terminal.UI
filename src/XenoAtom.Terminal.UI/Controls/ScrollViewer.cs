@@ -12,6 +12,9 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Hosts a single content visual and provides horizontal/vertical scrolling with scroll bars.
+/// </summary>
 public sealed partial class ScrollViewer : Visual
 {
     private readonly ContentViewportHost _contentHost;
@@ -31,6 +34,14 @@ public sealed partial class ScrollViewer : Visual
     private ScrollBarStyle? _internalScrollBarStyle;
     private bool _syncingOffsets;
 
+    /// <summary>
+    /// Initializes a new instance of the ScrollViewer class with default settings, enabling content scrolling and
+    /// displaying scroll bars as needed.
+    /// </summary>
+    /// <remarks>The ScrollViewer is configured to be focusable and stretches to fill its parent container by
+    /// default. It automatically creates and attaches vertical and horizontal scroll bars, as well as a content host
+    /// and scroll corner visual, to support scrolling functionality. After construction, you can add content to the
+    /// ScrollViewer and customize its behavior as required.</remarks>
     public ScrollViewer()
     {
         Focusable = true;
@@ -57,18 +68,28 @@ public sealed partial class ScrollViewer : Visual
         AttachChild(_corner);
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ScrollViewer"/> with content.
+    /// </summary>
+    /// <param name="content">The content visual.</param>
     public ScrollViewer(Visual? content) : this()
     {
         Content = content;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ScrollViewer"/> with dynamic content.
+    /// </summary>
+    /// <param name="contentFactory">A factory that produces the content visual.</param>
     public ScrollViewer(Func<Visual?> contentFactory) : this()
     {
         this.Content(contentFactory);
     }
 
+    /// <inheritdoc/>
     protected override int ChildrenCount => 4;
 
+    /// <inheritdoc/>
     protected override Visual GetChild(int index)
         => index switch
         {
@@ -79,6 +100,9 @@ public sealed partial class ScrollViewer : Visual
             _ => throw new ArgumentOutOfRangeException(nameof(index)),
         };
 
+    /// <summary>
+    /// Gets or sets the content visual.
+    /// </summary>
     [Bindable]
     public Visual? Content
     {
@@ -104,12 +128,21 @@ public sealed partial class ScrollViewer : Visual
         }
     }
 
+    /// <summary>
+    /// Gets the content scroll interface when the content implements <see cref="IScrollable"/>.
+    /// </summary>
     public IScrollable? ContentScrollable => _contentScrollable;
 
 
+    /// <summary>
+    /// Gets or sets the vertical scroll offset.
+    /// </summary>
     [Bindable]
     public partial int VerticalOffset { get; set; }
 
+    /// <summary>
+    /// Gets or sets the horizontal scroll offset.
+    /// </summary>
     [Bindable]
     public partial int HorizontalOffset { get; set; }
 
@@ -143,6 +176,7 @@ public sealed partial class ScrollViewer : Visual
         MarkArrangeDirty();
     }
 
+    /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var content = Content;
@@ -192,6 +226,7 @@ public sealed partial class ScrollViewer : Visual
             shrinkY: 1);
     }
 
+    /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
@@ -411,6 +446,7 @@ public sealed partial class ScrollViewer : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnKeyDown(KeyEventArgs e)
     {
         var useContentScroll = _contentScrollModel is not null;
@@ -459,6 +495,7 @@ public sealed partial class ScrollViewer : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerWheel(PointerEventArgs e)
     {
         if (e.WheelDelta == 0)

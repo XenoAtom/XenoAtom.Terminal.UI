@@ -12,6 +12,9 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Displays a vertical list of options with selection and activation.
+/// </summary>
 public sealed partial class OptionList : Visual
 {
     private int _scrollOffset;
@@ -25,17 +28,29 @@ public sealed partial class OptionList : Visual
     private string _typeBuffer = string.Empty;
     private long _typeLastTick;
 
+    /// <summary>
+    /// Gets the option items displayed by this list.
+    /// </summary>
     public VisualList<OptionListItem> Items { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OptionList"/> control.
+    /// </summary>
     public OptionList()
     {
         Items = new VisualList<OptionListItem>(this, "Items");
         Focusable = true;
     }
 
+    /// <summary>
+    /// Gets or sets the selected item index.
+    /// </summary>
     [Bindable]
     public partial int SelectedIndex { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether an item is activated on click.
+    /// </summary>
     [Bindable]
     public partial bool ActivateOnClick { get; set; }
 
@@ -58,10 +73,13 @@ public sealed partial class OptionList : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override int ChildrenCount => Items.Count;
 
+    /// <inheritdoc/>
     protected override Visual GetChild(int index) => Items[index];
 
+    /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = Get<OptionListStyle>();
@@ -89,6 +107,7 @@ public sealed partial class OptionList : Visual
         return SizeHints.Flex(min, natural, max, growX: 1, growY: 1, shrinkX: 1, shrinkY: 1);
     }
 
+    /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         var rect = finalRect;
@@ -128,6 +147,7 @@ public sealed partial class OptionList : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
@@ -205,6 +225,7 @@ public sealed partial class OptionList : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         var index = TryGetIndexAtPoint(e.UiX, e.UiY);
@@ -215,6 +236,7 @@ public sealed partial class OptionList : Visual
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)
@@ -233,6 +255,7 @@ public sealed partial class OptionList : Visual
         Invalidate();
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerReleased(PointerEventArgs e)
     {
         if (e.Button != TerminalMouseButton.Left)
@@ -257,6 +280,7 @@ public sealed partial class OptionList : Visual
         Invalidate();
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerWheel(PointerEventArgs e)
     {
         if (Items.Count == 0)
@@ -275,6 +299,7 @@ public sealed partial class OptionList : Visual
         e.Handled = true;
     }
 
+    /// <inheritdoc/>
     protected override void OnKeyDown(KeyEventArgs e)
     {
         var count = Items.Count;

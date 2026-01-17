@@ -10,35 +10,73 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+/// <summary>
+/// Specifies when a <see cref="MaskedInput"/> should reveal its text.
+/// </summary>
 public enum MaskedInputRevealMode
 {
+    /// <summary>
+    /// Never reveal the text (always masked).
+    /// </summary>
     Never = 0,
+    
+    /// <summary>
+    /// Reveal the text while the control is focused.
+    /// </summary>
     WhileFocused = 1,
+    
+    /// <summary>
+    /// Always reveal the text.
+    /// </summary>
     Always = 2,
 }
 
+/// <summary>
+/// Specifies clipboard behavior for a <see cref="MaskedInput"/>.
+/// </summary>
 public enum MaskedInputClipboardMode
 {
+    /// <summary>
+    /// Disable clipboard operations.
+    /// </summary>
     Disabled = 0,
+    
+    /// <summary>
+    /// Allow copy/cut of the real text.
+    /// </summary>
     CopyText = 1,
 }
 
+/// <summary>
+/// A text box that masks its content for password-like input.
+/// </summary>
 public sealed partial class MaskedInput : TextBox
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MaskedInput"/> class.
+    /// </summary>
     public MaskedInput()
     {
         this.RevealMode(MaskedInputRevealMode.Never);
         this.ClipboardMode(MaskedInputClipboardMode.Disabled);
     }
 
+    /// <summary>
+    /// Gets or sets the reveal mode.
+    /// </summary>
     [Bindable]
     public partial MaskedInputRevealMode RevealMode { get; set; }
 
+    /// <summary>
+    /// Gets or sets the clipboard mode.
+    /// </summary>
     [Bindable]
     public partial MaskedInputClipboardMode ClipboardMode { get; set; }
 
+    /// <inheritdoc/>
     protected override TextBoxStyle GetTextBoxStyle() => Get<MaskedInputStyle>();
 
+    /// <inheritdoc/>
     protected override void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, CellStyle cellStyle, bool isPlaceholder)
     {
         if (isPlaceholder || ShouldReveal())
@@ -62,6 +100,7 @@ public sealed partial class MaskedInput : TextBox
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if ((e.Modifiers & TerminalModifiers.Ctrl) != 0 && ClipboardMode != MaskedInputClipboardMode.CopyText)
