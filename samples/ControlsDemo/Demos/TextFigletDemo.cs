@@ -19,7 +19,7 @@ public sealed class TextFigletDemo : ControlsDemoBase
         _ = context;
 
         var text = new State<string?>("XenoAtom");
-        var spacing = new State<int>(1);
+        var spacing = new State<double>(1);
 
         return new VStack(
                 DemoUi.Hint("TextFiglet renders multi-line banner text. Bind Text to a State to update live."),
@@ -27,13 +27,14 @@ public sealed class TextFigletDemo : ControlsDemoBase
                         new TextBlock("Text:"),
                         new TextBox().Text(text).MinWidth(20).MaxWidth(20),
                         new TextBlock("Spacing:"),
-                        new Slider().Minimum(1).Maximum(4).Value(spacing).MinWidth(16).MaxWidth(16))
-                    .Spacing(1),
+                        new Slider().Minimum(1).Maximum(8).Value(spacing).MinWidth(16).MaxWidth(16),
+                        new TextBlock(() => $"{(int)spacing.Value}"))
+                    .Spacing(1).VerticalAlignment(VerticalAlignment.Top),
                 new Border(
                     new TextFiglet()
                         .Text(text)
                         .Font(FigletFont.Standard)
-                        .LetterSpacing(spacing)
+                        .LetterSpacing(() => (int)spacing.Value)
                         .TextAlignment(TextAlignment.Left)
                         .Style(TextFigletStyle.Default with
                         {
