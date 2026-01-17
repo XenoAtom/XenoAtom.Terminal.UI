@@ -61,10 +61,10 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 - `doc/controls/barchart.md`
 - `doc/controls/linechart.md`
 - `doc/controls/sparkline.md`
+- `doc/controls/canvas.md`
 
 ## Overlays
 
 - `doc/controls/popup.md`
 - `doc/controls/dialog.md`
 - `doc/controls/backdrop.md`
-

@@ -34,7 +34,7 @@ Following this list, you will find compact specs for high and medium priority co
 | [ ] | **Low**    | **Digits / KPI big-number**                           | Visualization              | Dashboard counters                   | Mostly polish                                     |
 | [ ] | **Low**    | **Placeholder / empty-state widget**                  | UX                         | No-results/loading states            | Polish; easy to fake                              |
 | [ ] | **Low**    | **Figlet / big text**                                 | Visual                     | Banners/headers                      | Fun, rarely essential                             |
-| [ ] | **Low**    | **Canvas / pixel surface**                            | Visualization              | Images/advanced plots                | Bigger scope; later                               |
+| [x] | **Low**    | **Canvas / pixel surface**                            | Visualization              | Images/advanced plots                | Bigger scope; later                               |
 | [ ] | **Low** | **DirectoryTree / File picker**                       | Navigation                 | File browsing                        | Popular in tool-like TUIs                         |
 | [ ] | **Low** | **Calendar widget**                                   | Visualization/productivity | Schedules/date picking               | App-dependent                                     |
 | [ ] | **Low** | **Log view (RichLog / styled log)**                   | Diagnostics                | Streaming logs + scroll + styling    | Huge value for devtools/ops TUIs                  |
