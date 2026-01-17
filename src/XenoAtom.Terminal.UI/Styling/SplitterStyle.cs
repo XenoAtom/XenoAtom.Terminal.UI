@@ -3,11 +3,12 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
+using XenoAtom.Terminal.UI.Controls;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
 /// <summary>
-/// Defines rendering and theming options for <see cref="Controls.SplitterBase"/> derivatives.
+/// Defines rendering and theming options for <see cref="Splitter"/> derivatives.
 /// </summary>
 public sealed record SplitterStyle : IStyle<SplitterStyle>
 {

@@ -7,7 +7,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// <summary>
 /// Represents a vertical splitter that arranges panes stacked vertically.
 /// </summary>
-public sealed partial class VSplitter : SplitterBase
+public sealed partial class VSplitter : Splitter
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="VSplitter"/> class.

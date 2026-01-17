@@ -13,7 +13,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// <summary>
 /// Base class for splitters that arrange two visuals separated by a draggable bar.
 /// </summary>
-public abstract partial class SplitterBase : Visual
+public abstract partial class Splitter : Visual
 {
     private Rectangle _barRect;
     private bool _dragging;
@@ -25,7 +25,7 @@ public abstract partial class SplitterBase : Visual
     /// <summary>
     /// Initializes a new splitter.
     /// </summary>
-    protected SplitterBase()
+    protected Splitter()
     {
         Focusable = true;
         this.HorizontalAlignment(HorizontalAlignment.Stretch);

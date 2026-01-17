@@ -7,7 +7,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// <summary>
 /// Represents a horizontal splitter that arranges panes side by side.
 /// </summary>
-public sealed partial class HSplitter : SplitterBase
+public sealed partial class HSplitter : Splitter
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="HSplitter"/> class.
