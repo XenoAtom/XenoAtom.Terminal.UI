@@ -401,9 +401,11 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             var indent = new string(' ', string.IsNullOrEmpty(ns) ? 0 : 4);
             var extensionClassName = GetExtensionClassName(containingType);
 
+            var receiverTypeXml = DocumentationCommentId.CreateDeclarationId(containingType);
+
             sb.Append(indent).AppendLine("/// <summary>");
             sb.Append(indent).Append("/// Fluent extension methods for configuring instances of <see cref=\"")
-                .Append(containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                .Append(receiverTypeXml)
                 .AppendLine("\"/>.");
             sb.Append(indent).AppendLine("/// </summary>");
             sb.Append(indent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
@@ -426,7 +428,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 }
 
                 sb.Append(methodIndent).AppendLine("/// <summary>");
-                sb.Append(methodIndent).Append("/// Sets <see cref=\"").Append(receiverType).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> and returns the same instance.");
+                sb.Append(methodIndent).Append("/// Sets <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> and returns the same instance.");
                 sb.Append(methodIndent).AppendLine("/// </summary>");
                 sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
                 sb.Append(methodIndent).Append("/// <param name=\"").Append(EscapeIdentifier(argName)).AppendLine("\">The value to set.</param>");
@@ -444,7 +446,9 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 }
                 else
                 {
-                    sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName)).Append("(this ").Append(receiverType).Append(" obj, ").Append(argType).Append(' ').Append(EscapeIdentifier(argName)).AppendLine(")");
+                    sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName));
+                    AppendTypeParameters(sb, containingType);
+                    sb.Append("(this ").Append(receiverType).Append(" obj, ").Append(argType).Append(' ').Append(EscapeIdentifier(argName)).AppendLine(")");
                     sb.Append(methodIndent).AppendLine("{");
                     sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
                     sb.Append(methodIndent).Append("    obj.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine(";");
@@ -456,7 +460,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 if (p.GenerateImplementation)
                 {
                     sb.Append(methodIndent).AppendLine("/// <summary>");
-                    sb.Append(methodIndent).Append("/// Binds <see cref=\"").Append(receiverType).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> to a binding and returns the same instance.");
+                    sb.Append(methodIndent).Append("/// Binds <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> to a binding and returns the same instance.");
                     sb.Append(methodIndent).AppendLine("/// </summary>");
                     sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
                     sb.Append(methodIndent).Append("/// <param name=\"").Append(EscapeIdentifier(argName)).AppendLine("\">The binding to attach.</param>");
@@ -474,7 +478,9 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     }
                     else
                     {
-                        sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName)).Append("(this ").Append(receiverType).Append(" obj, global::XenoAtom.Terminal.UI.Binding<").Append(argType).Append("> ").Append(EscapeIdentifier(argName)).AppendLine(")");
+                        sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName));
+                        AppendTypeParameters(sb, containingType);
+                        sb.Append("(this ").Append(receiverType).Append(" obj, global::XenoAtom.Terminal.UI.Binding<").Append(argType).Append("> ").Append(EscapeIdentifier(argName)).AppendLine(")");
                         sb.Append(methodIndent).AppendLine("{");
                         sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
                         sb.Append(methodIndent).Append("    obj.Bind").Append(propName).Append("(").Append(EscapeIdentifier(argName)).AppendLine(");");
@@ -487,7 +493,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 if (p.IsParentVisual)
                 {
                     sb.Append(methodIndent).AppendLine("/// <summary>");
-                    sb.Append(methodIndent).Append("/// Registers a dynamic update that assigns <see cref=\"").Append(receiverType).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> from a computed value and returns the same instance.");
+                    sb.Append(methodIndent).Append("/// Registers a dynamic update that assigns <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> from a computed value and returns the same instance.");
                     sb.Append(methodIndent).AppendLine("/// </summary>");
                     sb.Append(methodIndent).AppendLine("/// <remarks>");
                     sb.Append(methodIndent).AppendLine("/// The delegate is evaluated during the dynamic update pass; accessed bindings are tracked so only affected visuals are refreshed.");
@@ -512,7 +518,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     sb.AppendLine();
 
                     sb.Append(methodIndent).AppendLine("/// <summary>");
-                    sb.Append(methodIndent).Append("/// Configures <see cref=\"").Append(receiverType).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> from a <see cref=\"global::XenoAtom.Terminal.UI.State{T}\"/> and returns the same instance.");
+                    sb.Append(methodIndent).Append("/// Configures <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> from a <see cref=\"global::XenoAtom.Terminal.UI.State{T}\"/> and returns the same instance.");
                     sb.Append(methodIndent).AppendLine("/// </summary>");
                     sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
                     sb.Append(methodIndent).Append("/// <param name=\"").Append(EscapeIdentifier(argName)).AppendLine("\">The state providing the current value.</param>");
@@ -610,7 +616,9 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 AppendTypeParameters(sb, type);
                 if (i == containingTypes.Count - 1)
                 {
-                    sb.Append(" : ").Append(type.Name).Append(".IBindings");
+                    sb.Append(" : ").Append(type.Name);
+                    AppendTypeParameters(sb, type);
+                    sb.Append(".IBindings");
                 }
                 sb.AppendLine();
                 sb.Append(indent).AppendLine("{");
