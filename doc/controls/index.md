@@ -9,6 +9,7 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 - `doc/controls/textbox.md`
 - `doc/controls/textarea.md`
 - `doc/controls/maskedinput.md`
+- `doc/controls/numberbox.md`
 
 ## Buttons & toggles
 

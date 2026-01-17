@@ -10,6 +10,7 @@ using var session = Terminal.Open();
 var statusState = new State<string>("ready");
 var progressState = new State<double>(0.0);
 var sliderState = new State<double>(0.35);
+var portState = new State<int>(8080);
 var switcherIndexState = new State<int>(0);
 var switchState = new State<bool>(false);
 var chartTickState = new State<int>(0);
@@ -184,6 +185,14 @@ var leftColumn = new VStack(
                     .ShowValueLabel(true)
                     .HorizontalAlignment(HorizontalAlignment.Stretch)
                     .ValueChanged((_, e) => sliderState.Value = e.NewValue))
+            .Spacing(1)
+            .HorizontalAlignment(HorizontalAlignment.Stretch),
+        new VStack(
+                "Port (1..65535):",
+                new NumberBox<int>
+                {
+                    ValueValidator = v => v is >= 1 and <= 65535 ? null : "Port must be in [1..65535]",
+                }.Value(portState))
             .Spacing(1)
             .HorizontalAlignment(HorizontalAlignment.Stretch),
         progressBars)
@@ -411,7 +420,7 @@ var rightColumn = new VStack(
                         .HorizontalAlignment(HorizontalAlignment.Stretch))
             })
             .HorizontalAlignment(HorizontalAlignment.Stretch),
-        new TextBlock().Text(() => $"Status: {statusState.Value} | Slider: {sliderState.Value:0.00}"))
+        new TextBlock().Text(() => $"Status: {statusState.Value} | Slider: {sliderState.Value:0.00} | Port: {portState.Value}"))
     .Spacing(1)
     .HorizontalAlignment(HorizontalAlignment.Stretch)
     .VerticalAlignment(VerticalAlignment.Stretch);

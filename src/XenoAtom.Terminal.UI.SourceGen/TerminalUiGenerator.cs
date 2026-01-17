@@ -87,6 +87,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
         string ContainingTypeDisplayName,
         string PropertyName,
         string PropertyTypeFullyQualified,
+        bool IsDelegateProperty,
         bool IsParentVisual,
         bool IsVisualChildProperty,
         bool GenerateImplementation,
@@ -163,6 +164,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
 
             var propertyTypeFullyQualified = propertySymbol.Type.ToDisplayString(typeFormat);
+            var isDelegateProperty = propertySymbol.Type.TypeKind == TypeKind.Delegate;
             var isVisualChildProperty = ComputeIsVisualChildProperty(context.SemanticModel.Compilation, containingType, propertySymbol.Type);
             var isVisual = InheritsFromVisual(context.SemanticModel.Compilation, containingType);
 
@@ -182,6 +184,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 ContainingTypeDisplayName: containingTypeDisplayName,
                 PropertyName: propertyName,
                 PropertyTypeFullyQualified: propertyTypeFullyQualified,
+                IsDelegateProperty: isDelegateProperty,
                 IsParentVisual: isVisual,
                 IsVisualChildProperty: isVisualChildProperty,
                 GenerateImplementation: generateImplementation,
@@ -518,43 +521,49 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
 
                 if (p.IsParentVisual)
                 {
-                    sb.Append(methodIndent).AppendLine("/// <summary>");
-                    sb.Append(methodIndent).Append("/// Registers a dynamic update that assigns <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> from a computed value and returns the same instance.");
-                    sb.Append(methodIndent).AppendLine("/// </summary>");
-                    sb.Append(methodIndent).AppendLine("/// <remarks>");
-                    sb.Append(methodIndent).AppendLine("/// The delegate is evaluated during the dynamic update pass; accessed bindings are tracked so only affected visuals are refreshed.");
-                    sb.Append(methodIndent).AppendLine("/// </remarks>");
-                    sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
-                    sb.Append(methodIndent).Append("/// <param name=\"").Append(EscapeIdentifier(argName)).AppendLine("\">A delegate that computes the current value.</param>");
-                    sb.Append(methodIndent).AppendLine("/// <returns>The same instance for chaining.</returns>");
-                    sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
-                    if (canUseGeneric)
+                    // If the property itself is a delegate (e.g. Func<...>), avoid generating an overload taking
+                    // Func<PropertyType>. It would compete with the natural "set the delegate" overload and complicate
+                    // method resolution for lambdas.
+                    if (!p.IsDelegateProperty)
                     {
-                        sb.Append(methodIndent).Append("public static T ").Append(EscapeIdentifier(propName)).Append("<T>(this T obj, global::System.Func<").Append(argType).Append("> ").Append(EscapeIdentifier(argName))
-                            .Append(") where T : ").Append(receiverType).AppendLine();
-                        sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
-                    }
-                    else
-                    {
-                        sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName));
-                        if (needsTypeParameters)
+                        sb.Append(methodIndent).AppendLine("/// <summary>");
+                        sb.Append(methodIndent).Append("/// Registers a dynamic update that assigns <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> from a computed value and returns the same instance.");
+                        sb.Append(methodIndent).AppendLine("/// </summary>");
+                        sb.Append(methodIndent).AppendLine("/// <remarks>");
+                        sb.Append(methodIndent).AppendLine("/// The delegate is evaluated during the dynamic update pass; accessed bindings are tracked so only affected visuals are refreshed.");
+                        sb.Append(methodIndent).AppendLine("/// </remarks>");
+                        sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
+                        sb.Append(methodIndent).Append("/// <param name=\"").Append(EscapeIdentifier(argName)).AppendLine("\">A delegate that computes the current value.</param>");
+                        sb.Append(methodIndent).AppendLine("/// <returns>The same instance for chaining.</returns>");
+                        sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
+                        if (canUseGeneric)
                         {
-                            AppendTypeParameters(sb, containingType);
-                        }
-                        sb.Append("(this ").Append(receiverType).Append(" obj, global::System.Func<").Append(argType)
-                            .Append("> ").Append(EscapeIdentifier(argName)).Append(')');
-                        if (needsTypeParameters)
-                        {
-                            AppendTypeParameterConstraints(sb, containingType, methodIndent);
+                            sb.Append(methodIndent).Append("public static T ").Append(EscapeIdentifier(propName)).Append("<T>(this T obj, global::System.Func<").Append(argType).Append("> ").Append(EscapeIdentifier(argName))
+                                .Append(") where T : ").Append(receiverType).AppendLine();
+                            sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
                         }
                         else
                         {
-                            sb.AppendLine();
+                            sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName));
+                            if (needsTypeParameters)
+                            {
+                                AppendTypeParameters(sb, containingType);
+                            }
+                            sb.Append("(this ").Append(receiverType).Append(" obj, global::System.Func<").Append(argType)
+                                .Append("> ").Append(EscapeIdentifier(argName)).Append(')');
+                            if (needsTypeParameters)
+                            {
+                                AppendTypeParameterConstraints(sb, containingType, methodIndent);
+                            }
+                            else
+                            {
+                                sb.AppendLine();
+                            }
+                            sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
                         }
-                        sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
-                    }
 
-                    sb.AppendLine();
+                        sb.AppendLine();
+                    }
 
                     sb.Append(methodIndent).AppendLine("/// <summary>");
                     sb.Append(methodIndent).Append("/// Configures <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> from a <see cref=\"global::XenoAtom.Terminal.UI.State{T}\"/> and returns the same instance.");
