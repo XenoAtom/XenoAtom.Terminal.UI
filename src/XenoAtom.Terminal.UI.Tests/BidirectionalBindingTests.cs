@@ -18,7 +18,7 @@ public sealed class BidirectionalBindingTests
         using var session = BindingManager.Current.StartTracking();
         _ = binding.GetValue();
 
-        Assert.IsTrue(session.Dependencies.Contains((Binding)state));
+        Assert.Contains((Binding)state, session.Dependencies);
     }
 
     [TestMethod]
@@ -36,4 +36,3 @@ public sealed class BidirectionalBindingTests
         Assert.AreEqual("again", textBox.Text);
     }
 }
-

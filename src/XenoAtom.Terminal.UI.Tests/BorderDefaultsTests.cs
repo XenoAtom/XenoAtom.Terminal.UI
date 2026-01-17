@@ -35,7 +35,7 @@ public sealed class BorderDefaultsTests
         using (var driver2 = new TerminalAppTestDriver(borderedRoot, TerminalHostKind.Fullscreen, new TerminalSize(24, 6)))
         {
             driver2.Tick();
-            Assert.IsTrue(borderedButton.Bounds.Height >= 3, "ButtonStyle.ShowBorder should expand the button to include a border.");
+            Assert.IsGreaterThanOrEqualTo(3, borderedButton.Bounds.Height, "ButtonStyle.ShowBorder should expand the button to include a border.");
         }
     }
 }

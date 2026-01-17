@@ -48,7 +48,7 @@ public sealed class TextAreaTests
         screen.Apply(driver.Backend.GetOutText());
         var rendered = screen.GetText().Split('\n');
 
-        Assert.IsTrue(rendered.Length >= 2, "Expected multiple lines of output.");
+        Assert.IsGreaterThanOrEqualTo(2, rendered.Length, "Expected multiple lines of output.");
         Assert.IsTrue(rendered[0].Contains("01234567", StringComparison.Ordinal), "Expected first wrapped line.");
         Assert.IsTrue(rendered[1].Contains("89", StringComparison.Ordinal), "Expected second wrapped line.");
     }
@@ -87,4 +87,3 @@ public sealed class TextAreaTests
         Assert.AreEqual(3, textArea.Scroll.OffsetY);
     }
 }
-

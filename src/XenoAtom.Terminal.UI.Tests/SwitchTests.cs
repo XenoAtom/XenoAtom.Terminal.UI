@@ -27,8 +27,8 @@ public sealed class SwitchTests
         sw.IsOn = true;
 
         Assert.IsNotNull(args);
-        Assert.AreEqual(false, args.OldValue);
-        Assert.AreEqual(true, args.NewValue);
+        Assert.IsFalse(args.OldValue);
+        Assert.IsTrue(args.NewValue);
     }
 
     [TestMethod]
@@ -43,7 +43,7 @@ public sealed class SwitchTests
         driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Space });
         driver.Tick();
 
-        Assert.AreEqual(true, sw.IsOn);
+        Assert.IsTrue(sw.IsOn);
     }
 
     [TestMethod]

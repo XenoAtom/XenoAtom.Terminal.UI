@@ -32,7 +32,7 @@ public sealed class ScrollViewerTextAreaInteractionTests
         driver.App.Focus(button);
 
         var bounds = textArea.Bounds;
-        Assert.IsTrue(textArea.Scroll.ExtentHeight > textArea.Scroll.ViewportHeight, $"Expected scrollable content. extent={textArea.Scroll.ExtentHeight} viewport={textArea.Scroll.ViewportHeight}");
+        Assert.IsGreaterThan(textArea.Scroll.ViewportHeight, textArea.Scroll.ExtentHeight, $"Expected scrollable content. extent={textArea.Scroll.ExtentHeight} viewport={textArea.Scroll.ViewportHeight}");
 
         var wheelX = bounds.X + 1;
         var wheelY = bounds.Y + 2;
@@ -70,7 +70,7 @@ public sealed class ScrollViewerTextAreaInteractionTests
         driver.App.Focus(textArea);
 
         var bounds = textArea.Bounds;
-        Assert.IsTrue(textArea.Scroll.ExtentHeight > textArea.Scroll.ViewportHeight, $"Expected scrollable content. extent={textArea.Scroll.ExtentHeight} viewport={textArea.Scroll.ViewportHeight}");
+        Assert.IsGreaterThan(textArea.Scroll.ViewportHeight, textArea.Scroll.ExtentHeight, $"Expected scrollable content. extent={textArea.Scroll.ExtentHeight} viewport={textArea.Scroll.ViewportHeight}");
 
         driver.Backend.PushEvent(new TerminalMouseEvent
         {
@@ -103,7 +103,7 @@ public sealed class ScrollViewerTextAreaInteractionTests
 
         driver.App.Focus(button);
 
-        Assert.IsTrue(textArea.Scroll.ExtentHeight > textArea.Scroll.ViewportHeight, $"Expected scrollable content. extent={textArea.Scroll.ExtentHeight} viewport={textArea.Scroll.ViewportHeight}");
+        Assert.IsGreaterThan(textArea.Scroll.ViewportHeight, textArea.Scroll.ExtentHeight, $"Expected scrollable content. extent={textArea.Scroll.ExtentHeight} viewport={textArea.Scroll.ViewportHeight}");
 
         var scrollBounds = scrollViewer.Bounds;
         var barX = scrollBounds.X + scrollBounds.Width - 1;

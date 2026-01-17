@@ -59,7 +59,7 @@ public sealed class ScrollViewerLayoutTests
         scroll.Arrange(new Rectangle(0, 0, 20, 3));
 
         var bars = scroll.EnumerateVisualsDepthFirst().OfType<ScrollBar>().ToArray();
-        Assert.AreEqual(2, bars.Length, "Expected ScrollViewer to have both internal scroll bars.");
+        Assert.HasCount(2, bars, "Expected ScrollViewer to have both internal scroll bars.");
 
         var v = bars.Single(b => b.Orientation == Orientation.Vertical);
         var h = bars.Single(b => b.Orientation == Orientation.Horizontal);

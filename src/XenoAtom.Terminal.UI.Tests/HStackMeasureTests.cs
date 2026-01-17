@@ -21,8 +21,8 @@ public sealed class HStackMeasureTests
         stack.Measure(new Size(10, 1));
         stack.Arrange(new Rectangle(0, 0, 10, 1));
 
-        Assert.IsTrue(a.Bounds.Width > 0);
-        Assert.IsTrue(b.Bounds.Width > 0);
+        Assert.IsGreaterThan(0, a.Bounds.Width);
+        Assert.IsGreaterThan(0, b.Bounds.Width);
         Assert.AreEqual(10, a.Bounds.Width + b.Bounds.Width + 1);
     }
 

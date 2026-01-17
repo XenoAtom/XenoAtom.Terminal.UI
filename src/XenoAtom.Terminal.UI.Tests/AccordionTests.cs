@@ -24,12 +24,11 @@ public sealed class AccordionTests
         accordion.Children.Add(b);
 
         a.IsExpanded = true;
-        Assert.AreEqual(true, a.IsExpanded);
-        Assert.AreEqual(false, b.IsExpanded);
+        Assert.IsTrue(a.IsExpanded);
+        Assert.IsFalse(b.IsExpanded);
 
         b.IsExpanded = true;
-        Assert.AreEqual(false, a.IsExpanded);
-        Assert.AreEqual(true, b.IsExpanded);
+        Assert.IsFalse(a.IsExpanded);
+        Assert.IsTrue(b.IsExpanded);
     }
 }
-

@@ -40,8 +40,10 @@ public sealed class ThemeFromSchemeTests
         var surfaceLum = GetLuma(theme.Surface!.Value);
         var surfaceAltLum = GetLuma(theme.SurfaceAlt!.Value);
 
-        Assert.IsTrue(bgLum > fgLum);
-        Assert.IsTrue(bgLum > surfaceLum && surfaceLum > surfaceAltLum && surfaceAltLum > fgLum);
+        Assert.IsGreaterThan(fgLum, bgLum);
+        Assert.IsGreaterThan(surfaceLum, bgLum);
+        Assert.IsGreaterThan(surfaceAltLum, surfaceLum);
+        Assert.IsGreaterThan(fgLum, surfaceAltLum);
 
         // They should be derived, not direct palette "black" entries (which can be too saturated on light themes).
         Assert.AreNotEqual(scheme.Black, theme.Surface);
@@ -64,4 +66,3 @@ public sealed class ThemeFromSchemeTests
         return (0.2126f * r) + (0.7152f * g) + (0.0722f * b);
     }
 }
-

@@ -59,8 +59,7 @@ public sealed class CheckBoxTests
         }
 
         var labelIndex = Array.IndexOf(scalars, 'A');
-        Assert.IsTrue(labelIndex >= 0, "Expected the label text to be rendered.");
-        Assert.IsTrue(labelIndex >= glyphWidth, "Expected a gap between the glyph and the label text.");
+        Assert.IsGreaterThanOrEqualTo(0, labelIndex, "Expected the label text to be rendered.");
+        Assert.IsGreaterThanOrEqualTo(glyphWidth, labelIndex, "Expected a gap between the glyph and the label text.");
     }
 }
-

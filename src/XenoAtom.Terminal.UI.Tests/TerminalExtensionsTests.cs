@@ -74,11 +74,11 @@ public sealed class TerminalExtensionsTests
         var topLine = Array.FindIndex(rendered, line => line.Contains("TOP", StringComparison.Ordinal));
         var afterLine = Array.FindIndex(rendered, line => line.Contains("AFTER", StringComparison.Ordinal));
 
-        Assert.IsTrue(topLine >= 0);
-        Assert.IsTrue(afterLine >= 0);
+        Assert.IsGreaterThanOrEqualTo(0, topLine);
+        Assert.IsGreaterThanOrEqualTo(0, afterLine);
         // TextBox renders a single row by default (content only). With the initial TOP line, the live region
         // starts at row 1 and occupies row 1, so output after Live() should start at row >= 2.
-        Assert.IsTrue(afterLine >= topLine + 2, $"Expected output after Live() to appear after the live region. Screen:\n{screen.GetText()}");
+        Assert.IsGreaterThanOrEqualTo(topLine + 2, afterLine, $"Expected output after Live() to appear after the live region. Screen:\n{screen.GetText()}");
     }
 
     [TestMethod]
@@ -102,9 +102,9 @@ public sealed class TerminalExtensionsTests
         var topLine = Array.FindIndex(rendered, line => line.Contains("TOP", StringComparison.Ordinal));
         var afterLine = Array.FindIndex(rendered, line => line.Contains("AFTER", StringComparison.Ordinal));
 
-        Assert.IsTrue(topLine >= 0);
-        Assert.IsTrue(afterLine >= 0);
-        Assert.IsTrue(afterLine == topLine + 1, "Expected output after Live(RemoveOnEnd=true) to continue where Live started.");
+        Assert.IsGreaterThanOrEqualTo(0, topLine);
+        Assert.IsGreaterThanOrEqualTo(0, afterLine);
+        Assert.AreEqual(topLine + 1, afterLine, "Expected output after Live(RemoveOnEnd=true) to continue where Live started.");
         Assert.IsFalse(screen.GetText().Contains("abc", StringComparison.Ordinal), "Expected the live region to be removed.");
     }
 }

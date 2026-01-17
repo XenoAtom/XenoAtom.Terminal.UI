@@ -25,12 +25,11 @@ public sealed class TabControlStabilityTests
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(80, 25));
         driver.Tick();
 
-        Assert.AreEqual(2, tabControl.Tabs.Count);
+        Assert.HasCount(2, tabControl.Tabs);
 
         tabControl.SelectedIndex = 1;
         driver.Tick();
 
-        Assert.AreEqual(2, tabControl.Tabs.Count, "Tabs should not be re-added when SelectedIndex changes.");
+        Assert.HasCount(2, tabControl.Tabs, "Tabs should not be re-added when SelectedIndex changes.");
     }
 }
-

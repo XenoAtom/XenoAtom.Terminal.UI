@@ -45,10 +45,10 @@ public sealed class LayoutProtocolNestedTests
         root.Measure(new LayoutConstraints(0, 60, 0, 12));
         root.Arrange(new Rectangle(0, 0, 60, 12));
 
-        Assert.IsTrue(root.Bounds.Width > 0);
-        Assert.IsTrue(root.Bounds.Height > 0);
-        Assert.IsTrue(viewer.Bounds.Width > 0);
-        Assert.IsTrue(viewer.Bounds.Height > 0);
+        Assert.IsGreaterThan(0, root.Bounds.Width);
+        Assert.IsGreaterThan(0, root.Bounds.Height);
+        Assert.IsGreaterThan(0, viewer.Bounds.Width);
+        Assert.IsGreaterThan(0, viewer.Bounds.Height);
     }
 
     private sealed class FixedSizeVisual : Visual

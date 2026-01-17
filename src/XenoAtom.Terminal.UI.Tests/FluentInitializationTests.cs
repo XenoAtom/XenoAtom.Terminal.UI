@@ -22,7 +22,6 @@ public sealed class FluentInitializationTests
         root.Measure(new Size(40, 8));
         root.Arrange(new Rectangle(0, 0, 40, 8));
 
-        Assert.IsTrue(textBox.Bounds.Width > 0);
+        Assert.IsGreaterThan(0, textBox.Bounds.Width);
     }
 }
-

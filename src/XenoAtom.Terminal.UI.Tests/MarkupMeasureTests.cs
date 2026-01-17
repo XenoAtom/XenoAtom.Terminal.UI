@@ -36,7 +36,6 @@ public sealed class MarkupMeasureTests
         markup.Measure(new Size(5, 10));
 
         Assert.AreEqual(5, markup.DesiredSize.Width);
-        Assert.IsTrue(markup.DesiredSize.Height >= 2);
+        Assert.IsGreaterThanOrEqualTo(2, markup.DesiredSize.Height);
     }
 }
-
