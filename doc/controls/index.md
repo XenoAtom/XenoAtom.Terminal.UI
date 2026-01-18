@@ -33,6 +33,7 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 - `doc/controls/grid.md`
 - `doc/controls/docklayout.md`
 - `doc/controls/center.md`
+- `doc/controls/padder.md`
 - `doc/controls/border.md`
 - `doc/controls/group.md`
 - `doc/controls/splitter.md`

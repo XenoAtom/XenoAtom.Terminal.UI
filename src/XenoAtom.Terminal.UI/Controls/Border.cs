@@ -4,7 +4,6 @@
 
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
-using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -13,7 +12,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// <summary>
 /// Draws a border around a single content visual.
 /// </summary>
-public sealed partial class Border : ContentVisual
+public sealed partial class Border : Padder
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="Border"/> control.
@@ -41,89 +40,8 @@ public sealed partial class Border : ContentVisual
         this.Content(contentFactory);
     }
 
-    /// <summary>
-    /// Gets or sets the padding between the border and the content.
-    /// </summary>
-    [Bindable]
-    public partial Thickness Padding { get; set; }
-
-    /// <inheritdoc/>
-    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
-    {
-        var padding = Padding;
-        var padH = LayoutConstants.ClampFinite(Math.Max(0, padding.Horizontal));
-        var padV = LayoutConstants.ClampFinite(Math.Max(0, padding.Vertical));
-
-        var maxW = constraints.MaxWidth == LayoutConstants.Infinite
-            ? LayoutConstants.Infinite
-            : Math.Max(0, constraints.MaxWidth - 2 - padH);
-        var maxH = constraints.MaxHeight == LayoutConstants.Infinite
-            ? LayoutConstants.Infinite
-            : Math.Max(0, constraints.MaxHeight - 2 - padV);
-
-        var childConstraints = new LayoutConstraints(0, maxW, 0, maxH);
-
-        var content = Content;
-        var contentHints = content is null ? SizeHints.Fixed(Size.Zero) : content.Measure(childConstraints);
-
-        var addW = LayoutConstants.ClampFinite(2 + padH);
-        var addH = LayoutConstants.ClampFinite(2 + padV);
-
-        var minW = LayoutConstants.ClampFinite(contentHints.Min.Width + addW);
-        var minH = LayoutConstants.ClampFinite(contentHints.Min.Height + addH);
-        var natW = LayoutConstants.ClampFinite(contentHints.Natural.Width + addW);
-        var natH = LayoutConstants.ClampFinite(contentHints.Natural.Height + addH);
-
-        int maxWidth, maxHeight;
-        if (LayoutConstants.IsInfinite(contentHints.Max.Width))
-        {
-            maxWidth = LayoutConstants.Infinite;
-        }
-        else
-        {
-            maxWidth = LayoutConstants.ClampOrInfinite(contentHints.Max.Width + addW);
-        }
-
-        if (LayoutConstants.IsInfinite(contentHints.Max.Height))
-        {
-            maxHeight = LayoutConstants.Infinite;
-        }
-        else
-        {
-            maxHeight = LayoutConstants.ClampOrInfinite(contentHints.Max.Height + addH);
-        }
-
-        return SizeHints.Flex(
-            new Size(minW, minH),
-            new Size(natW, natH),
-            new Size(maxWidth, maxHeight),
-            contentHints.FlexGrowX,
-            contentHints.FlexGrowY,
-            contentHints.FlexShrinkX,
-            contentHints.FlexShrinkY).Normalize();
-    }
-
-    /// <inheritdoc/>
-    protected override void ArrangeCore(in Rectangle finalRect)
-    {
-        Bounds = finalRect;
-
-        var padding = Padding;
-        var padH = Math.Max(0, padding.Horizontal);
-        var padV = Math.Max(0, padding.Vertical);
-
-        var content = Content;
-        if (content is not null)
-        {
-            var inner = new Rectangle(
-                finalRect.X + 1 + padding.Left,
-                finalRect.Y + 1 + padding.Top,
-                Math.Max(0, finalRect.Width - 2 - padH),
-                Math.Max(0, finalRect.Height - 2 - padV));
-
-            content.Arrange(inner);
-        }
-    }
+    /// <inheritdoc />
+    protected override Thickness Inset => new(1);
 
     /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)

@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -45,6 +46,18 @@ public static partial class VisualExtensions
         obj.VerifyAccess();
         obj.AddRange(visuals);
         return obj;
+    }
+
+    /// <summary>
+    /// Wraps the visual in a <see cref="Padder"/> and applies padding around it.
+    /// </summary>
+    /// <param name="visual">The visual to pad.</param>
+    /// <param name="padding">The padding around the visual.</param>
+    /// <returns>A <see cref="Padder"/> containing <paramref name="visual"/>.</returns>
+    public static Padder Pad(this Visual visual, Thickness padding)
+    {
+        ArgumentNullException.ThrowIfNull(visual);
+        return new Padder(visual).Padding(padding);
     }
 
     /// <summary>
