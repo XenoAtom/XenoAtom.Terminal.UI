@@ -423,13 +423,13 @@ var rightColumn = new VStack(
 var header = new Header
 {
     Left = "Fullscreen demo",
-    Center = "Tab focus, mouse click, wheel scroll, F12 debug, Esc quit",
+    Center = "Tab focus, mouse click, wheel scroll, F12 debug, Ctrl+Q quit",
     Right = new TextBlock().Text(() => $"{(int)(progressState.Value * 100)}%"),
 };
 
 var footer = new Footer
 {
-    Left = "Tab focus | Mouse click | Wheel scroll | F12 debug | Esc quit",
+    Left = "Tab focus | Mouse click | Wheel scroll | F12 debug | Ctrl+Q quit",
     Right = "XenoAtom.Terminal.UI",
 };
 
@@ -446,7 +446,7 @@ var root = new DockLayout()
             .VerticalAlignment(VerticalAlignment.Stretch))
     .Bottom(footer);
 
-root.AddKeyBinding(new XenoAtom.Terminal.UI.Input.TerminalKeyGesture('p', TerminalModifiers.Ctrl), commandPalette.Show);
+root.AddKeyBinding(new XenoAtom.Terminal.UI.Input.TerminalKeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl), commandPalette.Show);
 
 var lastTick = Stopwatch.GetTimestamp();
 var t = 0.0;
@@ -456,7 +456,7 @@ Terminal.Run(root, () =>
     var now = Stopwatch.GetTimestamp();
     if (Stopwatch.GetElapsedTime(lastTick, now) < TimeSpan.FromMilliseconds(50))
     {
-        return true;
+        return TerminalLoopResult.Continue;
     }
 
     lastTick = now;
@@ -466,5 +466,5 @@ Terminal.Run(root, () =>
     Array.Copy(chartValues, 1, chartValues, 0, chartValues.Length - 1);
     chartValues[^1] = progressState.Value;
     chartTickState.Value++;
-    return true;
+    return TerminalLoopResult.Continue;
 });

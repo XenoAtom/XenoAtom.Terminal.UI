@@ -42,8 +42,11 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private int _renderFrameIndex;
     private Task? _runTask;
     private CellBuffer? _renderBuffer;
-    private Func<bool>? _onUpdate;
+    private Func<TerminalRunningContext, TerminalLoopResult>? _onUpdate;
+    private TerminalRunningContext? _updateContext;
     private readonly AnsiBuilder _updateOutputBuilder = new(initialCapacity: 4096);
+    private global::XenoAtom.Terminal.UI.Input.TerminalKeyGesture _exitGesture;
+    private bool _inlineRemoveOnEnd;
 
     private Visual? _visualBeingDynamicallyInitialized;
 
@@ -117,6 +120,8 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         {
             _inlineHost = new InlineInteractiveHost(_terminal);
         }
+
+        _exitGesture = _options.ExitGesture ?? GetDefaultExitGesture(_options.HostKind);
     }
 
     /// <summary>
@@ -134,11 +139,13 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     /// </summary>
     public Visual ContentRoot { get; }
 
-    internal void SetUpdateCallback(Func<bool> onUpdate)
+    internal void SetUpdateCallback(Func<TerminalRunningContext, TerminalLoopResult> onUpdate)
     {
         ArgumentNullException.ThrowIfNull(onUpdate);
         _onUpdate = onUpdate;
     }
+
+    internal bool InlineRemoveOnEnd => _inlineRemoveOnEnd;
 
     private Visual? _focusedElement;
 
@@ -328,10 +335,11 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
         if (_onUpdate is not null && !_cts.IsCancellationRequested)
         {
-            var keepGoing = false;
+            var result = TerminalLoopResult.Continue;
             using (_terminal.CaptureOutput(_updateOutputBuilder))
             {
-                keepGoing = _onUpdate();
+                _updateContext!.Timestamp = timestamp ?? Stopwatch.GetTimestamp();
+                result = _onUpdate(_updateContext);
             }
 
             if (_updateOutputBuilder.Length > 0 && _options.HostKind == TerminalHostKind.Inline)
@@ -342,8 +350,13 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
                 _renderRequested = true;
             }
 
-            if (!keepGoing)
+            if (result != TerminalLoopResult.Continue)
             {
+                if (_options.HostKind == TerminalHostKind.Inline)
+                {
+                    _inlineRemoveOnEnd = result == TerminalLoopResult.Stop;
+                }
+
                 ProcessPendingBindings();
                 _renderRequested = true;
                 _cts.Cancel();
@@ -430,6 +443,8 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
         Root.AttachToApp(this);
         BindingManager.Current.ValueChanged += OnValueChanged;
+        _updateContext = new TerminalRunningContext(this, _terminal, _options.HostKind);
+        _inlineRemoveOnEnd = false;
 
         if (!_terminal.IsInputRunning)
         {
@@ -970,9 +985,9 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
         var activeModal = FindActiveModalRoot(Root);
 
-        if (keyEvent.Key == TerminalKey.Escape)
+        if (_exitGesture.Matches(keyEvent))
         {
-            // Allow controls to handle Escape (e.g. close transient popups) before exiting the app.
+            // Allow controls to handle the exit gesture (e.g. close transient popups) before exiting the app.
             if (!DispatchKeyEvent(keyEvent))
             {
                 _cts.Cancel();
@@ -1001,6 +1016,11 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
         _ = DispatchKeyEvent(keyEvent);
     }
+
+    private static global::XenoAtom.Terminal.UI.Input.TerminalKeyGesture GetDefaultExitGesture(TerminalHostKind hostKind)
+        => hostKind == TerminalHostKind.Fullscreen
+            ? new global::XenoAtom.Terminal.UI.Input.TerminalKeyGesture(TerminalChar.CtrlQ, TerminalModifiers.Ctrl)
+            : new global::XenoAtom.Terminal.UI.Input.TerminalKeyGesture(TerminalKey.Escape);
 
     private void DispatchTextInput(string text)
     {

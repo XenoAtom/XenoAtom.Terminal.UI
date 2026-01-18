@@ -14,7 +14,7 @@ This guide documents the concepts, features, and controls of the library.
 
 ## Hosting & integration
 
-- `doc/hosting.md` (inline vs fullscreen, update loops, `TerminalLiveOptions`)
+- `doc/hosting.md` (inline vs fullscreen, update loops)
 
 ## Core concepts
 
@@ -48,4 +48,3 @@ The `doc/specs` folder contains deeper design documents and implementation notes
 - `doc/specs/text_editor_specs.md`
 - `doc/specs/specs.md`
 - `doc/specs/original_specs.md`
-

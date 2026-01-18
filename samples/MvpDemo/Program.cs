@@ -41,18 +41,18 @@ Terminal.Live(root, () =>
     var now = Stopwatch.GetTimestamp();
     if (Stopwatch.GetElapsedTime(lastTick, now) < TimeSpan.FromMilliseconds(50))
     {
-        return true;
+        return TerminalLoopResult.Continue;
     }
 
     lastTick = now;
     if (progressState.Value < 1.0)
     {
         progressState.Value = Math.Min(1.0, progressState.Value + 0.01);
-        return true;
+        return TerminalLoopResult.Continue;
     }
 
     Terminal.WriteMarkupLine("[green]Done![/]");
     progressState.Value = 0.0;
-    return true;
+    return TerminalLoopResult.Continue;
 });
 Terminal.WriteMarkupLine("[yellow]Finished![/]");

@@ -39,10 +39,10 @@ public sealed class TerminalExtensionsTests
             if (counter.Value >= 3)
             {
                 session.Instance.WriteMarkupLine("[green]Done[/]");
-                return false;
+                return TerminalLoopResult.StopAndKeepVisual;
             }
 
-            return true;
+            return TerminalLoopResult.Continue;
         });
 
         var outText = backend.GetOutText();
@@ -62,7 +62,7 @@ public sealed class TerminalExtensionsTests
         session.Instance.WriteLine("TOP");
 
         var root = new TextBox("abc");
-        session.Instance.Live(root, () => false, new TerminalLiveOptions(RemoveOnEnd: false));
+        session.Instance.Live(root, () => TerminalLoopResult.StopAndKeepVisual);
 
         session.Instance.WriteLine("AFTER");
 
@@ -90,7 +90,7 @@ public sealed class TerminalExtensionsTests
         session.Instance.WriteLine("TOP");
 
         var root = new TextBox("abc");
-        session.Instance.Live(root, () => false, new TerminalLiveOptions(RemoveOnEnd: true));
+        session.Instance.Live(root, () => TerminalLoopResult.Stop);
 
         session.Instance.WriteLine("AFTER");
 
@@ -104,7 +104,7 @@ public sealed class TerminalExtensionsTests
 
         Assert.IsGreaterThanOrEqualTo(0, topLine);
         Assert.IsGreaterThanOrEqualTo(0, afterLine);
-        Assert.AreEqual(topLine + 1, afterLine, "Expected output after Live(RemoveOnEnd=true) to continue where Live started.");
+        Assert.AreEqual(topLine + 1, afterLine, "Expected output after Live(Stop) to continue where Live started.");
         Assert.IsFalse(screen.GetText().Contains("abc", StringComparison.Ordinal), "Expected the live region to be removed.");
     }
 }

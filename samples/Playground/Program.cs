@@ -11,4 +11,4 @@ var editor = new TextArea(text);
 
 var view = new ScrollViewer(editor);
 
-Terminal.Run(view, () => true);
+Terminal.Run(view, () => TerminalLoopResult.Continue);

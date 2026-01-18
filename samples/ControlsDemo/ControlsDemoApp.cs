@@ -7,13 +7,17 @@ namespace XenoAtom.Terminal.UI.ControlsDemo;
 
 internal static class ControlsDemoApp
 {
-    public static Visual Build(out Func<bool> onUpdate)
+    public static Visual Build(out Func<TerminalLoopResult> onUpdate)
     {
         var demos = DemoRegistry.Load();
 
         var selectedDemoId = new State<string>(demos.Count > 0 ? demos[0].Metadata.Id : string.Empty);
         var runtime = new DemoRuntime();
-        onUpdate = runtime.Advance;
+        onUpdate = () =>
+        {
+            _ = runtime.Advance();
+            return TerminalLoopResult.Continue;
+        };
 
         void NavigateToId(string id) => selectedDemoId.Value = id;
 
@@ -48,7 +52,7 @@ internal static class ControlsDemoApp
 
         return new DockLayout()
             .Content(new HSplitter(sidebar, page).Ratio(0.16))
-            .Bottom(new Footer().Left("Tab focus | Mouse | Resize").Right("F12 debug | Esc quit"))
+            .Bottom(new Footer().Left("Tab focus | Mouse | Resize").Right("F12 debug | Ctrl+Q quit"))
             .Style(DemoThemes.Dark);
     }
 

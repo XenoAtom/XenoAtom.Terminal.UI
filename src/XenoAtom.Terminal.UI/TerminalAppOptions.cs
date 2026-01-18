@@ -46,4 +46,16 @@ public sealed class TerminalAppOptions
     /// Gets the key gesture used to toggle the debug overlay.
     /// </summary>
     public Input.TerminalKeyGesture ToggleDebugOverlayGesture { get; init; } = new(TerminalKey.F12);
+
+    /// <summary>
+    /// Gets the key gesture used to request application exit.
+    /// </summary>
+    /// <remarks>
+    /// When <see langword="null"/>, the default gesture is host-dependent:
+    /// <list type="bullet">
+    /// <item><description>Inline: <c>Escape</c></description></item>
+    /// <item><description>Fullscreen: <c>Ctrl+Q</c></description></item>
+    /// </list>
+    /// </remarks>
+    public Input.TerminalKeyGesture? ExitGesture { get; init; }
 }
