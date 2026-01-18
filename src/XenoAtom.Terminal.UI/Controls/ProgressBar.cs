@@ -11,7 +11,7 @@ using XenoAtom.Terminal.UI.Styling;
 namespace XenoAtom.Terminal.UI.Controls;
 
 /// <summary>
-/// Represents a horizontal progress bar with optional label and percentage.
+/// Represents a horizontal progress bar.
 /// </summary>
 public sealed partial class ProgressBar : Visual
 {
@@ -42,41 +42,19 @@ public sealed partial class ProgressBar : Visual
     [Bindable]
     public partial double Value { get; set; }
 
-    /// <summary>
-    /// Gets or sets the label visual displayed before the bar.
-    /// </summary>
-    [Bindable]
-    public partial Visual? Label { get; set; }
-
-    /// <inheritdoc />
-    protected override int ChildrenCount => _label is null ? 0 : 1;
-
-    /// <inheritdoc />
-    protected override Visual GetChild(int index)
-        => index == 0 && _label is not null ? _label : throw new ArgumentOutOfRangeException(nameof(index));
-
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var progressStyle = Get<ProgressBarStyle>();
 
-        var showPercent = progressStyle.ShowPercentage;
-        var percentWidth = showPercent ? 4 : 0; // "100%"
-
-        var label = Label;
-        var labelWidth = 0;
-        if (label is not null)
-        {
-            var labelHints = label.Measure(new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1));
-            labelWidth = labelHints.Natural.Width;
-            if (labelWidth > 0)
-            {
-                labelWidth += 1; // space after label
-            }
-        }
-
         var minBarWidth = 10;
-        var required = Math.Max(minBarWidth, labelWidth + minBarWidth + percentWidth);
+        var required = minBarWidth;
+
+        var showFrame = progressStyle.ShowFrame || progressStyle.Variant == ProgressBarVariant.Bracketed;
+        if (showFrame)
+        {
+            required += 2;
+        }
 
         var min = new Size(required, 1);
         var natural = min;
@@ -89,29 +67,6 @@ public sealed partial class ProgressBar : Visual
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
-
-        var rect = finalRect;
-        if (rect.Width <= 0 || rect.Height <= 0)
-        {
-            return;
-        }
-
-        var progressStyle = Get<ProgressBarStyle>();
-        var percentWidth = progressStyle.ShowPercentage ? 4 : 0; // "100%"
-        var label = Label;
-        if (label is null)
-        {
-            return;
-        }
-
-        var available = Math.Max(0, rect.Width - percentWidth);
-        var labelDesired = Math.Min(available, label.DesiredSize.Width);
-        if (labelDesired <= 0 || available <= 0)
-        {
-            return;
-        }
-
-        label.Arrange(new Rectangle(rect.X, rect.Y, labelDesired, 1));
     }
 
     /// <inheritdoc />
@@ -127,43 +82,13 @@ public sealed partial class ProgressBar : Visual
         var progressStyle = Get<ProgressBarStyle>();
 
         var value = Math.Clamp(Value, 0.0, 1.0);
-        var percent = (int)Math.Round(value * 100.0);
-
-        var label = Label;
-        var prefixWidth = 0;
-        if (label is not null)
-        {
-            prefixWidth = label.Bounds.Width;
-            if (prefixWidth > 0 && prefixWidth < rect.Width)
-            {
-                prefixWidth += 1; // space after label
-            }
-        }
-
-        var showPercent = progressStyle.ShowPercentage;
-        var percentText = showPercent ? $"{percent,3}%" : string.Empty;
-        var percentWidth = showPercent ? TerminalTextUtility.GetWidth(percentText.AsSpan()) : 0;
 
         var borderStyle = progressStyle.ResolveBorder(theme);
         var filledStyle = progressStyle.ResolveFilled(theme);
         var unfilledStyle = progressStyle.ResolveUnfilled(theme);
 
-        var barStartX = rect.X + prefixWidth;
-        var barEndX = rect.X + rect.Width - percentWidth;
-        if (showPercent && barEndX > barStartX)
-        {
-            barEndX = Math.Max(barStartX, barEndX - 1);
-        }
-
-        if (showPercent && percentWidth > 0)
-        {
-            buffer.WriteText(rect.X + Math.Max(0, rect.Width - percentWidth), rect.Y, percentText.AsSpan(), CellStyle.None);
-        }
-
-        if (label is not null && prefixWidth > 0 && label.Bounds.Width > 0 && rect.Width > label.Bounds.Width)
-        {
-            buffer.SetCell(rect.X + label.Bounds.Width, rect.Y, new Rune(' '), CellStyle.None);
-        }
+        var barStartX = rect.X;
+        var barEndX = rect.X + rect.Width;
 
         var showFrame = progressStyle.ShowFrame || progressStyle.Variant == ProgressBarVariant.Bracketed;
         if (showFrame && barEndX - barStartX >= 2)

@@ -31,7 +31,7 @@ public sealed class TerminalExtensionsTests
         var counter = new State<int>(0);
         var root = new VStack(
             new TextBlock().Text(() => $"Count: {counter.Value}"),
-            new ProgressBar().Label("Work").Value(() => counter.Value / 3.0));
+            new ProgressBar().Value(() => counter.Value / 3.0));
 
         session.Instance.Live(root, () =>
         {

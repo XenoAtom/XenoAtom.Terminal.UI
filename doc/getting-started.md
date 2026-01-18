@@ -31,16 +31,16 @@ using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 
-var progress = new State<double>(0);
+var work = new ProgressTask("Work");
 
 Terminal.Live(
-    new ProgressBar()
-        .Label("Work")
-        .Value(progress),
+    new ProgressTaskGroup().Tasks([work]),
     onUpdate: () =>
     {
-        progress.Value = Math.Min(1, progress.Value + 0.01);
-        return progress.Value < 1;
+        work.Value = Math.Min(1, work.Value + 0.01);
+        return work.Value < 1
+            ? TerminalLoopResult.Continue
+            : TerminalLoopResult.StopAndKeepVisual;
     });
 ```
 
@@ -64,4 +64,3 @@ See also:
 
 - `doc/hosting.md`
 - `doc/controls/index.md`
-

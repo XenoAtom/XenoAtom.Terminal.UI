@@ -1,6 +1,6 @@
 # ProgressBar
 
-`ProgressBar` renders progress using different variants (thin, shaded, segmented, bracketed…).
+`ProgressBar` renders a progress bar using different variants (thin, shaded, segmented, bracketed).
 
 Screenshot placeholder:
 
@@ -10,10 +10,11 @@ Screenshot placeholder:
 
 ```csharp
 var progress = new State<double>(0.66);
-new ProgressBar().Label("Work").Value(progress);
+new ProgressBar().Value(progress);
 ```
 
 ## Styling
 
 `ProgressBarStyle` controls variants, glyphs, and color palette.
 
+If you want to display a label, a percentage, or a spinner next to a progress bar, use `ProgressTaskGroup`.

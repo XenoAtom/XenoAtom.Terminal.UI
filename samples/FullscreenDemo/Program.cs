@@ -122,29 +122,45 @@ menuBar.Items.AddRange(menuFile, menuView, menuHelp);
 var progressBars = new VStack(
     "Progress variants:",
     new HStack(
-            new ProgressBar()
-                .Label("Thin")
-                .Value(progressState)
-                .HorizontalAlignment(HorizontalAlignment.Stretch)
-                .Style(ProgressBarStyle.Thin),
-            new ProgressBar()
-                .Label("Segmented")
-                .Value(progressState)
-                .HorizontalAlignment(HorizontalAlignment.Stretch)
-                .Style(ProgressBarStyle.Segmented))
+            new HStack(
+                    "Thin",
+                    new ProgressBar()
+                        .Value(progressState)
+                        .HorizontalAlignment(HorizontalAlignment.Stretch)
+                        .Style(ProgressBarStyle.Thin),
+                    new TextBlock().Text(() => $"{(int)(progressState.Value * 100),3}%"))
+                .Spacing(1)
+                .HorizontalAlignment(HorizontalAlignment.Stretch),
+            new HStack(
+                    "Segmented",
+                    new ProgressBar()
+                        .Value(progressState)
+                        .HorizontalAlignment(HorizontalAlignment.Stretch)
+                        .Style(ProgressBarStyle.Segmented),
+                    new TextBlock().Text(() => $"{(int)(progressState.Value * 100),3}%"))
+                .Spacing(1)
+                .HorizontalAlignment(HorizontalAlignment.Stretch))
         .Spacing(2)
         .HorizontalAlignment(HorizontalAlignment.Stretch),
     new HStack(
-            new ProgressBar()
-                .Label("Shaded")
-                .Value(progressState)
-                .HorizontalAlignment(HorizontalAlignment.Stretch)
-                .Style(ProgressBarStyle.Shaded),
-            new ProgressBar()
-                .Label("Bracketed")
-                .Value(progressState)
-                .HorizontalAlignment(HorizontalAlignment.Stretch)
-                .Style(ProgressBarStyle.Bracketed))
+            new HStack(
+                    "Shaded",
+                    new ProgressBar()
+                        .Value(progressState)
+                        .HorizontalAlignment(HorizontalAlignment.Stretch)
+                        .Style(ProgressBarStyle.Shaded),
+                    new TextBlock().Text(() => $"{(int)(progressState.Value * 100),3}%"))
+                .Spacing(1)
+                .HorizontalAlignment(HorizontalAlignment.Stretch),
+            new HStack(
+                    "Bracketed",
+                    new ProgressBar()
+                        .Value(progressState)
+                        .HorizontalAlignment(HorizontalAlignment.Stretch)
+                        .Style(ProgressBarStyle.Bracketed),
+                    new TextBlock().Text(() => $"{(int)(progressState.Value * 100),3}%"))
+                .Spacing(1)
+                .HorizontalAlignment(HorizontalAlignment.Stretch))
         .Spacing(2)
         .HorizontalAlignment(HorizontalAlignment.Stretch))
     .Spacing(0)

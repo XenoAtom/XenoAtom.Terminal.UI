@@ -26,7 +26,12 @@ public sealed class BindingsAndCompositionDemo : ControlsDemoBase
                     .Spacing(1),
                 new VStack(
                         DemoUi.Title("View 2"),
-                        new ProgressBar().Value(() => Math.Clamp(count.Value / 10.0, 0.0, 1.0)).Label("Count/10"),
+                        new HStack(
+                                "Count/10",
+                                new ProgressBar().Value(() => Math.Clamp(count.Value / 10.0, 0.0, 1.0)).HorizontalAlignment(HorizontalAlignment.Stretch),
+                                new TextBlock(() => $"{Math.Clamp((int)Math.Round(count.Value / 10.0 * 100.0), 0, 100),3}%"))
+                            .Spacing(1)
+                            .HorizontalAlignment(HorizontalAlignment.Stretch),
                         new Button("Reset").Click(() => count.Value = 0))
                     .Spacing(1));
 
@@ -41,4 +46,3 @@ public sealed class BindingsAndCompositionDemo : ControlsDemoBase
             .Spacing(1);
     }
 }
-

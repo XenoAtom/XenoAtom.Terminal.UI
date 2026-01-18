@@ -15,13 +15,20 @@ public sealed class ProgressBarDemo : ControlsDemoBase
     {
         var progress = context.Runtime.Progress01;
 
+        Visual Row(string label, ProgressBarStyle style)
+            => new HStack(
+                    label,
+                    new ProgressBar().Value(progress).HorizontalAlignment(HorizontalAlignment.Stretch).Style(style),
+                    new TextBlock(() => $"{(int)(progress.Value * 100),3}%"))
+                .Spacing(1)
+                .HorizontalAlignment(HorizontalAlignment.Stretch);
+
         return new VStack(
                 DemoUi.Hint("ProgressBar is bindable; any value update triggers a render."),
-                new ProgressBar().Label("Thin").Value(progress).Style(ProgressBarStyle.Thin),
-                new ProgressBar().Label("Segmented").Value(progress).Style(ProgressBarStyle.Segmented),
-                new ProgressBar().Label("Shaded").Value(progress).Style(ProgressBarStyle.Shaded),
-                new ProgressBar().Label("Bracketed").Value(progress).Style(ProgressBarStyle.Bracketed))
+                Row("Thin", ProgressBarStyle.Thin),
+                Row("Segmented", ProgressBarStyle.Segmented),
+                Row("Shaded", ProgressBarStyle.Shaded),
+                Row("Bracketed", ProgressBarStyle.Bracketed))
             .Spacing(1);
     }
 }
-

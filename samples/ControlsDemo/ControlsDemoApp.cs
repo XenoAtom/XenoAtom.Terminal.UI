@@ -48,7 +48,7 @@ internal static class ControlsDemoApp
             return demo is null
                 ? new Center().Content("No demos found.")
                 : DemoPage.Build(demo, new DemoContext { NavigateToDemoId = NavigateToId, Log = _ => { }, Runtime = runtime });
-        });
+        }).Pad(1).HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch);
 
         return new DockLayout()
             .Content(new HSplitter(sidebar, page).Ratio(0.16))

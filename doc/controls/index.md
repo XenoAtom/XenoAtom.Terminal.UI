@@ -59,6 +59,7 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 - `doc/controls/rule.md`
 - `doc/controls/link.md`
 - `doc/controls/progressbar.md`
+- `doc/controls/progresstaskgroup.md`
 - `doc/controls/spinner.md`
 - `doc/controls/barchart.md`
 - `doc/controls/linechart.md`

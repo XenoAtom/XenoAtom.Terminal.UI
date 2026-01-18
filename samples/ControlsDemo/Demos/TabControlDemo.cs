@@ -19,7 +19,7 @@ public sealed class TabControlDemo : ControlsDemoBase
                 header: new HStack("Status", new TextBlock(() => $"({(int)(progress.Value * 100)}%)")).Spacing(1),
                 content: new VStack(
                         DemoUi.Hint("This is the first tab."),
-                        new ProgressBar().Value(progress).Label("Work"))
+                        new ProgressBar().Value(progress))
                     .Spacing(1)),
             new TabPage(
                 header: "Logs",

@@ -41,7 +41,7 @@ public sealed class InlineHostTests
     [TestMethod]
     public void InlineApp_Can_Append_Flow_Visual()
     {
-        var progress = new ProgressBar { Label = "Work", Value = 0.0 };
+        var progress = new ProgressBar { Value = 0.0 };
         var root = new VStack { progress };
 
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Inline, new TerminalSize(40, 10));
@@ -52,6 +52,5 @@ public sealed class InlineHostTests
 
         var outText = driver.Backend.GetOutText();
         StringAssert.Contains(outText, "Flow: Hello");
-        StringAssert.Contains(outText, "Work");
     }
 }

@@ -20,7 +20,6 @@ public sealed record ProgressBarStyle : IStyle<ProgressBarStyle>
         FillGlyph = new Rune(0x2583), // ▃
         TrackGlyph = new Rune(0x2581), // ▁
         ShowFrame = false,
-        ShowPercentage = true,
     };
 
     /// <summary>
@@ -32,7 +31,6 @@ public sealed record ProgressBarStyle : IStyle<ProgressBarStyle>
         FillGlyph = new Rune(0x2588), // █
         TrackGlyph = new Rune(' '),
         ShowFrame = false,
-        ShowPercentage = true,
     };
 
     /// <summary>
@@ -44,7 +42,6 @@ public sealed record ProgressBarStyle : IStyle<ProgressBarStyle>
         FillGlyph = new Rune(0x2588), // █
         TrackGlyph = new Rune(' '),
         ShowFrame = false,
-        ShowPercentage = true,
     };
 
     /// <summary>
@@ -56,7 +53,6 @@ public sealed record ProgressBarStyle : IStyle<ProgressBarStyle>
         FillGlyph = new Rune(0x2593), // ▓
         TrackGlyph = new Rune(0x2591), // ░
         ShowFrame = false,
-        ShowPercentage = true,
     };
 
     /// <summary>
@@ -68,7 +64,6 @@ public sealed record ProgressBarStyle : IStyle<ProgressBarStyle>
         FillGlyph = new Rune(0x2588), // █
         TrackGlyph = new Rune(0x2591), // ░
         ShowFrame = true,
-        ShowPercentage = true,
     };
 
     /// <summary>
@@ -85,11 +80,6 @@ public sealed record ProgressBarStyle : IStyle<ProgressBarStyle>
     /// Gets the progress bar variant.
     /// </summary>
     public ProgressBarVariant Variant { get; init; } = ProgressBarVariant.Thin;
-
-    /// <summary>
-    /// Gets a value indicating whether to display the percentage text.
-    /// </summary>
-    public bool ShowPercentage { get; init; } = true;
 
     /// <summary>
     /// Gets a value indicating whether to render a frame around the bar.
