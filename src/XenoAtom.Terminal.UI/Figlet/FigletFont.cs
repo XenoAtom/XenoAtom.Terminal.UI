@@ -135,6 +135,38 @@ public sealed partial class FigletFont
     /// </summary>
     public static FigletFont Block => FigletFontBlockHolder.Instance;
 
+    /// <summary>
+    /// Retrieves a list of predefined Figlet fonts available for use.
+    /// </summary>
+    /// <returns>A list of <see cref="FigletFont"/> objects representing the predefined fonts. The list will be empty if no
+    /// predefined fonts are available.</returns>
+    public static List<FigletFont> GetPredefinedFonts() =>
+    [
+        Banner3D,
+        Big,
+        Block,
+        Bubble,
+        BulbHead,
+        CyberLarge,
+        CyberMedium,
+        Digital,
+        Doh,
+        Doom,
+        DotMatrix,
+        Isometric1,
+        Isometric2,
+        Isometric3,
+        Lcd,
+        Ogre,
+        Shadow,
+        Slant,
+        Small,
+        Smslant,
+        Standard,
+        ThreeD,
+        ThreeXFive
+    ];
+
     // NativeAOT lazy initialization pattern
     private static class FigletFontBlockHolder
     {
