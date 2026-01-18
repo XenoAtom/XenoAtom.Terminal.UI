@@ -67,49 +67,49 @@ public readonly record struct LineGlyphs
     /// Gets a single-line border glyph set.
     /// </summary>
     public static LineGlyphs Single { get; } = new(
-        horizontal: new Rune(0x2500),   // Ä
-        vertical: new Rune(0x2502),     // ³
-        topLeft: new Rune(0x250C),      // Ú
-        topRight: new Rune(0x2510),     // ¿
-        bottomLeft: new Rune(0x2514),   // À
-        bottomRight: new Rune(0x2518),  // Ù
-        teeTop: new Rune(0x252C),       // Â
-        teeBottom: new Rune(0x2534),    // Á
-        teeLeft: new Rune(0x251C),      // Ã
-        teeRight: new Rune(0x2524),     // ´
-        cross: new Rune(0x253C));       // Å
+        horizontal: new Rune(0x2500),   // ─
+        vertical: new Rune(0x2502),     // │
+        topLeft: new Rune(0x250C),      // ┌
+        topRight: new Rune(0x2510),     // ┐
+        bottomLeft: new Rune(0x2514),   // └
+        bottomRight: new Rune(0x2518),  // ┘
+        teeTop: new Rune(0x252C),       // ┬
+        teeBottom: new Rune(0x2534),    // ┴
+        teeLeft: new Rune(0x251C),      // ├
+        teeRight: new Rune(0x2524),     // ┤
+        cross: new Rune(0x253C));       // ┼
 
     /// <summary>
     /// Gets a single-line border glyph set with rounded corners.
     /// </summary>
     public static LineGlyphs Rounded { get; } = new(
-        horizontal: new Rune(0x2500),   // Ä
-        vertical: new Rune(0x2502),     // ³
+        horizontal: new Rune(0x2500),   // ─
+        vertical: new Rune(0x2502),     // │
         topLeft: new Rune(0x256D),      // ╭
         topRight: new Rune(0x256E),     // ╮
         bottomLeft: new Rune(0x2570),   // ╰
         bottomRight: new Rune(0x256F),  // ╯
-        teeTop: new Rune(0x252C),       // Â
-        teeBottom: new Rune(0x2534),    // Á
-        teeLeft: new Rune(0x251C),      // Ã
-        teeRight: new Rune(0x2524),     // ´
-        cross: new Rune(0x253C));       // Å
+        teeTop: new Rune(0x252C),       // ┬
+        teeBottom: new Rune(0x2534),    // ┴
+        teeLeft: new Rune(0x251C),      // ├
+        teeRight: new Rune(0x2524),     // ┤
+        cross: new Rune(0x253C));       // ┼
 
     /// <summary>
     /// Gets a double-line border glyph set.
     /// </summary>
     public static LineGlyphs Double { get; } = new(
-        horizontal: new Rune(0x2550),   // Í
-        vertical: new Rune(0x2551),     // º
-        topLeft: new Rune(0x2554),      // É
-        topRight: new Rune(0x2557),     // »
-        bottomLeft: new Rune(0x255A),   // È
-        bottomRight: new Rune(0x255D),  // ¼
-        teeTop: new Rune(0x2566),       // Ë
-        teeBottom: new Rune(0x2569),    // Ê
-        teeLeft: new Rune(0x2560),      // Ì
-        teeRight: new Rune(0x2563),     // ¹
-        cross: new Rune(0x256C));       // Î
+        horizontal: new Rune(0x2550),   // ═
+        vertical: new Rune(0x2551),     // ║
+        topLeft: new Rune(0x2554),      // ╔
+        topRight: new Rune(0x2557),     // ╗
+        bottomLeft: new Rune(0x255A),   // ╚
+        bottomRight: new Rune(0x255D),  // ╝
+        teeTop: new Rune(0x2566),       // ╦
+        teeBottom: new Rune(0x2569),    // ╩
+        teeLeft: new Rune(0x2560),      // ╠
+        teeRight: new Rune(0x2563),     // ╣
+        cross: new Rune(0x256C));       // ╬
 
     /// <summary>
     /// Gets a heavy single-line border glyph set.
