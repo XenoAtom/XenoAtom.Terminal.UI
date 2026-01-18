@@ -14,7 +14,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// This type is primarily a state container (value/range) and is not part of the visual tree.
 /// The task can expose a visual label (for rich composition) that is hosted by a group column.
 /// </remarks>
-public partial class ProgressTask : DispatcherObject
+public partial class ProgressTask : DispatcherObject, IVisualElement
 {
     private readonly Visual _label;
     private readonly BindableList<ProgressTaskCellCustomization> _cellCustomizations;
@@ -49,6 +49,11 @@ public partial class ProgressTask : DispatcherObject
     /// Gets the task label visual.
     /// </summary>
     public Visual Label => _label;
+
+    /// <summary>
+    /// Required to make sure that bindings in this class don't participate during the creation of this task, but only when it is added to a visual tree.
+    /// </summary>
+    TerminalApp? IVisualElement.App => _label.App;
 
     /// <summary>
     /// Gets or sets the current progress value.
