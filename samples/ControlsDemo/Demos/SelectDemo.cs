@@ -14,13 +14,8 @@ public sealed class SelectDemo : ControlsDemoBase
     {
         var selected = new State<int>(0);
 
-        var select = new Select().SelectedIndex(selected);
-        select.Items.AddRange(
-            new SelectItem("First"),
-            new SelectItem("Second"),
-            new SelectItem("Third"),
-            new SelectItem("Fourth"),
-            new SelectItem("Fifth"));
+        var select = new Select<string>().SelectedIndex(selected);
+        select.Items.AddRange("First", "Second", "Third", "Fourth", "Fifth");
 
         return new VStack(
                 DemoUi.Hint("Select opens a popup; click outside, press Tab or Esc to close."),
@@ -30,4 +25,3 @@ public sealed class SelectDemo : ControlsDemoBase
             .Spacing(1);
     }
 }
-

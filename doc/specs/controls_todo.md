@@ -77,7 +77,7 @@ Beyond the following specs, if there are improvements or features that would mak
 
 ## Select / Dropdown
 
-* **API**: items source, selected value, display renderer
+* **API**: `Select<T>` with `Items` (`BindableList<T>`), `SelectedIndex`, `ContentFactory` (`Func<T, Visual>`)
 * **Popup**: anchored list; clamps to viewport; supports flip above/below
 * **Search**: type-to-filter or type-to-jump; configurable timeout
 * **Keyboard**: Enter/Space open, Esc close, Up/Down navigate, PageUp/Down

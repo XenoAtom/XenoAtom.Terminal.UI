@@ -14,21 +14,19 @@ public sealed class PopupDemo : ControlsDemoBase
     {
         Popup? popup = null;
 
-        var placement = new Select();
-        placement.Items.AddRange(
-            new SelectItem("Below"),
-            new SelectItem("Above"),
-            new SelectItem("Right"),
-            new SelectItem("Left"));
+        var placement = new Select<PopupPlacement>();
+        placement.Items.AddRange(PopupPlacement.Below, PopupPlacement.Above, PopupPlacement.Right, PopupPlacement.Left);
 
         PopupPlacement GetPlacement()
-            => placement.SelectedIndex switch
+        {
+            if (placement.Items.Count == 0)
             {
-                1 => PopupPlacement.Above,
-                2 => PopupPlacement.Right,
-                3 => PopupPlacement.Left,
-                _ => PopupPlacement.Below,
-            };
+                return PopupPlacement.Below;
+            }
+
+            var index = Math.Clamp(placement.SelectedIndex, 0, placement.Items.Count - 1);
+            return placement.Items[index];
+        }
 
         var anchor = new Button("Show popup");
         anchor.Click(() =>

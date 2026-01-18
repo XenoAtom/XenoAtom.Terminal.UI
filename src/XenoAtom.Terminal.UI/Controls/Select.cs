@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Collections.Generic;
 using System.Text;
 using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Geometry;
@@ -13,51 +14,36 @@ using XenoAtom.Terminal.UI.Styling;
 namespace XenoAtom.Terminal.UI.Controls;
 
 /// <summary>
-/// Represents an item in a <see cref="Select"/> control.
+/// A generic dropdown/select control that displays a popup list to pick a single item.
 /// </summary>
-/// <param name="Value">The value associated with the item.</param>
-/// <param name="ContentFactory">A factory creating the visual used to render the item.</param>
-public sealed record SelectItem(object? Value, Func<Visual> ContentFactory)
-{
-    /// <summary>
-    /// Initializes a new item using a text label.
-    /// </summary>
-    /// <param name="text">The item text.</param>
-    public SelectItem(string text)
-        : this(text, () => new TextBlock { Text = text })
-    {
-    }
-
-    /// <summary>
-    /// Creates the visual used to render this item.
-    /// </summary>
-    public Visual CreateVisual() => ContentFactory();
-}
-
-/// <summary>
-/// A dropdown/select control that displays a popup list to pick a single item.
-/// </summary>
-public sealed partial class Select : ContentVisual
+/// <typeparam name="T">The item type.</typeparam>
+public sealed partial class Select<T> : ContentVisual
 {
     private Popup? _popup;
     private ListBox? _popupList;
     private int _contentIndex = -1;
-    private SelectItem? _contentItem;
+    private bool _hasContentValue;
+    private T _contentValue = default!;
+    private Func<T, Visual>? _lastContentFactory;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Select"/> class.
+    /// Initializes a new instance of the <see cref="Select{T}"/> class.
     /// </summary>
     public Select()
     {
         Focusable = true;
-        Items = new BindableList<SelectItem>(this, "Select.Items");
+        Items = new BindableList<T>(this, "Select.Items");
         this.SelectedIndex(0);
+
+        // Provide a sensible default factory. Note that this must be a typed delegate (not a lambda directly),
+        // otherwise the implicit conversion to Delegator{TDelegate} will not be applied.
+        ContentFactory = (Func<T, Visual>)CreateDefaultItemVisual;
     }
 
     /// <summary>
     /// Gets the items available for selection.
     /// </summary>
-    public BindableList<SelectItem> Items { get; }
+    public BindableList<T> Items { get; }
 
     /// <summary>
     /// Gets or sets the selected item index.
@@ -65,10 +51,26 @@ public sealed partial class Select : ContentVisual
     [Bindable]
     public partial int SelectedIndex { get; set; }
 
+    /// <summary>
+    /// Gets or sets the factory used to create visuals for items, both for the selected value and the popup list.
+    /// </summary>
+    /// <remarks>
+    /// When <see cref="ContentFactory"/> is not set (empty delegator), the control uses a default factory that
+    /// renders <c>value.ToString()</c> inside a <see cref="TextBlock"/>.
+    /// </remarks>
+    [Bindable]
+    public partial Delegator<Func<T, Visual>> ContentFactory { get; set; }
+
     partial void OnSelectedIndexChanged(int value)
     {
         _ = value;
         UpdateSelectedContent();
+    }
+
+    partial void OnContentFactoryChanged(Delegator<Func<T, Visual>> value)
+    {
+        _ = value;
+        UpdateSelectedContent(forceRebuild: true);
     }
 
     /// <inheritdoc/>
@@ -213,7 +215,7 @@ public sealed partial class Select : ContentVisual
         }
     }
 
-    private void UpdateSelectedContent()
+    private void UpdateSelectedContent(bool forceRebuild = false)
     {
         var items = Items;
         if (items.Count == 0)
@@ -222,8 +224,11 @@ public sealed partial class Select : ContentVisual
             {
                 Content = null;
             }
+
             _contentIndex = -1;
-            _contentItem = null;
+            _hasContentValue = false;
+            _contentValue = default!;
+            _lastContentFactory = null;
             return;
         }
 
@@ -234,15 +239,24 @@ public sealed partial class Select : ContentVisual
             return;
         }
 
-        var item = items[index];
-        if (_contentIndex == index && ReferenceEquals(_contentItem, item) && Content is not null)
+        var value = items[index];
+        var factory = ContentFactory.Invoke ?? CreateDefaultItemVisual;
+
+        if (!forceRebuild &&
+            _contentIndex == index &&
+            _hasContentValue &&
+            EqualityComparer<T>.Default.Equals(_contentValue, value) &&
+            ReferenceEquals(_lastContentFactory, factory) &&
+            Content is not null)
         {
             return;
         }
 
         _contentIndex = index;
-        _contentItem = item;
-        Content = item.CreateVisual();
+        _hasContentValue = true;
+        _contentValue = value;
+        _lastContentFactory = factory;
+        Content = factory(value);
     }
 
     private void OpenPopup()
@@ -261,9 +275,10 @@ public sealed partial class Select : ContentVisual
         }
 
         var list = new ListBox();
+        var factory = ContentFactory.Invoke ?? CreateDefaultItemVisual;
         for (var i = 0; i < Items.Count; i++)
         {
-            list.Items.Add(Items[i].CreateVisual());
+            list.Items.Add(factory(Items[i]));
         }
         list.SelectedIndex = Math.Clamp(SelectedIndex, 0, Math.Max(0, list.Items.Count - 1));
 
@@ -274,7 +289,7 @@ public sealed partial class Select : ContentVisual
                 return;
             }
 
-            if (s is not ListBox lb || lb.Parent is not Popup popup || popup.Anchor is not Select owner)
+            if (s is not ListBox lb || lb.Parent is not Popup popup || popup.Anchor is not Select<T> owner)
             {
                 return;
             }
@@ -290,7 +305,7 @@ public sealed partial class Select : ContentVisual
                 return;
             }
 
-            if (s is not ListBox lb || lb.Parent is not Popup popup || popup.Anchor is not Select owner)
+            if (s is not ListBox lb || lb.Parent is not Popup popup || popup.Anchor is not Select<T> owner)
             {
                 return;
             }
@@ -311,7 +326,7 @@ public sealed partial class Select : ContentVisual
 
         popup.Closed(static (sender, _) =>
         {
-            if (sender is not Popup p || p.Anchor is not Select owner)
+            if (sender is not Popup p || p.Anchor is not Select<T> owner)
             {
                 return;
             }
@@ -337,4 +352,7 @@ public sealed partial class Select : ContentVisual
 
         _popup.Close();
     }
+
+    private static Visual CreateDefaultItemVisual(T value)
+        => new TextBlock(value is null ? string.Empty : value.ToString() ?? string.Empty);
 }

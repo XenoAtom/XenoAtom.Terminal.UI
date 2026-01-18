@@ -8,7 +8,7 @@ using XenoAtom.Terminal.UI.Geometry;
 namespace XenoAtom.Terminal.UI.Styling;
 
 /// <summary>
-/// Defines rendering and theming options for a <see cref="Controls.Select"/>.
+/// Defines rendering and theming options for a <see cref="Controls.Select{T}"/>.
 /// </summary>
 public sealed record SelectStyle : IStyle<SelectStyle>
 {

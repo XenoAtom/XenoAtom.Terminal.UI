@@ -164,7 +164,7 @@ The demo should include every control currently in the library, but also include
 - **Functional composition**: `ContentSwitcher` (and other patterns) to swap subtrees based on state; show how to avoid dynamic updates for static setup.
 - **Live UI**: `Terminal.Live(...)` (inline) + “tick-driven” animations (spinner/progress) without input; show logging while live.
 - **Layouts**: StackPanels, Grid, Splitters, alignment, trimming, margins/padding.
-- **Input**: TextBox, MaskedInput, TextArea, Slider, Select, Switch, CheckBox.
+- **Input**: TextBox, MaskedInput, TextArea, Slider, Select<T>, Switch, CheckBox.
 - **Navigation**: Tabs, MenuBar, TreeView, OptionList, CommandPalette.
 - **Overlays**: Popup, Dialog/Window, modal behavior, window movement.
 - **Visualization**: Progress variants, Spinner styles, Sparkline, charts.

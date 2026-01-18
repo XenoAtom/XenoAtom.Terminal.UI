@@ -13,11 +13,8 @@ public sealed class SelectTests
     [TestMethod]
     public void Select_Opens_And_Selects_Item_On_Click()
     {
-        var select = new Select();
-        select.Items.AddRange(
-            new SelectItem("First"),
-            new SelectItem("Second"),
-            new SelectItem("Third"));
+        var select = new Select<string>();
+        select.Items.AddRange("First", "Second", "Third");
 
         var root = new VStack { select };
 
@@ -37,4 +34,3 @@ public sealed class SelectTests
         Assert.AreEqual(1, select.SelectedIndex);
     }
 }
-
