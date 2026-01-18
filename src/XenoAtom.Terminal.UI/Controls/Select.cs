@@ -20,7 +20,6 @@ namespace XenoAtom.Terminal.UI.Controls;
 public sealed partial class Select<T> : ContentVisual
 {
     private Popup? _popup;
-    private ListBox? _popupList;
     private int _contentIndex = -1;
     private bool _hasContentValue;
     private T _contentValue = default!;
@@ -38,6 +37,7 @@ public sealed partial class Select<T> : ContentVisual
         // Provide a sensible default factory. Note that this must be a typed delegate (not a lambda directly),
         // otherwise the implicit conversion to Delegator{TDelegate} will not be applied.
         ContentFactory = (Func<T, Visual>)CreateDefaultItemVisual;
+        PopupBorderFactory = (Func<Visual, Visual?>)(static x => new Border(x).HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch));
     }
 
     /// <summary>
@@ -51,6 +51,15 @@ public sealed partial class Select<T> : ContentVisual
     /// </summary>
     [Bindable]
     public partial int SelectedIndex { get; set; }
+
+    /// <summary>
+    /// Gets or sets the delegate used to create a border visual for a given visual element.
+    /// </summary>
+    /// <remarks>The delegate receives the target visual and returns a new visual representing its border, or
+    /// <see langword="null"/> if no border should be applied. This property enables customization of border rendering
+    /// for visual elements at runtime.</remarks>
+    [Bindable]
+    public partial Delegator<Func<Visual, Visual?>> PopupBorderFactory { get; set; }
 
     /// <summary>
     /// Gets or sets the factory used to create visuals for items, both for the selected value and the popup list.
@@ -283,14 +292,52 @@ public sealed partial class Select<T> : ContentVisual
         }
         list.SelectedIndex = Math.Clamp(SelectedIndex, 0, Math.Max(0, list.Items.Count - 1));
 
-        list.PointerPressed(static (s, e) =>
+        Func<Visual?, Select<T>?> getSelect;
+        var content = PopupBorderFactory.Invoke?.Invoke(list);
+        if (content is not null)
+        {
+            getSelect = static v =>
+            {
+                if (v?.Parent is Border parent && parent.Parent is Popup popup && popup.Anchor is Select<T> owner)
+                {
+                    return owner;
+                }
+                else
+                {
+                    return null;
+                }
+            };
+        }
+        else
+        {
+            content = list;
+            getSelect = static v =>
+            {
+                if (v?.Parent is Popup popup && popup.Anchor is Select<T> owner)
+                {
+                    return owner;
+                }
+                else
+                {
+                    return null;
+                }
+            };
+        }
+        
+
+        list.PointerPressed((s, e) =>
         {
             if (e.Button != TerminalMouseButton.Left)
             {
                 return;
             }
 
-            if (s is not ListBox lb || lb.Parent is not Popup popup || popup.Anchor is not Select<T> owner)
+            if (s is not ListBox lb )
+            {
+                return;
+            }
+            var owner = getSelect(lb);
+            if (owner is null)
             {
                 return;
             }
@@ -299,14 +346,19 @@ public sealed partial class Select<T> : ContentVisual
             owner.ClosePopup();
         });
 
-        list.KeyDown(static (s, e) =>
+        list.KeyDown((s, e) =>
         {
             if (e.Key is not (TerminalKey.Enter or TerminalKey.Space))
             {
                 return;
             }
 
-            if (s is not ListBox lb || lb.Parent is not Popup popup || popup.Anchor is not Select<T> owner)
+            if (s is not ListBox lb)
+            {
+                return;
+            }
+            var owner = getSelect(lb);
+            if (owner is null)
             {
                 return;
             }
@@ -316,10 +368,11 @@ public sealed partial class Select<T> : ContentVisual
             e.Handled = true;
         });
 
+
         var popup = new Popup
         {
             Anchor = this,
-            Content = list,
+            Content = content,
             MatchAnchorWidth = true,
             AdditionalWidth = 2,
             Placement = PopupPlacement.Below,
@@ -333,7 +386,6 @@ public sealed partial class Select<T> : ContentVisual
             }
 
             owner._popup = null;
-            owner._popupList = null;
 
             owner.App?.Focus(owner);
         });
@@ -341,7 +393,6 @@ public sealed partial class Select<T> : ContentVisual
         popup.Show();
 
         _popup = popup;
-        _popupList = list;
     }
 
     private void ClosePopup()
