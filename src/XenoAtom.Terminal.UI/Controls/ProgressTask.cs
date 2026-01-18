@@ -183,7 +183,8 @@ public partial class ProgressTask : DispatcherObject, IVisualElement
     /// <param name="cell">The created cell visual.</param>
     /// <remarks>
     /// Override this method to apply per-task customization without modifying the group column definitions.
-    /// The default implementation applies registered entries from <see cref="CellCustomizations"/>.
+    /// The default implementation applies registered entries added via <see cref="CustomizeCell(string,Action{Visual})"/>
+    /// and <see cref="SetCellCustomization(string,string,Action{Visual})"/>.
     /// </remarks>
     protected internal virtual void OnCellCreated(string columnId, Visual cell)
     {

@@ -160,7 +160,7 @@ public sealed class CellBufferDiffRenderer : IDisposable
             }
 
             firstChanged = AdjustStartForWideGlyph(cells, rowIndex, firstChanged);
-            lastChanged = AdjustEndForWideGlyph(scalars, cells, rowIndex, lastChanged, width);
+            lastChanged = AdjustEndForWideGlyph(buffer, scalars, cells, rowIndex, lastChanged, width);
 
             BeginOutput();
             writer.CursorPosition(y + 1, firstChanged + 1);
@@ -204,6 +204,13 @@ public sealed class CellBufferDiffRenderer : IDisposable
                 {
                     writer.Write(" ");
                     xPos++;
+                    continue;
+                }
+
+                if (scalar < 0 && buffer.TryGetTextElement(scalar, out var textElement, out var elementWidth))
+                {
+                    writer.Write(textElement);
+                    xPos += Math.Max(1, elementWidth);
                     continue;
                 }
 
@@ -295,7 +302,7 @@ public sealed class CellBufferDiffRenderer : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int AdjustEndForWideGlyph(ReadOnlySpan<int> scalars, ReadOnlySpan<CellStyle> cells, int rowIndex, int x, int width)
+    private static int AdjustEndForWideGlyph(CellBuffer buffer, ReadOnlySpan<int> scalars, ReadOnlySpan<CellStyle> cells, int rowIndex, int x, int width)
     {
         var cell = cells[rowIndex + x];
         if (cell.IsContinuation)
@@ -304,7 +311,12 @@ public sealed class CellBufferDiffRenderer : IDisposable
         }
 
         var scalar = scalars[rowIndex + x];
-        if (scalar != 0 && TerminalTextUtility.GetRuneWidth(new Rune(scalar)) > 1)
+        if (scalar < 0 && buffer.TryGetTextElement(scalar, out _, out var elementWidth) && elementWidth > 1)
+        {
+            return Math.Min(width - 1, x + 1);
+        }
+
+        if (scalar > 0 && TerminalTextUtility.GetRuneWidth(new Rune(scalar)) > 1)
         {
             return Math.Min(width - 1, x + 1);
         }

@@ -24,6 +24,7 @@ public sealed class InlineInteractiveHost : IDisposable
     private CellStyle[]? _lastCells;
     private ulong[]? _lastHyperlinks;
     private Dictionary<ulong, string>? _lastHyperlinkTable;
+    private Dictionary<int, string>? _lastTextElementTable;
     private int _lastWidth;
     private int _lastHeight;
     private bool _lastCursorVisible;
@@ -351,6 +352,13 @@ public sealed class InlineInteractiveHost : IDisposable
                         continue;
                     }
 
+                    if (scalar < 0 && buffer.TryGetTextElement(scalar, out var textElement, out var elementWidth))
+                    {
+                        writer.Write(textElement);
+                        xPos += Math.Max(1, elementWidth);
+                        continue;
+                    }
+
                     var rune = new Rune(scalar);
                     var written = rune.EncodeToUtf16(runeBuffer);
                     writer.Write(runeBuffer[..written]);
@@ -412,7 +420,7 @@ public sealed class InlineInteractiveHost : IDisposable
                 }
 
                 firstChanged = AdjustStartForWideGlyph(cells, rowIndex, firstChanged);
-                lastChanged = AdjustEndForWideGlyph(scalars, cells, rowIndex, lastChanged, width);
+                lastChanged = AdjustEndForWideGlyph(buffer, scalars, cells, rowIndex, lastChanged, width);
 
                 writer.CursorHorizontalAbsolute(firstChanged + 1);
 
@@ -455,6 +463,13 @@ public sealed class InlineInteractiveHost : IDisposable
                     {
                         writer.Write(" ");
                         xPos++;
+                        continue;
+                    }
+
+                    if (scalar < 0 && buffer.TryGetTextElement(scalar, out var textElement, out var elementWidth))
+                    {
+                        writer.Write(textElement);
+                        xPos += Math.Max(1, elementWidth);
                         continue;
                     }
 
@@ -524,6 +539,8 @@ public sealed class InlineInteractiveHost : IDisposable
         hyperlinks.Slice(0, width * height).CopyTo(lastHyperlinks.AsSpan());
         _lastHyperlinkTable ??= new Dictionary<ulong, string>();
         buffer.CopyHyperlinkTableTo(_lastHyperlinkTable);
+        _lastTextElementTable ??= new Dictionary<int, string>();
+        buffer.CopyTextElementTableTo(_lastTextElementTable);
         _hasSavedCursorPosition = true;
         _reservedHeight = height;
         _liveRegionTopRow = Math.Min(_liveRegionTopRow.GetValueOrDefault(), visibleHeight - height);
@@ -673,6 +690,7 @@ public sealed class InlineInteractiveHost : IDisposable
         var cells = _lastCells!;
         var hyperlinks = _lastHyperlinks!;
         var linkTable = _lastHyperlinkTable;
+        var textElementTable = _lastTextElementTable;
 
         var currentStyle = AnsiStyle.Default;
         ulong currentHyperlink = 0;
@@ -725,6 +743,13 @@ public sealed class InlineInteractiveHost : IDisposable
                     continue;
                 }
 
+                if (scalar < 0 && textElementTable is not null && textElementTable.TryGetValue(scalar, out var textElement))
+                {
+                    writer.Write(textElement);
+                    xPos += Math.Max(1, TerminalTextUtility.GetWidth(textElement.AsSpan()));
+                    continue;
+                }
+
                 var rune = new Rune(scalar);
                 var written = rune.EncodeToUtf16(runeBuffer);
                 writer.Write(runeBuffer[..written]);
@@ -760,7 +785,7 @@ public sealed class InlineInteractiveHost : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int AdjustEndForWideGlyph(ReadOnlySpan<int> scalars, ReadOnlySpan<CellStyle> cells, int rowIndex, int x, int width)
+    private static int AdjustEndForWideGlyph(CellBuffer buffer, ReadOnlySpan<int> scalars, ReadOnlySpan<CellStyle> cells, int rowIndex, int x, int width)
     {
         var cell = cells[rowIndex + x];
         if (cell.IsContinuation)
@@ -769,7 +794,12 @@ public sealed class InlineInteractiveHost : IDisposable
         }
 
         var scalar = scalars[rowIndex + x];
-        if (scalar != 0 && TerminalTextUtility.GetRuneWidth(new Rune(scalar)) > 1)
+        if (scalar < 0 && buffer.TryGetTextElement(scalar, out _, out var elementWidth) && elementWidth > 1)
+        {
+            return Math.Min(width - 1, x + 1);
+        }
+
+        if (scalar > 0 && TerminalTextUtility.GetRuneWidth(new Rune(scalar)) > 1)
         {
             return Math.Min(width - 1, x + 1);
         }

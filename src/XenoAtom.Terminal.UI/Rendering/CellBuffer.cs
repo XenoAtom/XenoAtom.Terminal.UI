@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Buffers;
+using System.Globalization;
 using System.Text;
 using XenoAtom.Ansi;
 using XenoAtom.Terminal.UI.Geometry;
@@ -19,10 +20,13 @@ public sealed class CellBuffer
     private readonly CellStyle[] _cells;
     private readonly ulong[] _hyperlinks;
     private Dictionary<ulong, string>? _hyperlinkTable;
+    private Dictionary<int, TextElementEntry>? _textElementTable;
 
     private Rectangle _clipRect;
     private Rectangle[]? _clipStack;
     private int _clipDepth;
+
+    private readonly record struct TextElementEntry(string Text, int Width);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CellBuffer"/> class.
@@ -69,6 +73,7 @@ public sealed class CellBuffer
         Array.Fill(_cells, CellStyle.None);
         Array.Fill(_hyperlinks, 0ul);
         _hyperlinkTable?.Clear();
+        _textElementTable?.Clear();
     }
 
     /// <summary>
@@ -81,6 +86,7 @@ public sealed class CellBuffer
         Array.Fill(_cells, cellStyle);
         Array.Fill(_hyperlinks, 0ul);
         _hyperlinkTable?.Clear();
+        _textElementTable?.Clear();
     }
 
     /// <summary>
@@ -163,6 +169,51 @@ public sealed class CellBuffer
         }
     }
 
+    internal bool TryGetTextElement(int token, out string text, out int width)
+    {
+        if (token >= 0 || _textElementTable is null || !_textElementTable.TryGetValue(token, out var entry))
+        {
+            text = string.Empty;
+            width = 0;
+            return false;
+        }
+
+        text = entry.Text;
+        width = entry.Width;
+        return true;
+    }
+
+    private void SetTextElementToken(int x, int y, int token, int width, CellStyle cellStyle, ulong hyperlinkToken)
+    {
+        if ((uint)x >= (uint)Width || (uint)y >= (uint)Height || !_clipRect.Contains(x, y))
+        {
+            return;
+        }
+
+        if (width <= 0)
+        {
+            return;
+        }
+
+        var index = (y * Width) + x;
+        _scalars[index] = token;
+        var style = cellStyle.WithoutContinuation().MergeUnspecified(_cells[index].WithoutContinuation());
+        _cells[index] = style;
+        _hyperlinks[index] = hyperlinkToken;
+
+        if (width > 1 && x + 1 < Width)
+        {
+            if (!_clipRect.Contains(x + 1, y))
+            {
+                return;
+            }
+
+            _scalars[index + 1] = ' ';
+            _cells[index + 1] = style.WithContinuation();
+            _hyperlinks[index + 1] = hyperlinkToken;
+        }
+    }
+
     /// <summary>
     /// Writes a UTF-16 text span to the buffer, applying the given style.
     /// </summary>
@@ -187,13 +238,29 @@ public sealed class CellBuffer
         var index = 0;
         while (index < text.Length && posX < Width)
         {
-            if (Rune.DecodeFromUtf16(text[index..], out var rune, out var consumed) != OperationStatus.Done || consumed <= 0)
+            var elementLength = StringInfo.GetNextTextElementLength(text[index..]);
+            if (elementLength <= 0)
             {
-                rune = Rune.ReplacementChar;
-                consumed = 1;
+                elementLength = 1;
             }
 
-            var w = TerminalTextUtility.GetRuneWidth(rune);
+            var elementSpan = text.Slice(index, Math.Min(elementLength, text.Length - index));
+            if (elementSpan.Length == 1 && elementSpan[0] == '\t')
+            {
+                // Expand tab using a deterministic tab stop so that cell-buffer rendering remains consistent.
+                var tabWidth = TerminalTextUtility.DefaultTabWidth;
+                var spaces = tabWidth - (posX % tabWidth);
+                spaces = Math.Max(1, spaces);
+                for (var s = 0; s < spaces && posX < Width; s++)
+                {
+                    SetCell(posX++, y, new Rune(' '), cellStyle, hyperlinkToken);
+                }
+
+                index += elementLength;
+                continue;
+            }
+
+            var w = GetTextElementWidth(elementSpan);
             if (w > 0)
             {
                 if (posX + w > Width)
@@ -201,12 +268,116 @@ public sealed class CellBuffer
                     break;
                 }
 
-                SetCell(posX, y, rune, cellStyle, hyperlinkToken);
+                if (TryDecodeSingleRune(elementSpan, out var rune))
+                {
+                    SetCell(posX, y, rune, cellStyle, hyperlinkToken);
+                }
+                else
+                {
+                    var token = RegisterTextElement(elementSpan, w);
+                    SetTextElementToken(posX, y, token, w, cellStyle, hyperlinkToken);
+                }
                 posX += w;
             }
 
-            index += consumed;
+            index += elementLength;
         }
+    }
+
+    private static bool TryDecodeSingleRune(ReadOnlySpan<char> element, out Rune rune)
+    {
+        if (Rune.DecodeFromUtf16(element, out rune, out var consumed) == OperationStatus.Done && consumed > 0 && consumed == element.Length)
+        {
+            return true;
+        }
+
+        rune = Rune.ReplacementChar;
+        return false;
+    }
+
+    private static int GetTextElementWidth(ReadOnlySpan<char> element)
+    {
+        if (element.IsEmpty)
+        {
+            return 0;
+        }
+
+        // Preserve the behavior of treating a tab as a fixed number of cells.
+        // Text editors generally expand tabs themselves; this is a safe fallback.
+        if (element.Length == 1 && element[0] == '\t')
+        {
+            return TerminalTextUtility.DefaultTabWidth;
+        }
+
+        if (Rune.DecodeFromUtf16(element, out var rune, out var consumed) != OperationStatus.Done || consumed <= 0)
+        {
+            return Math.Max(1, TerminalTextUtility.GetRuneWidth(Rune.ReplacementChar));
+        }
+
+        if (element.Length == consumed)
+        {
+            return Math.Max(1, TerminalTextUtility.GetRuneWidth(rune));
+        }
+
+        var maxWidth = Math.Max(0, TerminalTextUtility.GetRuneWidth(rune));
+        var i = consumed;
+        while (i < element.Length)
+        {
+            if (Rune.DecodeFromUtf16(element[i..], out var next, out var c) != OperationStatus.Done || c <= 0)
+            {
+                maxWidth = Math.Max(maxWidth, TerminalTextUtility.GetRuneWidth(Rune.ReplacementChar));
+                i++;
+                continue;
+            }
+
+            maxWidth = Math.Max(maxWidth, TerminalTextUtility.GetRuneWidth(next));
+            i += c;
+        }
+
+        return Math.Max(0, maxWidth);
+    }
+
+    private int RegisterTextElement(ReadOnlySpan<char> element, int width)
+    {
+        // Note: the token is stored directly in the scalar buffer (negative int), so it must be stable across frames.
+        // We use a deterministic hash with collision detection (same approach as hyperlinks).
+        var text = element.ToString();
+        _textElementTable ??= new Dictionary<int, TextElementEntry>();
+
+        var seed = 14695981039346656037ul;
+        var token = ComputeTextToken(text.AsSpan(), seed);
+
+        if (_textElementTable.TryGetValue(token, out var existing) && !string.Equals(existing.Text, text, StringComparison.Ordinal))
+        {
+            // Extremely unlikely; use a second deterministic seed.
+            token = ComputeTextToken(text.AsSpan(), seed ^ 0x9E3779B97F4A7C15ul);
+        }
+
+        if (_textElementTable.TryGetValue(token, out existing) && !string.Equals(existing.Text, text, StringComparison.Ordinal))
+        {
+            // Fall back to a unique negative id. This makes diffs noisier but preserves correctness.
+            var fallback = -1;
+            while (_textElementTable.ContainsKey(fallback))
+            {
+                fallback--;
+            }
+            token = fallback;
+        }
+
+        _textElementTable[token] = new TextElementEntry(text, width);
+        return token;
+    }
+
+    private static int ComputeTextToken(ReadOnlySpan<char> text, ulong seed)
+    {
+        var hash = ComputeFnv1a64(text, seed);
+        var token = (int)(hash & 0x7FFFFFFFul);
+        if (token == 0)
+        {
+            token = 1;
+        }
+
+        return -token;
     }
 
     /// <summary>
@@ -267,6 +438,22 @@ public sealed class CellBuffer
         foreach (var pair in _hyperlinkTable)
         {
             target[pair.Key] = pair.Value;
+        }
+    }
+
+    internal void CopyTextElementTableTo(Dictionary<int, string> target)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        target.Clear();
+
+        if (_textElementTable is null || _textElementTable.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var pair in _textElementTable)
+        {
+            target[pair.Key] = pair.Value.Text;
         }
     }
 
@@ -348,6 +535,12 @@ public sealed class CellBuffer
                 if (scalar == 0)
                 {
                     sb.Append(' ');
+                    continue;
+                }
+
+                if (scalar < 0 && TryGetTextElement(scalar, out var textElement, out _))
+                {
+                    sb.Append(AnsiMarkup.Escape(textElement.AsSpan()));
                     continue;
                 }
 

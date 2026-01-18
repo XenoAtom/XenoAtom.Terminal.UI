@@ -101,6 +101,13 @@ internal static class TerminalVisualWriter
                         continue;
                     }
 
+                    if (scalar < 0 && buffer.TryGetTextElement(scalar, out var textElement, out var elementWidth))
+                    {
+                        writer.Write(textElement);
+                        xPos += Math.Max(1, elementWidth);
+                        continue;
+                    }
+
                     var rune = new Rune(scalar);
                     var written = rune.EncodeToUtf16(runeBuffer);
                     writer.Write(runeBuffer[..written]);

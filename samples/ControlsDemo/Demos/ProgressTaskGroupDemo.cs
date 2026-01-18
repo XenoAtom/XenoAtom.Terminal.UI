@@ -16,9 +16,9 @@ public sealed class ProgressTaskGroupDemo : ControlsDemoBase
         var progress = context.Runtime.Progress01;
         var pulse = context.Runtime.Pulse01;
 
-        var download = new ProgressTask("🗃️  Download").Value(progress).StyleBar(ProgressBarStyle.Shaded with { Filled = CellStyle.None.WithForeground(AnsiColorScheme.RootLoopsDark.Red) });
-        var render = new ProgressTask("🎨  Render").Value(pulse).StyleBar(ProgressBarStyle.Segmented with { Filled = CellStyle.None.WithForeground(AnsiColorScheme.RootLoopsDark.Green) });
-        var tests = new ProgressTask("🧪  Tests").Value(progress);
+        var download = new ProgressTask("🗃️ Download").Value(progress).StyleBar(ProgressBarStyle.Shaded with { Filled = CellStyle.None.WithForeground(AnsiColorScheme.RootLoopsDark.Red) });
+        var render = new ProgressTask("🎨 Render").Value(pulse).StyleBar(ProgressBarStyle.Segmented with { Filled = CellStyle.None.WithForeground(AnsiColorScheme.RootLoopsDark.Green) });
+        var tests = new ProgressTask("🧪 Tests").Value(progress);
 
         return new VStack(
                 DemoUi.Hint("ProgressTaskGroup composes progress tasks using regular controls (label/bar/percent/spinner)."),
