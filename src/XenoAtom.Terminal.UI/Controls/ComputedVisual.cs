@@ -24,10 +24,15 @@ public sealed partial class ComputedVisual : Visual
     public ComputedVisual(Func<Visual?> build)
     {
         this.Child(build);
-        // We should not use Child property directly here to avoid capturing the Func in the lambda
-        // If the child is changed, the initializer will still be called
-        this.HorizontalAlignment(() => _child?.HorizontalAlignment ?? HorizontalAlignment.Stretch);
-        this.VerticalAlignment(() => _child?.VerticalAlignment ?? VerticalAlignment.Stretch);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ComputedVisual"/> class.
+    /// </summary>
+    /// <param name="state">The function that builds the child visual.</param>
+    public ComputedVisual(State<Visual?> state)
+    {
+        this.Child(state);
     }
 
     /// <summary>
@@ -35,6 +40,22 @@ public sealed partial class ComputedVisual : Visual
     /// </summary>
     [Bindable]
     public partial Visual? Child { get; set; }
+
+    partial void OnChildChanged(Visual? value)
+    {
+        if (value is null) return;
+
+        // We make sure that all visual properties are bound to the child.
+        this.BindHorizontalAlignment(value.@ref.HorizontalAlignment);
+        this.BindVerticalAlignment(value.@ref.VerticalAlignment);
+        this.BindMinWidth(value.@ref.MinWidth);
+        this.BindMinHeight(value.@ref.MinHeight);
+        this.BindMaxWidth(value.@ref.MaxWidth);
+        this.BindMaxHeight(value.@ref.MaxHeight);
+        this.BindMargin(value.@ref.Margin);
+        this.BindIsVisible(value.@ref.IsVisible);
+        this.BindIsEnabled(value.@ref.IsEnabled);
+    }
 
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)

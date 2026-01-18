@@ -9,6 +9,7 @@ using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Threading;
 using XenoAtom.Terminal.UI.Animation;
+using XenoAtom.Terminal.UI.Controls;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -1158,4 +1159,23 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// </summary>
     [RoutedEvent(RoutingStrategy.Preview | RoutingStrategy.Bubble)]
     protected virtual void OnPointerWheel(PointerEventArgs e) { }
+
+    /// <summary>
+    /// Defines an implicit conversion from a factory function to a computed visual representation.
+    /// </summary>
+    /// <remarks>This operator allows a factory function to be used wherever a <see cref="Visual"/> is
+    /// expected, enabling deferred or dynamic creation of visuals. The factory may be called multiple times depending
+    /// on usage.</remarks>
+    /// <param name="factory">A function that returns a <see cref="Visual"/> instance or <see langword="null"/>. The function is invoked to
+    /// produce the visual when needed.</param>
+    public static implicit operator Visual(Func<Visual?> factory) => new ComputedVisual(factory);
+
+    /// <summary>
+    /// Converts a state object containing a visual value to a visual instance.
+    /// </summary>
+    /// <remarks>This implicit conversion allows a State&lt;Visual?> to be used wherever a Visual is expected.
+    /// The resulting Visual instance reflects the current value of the provided state and updates automatically when
+    /// the state changes.</remarks>
+    /// <param name="state">The state object that holds the current visual value to be converted. Cannot be null.</param>
+    public static implicit operator Visual(State<Visual?> state) => new ComputedVisual(state);
 }
