@@ -16,7 +16,7 @@ public sealed partial class CommandPalette : Visual
 {
     private readonly TextBox _searchBox;
     private readonly OptionList _results;
-    private readonly Group _frame;
+    private readonly VStack _content;
 
     private Popup? _hostPopup;
     private readonly List<CommandPaletteItem> _visibleItems;
@@ -44,17 +44,11 @@ public sealed partial class CommandPalette : Visual
 
         _results.ItemActivated((_, e) => InvokeIndex(e.Index));
 
-        var content = new VStack(_searchBox, _results)
+        _content = new VStack(_searchBox, _results)
             .Spacing(1)
             .HorizontalAlignment(HorizontalAlignment.Stretch);
 
-        _frame = new Group()
-            .TopLeftText("Command palette")
-            .Padding(1)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .Content(content);
-
-        AttachChild(_frame);
+        AttachChild(_content);
 
         this.MinWidth(50);
         this.MaxWidth(72);
@@ -124,18 +118,18 @@ public sealed partial class CommandPalette : Visual
     protected override int ChildrenCount => 1;
 
     /// <inheritdoc />
-    protected override Visual GetChild(int index) => index == 0 ? _frame : throw new ArgumentOutOfRangeException(nameof(index));
+    protected override Visual GetChild(int index) => index == 0 ? _content : throw new ArgumentOutOfRangeException(nameof(index));
 
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        return _frame.Measure(constraints);
+        return _content.Measure(constraints);
     }
 
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        _frame.Arrange(finalRect);
+        _content.Arrange(finalRect);
     }
 
     private bool IsAttachedToHostPopup()
