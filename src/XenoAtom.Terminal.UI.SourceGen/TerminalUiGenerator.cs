@@ -79,6 +79,14 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             category: "XenoAtom.Terminal.UI.SourceGen",
             defaultSeverity: DiagnosticSeverity.Error,
             isEnabledByDefault: true);
+
+        public static readonly DiagnosticDescriptor BindableListPropertyMustBeGetOnly = new(
+            id: "XATUI005",
+            title: "Bindable list property must be get-only",
+            messageFormat: "The bindable list property '{0}' must be declared as a non-partial get-only property (no setter)",
+            category: "XenoAtom.Terminal.UI.SourceGen",
+            defaultSeverity: DiagnosticSeverity.Error,
+            isEnabledByDefault: true);
     }
 
     private sealed record BindablePropertyInfo(
@@ -90,6 +98,9 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
         bool IsDelegateProperty,
         bool IsDelegatorProperty,
         string? DelegatorDelegateTypeFullyQualified,
+        bool IsBindableListFluentOnlyProperty,
+        string? BindableListElementTypeFullyQualified,
+        bool IncludeInBindings,
         bool IsParentVisual,
         bool IsVisualChildProperty,
         bool GenerateImplementation,
@@ -130,20 +141,55 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             }
 
             var generateImplementation = propertySyntax.Modifiers.Any(SyntaxKind.PartialKeyword);
-            if (generateImplementation)
+
+            var typeFormat = SymbolDisplayFormat.FullyQualifiedFormat.WithMiscellaneousOptions(
+                SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
+
+            var propertyTypeFullyQualified = propertySymbol.Type.ToDisplayString(typeFormat);
+            var isDelegateProperty = propertySymbol.Type.TypeKind == TypeKind.Delegate;
+            var (isDelegatorProperty, delegatorDelegateTypeFullyQualified) = TryGetDelegatorDelegateType(context.SemanticModel.Compilation, propertySymbol.Type, typeFormat);
+            var (isBindableListProperty, bindableListElementTypeFullyQualified) = TryGetBindableListElementType(context.SemanticModel.Compilation, propertySymbol.Type, typeFormat);
+
+            var isBindableListFluentOnlyProperty = false;
+            var includeInBindings = true;
+
+            if (isBindableListProperty)
             {
-                if (!IsPartialAutoPropertyDeclaration(propertySyntax))
+                // BindableList/VisualList properties participate in binding via the list itself (reads/writes),
+                // so we only generate fluent extensions for them. They must be declared as get-only (no setter)
+                // and non-partial (no codegen-backed implementation).
+                if (generateImplementation || propertySymbol.SetMethod is not null)
                 {
-                    diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.BindablePropertyMustBePartialDeclaration, propertySyntax.Identifier.GetLocation(), propertySymbol.Name));
+                    diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.BindableListPropertyMustBeGetOnly, propertySyntax.Identifier.GetLocation(), propertySymbol.Name));
                     return new BindablePropertyResult(null, diagnostics.ToImmutable());
                 }
-            }
-            else
-            {
-                if (propertySymbol.GetMethod is null || propertySymbol.SetMethod is null)
+
+                if (propertySymbol.GetMethod is null)
                 {
                     diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.BindablePropertyMustHaveGetterAndSetter, propertySyntax.Identifier.GetLocation(), propertySymbol.Name));
                     return new BindablePropertyResult(null, diagnostics.ToImmutable());
+                }
+
+                isBindableListFluentOnlyProperty = true;
+                includeInBindings = false;
+            }
+            else
+            {
+                if (generateImplementation)
+                {
+                    if (!IsPartialAutoPropertyDeclaration(propertySyntax))
+                    {
+                        diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.BindablePropertyMustBePartialDeclaration, propertySyntax.Identifier.GetLocation(), propertySymbol.Name));
+                        return new BindablePropertyResult(null, diagnostics.ToImmutable());
+                    }
+                }
+                else
+                {
+                    if (propertySymbol.GetMethod is null || propertySymbol.SetMethod is null)
+                    {
+                        diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.BindablePropertyMustHaveGetterAndSetter, propertySyntax.Identifier.GetLocation(), propertySymbol.Name));
+                        return new BindablePropertyResult(null, diagnostics.ToImmutable());
+                    }
                 }
             }
 
@@ -162,12 +208,6 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             }
 
             var containingTypeDisplayName = containingType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
-            var typeFormat = SymbolDisplayFormat.FullyQualifiedFormat.WithMiscellaneousOptions(
-                SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
-
-            var propertyTypeFullyQualified = propertySymbol.Type.ToDisplayString(typeFormat);
-            var isDelegateProperty = propertySymbol.Type.TypeKind == TypeKind.Delegate;
-            var (isDelegatorProperty, delegatorDelegateTypeFullyQualified) = TryGetDelegatorDelegateType(context.SemanticModel.Compilation, propertySymbol.Type, typeFormat);
             var isVisualChildProperty = ComputeIsVisualChildProperty(context.SemanticModel.Compilation, containingType, propertySymbol.Type);
             var isVisual = InheritsFromVisual(context.SemanticModel.Compilation, containingType);
 
@@ -190,6 +230,9 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 IsDelegateProperty: isDelegateProperty,
                 IsDelegatorProperty: isDelegatorProperty,
                 DelegatorDelegateTypeFullyQualified: delegatorDelegateTypeFullyQualified,
+                IsBindableListFluentOnlyProperty: isBindableListFluentOnlyProperty,
+                BindableListElementTypeFullyQualified: bindableListElementTypeFullyQualified,
+                IncludeInBindings: includeInBindings,
                 IsParentVisual: isVisual,
                 IsVisualChildProperty: isVisualChildProperty,
                 GenerateImplementation: generateImplementation,
@@ -200,6 +243,39 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 SetPrivateOrInternal: privateOrInternalSet,
                 BackingFieldName: backingFieldName,
                 AccessorClassName: accessorClassName), diagnostics.ToImmutable());
+        }
+
+        private static (bool IsBindableListProperty, string? ElementTypeFullyQualified) TryGetBindableListElementType(
+            Compilation compilation,
+            ITypeSymbol propertyType,
+            SymbolDisplayFormat format)
+        {
+            var bindableListType = compilation.GetTypeByMetadataName("XenoAtom.Terminal.UI.Collections.BindableList`1");
+            if (bindableListType is null)
+            {
+                return (false, null);
+            }
+
+            if (propertyType is not INamedTypeSymbol named)
+            {
+                return (false, null);
+            }
+
+            for (var current = named; current is not null; current = current.BaseType)
+            {
+                if (SymbolEqualityComparer.Default.Equals(current.OriginalDefinition, bindableListType))
+                {
+                    if (current.TypeArguments.Length != 1)
+                    {
+                        return (false, null);
+                    }
+
+                    var elementType = current.TypeArguments[0];
+                    return (true, elementType.ToDisplayString(format));
+                }
+            }
+
+            return (false, null);
         }
 
         private static (bool IsDelegatorProperty, string? DelegatorDelegateTypeFullyQualified) TryGetDelegatorDelegateType(
@@ -402,7 +478,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             var typesWithBindings = new HashSet<INamedTypeSymbol>((IEqualityComparer<INamedTypeSymbol>)SymbolEqualityComparer.Default);
             foreach (var group in grouped)
             {
-                if (group.Key is not null)
+                if (group.Key is not null && group.Any(static p => p.IncludeInBindings))
                 {
                     typesWithBindings.Add(group.Key);
                 }
@@ -422,9 +498,13 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     continue;
                 }
 
-                var hintName = $"{SanitizeFileName(containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))}.Bindings.g.cs";
-                var source = GenerateBindingsSource(containingType, ordered, typesWithBindings);
-                context.AddSource(hintName, SourceText.From(source, Encoding.UTF8));
+                var orderedForBindings = ordered.Where(static p => p.IncludeInBindings).ToList();
+                if (orderedForBindings.Count > 0)
+                {
+                    var hintName = $"{SanitizeFileName(containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))}.Bindings.g.cs";
+                    var source = GenerateBindingsSource(containingType, orderedForBindings, typesWithBindings);
+                    context.AddSource(hintName, SourceText.From(source, Encoding.UTF8));
+                }
 
                 var fluentHintName = $"{SanitizeFileName(containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))}.Fluent.g.cs";
                 var fluentSource = GenerateFluentExtensionsSource(containingType, ordered);
@@ -478,6 +558,105 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
 
                 if (p.SetPrivateOrInternal)
                 {
+                    continue;
+                }
+
+                if (p.IsBindableListFluentOnlyProperty)
+                {
+                    var elementType = p.BindableListElementTypeFullyQualified ?? "global::System.Object";
+
+                    sb.Append(methodIndent).AppendLine("/// <summary>");
+                    sb.Append(methodIndent).Append("/// Replaces the contents of <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> and returns the same instance.");
+                    sb.Append(methodIndent).AppendLine("/// </summary>");
+                    sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
+                    sb.Append(methodIndent).Append("/// <param name=\"").Append(EscapeIdentifier(argName)).AppendLine("\">The items to populate the list with, or <c>null</c> to clear.</param>");
+                    sb.Append(methodIndent).AppendLine("/// <returns>The same instance for chaining.</returns>");
+                    sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
+                    if (canUseGeneric)
+                    {
+                        sb.Append(methodIndent).Append("public static T ").Append(EscapeIdentifier(propName)).Append("<T>(this T obj, global::System.Collections.Generic.IEnumerable<").Append(elementType).Append(">? ").Append(EscapeIdentifier(argName))
+                            .Append(") where T : ").Append(receiverType).AppendLine();
+                        sb.Append(methodIndent).AppendLine("{");
+                        sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
+                        sb.Append(methodIndent).Append("    obj.").Append(EscapeIdentifier(propName)).AppendLine(".Clear();");
+                        sb.Append(methodIndent).Append("    if (").Append(EscapeIdentifier(argName)).AppendLine(" is null) return obj;");
+                        sb.Append(methodIndent).Append("    foreach (var item in ").Append(EscapeIdentifier(argName)).AppendLine(")");
+                        sb.Append(methodIndent).Append("        obj.").Append(EscapeIdentifier(propName)).AppendLine(".Add(item);");
+                        sb.Append(methodIndent).AppendLine("    return obj;");
+                        sb.Append(methodIndent).AppendLine("}");
+                    }
+                    else
+                    {
+                        sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName));
+                        if (needsTypeParameters)
+                        {
+                            AppendTypeParameters(sb, containingType);
+                        }
+                        sb.Append("(this ").Append(receiverType).Append(" obj, global::System.Collections.Generic.IEnumerable<").Append(elementType).Append(">? ").Append(EscapeIdentifier(argName)).Append(')');
+                        if (needsTypeParameters)
+                        {
+                            AppendTypeParameterConstraints(sb, containingType, methodIndent);
+                        }
+                        else
+                        {
+                            sb.AppendLine();
+                        }
+                        sb.Append(methodIndent).AppendLine("{");
+                        sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
+                        sb.Append(methodIndent).Append("    obj.").Append(EscapeIdentifier(propName)).AppendLine(".Clear();");
+                        sb.Append(methodIndent).Append("    if (").Append(EscapeIdentifier(argName)).AppendLine(" is null) return obj;");
+                        sb.Append(methodIndent).Append("    foreach (var item in ").Append(EscapeIdentifier(argName)).AppendLine(")");
+                        sb.Append(methodIndent).Append("        obj.").Append(EscapeIdentifier(propName)).AppendLine(".Add(item);");
+                        sb.Append(methodIndent).AppendLine("    return obj;");
+                        sb.Append(methodIndent).AppendLine("}");
+                    }
+                    sb.AppendLine();
+
+                    sb.Append(methodIndent).AppendLine("/// <summary>");
+                    sb.Append(methodIndent).Append("/// Replaces the contents of <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> and returns the same instance.");
+                    sb.Append(methodIndent).AppendLine("/// </summary>");
+                    sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
+                    sb.Append(methodIndent).Append("/// <param name=\"").Append(EscapeIdentifier(argName)).AppendLine("\">The items to populate the list with.</param>");
+                    sb.Append(methodIndent).AppendLine("/// <returns>The same instance for chaining.</returns>");
+                    sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
+                    if (canUseGeneric)
+                    {
+                        sb.Append(methodIndent).Append("public static T ").Append(EscapeIdentifier(propName)).Append("<T>(this T obj, params global::System.ReadOnlySpan<").Append(elementType).Append("> ").Append(EscapeIdentifier(argName))
+                            .Append(") where T : ").Append(receiverType).AppendLine();
+                        sb.Append(methodIndent).AppendLine("{");
+                        sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
+                        sb.Append(methodIndent).Append("    obj.").Append(EscapeIdentifier(propName)).AppendLine(".Clear();");
+                        sb.Append(methodIndent).Append("    for (var i = 0; i < ").Append(EscapeIdentifier(argName)).AppendLine(".Length; i++)");
+                        sb.Append(methodIndent).Append("        obj.").Append(EscapeIdentifier(propName)).Append(".Add(").Append(EscapeIdentifier(argName)).AppendLine("[i]);");
+                        sb.Append(methodIndent).AppendLine("    return obj;");
+                        sb.Append(methodIndent).AppendLine("}");
+                    }
+                    else
+                    {
+                        sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName));
+                        if (needsTypeParameters)
+                        {
+                            AppendTypeParameters(sb, containingType);
+                        }
+                        sb.Append("(this ").Append(receiverType).Append(" obj, params global::System.ReadOnlySpan<").Append(elementType).Append("> ").Append(EscapeIdentifier(argName)).Append(')');
+                        if (needsTypeParameters)
+                        {
+                            AppendTypeParameterConstraints(sb, containingType, methodIndent);
+                        }
+                        else
+                        {
+                            sb.AppendLine();
+                        }
+                        sb.Append(methodIndent).AppendLine("{");
+                        sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
+                        sb.Append(methodIndent).Append("    obj.").Append(EscapeIdentifier(propName)).AppendLine(".Clear();");
+                        sb.Append(methodIndent).Append("    for (var i = 0; i < ").Append(EscapeIdentifier(argName)).AppendLine(".Length; i++)");
+                        sb.Append(methodIndent).Append("        obj.").Append(EscapeIdentifier(propName)).Append(".Add(").Append(EscapeIdentifier(argName)).AppendLine("[i]);");
+                        sb.Append(methodIndent).AppendLine("    return obj;");
+                        sb.Append(methodIndent).AppendLine("}");
+                    }
+
+                    sb.AppendLine();
                     continue;
                 }
 

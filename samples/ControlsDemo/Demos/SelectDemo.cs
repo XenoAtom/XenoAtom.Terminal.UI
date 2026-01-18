@@ -13,9 +13,9 @@ public sealed class SelectDemo : ControlsDemoBase
     public override Visual Build(DemoContext context)
     {
         var selected = new State<int>(0);
-
-        var select = new Select<string>().SelectedIndex(selected);
-        select.Items.AddRange("First", "Second", "Third", "Fourth", "Fifth");
+        var select = new Select<string>()
+            .Items(["First", "Second", "Third", "Fourth", "Fifth"])
+            .SelectedIndex(selected);
 
         return new VStack(
                 DemoUi.Hint("Select opens a popup; click outside, press Tab or Esc to close."),

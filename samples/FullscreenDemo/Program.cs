@@ -16,8 +16,8 @@ var switchState = new State<bool>(false);
 var chartTickState = new State<int>(0);
 var chartValues = new double[80];
 
-var select = new Select<string>();
-select.Items.AddRange("First", "Second", "Third", "Fourth");
+var select = new Select<string>()
+    .Items(["First", "Second", "Third", "Fourth"]);
 
 var selectionList = new SelectionList()
     .MinHeight(5).MaxHeight(5);

@@ -12,8 +12,8 @@ Screenshot placeholder:
 ## Basic usage
 
 ```csharp
-var select = new Select<string>();
-select.Items.AddRange("First", "Second", "Third");
+var select = new Select<string>()
+    .Items(["First", "Second", "Third"]);
 ```
 
 ## Custom item visuals

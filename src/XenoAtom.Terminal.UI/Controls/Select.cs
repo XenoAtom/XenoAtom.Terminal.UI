@@ -43,6 +43,7 @@ public sealed partial class Select<T> : ContentVisual
     /// <summary>
     /// Gets the items available for selection.
     /// </summary>
+    [Bindable]
     public BindableList<T> Items { get; }
 
     /// <summary>

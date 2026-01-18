@@ -14,8 +14,8 @@ public sealed class PopupDemo : ControlsDemoBase
     {
         Popup? popup = null;
 
-        var placement = new Select<PopupPlacement>();
-        placement.Items.AddRange(PopupPlacement.Below, PopupPlacement.Above, PopupPlacement.Right, PopupPlacement.Left);
+        var placement = new Select<PopupPlacement>()
+            .Items([PopupPlacement.Below, PopupPlacement.Above, PopupPlacement.Right, PopupPlacement.Left]);
 
         PopupPlacement GetPlacement()
         {

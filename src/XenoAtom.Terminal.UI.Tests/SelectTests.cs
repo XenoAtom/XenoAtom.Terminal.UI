@@ -13,8 +13,8 @@ public sealed class SelectTests
     [TestMethod]
     public void Select_Opens_And_Selects_Item_On_Click()
     {
-        var select = new Select<string>();
-        select.Items.AddRange("First", "Second", "Third");
+        var select = new Select<string>()
+            .Items(["First", "Second", "Third"]);
 
         var root = new VStack { select };
 
