@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Geometry;
@@ -37,7 +38,6 @@ public sealed partial class Select<T> : ContentVisual
         // Provide a sensible default factory. Note that this must be a typed delegate (not a lambda directly),
         // otherwise the implicit conversion to Delegator{TDelegate} will not be applied.
         ContentFactory = (Func<T, Visual>)CreateDefaultItemVisual;
-        PopupBorderFactory = (Func<Visual, Visual?>)(static x => new Border(x).HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch));
     }
 
     /// <summary>
@@ -51,15 +51,6 @@ public sealed partial class Select<T> : ContentVisual
     /// </summary>
     [Bindable]
     public partial int SelectedIndex { get; set; }
-
-    /// <summary>
-    /// Gets or sets the delegate used to create a border visual for a given visual element.
-    /// </summary>
-    /// <remarks>The delegate receives the target visual and returns a new visual representing its border, or
-    /// <see langword="null"/> if no border should be applied. This property enables customization of border rendering
-    /// for visual elements at runtime.</remarks>
-    [Bindable]
-    public partial Delegator<Func<Visual, Visual?>> PopupBorderFactory { get; set; }
 
     /// <summary>
     /// Gets or sets the factory used to create visuals for items, both for the selected value and the popup list.
@@ -292,38 +283,8 @@ public sealed partial class Select<T> : ContentVisual
         }
         list.SelectedIndex = Math.Clamp(SelectedIndex, 0, Math.Max(0, list.Items.Count - 1));
 
-        Func<Visual?, Select<T>?> getSelect;
-        var content = PopupBorderFactory.Invoke?.Invoke(list);
-        if (content is not null)
-        {
-            getSelect = static v =>
-            {
-                if (v?.Parent is Border parent && parent.Parent is Popup popup && popup.Anchor is Select<T> owner)
-                {
-                    return owner;
-                }
-                else
-                {
-                    return null;
-                }
-            };
-        }
-        else
-        {
-            content = list;
-            getSelect = static v =>
-            {
-                if (v?.Parent is Popup popup && popup.Anchor is Select<T> owner)
-                {
-                    return owner;
-                }
-                else
-                {
-                    return null;
-                }
-            };
-        }
-        
+        var style = Get<SelectStyle>();
+        var content = style.TemplateFactory?.Invoke(list) ?? list;
 
         list.PointerPressed((s, e) =>
         {
@@ -332,12 +293,7 @@ public sealed partial class Select<T> : ContentVisual
                 return;
             }
 
-            if (s is not ListBox lb )
-            {
-                return;
-            }
-            var owner = getSelect(lb);
-            if (owner is null)
+            if (!TryFindSelectPopupParent(s as Visual, out var lb, out var owner))
             {
                 return;
             }
@@ -353,12 +309,7 @@ public sealed partial class Select<T> : ContentVisual
                 return;
             }
 
-            if (s is not ListBox lb)
-            {
-                return;
-            }
-            var owner = getSelect(lb);
-            if (owner is null)
+            if (!TryFindSelectPopupParent(s as Visual, out var lb, out var owner))
             {
                 return;
             }
@@ -393,6 +344,30 @@ public sealed partial class Select<T> : ContentVisual
         popup.Show();
 
         _popup = popup;
+    }
+
+    private static bool TryFindSelectPopupParent(Visual? visual, [MaybeNullWhen(false)] out ListBox lb, [MaybeNullWhen(false)] out Select<T> select)
+    {
+        lb = null;
+        select = null;
+        if (visual is not ListBox lbInstance)
+        {
+            return false;
+        }
+
+        lb = lbInstance;
+        var parent = lb.Parent;
+        while (parent is not null)
+        {
+            if (parent is Popup popup && popup.Anchor is Select<T> selectInstance)
+            {
+                select = selectInstance;
+                return true;
+            }
+            parent = parent.Parent;
+        }
+
+        return false;
     }
 
     private void ClosePopup()

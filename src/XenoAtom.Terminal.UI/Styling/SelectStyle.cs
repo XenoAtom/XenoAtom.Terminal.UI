@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
+using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
 
 namespace XenoAtom.Terminal.UI.Styling;
@@ -15,7 +16,15 @@ public sealed record SelectStyle : IStyle<SelectStyle>
     /// <summary>
     /// Gets the default select style.
     /// </summary>
-    public static SelectStyle Default { get; } = new();
+    public static SelectStyle Default { get; } = new()
+    {
+        PopupTemplateFactory = visual => new Border(visual).HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch),
+    };
+
+    /// <summary>
+    /// Gets a predefined style that displays the selection without a border.
+    /// </summary>
+    public static SelectStyle NoBorder { get; } = new();
 
     /// <summary>
     /// Gets the environment key used to resolve a <see cref="SelectStyle"/>.
@@ -51,6 +60,11 @@ public sealed record SelectStyle : IStyle<SelectStyle>
     /// Gets the optional style used for the disabled state.
     /// </summary>
     public CellStyle? DisabledStyle { get; init; }
+
+    /// <summary>
+    /// Gets the factory function used to create a border visual for a given popup visual element.
+    /// </summary>
+    public Func<Visual, Visual?>? PopupTemplateFactory { get; init; }
 
     /// <summary>
     /// Resolves the select style for the provided state.
