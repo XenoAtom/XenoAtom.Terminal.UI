@@ -44,6 +44,7 @@ public sealed partial class TreeView : Visual
     /// <summary>
     /// Gets the collection of root nodes.
     /// </summary>
+    [Bindable]
     public BindableList<TreeNode> Roots => _roots;
 
     /// <summary>

@@ -18,16 +18,19 @@ public sealed partial class Grid : Visual
     /// <summary>
     /// Gets the row definitions.
     /// </summary>
+    [Bindable]
     public BindableList<RowDefinition> RowDefinitions { get; }
 
     /// <summary>
     /// Gets the column definitions.
     /// </summary>
+    [Bindable]
     public BindableList<ColumnDefinition> ColumnDefinitions { get; }
 
     /// <summary>
     /// Gets the grid cells collection.
     /// </summary>
+    [Bindable]
     public BindableList<GridCell> Cells { get; }
 
     /// <summary>

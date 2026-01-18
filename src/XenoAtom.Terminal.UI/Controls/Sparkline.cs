@@ -26,7 +26,8 @@ public sealed partial class Sparkline : Visual
     /// <summary>
     /// Gets the values to render.
     /// </summary>
-    public BindableList<double>? Values { get; }
+    [Bindable]
+    public BindableList<double> Values { get; }
 
     /// <summary>
     /// Gets or sets the minimum value for scaling.
@@ -43,7 +44,7 @@ public sealed partial class Sparkline : Visual
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var count = Values?.Count ?? 0;
+        var count = Values.Count;
         return SizeHints.Fixed(constraints.Clamp(new Size(Math.Max(0, count), 1)));
     }
 
@@ -57,7 +58,7 @@ public sealed partial class Sparkline : Visual
         }
 
         var values = Values;
-        if (values is null || values.Count == 0)
+        if (values.Count == 0)
         {
             return;
         }

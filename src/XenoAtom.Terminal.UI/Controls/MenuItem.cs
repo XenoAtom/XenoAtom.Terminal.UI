@@ -38,6 +38,7 @@ public sealed partial class MenuItem
     /// <summary>
     /// Gets the submenu items.
     /// </summary>
+    [Bindable]
     public BindableList<MenuItem> Items { get; }
 
     /// <summary>

@@ -48,22 +48,6 @@ public static partial class VisualExtensions
     }
 
     /// <summary>
-    /// Replaces the items of the list box and returns the same instance.
-    /// </summary>
-    /// <param name="obj">The list box to configure.</param>
-    /// <param name="items">The items to set.</param>
-    /// <returns>The same instance for chaining.</returns>
-    public static ListBox Items(this ListBox obj, params Visual[] items)
-    {
-        ArgumentNullException.ThrowIfNull(obj);
-        ArgumentNullException.ThrowIfNull(items);
-        obj.VerifyAccess();
-        obj.Items.Clear();
-        obj.Items.AddRange(items);
-        return obj;
-    }
-
-    /// <summary>
     /// Adds a header cell to the table and returns the same instance.
     /// </summary>
     /// <param name="obj">The table to configure.</param>

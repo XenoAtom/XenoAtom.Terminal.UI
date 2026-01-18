@@ -12,7 +12,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// <summary>
 /// Command palette control: search input + filtered list of actions.
 /// </summary>
-public sealed class CommandPalette : Visual
+public sealed partial class CommandPalette : Visual
 {
     private readonly TextBox _searchBox;
     private readonly OptionList _results;
@@ -65,6 +65,7 @@ public sealed class CommandPalette : Visual
     /// <summary>
     /// Gets the collection of command palette items.
     /// </summary>
+    [Bindable]
     public BindableList<CommandPaletteItem> Items { get; }
 
     /// <summary>

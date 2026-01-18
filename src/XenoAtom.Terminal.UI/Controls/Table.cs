@@ -32,11 +32,13 @@ public sealed partial class Table : Visual
     /// <summary>
     /// Gets the header cells collection.
     /// </summary>
+    [Bindable]
     public VisualList<Visual> HeaderCells { get; }
 
     /// <summary>
     /// Gets the row cells collection.
     /// </summary>
+    [Bindable]
     public BindableList<VisualList<Visual>> RowCells { get; }
 
     /// <summary>

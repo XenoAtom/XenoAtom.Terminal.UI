@@ -32,6 +32,7 @@ public sealed partial class SelectionList : Visual
     /// <summary>
     /// Gets the collection of selectable items.
     /// </summary>
+    [Bindable]
     public VisualList<SelectionListItem> Items { get; }
 
     /// <summary>

@@ -31,6 +31,7 @@ public sealed partial class OptionList : Visual
     /// <summary>
     /// Gets the option items displayed by this list.
     /// </summary>
+    [Bindable]
     public VisualList<OptionListItem> Items { get; }
 
     /// <summary>

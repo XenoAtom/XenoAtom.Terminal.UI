@@ -28,6 +28,7 @@ public abstract partial class Panel : Visual, IEnumerable<Visual>
     /// <summary>
     /// Gets the collection of child visuals.
     /// </summary>
+    [Bindable]
     public VisualList<Visual> Children => _children;
 
     internal void AddRange(params Visual[] children)

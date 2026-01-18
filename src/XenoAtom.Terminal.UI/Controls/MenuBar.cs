@@ -15,7 +15,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// <summary>
 /// Represents a menu bar hosting top-level menu items.
 /// </summary>
-public sealed class MenuBar : Visual
+public sealed partial class MenuBar : Visual
 {
     private readonly BindableList<MenuItem> _items;
     private readonly VisualList<MenuBarItem> _presenters;
@@ -40,6 +40,7 @@ public sealed class MenuBar : Visual
     /// <summary>
     /// Gets the menu items collection.
     /// </summary>
+    [Bindable]
     public BindableList<MenuItem> Items => _items;
 
     internal int OpenIndex => _openIndex;

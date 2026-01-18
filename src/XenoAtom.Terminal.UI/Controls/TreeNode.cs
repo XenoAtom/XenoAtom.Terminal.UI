@@ -51,6 +51,7 @@ public sealed partial class TreeNode: IVisualElement
     /// <summary>
     /// Gets the child nodes collection.
     /// </summary>
+    [Bindable]
     public BindableList<TreeNode> Children { get; }
 
     /// <summary>

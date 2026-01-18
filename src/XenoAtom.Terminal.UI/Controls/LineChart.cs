@@ -26,6 +26,7 @@ public sealed partial class LineChart : Visual
     /// <summary>
     /// Gets the data values to render.
     /// </summary>
+    [Bindable]
     public BindableList<double> Values { get; }
 
     /// <summary>

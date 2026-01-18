@@ -22,6 +22,7 @@ public sealed partial class ListBox : Visual
     /// <summary>
     /// Gets the collection of items displayed by the list box.
     /// </summary>
+    [Bindable]
     public VisualList<Visual> Items { get; }
 
     /// <summary>
