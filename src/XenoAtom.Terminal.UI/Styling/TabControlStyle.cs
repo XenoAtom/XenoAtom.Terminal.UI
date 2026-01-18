@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Controls;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
@@ -14,7 +15,94 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     /// <summary>
     /// Gets the default tab control style.
     /// </summary>
-    public static TabControlStyle Default { get; } = new();
+    public static TabControlStyle Default { get; } = new()
+    {
+        TabContentTemplateFactory = host => new Border(host)
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .VerticalAlignment(VerticalAlignment.Stretch),
+    };
+
+    /// <summary>
+    /// Gets a predefined tab control style that does not apply an additional content template.
+    /// </summary>
+    public static TabControlStyle NoBorder { get; } = new();
+
+    /// <summary>
+    /// Gets a predefined tab control style with a rounded content border.
+    /// </summary>
+    public static TabControlStyle Rounded { get; } = Default with
+    {
+        TabContentTemplateFactory = host => new Border(host)
+            .Style(BorderStyle.Rounded)
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .VerticalAlignment(VerticalAlignment.Stretch),
+    };
+
+    /// <summary>
+    /// Gets a predefined tab control style with a single-line content border.
+    /// </summary>
+    public static TabControlStyle Single { get; } = Default with
+    {
+        TabContentTemplateFactory = host => new Border(host)
+            .Style(BorderStyle.Single)
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .VerticalAlignment(VerticalAlignment.Stretch),
+    };
+
+    /// <summary>
+    /// Gets a predefined tab control style with a double-line content border.
+    /// </summary>
+    public static TabControlStyle Double { get; } = Default with
+    {
+        TabContentTemplateFactory = host => new Border(host)
+            .Style(BorderStyle.Double)
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .VerticalAlignment(VerticalAlignment.Stretch),
+    };
+
+    /// <summary>
+    /// Gets a predefined tab control style with a heavy content border.
+    /// </summary>
+    public static TabControlStyle Heavy { get; } = Default with
+    {
+        TabContentTemplateFactory = host => new Border(host)
+            .Style(BorderStyle.Heavy)
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .VerticalAlignment(VerticalAlignment.Stretch),
+    };
+
+    /// <summary>
+    /// Gets a predefined tab control style with an ASCII content border.
+    /// </summary>
+    public static TabControlStyle Ascii { get; } = Default with
+    {
+        TabContentTemplateFactory = host => new Border(host)
+            .Style(BorderStyle.Ascii)
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .VerticalAlignment(VerticalAlignment.Stretch),
+    };
+
+    /// <summary>
+    /// Gets a predefined tab control style with a heavy ASCII content border.
+    /// </summary>
+    public static TabControlStyle AsciiHeavy { get; } = Default with
+    {
+        TabContentTemplateFactory = host => new Border(host)
+            .Style(BorderStyle.AsciiHeavy)
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .VerticalAlignment(VerticalAlignment.Stretch),
+    };
+
+    /// <summary>
+    /// Gets a predefined tab control style with a dashed content border.
+    /// </summary>
+    public static TabControlStyle Dashed { get; } = Default with
+    {
+        TabContentTemplateFactory = host => new Border(host)
+            .Style(BorderStyle.Dashed)
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .VerticalAlignment(VerticalAlignment.Stretch),
+    };
 
     /// <summary>
     /// Gets the environment key used to resolve a <see cref="TabControlStyle"/>.
@@ -55,6 +143,16 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     /// Gets the optional style for a disabled tab header.
     /// </summary>
     public CellStyle? TabDisabledStyle { get; init; }
+
+    /// <summary>
+    /// Gets an optional template factory used to wrap the tab content host.
+    /// </summary>
+    /// <remarks>
+    /// The provided visual is an internal host that contains the selected tab content.
+    /// The returned visual should wrap that host (e.g. a <see cref="Border"/> or <see cref="Group"/>).
+    /// When <see langword="null"/>, the host is rendered directly with no additional wrapper.
+    /// </remarks>
+    public Func<Visual, ContentVisual?>? TabContentTemplateFactory { get; init; }
 
     /// <summary>
     /// Resolves the strip style for the provided <paramref name="theme"/>.

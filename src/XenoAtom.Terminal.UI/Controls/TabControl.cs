@@ -22,6 +22,10 @@ public sealed partial class TabControl : Visual
     private int _pressedIndex = -1;
     private bool _pressedInside;
     private int _headerHeight = 1;
+    private readonly TabContentHost _contentHost = new();
+    private ContentVisual? _contentTemplate;
+    private Visual? _contentRoot;
+    private Func<Visual, ContentVisual?>? _contentTemplateFactory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TabControl"/> class.
@@ -31,6 +35,9 @@ public sealed partial class TabControl : Visual
         Focusable = true;
         HorizontalAlignment = HorizontalAlignment.Stretch;
         VerticalAlignment = VerticalAlignment.Stretch;
+
+        _contentHost.HorizontalAlignment = HorizontalAlignment.Stretch;
+        _contentHost.VerticalAlignment = VerticalAlignment.Stretch;
     }
 
     /// <summary>
@@ -60,7 +67,7 @@ public sealed partial class TabControl : Visual
     partial void OnSelectedIndexChanged(int value)
     {
         _ = value;
-        UpdateTabVisibility();
+        UpdateSelectedContent();
         Invalidate();
     }
 
@@ -94,13 +101,10 @@ public sealed partial class TabControl : Visual
         _tabs.Add(page);
 
         AttachChild(header);
-        AttachChild(content);
 
-        // Avoid capturing SelectedIndex as an initializer dependency when AddTab is called from an initializer.
-        content.IsVisible = index == _selectedIndex;
         if (index == 0)
         {
-            UpdateTabVisibility();
+            UpdateSelectedContent();
         }
     }
 
@@ -115,7 +119,7 @@ public sealed partial class TabControl : Visual
     }
 
     /// <inheritdoc/>
-    protected override int ChildrenCount => _tabs.Count * 2;
+    protected override int ChildrenCount => _tabs.Count + (_contentRoot is null ? 0 : 1);
 
     /// <inheritdoc/>
     protected override Visual GetChild(int index)
@@ -125,15 +129,25 @@ public sealed partial class TabControl : Visual
             throw new ArgumentOutOfRangeException(nameof(index));
         }
 
-        var tabIndex = index / 2;
-        var page = _tabs[tabIndex];
-        return (index % 2) == 0 ? page.Header : page.Content;
+        if (index < _tabs.Count)
+        {
+            return _tabs[index].Header;
+        }
+
+        if (index == _tabs.Count && _contentRoot is not null)
+        {
+            return _contentRoot;
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(index));
     }
 
     /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = Get<TabControlStyle>();
+        EnsureContentTemplate(style);
+        UpdateSelectedContent();
         var pad = style.TabPadding;
 
         var headerHeight = 1;
@@ -165,11 +179,9 @@ public sealed partial class TabControl : Visual
 
         var contentWidth = 0;
         var contentHeight = 0;
-        if (_tabs.Count > 0)
+        if (_contentRoot is not null)
         {
-            var selected = Math.Clamp(SelectedIndex, 0, _tabs.Count - 1);
-            var content = _tabs[selected].Content;
-            var contentHints = content.Measure(new LayoutConstraints(0, contentMaxW, 0, contentMaxH));
+            var contentHints = _contentRoot.Measure(new LayoutConstraints(0, contentMaxW, 0, contentMaxH));
             contentWidth = contentHints.Natural.Width;
             contentHeight = contentHints.Natural.Height;
         }
@@ -189,6 +201,8 @@ public sealed partial class TabControl : Visual
         Bounds = finalRect;
 
         var style = Get<TabControlStyle>();
+        EnsureContentTemplate(style);
+        UpdateSelectedContent();
         var pad = style.TabPadding;
 
         var headerHeight = 1;
@@ -230,10 +244,7 @@ public sealed partial class TabControl : Visual
 
         var inner = new Rectangle(finalRect.X, contentTop, finalRect.Width, contentHeight);
 
-        for (var i = 0; i < _tabs.Count; i++)
-        {
-            _tabs[i].Content.Arrange(inner);
-        }
+        _contentRoot?.Arrange(inner);
     }
 
     /// <inheritdoc/>
@@ -421,14 +432,71 @@ public sealed partial class TabControl : Visual
         Invalidate();
     }
 
-    private void UpdateTabVisibility()
+    private void UpdateSelectedContent()
     {
-        var selected = _selectedIndex;
-        for (var i = 0; i < _tabs.Count; i++)
+        if (_tabs.Count == 0)
         {
-            _tabs[i].Content.IsVisible = i == selected;
+            _contentHost.Content = null;
+            return;
         }
+
+        var selected = Math.Clamp(_selectedIndex, 0, _tabs.Count - 1);
+        _contentHost.Content = _tabs[selected].Content;
     }
 
     private readonly record struct TabHitRange(int Index, int Start, int End);
+
+    private void EnsureContentTemplate(TabControlStyle style)
+    {
+        ArgumentNullException.ThrowIfNull(style);
+
+        var factory = style.TabContentTemplateFactory;
+        if (_contentRoot is not null && ReferenceEquals(factory, _contentTemplateFactory))
+        {
+            return;
+        }
+
+        if (_contentRoot is not null)
+        {
+            DetachChild(_contentRoot);
+            _contentRoot = null;
+        }
+
+        if (_contentTemplate is not null)
+        {
+            _contentTemplate.Content = null;
+            _contentTemplate = null;
+        }
+
+        _contentTemplateFactory = factory;
+
+        if (factory is null)
+        {
+            _contentRoot = _contentHost;
+        }
+        else
+        {
+            var template = factory(_contentHost);
+            if (template is null)
+            {
+                throw new InvalidOperationException($"{nameof(TabControlStyle)}.{nameof(TabControlStyle.TabContentTemplateFactory)} returned null.");
+            }
+
+            if (!ReferenceEquals(template.Content, _contentHost))
+            {
+                template.Content = _contentHost;
+            }
+
+            _contentTemplate = template;
+            _contentRoot = template;
+        }
+
+        _contentRoot.HorizontalAlignment = HorizontalAlignment.Stretch;
+        _contentRoot.VerticalAlignment = VerticalAlignment.Stretch;
+        AttachChild(_contentRoot);
+    }
+
+    private sealed class TabContentHost : ContentVisual
+    {
+    }
 }

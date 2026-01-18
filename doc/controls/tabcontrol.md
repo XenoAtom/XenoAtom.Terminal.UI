@@ -10,14 +10,20 @@ Screenshot placeholder:
 ## Basic usage
 
 ```csharp
-new TabControl()
-    .Pages.Add(
-        new TabPage("Tab1", new TextBlock("ContentTab1")),
-        new TabPage("Tab2", new TextBlock("ContentTab2"))
-    );
+new TabControl(
+    new TabPage("Tab1", "ContentTab1"),
+    new TabPage("Tab2", "ContentTab2"));
 ```
 
 ## Styling
 
-`TabControlStyle` controls header rendering (button-like appearance, hover/pressed/selected states).
+`TabControlStyle` controls header rendering (button-like appearance, hover/pressed/selected states) and the content wrapper.
 
+By default, the selected tab content is wrapped in a border.
+
+```csharp
+new TabControl(
+    new TabPage("Status", "Ready"),
+    new TabPage("Logs", "…"))
+    .Style(TabControlStyle.Rounded);
+```

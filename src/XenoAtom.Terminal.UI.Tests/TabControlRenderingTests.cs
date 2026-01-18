@@ -52,4 +52,29 @@ public sealed class TabControlRenderingTests
         Assert.IsTrue(cells[0].TryGetBackground(out var pressedBg));
         Assert.AreEqual(selection, pressedBg);
     }
+
+    [TestMethod]
+    public void TabControl_Applies_TabContentTemplateFactory()
+    {
+        var tabControl = new TabControl(
+            new TabPage("One", new TextBlock("A")));
+
+        tabControl.Set(Theme.Key, Theme.FromScheme(AnsiColorScheme.RootLoopsDark));
+        tabControl.Set(TabControlStyle.Rounded);
+
+        tabControl.Measure(new Size(20, 6));
+        tabControl.Arrange(new Rectangle(0, 0, 20, 6));
+
+        var buffer = new CellBuffer(20, 6);
+        buffer.Clear();
+
+        typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .Invoke(tabControl, new object[] { buffer });
+
+        var scalars = (int[])typeof(CellBuffer).GetField("_scalars", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
+
+        // Border is rendered below the header strip.
+        var expectedTopLeft = LineGlyphs.Rounded.TopLeft.Value;
+        Assert.AreEqual(expectedTopLeft, scalars[buffer.Width], "Expected the tab content to be wrapped by the rounded border template.");
+    }
 }
