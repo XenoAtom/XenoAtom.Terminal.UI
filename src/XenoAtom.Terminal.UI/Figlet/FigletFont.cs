@@ -55,6 +55,9 @@ public sealed partial class FigletFont
     /// </remarks>
     public char HardBlank { get; }
 
+    /// <inheritdoc/>
+    public override string ToString() => Info?.Name ?? "UnknownFont";
+
     /// <summary>
     /// Parses a FIGlet font from a string.
     /// </summary>
