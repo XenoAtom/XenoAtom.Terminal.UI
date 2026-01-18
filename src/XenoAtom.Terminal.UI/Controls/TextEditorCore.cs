@@ -73,6 +73,30 @@ internal sealed class TextEditorCore
         _scroll = scroll;
     }
 
+    private static int NormalizeIndexToTextElementBoundary(ReadOnlySpan<char> text, int index)
+    {
+        index = Math.Clamp(index, 0, text.Length);
+        if (index == 0 || index == text.Length)
+        {
+            return index;
+        }
+
+        var prev = TerminalTextUtility.GetPreviousTextElementIndex(text, index);
+        if (prev == index)
+        {
+            return index;
+        }
+
+        var next = TerminalTextUtility.GetNextTextElementIndex(text, prev);
+        if (index == next)
+        {
+            return index;
+        }
+
+        // Index points inside a grapheme cluster, snap to the end of that cluster.
+        return next;
+    }
+
     public void SetDocument(ITextDocument document)
     {
         _document = document;
@@ -84,8 +108,9 @@ internal sealed class TextEditorCore
 
     public void SetCaretIndex(int value, in TextEditorOptions options)
     {
-        var textLength = GetText().Length;
-        _caretIndex = Math.Clamp(value, 0, textLength);
+        var text = GetText().AsSpan();
+        var textLength = text.Length;
+        _caretIndex = NormalizeIndexToTextElementBoundary(text, Math.Clamp(value, 0, textLength));
         ClearSelection();
         _preferredColumn = -1;
         EnsureCaretVisible(options);
@@ -469,7 +494,7 @@ internal sealed class TextEditorCore
                 var oldCaretLeft = _caretIndex;
                 _caretIndex = (e.Modifiers & TerminalModifiers.Ctrl) != 0
                     ? GetPreviousWordIndex(text, _caretIndex)
-                    : TerminalTextUtility.GetPreviousRuneIndex(text, _caretIndex);
+                    : TerminalTextUtility.GetPreviousTextElementIndex(text, _caretIndex);
                 UpdateSelectionAfterCaretMove((e.Modifiers & TerminalModifiers.Shift) != 0, oldCaretLeft);
                 EnsureCaretVisible(options);
                 e.Handled = true;
@@ -478,7 +503,7 @@ internal sealed class TextEditorCore
                 var oldCaretRight = _caretIndex;
                 _caretIndex = (e.Modifiers & TerminalModifiers.Ctrl) != 0
                     ? GetNextWordIndex(text, _caretIndex)
-                    : TerminalTextUtility.GetNextRuneIndex(text, _caretIndex);
+                    : TerminalTextUtility.GetNextTextElementIndex(text, _caretIndex);
                 UpdateSelectionAfterCaretMove((e.Modifiers & TerminalModifiers.Shift) != 0, oldCaretRight);
                 EnsureCaretVisible(options);
                 e.Handled = true;
@@ -506,7 +531,7 @@ internal sealed class TextEditorCore
                 {
                     var prev = (e.Modifiers & TerminalModifiers.Ctrl) != 0
                         ? GetPreviousWordIndex(text, _caretIndex)
-                        : TerminalTextUtility.GetPreviousRuneIndex(text, _caretIndex);
+                        : TerminalTextUtility.GetPreviousTextElementIndex(text, _caretIndex);
                     _document.Replace(prev, _caretIndex - prev, ReadOnlySpan<char>.Empty);
                     _caretIndex = prev;
                 }
@@ -522,7 +547,7 @@ internal sealed class TextEditorCore
                 {
                     var next = (e.Modifiers & TerminalModifiers.Ctrl) != 0
                         ? GetNextWordIndex(text, _caretIndex)
-                        : TerminalTextUtility.GetNextRuneIndex(text, _caretIndex);
+                        : TerminalTextUtility.GetNextTextElementIndex(text, _caretIndex);
                     _document.Replace(_caretIndex, next - _caretIndex, ReadOnlySpan<char>.Empty);
                 }
                 UpdateAfterDocumentChange(options);
@@ -980,7 +1005,7 @@ internal sealed class TextEditorCore
             return;
         }
 
-        var prev = TerminalTextUtility.GetPreviousRuneIndex(text.AsSpan(), _caretIndex);
+        var prev = TerminalTextUtility.GetPreviousTextElementIndex(text.AsSpan(), _caretIndex);
         _document.Remove(prev, _caretIndex - prev);
         _caretIndex = prev;
         _preferredColumn = -1;
@@ -1001,7 +1026,7 @@ internal sealed class TextEditorCore
             return;
         }
 
-        var next = TerminalTextUtility.GetNextRuneIndex(text.AsSpan(), _caretIndex);
+        var next = TerminalTextUtility.GetNextTextElementIndex(text.AsSpan(), _caretIndex);
         _document.Remove(_caretIndex, next - _caretIndex);
         _preferredColumn = -1;
         UpdateAfterDocumentChange(options);
@@ -1009,7 +1034,7 @@ internal sealed class TextEditorCore
 
     private void MoveCaretTo(int index, bool extendSelection, in TextEditorOptions options)
     {
-        index = Math.Clamp(index, 0, GetText().Length);
+        index = NormalizeIndexToTextElementBoundary(GetText().AsSpan(), Math.Clamp(index, 0, GetText().Length));
         if (extendSelection)
         {
             ExtendSelection(index);
@@ -1027,8 +1052,17 @@ internal sealed class TextEditorCore
 
     private void MoveCaretHorizontal(int delta, bool extendSelection, in TextEditorOptions options)
     {
-        var text = GetText();
-        var next = Math.Clamp(_caretIndex + delta, 0, text.Length);
+        var text = GetText().AsSpan();
+        var next = _caretIndex;
+        if (delta < 0)
+        {
+            next = TerminalTextUtility.GetPreviousTextElementIndex(text, _caretIndex);
+        }
+        else if (delta > 0)
+        {
+            next = TerminalTextUtility.GetNextTextElementIndex(text, _caretIndex);
+        }
+
         MoveCaretTo(next, extendSelection, options);
     }
 
@@ -1624,14 +1658,13 @@ internal sealed class TextEditorCore
         var last = i;
         while (i < lineSpan.Length)
         {
-            var next = TerminalTextUtility.GetNextRuneIndex(lineSpan, i);
+            var next = TerminalTextUtility.GetNextTextElementIndex(lineSpan, i);
             if (next <= i)
             {
                 break;
             }
 
-            var rune = DecodeRune(lineSpan[i..next]);
-            var width = GetRuneCellWidth(rune, col, tabSize);
+            var width = GetTextElementCellWidth(lineSpan.Slice(i, next - i), col, tabSize);
 
             if (col + width > wrapWidth && col > 0)
             {
@@ -1686,14 +1719,13 @@ internal sealed class TextEditorCore
 
         while (i < indexInLine)
         {
-            var next = TerminalTextUtility.GetNextRuneIndex(lineSpan, i);
+            var next = TerminalTextUtility.GetNextTextElementIndex(lineSpan, i);
             if (next <= i)
             {
                 break;
             }
 
-            var rune = DecodeRune(lineSpan[i..next]);
-            var width = GetRuneCellWidth(rune, col, tabSize);
+            var width = GetTextElementCellWidth(lineSpan.Slice(i, next - i), col, tabSize);
 
             if (wrapWidth > 0 && col + width > wrapWidth && col > 0)
             {
@@ -1720,14 +1752,13 @@ internal sealed class TextEditorCore
         var i = 0;
         while (i < text.Length)
         {
-            var next = TerminalTextUtility.GetNextRuneIndex(text, i);
+            var next = TerminalTextUtility.GetNextTextElementIndex(text, i);
             if (next <= i)
             {
                 break;
             }
 
-            var rune = DecodeRune(text[i..next]);
-            col += GetRuneCellWidth(rune, col, tabSize);
+            col += GetTextElementCellWidth(text.Slice(i, next - i), col, tabSize);
             i = next;
         }
 
@@ -1741,14 +1772,13 @@ internal sealed class TextEditorCore
         var i = 0;
         while (i < index)
         {
-            var next = TerminalTextUtility.GetNextRuneIndex(text, i);
+            var next = TerminalTextUtility.GetNextTextElementIndex(text, i);
             if (next <= i)
             {
                 break;
             }
 
-            var rune = DecodeRune(text[i..next]);
-            col += GetRuneCellWidth(rune, col, tabSize);
+            col += GetTextElementCellWidth(text.Slice(i, next - i), col, tabSize);
             i = next;
         }
 
@@ -1766,14 +1796,13 @@ internal sealed class TextEditorCore
         var i = 0;
         while (i < text.Length)
         {
-            var next = TerminalTextUtility.GetNextRuneIndex(text, i);
+            var next = TerminalTextUtility.GetNextTextElementIndex(text, i);
             if (next <= i)
             {
                 break;
             }
 
-            var rune = DecodeRune(text[i..next]);
-            var width = GetRuneCellWidth(rune, col, tabSize);
+            var width = GetTextElementCellWidth(text.Slice(i, next - i), col, tabSize);
             if (col + width > targetCell)
             {
                 return i;
@@ -1786,25 +1815,15 @@ internal sealed class TextEditorCore
         return text.Length;
     }
 
-    private static int GetRuneCellWidth(Rune rune, int column, int tabSize)
+    private static int GetTextElementCellWidth(ReadOnlySpan<char> element, int column, int tabSize)
     {
-        if (rune.Value == '\t')
+        if (element.Length == 1 && element[0] == '\t')
         {
             var size = Math.Max(1, tabSize);
             return size - (column % size);
         }
 
-        return Math.Max(1, TerminalTextUtility.GetRuneWidth(rune));
-    }
-
-    private static Rune DecodeRune(ReadOnlySpan<char> span)
-    {
-        if (Rune.DecodeFromUtf16(span, out var rune, out var consumed) == OperationStatus.Done && consumed > 0)
-        {
-            return rune;
-        }
-
-        return Rune.ReplacementChar;
+        return Math.Max(1, TerminalTextUtility.GetWidth(element));
     }
 
     private static int GetPreviousWordIndex(ReadOnlySpan<char> text, int caretIndex)
@@ -1818,8 +1837,8 @@ internal sealed class TextEditorCore
         var i = caretIndex;
         while (i > 0)
         {
-            var prev = TerminalTextUtility.GetPreviousRuneIndex(text, i);
-            if (!IsWhitespace(ReadRuneAt(text, prev)))
+            var prev = TerminalTextUtility.GetPreviousTextElementIndex(text, i);
+            if (!IsWhitespace(ReadTextElementAt(text, prev)))
             {
                 i = prev;
                 break;
@@ -1832,11 +1851,11 @@ internal sealed class TextEditorCore
             return 0;
         }
 
-        var category = GetCategory(ReadRuneAt(text, i));
+        var category = GetCategory(ReadTextElementAt(text, i));
         while (i > 0)
         {
-            var prev = TerminalTextUtility.GetPreviousRuneIndex(text, i);
-            if (GetCategory(ReadRuneAt(text, prev)) != category)
+            var prev = TerminalTextUtility.GetPreviousTextElementIndex(text, i);
+            if (GetCategory(ReadTextElementAt(text, prev)) != category)
             {
                 break;
             }
@@ -1857,12 +1876,12 @@ internal sealed class TextEditorCore
         var i = caretIndex;
         while (i < text.Length)
         {
-            var rune = ReadRuneAt(text, i);
+            var rune = ReadTextElementAt(text, i);
             if (!IsWhitespace(rune))
             {
                 break;
             }
-            i = TerminalTextUtility.GetNextRuneIndex(text, i);
+            i = TerminalTextUtility.GetNextTextElementIndex(text, i);
         }
 
         if (i >= text.Length)
@@ -1870,16 +1889,16 @@ internal sealed class TextEditorCore
             return text.Length;
         }
 
-        var category = GetCategory(ReadRuneAt(text, i));
+        var category = GetCategory(ReadTextElementAt(text, i));
         while (i < text.Length)
         {
-            var next = TerminalTextUtility.GetNextRuneIndex(text, i);
+            var next = TerminalTextUtility.GetNextTextElementIndex(text, i);
             if (next >= text.Length)
             {
                 return text.Length;
             }
 
-            if (GetCategory(ReadRuneAt(text, next)) != category)
+            if (GetCategory(ReadTextElementAt(text, next)) != category)
             {
                 return next;
             }
@@ -1925,14 +1944,20 @@ internal sealed class TextEditorCore
         return Rune.IsLetterOrDigit(rune) || rune.Value == '_';
     }
 
-    private static Rune ReadRuneAt(ReadOnlySpan<char> text, int index)
+    private static Rune ReadTextElementAt(ReadOnlySpan<char> text, int index)
     {
         if (index < 0 || index >= text.Length)
         {
             return Rune.ReplacementChar;
         }
 
-        if (Rune.DecodeFromUtf16(text[index..], out var rune, out var consumed) != OperationStatus.Done || consumed <= 0)
+        var next = TerminalTextUtility.GetNextTextElementIndex(text, index);
+        if (next <= index)
+        {
+            return Rune.ReplacementChar;
+        }
+
+        if (Rune.DecodeFromUtf16(text.Slice(index, next - index), out var rune, out var consumed) != OperationStatus.Done || consumed <= 0)
         {
             return Rune.ReplacementChar;
         }

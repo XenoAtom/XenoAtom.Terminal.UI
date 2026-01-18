@@ -367,13 +367,8 @@ public sealed partial class Markup : Visual
         var index = text.Length;
         while (index > 0)
         {
-            var prev = TerminalTextUtility.GetPreviousRuneIndex(text, index);
-            if (Rune.DecodeFromUtf16(text[prev..], out var rune, out var consumed) != OperationStatus.Done || consumed <= 0)
-            {
-                rune = Rune.ReplacementChar;
-            }
-
-            var w = TerminalTextUtility.GetRuneWidth(rune);
+            var prev = TerminalTextUtility.GetPreviousTextElementIndex(text, index);
+            var w = TerminalTextUtility.GetWidth(text.Slice(prev, index - prev));
             if (width + w > maxCells)
             {
                 break;
