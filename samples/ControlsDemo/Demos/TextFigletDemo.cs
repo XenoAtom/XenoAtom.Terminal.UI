@@ -20,7 +20,7 @@ public sealed class TextFigletDemo : ControlsDemoBase
 
         var text = new State<string?>("XenoAtom");
         var spacing = new State<int>(1);
-        var font = new State<FigletFont>(FigletFont.Standard);
+        var font = new State<FigletFont>(FigletPredefinedFont.Standard);
         var fonts = FigletFont.GetPredefinedFonts();
         var selectedFontIndex = new State<int>(0);
         return new VStack(

@@ -24,8 +24,9 @@ public sealed class FigletVerifyTests : VerifyBase
     {
         get
         {
-            var test = FigletFont.Standard;
-            var props = typeof(FigletFont).GetProperties(BindingFlags.Static | BindingFlags.Public).Where(x => x.PropertyType == typeof(FigletFont));
+            var test = FigletPredefinedFont.Standard;
+            var props = typeof(FigletPredefinedFont).GetProperties(BindingFlags.Static | BindingFlags.Public)
+                .Where(x => x.PropertyType == typeof(FigletFont));
             foreach (var prop in props)
             {
                 Console.WriteLine($"Font {prop.Name}");
@@ -41,4 +42,3 @@ public sealed class FigletVerifyTests : VerifyBase
     }
 
 }
-
