@@ -131,7 +131,13 @@ public sealed partial class ProgressTaskGroup : Visual
             {
                 var column = effectiveColumns[c];
                 var colIndex = c * colStride;
-                grid.Cell(column.CreateCell(task), rowIndex, colIndex);
+                var cell = column.CreateCell(task);
+                if (column.Id is { Length: > 0 } id)
+                {
+                    task.OnCellCreated(id, cell);
+                }
+
+                grid.Cell(cell, rowIndex, colIndex);
             }
         }
 

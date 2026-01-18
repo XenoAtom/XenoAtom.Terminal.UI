@@ -20,6 +20,15 @@ work.Value = 0.5;
 download.Value = 512;
 ```
 
+## Per-task styling
+
+Tasks can customize how their cells are built per column (for example, to color a specific bar differently than the rest).
+
+```csharp
+var download = new ProgressTask("Download")
+    .StyleBar(ProgressBarStyle.Bracketed);
+```
+
 ## Columns
 
 You can reorder, replace, or add columns using `ProgressTaskGroup.Columns`.
@@ -42,4 +51,3 @@ var etaColumn = new ProgressTaskColumn(task => new TextBlock(() => $"v={task.Val
 var group = new ProgressTaskGroup()
     .Columns([ProgressTaskColumns.Label(), etaColumn, ProgressTaskColumns.Bar()]);
 ```
-

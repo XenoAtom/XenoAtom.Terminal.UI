@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Threading;
 
 namespace XenoAtom.Terminal.UI.Controls;
@@ -16,6 +17,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 public partial class ProgressTask : DispatcherObject
 {
     private readonly Visual _label;
+    private readonly BindableList<ProgressTaskCellCustomization> _cellCustomizations;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProgressTask"/> class.
@@ -25,6 +27,7 @@ public partial class ProgressTask : DispatcherObject
     {
         ArgumentNullException.ThrowIfNull(label);
         _label = label;
+        _cellCustomizations = new BindableList<ProgressTaskCellCustomization>(this, $"{nameof(ProgressTask)}.CellCustomizations");
 
         Maximum = 1.0;
     }
@@ -37,6 +40,7 @@ public partial class ProgressTask : DispatcherObject
     {
         ArgumentNullException.ThrowIfNull(label);
         _label = new ComputedVisual(label);
+        _cellCustomizations = new BindableList<ProgressTaskCellCustomization>(this, $"{nameof(ProgressTask)}.CellCustomizations");
 
         Maximum = 1.0;
     }
@@ -102,4 +106,102 @@ public partial class ProgressTask : DispatcherObject
     /// </summary>
     /// <param name="delta">The delta to add.</param>
     public void Increment(double delta) => Value += delta;
+
+    /// <summary>
+    /// Adds a customization applied to the cell visual of a specific column.
+    /// </summary>
+    /// <param name="columnId">The target column identifier (see <see cref="ProgressTaskColumns"/> for built-in column ids).</param>
+    /// <param name="customize">The customization to apply to the created cell visual.</param>
+    /// <returns>The same instance for chaining.</returns>
+    public ProgressTask CustomizeCell(string columnId, Action<Visual> customize)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(columnId);
+        ArgumentNullException.ThrowIfNull(customize);
+
+        _cellCustomizations.Add(new ProgressTaskCellCustomization(columnId, Key: null, customize));
+        return this;
+    }
+
+    /// <summary>
+    /// Sets a keyed customization applied to the cell visual of a specific column.
+    /// </summary>
+    /// <param name="columnId">The target column identifier (see <see cref="ProgressTaskColumns"/> for built-in column ids).</param>
+    /// <param name="key">A stable key used to replace a previous customization for the same column.</param>
+    /// <param name="customize">The customization to apply to the created cell visual.</param>
+    /// <returns>The same instance for chaining.</returns>
+    public ProgressTask SetCellCustomization(string columnId, string key, Action<Visual> customize)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(columnId);
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        ArgumentNullException.ThrowIfNull(customize);
+
+        var customizations = _cellCustomizations;
+        for (var i = 0; i < customizations.Count; i++)
+        {
+            var existing = customizations[i];
+            if (existing.ColumnId == columnId && existing.Key == key)
+            {
+                customizations[i] = new ProgressTaskCellCustomization(columnId, key, customize);
+                return this;
+            }
+        }
+
+        customizations.Add(new ProgressTaskCellCustomization(columnId, key, customize));
+        return this;
+    }
+
+    /// <summary>
+    /// Clears all customizations associated with a specific column.
+    /// </summary>
+    /// <param name="columnId">The target column identifier.</param>
+    /// <returns>The same instance for chaining.</returns>
+    public ProgressTask ClearCellCustomizations(string columnId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(columnId);
+
+        var customizations = _cellCustomizations;
+        for (var i = customizations.Count - 1; i >= 0; i--)
+        {
+            if (customizations[i].ColumnId == columnId)
+            {
+                customizations.RemoveAt(i);
+            }
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Called by <see cref="ProgressTaskGroup"/> when a cell visual is created for this task.
+    /// </summary>
+    /// <param name="columnId">The column identifier.</param>
+    /// <param name="cell">The created cell visual.</param>
+    /// <remarks>
+    /// Override this method to apply per-task customization without modifying the group column definitions.
+    /// The default implementation applies registered entries from <see cref="CellCustomizations"/>.
+    /// </remarks>
+    protected internal virtual void OnCellCreated(string columnId, Visual cell)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(columnId);
+        ArgumentNullException.ThrowIfNull(cell);
+
+        var customizations = _cellCustomizations;
+        for (var i = 0; i < customizations.Count; i++)
+        {
+            var customization = customizations[i];
+            if (customization.ColumnId == columnId)
+            {
+                customization.Apply(cell);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Stores per-task customizations applied to a specific column cell visual.
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="ProgressTaskGroup"/> creates cell visuals from columns, then applies matching customizations from
+    /// the task before the visuals are attached to the visual tree.
+    /// </remarks>
+    private sealed record ProgressTaskCellCustomization(string ColumnId, string? Key, Action<Visual> Apply);
 }

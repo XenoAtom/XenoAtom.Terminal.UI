@@ -12,10 +12,30 @@ namespace XenoAtom.Terminal.UI.Controls;
 public static class ProgressTaskColumns
 {
     /// <summary>
+    /// Gets the id used by the built-in label column.
+    /// </summary>
+    public const string LabelColumnId = "Label";
+
+    /// <summary>
+    /// Gets the id used by the built-in progress bar column.
+    /// </summary>
+    public const string BarColumnId = "Bar";
+
+    /// <summary>
+    /// Gets the id used by the built-in percentage column.
+    /// </summary>
+    public const string PercentageColumnId = "Percentage";
+
+    /// <summary>
+    /// Gets the id used by the built-in spinner column.
+    /// </summary>
+    public const string SpinnerColumnId = "Spinner";
+
+    /// <summary>
     /// Creates a column that displays <see cref="ProgressTask.Label"/>.
     /// </summary>
     public static ProgressTaskColumn Label(HorizontalAlignment alignment = HorizontalAlignment.Right)
-        => new(task => task.Label.HorizontalAlignment(alignment)) { Id = "Label", Width = GridLength.Auto };
+        => new(task => task.Label.HorizontalAlignment(alignment)) { Id = LabelColumnId, Width = GridLength.Auto };
 
     /// <summary>
     /// Creates a column that displays a <see cref="Controls.ProgressBar"/> bound to <see cref="ProgressTask.Progress01"/>.
@@ -28,7 +48,7 @@ public static class ProgressTaskColumns
             .Style(style ?? ProgressBarStyle.Default)
             .HorizontalAlignment(HorizontalAlignment.Stretch))
         {
-            Id = "Bar",
+            Id = BarColumnId,
             Width = GridLength.Star(1),
             MinWidth = Math.Max(0, minWidth),
         };
@@ -39,7 +59,7 @@ public static class ProgressTaskColumns
     public static ProgressTaskColumn Percentage()
         => new(static task => new TextBlock(() => $"{task.Percentage,3}%"))
         {
-            Id = "Percentage",
+            Id = PercentageColumnId,
             Width = GridLength.Auto,
             MinWidth = 4,
         };
@@ -51,7 +71,7 @@ public static class ProgressTaskColumns
     public static ProgressTaskColumn Spinner(SpinnerStyle? style = null)
         => new(_ => new Spinner().Style(style ?? SpinnerStyle.Default))
         {
-            Id = "Spinner",
+            Id = SpinnerColumnId,
             Width = GridLength.Auto,
             MinWidth = 2,
         };

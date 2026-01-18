@@ -1,5 +1,6 @@
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
@@ -15,8 +16,8 @@ public sealed class ProgressTaskGroupDemo : ControlsDemoBase
         var progress = context.Runtime.Progress01;
         var pulse = context.Runtime.Pulse01;
 
-        var download = new ProgressTask("🗃️  Download").Value(progress);
-        var render = new ProgressTask("🎨  Render").Value(pulse);
+        var download = new ProgressTask("🗃️  Download").Value(progress).StyleBar(ProgressBarStyle.Shaded with { Filled = CellStyle.None.WithForeground(AnsiColorScheme.RootLoopsDark.Red) });
+        var render = new ProgressTask("🎨  Render").Value(pulse).StyleBar(ProgressBarStyle.Segmented with { Filled = CellStyle.None.WithForeground(AnsiColorScheme.RootLoopsDark.Green) });
         var tests = new ProgressTask("🧪  Tests").Value(progress);
 
         return new VStack(
