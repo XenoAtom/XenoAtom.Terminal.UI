@@ -16,3 +16,14 @@ new Group("Settings")
     ));
 ```
 
+## Per-control border style
+
+You can override the group glyphs and border colors on a per-group basis using `GroupStyle`:
+
+```csharp
+using XenoAtom.Terminal.UI.Styling;
+
+new Group("Rounded")
+    .Style(GroupStyle.Rounded)
+    .Content("Content");
+```

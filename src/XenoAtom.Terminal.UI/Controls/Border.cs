@@ -53,9 +53,24 @@ public sealed partial class Border : Padder
         }
 
         var theme = GetTheme();
-        var glyphs = theme.Lines;
-        var style = theme.BorderStyle(focused: false);
-        var clearStyle = CellStyle.None;
+        var borderStyle = Get<BorderStyle>();
+        var glyphs = borderStyle.Glyphs ?? theme.Lines;
+
+        var focusedWithin = false;
+        if (borderStyle.HighlightOnFocusWithin)
+        {
+            for (var v = App?.FocusedElement; v is not null; v = v.Parent)
+            {
+                if (ReferenceEquals(v, this))
+                {
+                    focusedWithin = true;
+                    break;
+                }
+            }
+        }
+
+        var style = borderStyle.ResolveBorderStyle(theme, focusedWithin);
+        var clearStyle = borderStyle.ResolveBackgroundStyle();
 
         var left = rect.X;
         var top = rect.Y;

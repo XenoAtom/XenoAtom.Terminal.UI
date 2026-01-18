@@ -9,7 +9,7 @@ namespace XenoAtom.Terminal.UI.Styling;
 /// <summary>
 /// Defines a set of glyphs used to draw line borders and separators.
 /// </summary>
-public readonly record struct LineGlyphs
+public readonly partial record struct LineGlyphs
 {
     /// <summary>Gets the horizontal line glyph.</summary>
     public Rune Horizontal { get; init; }

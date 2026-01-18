@@ -298,13 +298,27 @@ public sealed partial class Group : Visual
         }
 
         var theme = GetTheme();
-        var glyphs = theme.Lines;
-        var borderStyle = theme.BorderStyle(focused);
+        var groupStyle = Get<GroupStyle>();
+        var glyphs = groupStyle.Glyphs ?? theme.Lines;
+        var borderStyle = groupStyle.ResolveBorderStyle(theme, focused);
+
+        var backgroundStyle = groupStyle.ResolveBackgroundStyle();
 
         var left = rect.X;
         var top = rect.Y;
         var right = rect.X + rect.Width - 1;
         var bottom = rect.Y + rect.Height - 1;
+
+        if (backgroundStyle is { } bgStyle)
+        {
+            for (var y = top; y <= bottom; y++)
+            {
+                for (var x = left; x <= right; x++)
+                {
+                    buffer.SetCell(x, y, new Rune(' '), bgStyle);
+                }
+            }
+        }
 
         if (rect.Width >= 2 && rect.Height >= 2)
         {
@@ -326,7 +340,7 @@ public sealed partial class Group : Visual
             }
         }
 
-        var labelStyle = CellStyle.None | TextStyle.Bold;
+        var labelStyle = groupStyle.ResolveLabelBackgroundStyle();
         var innerWidth = Math.Max(0, rect.Width - 2);
         if (innerWidth > 0)
         {
