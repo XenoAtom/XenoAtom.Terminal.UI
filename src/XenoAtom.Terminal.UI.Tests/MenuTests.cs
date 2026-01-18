@@ -53,4 +53,39 @@ public sealed class MenuTests
         driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter }); // invoke submenu item
         driver.TickUntil(() => invoked);
     }
+
+    [TestMethod]
+    public void MenuBar_Left_Closes_Submenu()
+    {
+        var file = new MenuItem("File");
+        var recent = new MenuItem("Recent");
+        recent.Items.Add(new MenuItem("Entry 1"));
+        file.Items.Add(recent);
+
+        var bar = new MenuBar();
+        bar.Items.Add(file);
+
+        var root = new VStack { bar };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 14));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter }); // open root menu
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right }); // open submenu
+        driver.Tick();
+
+        var withSubmenu = driver.Backend.GetOutText();
+        var screen = new AnsiTestScreen(60, 14);
+        screen.Apply(withSubmenu);
+        var rendered = screen.GetText();
+        StringAssert.Contains(rendered, "Entry 1");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left }); // close submenu
+        driver.Tick();
+
+        var withoutSubmenu = driver.Backend.GetOutText();
+        var screen2 = new AnsiTestScreen(60, 14);
+        screen2.Apply(withoutSubmenu);
+        var rendered2 = screen2.GetText();
+        Assert.IsFalse(rendered2.Contains("Entry 1", StringComparison.Ordinal), "Closing the submenu should remove its content from the screen.");
+    }
 }

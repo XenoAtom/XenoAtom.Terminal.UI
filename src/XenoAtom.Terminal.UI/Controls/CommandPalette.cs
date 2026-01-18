@@ -89,17 +89,28 @@ public sealed partial class CommandPalette : Visual
     {
         VerifyAccess();
 
-        if (Parent is not null && !ReferenceEquals(Parent, _hostPopup))
+        if (Parent is not null && !IsAttachedToHostPopup())
         {
             throw new InvalidOperationException("CommandPalette.Show cannot be called when the palette is part of a visual tree.");
         }
 
         _hostPopup ??= new Popup
         {
-            Content = this,
             MatchAnchorWidth = false,
             Placement = PopupPlacement.Below,
         }.Style(PopupStyle.Default with { Padding = Thickness.Zero });
+
+        // If already hosted, simply re-show the existing popup without re-wrapping the palette.
+        // Re-wrapping would attempt to attach the palette to a new parent while it is still parented.
+        if (IsAttachedToHostPopup())
+        {
+            _hostPopup.Show();
+            return;
+        }
+
+        var style = Get<CommandPaletteStyle>();
+        var content = style.PopupTemplateFactory?.Invoke(this) ?? this;
+        _hostPopup.Content = content;
 
         _hostPopup.Show();
     }
@@ -125,6 +136,24 @@ public sealed partial class CommandPalette : Visual
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         _frame.Arrange(finalRect);
+    }
+
+    private bool IsAttachedToHostPopup()
+    {
+        if (_hostPopup is null)
+        {
+            return false;
+        }
+
+        for (var parent = Parent; parent is not null; parent = parent.Parent)
+        {
+            if (ReferenceEquals(parent, _hostPopup))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void RebuildResults()

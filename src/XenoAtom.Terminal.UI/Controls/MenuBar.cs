@@ -189,31 +189,26 @@ public sealed partial class MenuBar : Visual
 
         _openIndex = index;
 
+        var list = new MenuList(this, menu.Items, parent: null);
+        var menuListStyle = Get<MenuListStyle>();
+        var popupContent = menuListStyle.PopupTemplateFactory?.Invoke(list) ?? list;
+
         var popup = new Popup
         {
             Anchor = _presenters[index],
-            Content = new MenuList(this, menu.Items, parent: null),
+            Content = popupContent,
             MatchAnchorWidth = false,
             Placement = PopupPlacement.Below,
         }.Style(PopupStyle.Default with { Padding = Thickness.Zero });
 
         RegisterPopup(popup);
 
-        popup.Closed(static (sender, _) =>
+        popup.Closed((_, _) =>
         {
-            if (sender is not Popup p || p.Anchor is not MenuBarItem barItem || barItem.Parent is not MenuBar owner)
-            {
-                return;
-            }
-
-            if (p.Content is MenuList list)
-            {
-                list.ReleaseVisuals();
-            }
-
-            owner.UnregisterPopup(p);
-            owner._openIndex = -1;
-            owner.App?.Focus(owner);
+            list.ReleaseVisuals();
+            UnregisterPopup(popup);
+            _openIndex = -1;
+            App?.Focus(this);
         });
 
         popup.Show();
@@ -764,26 +759,25 @@ public sealed partial class MenuBar : Visual
 
             CloseSubmenu();
 
+            var list = new MenuList(_owner, item.Items, parent: this);
+            var menuListStyle = Get<MenuListStyle>();
+            var popupContent = menuListStyle.PopupTemplateFactory?.Invoke(list) ?? list;
+
             var popup = new Popup
             {
                 Anchor = _rows[index],
-                Content = new MenuList(_owner, item.Items, parent: this),
+                Content = popupContent,
                 MatchAnchorWidth = false,
                 Placement = PopupPlacement.Right,
             }.Style(PopupStyle.Default with { Padding = Thickness.Zero });
 
             _owner.RegisterPopup(popup);
 
-            popup.Closed(static (sender, _) =>
+            popup.Closed((_, _) =>
             {
-                if (sender is not Popup p || p.Content is not MenuList child || child._parent is not MenuList parent)
-                {
-                    return;
-                }
-
-                child.ReleaseVisuals();
-                parent._submenuPopup = null;
-                parent._owner.UnregisterPopup(p);
+                list.ReleaseVisuals();
+                _submenuPopup = null;
+                _owner.UnregisterPopup(popup);
             });
 
             _submenuPopup = popup;
@@ -803,11 +797,25 @@ public sealed partial class MenuBar : Visual
 
         private void CloseSelf()
         {
-            if (Parent is Popup popup)
+            var popup = FindPopupAncestor();
+            if (popup is not null)
             {
                 popup.Close();
                 _owner.App?.Focus(_parent);
             }
+        }
+
+        private Popup? FindPopupAncestor()
+        {
+            for (var parent = Parent; parent is not null; parent = parent.Parent)
+            {
+                if (parent is Popup popup)
+                {
+                    return popup;
+                }
+            }
+
+            return null;
         }
 
         public void ReleaseVisuals()

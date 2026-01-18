@@ -54,4 +54,20 @@ public sealed class CommandPaletteTests
         driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
         driver.TickUntil(() => invoked);
     }
+
+    [TestMethod]
+    public void CommandPalette_Show_Can_Be_Called_When_Hosted_In_Popup_Template()
+    {
+        var root = new VStack();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 12));
+        driver.Tick();
+
+        var palette = new CommandPalette();
+        palette.Items.Add(new CommandPaletteItem("Open"));
+
+        palette.Show();
+        palette.Show(); // should not throw even though the palette is wrapped by the popup template.
+        palette.Close();
+        driver.Tick();
+    }
 }

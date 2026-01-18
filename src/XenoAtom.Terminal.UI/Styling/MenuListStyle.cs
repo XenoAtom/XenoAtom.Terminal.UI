@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
+using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
 
 namespace XenoAtom.Terminal.UI.Styling;
@@ -15,7 +16,15 @@ public sealed record MenuListStyle : IStyle<MenuListStyle>
     /// <summary>
     /// Gets the default menu list style.
     /// </summary>
-    public static MenuListStyle Default { get; } = new();
+    public static MenuListStyle Default { get; } = new()
+    {
+        PopupTemplateFactory = visual => new Group { Content = visual }.HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch),
+    };
+
+    /// <summary>
+    /// Gets a predefined style that does not apply a popup template (no border wrapper).
+    /// </summary>
+    public static MenuListStyle NoBorder { get; } = new();
 
     /// <summary>
     /// Gets the environment key used to resolve a <see cref="MenuListStyle"/>.
@@ -66,6 +75,14 @@ public sealed record MenuListStyle : IStyle<MenuListStyle>
     /// Gets the optional style used for separators.
     /// </summary>
     public CellStyle? SeparatorStyle { get; init; }
+
+    /// <summary>
+    /// Gets the factory function used to create an optional template wrapper for the menu list when it is shown in a popup.
+    /// </summary>
+    /// <remarks>
+    /// The returned visual is typically used to draw a border or other chrome around the menu list.
+    /// </remarks>
+    public Func<Visual, Visual?>? PopupTemplateFactory { get; init; }
 
     /// <summary>
     /// Resolves an item style for the provided state.

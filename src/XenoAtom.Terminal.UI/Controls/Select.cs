@@ -284,7 +284,7 @@ public sealed partial class Select<T> : ContentVisual
         list.SelectedIndex = Math.Clamp(SelectedIndex, 0, Math.Max(0, list.Items.Count - 1));
 
         var style = Get<SelectStyle>();
-        var content = style.TemplateFactory?.Invoke(list) ?? list;
+        var content = style.PopupTemplateFactory?.Invoke(list) ?? list;
 
         list.PointerPressed((s, e) =>
         {
