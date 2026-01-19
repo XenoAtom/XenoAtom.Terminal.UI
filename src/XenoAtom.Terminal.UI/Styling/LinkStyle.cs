@@ -22,22 +22,22 @@ public sealed record LinkStyle : IStyle<LinkStyle>
     /// <summary>
     /// Gets the normal style.
     /// </summary>
-    public CellStyle? Normal { get; init; }
+    public Style? Normal { get; init; }
 
     /// <summary>
     /// Gets the hovered style.
     /// </summary>
-    public CellStyle? Hovered { get; init; }
+    public Style? Hovered { get; init; }
 
     /// <summary>
     /// Gets the focused style.
     /// </summary>
-    public CellStyle? Focused { get; init; }
+    public Style? Focused { get; init; }
 
     /// <summary>
     /// Gets the disabled style.
     /// </summary>
-    public CellStyle? Disabled { get; init; }
+    public Style? Disabled { get; init; }
 
     /// <summary>
     /// Resolves the link style for the given state.
@@ -47,7 +47,7 @@ public sealed record LinkStyle : IStyle<LinkStyle>
     /// <param name="focused">Whether the link is focused.</param>
     /// <param name="hovered">Whether the link is hovered.</param>
     /// <returns>The resolved cell style.</returns>
-    public CellStyle Resolve(Theme theme, bool enabled, bool focused, bool hovered)
+    public Style Resolve(Theme theme, bool enabled, bool focused, bool hovered)
     {
         if (!enabled)
         {

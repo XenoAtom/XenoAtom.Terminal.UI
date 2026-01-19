@@ -17,7 +17,7 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
   - Bindable properties, `State<T>`, automatic dependency tracking, minimal boilerplate
 - **Layout system**: consistent measure/arrange protocol (integer cell UI), panels and containers
 - **Styling & themes**:
-  - Theme + per-control styles, `AnsiColorScheme` palettes (terminal-native and RGB themes)
+  - Theme + per-control styles, `ColorScheme` palettes (terminal-native and RGB themes)
 - **Input**:
   - Keyboard, mouse, resize events; focus navigation; routed events where appropriate
 - **Rendering**:

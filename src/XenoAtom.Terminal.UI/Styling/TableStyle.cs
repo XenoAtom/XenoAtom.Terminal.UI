@@ -90,28 +90,28 @@ public sealed record TableStyle : IStyle<TableStyle>
     /// <summary>
     /// Gets the optional base cell style.
     /// </summary>
-    public CellStyle? CellStyle { get; init; }
+    public Style? CellStyle { get; init; }
 
     /// <summary>
     /// Gets the optional header cell style.
     /// </summary>
-    public CellStyle? HeaderStyle { get; init; }
+    public Style? HeaderStyle { get; init; }
 
     /// <summary>
     /// Gets the optional border/separator style.
     /// </summary>
-    public CellStyle? BorderStyle { get; init; }
+    public Style? BorderStyle { get; init; }
 
     /// <summary>
     /// Resolves the base cell style for the provided <paramref name="theme"/>.
     /// </summary>
-    public CellStyle ResolveCellStyle(Theme theme)
+    public Style ResolveCellStyle(Theme theme)
         => CellStyle ?? theme.BaseTextStyle();
 
     /// <summary>
     /// Resolves the header cell style for the provided <paramref name="theme"/>.
     /// </summary>
-    public CellStyle ResolveHeaderStyle(Theme theme)
+    public Style ResolveHeaderStyle(Theme theme)
         => HeaderStyle ?? (ResolveCellStyle(theme) | TextStyle.Bold);
 
     /// <summary>
@@ -119,6 +119,6 @@ public sealed record TableStyle : IStyle<TableStyle>
     /// </summary>
     /// <param name="theme">The current theme.</param>
     /// <param name="focused">Whether the table is focused.</param>
-    public CellStyle ResolveBorderStyle(Theme theme, bool focused)
+    public Style ResolveBorderStyle(Theme theme, bool focused)
         => BorderStyle ?? theme.BorderStyle(focused);
 }

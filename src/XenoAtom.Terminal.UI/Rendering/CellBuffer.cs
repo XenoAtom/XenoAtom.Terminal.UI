@@ -17,7 +17,7 @@ namespace XenoAtom.Terminal.UI.Rendering;
 public sealed class CellBuffer
 {
     private readonly int[] _scalars;
-    private readonly CellStyle[] _cells;
+    private readonly Style[] _cells;
     private readonly ulong[] _hyperlinks;
     private Dictionary<ulong, string>? _hyperlinkTable;
     private Dictionary<int, TextElementEntry>? _textElementTable;
@@ -42,7 +42,7 @@ public sealed class CellBuffer
         Height = height;
 
         _scalars = new int[width * height];
-        _cells = new CellStyle[width * height];
+        _cells = new Style[width * height];
         _hyperlinks = new ulong[width * height];
         _clipRect = new Rectangle(0, 0, width, height);
         Clear();
@@ -60,30 +60,30 @@ public sealed class CellBuffer
 
     internal ReadOnlySpan<int> UnsafeScalars => _scalars;
 
-    internal ReadOnlySpan<CellStyle> UnsafeCells => _cells;
+    internal ReadOnlySpan<Style> UnsafeCells => _cells;
 
     internal ReadOnlySpan<ulong> UnsafeHyperlinks => _hyperlinks;
 
     /// <summary>
-    /// Clears the buffer using a blank glyph and <see cref="CellStyle.None"/>.
+    /// Clears the buffer using a blank glyph and <see cref="Style.None"/>.
     /// </summary>
     public void Clear()
     {
         Array.Fill(_scalars, ' ');
-        Array.Fill(_cells, CellStyle.None);
+        Array.Fill(_cells, Style.None);
         Array.Fill(_hyperlinks, 0ul);
         _hyperlinkTable?.Clear();
         _textElementTable?.Clear();
     }
 
     /// <summary>
-    /// Clears the buffer using a blank glyph and the specified <paramref name="cellStyle"/>.
+    /// Clears the buffer using a blank glyph and the specified <paramref name="style"/>.
     /// </summary>
-    /// <param name="cellStyle">The style applied to every cell.</param>
-    public void Clear(CellStyle cellStyle)
+    /// <param name="style">The style applied to every cell.</param>
+    public void Clear(Style style)
     {
         Array.Fill(_scalars, ' ');
-        Array.Fill(_cells, cellStyle);
+        Array.Fill(_cells, style);
         Array.Fill(_hyperlinks, 0ul);
         _hyperlinkTable?.Clear();
         _textElementTable?.Clear();
@@ -126,9 +126,9 @@ public sealed class CellBuffer
     /// <param name="x">The x coordinate (column).</param>
     /// <param name="y">The y coordinate (row).</param>
     /// <param name="rune">The glyph to write.</param>
-    /// <param name="cellStyle">The cell style.</param>
-    public void SetCell(int x, int y, Rune rune, CellStyle cellStyle)
-        => SetCell(x, y, rune, cellStyle, hyperlinkToken: 0);
+    /// <param name="style">The cell style.</param>
+    public void SetCell(int x, int y, Rune rune, Style style)
+        => SetCell(x, y, rune, style, hyperlinkToken: 0);
 
     /// <summary>
     /// Sets a cell at the given position with an associated hyperlink token.
@@ -136,9 +136,9 @@ public sealed class CellBuffer
     /// <param name="x">The x coordinate (column).</param>
     /// <param name="y">The y coordinate (row).</param>
     /// <param name="rune">The glyph to write.</param>
-    /// <param name="cellStyle">The cell style.</param>
+    /// <param name="style">The cell style.</param>
     /// <param name="hyperlinkToken">A hyperlink token registered via <see cref="RegisterHyperlink"/>.</param>
-    public void SetCell(int x, int y, Rune rune, CellStyle cellStyle, ulong hyperlinkToken)
+    public void SetCell(int x, int y, Rune rune, Style style, ulong hyperlinkToken)
     {
         if ((uint)x >= (uint)Width || (uint)y >= (uint)Height || !_clipRect.Contains(x, y))
         {
@@ -153,8 +153,8 @@ public sealed class CellBuffer
 
         var index = (y * Width) + x;
         _scalars[index] = rune.Value;
-        var style = cellStyle.WithoutContinuation().MergeUnspecified(_cells[index].WithoutContinuation());
-        _cells[index] = style;
+        var mergedStyle = style.WithoutContinuation().MergeUnspecified(_cells[index].WithoutContinuation());
+        _cells[index] = mergedStyle;
         _hyperlinks[index] = hyperlinkToken;
 
         if (width > 1 && x + 1 < Width)
@@ -164,7 +164,7 @@ public sealed class CellBuffer
                 return;
             }
             _scalars[index + 1] = ' ';
-            _cells[index + 1] = style.WithContinuation();
+            _cells[index + 1] = mergedStyle.WithContinuation();
             _hyperlinks[index + 1] = hyperlinkToken;
         }
     }
@@ -183,7 +183,7 @@ public sealed class CellBuffer
         return true;
     }
 
-    private void SetTextElementToken(int x, int y, int token, int width, CellStyle cellStyle, ulong hyperlinkToken)
+    private void SetTextElementToken(int x, int y, int token, int width, Style style, ulong hyperlinkToken)
     {
         if ((uint)x >= (uint)Width || (uint)y >= (uint)Height || !_clipRect.Contains(x, y))
         {
@@ -197,8 +197,8 @@ public sealed class CellBuffer
 
         var index = (y * Width) + x;
         _scalars[index] = token;
-        var style = cellStyle.WithoutContinuation().MergeUnspecified(_cells[index].WithoutContinuation());
-        _cells[index] = style;
+        var mergedStyle = style.WithoutContinuation().MergeUnspecified(_cells[index].WithoutContinuation());
+        _cells[index] = mergedStyle;
         _hyperlinks[index] = hyperlinkToken;
 
         if (width > 1 && x + 1 < Width)
@@ -209,7 +209,7 @@ public sealed class CellBuffer
             }
 
             _scalars[index + 1] = ' ';
-            _cells[index + 1] = style.WithContinuation();
+            _cells[index + 1] = mergedStyle.WithContinuation();
             _hyperlinks[index + 1] = hyperlinkToken;
         }
     }
@@ -220,9 +220,9 @@ public sealed class CellBuffer
     /// <param name="x">The start x coordinate (column).</param>
     /// <param name="y">The y coordinate (row).</param>
     /// <param name="text">The text to write.</param>
-    /// <param name="cellStyle">The cell style.</param>
-    public void WriteText(int x, int y, ReadOnlySpan<char> text, CellStyle cellStyle)
-        => WriteText(x, y, text, cellStyle, hyperlinkToken: 0);
+    /// <param name="style">The cell style.</param>
+    public void WriteText(int x, int y, ReadOnlySpan<char> text, Style style)
+        => WriteText(x, y, text, style, hyperlinkToken: 0);
 
     /// <summary>
     /// Writes a UTF-16 text span to the buffer, applying the given style and hyperlink.
@@ -230,9 +230,9 @@ public sealed class CellBuffer
     /// <param name="x">The start x coordinate (column).</param>
     /// <param name="y">The y coordinate (row).</param>
     /// <param name="text">The text to write.</param>
-    /// <param name="cellStyle">The cell style.</param>
+    /// <param name="style">The cell style.</param>
     /// <param name="hyperlinkToken">A hyperlink token registered via <see cref="RegisterHyperlink"/>.</param>
-    public void WriteText(int x, int y, ReadOnlySpan<char> text, CellStyle cellStyle, ulong hyperlinkToken)
+    public void WriteText(int x, int y, ReadOnlySpan<char> text, Style style, ulong hyperlinkToken)
     {
         var posX = x;
         var index = 0;
@@ -253,7 +253,7 @@ public sealed class CellBuffer
                 spaces = Math.Max(1, spaces);
                 for (var s = 0; s < spaces && posX < Width; s++)
                 {
-                    SetCell(posX++, y, new Rune(' '), cellStyle, hyperlinkToken);
+                    SetCell(posX++, y, new Rune(' '), style, hyperlinkToken);
                 }
 
                 index += elementLength;
@@ -270,12 +270,12 @@ public sealed class CellBuffer
 
                 if (TryDecodeSingleRune(elementSpan, out var rune))
                 {
-                    SetCell(posX, y, rune, cellStyle, hyperlinkToken);
+                    SetCell(posX, y, rune, style, hyperlinkToken);
                 }
                 else
                 {
                     var token = RegisterTextElement(elementSpan, w);
-                    SetTextElementToken(posX, y, token, w, cellStyle, hyperlinkToken);
+                    SetTextElementToken(posX, y, token, w, style, hyperlinkToken);
                 }
                 posX += w;
             }
@@ -501,7 +501,7 @@ public sealed class CellBuffer
         {
             sb.Clear();
 
-            var currentCell = CellStyle.None;
+            var currentCell = Style.None;
             var hasOpenStyle = false;
 
             for (var x = 0; x < Width; x++)
@@ -524,7 +524,7 @@ public sealed class CellBuffer
                     }
 
                     currentCell = cell;
-                    if (currentCell != CellStyle.None)
+                    if (currentCell != Style.None)
                     {
                         AppendStyle(sb, currentCell);
                         hasOpenStyle = true;
@@ -560,27 +560,27 @@ public sealed class CellBuffer
         return lines;
     }
 
-    private static void AppendStyle(StringBuilder sb, CellStyle cellStyle)
+    private static void AppendStyle(StringBuilder sb, Style style)
     {
         sb.Append('[');
         var first = true;
 
-        var style = cellStyle.TextStyle;
-        AppendStyleToken(ref first, sb, style, TextStyle.Bold, "bold");
-        AppendStyleToken(ref first, sb, style, TextStyle.Dim, "dim");
-        AppendStyleToken(ref first, sb, style, TextStyle.Italic, "italic");
-        AppendStyleToken(ref first, sb, style, TextStyle.Underline, "underline");
-        AppendStyleToken(ref first, sb, style, TextStyle.Blink, "blink");
-        AppendStyleToken(ref first, sb, style, TextStyle.Invert, "invert");
-        AppendStyleToken(ref first, sb, style, TextStyle.Hidden, "hidden");
-        AppendStyleToken(ref first, sb, style, TextStyle.Strikethrough, "strikethrough");
+        var textStyle = style.TextStyle;
+        AppendStyleToken(ref first, sb, textStyle, TextStyle.Bold, "bold");
+        AppendStyleToken(ref first, sb, textStyle, TextStyle.Dim, "dim");
+        AppendStyleToken(ref first, sb, textStyle, TextStyle.Italic, "italic");
+        AppendStyleToken(ref first, sb, textStyle, TextStyle.Underline, "underline");
+        AppendStyleToken(ref first, sb, textStyle, TextStyle.Blink, "blink");
+        AppendStyleToken(ref first, sb, textStyle, TextStyle.Invert, "invert");
+        AppendStyleToken(ref first, sb, textStyle, TextStyle.Hidden, "hidden");
+        AppendStyleToken(ref first, sb, textStyle, TextStyle.Strikethrough, "strikethrough");
 
-        if (cellStyle.TryGetForeground(out var fg))
+        if (style.TryGetForeground(out var fg))
         {
             AppendToken(ref first, sb, ToMarkupColor(fg));
         }
 
-        if (cellStyle.TryGetBackground(out var bg))
+        if (style.TryGetBackground(out var bg))
         {
             AppendToken(ref first, sb, "on");
             AppendToken(ref first, sb, ToMarkupColor(bg));
@@ -610,22 +610,22 @@ public sealed class CellBuffer
         first = false;
     }
 
-    private static string ToMarkupColor(AnsiColor color)
+    private static string ToMarkupColor(Color color)
     {
-        if (color.Kind == AnsiColorKind.Rgb)
+        if (color.Kind == ColorKind.Rgb)
         {
             var packed = (uint)((color.R << 16) | (color.G << 8) | color.B);
             return $"#{packed:x6}";
         }
 
-        if (color.Kind == AnsiColorKind.Basic16)
+        if (color.Kind == ColorKind.Basic16)
         {
             var (r, g, b) = AnsiPalettes.GetBasic16Rgb(color.Index);
             var packed = (uint)((r << 16) | (g << 8) | b);
             return $"#{packed:x6}";
         }
 
-        if (color.Kind == AnsiColorKind.Indexed256)
+        if (color.Kind == ColorKind.Indexed256)
         {
             var (r, g, b) = AnsiPalettes.GetXterm256Rgb(color.Index);
             var packed = (uint)((r << 16) | (g << 8) | b);

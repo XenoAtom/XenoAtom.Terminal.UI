@@ -25,11 +25,11 @@ var danger = ButtonStyle.Default with { Tone = ControlTone.Error };
 
 ## Color schemes
 
-`AnsiColorScheme` represents a 16-color scheme.
+`ColorScheme` represents a 16-color scheme.
 Schemes can be:
 
-- terminal-indexed (`AnsiColor.Basic16(...)`)
-- RGB (`AnsiColor.Rgb(...)`)
+- terminal-indexed (`Color.Basic16(...)`)
+- RGB (`Color.Rgb(...)`)
 
 ## Glyphs
 

@@ -29,22 +29,22 @@ public sealed record ListBoxStyle : IStyle<ListBoxStyle>
     /// <summary>
     /// Gets the normal item style.
     /// </summary>
-    public CellStyle? Item { get; init; }
+    public Style? Item { get; init; }
 
     /// <summary>
     /// Gets the selected item style when focused.
     /// </summary>
-    public CellStyle? SelectedFocused { get; init; }
+    public Style? SelectedFocused { get; init; }
 
     /// <summary>
     /// Gets the selected item style when unfocused.
     /// </summary>
-    public CellStyle? SelectedUnfocused { get; init; }
+    public Style? SelectedUnfocused { get; init; }
 
     /// <summary>
     /// Gets the disabled item style.
     /// </summary>
-    public CellStyle? Disabled { get; init; }
+    public Style? Disabled { get; init; }
 
     /// <summary>
     /// Resolves the item style for the given state.
@@ -54,7 +54,7 @@ public sealed record ListBoxStyle : IStyle<ListBoxStyle>
     /// <param name="selected">Whether the item is selected.</param>
     /// <param name="focused">Whether the control is focused.</param>
     /// <returns>The resolved cell style.</returns>
-    public CellStyle ResolveItemStyle(Theme theme, bool enabled, bool selected, bool focused)
+    public Style ResolveItemStyle(Theme theme, bool enabled, bool selected, bool focused)
     {
         var baseStyle = theme.ForegroundTextStyle();
 
@@ -93,6 +93,6 @@ public sealed record ListBoxStyle : IStyle<ListBoxStyle>
             return selectedStyle;
         }
 
-        return SelectedUnfocused ?? (CellStyle.None | TextStyle.Bold | theme.BorderStyle(focused: false));
+        return SelectedUnfocused ?? (Style.None | TextStyle.Bold | theme.BorderStyle(focused: false));
     }
 }

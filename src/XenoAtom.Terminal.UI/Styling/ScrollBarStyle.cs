@@ -32,24 +32,24 @@ public sealed record ScrollBarStyle : IStyle<ScrollBarStyle>
     /// <summary>
     /// Gets the optional style used for the track.
     /// </summary>
-    public CellStyle? TrackStyle { get; init; }
+    public Style? TrackStyle { get; init; }
 
     /// <summary>
     /// Gets the optional style used for the thumb.
     /// </summary>
-    public CellStyle? ThumbStyle { get; init; }
+    public Style? ThumbStyle { get; init; }
 
     /// <summary>
     /// Resolves the track style for the provided <paramref name="theme"/>.
     /// </summary>
-    public CellStyle ResolveTrackStyle(Theme theme)
+    public Style ResolveTrackStyle(Theme theme)
     {
         if (TrackStyle is { } track)
         {
             return track;
         }
 
-        var style = CellStyle.None | TextStyle.Dim;
+        var style = Style.None | TextStyle.Dim;
         if (theme.Muted is { } fg)
         {
             style = style.WithForeground(fg);
@@ -67,14 +67,14 @@ public sealed record ScrollBarStyle : IStyle<ScrollBarStyle>
     /// </summary>
     /// <param name="theme">The current theme.</param>
     /// <param name="highlighted">Whether the thumb is highlighted (hovered/dragging/focused).</param>
-    public CellStyle ResolveThumbStyle(Theme theme, bool highlighted)
+    public Style ResolveThumbStyle(Theme theme, bool highlighted)
     {
         if (ThumbStyle is { } thumb)
         {
             return thumb;
         }
 
-        var style = CellStyle.None | TextStyle.Bold;
+        var style = Style.None | TextStyle.Bold;
         var fg = highlighted
             ? (theme.FocusBorder ?? theme.Selection ?? theme.Accent ?? theme.Border ?? theme.Foreground)
             : (theme.Border ?? theme.Muted ?? theme.Foreground);

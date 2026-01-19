@@ -6,7 +6,6 @@ using System.Text;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI.Rendering;
-using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -21,13 +20,13 @@ public sealed class CellBufferDiffRendererTests
         using var renderer = new CellBufferDiffRenderer();
 
         var buffer = new CellBuffer(6, 1);
-        buffer.Clear(CellStyle.None);
-        buffer.SetCell(0, 0, new Rune('A'), CellStyle.None);
+        buffer.Clear(Style.None);
+        buffer.SetCell(0, 0, new Rune('A'), Style.None);
 
         renderer.RenderFullscreen(session.Instance, buffer, wantsCursor: true, cursorX: 0, cursorY: 0);
         var lengthAfterFirst = backend.GetOutText().Length;
 
-        buffer.SetCell(1, 0, new Rune('B'), CellStyle.None);
+        buffer.SetCell(1, 0, new Rune('B'), Style.None);
         renderer.RenderFullscreen(session.Instance, buffer, wantsCursor: true, cursorX: 0, cursorY: 0);
 
         var delta = backend.GetOutText().Substring(lengthAfterFirst);

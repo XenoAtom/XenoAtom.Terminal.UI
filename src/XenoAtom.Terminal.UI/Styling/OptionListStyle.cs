@@ -4,6 +4,7 @@
 
 using System.Text;
 using XenoAtom.Ansi;
+using XenoAtom.Terminal.UI;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
@@ -45,27 +46,27 @@ public sealed record OptionListStyle : IStyle<OptionListStyle>
     /// <summary>
     /// Gets the optional style for a normal item.
     /// </summary>
-    public CellStyle? Item { get; init; }
+    public Style? Item { get; init; }
 
     /// <summary>
     /// Gets the optional style for a selected item when focused.
     /// </summary>
-    public CellStyle? SelectedFocused { get; init; }
+    public Style? SelectedFocused { get; init; }
 
     /// <summary>
     /// Gets the optional style for a selected item when unfocused.
     /// </summary>
-    public CellStyle? SelectedUnfocused { get; init; }
+    public Style? SelectedUnfocused { get; init; }
 
     /// <summary>
     /// Gets the optional style for a hovered item.
     /// </summary>
-    public CellStyle? Hovered { get; init; }
+    public Style? Hovered { get; init; }
 
     /// <summary>
     /// Gets the optional style for disabled items.
     /// </summary>
-    public CellStyle? Disabled { get; init; }
+    public Style? Disabled { get; init; }
 
     /// <summary>
     /// Resolves the style for an item given its state.
@@ -75,7 +76,7 @@ public sealed record OptionListStyle : IStyle<OptionListStyle>
     /// <param name="selected">Whether the item is selected.</param>
     /// <param name="focused">Whether the list is focused.</param>
     /// <param name="hovered">Whether the item is hovered.</param>
-    public CellStyle ResolveItemStyle(Theme theme, bool enabled, bool selected, bool focused, bool hovered)
+    public Style ResolveItemStyle(Theme theme, bool enabled, bool selected, bool focused, bool hovered)
     {
         var baseStyle = theme.ForegroundTextStyle();
 
@@ -111,15 +112,13 @@ public sealed record OptionListStyle : IStyle<OptionListStyle>
                 return selectedFocused;
             }
 
-            var selectedStyle = CellStyle.None.WithForeground(theme.Accent ?? AnsiColors.Blue) | TextStyle.Bold;
+            var selectedStyle = Style.None.WithForeground(theme.Accent ?? Colors.TerminalBlue) | TextStyle.Bold;
             if (theme.FocusBorder is { } c)
             {
                 selectedStyle = selectedStyle.WithForeground(c);
             }
             return selectedStyle;
         }
-
-
 
         var style = theme.ForegroundTextStyle();
         if (theme.Accent is { } accent)
@@ -131,7 +130,7 @@ public sealed record OptionListStyle : IStyle<OptionListStyle>
         //return SelectedUnfocused ?? (CellStyle.None | TextStyle.Bold | theme.BorderStyle(focused: false));
     }
 
-    private static CellStyle ResolveDefaultHovered(Theme theme, CellStyle normal)
+    private static Style ResolveDefaultHovered(Theme theme, Style normal)
     {
         if (theme.SurfaceAlt is { } bg)
         {

@@ -176,7 +176,7 @@ public sealed partial class OptionList : Visual
         {
             for (var x = rect.X; x < rect.X + rect.Width; x++)
             {
-                buffer.SetCell(x, y, new Rune(' '), CellStyle.None);
+                buffer.SetCell(x, y, new Rune(' '), Style.None);
             }
         }
 

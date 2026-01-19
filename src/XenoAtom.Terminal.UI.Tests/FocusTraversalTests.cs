@@ -51,7 +51,7 @@ public sealed class FocusTraversalTests
 
         protected override void RenderOverride(CellBuffer buffer)
         {
-            buffer.WriteText(Bounds.X, Bounds.Y, Text.AsSpan(), ReferenceEquals(App?.FocusedElement, this) ? (CellStyle.None | TextStyle.Invert) : CellStyle.None);
+            buffer.WriteText(Bounds.X, Bounds.Y, Text.AsSpan(), ReferenceEquals(App?.FocusedElement, this) ? (Style.None | TextStyle.Invert) : Style.None);
         }
     }
 }

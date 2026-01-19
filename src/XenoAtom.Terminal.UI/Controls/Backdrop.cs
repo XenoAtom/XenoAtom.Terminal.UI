@@ -39,7 +39,7 @@ public sealed partial class Backdrop : Visual
         }
 
         var theme = GetTheme();
-        var style = CellStyle.None | TextStyle.Dim;
+        var style = Style.None | TextStyle.Dim;
         if (theme.Disabled is { } c) style = style.WithBackground(c);
 
         for (var y = rect.Y; y < rect.Y + rect.Height; y++)

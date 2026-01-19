@@ -29,37 +29,37 @@ public sealed record TextAreaStyle : IStyle<TextAreaStyle>
     /// <summary>
     /// Gets the optional border color.
     /// </summary>
-    public XenoAtom.Ansi.AnsiColor? Border { get; init; }
+    public Color? Border { get; init; }
 
     /// <summary>
     /// Gets the optional border color when focused.
     /// </summary>
-    public XenoAtom.Ansi.AnsiColor? FocusBorder { get; init; }
+    public Color? FocusBorder { get; init; }
 
     /// <summary>
     /// Gets the optional selection background color.
     /// </summary>
-    public XenoAtom.Ansi.AnsiColor? Selection { get; init; }
+    public Color? Selection { get; init; }
 
     /// <summary>
     /// Gets the optional background color for the text surface.
     /// </summary>
-    public XenoAtom.Ansi.AnsiColor? Background { get; init; }
+    public Color? Background { get; init; }
 
     /// <summary>
     /// Gets the optional placeholder foreground color.
     /// </summary>
-    public XenoAtom.Ansi.AnsiColor? Placeholder { get; init; }
+    public Color? Placeholder { get; init; }
 
     /// <summary>
     /// Resolves the border style for the provided <paramref name="theme"/>.
     /// </summary>
     /// <param name="theme">The current theme.</param>
     /// <param name="focused">Whether the control is focused.</param>
-    public CellStyle BorderStyle(Theme theme, bool focused)
+    public Style BorderStyle(Theme theme, bool focused)
     {
         var color = focused ? (FocusBorder ?? theme.FocusBorder) : (Border ?? theme.Border);
-        var style = CellStyle.None;
+        var style = Style.None;
         if (color is { } c)
         {
             style = style.WithForeground(c);
@@ -70,9 +70,9 @@ public sealed record TextAreaStyle : IStyle<TextAreaStyle>
     /// <summary>
     /// Resolves the selection style for the provided <paramref name="theme"/>.
     /// </summary>
-    public CellStyle SelectionStyle(Theme theme)
+    public Style SelectionStyle(Theme theme)
     {
-        var style = CellStyle.None;
+        var style = Style.None;
         var color = Selection ?? theme.Selection;
         if (color is { } c)
         {
@@ -85,9 +85,9 @@ public sealed record TextAreaStyle : IStyle<TextAreaStyle>
     /// <summary>
     /// Resolves the background style for the provided <paramref name="theme"/>.
     /// </summary>
-    public CellStyle BackgroundStyle(Theme theme)
+    public Style BackgroundStyle(Theme theme)
     {
-        var style = CellStyle.None;
+        var style = Style.None;
         if (theme.Foreground is { } fg) style = style.WithForeground(fg);
         var bg = Background ?? theme.SurfaceAlt ?? theme.Surface ?? theme.Background;
         if (bg is { } b) style = style.WithBackground(b);
@@ -97,7 +97,7 @@ public sealed record TextAreaStyle : IStyle<TextAreaStyle>
     /// <summary>
     /// Resolves the placeholder style for the provided <paramref name="theme"/>.
     /// </summary>
-    public CellStyle PlaceholderStyle(Theme theme)
+    public Style PlaceholderStyle(Theme theme)
     {
         var style = BackgroundStyle(theme);
         var fg = Placeholder ?? theme.Muted ?? theme.Foreground;

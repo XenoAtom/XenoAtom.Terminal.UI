@@ -37,17 +37,17 @@ public sealed class Theme : IStyle<Theme>
     /// <summary>
     /// Gets the default theme (Root Loops dark).
     /// </summary>
-    public static Theme Default { get; } = FromScheme(AnsiColorScheme.RootLoopsDark);
+    public static Theme Default { get; } = FromScheme(ColorScheme.RootLoopsDark);
 
     /// <summary>
     /// Gets the default light theme (Root Loops light).
     /// </summary>
-    public static Theme DefaultLight { get; } = FromScheme(AnsiColorScheme.RootLoopsLight);
+    public static Theme DefaultLight { get; } = FromScheme(ColorScheme.RootLoopsLight);
 
     /// <summary>
     /// Gets a theme that maps to terminal defaults and the indexed 16-color palette.
     /// </summary>
-    public static Theme Terminal { get; } = FromScheme(AnsiColorScheme.Terminal);
+    public static Theme Terminal { get; } = FromScheme(ColorScheme.Terminal);
 
     /// <summary>
     /// Gets the environment key for the theme style.
@@ -60,7 +60,7 @@ public sealed class Theme : IStyle<Theme>
     /// <param name="scheme">The color scheme.</param>
     /// <param name="brightness">How to interpret scheme brightness.</param>
     /// <returns>The created theme.</returns>
-    public static Theme FromScheme(AnsiColorScheme scheme, ThemeSchemeBrightness brightness = ThemeSchemeBrightness.Auto)
+    public static Theme FromScheme(ColorScheme scheme, ThemeSchemeBrightness brightness = ThemeSchemeBrightness.Auto)
     {
         ArgumentNullException.ThrowIfNull(scheme);
 
@@ -71,12 +71,12 @@ public sealed class Theme : IStyle<Theme>
             _ => DetectLightScheme(scheme),
         };
 
-        AnsiColor? surface = scheme.Black;
-        AnsiColor? surfaceAlt = scheme.BrightBlack;
-        AnsiColor? disabled = scheme.BrightBlack;
-        AnsiColor? muted = scheme.White;
-        AnsiColor? border = scheme.CursorColor;
-        AnsiColor? focusBorder = scheme.BrightWhite;
+        Color? surface = scheme.Black;
+        Color? surfaceAlt = scheme.BrightBlack;
+        Color? disabled = scheme.BrightBlack;
+        Color? muted = scheme.White;
+        Color? border = scheme.CursorColor;
+        Color? focusBorder = scheme.BrightWhite;
 
         if (isLight && TryGetRgb(scheme.Background, out _) && TryGetRgb(scheme.Foreground, out _))
         {
@@ -118,72 +118,72 @@ public sealed class Theme : IStyle<Theme>
     /// <summary>
     /// Gets the default foreground color, or <c>null</c> for terminal default.
     /// </summary>
-    public AnsiColor? Foreground { get; init; }
+    public Color? Foreground { get; init; }
 
     /// <summary>
     /// Gets the default background color, or <c>null</c> for terminal default.
     /// </summary>
-    public AnsiColor? Background { get; init; }
+    public Color? Background { get; init; }
 
     /// <summary>
     /// Gets the primary surface background color used for large areas, or <c>null</c>.
     /// </summary>
-    public AnsiColor? Surface { get; init; }
+    public Color? Surface { get; init; }
 
     /// <summary>
     /// Gets an alternate surface background color, or <c>null</c>.
     /// </summary>
-    public AnsiColor? SurfaceAlt { get; init; }
+    public Color? SurfaceAlt { get; init; }
 
     /// <summary>
     /// Gets the default border color, or <c>null</c>.
     /// </summary>
-    public AnsiColor? Border { get; init; }
+    public Color? Border { get; init; }
 
     /// <summary>
     /// Gets the focused border color, or <c>null</c>.
     /// </summary>
-    public AnsiColor? FocusBorder { get; init; }
+    public Color? FocusBorder { get; init; }
 
     /// <summary>
     /// Gets the accent color, or <c>null</c>.
     /// </summary>
-    public AnsiColor? Accent { get; init; }
+    public Color? Accent { get; init; }
 
     /// <summary>
     /// Gets the selection background color, or <c>null</c>.
     /// </summary>
-    public AnsiColor? Selection { get; init; }
+    public Color? Selection { get; init; }
 
     /// <summary>
     /// Gets the disabled foreground color, or <c>null</c>.
     /// </summary>
-    public AnsiColor? Disabled { get; init; }
+    public Color? Disabled { get; init; }
 
     /// <summary>
     /// Gets the primary semantic color, or <c>null</c>.
     /// </summary>
-    public AnsiColor? Primary { get; init; }
+    public Color? Primary { get; init; }
 
     /// <summary>
     /// Gets the success semantic color, or <c>null</c>.
     /// </summary>
-    public AnsiColor? Success { get; init; }
+    public Color? Success { get; init; }
 
     /// <summary>
     /// Gets the warning semantic color, or <c>null</c>.
     /// </summary>
-    public AnsiColor? Warning { get; init; }
+    public Color? Warning { get; init; }
 
     /// <summary>
     /// Gets the error semantic color, or <c>null</c>.
     /// </summary>
-    public AnsiColor? Error { get; init; }
+    public Color? Error { get; init; }
 
     /// <summary>
     /// Gets a muted/secondary text color, or <c>null</c>.
     /// </summary>
-    public AnsiColor? Muted { get; init; }
+    public Color? Muted { get; init; }
 
     /// <summary>
     /// Gets the glyph set used for line borders and separators.
@@ -198,9 +198,9 @@ public sealed class Theme : IStyle<Theme>
     /// <summary>
     /// Builds the base text style using theme foreground/background.
     /// </summary>
-    public CellStyle BaseTextStyle()
+    public Style BaseTextStyle()
     {
-        var style = CellStyle.None;
+        var style = Style.None;
         if (Foreground is { } fg)
         {
             style = style.WithForeground(fg);
@@ -215,9 +215,9 @@ public sealed class Theme : IStyle<Theme>
     /// <summary>
     /// Builds a text style using only the theme foreground.
     /// </summary>
-    public CellStyle ForegroundTextStyle()
+    public Style ForegroundTextStyle()
     {
-        var style = CellStyle.None;
+        var style = Style.None;
         if (Foreground is { } fg)
         {
             style = style.WithForeground(fg);
@@ -228,9 +228,9 @@ public sealed class Theme : IStyle<Theme>
     /// <summary>
     /// Builds a surface style using theme foreground and surface background.
     /// </summary>
-    public CellStyle SurfaceStyle()
+    public Style SurfaceStyle()
     {
-        var style = CellStyle.None;
+        var style = Style.None;
         if (Foreground is { } fg)
         {
             style = style.WithForeground(fg);
@@ -245,7 +245,7 @@ public sealed class Theme : IStyle<Theme>
     /// <summary>
     /// Builds a muted text style using <see cref="Muted"/> on top of <see cref="BaseTextStyle"/>.
     /// </summary>
-    public CellStyle MutedTextStyle()
+    public Style MutedTextStyle()
     {
         var style = BaseTextStyle();
         if (Muted is { } m)
@@ -259,10 +259,10 @@ public sealed class Theme : IStyle<Theme>
     /// Builds a border style using either <see cref="Border"/> or <see cref="FocusBorder"/>.
     /// </summary>
     /// <param name="focused">Whether the border should use the focused color.</param>
-    public CellStyle BorderStyle(bool focused)
+    public Style BorderStyle(bool focused)
     {
         var color = focused ? FocusBorder : Border;
-        var style = CellStyle.None;
+        var style = Style.None;
         if (color is { } c)
         {
             style = style.WithForeground(c);
@@ -273,9 +273,9 @@ public sealed class Theme : IStyle<Theme>
     /// <summary>
     /// Builds the selection style used for focused/selected items.
     /// </summary>
-    public CellStyle SelectionStyle()
+    public Style SelectionStyle()
     {
-        var style = CellStyle.None;
+        var style = Style.None;
         if (Selection is { } c)
         {
             style = style.WithBackground(c);
@@ -284,7 +284,7 @@ public sealed class Theme : IStyle<Theme>
         return style;
     }
 
-    private static bool DetectLightScheme(AnsiColorScheme scheme)
+    private static bool DetectLightScheme(ColorScheme scheme)
     {
         if (scheme.Background is not { } bg || scheme.Foreground is not { } fg)
         {
@@ -300,9 +300,9 @@ public sealed class Theme : IStyle<Theme>
         return bgLum > fgLum && bgLum >= 0.55f;
     }
 
-    private static bool TryGetRgb(AnsiColor? color, out (byte r, byte g, byte b) rgb)
+    private static bool TryGetRgb(Color? color, out (byte r, byte g, byte b) rgb)
     {
-        if (color is not { } c || c.Kind != AnsiColorKind.Rgb)
+        if (color is not { } c || c.Kind != ColorKind.Rgb)
         {
             rgb = default;
             return false;
@@ -312,9 +312,9 @@ public sealed class Theme : IStyle<Theme>
         return true;
     }
 
-    private static bool TryGetRelativeLuminance(AnsiColor color, out float luma)
+    private static bool TryGetRelativeLuminance(Color color, out float luma)
     {
-        if (color.Kind != AnsiColorKind.Rgb)
+        if (color.Kind != ColorKind.Rgb)
         {
             luma = 0;
             return false;
@@ -335,13 +335,13 @@ public sealed class Theme : IStyle<Theme>
         return true;
     }
 
-    private static AnsiColor Blend(AnsiColor a, AnsiColor b, float t)
+    private static Color Blend(Color a, Color b, float t)
     {
         // Caller ensures both colors are RGB.
         t = Math.Clamp(t, 0f, 1f);
         var r = (byte)Math.Clamp((int)MathF.Round(a.R + ((b.R - a.R) * t)), 0, 255);
         var g = (byte)Math.Clamp((int)MathF.Round(a.G + ((b.G - a.G) * t)), 0, 255);
         var bl = (byte)Math.Clamp((int)MathF.Round(a.B + ((b.B - a.B) * t)), 0, 255);
-        return AnsiColor.Rgb(r, g, bl);
+        return Color.Rgb(r, g, bl);
     }
 }

@@ -77,16 +77,16 @@ public sealed partial class MaskedInput : TextBox
     protected override TextBoxStyle GetTextBoxStyle() => Get<MaskedInputStyle>();
 
     /// <inheritdoc/>
-    protected override void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, CellStyle cellStyle, bool isPlaceholder)
+    protected override void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, Style style, bool isPlaceholder)
     {
         if (isPlaceholder || ShouldReveal())
         {
-            base.WriteTextSegment(buffer, x, y, text, cellStyle, isPlaceholder);
+            base.WriteTextSegment(buffer, x, y, text, style, isPlaceholder);
             return;
         }
 
-        var style = (MaskedInputStyle)GetTextBoxStyle();
-        var rune = style.MaskGlyph;
+        var inputStyle = (MaskedInputStyle)GetTextBoxStyle();
+        var rune = inputStyle.MaskGlyph;
         var runeWidth = TerminalTextUtility.GetRuneWidth(rune);
         if (runeWidth != 1)
         {
@@ -96,7 +96,7 @@ public sealed partial class MaskedInput : TextBox
         var totalCells = TerminalTextUtility.GetWidth(text);
         for (var i = 0; i < totalCells; i++)
         {
-            buffer.SetCell(x + i, y, rune, cellStyle);
+            buffer.SetCell(x + i, y, rune, style);
         }
     }
 

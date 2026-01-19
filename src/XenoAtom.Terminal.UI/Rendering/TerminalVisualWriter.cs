@@ -148,20 +148,20 @@ internal static class TerminalVisualWriter
         }
     }
 
-    private static AnsiStyle MapStyle(CellStyle cellStyle)
+    private static AnsiStyle MapStyle(Style style)
     {
-        cellStyle = cellStyle.WithoutContinuation();
-        var deco = cellStyle.ToAnsiDecorations();
+        style = style.WithoutContinuation();
+        var deco = style.ToAnsiDecorations();
 
-        AnsiColor? fg = null;
-        AnsiColor? bg = null;
+        Color? fg = null;
+        Color? bg = null;
 
-        if (cellStyle.TryGetForeground(out var fgColor))
+        if (style.TryGetForeground(out var fgColor))
         {
             fg = fgColor;
         }
 
-        if (cellStyle.TryGetBackground(out var bgColor))
+        if (style.TryGetBackground(out var bgColor))
         {
             bg = bgColor;
         }
@@ -173,8 +173,8 @@ internal static class TerminalVisualWriter
 
         return new AnsiStyle
         {
-            Foreground = fg ?? AnsiColor.Default,
-            Background = bg ?? AnsiColor.Default,
+            Foreground = fg ?? Color.Default,
+            Background = bg ?? Color.Default,
             Decorations = deco,
         };
     }

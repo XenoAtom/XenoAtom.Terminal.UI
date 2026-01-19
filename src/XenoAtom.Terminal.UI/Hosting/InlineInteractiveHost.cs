@@ -5,8 +5,8 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using XenoAtom.Ansi;
+using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Rendering;
-using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Hosting;
 
@@ -21,7 +21,7 @@ public sealed class InlineInteractiveHost : IDisposable
     private int? _liveRegionTopRow;
     private bool _hasSavedCursorPosition;
     private int[]? _lastScalars;
-    private CellStyle[]? _lastCells;
+    private Style[]? _lastCells;
     private ulong[]? _lastHyperlinks;
     private Dictionary<ulong, string>? _lastHyperlinkTable;
     private Dictionary<int, string>? _lastTextElementTable;
@@ -676,7 +676,7 @@ public sealed class InlineInteractiveHost : IDisposable
         if (_lastScalars is null || _lastCells is null || _lastHyperlinks is null || _lastScalars.Length != length)
         {
             _lastScalars = new int[length];
-            _lastCells = new CellStyle[length];
+            _lastCells = new Style[length];
             _lastHyperlinks = new ulong[length];
         }
 
@@ -773,7 +773,7 @@ public sealed class InlineInteractiveHost : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int AdjustStartForWideGlyph(ReadOnlySpan<CellStyle> cells, int rowIndex, int x)
+    private static int AdjustStartForWideGlyph(ReadOnlySpan<Style> cells, int rowIndex, int x)
     {
         var cell = cells[rowIndex + x];
         if (cell.IsContinuation && x > 0)
@@ -785,7 +785,7 @@ public sealed class InlineInteractiveHost : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int AdjustEndForWideGlyph(CellBuffer buffer, ReadOnlySpan<int> scalars, ReadOnlySpan<CellStyle> cells, int rowIndex, int x, int width)
+    private static int AdjustEndForWideGlyph(CellBuffer buffer, ReadOnlySpan<int> scalars, ReadOnlySpan<Style> cells, int rowIndex, int x, int width)
     {
         var cell = cells[rowIndex + x];
         if (cell.IsContinuation)
@@ -807,20 +807,20 @@ public sealed class InlineInteractiveHost : IDisposable
         return x;
     }
 
-    private static AnsiStyle MapStyle(CellStyle cellStyle)
+    private static AnsiStyle MapStyle(Style style)
     {
-        cellStyle = cellStyle.WithoutContinuation();
-        var deco = cellStyle.ToAnsiDecorations();
+        style = style.WithoutContinuation();
+        var deco = style.ToAnsiDecorations();
 
-        AnsiColor? fg = null;
-        AnsiColor? bg = null;
+        Color? fg = null;
+        Color? bg = null;
 
-        if (cellStyle.TryGetForeground(out var fgColor))
+        if (style.TryGetForeground(out var fgColor))
         {
             fg = fgColor;
         }
 
-        if (cellStyle.TryGetBackground(out var bgColor))
+        if (style.TryGetBackground(out var bgColor))
         {
             bg = bgColor;
         }
@@ -832,8 +832,8 @@ public sealed class InlineInteractiveHost : IDisposable
 
         return new AnsiStyle
         {
-            Foreground = fg ?? AnsiColor.Default,
-            Background = bg ?? AnsiColor.Default,
+            Foreground = fg ?? Color.Default,
+            Background = bg ?? Color.Default,
             Decorations = deco,
         };
     }

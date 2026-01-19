@@ -4,10 +4,10 @@
 
 using System.Buffers;
 using System.Text;
+using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
-using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -102,7 +102,7 @@ public sealed partial class TextBlock : Visual
 
         if (!Wrap || rect.Height == 1)
         {
-            WriteSingleLine(buffer, rect, text.AsSpan(), CellStyle.None);
+            WriteSingleLine(buffer, rect, text.AsSpan(), Style.None);
             return;
         }
 
@@ -119,13 +119,13 @@ public sealed partial class TextBlock : Visual
             }
 
             var slice = span.Slice(start, Math.Max(0, endExclusive - start));
-            WriteAlignedLine(buffer, rect, rect.Y + lineIndex, slice, CellStyle.None, isLastLine: nextStart >= span.Length);
+            WriteAlignedLine(buffer, rect, rect.Y + lineIndex, slice, Style.None, isLastLine: nextStart >= span.Length);
             lineIndex++;
             start = nextStart;
         }
     }
 
-    private void WriteSingleLine(CellBuffer buffer, Rectangle rect, ReadOnlySpan<char> text, CellStyle style)
+    private void WriteSingleLine(CellBuffer buffer, Rectangle rect, ReadOnlySpan<char> text, Style style)
     {
         var maxWidth = rect.Width;
         if (maxWidth <= 0)
@@ -185,7 +185,7 @@ public sealed partial class TextBlock : Visual
         buffer.WriteText(defaultX, rect.Y, clipped, style);
     }
 
-    private void WriteAlignedLine(CellBuffer buffer, Rectangle rect, int y, ReadOnlySpan<char> text, CellStyle style, bool isLastLine)
+    private void WriteAlignedLine(CellBuffer buffer, Rectangle rect, int y, ReadOnlySpan<char> text, Style style, bool isLastLine)
     {
         var width = rect.Width;
         if (width <= 0)
@@ -263,7 +263,7 @@ public sealed partial class TextBlock : Visual
         return index;
     }
 
-    private static bool TryWriteJustified(CellBuffer buffer, int x, int y, int width, ReadOnlySpan<char> text, CellStyle style)
+    private static bool TryWriteJustified(CellBuffer buffer, int x, int y, int width, ReadOnlySpan<char> text, Style style)
     {
         Span<(int Start, int Length)> words = stackalloc (int, int)[32];
         var wordCount = 0;

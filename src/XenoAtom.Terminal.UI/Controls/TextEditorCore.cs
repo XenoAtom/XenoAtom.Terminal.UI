@@ -4,16 +4,16 @@
 
 using System.Buffers;
 using System.Text;
+using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Scrolling;
-using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-internal delegate void TextSegmentWriter(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, CellStyle style, bool isPlaceholder);
+internal delegate void TextSegmentWriter(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, Style style, bool isPlaceholder);
 
 internal readonly record struct TextEditorOptions(
     bool SingleLine,
@@ -27,9 +27,9 @@ internal readonly record struct TextEditorOptions(
 internal readonly record struct TextEditorRenderContext(
     CellBuffer Buffer,
     Rectangle ContentRect,
-    CellStyle TextStyle,
-    CellStyle SelectionStyle,
-    CellStyle PlaceholderStyle,
+    Style TextStyle,
+    Style SelectionStyle,
+    Style PlaceholderStyle,
     string? Placeholder,
     bool IsFocused,
     TextSegmentWriter SegmentWriter);

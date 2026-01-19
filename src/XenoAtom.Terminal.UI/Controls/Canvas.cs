@@ -88,10 +88,10 @@ public readonly struct CanvasContext
 {
     private readonly CellBuffer _buffer;
     private readonly Rectangle _bounds;
-    private readonly CellStyle _defaultStyle;
+    private readonly Style _defaultStyle;
     private readonly Rune _defaultRune;
 
-    internal CanvasContext(CellBuffer buffer, Rectangle bounds, CellStyle defaultStyle, Rune defaultRune)
+    internal CanvasContext(CellBuffer buffer, Rectangle bounds, Style defaultStyle, Rune defaultRune)
     {
         _buffer = buffer;
         _bounds = bounds;
@@ -114,7 +114,7 @@ public readonly struct CanvasContext
     /// </summary>
     /// <param name="rune">The rune used to fill.</param>
     /// <param name="style">The style used to fill.</param>
-    public void Clear(Rune rune, CellStyle style)
+    public void Clear(Rune rune, Style style)
         => FillRect(0, 0, _bounds.Width, _bounds.Height, rune, style);
 
     /// <summary>
@@ -130,7 +130,7 @@ public readonly struct CanvasContext
     /// <param name="y">The Y coordinate relative to the canvas origin.</param>
     /// <param name="rune">The rune to draw.</param>
     /// <param name="style">The style to apply.</param>
-    public void SetPixel(int x, int y, Rune rune, CellStyle style)
+    public void SetPixel(int x, int y, Rune rune, Style style)
     {
         if ((uint)x >= (uint)_bounds.Width || (uint)y >= (uint)_bounds.Height)
         {
@@ -149,7 +149,7 @@ public readonly struct CanvasContext
     /// <summary>
     /// Sets a single cell using the default rune.
     /// </summary>
-    public void SetPixel(int x, int y, CellStyle style)
+    public void SetPixel(int x, int y, Style style)
         => SetPixel(x, y, _defaultRune, style);
 
     /// <summary>
@@ -161,7 +161,7 @@ public readonly struct CanvasContext
     /// <summary>
     /// Draws a horizontal line.
     /// </summary>
-    public void DrawHLine(int x, int y, int length, Rune rune, CellStyle style)
+    public void DrawHLine(int x, int y, int length, Rune rune, Style style)
     {
         if (length <= 0)
         {
@@ -177,7 +177,7 @@ public readonly struct CanvasContext
     /// <summary>
     /// Draws a horizontal line.
     /// </summary>
-    public void DrawHLine(int x, int y, int length, CellStyle style) => DrawHLine(x, y, length, _defaultRune, style);
+    public void DrawHLine(int x, int y, int length, Style style) => DrawHLine(x, y, length, _defaultRune, style);
 
     /// <summary>
     /// Draws a horizontal line.
@@ -187,7 +187,7 @@ public readonly struct CanvasContext
     /// <summary>
     /// Draws a vertical line.
     /// </summary>
-    public void DrawVLine(int x, int y, int length, Rune rune, CellStyle style)
+    public void DrawVLine(int x, int y, int length, Rune rune, Style style)
     {
         if (length <= 0)
         {
@@ -203,7 +203,7 @@ public readonly struct CanvasContext
     /// <summary>
     /// Draws a vertical line.
     /// </summary>
-    public void DrawVLine(int x, int y, int length, CellStyle style) => DrawVLine(x, y, length, _defaultRune, style);
+    public void DrawVLine(int x, int y, int length, Style style) => DrawVLine(x, y, length, _defaultRune, style);
 
     /// <summary>
     /// Draws a vertical line.
@@ -213,7 +213,7 @@ public readonly struct CanvasContext
     /// <summary>
     /// Draws a line between two points using an integer Bresenham algorithm.
     /// </summary>
-    public void DrawLine(int x0, int y0, int x1, int y1, Rune rune, CellStyle style)
+    public void DrawLine(int x0, int y0, int x1, int y1, Rune rune, Style style)
     {
         var dx = Math.Abs(x1 - x0);
         var sx = x0 < x1 ? 1 : -1;
@@ -246,7 +246,7 @@ public readonly struct CanvasContext
     /// <summary>
     /// Draws a line between two points using an integer Bresenham algorithm.
     /// </summary>
-    public void DrawLine(int x0, int y0, int x1, int y1, CellStyle style) => DrawLine(x0, y0, x1, y1, _defaultRune, style);
+    public void DrawLine(int x0, int y0, int x1, int y1, Style style) => DrawLine(x0, y0, x1, y1, _defaultRune, style);
 
     /// <summary>
     /// Draws a line between two points using an integer Bresenham algorithm.
@@ -256,7 +256,7 @@ public readonly struct CanvasContext
     /// <summary>
     /// Draws an outline rectangle.
     /// </summary>
-    public void DrawRect(int x, int y, int width, int height, Rune rune, CellStyle style)
+    public void DrawRect(int x, int y, int width, int height, Rune rune, Style style)
     {
         if (width <= 0 || height <= 0)
         {
@@ -284,7 +284,7 @@ public readonly struct CanvasContext
     /// <summary>
     /// Draws an outline rectangle.
     /// </summary>
-    public void DrawRect(int x, int y, int width, int height, CellStyle style) => DrawRect(x, y, width, height, _defaultRune, style);
+    public void DrawRect(int x, int y, int width, int height, Style style) => DrawRect(x, y, width, height, _defaultRune, style);
 
     /// <summary>
     /// Draws an outline rectangle.
@@ -294,7 +294,7 @@ public readonly struct CanvasContext
     /// <summary>
     /// Draws a box rectangle using line glyphs (corners + edges).
     /// </summary>
-    public void DrawBox(int x, int y, int width, int height, LineGlyphs glyphs, CellStyle style)
+    public void DrawBox(int x, int y, int width, int height, LineGlyphs glyphs, Style style)
     {
         if (width <= 0 || height <= 0)
         {
@@ -341,7 +341,7 @@ public readonly struct CanvasContext
     /// <summary>
     /// Draws a box rectangle using line glyphs (corners + edges).
     /// </summary>
-    public void DrawBox(int x, int y, int width, int height, CellStyle style) => DrawBox(x, y, width, height, LineGlyphs.Single, style);
+    public void DrawBox(int x, int y, int width, int height, Style style) => DrawBox(x, y, width, height, LineGlyphs.Single, style);
 
     /// <summary>
     /// Draws a box rectangle using line glyphs (corners + edges).
@@ -351,7 +351,7 @@ public readonly struct CanvasContext
     /// <summary>
     /// Fills a rectangle.
     /// </summary>
-    public void FillRect(int x, int y, int width, int height, Rune rune, CellStyle style)
+    public void FillRect(int x, int y, int width, int height, Rune rune, Style style)
     {
         if (width <= 0 || height <= 0)
         {
@@ -370,7 +370,7 @@ public readonly struct CanvasContext
     /// <summary>
     /// Fills a rectangle.
     /// </summary>
-    public void FillRect(int x, int y, int width, int height, CellStyle style) => FillRect(x, y, width, height, _defaultRune, style);
+    public void FillRect(int x, int y, int width, int height, Style style) => FillRect(x, y, width, height, _defaultRune, style);
 
     /// <summary>
     /// Fills a rectangle.
@@ -380,7 +380,7 @@ public readonly struct CanvasContext
     /// <summary>
     /// Draws a circle outline using the midpoint circle algorithm.
     /// </summary>
-    public void DrawCircle(int centerX, int centerY, int radius, Rune rune, CellStyle style)
+    public void DrawCircle(int centerX, int centerY, int radius, Rune rune, Style style)
     {
         if (radius < 0)
         {
@@ -410,7 +410,7 @@ public readonly struct CanvasContext
     /// <summary>
     /// Draws a circle outline using the midpoint circle algorithm.
     /// </summary>
-    public void DrawCircle(int centerX, int centerY, int radius, CellStyle style) => DrawCircle(centerX, centerY, radius, _defaultRune, style);
+    public void DrawCircle(int centerX, int centerY, int radius, Style style) => DrawCircle(centerX, centerY, radius, _defaultRune, style);
 
 
     /// <summary>
@@ -421,7 +421,7 @@ public readonly struct CanvasContext
     /// <summary>
     /// Writes plain text at the specified position (clipped to the canvas bounds).
     /// </summary>
-    public void WriteText(int x, int y, ReadOnlySpan<char> text, CellStyle style)
+    public void WriteText(int x, int y, ReadOnlySpan<char> text, Style style)
     {
         if ((uint)y >= (uint)_bounds.Height)
         {
@@ -450,7 +450,7 @@ public readonly struct CanvasContext
     public void WriteText(int x, int y, ReadOnlySpan<char> text)
         => WriteText(x, y, text, _defaultStyle);
 
-    private void PlotCircle8(int cx, int cy, int x, int y, Rune rune, CellStyle style)
+    private void PlotCircle8(int cx, int cy, int x, int y, Rune rune, Style style)
     {
         SetPixel(cx + x, cy + y, rune, style);
         SetPixel(cx + y, cy + x, rune, style);

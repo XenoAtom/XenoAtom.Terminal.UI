@@ -25,13 +25,13 @@ public sealed class CanvasDemo : ControlsDemoBase
                     .Painter(ctx =>
                     {
                         var t = tick.Value;
-                        var bg = CellStyle.None.WithBackground(AnsiColor.Rgb(0x12, 0x1A, 0x30));
+                        var bg = Style.None.WithBackground(Color.Rgb(0x12, 0x1A, 0x30));
                         ctx.Clear(new Rune(' '), bg);
 
-                        var ink = CellStyle.None.WithForeground(AnsiColor.Rgb(0x9E, 0xC7, 0xFC));
+                        var ink = Style.None.WithForeground(Color.Rgb(0x9E, 0xC7, 0xFC));
                         ctx.DrawBox(0, 0, ctx.Size.Width, ctx.Size.Height, LineGlyphs.Single, ink);
 
-                        var accent = CellStyle.None.WithForeground(AnsiColor.Rgb(0xE4, 0x9F, 0x27));
+                        var accent = Style.None.WithForeground(Color.Rgb(0xE4, 0x9F, 0x27));
                         var x0 = 2 + (t % 10);
                         ctx.DrawLine(2, 2, x0, 10, accent);
                         ctx.DrawHLine(4, 2, 10, new Rune('='), accent);

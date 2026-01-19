@@ -25,12 +25,12 @@ public sealed record TextFigletStyle : IStyle<TextFigletStyle>
     /// <remarks>
     /// When <c>null</c>, the style is resolved from the current theme foreground.
     /// </remarks>
-    public CellStyle? TextStyle { get; init; }
+    public Style? TextStyle { get; init; }
 
     /// <summary>
     /// Resolves the FIGlet text style for the specified theme.
     /// </summary>
-    public CellStyle ResolveTextStyle(Theme theme)
+    public Style ResolveTextStyle(Theme theme)
     {
         ArgumentNullException.ThrowIfNull(theme);
         return TextStyle ?? theme.ForegroundTextStyle();

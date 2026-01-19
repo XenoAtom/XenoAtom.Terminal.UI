@@ -42,7 +42,7 @@ public sealed class TextFigletDemo : ControlsDemoBase
                         .TextAlignment(TextAlignment.Left)
                         .Style(TextFigletStyle.Default with
                         {
-                            TextStyle = CellStyle.None.WithForeground(AnsiColor.Rgb(0x77, 0xB1, 0xFB)),
+                            TextStyle = Style.None.WithForeground(Color.Rgb(0x77, 0xB1, 0xFB)),
                         }))
                 { Padding = new Thickness(1) })
             .Spacing(1);

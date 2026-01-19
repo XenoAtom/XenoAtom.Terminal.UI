@@ -2,9 +2,15 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using XenoAtom.Ansi;
 
-namespace XenoAtom.Terminal.UI.Styling;
+// Copyright (c) Alexandre Mutel. All rights reserved.
+// Licensed under the BSD-Clause 2 license.
+// See license.txt file in the project root for full license information.
+
+using XenoAtom.Ansi;
+using XenoAtom.Terminal.UI.Styling;
+
+namespace XenoAtom.Terminal.UI;
 
 /// <summary>
 /// Packed per-cell style (foreground/background + decorations).
@@ -14,7 +20,7 @@ namespace XenoAtom.Terminal.UI.Styling;
 /// It preserves the kind of ANSI colors (default / 16 / 256 / RGB) so renderers can
 /// emit the most appropriate escape sequences for the target terminal.
 /// </remarks>
-public readonly struct CellStyle : IEquatable<CellStyle>
+public readonly struct Style : IEquatable<Style>
 {
     // Layout:
     // - Bits [0..7]   : TextStyle flags (matches AnsiDecorations bit positions)
@@ -46,12 +52,12 @@ public readonly struct CellStyle : IEquatable<CellStyle>
 
     internal readonly ulong Value;
 
-    internal CellStyle(ulong value) => Value = value;
+    internal Style(ulong value) => Value = value;
 
     /// <summary>
     /// Gets a style with default foreground/background and no decorations.
     /// </summary>
-    public static CellStyle None => default;
+    public static Style None => default;
 
     /// <summary>
     /// Gets the text style flags (decorations) for this cell.
@@ -60,12 +66,12 @@ public readonly struct CellStyle : IEquatable<CellStyle>
 
     internal bool IsContinuation => (Value & ContinuationMask) != 0;
 
-    internal CellStyle WithoutContinuation() => new(Value & ~ContinuationMask);
+    internal Style WithoutContinuation() => new(Value & ~ContinuationMask);
 
-    internal CellStyle WithContinuation()
+    internal Style WithContinuation()
         => new((Value & ~ContinuationMask) | ContinuationMask);
 
-    internal CellStyle MergeUnspecified(CellStyle under)
+    internal Style MergeUnspecified(Style under)
     {
         var value = Value;
         var underValue = under.Value;
@@ -85,57 +91,57 @@ public readonly struct CellStyle : IEquatable<CellStyle>
             value |= underValue & TextStyleMask;
         }
 
-        return new CellStyle(value);
+        return new Style(value);
     }
 
     /// <summary>
     /// Returns a copy with the specified text style flags (replacing any existing flags).
     /// </summary>
-    public CellStyle WithTextStyle(TextStyle style)
+    public Style WithTextStyle(TextStyle style)
         => new((Value & ~TextStyleMask) | ((ulong)style & TextStyleMask));
 
     /// <summary>
     /// Returns a copy with the specified text style flags added.
     /// </summary>
-    public CellStyle AddTextStyle(TextStyle style)
+    public Style AddTextStyle(TextStyle style)
         => new(Value | ((ulong)style & TextStyleMask));
 
     /// <summary>
     /// Returns a copy with the specified text style flags removed.
     /// </summary>
-    public CellStyle RemoveTextStyle(TextStyle style)
+    public Style RemoveTextStyle(TextStyle style)
         => new(Value & ~((ulong)style & TextStyleMask));
 
     /// <summary>
     /// Returns a copy with the foreground cleared to terminal default.
     /// </summary>
-    public CellStyle ClearForeground()
+    public Style ClearForeground()
         => new(Value & ~ForegroundMask);
 
     /// <summary>
     /// Returns a copy with the background cleared to terminal default.
     /// </summary>
-    public CellStyle ClearBackground()
+    public Style ClearBackground()
         => new(Value & ~BackgroundMask);
 
     /// <summary>
     /// Returns a copy with the specified foreground color.
     /// </summary>
-    public CellStyle WithForeground(AnsiColor color)
+    public Style WithForeground(Color color)
     {
         var value = Value;
         value = (value & ~ForegroundMask) | (Encode(color) << ForegroundShift);
-        return new CellStyle(value);
+        return new Style(value);
     }
 
     /// <summary>
     /// Returns a copy with the specified background color.
     /// </summary>
-    public CellStyle WithBackground(AnsiColor color)
+    public Style WithBackground(Color color)
     {
         var value = Value;
         value = (value & ~BackgroundMask) | (Encode(color) << BackgroundShift);
-        return new CellStyle(value);
+        return new Style(value);
     }
 
     /// <summary>
@@ -143,7 +149,7 @@ public readonly struct CellStyle : IEquatable<CellStyle>
     /// </summary>
     /// <param name="color">When this method returns, contains the foreground color if set.</param>
     /// <returns><c>true</c> if a foreground is explicitly set; otherwise <c>false</c>.</returns>
-    public bool TryGetForeground(out AnsiColor color)
+    public bool TryGetForeground(out Color color)
     {
         var encoded = (Value & ForegroundMask) >> ForegroundShift;
         if (encoded == 0)
@@ -152,7 +158,7 @@ public readonly struct CellStyle : IEquatable<CellStyle>
             return false;
         }
 
-        return TryDecodeToAnsiColor(encoded, out color);
+        return TryDecodeToColor(encoded, out color);
     }
 
     /// <summary>
@@ -160,7 +166,7 @@ public readonly struct CellStyle : IEquatable<CellStyle>
     /// </summary>
     /// <param name="color">When this method returns, contains the background color if set.</param>
     /// <returns><c>true</c> if a background is explicitly set; otherwise <c>false</c>.</returns>
-    public bool TryGetBackground(out AnsiColor color)
+    public bool TryGetBackground(out Color color)
     {
         var encoded = (Value & BackgroundMask) >> BackgroundShift;
         if (encoded == 0)
@@ -169,57 +175,57 @@ public readonly struct CellStyle : IEquatable<CellStyle>
             return false;
         }
 
-        return TryDecodeToAnsiColor(encoded, out color);
+        return TryDecodeToColor(encoded, out color);
     }
 
     /// <summary>
     /// Combines two styles by OR-ing their packed representation.
     /// </summary>
-    public static CellStyle operator |(CellStyle a, CellStyle b) => new(a.Value | b.Value);
+    public static Style operator |(Style a, Style b) => new(a.Value | b.Value);
 
     /// <summary>
-    /// Adds text style flags to a <see cref="CellStyle"/>.
+    /// Adds text style flags to a <see cref="Style"/>.
     /// </summary>
-    public static CellStyle operator |(CellStyle a, TextStyle style) => a.AddTextStyle(style);
+    public static Style operator |(Style a, TextStyle style) => a.AddTextStyle(style);
 
     /// <summary>
     /// ANDs the packed value with the provided style flags.
     /// </summary>
-    public static CellStyle operator &(CellStyle a, TextStyle style) => new(a.Value & (ulong)style);
+    public static Style operator &(Style a, TextStyle style) => new(a.Value & (ulong)style);
 
     /// <inheritdoc />
-    public bool Equals(CellStyle other) => Value == other.Value;
+    public bool Equals(Style other) => Value == other.Value;
 
     /// <inheritdoc />
-    public override bool Equals(object? obj) => obj is CellStyle other && Equals(other);
+    public override bool Equals(object? obj) => obj is Style other && Equals(other);
 
     /// <inheritdoc />
     public override int GetHashCode() => Value.GetHashCode();
 
     /// <summary>
-    /// Returns whether two <see cref="CellStyle"/> values are equal.
+    /// Returns whether two <see cref="Style"/> values are equal.
     /// </summary>
-    public static bool operator ==(CellStyle left, CellStyle right) => left.Equals(right);
+    public static bool operator ==(Style left, Style right) => left.Equals(right);
 
     /// <summary>
-    /// Returns whether two <see cref="CellStyle"/> values are not equal.
+    /// Returns whether two <see cref="Style"/> values are not equal.
     /// </summary>
-    public static bool operator !=(CellStyle left, CellStyle right) => !left.Equals(right);
+    public static bool operator !=(Style left, Style right) => !left.Equals(right);
 
     internal AnsiDecorations ToAnsiDecorations()
         => (AnsiDecorations)((int)TextStyle);
 
-    private static ulong Encode(AnsiColor color)
+    private static ulong Encode(Color color)
     {
         switch (color.Kind)
         {
-            case AnsiColorKind.Default:
+            case ColorKind.Default:
                 return 0;
-            case AnsiColorKind.Basic16:
+            case ColorKind.Basic16:
                 return EncodeColor(kind: 1u, value: (uint)color.Index);
-            case AnsiColorKind.Indexed256:
+            case ColorKind.Indexed256:
                 return EncodeColor(kind: 2u, value: (uint)color.Index);
-            case AnsiColorKind.Rgb:
+            case ColorKind.Rgb:
                 return EncodeColor(kind: 3u, value: (uint)((color.R << 16) | (color.G << 8) | color.B));
             default:
                 return 0;
@@ -237,7 +243,7 @@ public readonly struct CellStyle : IEquatable<CellStyle>
         return (ulong)((kind << ColorValueBits) | value);
     }
 
-    private static bool TryDecodeToAnsiColor(ulong encoded, out AnsiColor color)
+    private static bool TryDecodeToColor(ulong encoded, out Color color)
     {
         var kind = (uint)((encoded >> ColorValueBits) & 0b11);
         var value = (uint)encoded & ColorValueMask;
@@ -245,17 +251,17 @@ public readonly struct CellStyle : IEquatable<CellStyle>
         switch (kind)
         {
             case 1:
-                color = AnsiColor.Basic16((int)(value & 0xF));
+                color = Color.Basic16((int)(value & 0xF));
                 return true;
             case 2:
-                color = AnsiColor.Indexed256((int)(value & 0xFF));
+                color = Color.Indexed256((int)(value & 0xFF));
                 return true;
             case 3:
             {
                 var r = (byte)((value >> 16) & 0xFF);
                 var g = (byte)((value >> 8) & 0xFF);
                 var b = (byte)(value & 0xFF);
-                color = AnsiColor.Rgb(r, g, b);
+                color = Color.Rgb(r, g, b);
                 return true;
             }
             default:

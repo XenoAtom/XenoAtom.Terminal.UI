@@ -111,7 +111,7 @@ public sealed partial class Switch : ContentVisual
             thumbIndex = Math.Min(1, trackCells - 2);
         }
 
-        var thumbTrackStyle = CellStyle.None;
+        var thumbTrackStyle = Style.None;
 
         // Track background (segmented).
         for (var i = 0; i < trackCells; i++)

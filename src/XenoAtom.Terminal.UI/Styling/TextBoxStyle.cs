@@ -57,23 +57,23 @@ public record TextBoxStyle : IStyle<TextBoxStyle>
     public Rune? OverflowIndicatorRight { get; init; } = new('→');
 
     /// <summary>Gets an optional border color override.</summary>
-    public AnsiColor? Border { get; init; }
+    public Color? Border { get; init; }
     /// <summary>Gets an optional focused border color override.</summary>
-    public AnsiColor? FocusBorder { get; init; }
+    public Color? FocusBorder { get; init; }
     /// <summary>Gets an optional selection background color override.</summary>
-    public AnsiColor? Selection { get; init; }
+    public Color? Selection { get; init; }
     /// <summary>Gets an optional background color override for the text region.</summary>
-    public AnsiColor? Background { get; init; }
+    public Color? Background { get; init; }
     /// <summary>Gets an optional placeholder foreground color override.</summary>
-    public AnsiColor? Placeholder { get; init; }
+    public Color? Placeholder { get; init; }
 
     /// <summary>
     /// Resolves the border style for the specified focus state.
     /// </summary>
-    public CellStyle BorderStyle(Theme theme, bool focused)
+    public Style BorderStyle(Theme theme, bool focused)
     {
         var color = focused ? (FocusBorder ?? theme.FocusBorder) : (Border ?? theme.Border);
-        var style = CellStyle.None;
+        var style = Style.None;
         if (color is { } c)
         {
             style = style.WithForeground(c);
@@ -84,9 +84,9 @@ public record TextBoxStyle : IStyle<TextBoxStyle>
     /// <summary>
     /// Resolves the selection style.
     /// </summary>
-    public CellStyle SelectionStyle(Theme theme)
+    public Style SelectionStyle(Theme theme)
     {
-        var style = CellStyle.None;
+        var style = Style.None;
         var color = Selection ?? theme.Selection;
         if (color is { } c)
         {
@@ -99,9 +99,9 @@ public record TextBoxStyle : IStyle<TextBoxStyle>
     /// <summary>
     /// Resolves the background style used for the text region.
     /// </summary>
-    public CellStyle BackgroundStyle(Theme theme)
+    public Style BackgroundStyle(Theme theme)
     {
-        var style = CellStyle.None;
+        var style = Style.None;
         if (theme.Foreground is { } fg) style = style.WithForeground(fg);
         var bg = Background ?? theme.SurfaceAlt ?? theme.Surface ?? theme.Background;
         if (bg is { } b) style = style.WithBackground(b);
@@ -111,7 +111,7 @@ public record TextBoxStyle : IStyle<TextBoxStyle>
     /// <summary>
     /// Resolves the placeholder style.
     /// </summary>
-    public CellStyle PlaceholderStyle(Theme theme)
+    public Style PlaceholderStyle(Theme theme)
     {
         var style = BackgroundStyle(theme);
         var fg = Placeholder ?? theme.Muted ?? theme.Foreground;
@@ -122,6 +122,6 @@ public record TextBoxStyle : IStyle<TextBoxStyle>
     /// <summary>
     /// Resolves the style used for overflow indicators.
     /// </summary>
-    public CellStyle OverflowIndicatorStyle(Theme theme)
+    public Style OverflowIndicatorStyle(Theme theme)
         => PlaceholderStyle(theme) | TextStyle.Bold;
 }

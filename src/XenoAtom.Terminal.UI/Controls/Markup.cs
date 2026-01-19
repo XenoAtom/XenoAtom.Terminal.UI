@@ -5,6 +5,7 @@
 using System.Buffers;
 using System.Text;
 using XenoAtom.Ansi;
+using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
@@ -229,7 +230,7 @@ public sealed partial class Markup : Visual
 
         if (maxWidth == 1)
         {
-            buffer.SetCell(rect.X, y, Ellipsis, CellStyle.None);
+            buffer.SetCell(rect.X, y, Ellipsis, Style.None);
             return;
         }
 
@@ -241,7 +242,7 @@ public sealed partial class Markup : Visual
             var contentWidth = Math.Min(maxWidth, bodyCells + 1);
             var x = AlignX(rect, alignment, maxWidth, contentWidth);
             WriteStyledSpan(buffer, x, y, lineStartIndex, lineStartIndex + bodyEndIndex);
-            buffer.SetCell(x + bodyCells, y, Ellipsis, CellStyle.None);
+            buffer.SetCell(x + bodyCells, y, Ellipsis, Style.None);
             return;
         }
 
@@ -252,7 +253,7 @@ public sealed partial class Markup : Visual
         var suffixCells = TerminalTextUtility.GetWidth(suffix);
         var contentW = Math.Min(maxWidth, 1 + suffixCells);
         var x0 = AlignX(rect, alignment, maxWidth, contentW);
-        buffer.SetCell(x0, y, Ellipsis, CellStyle.None);
+        buffer.SetCell(x0, y, Ellipsis, Style.None);
         WriteStyledSpan(buffer, x0 + 1, y, lineStartIndex + suffixStart, lineStartIndex + text.Length);
     }
 
@@ -595,7 +596,7 @@ public sealed partial class Markup : Visual
         return endExclusive > start;
     }
 
-    private readonly record struct StyledRun(int Start, int Length, CellStyle Style);
+    private readonly record struct StyledRun(int Start, int Length, Style Style);
 
     private sealed class MarkupCaptureWriter : IAnsiBasicWriter
     {
@@ -655,9 +656,9 @@ public sealed partial class Markup : Visual
             _style = to.ResolveMissingFrom(from);
         }
 
-        private static CellStyle ConvertStyle(AnsiStyle style)
+        private static Style ConvertStyle(AnsiStyle style)
         {
-            var cellStyle = CellStyle.None;
+            var cellStyle = Style.None;
             if (style.Foreground is { } fg)
             {
                 cellStyle = cellStyle.WithForeground(fg);

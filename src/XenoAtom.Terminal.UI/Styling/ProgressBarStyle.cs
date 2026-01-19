@@ -109,27 +109,27 @@ public sealed record ProgressBarStyle : IStyle<ProgressBarStyle>
     /// <summary>
     /// Gets the optional cell style for the filled portion.
     /// </summary>
-    public CellStyle? Filled { get; init; }
+    public Style? Filled { get; init; }
 
     /// <summary>
     /// Gets the optional cell style for the unfilled (track) portion.
     /// </summary>
-    public CellStyle? Unfilled { get; init; }
+    public Style? Unfilled { get; init; }
 
     /// <summary>
     /// Gets the optional cell style for the frame/border.
     /// </summary>
-    public CellStyle? Border { get; init; }
+    public Style? Border { get; init; }
 
     /// <summary>
     /// Resolves the border style for this progress bar using the provided <paramref name="theme"/>.
     /// </summary>
-    public CellStyle ResolveBorder(Theme theme) => Border ?? (theme.BorderStyle(focused: false) | TextStyle.Dim);
+    public Style ResolveBorder(Theme theme) => Border ?? (theme.BorderStyle(focused: false) | TextStyle.Dim);
 
     /// <summary>
     /// Resolves the filled style for this progress bar using the provided <paramref name="theme"/>.
     /// </summary>
-    public CellStyle ResolveFilled(Theme theme)
+    public Style ResolveFilled(Theme theme)
     {
         if (Filled is { } filled)
         {
@@ -139,13 +139,13 @@ public sealed record ProgressBarStyle : IStyle<ProgressBarStyle>
         if (Variant == ProgressBarVariant.Thin || Variant == ProgressBarVariant.Segmented)
         {
             var fg = theme.Primary ?? theme.FocusBorder ?? theme.Foreground;
-            return fg is { } c ? (CellStyle.None.WithForeground(c) | TextStyle.Bold) : (CellStyle.None | TextStyle.Bold);
+            return fg is { } c ? (Style.None.WithForeground(c) | TextStyle.Bold) : (Style.None | TextStyle.Bold);
         }
 
         if (Variant == ProgressBarVariant.Solid || Variant == ProgressBarVariant.Shaded)
         {
             var bg = theme.Primary ?? theme.Selection;
-            return bg is { } c ? (CellStyle.None.WithBackground(c) | TextStyle.Bold) : (CellStyle.None | TextStyle.Bold);
+            return bg is { } c ? (Style.None.WithBackground(c) | TextStyle.Bold) : (Style.None | TextStyle.Bold);
         }
 
         return theme.SelectionStyle();
@@ -154,7 +154,7 @@ public sealed record ProgressBarStyle : IStyle<ProgressBarStyle>
     /// <summary>
     /// Resolves the unfilled (track) style for this progress bar using the provided <paramref name="theme"/>.
     /// </summary>
-    public CellStyle ResolveUnfilled(Theme theme)
+    public Style ResolveUnfilled(Theme theme)
     {
         if (Unfilled is { } unfilled)
         {
@@ -169,7 +169,7 @@ public sealed record ProgressBarStyle : IStyle<ProgressBarStyle>
         if (Variant == ProgressBarVariant.Solid || Variant == ProgressBarVariant.Shaded)
         {
             var bg = theme.Border;
-            return bg is { } c ? (CellStyle.None.WithBackground(c) | TextStyle.Dim) : (CellStyle.None | TextStyle.Dim);
+            return bg is { } c ? (Style.None.WithBackground(c) | TextStyle.Dim) : (Style.None | TextStyle.Dim);
         }
 
         return theme.BorderStyle(focused: false) | TextStyle.Dim;

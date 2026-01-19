@@ -27,14 +27,14 @@ public sealed record SparklineStyle : IStyle<SparklineStyle>
     /// <summary>
     /// Gets the optional cell style.
     /// </summary>
-    public CellStyle? Style { get; init; }
+    public Style? Style { get; init; }
 
     /// <summary>
     /// Resolves the sparkline style for the given theme.
     /// </summary>
     /// <param name="theme">The current theme.</param>
     /// <returns>The resolved cell style.</returns>
-    public CellStyle Resolve(Theme theme)
+    public Style Resolve(Theme theme)
     {
         if (Style is { } s)
         {

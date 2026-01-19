@@ -15,6 +15,7 @@ using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Threading;
 using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -835,7 +836,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         }
 
         var borderStyle = theme.BorderStyle(focused: true) | TextStyle.Bold;
-        var backgroundStyle = CellStyle.None | TextStyle.Dim;
+        var backgroundStyle = Style.None | TextStyle.Dim;
         if (theme.Background is { } bg)
         {
             backgroundStyle = backgroundStyle.WithBackground(bg);
@@ -871,7 +872,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
         for (var i = 0; i < lines.Length && i + 1 < bottom; i++)
         {
-            buffer.WriteText(1, 1 + i, lines[i].AsSpan(), CellStyle.None);
+            buffer.WriteText(1, 1 + i, lines[i].AsSpan(), Style.None);
         }
     }
 

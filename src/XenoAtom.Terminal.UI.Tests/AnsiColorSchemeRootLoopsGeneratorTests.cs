@@ -7,12 +7,12 @@ using XenoAtom.Terminal.UI.Styling;
 namespace XenoAtom.Terminal.UI.Tests;
 
 [TestClass]
-public sealed class AnsiColorSchemeRootLoopsGeneratorTests
+public sealed class ColorSchemeRootLoopsGeneratorTests
 {
     [TestMethod]
     public void RootLoops_Generate_Matches_RootLoopsDark()
     {
-        var generated = AnsiColorScheme.Generate(
+        var generated = ColorScheme.Generate(
             sugar: 7,
             colors: 9,
             sogginess: 4,
@@ -21,13 +21,13 @@ public sealed class AnsiColorSchemeRootLoopsGeneratorTests
             milk: 0.94,
             name: "Root Loops (Dark)");
 
-        AssertSchemesEqual(AnsiColorScheme.RootLoopsDark, generated);
+        AssertSchemesEqual(ColorScheme.RootLoopsDark, generated);
     }
 
     [TestMethod]
     public void RootLoops_Generate_Matches_RootLoopsLight()
     {
-        var generated = AnsiColorScheme.Generate(
+        var generated = ColorScheme.Generate(
             sugar: 7,
             colors: 9,
             sogginess: 4,
@@ -36,10 +36,10 @@ public sealed class AnsiColorSchemeRootLoopsGeneratorTests
             milk: 3.0,
             name: "Root Loops (Light)");
 
-        AssertSchemesEqual(AnsiColorScheme.RootLoopsLight, generated);
+        AssertSchemesEqual(ColorScheme.RootLoopsLight, generated);
     }
 
-    private static void AssertSchemesEqual(AnsiColorScheme expected, AnsiColorScheme actual)
+    private static void AssertSchemesEqual(ColorScheme expected, ColorScheme actual)
     {
         Assert.AreEqual(expected.CursorColor, actual.CursorColor);
         Assert.AreEqual(expected.SelectionBackground, actual.SelectionBackground);

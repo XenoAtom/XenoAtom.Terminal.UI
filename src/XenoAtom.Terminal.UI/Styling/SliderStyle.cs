@@ -49,48 +49,48 @@ public sealed record SliderStyle : IStyle<SliderStyle>
     /// <summary>
     /// Gets the optional style for the inactive track.
     /// </summary>
-    public CellStyle? TrackStyle { get; init; }
+    public Style? TrackStyle { get; init; }
 
     /// <summary>
     /// Gets the optional style for the active track.
     /// </summary>
-    public CellStyle? ActiveTrackStyle { get; init; }
+    public Style? ActiveTrackStyle { get; init; }
 
     /// <summary>
     /// Gets the optional style for the thumb.
     /// </summary>
-    public CellStyle? ThumbStyle { get; init; }
+    public Style? ThumbStyle { get; init; }
 
     /// <summary>
     /// Gets the optional style for the thumb when hovered.
     /// </summary>
-    public CellStyle? ThumbHoveredStyle { get; init; }
+    public Style? ThumbHoveredStyle { get; init; }
 
     /// <summary>
     /// Gets the optional style for the thumb when pressed.
     /// </summary>
-    public CellStyle? ThumbPressedStyle { get; init; }
+    public Style? ThumbPressedStyle { get; init; }
 
     /// <summary>
     /// Gets the optional style for the thumb when focused.
     /// </summary>
-    public CellStyle? ThumbFocusedStyle { get; init; }
+    public Style? ThumbFocusedStyle { get; init; }
 
     /// <summary>
     /// Gets the optional style when the slider is disabled.
     /// </summary>
-    public CellStyle? DisabledStyle { get; init; }
+    public Style? DisabledStyle { get; init; }
 
     /// <summary>
     /// Resolves the inactive track style for the provided <paramref name="theme"/>.
     /// </summary>
-    public CellStyle ResolveTrackStyle(Theme theme)
+    public Style ResolveTrackStyle(Theme theme)
         => TrackStyle ?? theme.BorderStyle(focused: false);
 
     /// <summary>
     /// Resolves the active track style for the provided <paramref name="theme"/>.
     /// </summary>
-    public CellStyle ResolveActiveTrackStyle(Theme theme)
+    public Style ResolveActiveTrackStyle(Theme theme)
     {
         var style = ActiveTrackStyle;
         if (style is not null)
@@ -99,7 +99,7 @@ public sealed record SliderStyle : IStyle<SliderStyle>
         }
 
         var fg = theme.Accent ?? theme.FocusBorder ?? theme.Foreground;
-        var resolved = CellStyle.None | TextStyle.Bold;
+        var resolved = Style.None | TextStyle.Bold;
         if (fg is { } c)
         {
             resolved = resolved.WithForeground(c);
@@ -115,7 +115,7 @@ public sealed record SliderStyle : IStyle<SliderStyle>
     /// <param name="focused">Whether the slider is focused.</param>
     /// <param name="hovered">Whether the thumb is hovered.</param>
     /// <param name="pressed">Whether the thumb is pressed.</param>
-    public CellStyle ResolveThumbStyle(Theme theme, bool enabled, bool focused, bool hovered, bool pressed)
+    public Style ResolveThumbStyle(Theme theme, bool enabled, bool focused, bool hovered, bool pressed)
     {
         if (!enabled)
         {

@@ -46,7 +46,7 @@ public sealed class KeyBindingTests
 
         protected override void RenderOverride(CellBuffer buffer)
         {
-            buffer.WriteText(Bounds.X, Bounds.Y, $"Count:{Count}".AsSpan(), CellStyle.None);
+            buffer.WriteText(Bounds.X, Bounds.Y, $"Count:{Count}".AsSpan(), Style.None);
         }
     }
 }

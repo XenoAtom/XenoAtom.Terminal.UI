@@ -42,14 +42,14 @@ public sealed record BarChartStyle : IStyle<BarChartStyle>
     /// <summary>
     /// Gets the optional fill style for bars.
     /// </summary>
-    public CellStyle? FillStyle { get; init; }
+    public Style? FillStyle { get; init; }
 
     /// <summary>
     /// Resolves the fill style for the given theme.
     /// </summary>
     /// <param name="theme">The current theme.</param>
     /// <returns>The resolved cell style.</returns>
-    public CellStyle ResolveFill(Theme theme)
+    public Style ResolveFill(Theme theme)
     {
         if (FillStyle is { } s)
         {

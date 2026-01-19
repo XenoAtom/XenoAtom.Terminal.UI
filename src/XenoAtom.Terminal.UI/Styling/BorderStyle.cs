@@ -70,33 +70,33 @@ public sealed record BorderStyle : IStyle<BorderStyle>
     /// <summary>
     /// Gets the optional border style used when not focused.
     /// </summary>
-    public CellStyle? BorderCellStyle { get; init; }
+    public Style? BorderCellStyle { get; init; }
 
     /// <summary>
     /// Gets the optional border style used when focus is within the border subtree.
     /// </summary>
-    public CellStyle? FocusedBorderCellStyle { get; init; }
+    public Style? FocusedBorderCellStyle { get; init; }
 
     /// <summary>
     /// Gets the optional background style used to clear the border surface.
     /// </summary>
     /// <remarks>
     /// This style is applied to the full bounds of the border before drawing the glyphs, so it can be used to fill
-    /// the interior background if desired. When <c>null</c>, the border clears using <see cref="CellStyle.None"/>.
+    /// the interior background if desired. When <c>null</c>, the border clears using <see cref="Style.None"/>.
     /// </remarks>
-    public CellStyle? BackgroundStyle { get; init; }
+    public Style? BackgroundStyle { get; init; }
 
     /// <summary>
     /// Resolves the border cell style for the provided <paramref name="theme"/> and focus state.
     /// </summary>
     /// <param name="theme">The current theme.</param>
     /// <param name="focusedWithin">Whether focus is within the border subtree.</param>
-    public CellStyle ResolveBorderStyle(Theme theme, bool focusedWithin)
+    public Style ResolveBorderStyle(Theme theme, bool focusedWithin)
         => focusedWithin ? (FocusedBorderCellStyle ?? theme.BorderStyle(focused: true)) : (BorderCellStyle ?? theme.BorderStyle(focused: false));
 
     /// <summary>
     /// Resolves the background style used to clear the border surface.
     /// </summary>
-    public CellStyle ResolveBackgroundStyle() => BackgroundStyle ?? CellStyle.None;
+    public Style ResolveBackgroundStyle() => BackgroundStyle ?? Style.None;
 }
 

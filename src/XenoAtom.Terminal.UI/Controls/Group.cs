@@ -352,7 +352,7 @@ public sealed partial class Group : Visual
         }
     }
 
-    private static void RenderLabelLeft(CellBuffer buffer, Visual? label, int innerLeft, int y, int innerWidth, CellStyle style)
+    private static void RenderLabelLeft(CellBuffer buffer, Visual? label, int innerLeft, int y, int innerWidth, Style style)
     {
         if (label is null)
         {
@@ -371,7 +371,7 @@ public sealed partial class Group : Visual
         }
     }
 
-    private static void RenderLabelRight(CellBuffer buffer, Visual? label, int innerLeft, int y, int innerWidth, CellStyle style)
+    private static void RenderLabelRight(CellBuffer buffer, Visual? label, int innerLeft, int y, int innerWidth, Style style)
     {
         if (label is null)
         {

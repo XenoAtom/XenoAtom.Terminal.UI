@@ -117,32 +117,32 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     /// <summary>
     /// Gets the optional style for the tab strip background.
     /// </summary>
-    public CellStyle? StripStyle { get; init; }
+    public Style? StripStyle { get; init; }
 
     /// <summary>
     /// Gets the optional base style for a tab header.
     /// </summary>
-    public CellStyle? TabStyle { get; init; }
+    public Style? TabStyle { get; init; }
 
     /// <summary>
     /// Gets the optional style for a hovered tab header.
     /// </summary>
-    public CellStyle? TabHoveredStyle { get; init; }
+    public Style? TabHoveredStyle { get; init; }
 
     /// <summary>
     /// Gets the optional style for a pressed tab header.
     /// </summary>
-    public CellStyle? TabPressedStyle { get; init; }
+    public Style? TabPressedStyle { get; init; }
 
     /// <summary>
     /// Gets the optional style for a selected tab header.
     /// </summary>
-    public CellStyle? TabSelectedStyle { get; init; }
+    public Style? TabSelectedStyle { get; init; }
 
     /// <summary>
     /// Gets the optional style for a disabled tab header.
     /// </summary>
-    public CellStyle? TabDisabledStyle { get; init; }
+    public Style? TabDisabledStyle { get; init; }
 
     /// <summary>
     /// Gets an optional template factory used to wrap the tab content host.
@@ -157,7 +157,7 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     /// <summary>
     /// Resolves the strip style for the provided <paramref name="theme"/>.
     /// </summary>
-    public CellStyle ResolveStripStyle(Theme theme) => StripStyle ?? theme.BaseTextStyle();
+    public Style ResolveStripStyle(Theme theme) => StripStyle ?? theme.BaseTextStyle();
 
     /// <summary>
     /// Resolves the tab style for the provided state.
@@ -168,7 +168,7 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     /// <param name="selected">Whether the tab is selected.</param>
     /// <param name="hovered">Whether the tab is hovered.</param>
     /// <param name="pressed">Whether the tab is pressed.</param>
-    public CellStyle ResolveTabStyle(Theme theme, bool enabled, bool focused, bool selected, bool hovered, bool pressed)
+    public Style ResolveTabStyle(Theme theme, bool enabled, bool focused, bool selected, bool hovered, bool pressed)
     {
         ArgumentNullException.ThrowIfNull(theme);
 
@@ -207,7 +207,7 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
         return normal;
     }
 
-    private static CellStyle ResolveDefaultHovered(Theme theme, CellStyle normal)
+    private static Style ResolveDefaultHovered(Theme theme, Style normal)
     {
         if (theme.SurfaceAlt is { } hoverBg)
         {
@@ -217,7 +217,7 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
         return normal | TextStyle.Bold;
     }
 
-    private static CellStyle ResolveDefaultPressed(Theme theme, CellStyle normal)
+    private static Style ResolveDefaultPressed(Theme theme, Style normal)
     {
         if (theme.Selection is { } selectionBg)
         {
@@ -227,7 +227,7 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
         return normal | TextStyle.Bold;
     }
 
-    private static CellStyle ResolveDefaultSelected(Theme theme, CellStyle normal)
+    private static Style ResolveDefaultSelected(Theme theme, Style normal)
     {
         var style = normal | TextStyle.Bold;
         if (theme.Accent is { } accent)
@@ -237,7 +237,7 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
         return style;
     }
 
-    private static CellStyle ResolveDefaultFocused(Theme theme, CellStyle style)
+    private static Style ResolveDefaultFocused(Theme theme, Style style)
     {
         if (theme.FocusBorder is { } focus)
         {

@@ -35,19 +35,19 @@ public sealed record NumberBoxStyle : IStyle<NumberBoxStyle>
     /// <summary>
     /// Gets an optional foreground color override for the validation message.
     /// </summary>
-    public AnsiColor? ValidationForeground { get; init; }
+    public Color? ValidationForeground { get; init; }
 
     /// <summary>
     /// Gets an optional background color override for the validation message.
     /// </summary>
-    public AnsiColor? ValidationBackground { get; init; }
+    public Color? ValidationBackground { get; init; }
 
     /// <summary>
     /// Resolves the style used to render the validation message.
     /// </summary>
     /// <param name="theme">The resolved theme.</param>
     /// <returns>The style used to render the validation message line.</returns>
-    public CellStyle ValidationStyle(Theme theme)
+    public Style ValidationStyle(Theme theme)
     {
         var style = theme.BaseTextStyle();
 

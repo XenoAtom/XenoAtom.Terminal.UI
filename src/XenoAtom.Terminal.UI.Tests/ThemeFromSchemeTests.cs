@@ -13,7 +13,7 @@ public sealed class ThemeFromSchemeTests
     [TestMethod]
     public void FromScheme_Uses_Palette_Neutrals_For_Dark_Schemes()
     {
-        var scheme = AnsiColorScheme.RootLoopsDark;
+        var scheme = ColorScheme.RootLoopsDark;
         var theme = Theme.FromScheme(scheme, ThemeSchemeBrightness.Auto);
 
         Assert.AreEqual(scheme.Background, theme.Background);
@@ -25,7 +25,7 @@ public sealed class ThemeFromSchemeTests
     [TestMethod]
     public void FromScheme_Derives_Neutrals_Close_To_Background_For_Light_Schemes()
     {
-        var scheme = AnsiColorScheme.RootLoopsLight;
+        var scheme = ColorScheme.RootLoopsLight;
         var theme = Theme.FromScheme(scheme, ThemeSchemeBrightness.Auto);
 
         Assert.AreEqual(scheme.Background, theme.Background);
@@ -50,9 +50,9 @@ public sealed class ThemeFromSchemeTests
         Assert.AreNotEqual(scheme.BrightBlack, theme.SurfaceAlt);
     }
 
-    private static float GetLuma(AnsiColor color)
+    private static float GetLuma(Color color)
     {
-        Assert.AreEqual(AnsiColorKind.Rgb, color.Kind);
+        Assert.AreEqual(ColorKind.Rgb, color.Kind);
 
         static float ToLinear(byte channel)
         {

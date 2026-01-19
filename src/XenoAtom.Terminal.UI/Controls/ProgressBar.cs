@@ -120,7 +120,7 @@ public sealed partial class ProgressBar : Visual
         RenderSolid(buffer, rect.Y, barStartX, barWidth, value, progressStyle.FillGlyph, progressStyle.TrackGlyph, filledStyle, unfilledStyle);
     }
 
-    private static void RenderSolid(CellBuffer buffer, int y, int x, int width, double value, Rune fill, Rune track, CellStyle fillStyle, CellStyle trackStyle)
+    private static void RenderSolid(CellBuffer buffer, int y, int x, int width, double value, Rune fill, Rune track, Style fillStyle, Style trackStyle)
     {
         var filled = (int)Math.Round(width * value);
         filled = Math.Clamp(filled, 0, width);
@@ -131,7 +131,7 @@ public sealed partial class ProgressBar : Visual
         }
     }
 
-    private static void RenderSegmented(CellBuffer buffer, int y, int x, int width, double value, Rune fullFill, Rune track, CellStyle fillStyle, CellStyle trackStyle)
+    private static void RenderSegmented(CellBuffer buffer, int y, int x, int width, double value, Rune fullFill, Rune track, Style fillStyle, Style trackStyle)
     {
         value = Math.Clamp(value, 0.0, 1.0);
         var scaled = value * width;

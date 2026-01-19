@@ -33,14 +33,14 @@ public sealed record CanvasStyle : IStyle<CanvasStyle>
     /// <remarks>
     /// When <c>null</c>, the style is resolved from the current theme.
     /// </remarks>
-    public CellStyle? DefaultStyle { get; init; }
+    public Style? DefaultStyle { get; init; }
 
     /// <summary>
     /// Resolves the default drawing style for the specified theme.
     /// </summary>
     /// <param name="theme">The current theme.</param>
     /// <returns>The resolved style.</returns>
-    public CellStyle ResolveDefaultStyle(Theme theme)
+    public Style ResolveDefaultStyle(Theme theme)
     {
         ArgumentNullException.ThrowIfNull(theme);
         if (DefaultStyle is { } style)

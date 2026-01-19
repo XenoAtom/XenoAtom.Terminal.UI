@@ -6,7 +6,6 @@ using XenoAtom.Terminal;
 using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Rendering;
-using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -16,11 +15,11 @@ public sealed class InlineInteractiveHostTests
     private static CellBuffer CreateBuffer(int width, params string[] lines)
     {
         var buffer = new CellBuffer(width, lines.Length);
-        buffer.Clear(CellStyle.None);
+        buffer.Clear(Style.None);
 
         for (var i = 0; i < lines.Length; i++)
         {
-            buffer.WriteText(0, i, lines[i].AsSpan(), CellStyle.None);
+            buffer.WriteText(0, i, lines[i].AsSpan(), Style.None);
         }
 
         return buffer;

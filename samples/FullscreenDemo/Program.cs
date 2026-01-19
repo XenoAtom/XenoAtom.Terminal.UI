@@ -115,7 +115,7 @@ menuBar.Items.AddRange(menuFile, menuView, menuHelp);
 //    Border = Theme.Default.Border,
 //    FocusBorder = Theme.Default.FocusBorder,
 //    Accent = Theme.Default.Accent,
-//    Selection = AnsiColor.Rgb(0x00, 0xFF, 0x00),
+//    Selection = Color.Rgb(0x00, 0xFF, 0x00),
 //    Disabled = Theme.Default.Disabled,
 //});
 

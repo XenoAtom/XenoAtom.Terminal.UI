@@ -39,37 +39,37 @@ public sealed record MenuBarStyle : IStyle<MenuBarStyle>
     /// <summary>
     /// Gets the optional style used for the bar background.
     /// </summary>
-    public CellStyle? BarStyle { get; init; }
+    public Style? BarStyle { get; init; }
     
     /// <summary>
     /// Gets the optional style used for normal items.
     /// </summary>
-    public CellStyle? ItemStyle { get; init; }
+    public Style? ItemStyle { get; init; }
     
     /// <summary>
     /// Gets the optional style used for hovered items.
     /// </summary>
-    public CellStyle? ItemHoverStyle { get; init; }
+    public Style? ItemHoverStyle { get; init; }
     
     /// <summary>
     /// Gets the optional style used for open items.
     /// </summary>
-    public CellStyle? ItemOpenStyle { get; init; }
+    public Style? ItemOpenStyle { get; init; }
     
     /// <summary>
     /// Gets the optional style used for selected items.
     /// </summary>
-    public CellStyle? ItemSelectedStyle { get; init; }
+    public Style? ItemSelectedStyle { get; init; }
     
     /// <summary>
     /// Gets the optional style used for disabled items.
     /// </summary>
-    public CellStyle? ItemDisabledStyle { get; init; }
+    public Style? ItemDisabledStyle { get; init; }
 
     /// <summary>
     /// Resolves the bar style for the provided <paramref name="theme"/>.
     /// </summary>
-    public CellStyle ResolveBarStyle(Theme theme)
+    public Style ResolveBarStyle(Theme theme)
     {
         if (BarStyle is { } s)
         {
@@ -97,7 +97,7 @@ public sealed record MenuBarStyle : IStyle<MenuBarStyle>
     /// <param name="open">Whether the item is open.</param>
     /// <param name="selected">Whether the item is selected.</param>
     /// <param name="hovered">Whether the item is hovered.</param>
-    public CellStyle ResolveItemStyle(Theme theme, bool enabled, bool open, bool selected, bool hovered)
+    public Style ResolveItemStyle(Theme theme, bool enabled, bool open, bool selected, bool hovered)
     {
         if (!enabled)
         {

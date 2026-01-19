@@ -8,7 +8,6 @@ using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Rendering;
-using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -48,14 +47,14 @@ public sealed class CheckBoxTests
         typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(checkBox, new object[] { buffer });
 
         var scalars = (int[])typeof(CellBuffer).GetField("_scalars", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
-        var cells = (CellStyle[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
+        var cells = (Style[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
 
         Assert.AreEqual(wideGlyph.Value, scalars[0]);
 
         var glyphWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(wideGlyph));
         if (glyphWidth > 1)
         {
-            Assert.IsTrue((bool)typeof(CellStyle).GetProperty("IsContinuation", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(cells[1])!);
+            Assert.IsTrue((bool)typeof(Style).GetProperty("IsContinuation", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(cells[1])!);
         }
 
         var labelIndex = Array.IndexOf(scalars, 'A');

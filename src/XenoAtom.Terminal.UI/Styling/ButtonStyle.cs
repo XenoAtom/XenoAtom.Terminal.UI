@@ -45,27 +45,27 @@ public sealed record ButtonStyle : IStyle<ButtonStyle>
     /// <summary>
     /// Gets the optional style for the normal state.
     /// </summary>
-    public CellStyle? Normal { get; init; }
+    public Style? Normal { get; init; }
 
     /// <summary>
     /// Gets the optional style for the hovered state.
     /// </summary>
-    public CellStyle? Hovered { get; init; }
+    public Style? Hovered { get; init; }
 
     /// <summary>
     /// Gets the optional style for the pressed state.
     /// </summary>
-    public CellStyle? Pressed { get; init; }
+    public Style? Pressed { get; init; }
 
     /// <summary>
     /// Gets the optional style for the focused state.
     /// </summary>
-    public CellStyle? Focused { get; init; }
+    public Style? Focused { get; init; }
 
     /// <summary>
     /// Gets the optional style for the disabled state.
     /// </summary>
-    public CellStyle? Disabled { get; init; }
+    public Style? Disabled { get; init; }
 
     /// <summary>
     /// Resolves the button style for the provided state.
@@ -76,7 +76,7 @@ public sealed record ButtonStyle : IStyle<ButtonStyle>
     /// <param name="hovered">Whether the pointer is hovering over the button.</param>
     /// <param name="pressed">Whether the button is pressed.</param>
     /// <param name="tone">The semantic tone of the button.</param>
-    public CellStyle Resolve(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, ControlTone tone)
+    public Style Resolve(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, ControlTone tone)
     {
         ArgumentNullException.ThrowIfNull(theme);
 
@@ -116,7 +116,7 @@ public sealed record ButtonStyle : IStyle<ButtonStyle>
         return style;
     }
 
-    private static CellStyle ResolveDefaultNormal(Theme theme, ControlTone tone)
+    private static Style ResolveDefaultNormal(Theme theme, ControlTone tone)
     {
         var (fg, bg) = tone switch
         {
@@ -127,13 +127,13 @@ public sealed record ButtonStyle : IStyle<ButtonStyle>
             _ => (theme.Foreground, theme.Surface ?? theme.SurfaceAlt ?? theme.Background),
         };
 
-        var resolved = CellStyle.None;
+        var resolved = Style.None;
         if (fg is { } fgc) resolved = resolved.WithForeground(fgc);
         if (bg is { } bgc) resolved = resolved.WithBackground(bgc);
         return resolved;
     }
 
-    private static CellStyle ResolveDefaultHovered(Theme theme, CellStyle normal, ControlTone tone)
+    private static Style ResolveDefaultHovered(Theme theme, Style normal, ControlTone tone)
     {
         if (tone == ControlTone.Default && theme.SurfaceAlt is { } hoverBg)
         {
@@ -143,7 +143,7 @@ public sealed record ButtonStyle : IStyle<ButtonStyle>
         return normal | TextStyle.Bold;
     }
 
-    private static CellStyle ResolveDefaultPressed(Theme theme, CellStyle normal)
+    private static Style ResolveDefaultPressed(Theme theme, Style normal)
     {
         if (theme.Selection is { } selectionBg)
         {
@@ -153,7 +153,7 @@ public sealed record ButtonStyle : IStyle<ButtonStyle>
         return normal | TextStyle.Bold;
     }
 
-    private static CellStyle ResolveDefaultFocused(Theme theme, CellStyle normal, ControlTone tone)
+    private static Style ResolveDefaultFocused(Theme theme, Style normal, ControlTone tone)
     {
         var style = normal;
 

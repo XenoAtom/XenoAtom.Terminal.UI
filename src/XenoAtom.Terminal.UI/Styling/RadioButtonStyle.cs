@@ -34,22 +34,22 @@ public sealed record RadioButtonStyle : IStyle<RadioButtonStyle>
     /// <summary>
     /// Gets the optional style used for the normal state.
     /// </summary>
-    public CellStyle? Normal { get; init; }
+    public Style? Normal { get; init; }
     
     /// <summary>
     /// Gets the optional style used for the hovered state.
     /// </summary>
-    public CellStyle? Hovered { get; init; }
+    public Style? Hovered { get; init; }
     
     /// <summary>
     /// Gets the optional style used for the focused state.
     /// </summary>
-    public CellStyle? Focused { get; init; }
+    public Style? Focused { get; init; }
     
     /// <summary>
     /// Gets the optional style used for the disabled state.
     /// </summary>
-    public CellStyle? Disabled { get; init; }
+    public Style? Disabled { get; init; }
 
     /// <summary>
     /// Resolves the radio button style for the provided state.
@@ -58,7 +58,7 @@ public sealed record RadioButtonStyle : IStyle<RadioButtonStyle>
     /// <param name="enabled">Whether the control is enabled.</param>
     /// <param name="focused">Whether the control is focused.</param>
     /// <param name="hovered">Whether the control is hovered.</param>
-    public CellStyle Resolve(Theme theme, bool enabled, bool focused, bool hovered)
+    public Style Resolve(Theme theme, bool enabled, bool focused, bool hovered)
     {
         var baseStyle = theme.ForegroundTextStyle();
 

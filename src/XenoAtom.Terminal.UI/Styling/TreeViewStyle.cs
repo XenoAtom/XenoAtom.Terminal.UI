@@ -75,22 +75,22 @@ public sealed record TreeViewStyle : IStyle<TreeViewStyle>
     /// <summary>
     /// Gets the optional style used for a normal item.
     /// </summary>
-    public CellStyle? Item { get; init; }
+    public Style? Item { get; init; }
 
     /// <summary>
     /// Gets the optional style used for a selected and focused item.
     /// </summary>
-    public CellStyle? SelectedFocused { get; init; }
+    public Style? SelectedFocused { get; init; }
 
     /// <summary>
     /// Gets the optional style used for a selected but unfocused item.
     /// </summary>
-    public CellStyle? SelectedUnfocused { get; init; }
+    public Style? SelectedUnfocused { get; init; }
 
     /// <summary>
     /// Gets the optional style used for disabled items.
     /// </summary>
-    public CellStyle? Disabled { get; init; }
+    public Style? Disabled { get; init; }
     
     /// <summary>
     /// Resolves the icon to display for a node.
@@ -111,7 +111,7 @@ public sealed record TreeViewStyle : IStyle<TreeViewStyle>
     /// <param name="selected">Whether the item is selected.</param>
     /// <param name="focused">Whether the tree view is focused.</param>
     /// <returns>The resolved style.</returns>
-    public CellStyle ResolveItemStyle(Theme theme, bool enabled, bool selected, bool focused)
+    public Style ResolveItemStyle(Theme theme, bool enabled, bool selected, bool focused)
     {
         var baseStyle = theme.ForegroundTextStyle();
 
@@ -150,6 +150,6 @@ public sealed record TreeViewStyle : IStyle<TreeViewStyle>
             return selectedStyle;
         }
 
-        return SelectedUnfocused ?? (CellStyle.None | TextStyle.Bold | theme.BorderStyle(focused: false));
+        return SelectedUnfocused ?? (Style.None | TextStyle.Bold | theme.BorderStyle(focused: false));
     }
 }

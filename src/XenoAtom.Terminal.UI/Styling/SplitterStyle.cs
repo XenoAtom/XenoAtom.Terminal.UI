@@ -35,27 +35,27 @@ public sealed record SplitterStyle : IStyle<SplitterStyle>
     /// <summary>
     /// Gets the optional base bar style.
     /// </summary>
-    public CellStyle? BarStyle { get; init; }
+    public Style? BarStyle { get; init; }
     
     /// <summary>
     /// Gets the optional style used when hovered.
     /// </summary>
-    public CellStyle? HoverStyle { get; init; }
+    public Style? HoverStyle { get; init; }
     
     /// <summary>
     /// Gets the optional style used when focused.
     /// </summary>
-    public CellStyle? FocusStyle { get; init; }
+    public Style? FocusStyle { get; init; }
     
     /// <summary>
     /// Gets the optional style used while dragging.
     /// </summary>
-    public CellStyle? DragStyle { get; init; }
+    public Style? DragStyle { get; init; }
     
     /// <summary>
     /// Gets the optional style used when disabled.
     /// </summary>
-    public CellStyle? DisabledStyle { get; init; }
+    public Style? DisabledStyle { get; init; }
 
     /// <summary>
     /// Resolves the splitter bar style for the provided state.
@@ -65,7 +65,7 @@ public sealed record SplitterStyle : IStyle<SplitterStyle>
     /// <param name="focused">Whether the splitter is focused.</param>
     /// <param name="hovered">Whether the bar is hovered.</param>
     /// <param name="dragging">Whether the bar is being dragged.</param>
-    public CellStyle Resolve(Theme theme, bool enabled, bool focused, bool hovered, bool dragging)
+    public Style Resolve(Theme theme, bool enabled, bool focused, bool hovered, bool dragging)
     {
         if (!enabled)
         {

@@ -29,19 +29,19 @@ public sealed record PopupStyle : IStyle<PopupStyle>
     /// <summary>
     /// Gets the optional surface style.
     /// </summary>
-    public CellStyle? SurfaceStyle { get; init; }
+    public Style? SurfaceStyle { get; init; }
 
     /// <summary>
     /// Gets the optional border style.
     /// </summary>
-    public CellStyle? BorderStyle { get; init; }
+    public Style? BorderStyle { get; init; }
 
     /// <summary>
     /// Resolves the surface style for the given theme.
     /// </summary>
     /// <param name="theme">The current theme.</param>
     /// <returns>The resolved cell style.</returns>
-    public CellStyle ResolveSurfaceStyle(Theme theme)
+    public Style ResolveSurfaceStyle(Theme theme)
     {
         if (SurfaceStyle is { } surface)
         {
@@ -66,7 +66,7 @@ public sealed record PopupStyle : IStyle<PopupStyle>
     /// </summary>
     /// <param name="theme">The current theme.</param>
     /// <returns>The resolved cell style.</returns>
-    public CellStyle ResolveBorderStyle(Theme theme)
+    public Style ResolveBorderStyle(Theme theme)
     {
         if (BorderStyle is { } border)
         {

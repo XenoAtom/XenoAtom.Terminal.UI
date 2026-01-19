@@ -9,7 +9,6 @@ using XenoAtom.Terminal.UI.Hosting;
 using System.Reflection;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Rendering;
-using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -49,7 +48,7 @@ public sealed class SwitchTests
     [TestMethod]
     public void Switch_Renders_Segmented_Track_With_Different_Left_And_Right_Backgrounds()
     {
-        var theme = Theme.FromScheme(XenoAtom.Terminal.UI.Styling.AnsiColorScheme.RootLoopsDark);
+        var theme = Theme.FromScheme(XenoAtom.Terminal.UI.Styling.ColorScheme.RootLoopsDark);
 
         var sw = new Switch();
         sw.Set(Theme.Key, theme);
@@ -61,7 +60,7 @@ public sealed class SwitchTests
         buffer.Clear();
         typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(sw, new object[] { buffer });
 
-        var cells = (CellStyle[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
+        var cells = (Style[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
 
         Assert.IsTrue(cells[0].TryGetBackground(out var leftOffBg));
         Assert.IsTrue(cells[3].TryGetBackground(out var rightOffBg));
@@ -74,7 +73,7 @@ public sealed class SwitchTests
         sw.IsOn = true;
         buffer.Clear();
         typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(sw, new object[] { buffer });
-        cells = (CellStyle[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
+        cells = (Style[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
 
         Assert.IsTrue(cells[0].TryGetBackground(out var leftOnBg));
         Assert.IsTrue(cells[3].TryGetBackground(out var rightOnBg));

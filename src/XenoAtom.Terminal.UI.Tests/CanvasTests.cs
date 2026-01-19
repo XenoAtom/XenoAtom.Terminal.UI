@@ -6,7 +6,6 @@ using System.Text;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI.Controls;
-using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -26,9 +25,9 @@ public sealed class CanvasTests
             .MaxHeight(6)
             .Painter(ctx =>
             {
-                ctx.Clear(new Rune(' '), CellStyle.None);
-                ctx.DrawBox(0, 0, 12, 6, LineGlyphs.Single, CellStyle.None);
-                ctx.DrawLine(1, 1, 10, 4, new Rune('*'), CellStyle.None);
+                ctx.Clear(new Rune(' '), Style.None);
+                ctx.DrawBox(0, 0, 12, 6, LineGlyphs.Single, Style.None);
+                ctx.DrawLine(1, 1, 10, 4, new Rune('*'), Style.None);
             });
 
         session.Instance.Write(canvas);
@@ -55,8 +54,8 @@ public sealed class CanvasTests
             .MaxHeight(7)
             .Painter(ctx =>
             {
-                ctx.Clear(new Rune(' '), CellStyle.None);
-                ctx.DrawCircle(5, 3, 2, new Rune('o'), CellStyle.None);
+                ctx.Clear(new Rune(' '), Style.None);
+                ctx.DrawCircle(5, 3, 2, new Rune('o'), Style.None);
             });
 
         session.Instance.Write(canvas);

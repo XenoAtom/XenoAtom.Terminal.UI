@@ -136,7 +136,7 @@ public sealed partial class ListBox : Visual
         var theme = GetTheme();
 
         // Fill background.
-        var background = CellStyle.None;
+        var background = Style.None;
         for (var y = rect.Y; y < rect.Y + rect.Height; y++)
         {
             for (var x = rect.X; x < rect.X + rect.Width; x++)

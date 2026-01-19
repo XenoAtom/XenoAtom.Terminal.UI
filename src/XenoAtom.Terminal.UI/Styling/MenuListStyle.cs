@@ -54,27 +54,27 @@ public sealed record MenuListStyle : IStyle<MenuListStyle>
     /// <summary>
     /// Gets the optional style used for normal items.
     /// </summary>
-    public CellStyle? ItemStyle { get; init; }
+    public Style? ItemStyle { get; init; }
     
     /// <summary>
     /// Gets the optional style used for selected items.
     /// </summary>
-    public CellStyle? SelectedStyle { get; init; }
+    public Style? SelectedStyle { get; init; }
     
     /// <summary>
     /// Gets the optional style used for hovered items.
     /// </summary>
-    public CellStyle? HoveredStyle { get; init; }
+    public Style? HoveredStyle { get; init; }
     
     /// <summary>
     /// Gets the optional style used for disabled items.
     /// </summary>
-    public CellStyle? DisabledStyle { get; init; }
+    public Style? DisabledStyle { get; init; }
     
     /// <summary>
     /// Gets the optional style used for separators.
     /// </summary>
-    public CellStyle? SeparatorStyle { get; init; }
+    public Style? SeparatorStyle { get; init; }
 
     /// <summary>
     /// Gets the factory function used to create an optional template wrapper for the menu list when it is shown in a popup.
@@ -91,7 +91,7 @@ public sealed record MenuListStyle : IStyle<MenuListStyle>
     /// <param name="enabled">Whether the item is enabled.</param>
     /// <param name="selected">Whether the item is selected.</param>
     /// <param name="hovered">Whether the item is hovered.</param>
-    public CellStyle ResolveItemStyle(Theme theme, bool enabled, bool selected, bool hovered)
+    public Style ResolveItemStyle(Theme theme, bool enabled, bool selected, bool hovered)
     {
         var baseStyle = theme.ForegroundTextStyle();
 
@@ -131,7 +131,7 @@ public sealed record MenuListStyle : IStyle<MenuListStyle>
     /// <summary>
     /// Resolves the separator style for the provided <paramref name="theme"/>.
     /// </summary>
-    public CellStyle ResolveSeparatorStyle(Theme theme)
+    public Style ResolveSeparatorStyle(Theme theme)
     {
         if (SeparatorStyle is { } s)
         {

@@ -44,22 +44,22 @@ public sealed record SelectStyle : IStyle<SelectStyle>
     /// <summary>
     /// Gets the optional style used for the normal state.
     /// </summary>
-    public CellStyle? NormalStyle { get; init; }
+    public Style? NormalStyle { get; init; }
 
     /// <summary>
     /// Gets the optional style used for the hovered state.
     /// </summary>
-    public CellStyle? HoverStyle { get; init; }
+    public Style? HoverStyle { get; init; }
 
     /// <summary>
     /// Gets the optional style used for the focused state.
     /// </summary>
-    public CellStyle? FocusedStyle { get; init; }
+    public Style? FocusedStyle { get; init; }
 
     /// <summary>
     /// Gets the optional style used for the disabled state.
     /// </summary>
-    public CellStyle? DisabledStyle { get; init; }
+    public Style? DisabledStyle { get; init; }
 
     /// <summary>
     /// Gets the factory function used to create a border visual for a given popup visual element.
@@ -73,7 +73,7 @@ public sealed record SelectStyle : IStyle<SelectStyle>
     /// <param name="enabled">Whether the control is enabled.</param>
     /// <param name="focused">Whether the control is focused.</param>
     /// <param name="hovered">Whether the control is hovered.</param>
-    public CellStyle ResolveStyle(Theme theme, bool enabled, bool focused, bool hovered)
+    public Style ResolveStyle(Theme theme, bool enabled, bool focused, bool hovered)
     {
         if (!enabled && DisabledStyle is { } disabled)
         {
@@ -95,7 +95,7 @@ public sealed record SelectStyle : IStyle<SelectStyle>
             return normal;
         }
 
-        var style = CellStyle.None;
+        var style = Style.None;
         if (!enabled)
         {
             style |= TextStyle.Dim;

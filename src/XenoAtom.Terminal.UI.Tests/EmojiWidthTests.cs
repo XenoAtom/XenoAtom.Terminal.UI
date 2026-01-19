@@ -4,7 +4,6 @@
 
 using System.Reflection;
 using XenoAtom.Terminal.UI.Rendering;
-using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -20,10 +19,10 @@ public sealed class EmojiWidthTests
 
         var buffer = new CellBuffer(20, 1);
         buffer.Clear();
-        buffer.WriteText(0, 0, text.AsSpan(), CellStyle.None);
+        buffer.WriteText(0, 0, text.AsSpan(), Style.None);
 
         var scalars = (int[])typeof(CellBuffer).GetField("_scalars", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
-        var cells = (CellStyle[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
+        var cells = (Style[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
 
         Assert.IsLessThan(0, scalars[0], "Expected a grapheme cluster token for the emoji text element.");
         Assert.IsTrue(buffer.TryGetTextElement(scalars[0], out var element, out var elementWidth));
@@ -31,7 +30,7 @@ public sealed class EmojiWidthTests
         Assert.AreEqual(2, elementWidth);
 
         // Wide glyphs occupy a leading cell + a continuation cell.
-        Assert.IsTrue((bool)typeof(CellStyle).GetProperty("IsContinuation", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(cells[1])!);
+        Assert.IsTrue((bool)typeof(Style).GetProperty("IsContinuation", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(cells[1])!);
 
         // The first typed space must appear after the wide glyph (cell 2).
         Assert.AreEqual(' ', scalars[2]);

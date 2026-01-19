@@ -44,22 +44,22 @@ public sealed record SelectionListStyle : IStyle<SelectionListStyle>
     /// <summary>
     /// Gets the optional style for a normal item.
     /// </summary>
-    public CellStyle? Item { get; init; }
+    public Style? Item { get; init; }
     
     /// <summary>
     /// Gets the optional style for a selected item when focused.
     /// </summary>
-    public CellStyle? SelectedFocused { get; init; }
+    public Style? SelectedFocused { get; init; }
     
     /// <summary>
     /// Gets the optional style for a selected item when unfocused.
     /// </summary>
-    public CellStyle? SelectedUnfocused { get; init; }
+    public Style? SelectedUnfocused { get; init; }
     
     /// <summary>
     /// Gets the optional style for disabled items.
     /// </summary>
-    public CellStyle? Disabled { get; init; }
+    public Style? Disabled { get; init; }
 
     /// <summary>
     /// Resolves the style for an item given its state.
@@ -68,7 +68,7 @@ public sealed record SelectionListStyle : IStyle<SelectionListStyle>
     /// <param name="enabled">Whether the item is enabled.</param>
     /// <param name="selected">Whether the item is selected.</param>
     /// <param name="focused">Whether the list is focused.</param>
-    public CellStyle ResolveItemStyle(Theme theme, bool enabled, bool selected, bool focused)
+    public Style ResolveItemStyle(Theme theme, bool enabled, bool selected, bool focused)
     {
         var baseStyle = theme.ForegroundTextStyle();
 
@@ -107,6 +107,6 @@ public sealed record SelectionListStyle : IStyle<SelectionListStyle>
             return selectedStyle;
         }
 
-        return SelectedUnfocused ?? (CellStyle.None | TextStyle.Bold | theme.BorderStyle(focused: false));
+        return SelectedUnfocused ?? (Style.None | TextStyle.Bold | theme.BorderStyle(focused: false));
     }
 }

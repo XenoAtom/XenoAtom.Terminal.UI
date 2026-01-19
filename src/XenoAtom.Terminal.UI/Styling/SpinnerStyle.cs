@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Ansi;
+using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Rendering;
 
 namespace XenoAtom.Terminal.UI.Styling;
@@ -98,7 +99,7 @@ public sealed record SpinnerStyle : IStyle<SpinnerStyle>
     /// <summary>
     /// Gets the optional foreground color used to render the spinner.
     /// </summary>
-    public AnsiColor? Foreground { get; init; }
+    public Color? Foreground { get; init; }
 
     /// <summary>
     /// Gets a frame string for the given frame index.
@@ -119,12 +120,12 @@ public sealed record SpinnerStyle : IStyle<SpinnerStyle>
     }
 
     /// <summary>
-    /// Resolves the <see cref="CellStyle"/> to use for rendering a spinner.
+    /// Resolves the <see cref="Style"/> to use for rendering a spinner.
     /// </summary>
     /// <param name="theme">The current theme.</param>
     /// <param name="enabled">Whether the spinner is enabled.</param>
     /// <param name="tone">The semantic tone used for color selection.</param>
-    public CellStyle Resolve(Theme theme, bool enabled, ControlTone tone)
+    public Style Resolve(Theme theme, bool enabled, ControlTone tone)
     {
         var fg = Foreground ?? tone switch
         {
@@ -135,7 +136,7 @@ public sealed record SpinnerStyle : IStyle<SpinnerStyle>
             _ => theme.Muted ?? theme.Foreground,
         };
 
-        var style = CellStyle.None;
+        var style = Style.None;
         if (fg is { } c)
         {
             style = style.WithForeground(c);

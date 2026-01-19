@@ -6,19 +6,19 @@
 // https://github.com/hamvocke/root-loops/
 //
 // MIT License
-// 
+//
 // Copyright (c) 2024 Hermann "Ham" Vocke
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -31,19 +31,19 @@
 // https://github.com/Evercoder/culori
 //
 // MIT License
-// 
+//
 // Copyright (c) 2018 Dan Burzo
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -55,10 +55,10 @@ using XenoAtom.Ansi;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
-public sealed partial record AnsiColorScheme
+public sealed partial record ColorScheme
 {
     /// <summary>
-    /// Generates a Root Loops <see cref="AnsiColorScheme"/> from numeric parameters.
+    /// Generates a Root Loops <see cref="ColorScheme"/> from numeric parameters.
     /// </summary>
     /// <param name="sugar">Controls accent lightness (0..10).</param>
     /// <param name="colors">Controls accent saturation (0..10).</param>
@@ -68,7 +68,7 @@ public sealed partial record AnsiColorScheme
     /// <param name="milk">Controls background/foreground lightness (typically 0..1).</param>
     /// <param name="name">Optional scheme name override.</param>
     /// <returns>The generated scheme.</returns>
-    public static AnsiColorScheme Generate(
+    public static ColorScheme Generate(
         int sugar,
         int colors,
         int sogginess,
@@ -79,7 +79,7 @@ public sealed partial record AnsiColorScheme
         => Generate(new RootLoopsRecipe(sugar, colors, sogginess, flavor, fruit, milk), name);
 
     /// <summary>
-    /// Generates a Root Loops <see cref="AnsiColorScheme"/> from numeric parameters and a discrete milk amount.
+    /// Generates a Root Loops <see cref="ColorScheme"/> from numeric parameters and a discrete milk amount.
     /// </summary>
     /// <param name="sugar">Controls accent lightness (0..10).</param>
     /// <param name="colors">Controls accent saturation (0..10).</param>
@@ -89,7 +89,7 @@ public sealed partial record AnsiColorScheme
     /// <param name="milk">Controls background/foreground lightness using a discrete preset.</param>
     /// <param name="name">Optional scheme name override.</param>
     /// <returns>The generated scheme.</returns>
-    public static AnsiColorScheme Generate(
+    public static ColorScheme Generate(
         int sugar,
         int colors,
         int sogginess,
@@ -100,12 +100,12 @@ public sealed partial record AnsiColorScheme
         => Generate(new RootLoopsRecipe(sugar, colors, sogginess, flavor, fruit, (int)milk), name);
 
     /// <summary>
-    /// Generates a Root Loops <see cref="AnsiColorScheme"/> from a recipe.
+    /// Generates a Root Loops <see cref="ColorScheme"/> from a recipe.
     /// </summary>
     /// <param name="recipe">The recipe.</param>
     /// <param name="name">Optional scheme name override.</param>
     /// <returns>The generated scheme.</returns>
-    public static AnsiColorScheme Generate(RootLoopsRecipe recipe, string? name = null)
+    public static ColorScheme Generate(RootLoopsRecipe recipe, string? name = null)
     {
         var sugar = Math.Clamp(recipe.Sugar, 0, 10);
         var colors = Math.Clamp(recipe.Colors, 0, 10);
@@ -124,12 +124,12 @@ public sealed partial record AnsiColorScheme
         var brightWhiteL = Logistics(lightness0: 90, lightness3: 15, milk);
         var foregroundL = Logistics(lightness0: 96, lightness3: 4, milk);
 
-        var background = OkhslToAnsiColor(new Okhsl(baseHue, baseSaturation, backgroundL / 100.0));
-        var black = OkhslToAnsiColor(new Okhsl(baseHue, baseSaturation, blackL / 100.0));
-        var brightBlack = OkhslToAnsiColor(new Okhsl(baseHue, baseSaturation, brightBlackL / 100.0));
-        var white = OkhslToAnsiColor(new Okhsl(baseHue, baseSaturation, whiteL / 100.0));
-        var brightWhite = OkhslToAnsiColor(new Okhsl(baseHue, baseSaturation, brightWhiteL / 100.0));
-        var foreground = OkhslToAnsiColor(new Okhsl(baseHue, baseSaturation, foregroundL / 100.0));
+        var background = OkhslToColor(new Okhsl(baseHue, baseSaturation, backgroundL / 100.0));
+        var black = OkhslToColor(new Okhsl(baseHue, baseSaturation, blackL / 100.0));
+        var brightBlack = OkhslToColor(new Okhsl(baseHue, baseSaturation, brightBlackL / 100.0));
+        var white = OkhslToColor(new Okhsl(baseHue, baseSaturation, whiteL / 100.0));
+        var brightWhite = OkhslToColor(new Okhsl(baseHue, baseSaturation, brightWhiteL / 100.0));
+        var foreground = OkhslToColor(new Okhsl(baseHue, baseSaturation, foregroundL / 100.0));
 
         var accentLightness = GetAccentLightness(sugar);
         var brightAccentLightness = GetAccentLightness(sugar + 1);
@@ -146,21 +146,21 @@ public sealed partial record AnsiColorScheme
         }
 
         // Accent mapping matches root-loops: red=0, yellow=1, green=2, cyan=3, blue=4, magenta=5.
-        var red = OkhslToAnsiColor(accents[0]);
-        var yellow = OkhslToAnsiColor(accents[1]);
-        var green = OkhslToAnsiColor(accents[2]);
-        var cyan = OkhslToAnsiColor(accents[3]);
-        var blue = OkhslToAnsiColor(accents[4]);
-        var purple = OkhslToAnsiColor(accents[5]);
+        var red = OkhslToColor(accents[0]);
+        var yellow = OkhslToColor(accents[1]);
+        var green = OkhslToColor(accents[2]);
+        var cyan = OkhslToColor(accents[3]);
+        var blue = OkhslToColor(accents[4]);
+        var purple = OkhslToColor(accents[5]);
 
-        var brightRed = OkhslToAnsiColor(brightAccents[0]);
-        var brightYellow = OkhslToAnsiColor(brightAccents[1]);
-        var brightGreen = OkhslToAnsiColor(brightAccents[2]);
-        var brightCyan = OkhslToAnsiColor(brightAccents[3]);
-        var brightBlue = OkhslToAnsiColor(brightAccents[4]);
-        var brightPurple = OkhslToAnsiColor(brightAccents[5]);
+        var brightRed = OkhslToColor(brightAccents[0]);
+        var brightYellow = OkhslToColor(brightAccents[1]);
+        var brightGreen = OkhslToColor(brightAccents[2]);
+        var brightCyan = OkhslToColor(brightAccents[3]);
+        var brightBlue = OkhslToColor(brightAccents[4]);
+        var brightPurple = OkhslToColor(brightAccents[5]);
 
-        return new AnsiColorScheme
+        return new ColorScheme
         {
             Name = name ?? "Root Loops",
             CursorColor = white,
@@ -235,10 +235,10 @@ public sealed partial record AnsiColorScheme
         return lightness0 + ((lightness3 - lightness0) / (1.0 + Math.Pow(e, exponent)));
     }
 
-    private static AnsiColor OkhslToAnsiColor(Okhsl color)
+    private static Color OkhslToColor(Okhsl color)
     {
         var (r, g, b) = OkhslToSrgb(color);
-        return AnsiColor.Rgb(r, g, b);
+        return Color.Rgb(r, g, b);
     }
 
     private static (byte r, byte g, byte b) OkhslToSrgb(Okhsl hsl)
@@ -620,7 +620,7 @@ public enum RootLoopsFruit
 }
 
 /// <summary>
-/// Represents a Root Loops recipe used to generate an <see cref="AnsiColorScheme"/>.
+/// Represents a Root Loops recipe used to generate an <see cref="ColorScheme"/>.
 /// </summary>
 /// <param name="Sugar">Controls accent lightness (0..10).</param>
 /// <param name="Colors">Controls accent saturation (0..10).</param>

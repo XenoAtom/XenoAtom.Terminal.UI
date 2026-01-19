@@ -29,14 +29,14 @@ public sealed record LineChartStyle : IStyle<LineChartStyle>
     /// <summary>
     /// Gets the optional point style.
     /// </summary>
-    public CellStyle? PointStyle { get; init; }
+    public Style? PointStyle { get; init; }
 
     /// <summary>
     /// Resolves the point style for the given theme.
     /// </summary>
     /// <param name="theme">The current theme.</param>
     /// <returns>The resolved cell style.</returns>
-    public CellStyle ResolvePointStyle(Theme theme)
+    public Style ResolvePointStyle(Theme theme)
     {
         if (PointStyle is { } s)
         {

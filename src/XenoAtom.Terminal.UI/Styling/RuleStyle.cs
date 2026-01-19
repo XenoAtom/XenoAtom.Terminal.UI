@@ -27,7 +27,7 @@ public sealed record RuleStyle : IStyle<RuleStyle>
     /// <summary>
     /// Gets the optional line style.
     /// </summary>
-    public CellStyle? LineStyle { get; init; }
+    public Style? LineStyle { get; init; }
 
     /// <summary>
     /// Gets the padding around labels.
@@ -47,6 +47,6 @@ public sealed record RuleStyle : IStyle<RuleStyle>
     /// </summary>
     /// <param name="theme">The current theme.</param>
     /// <returns>The resolved cell style.</returns>
-    public CellStyle ResolveLineStyle(Theme theme)
+    public Style ResolveLineStyle(Theme theme)
         => LineStyle ?? theme.BorderStyle(focused: false);
 }

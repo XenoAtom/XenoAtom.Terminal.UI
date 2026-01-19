@@ -6,7 +6,6 @@ using System.Reflection;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Rendering;
-using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -20,7 +19,7 @@ public sealed class TabControlRenderingTests
             new TabPage("One", new TextBlock("A")),
             new TabPage("Two", new TextBlock("B")));
 
-        var theme = Theme.FromScheme(AnsiColorScheme.RootLoopsDark);
+        var theme = Theme.FromScheme(ColorScheme.RootLoopsDark);
         tabControl.Set(Theme.Key, theme);
 
         tabControl.Measure(new Size(40, 6));
@@ -32,7 +31,7 @@ public sealed class TabControlRenderingTests
         typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!
             .Invoke(tabControl, new object[] { buffer });
 
-        var cells = (CellStyle[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
+        var cells = (Style[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
 
         // First tab background should differ from the strip background.
         Assert.IsTrue(cells[0].TryGetBackground(out var tabBg), "Expected tab header cell to have a background color.");
@@ -47,7 +46,7 @@ public sealed class TabControlRenderingTests
         buffer.Clear();
         typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!
             .Invoke(tabControl, new object[] { buffer });
-        cells = (CellStyle[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
+        cells = (Style[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
 
         Assert.IsTrue(cells[0].TryGetBackground(out var pressedBg));
         Assert.AreEqual(selection, pressedBg);
@@ -59,7 +58,7 @@ public sealed class TabControlRenderingTests
         var tabControl = new TabControl(
             new TabPage("One", new TextBlock("A")));
 
-        tabControl.Set(Theme.Key, Theme.FromScheme(AnsiColorScheme.RootLoopsDark));
+        tabControl.Set(Theme.Key, Theme.FromScheme(ColorScheme.RootLoopsDark));
         tabControl.Set(TabControlStyle.Rounded);
 
         tabControl.Measure(new Size(20, 6));

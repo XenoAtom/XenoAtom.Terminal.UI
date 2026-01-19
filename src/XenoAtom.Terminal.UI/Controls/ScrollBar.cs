@@ -168,7 +168,7 @@ public abstract partial class ScrollBar : Visual
         }
     }
 
-    private void RenderVertical(CellBuffer buffer, Rectangle rect, ScrollBarGlyphs glyphs, CellStyle trackStyle, CellStyle thumbStyle)
+    private void RenderVertical(CellBuffer buffer, Rectangle rect, ScrollBarGlyphs glyphs, Style trackStyle, Style thumbStyle)
     {
         var trackLength = rect.Height;
         if (trackLength <= 0)
@@ -190,7 +190,7 @@ public abstract partial class ScrollBar : Visual
         }
     }
 
-    private void RenderHorizontal(CellBuffer buffer, Rectangle rect, ScrollBarGlyphs glyphs, CellStyle trackStyle, CellStyle thumbStyle)
+    private void RenderHorizontal(CellBuffer buffer, Rectangle rect, ScrollBarGlyphs glyphs, Style trackStyle, Style thumbStyle)
     {
         var trackLength = rect.Width;
         if (trackLength <= 0)

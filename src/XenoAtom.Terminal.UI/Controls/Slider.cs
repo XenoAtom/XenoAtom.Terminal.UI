@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Numerics;
+using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
@@ -231,7 +232,7 @@ public sealed partial class Slider<T> : Visual where T: struct, INumber<T>
         RenderHorizontal(buffer, rect, style, trackStyle, activeTrackStyle, thumbStyle);
     }
 
-    private void RenderHorizontal(CellBuffer buffer, Rectangle rect, SliderStyle style, CellStyle trackStyle, CellStyle activeStyle, CellStyle thumbStyle)
+    private void RenderHorizontal(CellBuffer buffer, Rectangle rect, SliderStyle style, Style trackStyle, Style activeStyle, Style thumbStyle)
     {
         var label = ShowValueLabel ? FormatValue(Value) : null;
         var labelCells = label is null ? 0 : TerminalTextUtility.GetWidth(label.AsSpan());
@@ -268,11 +269,11 @@ public sealed partial class Slider<T> : Visual where T: struct, INumber<T>
 
         if (labelCells > 0 && label is not null)
         {
-            buffer.WriteText(rect.X + trackWidth + 1, y, label.AsSpan(), CellStyle.None | TextStyle.Dim);
+            buffer.WriteText(rect.X + trackWidth + 1, y, label.AsSpan(), Style.None | TextStyle.Dim);
         }
     }
 
-    private void RenderVertical(CellBuffer buffer, Rectangle rect, SliderStyle style, CellStyle trackStyle, CellStyle activeStyle, CellStyle thumbStyle)
+    private void RenderVertical(CellBuffer buffer, Rectangle rect, SliderStyle style, Style trackStyle, Style activeStyle, Style thumbStyle)
     {
         var trackHeight = rect.Height;
         var thumbOffset = GetThumbIndex(trackHeight);

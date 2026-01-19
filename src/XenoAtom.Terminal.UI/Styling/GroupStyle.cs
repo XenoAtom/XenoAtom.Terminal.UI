@@ -60,12 +60,12 @@ public sealed record GroupStyle : IStyle<GroupStyle>
     /// <summary>
     /// Gets the optional border style used when the group does not contain focus.
     /// </summary>
-    public CellStyle? BorderCellStyle { get; init; }
+    public Style? BorderCellStyle { get; init; }
 
     /// <summary>
     /// Gets the optional border style used when focus is within the group subtree.
     /// </summary>
-    public CellStyle? FocusedBorderCellStyle { get; init; }
+    public Style? FocusedBorderCellStyle { get; init; }
 
     /// <summary>
     /// Gets the optional style used to clear the label area (so labels can "cut" the border).
@@ -73,7 +73,7 @@ public sealed record GroupStyle : IStyle<GroupStyle>
     /// <remarks>
     /// The style is applied to spaces written behind label visuals, not to the label content itself.
     /// </remarks>
-    public CellStyle? LabelBackgroundStyle { get; init; }
+    public Style? LabelBackgroundStyle { get; init; }
 
     /// <summary>
     /// Gets the optional background style used to clear the group surface.
@@ -81,26 +81,26 @@ public sealed record GroupStyle : IStyle<GroupStyle>
     /// <remarks>
     /// When set, the group fills its bounds with spaces using this style before drawing border glyphs.
     /// </remarks>
-    public CellStyle? BackgroundStyle { get; init; }
+    public Style? BackgroundStyle { get; init; }
 
     /// <summary>
     /// Resolves the border cell style for the provided <paramref name="theme"/> and focus state.
     /// </summary>
     /// <param name="theme">The current theme.</param>
     /// <param name="focusedWithin">Whether focus is within the group subtree.</param>
-    public CellStyle ResolveBorderStyle(Theme theme, bool focusedWithin)
+    public Style ResolveBorderStyle(Theme theme, bool focusedWithin)
         => focusedWithin ? (FocusedBorderCellStyle ?? theme.BorderStyle(focused: true)) : (BorderCellStyle ?? theme.BorderStyle(focused: false));
 
     /// <summary>
     /// Resolves the label background style.
     /// </summary>
-    public CellStyle ResolveLabelBackgroundStyle()
-        => LabelBackgroundStyle ?? (CellStyle.None | TextStyle.Bold);
+    public Style ResolveLabelBackgroundStyle()
+        => LabelBackgroundStyle ?? (Style.None | TextStyle.Bold);
 
     /// <summary>
     /// Resolves the background style used to clear the group surface.
     /// </summary>
-    public CellStyle? ResolveBackgroundStyle()
+    public Style? ResolveBackgroundStyle()
         => BackgroundStyle;
 }
 

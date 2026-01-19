@@ -6,7 +6,6 @@ using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Scrolling;
-using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.Controls;
@@ -128,7 +127,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     /// <remarks>
     /// Derived controls can override this to customize how characters are rendered (e.g. masking).
     /// </remarks>
-    protected virtual void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, CellStyle style, bool isPlaceholder)
+    protected virtual void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, Style style, bool isPlaceholder)
     {
         buffer.WriteText(x, y, text, style);
     }
@@ -143,13 +142,13 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
             Alignment: Alignment,
             ShowPlaceholderWhenUnfocusedOnly: ShowPlaceholderWhenUnfocusedOnly);
 
-    private TextEditorRenderContext BuildRenderContext(CellBuffer buffer, Rectangle contentRect, CellStyle textStyle, CellStyle selectionStyle, CellStyle placeholderStyle)
+    private TextEditorRenderContext BuildRenderContext(CellBuffer buffer, Rectangle contentRect, Style textStyle, Style selectionStyle, Style placeholderStyle)
         => new(buffer, contentRect, textStyle, selectionStyle, placeholderStyle, Placeholder, IsFocused, WriteTextSegment);
 
     /// <summary>
     /// Renders the editor content into the provided buffer.
     /// </summary>
-    protected void RenderEditor(CellBuffer buffer, Rectangle contentRect, CellStyle textStyle, CellStyle selectionStyle, CellStyle placeholderStyle)
+    protected void RenderEditor(CellBuffer buffer, Rectangle contentRect, Style textStyle, Style selectionStyle, Style placeholderStyle)
     {
         var options = BuildEditorOptions();
         var context = BuildRenderContext(buffer, contentRect, textStyle, selectionStyle, placeholderStyle);

@@ -22,21 +22,21 @@ public sealed record HeaderStyle : IStyle<HeaderStyle>
     /// <summary>
     /// Gets the optional background color.
     /// </summary>
-    public XenoAtom.Ansi.AnsiColor? Background { get; init; }
+    public Color? Background { get; init; }
 
     /// <summary>
     /// Gets the optional foreground color.
     /// </summary>
-    public XenoAtom.Ansi.AnsiColor? Foreground { get; init; }
+    public Color? Foreground { get; init; }
 
     /// <summary>
     /// Resolves the header style for the given theme.
     /// </summary>
     /// <param name="theme">The current theme.</param>
     /// <returns>The resolved cell style.</returns>
-    public CellStyle Resolve(Theme theme)
+    public Style Resolve(Theme theme)
     {
-        var style = CellStyle.None;
+        var style = Style.None;
         var fg = Foreground ?? theme.Foreground;
         var bg = Background ?? theme.SurfaceAlt;
 

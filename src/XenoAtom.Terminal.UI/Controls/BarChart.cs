@@ -121,7 +121,7 @@ public sealed partial class BarChart : Visual
         }
     }
 
-    private static void RenderHorizontal(CellBuffer buffer, Rectangle rect, IReadOnlyList<double> values, double minV, double maxV, Rune full, CellStyle style)
+    private static void RenderHorizontal(CellBuffer buffer, Rectangle rect, IReadOnlyList<double> values, double minV, double maxV, Rune full, Style style)
     {
         var count = Math.Min(values.Count, rect.Height);
         for (var row = 0; row < count; row++)
@@ -144,7 +144,7 @@ public sealed partial class BarChart : Visual
         }
     }
 
-    private static void RenderVertical(CellBuffer buffer, Rectangle rect, IReadOnlyList<double> values, double minV, double maxV, BarChartGlyphs glyphs, CellStyle style)
+    private static void RenderVertical(CellBuffer buffer, Rectangle rect, IReadOnlyList<double> values, double minV, double maxV, BarChartGlyphs glyphs, Style style)
     {
         var width = rect.Width;
         var height = rect.Height;

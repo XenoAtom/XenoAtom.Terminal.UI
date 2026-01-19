@@ -297,8 +297,8 @@ public sealed partial class Table : Visual
         bool showOuterBorder,
         bool showVerticalLines,
         LineGlyphs glyphs,
-        CellStyle cellStyle,
-        CellStyle borderStyle)
+        Style style,
+        Style borderStyle)
     {
         var padLeft = Math.Max(0, padding.Left);
         var padRight = Math.Max(0, padding.Right);
@@ -321,7 +321,7 @@ public sealed partial class Table : Visual
 
                 for (var i = 0; i < cellWidth; i++)
                 {
-                    buffer.SetCell(x + i, y, new Rune(' '), cellStyle);
+                    buffer.SetCell(x + i, y, new Rune(' '), style);
                 }
 
                 x += cellWidth;
@@ -348,7 +348,7 @@ public sealed partial class Table : Visual
         Thickness padding,
         bool showVerticalLines,
         LineGlyphs glyphs,
-        CellStyle borderStyle,
+        Style borderStyle,
         bool isTop)
     {
         if (rect.Width <= 0)
@@ -395,7 +395,7 @@ public sealed partial class Table : Visual
         bool showOuterBorder,
         bool showVerticalLines,
         LineGlyphs glyphs,
-        CellStyle borderStyle)
+        Style borderStyle)
     {
         if (rect.Width <= 0)
         {

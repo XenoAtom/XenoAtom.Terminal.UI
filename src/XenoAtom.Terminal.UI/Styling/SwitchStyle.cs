@@ -50,43 +50,43 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
     public Rune ThumbGlyph { get; init; } = new('⬛');
 
     /// <summary>Gets the base style for the track when the switch is on.</summary>
-    public CellStyle? TrackOn { get; init; }
+    public Style? TrackOn { get; init; }
     /// <summary>Gets the base style for the track when the switch is off.</summary>
-    public CellStyle? TrackOff { get; init; }
+    public Style? TrackOff { get; init; }
     /// <summary>Gets the style for the active track segment when the switch is on.</summary>
-    public CellStyle? TrackOnActive { get; init; }
+    public Style? TrackOnActive { get; init; }
     /// <summary>Gets the style for the inactive track segment when the switch is on.</summary>
-    public CellStyle? TrackOnInactive { get; init; }
+    public Style? TrackOnInactive { get; init; }
     /// <summary>Gets the style for the active track segment when the switch is off.</summary>
-    public CellStyle? TrackOffActive { get; init; }
+    public Style? TrackOffActive { get; init; }
     /// <summary>Gets the style for the inactive track segment when the switch is off.</summary>
-    public CellStyle? TrackOffInactive { get; init; }
+    public Style? TrackOffInactive { get; init; }
     /// <summary>Gets the style applied when the switch is hovered.</summary>
-    public CellStyle? TrackHovered { get; init; }
+    public Style? TrackHovered { get; init; }
     /// <summary>Gets the style applied when the switch is pressed.</summary>
-    public CellStyle? TrackPressed { get; init; }
+    public Style? TrackPressed { get; init; }
     /// <summary>Gets the style applied when the switch is focused.</summary>
-    public CellStyle? TrackFocused { get; init; }
+    public Style? TrackFocused { get; init; }
     /// <summary>Gets the style applied when the switch is disabled.</summary>
-    public CellStyle? TrackDisabled { get; init; }
+    public Style? TrackDisabled { get; init; }
 
     /// <summary>Gets the thumb style when the switch is on.</summary>
-    public CellStyle? ThumbOn { get; init; }
+    public Style? ThumbOn { get; init; }
     /// <summary>Gets the thumb style when the switch is off.</summary>
-    public CellStyle? ThumbOff { get; init; }
+    public Style? ThumbOff { get; init; }
     /// <summary>Gets the thumb style when the switch is disabled.</summary>
-    public CellStyle? ThumbDisabled { get; init; }
+    public Style? ThumbDisabled { get; init; }
 
     /// <summary>
     /// Resolves the final track style for the given state.
     /// </summary>
-    public CellStyle ResolveTrack(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, bool isOn)
+    public Style ResolveTrack(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, bool isOn)
         => ResolveTrackPart(theme, enabled, focused, hovered, pressed, isOn, activePart: true);
 
     /// <summary>
     /// Resolves the final track style for a specific track segment.
     /// </summary>
-    public CellStyle ResolveTrackPart(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, bool isOn, bool activePart)
+    public Style ResolveTrackPart(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, bool isOn, bool activePart)
     {
         ArgumentNullException.ThrowIfNull(theme);
 
@@ -116,7 +116,7 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
         return style;
     }
 
-    private CellStyle ResolveBaseTrack(Theme theme, bool isOn, bool activePart)
+    private Style ResolveBaseTrack(Theme theme, bool isOn, bool activePart)
     {
         if (isOn)
         {
@@ -139,7 +139,7 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
     /// <summary>
     /// Resolves the thumb style for the given state.
     /// </summary>
-    public CellStyle ResolveThumb(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, bool isOn)
+    public Style ResolveThumb(Theme theme, bool enabled, bool focused, bool hovered, bool pressed, bool isOn)
     {
         ArgumentNullException.ThrowIfNull(theme);
 
@@ -163,9 +163,9 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
         return style;
     }
 
-    private static CellStyle ResolveDefaultTrackOn(Theme theme)
+    private static Style ResolveDefaultTrackOn(Theme theme)
     {
-        var style = CellStyle.None;
+        var style = Style.None;
         if (theme.Background is { } fg)
         {
             style = style.WithForeground(fg);
@@ -177,12 +177,12 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
         return style;
     }
 
-    private static CellStyle ResolveDefaultTrackOnActive(Theme theme)
+    private static Style ResolveDefaultTrackOnActive(Theme theme)
         => ResolveDefaultTrackOn(theme);
 
-    private static CellStyle ResolveDefaultTrackOnInactive(Theme theme)
+    private static Style ResolveDefaultTrackOnInactive(Theme theme)
     {
-        var style = CellStyle.None;
+        var style = Style.None;
         if (theme.Foreground is { } fg)
         {
             style = style.WithForeground(fg);
@@ -194,9 +194,9 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
         return style;
     }
 
-    private static CellStyle ResolveDefaultTrackOff(Theme theme)
+    private static Style ResolveDefaultTrackOff(Theme theme)
     {
-        var style = CellStyle.None;
+        var style = Style.None;
         if (theme.Foreground is { } fg)
         {
             style = style.WithForeground(fg);
@@ -208,9 +208,9 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
         return style;
     }
 
-    private static CellStyle ResolveDefaultTrackOffActive(Theme theme)
+    private static Style ResolveDefaultTrackOffActive(Theme theme)
     {
-        var style = CellStyle.None;
+        var style = Style.None;
         if (theme.Foreground is { } fg)
         {
             style = style.WithForeground(fg);
@@ -222,10 +222,10 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
         return style;
     }
 
-    private static CellStyle ResolveDefaultTrackOffInactive(Theme theme)
+    private static Style ResolveDefaultTrackOffInactive(Theme theme)
         => ResolveDefaultTrackOff(theme);
 
-    private static CellStyle ResolveDefaultTrackHovered(Theme theme, CellStyle baseStyle)
+    private static Style ResolveDefaultTrackHovered(Theme theme, Style baseStyle)
     {
         if (theme.Surface is { } hoverBg)
         {
@@ -235,7 +235,7 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
         return baseStyle | TextStyle.Bold;
     }
 
-    private static CellStyle ResolveDefaultTrackPressed(Theme theme, CellStyle baseStyle)
+    private static Style ResolveDefaultTrackPressed(Theme theme, Style baseStyle)
     {
         if (theme.Selection is { } pressedBg)
         {
@@ -245,7 +245,7 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
         return baseStyle | TextStyle.Bold;
     }
 
-    private static CellStyle ResolveDefaultTrackFocused(Theme theme, CellStyle baseStyle)
+    private static Style ResolveDefaultTrackFocused(Theme theme, Style baseStyle)
     {
         if (theme.FocusBorder is { } focusFg)
         {
@@ -255,9 +255,9 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
         return baseStyle;
     }
 
-    private static CellStyle ResolveDefaultTrackDisabled(Theme theme)
+    private static Style ResolveDefaultTrackDisabled(Theme theme)
     {
-        var style = CellStyle.None;
+        var style = Style.None;
         if (theme.Disabled is { } fg)
         {
             style = style.WithForeground(fg);
@@ -269,9 +269,9 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
         return style;
     }
 
-    private static CellStyle ResolveDefaultThumbOn(Theme theme)
+    private static Style ResolveDefaultThumbOn(Theme theme)
     {
-        var style = CellStyle.None;
+        var style = Style.None;
         if (theme.Background is { } fg)
         {
             style = style.WithForeground(fg);
@@ -279,9 +279,9 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
         return style | TextStyle.Bold;
     }
 
-    private static CellStyle ResolveDefaultThumbOff(Theme theme)
+    private static Style ResolveDefaultThumbOff(Theme theme)
     {
-        var style = CellStyle.None;
+        var style = Style.None;
         if (theme.Foreground is { } fg)
         {
             style = style.WithForeground(fg);
@@ -289,9 +289,9 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
         return style | TextStyle.Bold;
     }
 
-    private static CellStyle ResolveDefaultThumbDisabled(Theme theme)
+    private static Style ResolveDefaultThumbDisabled(Theme theme)
     {
-        var style = CellStyle.None;
+        var style = Style.None;
         if (theme.Disabled is { } fg)
         {
             style = style.WithForeground(fg);

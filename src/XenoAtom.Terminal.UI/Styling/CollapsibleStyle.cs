@@ -44,27 +44,27 @@ public sealed record CollapsibleStyle : IStyle<CollapsibleStyle>
     /// <summary>
     /// Gets the optional style for a normal header.
     /// </summary>
-    public CellStyle? Header { get; init; }
+    public Style? Header { get; init; }
 
     /// <summary>
     /// Gets the optional style for a hovered header.
     /// </summary>
-    public CellStyle? HeaderHovered { get; init; }
+    public Style? HeaderHovered { get; init; }
 
     /// <summary>
     /// Gets the optional style for a pressed header.
     /// </summary>
-    public CellStyle? HeaderPressed { get; init; }
+    public Style? HeaderPressed { get; init; }
 
     /// <summary>
     /// Gets the optional style for a focused header.
     /// </summary>
-    public CellStyle? HeaderFocused { get; init; }
+    public Style? HeaderFocused { get; init; }
 
     /// <summary>
     /// Gets the optional style for a disabled header.
     /// </summary>
-    public CellStyle? HeaderDisabled { get; init; }
+    public Style? HeaderDisabled { get; init; }
 
     /// <summary>
     /// Resolves the header style for the provided state.
@@ -74,7 +74,7 @@ public sealed record CollapsibleStyle : IStyle<CollapsibleStyle>
     /// <param name="focused">Whether the control is focused.</param>
     /// <param name="hovered">Whether the header is hovered.</param>
     /// <param name="pressed">Whether the header is pressed.</param>
-    public CellStyle ResolveHeader(Theme theme, bool enabled, bool focused, bool hovered, bool pressed)
+    public Style ResolveHeader(Theme theme, bool enabled, bool focused, bool hovered, bool pressed)
     {
         ArgumentNullException.ThrowIfNull(theme);
 
@@ -114,10 +114,10 @@ public sealed record CollapsibleStyle : IStyle<CollapsibleStyle>
         return style;
     }
 
-    private static CellStyle ResolveDefaultHeader(Theme theme)
+    private static Style ResolveDefaultHeader(Theme theme)
         => theme.ForegroundTextStyle() | TextStyle.Bold;
 
-    private static CellStyle ResolveDefaultHovered(Theme theme, CellStyle normal)
+    private static Style ResolveDefaultHovered(Theme theme, Style normal)
     {
         if (theme.SurfaceAlt is { } bg)
         {
@@ -127,7 +127,7 @@ public sealed record CollapsibleStyle : IStyle<CollapsibleStyle>
         return normal;
     }
 
-    private static CellStyle ResolveDefaultPressed(Theme theme, CellStyle normal)
+    private static Style ResolveDefaultPressed(Theme theme, Style normal)
     {
         if (theme.Selection is { } bg)
         {
@@ -137,7 +137,7 @@ public sealed record CollapsibleStyle : IStyle<CollapsibleStyle>
         return normal | TextStyle.Bold;
     }
 
-    private static CellStyle ResolveDefaultFocused(Theme theme, CellStyle normal)
+    private static Style ResolveDefaultFocused(Theme theme, Style normal)
     {
         if (theme.FocusBorder is { } fg)
         {

@@ -183,7 +183,7 @@ public sealed partial class Rule : Visual
 
         var startX = Math.Max(rect.X, label.Bounds.X - pad);
         var endX = Math.Min(rect.X + rect.Width, label.Bounds.X + label.Bounds.Width + pad);
-        var style = CellStyle.None | TextStyle.Bold;
+        var style = Style.None | TextStyle.Bold;
 
         for (var x = startX; x < endX; x++)
         {
