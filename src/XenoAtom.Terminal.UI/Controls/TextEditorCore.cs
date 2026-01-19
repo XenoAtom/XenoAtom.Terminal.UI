@@ -4,8 +4,6 @@
 
 using System.Buffers;
 using System.Text;
-using XenoAtom.Terminal;
-using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Rendering;
@@ -562,11 +560,25 @@ internal sealed class TextEditorCore
         switch (e.Key)
         {
             case TerminalKey.Left:
-                MoveCaretHorizontal(-1, (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                if (ctrl)
+                {
+                    MoveCaretTo(GetPreviousWordIndex(text, _caretIndex), (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                }
+                else
+                {
+                    MoveCaretHorizontal(-1, (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                }
                 e.Handled = true;
                 return;
             case TerminalKey.Right:
-                MoveCaretHorizontal(1, (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                if (ctrl)
+                {
+                    MoveCaretTo(GetNextWordIndex(text, _caretIndex), (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                }
+                else
+                {
+                    MoveCaretHorizontal(1, (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                }
                 e.Handled = true;
                 return;
             case TerminalKey.Up:

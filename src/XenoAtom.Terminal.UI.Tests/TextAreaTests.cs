@@ -72,6 +72,34 @@ public sealed class TextAreaTests
     }
 
     [TestMethod]
+    public void TextArea_CtrlLeftRight_Moves_By_Word()
+    {
+        var textArea = new TextArea("Hello world");
+        var root = new VStack { textArea };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        textArea.CaretIndex = 0;
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+        Assert.AreEqual(5, textArea.CaretIndex);
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+        Assert.AreEqual("Hello world".Length, textArea.CaretIndex);
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+        Assert.AreEqual(6, textArea.CaretIndex);
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+        Assert.AreEqual(0, textArea.CaretIndex);
+    }
+
+    [TestMethod]
     public void TextArea_ScrollOffset_Does_Not_Reset_During_Layout()
     {
         var text = string.Join("\n", Enumerable.Range(0, 40).Select(i => $"Line {i:00}"));
