@@ -171,6 +171,123 @@ public readonly partial record struct Color
     }
 
     /// <summary>
+    /// Adjusts OKLCH chroma (C) by the specified delta.
+    /// </summary>
+    /// <param name="delta">A delta in the range [-1..1].</param>
+    public Color AdjustChroma(float delta)
+    {
+        var rgb = ToRgb();
+        if (rgb.Kind == ColorKind.Default)
+        {
+            return Default;
+        }
+
+        rgb.ToOklch(out var l, out var c, out var h);
+        c = Math.Max(0f, c + delta);
+        var alpha = Kind == ColorKind.RgbA ? A : byte.MaxValue;
+        return FromOklch(l, c, h, alpha);
+    }
+
+    /// <summary>
+    /// Returns a copy of this color with its OKLCH hue replaced (in degrees).
+    /// </summary>
+    public Color WithHue(float degrees)
+    {
+        var rgb = ToRgb();
+        if (rgb.Kind == ColorKind.Default)
+        {
+            return Default;
+        }
+
+        rgb.ToOklch(out var l, out var c, out _);
+        var alpha = Kind == ColorKind.RgbA ? A : byte.MaxValue;
+        return FromOklch(l, c, degrees, alpha);
+    }
+
+    /// <summary>
+    /// Returns a copy of this color with its OKLab lightness replaced.
+    /// </summary>
+    public Color WithLightness(float lightness)
+    {
+        var rgb = ToRgb();
+        if (rgb.Kind == ColorKind.Default)
+        {
+            return Default;
+        }
+
+        rgb.ToOklab(out _, out var a, out var b);
+        var alpha = Kind == ColorKind.RgbA ? A : byte.MaxValue;
+        return FromOklab(Math.Clamp(lightness, 0f, 1f), a, b, alpha);
+    }
+
+    /// <summary>
+    /// Adjusts HSL saturation by the specified delta.
+    /// </summary>
+    /// <param name="delta">A delta in the range [-1..1].</param>
+    public Color AdjustSaturation(float delta)
+    {
+        var rgb = ToRgb();
+        if (rgb.Kind == ColorKind.Default)
+        {
+            return Default;
+        }
+
+        rgb.ToHsl(out var h, out var s, out var l);
+        s = Math.Clamp(s + delta, 0f, 1f);
+        var alpha = Kind == ColorKind.RgbA ? A : byte.MaxValue;
+        return FromHsl(h, s, l, alpha);
+    }
+
+    /// <summary>
+    /// Returns a more saturated version of this color.
+    /// </summary>
+    /// <param name="amount">A delta in the range [0..1].</param>
+    public Color Saturate(float amount) => AdjustSaturation(Math.Abs(amount));
+
+    /// <summary>
+    /// Returns a less saturated version of this color.
+    /// </summary>
+    /// <param name="amount">A delta in the range [0..1].</param>
+    public Color Desaturate(float amount) => AdjustSaturation(-Math.Abs(amount));
+
+    /// <summary>
+    /// Returns a grayscale version of this color while preserving alpha.
+    /// </summary>
+    public Color Grayscale()
+    {
+        var rgb = ToRgb();
+        if (rgb.Kind == ColorKind.Default)
+        {
+            return Default;
+        }
+
+        var y = rgb.GetRelativeLuminance();
+        var ch = ToByte01(y);
+        var alpha = Kind == ColorKind.RgbA ? A : byte.MaxValue;
+        return alpha == byte.MaxValue ? Rgb(ch, ch, ch) : RgbA(ch, ch, ch, alpha);
+    }
+
+    /// <summary>
+    /// Converts this color to a hex string (<c>#RRGGBB</c> or <c>#RRGGBBAA</c>).
+    /// </summary>
+    /// <param name="includeAlpha">Whether to include alpha for <see cref="ColorKind.RgbA"/>.</param>
+    public string ToHexString(bool includeAlpha = false)
+    {
+        var rgb = ToRgb();
+        if (rgb.Kind == ColorKind.Default)
+        {
+            return "#000000";
+        }
+
+        if (includeAlpha && Kind == ColorKind.RgbA)
+        {
+            return $"#{rgb.R:x2}{rgb.G:x2}{rgb.B:x2}{A:x2}";
+        }
+
+        return $"#{rgb.R:x2}{rgb.G:x2}{rgb.B:x2}";
+    }
+
+    /// <summary>
     /// Returns a copy of this color with its hue rotated by the specified amount (in degrees) in OKLCH.
     /// </summary>
     public Color RotateHue(float degrees)
@@ -494,4 +611,3 @@ public readonly partial record struct Color
         return degrees;
     }
 }
-
