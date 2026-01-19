@@ -47,6 +47,8 @@ public sealed partial class ScrollViewer : Visual
         Focusable = true;
         VerticalAlignment = VerticalAlignment.Stretch;
         HorizontalAlignment = HorizontalAlignment.Stretch;
+        this.HorizontalScrollEnabled(true);
+        this.VerticalScrollEnabled(true);
 
         _contentHost = new ContentViewportHost(this);
         // Internal scrollbars may receive their Thickness style during Arrange (when ScrollViewerStyle is bridged to
@@ -130,6 +132,25 @@ public sealed partial class ScrollViewer : Visual
     /// </summary>
     public IScrollable? ContentScrollable => _contentScrollable;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether horizontal scrolling is enabled.
+    /// </summary>
+    /// <remarks>
+    /// When disabled, the horizontal scroll bar is never shown and <see cref="HorizontalOffset"/> is forced to <c>0</c>.
+    /// This is commonly used for document-like content that should wrap to the viewport width.
+    /// </remarks>
+    [Bindable]
+    public partial bool HorizontalScrollEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether vertical scrolling is enabled.
+    /// </summary>
+    /// <remarks>
+    /// When disabled, the vertical scroll bar is never shown and <see cref="VerticalOffset"/> is forced to <c>0</c>.
+    /// </remarks>
+    [Bindable]
+    public partial bool VerticalScrollEnabled { get; set; }
+
 
     /// <summary>
     /// Gets or sets the vertical scroll offset.
@@ -143,10 +164,39 @@ public sealed partial class ScrollViewer : Visual
     [Bindable]
     public partial int HorizontalOffset { get; set; }
 
+    partial void OnHorizontalScrollEnabledChanged(bool value)
+    {
+        if (!value)
+        {
+            HorizontalOffset = 0;
+        }
+
+        MarkArrangeDirty();
+    }
+
+    partial void OnVerticalScrollEnabledChanged(bool value)
+    {
+        if (!value)
+        {
+            VerticalOffset = 0;
+        }
+
+        MarkArrangeDirty();
+    }
+
     partial void OnVerticalOffsetChanged(int value)
     {
         if (_syncingOffsets)
         {
+            return;
+        }
+
+        if (!VerticalScrollEnabled)
+        {
+            if (value != 0)
+            {
+                VerticalOffset = 0;
+            }
             return;
         }
 
@@ -162,6 +212,15 @@ public sealed partial class ScrollViewer : Visual
     {
         if (_syncingOffsets)
         {
+            return;
+        }
+
+        if (!HorizontalScrollEnabled)
+        {
+            if (value != 0)
+            {
+                HorizontalOffset = 0;
+            }
             return;
         }
 
@@ -186,7 +245,9 @@ public sealed partial class ScrollViewer : Visual
             }
             else
             {
-                var childConstraints = new LayoutConstraints(0, LayoutConstants.Infinite, 0, LayoutConstants.Infinite);
+                var maxWidth = HorizontalScrollEnabled ? LayoutConstants.Infinite : constraints.MaxWidth;
+                var maxHeight = VerticalScrollEnabled ? LayoutConstants.Infinite : constraints.MaxHeight;
+                var childConstraints = new LayoutConstraints(0, maxWidth, 0, maxHeight);
                 hints = content.Measure(childConstraints);
             }
 
@@ -233,6 +294,9 @@ public sealed partial class ScrollViewer : Visual
             return;
         }
 
+        var verticalScrollEnabled = VerticalScrollEnabled;
+        var horizontalScrollEnabled = HorizontalScrollEnabled;
+
         var style = Get<ScrollViewerStyle>();
         var thickness = Math.Max(1, style.ScrollBarThickness);
         var viewportWidth = Math.Max(1, finalRect.Width);
@@ -278,8 +342,8 @@ public sealed partial class ScrollViewer : Visual
                 modelViewportWidth = Math.Max(0, _contentScrollModel.ViewportWidth);
                 modelViewportHeight = Math.Max(0, _contentScrollModel.ViewportHeight);
 
-                var nextShowV = extentHeight > modelViewportHeight;
-                var nextShowH = extentWidth > modelViewportWidth;
+                var nextShowV = verticalScrollEnabled && extentHeight > modelViewportHeight;
+                var nextShowH = horizontalScrollEnabled && extentWidth > modelViewportWidth;
                 if (nextShowV == showV && nextShowH == showH)
                 {
                     break;
@@ -295,8 +359,8 @@ public sealed partial class ScrollViewer : Visual
             var maxVerticalOffset = Math.Max(0, extentHeight - modelViewportHeight);
             var maxHorizontalOffset = Math.Max(0, extentWidth - modelViewportWidth);
 
-            v = Math.Clamp(_contentScrollModel!.OffsetY, 0, maxVerticalOffset);
-            hOffset = Math.Clamp(_contentScrollModel.OffsetX, 0, maxHorizontalOffset);
+            v = verticalScrollEnabled ? Math.Clamp(_contentScrollModel!.OffsetY, 0, maxVerticalOffset) : 0;
+            hOffset = horizontalScrollEnabled ? Math.Clamp(_contentScrollModel.OffsetX, 0, maxHorizontalOffset) : 0;
             if (v != _contentScrollModel.OffsetY || hOffset != _contentScrollModel.OffsetX)
             {
                 _contentScrollModel.SetOffset(hOffset, v);
@@ -323,8 +387,8 @@ public sealed partial class ScrollViewer : Visual
 
             var lastMeasuredViewportWidth = -1;
 
-            showV = extentHeight > viewportHeight;
-            showH = extentWidth > viewportWidth && !CanShrinkToWidth(viewportWidth);
+            showV = verticalScrollEnabled && extentHeight > viewportHeight;
+            showH = horizontalScrollEnabled && extentWidth > viewportWidth && !CanShrinkToWidth(viewportWidth);
 
             // Determine which bars to show. If horizontal scrolling isn't needed, re-measure the content
             // using the final viewport width so width-dependent layout (e.g. wrapping) can report a correct height.
@@ -335,8 +399,8 @@ public sealed partial class ScrollViewer : Visual
                 {
                     var w = viewportWidth - (showV ? thickness : 0);
                     var hViewport = viewportHeight - (showH ? thickness : 0);
-                    showV = extentHeight > Math.Max(1, hViewport);
-                    showH = extentWidth > Math.Max(1, w) && !CanShrinkToWidth(Math.Max(1, w));
+                    showV = verticalScrollEnabled && extentHeight > Math.Max(1, hViewport);
+                    showH = horizontalScrollEnabled && extentWidth > Math.Max(1, w) && !CanShrinkToWidth(Math.Max(1, w));
                 }
 
                 contentViewportWidth = Math.Max(1, viewportWidth - (showV ? thickness : 0));
@@ -368,8 +432,8 @@ public sealed partial class ScrollViewer : Visual
                 _contentHeight = extentHeight;
 
                 // Continue loop to re-evaluate vertical bar visibility (height may have changed due to wrapping).
-                showV = extentHeight > viewportHeight;
-                showH = extentWidth > viewportWidth && !CanShrinkToWidth(viewportWidth);
+                showV = verticalScrollEnabled && extentHeight > viewportHeight;
+                showH = horizontalScrollEnabled && extentWidth > viewportWidth && !CanShrinkToWidth(viewportWidth);
             }
 
             _showVerticalBar = showV;
@@ -378,8 +442,8 @@ public sealed partial class ScrollViewer : Visual
             var maxVerticalOffset = Math.Max(0, extentHeight - contentViewportHeight);
             var maxHorizontalOffset = Math.Max(0, extentWidth - contentViewportWidth);
 
-            v = Math.Clamp(VerticalOffset, 0, maxVerticalOffset);
-            hOffset = Math.Clamp(HorizontalOffset, 0, maxHorizontalOffset);
+            v = verticalScrollEnabled ? Math.Clamp(VerticalOffset, 0, maxVerticalOffset) : 0;
+            hOffset = horizontalScrollEnabled ? Math.Clamp(HorizontalOffset, 0, maxHorizontalOffset) : 0;
             if (v != VerticalOffset) VerticalOffset = v;
             if (hOffset != HorizontalOffset) HorizontalOffset = hOffset;
 
@@ -446,6 +510,11 @@ public sealed partial class ScrollViewer : Visual
     /// <inheritdoc/>
     protected override void OnKeyDown(KeyEventArgs e)
     {
+        if (!VerticalScrollEnabled && !HorizontalScrollEnabled)
+        {
+            return;
+        }
+
         var useContentScroll = _contentScrollModel is not null;
         var viewportWidth = useContentScroll ? Math.Max(1, _contentScrollModel!.ViewportWidth) : Math.Max(1, _contentHost.Bounds.Width);
         var viewportHeight = useContentScroll ? Math.Max(1, _contentScrollModel!.ViewportHeight) : Math.Max(1, _contentHost.Bounds.Height);
@@ -458,34 +527,42 @@ public sealed partial class ScrollViewer : Visual
         switch (e.Key)
         {
             case TerminalKey.Up:
+                if (!VerticalScrollEnabled) return;
                 VerticalOffset = Math.Max(0, VerticalOffset - 1);
                 e.Handled = true;
                 return;
             case TerminalKey.Down:
+                if (!VerticalScrollEnabled) return;
                 VerticalOffset = Math.Min(maxVerticalOffset, VerticalOffset + 1);
                 e.Handled = true;
                 return;
             case TerminalKey.PageUp:
+                if (!VerticalScrollEnabled) return;
                 VerticalOffset = Math.Max(0, VerticalOffset - viewportHeight);
                 e.Handled = true;
                 return;
             case TerminalKey.PageDown:
+                if (!VerticalScrollEnabled) return;
                 VerticalOffset = Math.Min(maxVerticalOffset, VerticalOffset + viewportHeight);
                 e.Handled = true;
                 return;
             case TerminalKey.Home:
+                if (!VerticalScrollEnabled) return;
                 VerticalOffset = 0;
                 e.Handled = true;
                 return;
             case TerminalKey.End:
+                if (!VerticalScrollEnabled) return;
                 VerticalOffset = maxVerticalOffset;
                 e.Handled = true;
                 return;
             case TerminalKey.Left:
+                if (!HorizontalScrollEnabled) return;
                 HorizontalOffset = Math.Max(0, HorizontalOffset - 1);
                 e.Handled = true;
                 return;
             case TerminalKey.Right:
+                if (!HorizontalScrollEnabled) return;
                 HorizontalOffset = Math.Min(maxHorizontalOffset, HorizontalOffset + 1);
                 e.Handled = true;
                 return;
@@ -504,6 +581,7 @@ public sealed partial class ScrollViewer : Visual
 
         if ((e.Modifiers & TerminalModifiers.Shift) != 0)
         {
+            if (!HorizontalScrollEnabled) return;
             var viewportWidth = useContentScroll ? Math.Max(1, _contentScrollModel!.ViewportWidth) : Math.Max(1, _contentHost.Bounds.Width);
             var extentWidth = useContentScroll ? _contentScrollModel!.ExtentWidth : _contentWidth;
             var maxOffset = Math.Max(0, extentWidth - viewportWidth);
@@ -516,6 +594,7 @@ public sealed partial class ScrollViewer : Visual
         }
         else
         {
+            if (!VerticalScrollEnabled) return;
             var viewportHeight = useContentScroll ? Math.Max(1, _contentScrollModel!.ViewportHeight) : Math.Max(1, _contentHost.Bounds.Height);
             var extentHeight = useContentScroll ? _contentScrollModel!.ExtentHeight : _contentHeight;
             var maxOffset = Math.Max(0, extentHeight - viewportHeight);

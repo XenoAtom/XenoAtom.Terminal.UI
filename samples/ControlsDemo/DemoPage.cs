@@ -27,7 +27,11 @@ internal static class DemoPage
             .Left(meta.Name)
             .Right(link);
 
-        var demoContent = new ScrollViewer(content);
+        // Keep horizontal scrolling disabled for the overall demo page so that text controls can reflow (wrap)
+        // as the terminal is resized. Individual demos can still opt into horizontal scrolling by using their own
+        // ScrollViewer instances.
+        var demoContent = new ScrollViewer(content)
+            .HorizontalScrollEnabled(false);
 
         var logPanel = BuildLogPanel(log);
 
