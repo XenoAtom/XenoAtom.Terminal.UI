@@ -1,5 +1,5 @@
-using System.Text;
 using XenoAtom.Ansi;
+using System.Text;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Figlet;
 using XenoAtom.Terminal.UI.Geometry;
@@ -16,30 +16,6 @@ public sealed class WelcomeDemo : ControlsDemoBase
     public override Visual Build(DemoContext context)
     {
         _ = context;
-
-        static Color Hue(float t)
-        {
-            // Simple HSV->RGB (s=1,v=1) for a pleasant spectrum.
-            t = Math.Clamp(t, 0f, 1f) * 6f;
-            var i = (int)t;
-            var f = t - i;
-
-            float r, g, b;
-            switch (i)
-            {
-                case 0: r = 1f; g = f; b = 0f; break;
-                case 1: r = 1f - f; g = 1f; b = 0f; break;
-                case 2: r = 0f; g = 1f; b = f; break;
-                case 3: r = 0f; g = 1f - f; b = 1f; break;
-                case 4: r = f; g = 0f; b = 1f; break;
-                default: r = 1f; g = 0f; b = 1f - f; break;
-            }
-
-            return Color.Rgb(
-                (byte)(r * 255f + 0.5f),
-                (byte)(g * 255f + 0.5f),
-                (byte)(b * 255f + 0.5f));
-        }
 
         var banner = new TextFiglet("Welcome")
             .Font(FigletPredefinedFont.Slant)
@@ -62,13 +38,24 @@ public sealed class WelcomeDemo : ControlsDemoBase
             {
                 var theme = DemoThemes.Dark;
                 var baseStyle = theme.BaseTextStyle();
+                var width = Math.Max(1, ctx.Bounds.Width);
+                var height = Math.Max(1, ctx.Bounds.Height);
 
-                for (var y = 0; y < ctx.Bounds.Height; y++)
+                // Hue across X, lightness down Y (similar to typical "spectrum" palettes).
+                const float chroma = 0.18f;
+                const float topLightness = 0.92f;
+                const float bottomLightness = 0.25f;
+
+                for (var y = 0; y < height; y++)
                 {
-                    for (var x = 0; x < ctx.Bounds.Width; x++)
+                    var yt = height <= 1 ? 0f : y / (float)(height - 1);
+                    var l = topLightness + ((bottomLightness - topLightness) * yt);
+
+                    for (var x = 0; x < width; x++)
                     {
-                        var t = ctx.Bounds.Width <= 1 ? 0f : x / (float)(ctx.Bounds.Width - 1);
-                        var color = Hue(t);
+                        var xt = width <= 1 ? 0f : x / (float)(width - 1);
+                        var hueDegrees = xt * 360f;
+                        var color = Color.FromOklch(l, chroma, hueDegrees);
                         var style = baseStyle.WithBackground(color);
                         ctx.SetPixel(x, y, new Rune(' '), style);
                     }
