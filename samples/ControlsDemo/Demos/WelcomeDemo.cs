@@ -3,6 +3,7 @@ using System.Text;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Figlet;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
@@ -62,6 +63,8 @@ public sealed class WelcomeDemo : ControlsDemoBase
                 }
             }).HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch);
 
+        var schemePanel = BuildSchemePanel(DemoThemes.Dark);
+
         return new VStack(
                 banner,
                 title,
@@ -71,7 +74,99 @@ public sealed class WelcomeDemo : ControlsDemoBase
                 new Group()
                     .TopLeftText("Spectrum")
                     .Padding(1)
-                    .Content(spectrum).VerticalAlignment(VerticalAlignment.Stretch).HorizontalAlignment(HorizontalAlignment.Stretch))
+                    .Content(spectrum).VerticalAlignment(VerticalAlignment.Stretch).HorizontalAlignment(HorizontalAlignment.Stretch),
+                schemePanel)
             .Spacing(1);
+    }
+
+    private static Visual BuildSchemePanel(Theme theme)
+    {
+        var scheme = theme.Scheme;
+        if (scheme is null)
+        {
+            return (Visual)"[dim]No ColorScheme available for this theme.[/]";
+        }
+
+        var table = new Table()
+            .Headers("Name", "Sample", "Value");
+
+        void Add(string name, Color? color)
+        {
+            table.AddRow(
+                new TextBlock(name),
+                CreateSwatch(theme, color),
+                new Markup($"[dim]{FormatColor(color)}[/]") { Wrap = false });
+        }
+
+        Add("Background", scheme.Background);
+        Add("Foreground", scheme.Foreground);
+        Add("Black", scheme.Black);
+        Add("Red", scheme.Red);
+        Add("Green", scheme.Green);
+        Add("Yellow", scheme.Yellow);
+        Add("Blue", scheme.Blue);
+        Add("Purple", scheme.Purple);
+        Add("Cyan", scheme.Cyan);
+        Add("White", scheme.White);
+        Add("BrightBlack", scheme.BrightBlack);
+        Add("BrightRed", scheme.BrightRed);
+        Add("BrightGreen", scheme.BrightGreen);
+        Add("BrightYellow", scheme.BrightYellow);
+        Add("BrightBlue", scheme.BrightBlue);
+        Add("BrightPurple", scheme.BrightPurple);
+        Add("BrightCyan", scheme.BrightCyan);
+        Add("BrightWhite", scheme.BrightWhite);
+
+        return new Group()
+            .TopLeftText($"Scheme: {scheme.Name}")
+            .Padding(1)
+            .Content(table);
+    }
+
+    private static Visual CreateSwatch(Theme theme, Color? color)
+    {
+        const int width = 10;
+        const int height = 1;
+
+        return new Canvas()
+            .MinWidth(width)
+            .MaxWidth(width)
+            .MinHeight(height)
+            .MaxHeight(height)
+            .Painter(ctx =>
+            {
+                var style = theme.BaseTextStyle();
+                if (color is { } c && c.Kind != ColorKind.Default)
+                {
+                    style = style.WithBackground(c);
+                }
+
+                for (var y = 0; y < ctx.Bounds.Height; y++)
+                {
+                    for (var x = 0; x < ctx.Bounds.Width; x++)
+                    {
+                        ctx.SetPixel(x, y, new Rune(' '), style);
+                    }
+                }
+            });
+    }
+
+    private static string FormatColor(Color? color)
+    {
+        if (color is null)
+        {
+            return "Default";
+        }
+
+        var c = color.Value;
+        return c.Kind switch
+        {
+            ColorKind.Default => "Default",
+            ColorKind.Basic16 => $"Basic16({c.Index}) {c.ToHexString()}",
+            ColorKind.Indexed256 => $"Indexed256({c.Index}) {c.ToHexString()}",
+            ColorKind.Rgb => c.ToHexString(),
+            ColorKind.RgbA => c.ToHexString(includeAlpha: true),
+            _ => c.ToHexString(),
+        };
     }
 }

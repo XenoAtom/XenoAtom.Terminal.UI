@@ -78,6 +78,15 @@ public sealed class Theme : IStyle<Theme>
     public static StyleKey<Theme> Key { get; } = new("Theme", Default);
 
     /// <summary>
+    /// Gets the source <see cref="ColorScheme"/> used to build this theme, when available.
+    /// </summary>
+    /// <remarks>
+    /// This is primarily intended for diagnostics and demos. The theme itself exposes derived design-tokens such as
+    /// <see cref="Surface"/>, <see cref="ControlFill"/>, and <see cref="InputFill"/> that are used by controls.
+    /// </remarks>
+    public ColorScheme? Scheme { get; init; }
+
+    /// <summary>
     /// Creates a <see cref="Theme"/> from a 16-color ANSI scheme.
     /// </summary>
     /// <param name="scheme">The color scheme.</param>
@@ -110,6 +119,7 @@ public sealed class Theme : IStyle<Theme>
 
             return new Theme
             {
+                Scheme = scheme,
                 Foreground = scheme.Foreground,
                 Background = scheme.Background,
                 Surface = scheme.Black,
@@ -203,6 +213,7 @@ public sealed class Theme : IStyle<Theme>
 
         return new Theme
         {
+            Scheme = scheme,
             Foreground = foreground,
             Background = background,
             Surface = surface,
