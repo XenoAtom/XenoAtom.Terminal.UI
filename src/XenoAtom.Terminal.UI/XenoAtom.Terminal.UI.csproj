@@ -38,8 +38,8 @@
     </PackageReference>
 
     <!-- Use local project reference while iterating on shared text measurement utilities. -->
-    <!--<PackageReference Include="XenoAtom.Terminal" />-->
-    <ProjectReference Include="..\..\..\XenoAtom.Terminal\src\XenoAtom.Terminal\XenoAtom.Terminal.csproj" />
+    <PackageReference Include="XenoAtom.Terminal" />
+    <!--<ProjectReference Include="..\..\..\XenoAtom.Terminal\src\XenoAtom.Terminal\XenoAtom.Terminal.csproj" />-->
   </ItemGroup>
 
   <ItemGroup>
