@@ -40,11 +40,11 @@ public sealed class PopupDemo : ControlsDemoBase
         Popup CreatePopup()
         {
             var p = new Popup();
-            p.Content(new VStack(
+            p.Content(new Border(new VStack(
                     DemoUi.Title("Popup"),
                     DemoUi.Hint("Click outside or press Tab/Esc to close."),
                     new Button("Close").Click(p.Close))
-                .Spacing(1));
+                .Spacing(1)));
 
             p.Closed((_, _) => context.Log("Popup closed"));
             return p;
@@ -52,6 +52,10 @@ public sealed class PopupDemo : ControlsDemoBase
 
         return new VStack(
                 DemoUi.Hint("Popups are useful for dropdowns and context menus."),
+                "This is a line of text to give space",
+                "This is another line",
+                "And another line",
+                "Now you can try it:",
                 new HStack(anchor, "Placement:", placement).Spacing(1))
             .Spacing(1);
     }

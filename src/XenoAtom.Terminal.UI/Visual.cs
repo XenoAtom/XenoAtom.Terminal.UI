@@ -341,6 +341,18 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     {
         using var _ = BindingManager.Current.DisableReadTracking();
         App = app;
+
+        // A visual may be detached and later re-attached (e.g. popups, dialogs, or moved subtrees).
+        // Cached layout/render state must not survive across attachments, otherwise we can skip Arrange/Measure
+        // and keep stale bounds (e.g. a Popup re-used with a different placement).
+        _measureDirty = true;
+        _arrangeDirty = true;
+        _hasLastMeasure = false;
+        _hasLastArrange = false;
+        _measureDeps = null;
+        _arrangeDeps = null;
+        _renderDeps = null;
+
         OnAttachedToApp(app);
 
         if (this is IAnimatedVisual animated)

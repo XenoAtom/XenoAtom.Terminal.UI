@@ -60,6 +60,34 @@ public sealed class PopupTests
     }
 
     [TestMethod]
+    public void Popup_Reused_Instance_Updates_Placement_On_Reshow()
+    {
+        var anchor = new Button("Anchor");
+        var root = new VStack { anchor };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        var popup = new Popup
+        {
+            Anchor = anchor,
+            Content = new TextBlock("PopupContent"),
+            MatchAnchorWidth = false,
+        };
+
+        driver.App.Post(popup.Show);
+        driver.Tick();
+        driver.App.Post(popup.Close);
+        driver.Tick();
+
+        popup.Placement = PopupPlacement.Right;
+        driver.App.Post(popup.Show);
+        driver.Tick();
+
+        Assert.AreEqual(anchor.Bounds.Right, popup.Content!.Bounds.X);
+    }
+
+    [TestMethod]
     public void Popup_RightPlacement_Shrinks_To_Available_Space()
     {
         var anchor = new Button("A");
