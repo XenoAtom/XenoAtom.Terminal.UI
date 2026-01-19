@@ -190,7 +190,7 @@ public sealed class Theme : IStyle<Theme>
             controlPressed = Color.RgbA(255, 255, 255, 0x20);
 
             // Inputs: unfocused are slightly lifted (lighter); focused is inset (darker).
-            inputFill = Color.RgbA(255, 255, 255, 0x0C);
+            inputFill = Color.RgbA(128, 128, 128, 0x04);
             inputFillFocused = Color.RgbA(0, 0, 0, 0x28);
 
             borderStroke = Color.RgbA(255, 255, 255, 0x26);

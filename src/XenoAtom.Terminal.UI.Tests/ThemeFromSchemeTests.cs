@@ -42,9 +42,9 @@ public sealed class ThemeFromSchemeTests
         Assert.AreEqual(ColorKind.RgbA, theme.Selection!.Value.Kind);
 
         // Dark theme: unfocused inputs are slightly lifted (lighter), focused inputs are inset (darker).
-        Assert.AreEqual(255, theme.InputFill.Value.R);
-        Assert.AreEqual(255, theme.InputFill.Value.G);
-        Assert.AreEqual(255, theme.InputFill.Value.B);
+        Assert.AreEqual(128, theme.InputFill.Value.R);
+        Assert.AreEqual(128, theme.InputFill.Value.G);
+        Assert.AreEqual(128, theme.InputFill.Value.B);
         Assert.AreEqual(0, theme.InputFillFocused.Value.R);
         Assert.AreEqual(0, theme.InputFillFocused.Value.G);
         Assert.AreEqual(0, theme.InputFillFocused.Value.B);
