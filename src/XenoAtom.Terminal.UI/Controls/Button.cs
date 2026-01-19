@@ -194,11 +194,17 @@ public partial class Button : ContentVisual
         var content = Content;
         if (content is not null && contentWidth > 0 && contentHeight > 0)
         {
+            // Preserve a consistent background for the whole button.
+            // The button background may be an RGBA overlay that is blended into the cell buffer when written.
+            // Filling the content region with the same RGBA background twice would apply the overlay twice and
+            // visually create a lighter/darker strip behind the label. We only need to stamp the text style here
+            // (e.g. Bold/Underline), while letting the background come from the initial full-rect fill.
+            var contentFill = style.ClearBackground() | TextStyle.Bold;
             for (var y = contentY; y < contentY + contentHeight; y++)
             {
                 for (var x = contentX; x < contentX + contentWidth; x++)
                 {
-                    buffer.SetCell(x, y, new Rune(' '), style | TextStyle.Bold);
+                    buffer.SetCell(x, y, new Rune(' '), contentFill);
                 }
             }
         }
