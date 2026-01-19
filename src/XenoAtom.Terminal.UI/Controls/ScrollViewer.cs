@@ -325,6 +325,12 @@ public sealed partial class ScrollViewer : Visual
 
         if (useContentScroll)
         {
+            var scrollModel = _contentScrollModel;
+            if (scrollModel is null)
+            {
+                return;
+            }
+
             // When a content provides a ScrollModel (e.g. TextArea), the content owns its viewport size
             // (it depends on padding/borders and any internal chrome). ScrollViewer must not call
             // ScrollModel.SetViewport(), otherwise it will fight with the content and cause oscillations
@@ -337,10 +343,10 @@ public sealed partial class ScrollViewer : Visual
                 _contentHost.UpdateLayout(contentViewportWidth, contentViewportHeight, 0, 0);
                 _contentHost.Arrange(new Rectangle(finalRect.X, finalRect.Y, contentViewportWidth, contentViewportHeight));
 
-                extentWidth = Math.Max(0, _contentScrollModel!.ExtentWidth);
-                extentHeight = Math.Max(0, _contentScrollModel.ExtentHeight);
-                modelViewportWidth = Math.Max(0, _contentScrollModel.ViewportWidth);
-                modelViewportHeight = Math.Max(0, _contentScrollModel.ViewportHeight);
+                extentWidth = Math.Max(0, scrollModel.ExtentWidth);
+                extentHeight = Math.Max(0, scrollModel.ExtentHeight);
+                modelViewportWidth = Math.Max(0, scrollModel.ViewportWidth);
+                modelViewportHeight = Math.Max(0, scrollModel.ViewportHeight);
 
                 var nextShowV = verticalScrollEnabled && extentHeight > modelViewportHeight;
                 var nextShowH = horizontalScrollEnabled && extentWidth > modelViewportWidth;
@@ -359,11 +365,11 @@ public sealed partial class ScrollViewer : Visual
             var maxVerticalOffset = Math.Max(0, extentHeight - modelViewportHeight);
             var maxHorizontalOffset = Math.Max(0, extentWidth - modelViewportWidth);
 
-            v = verticalScrollEnabled ? Math.Clamp(_contentScrollModel!.OffsetY, 0, maxVerticalOffset) : 0;
-            hOffset = horizontalScrollEnabled ? Math.Clamp(_contentScrollModel.OffsetX, 0, maxHorizontalOffset) : 0;
-            if (v != _contentScrollModel.OffsetY || hOffset != _contentScrollModel.OffsetX)
+            v = verticalScrollEnabled ? Math.Clamp(scrollModel.OffsetY, 0, maxVerticalOffset) : 0;
+            hOffset = horizontalScrollEnabled ? Math.Clamp(scrollModel.OffsetX, 0, maxHorizontalOffset) : 0;
+            if (v != scrollModel.OffsetY || hOffset != scrollModel.OffsetX)
             {
-                _contentScrollModel.SetOffset(hOffset, v);
+                scrollModel.SetOffset(hOffset, v);
             }
 
             SyncOffsetsFromContent();

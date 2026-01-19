@@ -100,7 +100,7 @@ internal static class ControlsDemoApp
                 continue;
             }
 
-            list.Items.Add(new OptionListItem(new Markup($"[dim]{category}[/]")) { IsEnabled = false });
+            list.Items.Add(new OptionListItem(CreateCategoryHeader(category)) { IsEnabled = false });
             demoIdForIndex.Add(null);
 
             for (var i = 0; i < matches.Count; i++)
@@ -144,5 +144,23 @@ internal static class ControlsDemoApp
         });
 
         return list;
+    }
+
+    private static Visual CreateCategoryHeader(string category)
+    {
+        var label = category switch
+        {
+            "Content" => $"📄 {category}",
+            "Input" => $"⌨️ {category}",
+            "Layout" => $"🧩 {category}",
+            "Navigation" => $"🧭 {category}",
+            "Overlays" => $"🪟 {category}",
+            "Patterns" => $"🧠 {category}",
+            "Visualization" => $"📊 {category}",
+            _ => $"📁 {category}",
+        };
+
+        // Category headers are rendered as disabled items, so we use markup styling instead of selection styles.
+        return new Markup($"[underline][bold]{label}[/][/]");
     }
 }
