@@ -103,7 +103,7 @@ public record TextBoxStyle : IStyle<TextBoxStyle>
     {
         var style = Style.None;
         if (theme.Foreground is { } fg) style = style.WithForeground(fg);
-        var bg = Background ?? theme.SurfaceAlt ?? theme.Surface ?? theme.Background;
+        var bg = Background ?? theme.InputFill ?? theme.SurfaceAlt ?? theme.Surface ?? theme.Background;
         if (bg is { } b) style = style.WithBackground(b);
         return style;
     }

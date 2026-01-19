@@ -11,19 +11,42 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class ThemeFromSchemeTests
 {
     [TestMethod]
-    public void FromScheme_Uses_Palette_Neutrals_For_Dark_Schemes()
+    public void FromScheme_DarkScheme_Provides_Fullscreen_Tokens()
     {
         var scheme = ColorScheme.RootLoopsDark;
         var theme = Theme.FromScheme(scheme, ThemeSchemeBrightness.Auto);
 
         Assert.AreEqual(scheme.Background, theme.Background);
         Assert.AreEqual(scheme.Foreground, theme.Foreground);
-        Assert.AreEqual(scheme.Black, theme.Surface);
-        Assert.AreEqual(scheme.BrightBlack, theme.SurfaceAlt);
+
+        Assert.IsNotNull(theme.Surface);
+        Assert.IsNotNull(theme.PopupSurface);
+        Assert.IsNotNull(theme.ControlFill);
+        Assert.IsNotNull(theme.ControlFillHover);
+        Assert.IsNotNull(theme.ControlFillPressed);
+        Assert.IsNotNull(theme.InputFill);
+        Assert.IsNotNull(theme.Border);
+        Assert.IsNotNull(theme.FocusBorder);
+        Assert.IsNotNull(theme.Selection);
+        Assert.IsNotNull(theme.Muted);
+        Assert.IsNotNull(theme.Disabled);
+
+        Assert.AreEqual(ColorKind.RgbA, theme.Surface!.Value.Kind);
+        Assert.AreEqual(ColorKind.Rgb, theme.PopupSurface!.Value.Kind);
+        Assert.AreEqual(ColorKind.RgbA, theme.ControlFill!.Value.Kind);
+        Assert.AreEqual(ColorKind.RgbA, theme.InputFill!.Value.Kind);
+        Assert.AreEqual(ColorKind.RgbA, theme.Border!.Value.Kind);
+        Assert.AreEqual(ColorKind.Rgb, theme.FocusBorder!.Value.Kind);
+        Assert.AreEqual(ColorKind.RgbA, theme.Selection!.Value.Kind);
+
+        // Dark theme: inputs are inset by darkening the background.
+        Assert.AreEqual(0, theme.InputFill.Value.R);
+        Assert.AreEqual(0, theme.InputFill.Value.G);
+        Assert.AreEqual(0, theme.InputFill.Value.B);
     }
 
     [TestMethod]
-    public void FromScheme_Derives_Neutrals_Close_To_Background_For_Light_Schemes()
+    public void FromScheme_LightScheme_Uses_Light_Surfaces_And_Dark_Overlays()
     {
         var scheme = ColorScheme.RootLoopsLight;
         var theme = Theme.FromScheme(scheme, ThemeSchemeBrightness.Auto);
@@ -32,27 +55,26 @@ public sealed class ThemeFromSchemeTests
         Assert.AreEqual(scheme.Foreground, theme.Foreground);
 
         Assert.IsNotNull(theme.Surface);
-        Assert.IsNotNull(theme.SurfaceAlt);
+        Assert.IsNotNull(theme.ControlFill);
+        Assert.IsNotNull(theme.InputFill);
+        Assert.IsNotNull(theme.PopupSurface);
+        Assert.IsNotNull(theme.Border);
 
-        // For light schemes, the derived surfaces should be closer to the background than to the foreground.
+        Assert.AreEqual(ColorKind.Rgb, theme.Surface.Value.Kind);
+        Assert.AreEqual(ColorKind.RgbA, theme.ControlFill!.Value.Kind);
+        Assert.AreEqual(ColorKind.Rgb, theme.InputFill!.Value.Kind);
+        Assert.AreEqual(ColorKind.Rgb, theme.PopupSurface!.Value.Kind);
+        Assert.AreEqual(ColorKind.RgbA, theme.Border!.Value.Kind);
+
+        // Light scheme surfaces are intended to be lighter than the background.
         var bgLum = GetLuma(scheme.Background!.Value);
-        var fgLum = GetLuma(scheme.Foreground!.Value);
-        var surfaceLum = GetLuma(theme.Surface!.Value);
-        var surfaceAltLum = GetLuma(theme.SurfaceAlt!.Value);
-
-        Assert.IsGreaterThan(fgLum, bgLum);
-        Assert.IsGreaterThan(surfaceLum, bgLum);
-        Assert.IsGreaterThan(surfaceAltLum, surfaceLum);
-        Assert.IsGreaterThan(fgLum, surfaceAltLum);
-
-        // They should be derived, not direct palette "black" entries (which can be too saturated on light themes).
-        Assert.AreNotEqual(scheme.Black, theme.Surface);
-        Assert.AreNotEqual(scheme.BrightBlack, theme.SurfaceAlt);
+        var surfaceLum = GetLuma(theme.Surface.Value);
+        Assert.IsGreaterThan(bgLum, surfaceLum);
     }
 
     private static float GetLuma(Color color)
     {
-        Assert.AreEqual(ColorKind.Rgb, color.Kind);
+        Assert.IsTrue(color.Kind is ColorKind.Rgb or ColorKind.RgbA);
 
         static float ToLinear(byte channel)
         {

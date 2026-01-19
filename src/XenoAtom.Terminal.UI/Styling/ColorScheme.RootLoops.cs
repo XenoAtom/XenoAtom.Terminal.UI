@@ -163,8 +163,6 @@ public sealed partial record ColorScheme
         return new ColorScheme
         {
             Name = name ?? "Root Loops",
-            CursorColor = white,
-            SelectionBackground = white,
             Background = background,
             Foreground = foreground,
             Black = black,

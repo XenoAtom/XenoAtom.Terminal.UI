@@ -49,13 +49,20 @@ public sealed record PopupStyle : IStyle<PopupStyle>
         }
 
         var style = theme.ForegroundTextStyle();
-        if (theme.SurfaceAlt is { } bg)
+        if (theme.PopupSurface is { } bg)
         {
-            style = style.WithBackground(bg);
+            return style.WithBackground(bg);
         }
-        else if (theme.Surface is { } bg2)
+
+        // Fallbacks (terminal theme / older themes).
+        if (theme.SurfaceAlt is { } bg2)
         {
-            style = style.WithBackground(bg2);
+            return style.WithBackground(bg2);
+        }
+
+        if (theme.Surface is { } bg3)
+        {
+            return style.WithBackground(bg3);
         }
 
         return style;
@@ -74,13 +81,21 @@ public sealed record PopupStyle : IStyle<PopupStyle>
         }
 
         var style = theme.BorderStyle(focused: false);
-        if (theme.SurfaceAlt is { } bg)
+
+        // Match the popup surface fill so borders blend naturally when using RGBA strokes.
+        if (theme.PopupSurface is { } bg)
         {
-            style = style.WithBackground(bg);
+            return style.WithBackground(bg);
         }
-        else if (theme.Surface is { } bg2)
+
+        if (theme.SurfaceAlt is { } bg2)
         {
-            style = style.WithBackground(bg2);
+            return style.WithBackground(bg2);
+        }
+
+        if (theme.Surface is { } bg3)
+        {
+            return style.WithBackground(bg3);
         }
 
         return style;

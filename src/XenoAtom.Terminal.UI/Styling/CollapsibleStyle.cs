@@ -119,7 +119,7 @@ public sealed record CollapsibleStyle : IStyle<CollapsibleStyle>
 
     private static Style ResolveDefaultHovered(Theme theme, Style normal)
     {
-        if (theme.SurfaceAlt is { } bg)
+        if ((theme.ControlFillHover ?? theme.SurfaceAlt) is { } bg)
         {
             return normal.WithBackground(bg);
         }

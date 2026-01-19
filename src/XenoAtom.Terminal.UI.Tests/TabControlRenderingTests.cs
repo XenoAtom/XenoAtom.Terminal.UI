@@ -26,7 +26,7 @@ public sealed class TabControlRenderingTests
         tabControl.Arrange(new Rectangle(0, 0, 40, 6));
 
         var buffer = new CellBuffer(40, 6);
-        buffer.Clear();
+        buffer.Clear(theme.BaseTextStyle());
 
         typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!
             .Invoke(tabControl, new object[] { buffer });
@@ -43,13 +43,17 @@ public sealed class TabControlRenderingTests
         typeof(TabControl).GetField("_pressedIndex", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(tabControl, 0);
         typeof(TabControl).GetField("_pressedInside", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(tabControl, true);
 
-        buffer.Clear();
+        buffer.Clear(theme.BaseTextStyle());
         typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!
             .Invoke(tabControl, new object[] { buffer });
         cells = (Style[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
 
         Assert.IsTrue(cells[0].TryGetBackground(out var pressedBg));
-        Assert.AreEqual(selection, pressedBg);
+        Assert.IsTrue(cells[39].TryGetBackground(out var stripBgPressed), "Expected strip cell to have a background color.");
+
+        // Selection backgrounds can be RGBA overlays; they should be blended over the header strip background.
+        var expected = selection.Kind == ColorKind.RgbA ? BlendLinear(selection, stripBgPressed) : selection;
+        AssertClose(expected, pressedBg);
     }
 
     [TestMethod]
@@ -65,7 +69,7 @@ public sealed class TabControlRenderingTests
         tabControl.Arrange(new Rectangle(0, 0, 20, 6));
 
         var buffer = new CellBuffer(20, 6);
-        buffer.Clear();
+        buffer.Clear(tabControl.GetTheme().BaseTextStyle());
 
         typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!
             .Invoke(tabControl, new object[] { buffer });
@@ -75,5 +79,52 @@ public sealed class TabControlRenderingTests
         // Border is rendered below the header strip.
         var expectedTopLeft = LineGlyphs.Rounded.TopLeft.Value;
         Assert.AreEqual(expectedTopLeft, scalars[buffer.Width], "Expected the tab content to be wrapped by the rounded border template.");
+    }
+
+    private static void AssertClose(Color expected, Color actual)
+    {
+        // The production code uses LUTs for speed; allow a small tolerance.
+        Assert.AreEqual(ColorKind.Rgb, actual.Kind);
+
+        Assert.IsLessThanOrEqualTo(1, Math.Abs(expected.R - actual.R));
+        Assert.IsLessThanOrEqualTo(1, Math.Abs(expected.G - actual.G));
+        Assert.IsLessThanOrEqualTo(1, Math.Abs(expected.B - actual.B));
+    }
+
+    private static Color BlendLinear(Color src, Color dst)
+    {
+        Assert.AreEqual(ColorKind.RgbA, src.Kind);
+        Assert.AreEqual(ColorKind.Rgb, dst.Kind);
+
+        var sa = src.A / 255.0;
+        var invSa = 1.0 - sa;
+
+        var srcR = SrgbToLinear(src.R);
+        var srcG = SrgbToLinear(src.G);
+        var srcB = SrgbToLinear(src.B);
+
+        var dstR = SrgbToLinear(dst.R);
+        var dstG = SrgbToLinear(dst.G);
+        var dstB = SrgbToLinear(dst.B);
+
+        var outR = (srcR * sa) + (dstR * invSa);
+        var outG = (srcG * sa) + (dstG * invSa);
+        var outB = (srcB * sa) + (dstB * invSa);
+
+        return Color.Rgb(LinearToSrgb(outR), LinearToSrgb(outG), LinearToSrgb(outB));
+    }
+
+    private static double SrgbToLinear(byte value)
+    {
+        var srgb = value / 255.0;
+        return srgb <= 0.04045 ? srgb / 12.92 : Math.Pow((srgb + 0.055) / 1.055, 2.4);
+    }
+
+    private static byte LinearToSrgb(double linear)
+    {
+        linear = Math.Clamp(linear, 0.0, 1.0);
+        var srgb = linear <= 0.0031308 ? 12.92 * linear : (1.055 * Math.Pow(linear, 1.0 / 2.4)) - 0.055;
+        var value = (int)Math.Round(srgb * 255.0);
+        return (byte)Math.Clamp(value, 0, 255);
     }
 }

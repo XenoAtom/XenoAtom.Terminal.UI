@@ -230,7 +230,7 @@ public sealed partial class Dialog : Visual, IModalVisual
         var glyphs = theme.Lines;
         var borderStyle = theme.BorderStyle(focused);
 
-        var dialogBackground = theme.SurfaceAlt ?? theme.Surface;
+        var dialogBackground = theme.PopupSurface ?? theme.SurfaceAlt ?? theme.Surface;
         var surface = theme.ForegroundTextStyle();
         if (dialogBackground is { } bg)
         {

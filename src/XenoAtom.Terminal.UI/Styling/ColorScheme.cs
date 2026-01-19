@@ -17,16 +17,6 @@ public sealed partial record ColorScheme
     public required string Name { get; init; }
 
     /// <summary>
-    /// Gets the suggested cursor color.
-    /// </summary>
-    public required Color CursorColor { get; init; }
-
-    /// <summary>
-    /// Gets the suggested selection background color.
-    /// </summary>
-    public required Color SelectionBackground { get; init; }
-
-    /// <summary>
     /// Gets the background color, or <c>null</c> to use the terminal default background.
     /// </summary>
     public Color? Background { get; init; }
@@ -122,8 +112,6 @@ public sealed partial record ColorScheme
     public static ColorScheme Terminal { get; } = new ColorScheme
     {
         Name = "Terminal",
-        CursorColor = Color.Basic16(7), // white
-        SelectionBackground = Color.Basic16(12), // bright blue
         Background = null, // terminal default
         Foreground = null, // terminal default
         Black = Color.Basic16(0),
@@ -151,8 +139,6 @@ public sealed partial record ColorScheme
     public static ColorScheme RootLoopsDark { get; } = new ColorScheme
     {
         Name = "Root Loops (Dark)",
-        CursorColor = Color.Rgb(0x7D, 0xA9, 0xC9),
-        SelectionBackground = Color.Rgb(0x7D, 0xA9, 0xC9),
         Background = Color.Rgb(0x0F, 0x1D, 0x27),
         Foreground = Color.Rgb(0xCD, 0xE0, 0xEE),
         Black = Color.Rgb(0x1F, 0x35, 0x44),
@@ -180,8 +166,6 @@ public sealed partial record ColorScheme
     public static ColorScheme RootLoopsLight { get; } = new ColorScheme
     {
         Name = "Root Loops (Light)",
-        CursorColor = Color.Rgb(0x36, 0x56, 0x6C),
-        SelectionBackground = Color.Rgb(0x36, 0x56, 0x6C),
         Background = Color.Rgb(0xEE, 0xF5, 0xF9),
         Foreground = Color.Rgb(0x02, 0x06, 0x0B),
         Black = Color.Rgb(0xD5, 0xE5, 0xF1),

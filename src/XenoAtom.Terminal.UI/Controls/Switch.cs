@@ -139,7 +139,14 @@ public sealed partial class Switch : ContentVisual
 
         if ((uint)thumbIndex < (uint)trackCells)
         {
-            var mergedThumb = thumbStyle.MergeUnspecified(thumbTrackStyle);
+            // The thumb is rendered over a track cell that was already written. For RGBA track fills, merging the
+            // track background into the thumb style would apply the overlay twice (once for the track, once for the
+            // thumb), producing a visibly different background. Instead, rely on the existing cell background.
+            var mergedThumb = thumbStyle;
+            if (thumbTrackStyle.TryGetBackground(out var trackBg) && trackBg.Kind != ColorKind.RgbA)
+            {
+                mergedThumb = thumbStyle.MergeUnspecified(thumbTrackStyle);
+            }
             buffer.SetCell(x + thumbIndex, y, style.ThumbGlyph, mergedThumb);
         }
     }

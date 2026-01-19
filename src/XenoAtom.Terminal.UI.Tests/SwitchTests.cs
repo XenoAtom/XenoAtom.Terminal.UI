@@ -57,7 +57,7 @@ public sealed class SwitchTests
         sw.Arrange(new Rectangle(0, 0, 10, 1));
 
         var buffer = new CellBuffer(10, 1);
-        buffer.Clear();
+        buffer.Clear(theme.BaseTextStyle());
         typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(sw, new object[] { buffer });
 
         var cells = (Style[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
@@ -71,7 +71,7 @@ public sealed class SwitchTests
         Assert.AreEqual(leftOffBg, thumbOffBg);
 
         sw.IsOn = true;
-        buffer.Clear();
+        buffer.Clear(theme.BaseTextStyle());
         typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(sw, new object[] { buffer });
         cells = (Style[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
 

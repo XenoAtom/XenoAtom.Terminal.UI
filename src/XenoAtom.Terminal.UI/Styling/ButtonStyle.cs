@@ -124,7 +124,7 @@ public sealed record ButtonStyle : IStyle<ButtonStyle>
             ControlTone.Success => (theme.Background ?? theme.Foreground, theme.Success),
             ControlTone.Warning => (theme.Background ?? theme.Foreground, theme.Warning),
             ControlTone.Error => (theme.Background ?? theme.Foreground, theme.Error),
-            _ => (theme.Foreground, theme.Surface ?? theme.SurfaceAlt ?? theme.Background),
+            _ => (theme.Foreground, theme.ControlFill ?? theme.SurfaceAlt ?? theme.Surface ?? theme.Background),
         };
 
         var resolved = Style.None;
@@ -135,7 +135,7 @@ public sealed record ButtonStyle : IStyle<ButtonStyle>
 
     private static Style ResolveDefaultHovered(Theme theme, Style normal, ControlTone tone)
     {
-        if (tone == ControlTone.Default && theme.SurfaceAlt is { } hoverBg)
+        if (tone == ControlTone.Default && (theme.ControlFillHover ?? theme.SurfaceAlt) is { } hoverBg)
         {
             return normal.WithBackground(hoverBg);
         }
@@ -145,7 +145,7 @@ public sealed record ButtonStyle : IStyle<ButtonStyle>
 
     private static Style ResolveDefaultPressed(Theme theme, Style normal)
     {
-        if (theme.Selection is { } selectionBg)
+        if ((theme.ControlFillPressed ?? theme.Selection) is { } selectionBg)
         {
             normal = normal.WithBackground(selectionBg);
         }
@@ -157,9 +157,15 @@ public sealed record ButtonStyle : IStyle<ButtonStyle>
     {
         var style = normal;
 
-        if (tone == ControlTone.Default && theme.FocusBorder is { } focus)
+        // Focus should not look like a pressed state. Prefer an accent foreground + underline.
+        if (tone == ControlTone.Default)
         {
-            style = style.WithForeground(focus);
+            if (theme.FocusBorder is { } focus)
+            {
+                style = style.WithForeground(focus);
+            }
+
+            style |= TextStyle.Underline;
         }
 
         return style;

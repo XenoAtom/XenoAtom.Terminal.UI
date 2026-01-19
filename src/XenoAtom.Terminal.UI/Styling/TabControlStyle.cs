@@ -209,7 +209,7 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
 
     private static Style ResolveDefaultHovered(Theme theme, Style normal)
     {
-        if (theme.SurfaceAlt is { } hoverBg)
+        if ((theme.ControlFillHover ?? theme.SurfaceAlt) is { } hoverBg)
         {
             normal = normal.WithBackground(hoverBg);
         }

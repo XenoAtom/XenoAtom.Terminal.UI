@@ -41,8 +41,6 @@ public sealed class ColorSchemeRootLoopsGeneratorTests
 
     private static void AssertSchemesEqual(ColorScheme expected, ColorScheme actual)
     {
-        Assert.AreEqual(expected.CursorColor, actual.CursorColor);
-        Assert.AreEqual(expected.SelectionBackground, actual.SelectionBackground);
         Assert.AreEqual(expected.Background, actual.Background);
         Assert.AreEqual(expected.Foreground, actual.Foreground);
 
@@ -65,4 +63,3 @@ public sealed class ColorSchemeRootLoopsGeneratorTests
         Assert.AreEqual(expected.BrightWhite, actual.BrightWhite);
     }
 }
-

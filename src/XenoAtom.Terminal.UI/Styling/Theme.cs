@@ -26,6 +26,29 @@ public enum ThemeSchemeBrightness
 }
 
 /// <summary>
+/// Selects which base palette entry is used as the theme accent color.
+/// </summary>
+public enum ThemeAccentColor
+{
+    /// <summary>Uses the scheme blue color.</summary>
+    Blue,
+    /// <summary>Uses the scheme cyan color.</summary>
+    Cyan,
+    /// <summary>Uses the scheme green color.</summary>
+    Green,
+    /// <summary>Uses the scheme purple/magenta color.</summary>
+    Purple,
+    /// <summary>Uses the scheme red color.</summary>
+    Red,
+    /// <summary>Uses the scheme yellow color.</summary>
+    Yellow,
+    /// <summary>Uses the scheme white color.</summary>
+    White,
+    /// <summary>Uses the scheme black color.</summary>
+    Black,
+}
+
+/// <summary>
 /// Defines a theme used to style the UI (semantic colors, surfaces, and glyph sets).
 /// </summary>
 /// <remarks>
@@ -59,51 +82,135 @@ public sealed class Theme : IStyle<Theme>
     /// </summary>
     /// <param name="scheme">The color scheme.</param>
     /// <param name="brightness">How to interpret scheme brightness.</param>
+    /// <param name="accent">Which scheme color to use as the accent.</param>
     /// <returns>The created theme.</returns>
-    public static Theme FromScheme(ColorScheme scheme, ThemeSchemeBrightness brightness = ThemeSchemeBrightness.Auto)
+    public static Theme FromScheme(ColorScheme scheme, ThemeSchemeBrightness brightness = ThemeSchemeBrightness.Auto, ThemeAccentColor accent = ThemeAccentColor.Purple)
     {
         ArgumentNullException.ThrowIfNull(scheme);
+
+        var hasRgbBase = scheme.Background is { } bg && scheme.Foreground is { } fg
+            && bg.Kind is ColorKind.Rgb or ColorKind.RgbA
+            && fg.Kind is ColorKind.Rgb or ColorKind.RgbA;
 
         var isLight = brightness switch
         {
             ThemeSchemeBrightness.Light => true,
             ThemeSchemeBrightness.Dark => false,
-            _ => DetectLightScheme(scheme),
+            _ => hasRgbBase && DetectLightScheme(scheme),
         };
 
-        Color? surface = scheme.Black;
-        Color? surfaceAlt = scheme.BrightBlack;
-        Color? disabled = scheme.BrightBlack;
-        Color? muted = scheme.White;
-        Color? border = scheme.CursorColor;
-        Color? focusBorder = scheme.BrightWhite;
+        var accentColor = ResolveAccentColor(scheme, accent);
 
-        if (isLight && TryGetRgb(scheme.Background, out _) && TryGetRgb(scheme.Foreground, out _))
+        // Terminal-like schemes (unknown background/foreground) should avoid RGB(A) overlays.
+        if (!hasRgbBase)
         {
-            // For light schemes, derive neutrals close to the background so the overall UI keeps a "light" feel.
-            // This avoids using palette entries like Black/BrightBlack as large surfaces, which can be too saturated.
-            surface = Blend(scheme.Background!.Value, scheme.Foreground!.Value, t: 0.04f);
-            surfaceAlt = Blend(scheme.Background!.Value, scheme.Foreground!.Value, t: 0.08f);
-            disabled = Blend(scheme.Background!.Value, scheme.Foreground!.Value, t: 0.35f);
-            muted = Blend(scheme.Foreground!.Value, scheme.Background!.Value, t: 0.55f);
-            border = Blend(scheme.Background!.Value, scheme.Foreground!.Value, t: 0.15f);
-            focusBorder = scheme.CursorColor;
+            var border = scheme.BrightBlack;
+            var focusBorder = scheme.BrightBlue;
+            var selection = scheme.BrightBlue;
+
+            return new Theme
+            {
+                Foreground = scheme.Foreground,
+                Background = scheme.Background,
+                Surface = scheme.Black,
+                SurfaceAlt = scheme.BrightBlack,
+                PopupSurface = scheme.Black,
+                ControlFill = scheme.BrightBlack,
+                ControlFillHover = scheme.White,
+                ControlFillPressed = scheme.Blue,
+                InputFill = scheme.Black,
+                Border = border,
+                FocusBorder = focusBorder,
+                Accent = accentColor,
+                Selection = selection,
+                Disabled = scheme.BrightBlack,
+                Primary = scheme.Blue,
+                Success = scheme.Green,
+                Warning = scheme.Yellow,
+                Error = scheme.Red,
+                Muted = scheme.BrightBlack,
+                Lines = LineGlyphs.Single,
+                ScrollBars = ScrollBarGlyphs.Default,
+            };
         }
-        else if (isLight)
+
+        // Fullscreen schemes: derive a coherent set of design-tokens using RGB(A) overlays.
+        var background = ToRgb(scheme.Background!.Value);
+        var foreground = ToRgb(scheme.Foreground!.Value);
+        accentColor = ToRgb(accentColor);
+
+        Color surface;
+        Color controlFill;
+        Color controlHover;
+        Color controlPressed;
+        Color inputFill;
+        Color popupSurface;
+        Color borderStroke;
+        Color focusBorderStroke;
+        Color selectionFill;
+        Color muted;
+        Color disabled;
+
+        if (isLight)
         {
-            focusBorder = scheme.CursorColor;
+            // Light theme:
+            // - background is slightly tinted (not pure white)
+            // - surfaces are typically solid white
+            // - controls use subtle dark overlays for hover/pressed
+            surface = Color.Rgb(255, 255, 255);
+            popupSurface = surface;
+
+            controlFill = Color.RgbA(0, 0, 0, 0x0A);
+            controlHover = Color.RgbA(0, 0, 0, 0x14);
+            controlPressed = Color.RgbA(0, 0, 0, 0x1E);
+
+            // Inputs are slightly elevated (solid white) with strokes.
+            inputFill = surface;
+
+            borderStroke = Color.RgbA(0, 0, 0, 0x28);
+            focusBorderStroke = accentColor;
+
+            selectionFill = WithAlpha(accentColor, 0x30);
+            muted = WithAlpha(foreground, 0xB0);
+            disabled = WithAlpha(foreground, 0x70);
+        }
+        else
+        {
+            // Dark theme:
+            // - surfaces and controls are lifted using low-alpha white overlays
+            // - editable regions are inset using a low-alpha black overlay
+            surface = Color.RgbA(255, 255, 255, 0x08);
+            popupSurface = Blend(background, foreground, t: 0.12f);
+
+            controlFill = Color.RgbA(255, 255, 255, 0x0F);
+            controlHover = Color.RgbA(255, 255, 255, 0x17);
+            controlPressed = Color.RgbA(255, 255, 255, 0x20);
+
+            inputFill = Color.RgbA(0, 0, 0, 0x19);
+
+            borderStroke = Color.RgbA(255, 255, 255, 0x26);
+            focusBorderStroke = accentColor;
+
+            selectionFill = WithAlpha(accentColor, 0x3A);
+            muted = WithAlpha(foreground, 0xC5);
+            disabled = WithAlpha(foreground, 0x80);
         }
 
         return new Theme
         {
-            Foreground = scheme.Foreground,
-            Background = scheme.Background,
+            Foreground = foreground,
+            Background = background,
             Surface = surface,
-            SurfaceAlt = surfaceAlt,
-            Border = border,
-            FocusBorder = focusBorder,
-            Accent = scheme.Purple,
-            Selection = scheme.SelectionBackground,
+            SurfaceAlt = controlFill,
+            PopupSurface = popupSurface,
+            ControlFill = controlFill,
+            ControlFillHover = controlHover,
+            ControlFillPressed = controlPressed,
+            InputFill = inputFill,
+            Border = borderStroke,
+            FocusBorder = focusBorderStroke,
+            Accent = accentColor,
+            Selection = selectionFill,
             Disabled = disabled,
             Primary = scheme.Blue,
             Success = scheme.Green,
@@ -134,6 +241,31 @@ public sealed class Theme : IStyle<Theme>
     /// Gets an alternate surface background color, or <c>null</c>.
     /// </summary>
     public Color? SurfaceAlt { get; init; }
+
+    /// <summary>
+    /// Gets the background color used for popup surfaces (menus, dropdowns, dialogs), or <c>null</c>.
+    /// </summary>
+    public Color? PopupSurface { get; init; }
+
+    /// <summary>
+    /// Gets the default control fill used for interactive controls (buttons, list rows), or <c>null</c>.
+    /// </summary>
+    public Color? ControlFill { get; init; }
+
+    /// <summary>
+    /// Gets the control fill used for hovered interactive controls, or <c>null</c>.
+    /// </summary>
+    public Color? ControlFillHover { get; init; }
+
+    /// <summary>
+    /// Gets the control fill used for pressed interactive controls, or <c>null</c>.
+    /// </summary>
+    public Color? ControlFillPressed { get; init; }
+
+    /// <summary>
+    /// Gets the fill used for editable regions (text inputs/editors), or <c>null</c>.
+    /// </summary>
+    public Color? InputFill { get; init; }
 
     /// <summary>
     /// Gets the default border color, or <c>null</c>.
@@ -243,6 +375,45 @@ public sealed class Theme : IStyle<Theme>
     }
 
     /// <summary>
+    /// Builds a popup surface style using theme foreground and <see cref="PopupSurface"/>.
+    /// </summary>
+    public Style PopupSurfaceStyle()
+    {
+        var style = ForegroundTextStyle();
+        if (PopupSurface is { } bg)
+        {
+            style = style.WithBackground(bg);
+        }
+        return style;
+    }
+
+    /// <summary>
+    /// Builds a control fill style using theme foreground and <see cref="ControlFill"/>.
+    /// </summary>
+    public Style ControlFillStyle()
+    {
+        var style = ForegroundTextStyle();
+        if (ControlFill is { } bg)
+        {
+            style = style.WithBackground(bg);
+        }
+        return style;
+    }
+
+    /// <summary>
+    /// Builds an input fill style using theme foreground and <see cref="InputFill"/>.
+    /// </summary>
+    public Style InputFillStyle()
+    {
+        var style = ForegroundTextStyle();
+        if (InputFill is { } bg)
+        {
+            style = style.WithBackground(bg);
+        }
+        return style;
+    }
+
+    /// <summary>
     /// Builds a muted text style using <see cref="Muted"/> on top of <see cref="BaseTextStyle"/>.
     /// </summary>
     public Style MutedTextStyle()
@@ -302,7 +473,7 @@ public sealed class Theme : IStyle<Theme>
 
     private static bool TryGetRgb(Color? color, out (byte r, byte g, byte b) rgb)
     {
-        if (color is not { } c || c.Kind != ColorKind.Rgb)
+        if (color is not { } c || c.Kind is not (ColorKind.Rgb or ColorKind.RgbA))
         {
             rgb = default;
             return false;
@@ -314,7 +485,7 @@ public sealed class Theme : IStyle<Theme>
 
     private static bool TryGetRelativeLuminance(Color color, out float luma)
     {
-        if (color.Kind != ColorKind.Rgb)
+        if (color.Kind is not (ColorKind.Rgb or ColorKind.RgbA))
         {
             luma = 0;
             return false;
@@ -343,5 +514,47 @@ public sealed class Theme : IStyle<Theme>
         var g = (byte)Math.Clamp((int)MathF.Round(a.G + ((b.G - a.G) * t)), 0, 255);
         var bl = (byte)Math.Clamp((int)MathF.Round(a.B + ((b.B - a.B) * t)), 0, 255);
         return Color.Rgb(r, g, bl);
+    }
+
+    private static Color WithAlpha(Color rgb, byte alpha)
+        => Color.RgbA(rgb.R, rgb.G, rgb.B, alpha);
+
+    private static Color ToRgb(Color color)
+    {
+        return color.Kind switch
+        {
+            ColorKind.Rgb or ColorKind.RgbA => Color.Rgb(color.R, color.G, color.B),
+            ColorKind.Basic16 => ToRgbFromAnsi16(color.Index),
+            ColorKind.Indexed256 => ToRgbFromAnsi256(color.Index),
+            _ => Color.Rgb(0, 0, 0),
+        };
+    }
+
+    private static Color ToRgbFromAnsi16(byte index)
+    {
+        var (r, g, b) = AnsiPalettes.GetBasic16Rgb(index);
+        return Color.Rgb(r, g, b);
+    }
+
+    private static Color ToRgbFromAnsi256(byte index)
+    {
+        var (r, g, b) = AnsiPalettes.GetXterm256Rgb(index);
+        return Color.Rgb(r, g, b);
+    }
+
+    private static Color ResolveAccentColor(ColorScheme scheme, ThemeAccentColor accent)
+    {
+        return accent switch
+        {
+            ThemeAccentColor.Blue => scheme.Blue,
+            ThemeAccentColor.Cyan => scheme.Cyan,
+            ThemeAccentColor.Green => scheme.Green,
+            ThemeAccentColor.Purple => scheme.Purple,
+            ThemeAccentColor.Red => scheme.Red,
+            ThemeAccentColor.Yellow => scheme.Yellow,
+            ThemeAccentColor.White => scheme.White,
+            ThemeAccentColor.Black => scheme.Black,
+            _ => scheme.Purple,
+        };
     }
 }
