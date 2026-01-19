@@ -20,7 +20,7 @@ namespace XenoAtom.Terminal.UI;
 /// <item><description>Truecolor + Alpha (32-bit RGBA). This is a pseudo terminal color used by this library to simulate color blending.</description></item>
 /// </list>
 /// </remarks>
-public readonly record struct Color
+public readonly partial record struct Color
 {
     /// <summary>
     /// The terminal default color.

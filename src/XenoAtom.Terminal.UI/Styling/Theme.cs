@@ -136,9 +136,9 @@ public sealed class Theme : IStyle<Theme>
         }
 
         // Fullscreen schemes: derive a coherent set of design-tokens using RGB(A) overlays.
-        var background = ToRgb(scheme.Background!.Value);
-        var foreground = ToRgb(scheme.Foreground!.Value);
-        accentColor = ToRgb(accentColor);
+        var background = scheme.Background!.Value.ToRgb();
+        var foreground = scheme.Foreground!.Value.ToRgb();
+        accentColor = accentColor.ToRgb();
 
         Color surface;
         Color controlFill;
@@ -173,9 +173,9 @@ public sealed class Theme : IStyle<Theme>
             borderStroke = Color.RgbA(0, 0, 0, 0x28);
             focusBorderStroke = accentColor;
 
-            selectionFill = WithAlpha(accentColor, 0x30);
-            muted = WithAlpha(foreground, 0xB0);
-            disabled = WithAlpha(foreground, 0x70);
+            selectionFill = accentColor.WithAlpha(0x30);
+            muted = foreground.WithAlpha(0xB0);
+            disabled = foreground.WithAlpha(0x70);
         }
         else
         {
@@ -183,7 +183,7 @@ public sealed class Theme : IStyle<Theme>
             // - surfaces and controls are lifted using low-alpha white overlays
             // - editable regions are inset using a low-alpha black overlay
             surface = Color.RgbA(255, 255, 255, 0x08);
-            popupSurface = Blend(background, foreground, t: 0.12f);
+            popupSurface = background.Mix(foreground, t: 0.12f);
 
             controlFill = Color.RgbA(255, 255, 255, 0x0F);
             controlHover = Color.RgbA(255, 255, 255, 0x17);
@@ -196,9 +196,9 @@ public sealed class Theme : IStyle<Theme>
             borderStroke = Color.RgbA(255, 255, 255, 0x26);
             focusBorderStroke = accentColor;
 
-            selectionFill = WithAlpha(accentColor, 0x3A);
-            muted = WithAlpha(foreground, 0xC5);
-            disabled = WithAlpha(foreground, 0x80);
+            selectionFill = accentColor.WithAlpha(0x3A);
+            muted = foreground.WithAlpha(0xC5);
+            disabled = foreground.WithAlpha(0x80);
         }
 
         return new Theme
@@ -488,84 +488,11 @@ public sealed class Theme : IStyle<Theme>
             return false;
         }
 
-        if (!TryGetRelativeLuminance(bg, out var bgLum) || !TryGetRelativeLuminance(fg, out var fgLum))
-        {
-            return false;
-        }
+        var bgLum = bg.GetRelativeLuminance();
+        var fgLum = fg.GetRelativeLuminance();
 
         // We consider it a light scheme when the background is substantially lighter than the foreground.
         return bgLum > fgLum && bgLum >= 0.55f;
-    }
-
-    private static bool TryGetRgb(Color? color, out (byte r, byte g, byte b) rgb)
-    {
-        if (color is not { } c || c.Kind is not (ColorKind.Rgb or ColorKind.RgbA))
-        {
-            rgb = default;
-            return false;
-        }
-
-        rgb = (c.R, c.G, c.B);
-        return true;
-    }
-
-    private static bool TryGetRelativeLuminance(Color color, out float luma)
-    {
-        if (color.Kind is not (ColorKind.Rgb or ColorKind.RgbA))
-        {
-            luma = 0;
-            return false;
-        }
-
-        // Relative luminance using linearized sRGB components.
-        // https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
-        static float ToLinear(byte channel)
-        {
-            var v = channel / 255f;
-            return v <= 0.04045f ? v / 12.92f : MathF.Pow((v + 0.055f) / 1.055f, 2.4f);
-        }
-
-        var r = ToLinear(color.R);
-        var g = ToLinear(color.G);
-        var b = ToLinear(color.B);
-        luma = (0.2126f * r) + (0.7152f * g) + (0.0722f * b);
-        return true;
-    }
-
-    private static Color Blend(Color a, Color b, float t)
-    {
-        // Caller ensures both colors are RGB.
-        t = Math.Clamp(t, 0f, 1f);
-        var r = (byte)Math.Clamp((int)MathF.Round(a.R + ((b.R - a.R) * t)), 0, 255);
-        var g = (byte)Math.Clamp((int)MathF.Round(a.G + ((b.G - a.G) * t)), 0, 255);
-        var bl = (byte)Math.Clamp((int)MathF.Round(a.B + ((b.B - a.B) * t)), 0, 255);
-        return Color.Rgb(r, g, bl);
-    }
-
-    private static Color WithAlpha(Color rgb, byte alpha)
-        => Color.RgbA(rgb.R, rgb.G, rgb.B, alpha);
-
-    private static Color ToRgb(Color color)
-    {
-        return color.Kind switch
-        {
-            ColorKind.Rgb or ColorKind.RgbA => Color.Rgb(color.R, color.G, color.B),
-            ColorKind.Basic16 => ToRgbFromAnsi16(color.Index),
-            ColorKind.Indexed256 => ToRgbFromAnsi256(color.Index),
-            _ => Color.Rgb(0, 0, 0),
-        };
-    }
-
-    private static Color ToRgbFromAnsi16(byte index)
-    {
-        var (r, g, b) = AnsiPalettes.GetBasic16Rgb(index);
-        return Color.Rgb(r, g, b);
-    }
-
-    private static Color ToRgbFromAnsi256(byte index)
-    {
-        var (r, g, b) = AnsiPalettes.GetXterm256Rgb(index);
-        return Color.Rgb(r, g, b);
     }
 
     private static Color ResolveAccentColor(ColorScheme scheme, ThemeAccentColor accent)
