@@ -154,14 +154,28 @@ public sealed partial class Popup : ContentVisual, IModalVisual
     /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        _layoutSlot = finalRect;
-        Bounds = finalRect;
+        var slot = finalRect;
+
+        _layoutSlot = slot;
+        Bounds = slot;
 
         var style = Get<PopupStyle>();
         var padding = style.Padding;
 
         var content = Content;
         var contentDesired = content?.DesiredSize ?? default;
+
+        void RemeasureContentForPopupWidth(int popupWidth)
+        {
+            if (content is null)
+            {
+                return;
+            }
+
+            var innerWidth = Math.Max(0, popupWidth - padding.Horizontal);
+            content.Measure(new LayoutConstraints(0, innerWidth, 0, slot.Height));
+            contentDesired = content.DesiredSize;
+        }
 
         var desiredWidth = Math.Max(1, padding.Horizontal + contentDesired.Width);
         var desiredHeight = Math.Max(1, padding.Vertical + contentDesired.Height);
@@ -174,11 +188,11 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         }
         width += Math.Max(0, AdditionalWidth);
 
-        width = Math.Clamp(width, 1, finalRect.Width);
-        desiredHeight = Math.Clamp(desiredHeight, 1, finalRect.Height);
+        width = Math.Clamp(width, 1, slot.Width);
+        desiredHeight = Math.Clamp(desiredHeight, 1, slot.Height);
 
-        var x = finalRect.X;
-        var y = finalRect.Y;
+        var x = slot.X;
+        var y = slot.Y;
 
         if (anchor is not null)
         {
@@ -192,25 +206,46 @@ public sealed partial class Popup : ContentVisual, IModalVisual
                 case PopupPlacement.Above:
                     x = anchor.Bounds.X;
                     y = aboveY;
-                    if (y < finalRect.Y && belowY + desiredHeight <= finalRect.Bottom)
+                    if (y < slot.Y && belowY + desiredHeight <= slot.Bottom)
                     {
                         y = belowY;
                     }
                     break;
 
                 case PopupPlacement.Right:
+                    // Prefer shrinking to the available space on the requested side over clamping the popup
+                    // to the left edge, which would make the placement appear to "not work" in UIs like
+                    // ControlsDemo where wrapped text can naturally measure to the full viewport width.
+                    var maxRightWidth = Math.Max(0, slot.Right - rightX);
+                    if (width > Math.Max(1, maxRightWidth))
+                    {
+                        width = Math.Max(1, Math.Min(width, maxRightWidth));
+                        RemeasureContentForPopupWidth(width);
+                        desiredHeight = Math.Clamp(Math.Max(1, padding.Vertical + contentDesired.Height), 1, slot.Height);
+                    }
+
                     x = rightX;
                     y = anchor.Bounds.Y;
-                    if (x + width > finalRect.Right && leftX >= finalRect.X)
+                    leftX = anchor.Bounds.X - width;
+                    if (x + width > slot.Right && leftX >= slot.X)
                     {
                         x = leftX;
                     }
                     break;
 
                 case PopupPlacement.Left:
+                    var maxLeftWidth = Math.Max(0, anchor.Bounds.X - slot.X);
+                    if (width > Math.Max(1, maxLeftWidth))
+                    {
+                        width = Math.Max(1, Math.Min(width, maxLeftWidth));
+                        RemeasureContentForPopupWidth(width);
+                        desiredHeight = Math.Clamp(Math.Max(1, padding.Vertical + contentDesired.Height), 1, slot.Height);
+                    }
+
                     x = leftX;
                     y = anchor.Bounds.Y;
-                    if (x < finalRect.X && rightX + width <= finalRect.Right)
+                    x = anchor.Bounds.X - width;
+                    if (x < slot.X && rightX + width <= slot.Right)
                     {
                         x = rightX;
                     }
@@ -220,7 +255,7 @@ public sealed partial class Popup : ContentVisual, IModalVisual
                 default:
                     x = anchor.Bounds.X;
                     y = belowY;
-                    if (y + desiredHeight > finalRect.Bottom && aboveY >= finalRect.Y)
+                    if (y + desiredHeight > slot.Bottom && aboveY >= slot.Y)
                     {
                         y = aboveY;
                     }
@@ -229,12 +264,12 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         }
         else
         {
-            x = finalRect.X + Math.Max(0, (finalRect.Width - width) / 2);
-            y = finalRect.Y + Math.Max(0, (finalRect.Height - desiredHeight) / 2);
+            x = slot.X + Math.Max(0, (slot.Width - width) / 2);
+            y = slot.Y + Math.Max(0, (slot.Height - desiredHeight) / 2);
         }
 
-        x = Math.Clamp(x, finalRect.X, Math.Max(finalRect.X, finalRect.Right - width));
-        y = Math.Clamp(y, finalRect.Y, Math.Max(finalRect.Y, finalRect.Bottom - desiredHeight));
+        x = Math.Clamp(x, slot.X, Math.Max(slot.X, slot.Right - width));
+        y = Math.Clamp(y, slot.Y, Math.Max(slot.Y, slot.Bottom - desiredHeight));
 
         _popupRect = new Rectangle(x, y, width, desiredHeight);
 
