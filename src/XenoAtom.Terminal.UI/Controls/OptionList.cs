@@ -295,8 +295,16 @@ public sealed partial class OptionList : Visual
             return;
         }
 
-        // WheelDelta > 0 is typically up.
-        SelectedIndex = Math.Clamp(SelectedIndex - Math.Sign(delta), 0, Math.Max(0, Items.Count - 1));
+        // WheelDelta > 0 is typically up. Skip disabled items, matching keyboard navigation behavior.
+        var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, Items.Count - 1));
+        if (delta > 0)
+        {
+            SelectedIndex = FindPreviousEnabledIndex(selected - 1);
+        }
+        else
+        {
+            SelectedIndex = FindNextEnabledIndex(selected + 1);
+        }
         e.Handled = true;
     }
 

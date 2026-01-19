@@ -77,4 +77,35 @@ public sealed class OptionListTests
         StringAssert.Contains(rendered, "Build the project");
         StringAssert.Contains(rendered, "Run the app");
     }
+
+    [TestMethod]
+    public void OptionList_MouseWheel_Skips_Disabled_Items()
+    {
+        var list = new OptionList { MinHeight = 4, MaxHeight = 4 };
+        list.Items.AddRange(
+            new OptionListItem("Header") { IsEnabled = false },
+            new OptionListItem("First"),
+            new OptionListItem("Second"));
+
+        list.SelectedIndex = 1;
+
+        var root = new VStack { list };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        // Wheel up from "First": should skip the disabled header and remain on the first enabled item.
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Wheel, Button = TerminalMouseButton.Wheel, WheelDelta = 1, X = 1, Y = 0 });
+        driver.Tick();
+        Assert.AreEqual(1, list.SelectedIndex);
+
+        // Wheel down: should move to "Second".
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Wheel, Button = TerminalMouseButton.Wheel, WheelDelta = -1, X = 1, Y = 0 });
+        driver.Tick();
+        Assert.AreEqual(2, list.SelectedIndex);
+
+        // Wheel up from "Second": should go back to "First".
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Wheel, Button = TerminalMouseButton.Wheel, WheelDelta = 1, X = 1, Y = 0 });
+        driver.Tick();
+        Assert.AreEqual(1, list.SelectedIndex);
+    }
 }

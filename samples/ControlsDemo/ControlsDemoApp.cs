@@ -1,6 +1,7 @@
 using System.Linq;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.ControlsDemo.Demos;
 using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo;
@@ -11,7 +12,23 @@ internal static class ControlsDemoApp
     {
         var demos = DemoRegistry.Load();
 
-        var selectedDemoId = new State<string>(demos.Count > 0 ? demos[0].Metadata.Id : string.Empty);
+        var defaultId = string.Empty;
+        var welcomeId = typeof(WelcomeDemo).FullName ?? string.Empty;
+        for (var i = 0; i < demos.Count; i++)
+        {
+            if (string.Equals(demos[i].Metadata.Id, welcomeId, StringComparison.Ordinal))
+            {
+                defaultId = welcomeId;
+                break;
+            }
+        }
+
+        if (defaultId.Length == 0 && demos.Count > 0)
+        {
+            defaultId = demos[0].Metadata.Id;
+        }
+
+        var selectedDemoId = new State<string>(defaultId);
         var runtime = new DemoRuntime();
         onUpdate = () =>
         {
@@ -65,7 +82,44 @@ internal static class ControlsDemoApp
             .ActivateOnClick(true)
             .VerticalAlignment(VerticalAlignment.Stretch);
 
+        // Make category headers stand out by giving disabled rows a stronger style.
+        // (Category headers are represented as disabled items so they cannot be selected.)
+        var theme = DemoThemes.Dark;
+        var headerStyle = Style.None;
+        if (theme.Foreground is { } headerFg)
+        {
+            headerStyle = headerStyle.WithForeground(headerFg);
+        }
+        if ((theme.SurfaceAlt ?? theme.ControlFill ?? theme.Surface ?? theme.Background) is { } headerBg)
+        {
+            headerStyle = headerStyle.WithBackground(headerBg);
+        }
+        headerStyle |= TextStyle.Bold;
+
+        list.Style(OptionListStyle.Default with { Disabled = headerStyle });
+
         var demoIdForIndex = new List<string?>(demos.Count);
+
+        // Add welcome page as the first item (outside categories).
+        var welcomeId = typeof(WelcomeDemo).FullName ?? string.Empty;
+        if (welcomeId.Length > 0)
+        {
+            IControlsDemo? welcome = null;
+            for (var i = 0; i < demos.Count; i++)
+            {
+                if (string.Equals(demos[i].Metadata.Id, welcomeId, StringComparison.Ordinal))
+                {
+                    welcome = demos[i];
+                    break;
+                }
+            }
+
+            if (welcome is not null && (!hasQuery || DemoSearch.Matches(welcome.Metadata, normalizedQuery)))
+            {
+                list.Items.Add(new OptionListItem("🏠 Welcome"));
+                demoIdForIndex.Add(welcomeId);
+            }
+        }
 
         // Group by category and keep everything expanded (flat list with category headers).
         var categories = demos
@@ -82,6 +136,11 @@ internal static class ControlsDemoApp
             for (var i = 0; i < demos.Count; i++)
             {
                 var demo = demos[i];
+                if (string.Equals(demo.Metadata.Id, welcomeId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
                 if (!string.Equals(demo.Metadata.Category, category, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
@@ -129,19 +188,22 @@ internal static class ControlsDemoApp
             }
         }
 
-        list.SelectedIndex(selectedIndex);
-        list.SelectionChanged((_, e) =>
+        void SelectByIndex(int index)
         {
-            if ((uint)e.NewIndex >= (uint)demoIdForIndex.Count)
+            if ((uint)index >= (uint)demoIdForIndex.Count)
             {
                 return;
             }
 
-            if (demoIdForIndex[e.NewIndex] is { } id)
+            if (demoIdForIndex[index] is { } id)
             {
                 selectedDemoId.Value = id;
             }
-        });
+        }
+
+        list.SelectionChanged((_, e) => SelectByIndex(e.NewIndex));
+        list.ItemActivated((_, e) => SelectByIndex(e.Index));
+        list.SelectedIndex(selectedIndex);
 
         return list;
     }
@@ -160,7 +222,7 @@ internal static class ControlsDemoApp
             _ => $"📁 {category}",
         };
 
-        // Category headers are rendered as disabled items, so we use markup styling instead of selection styles.
-        return new Markup($"[underline][bold]{label}[/][/]");
+        // Category headers are rendered as disabled items, so they inherit the disabled row style.
+        return new Markup($"[underline]{label}[/]");
     }
 }
