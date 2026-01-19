@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using XenoAtom.Ansi;
 
 namespace XenoAtom.Terminal.UI;
@@ -52,28 +53,37 @@ public readonly record struct Color
     public byte Index => Kind is ColorKind.Basic16 or ColorKind.Indexed256 ? (byte)(_value >> 8) : (byte)0;
 
     /// <summary>
-    /// Gets the red component for <see cref="ColorKind.Rgb"/> and <see cref="ColorKind.RgbA"/>.
+    /// Gets the red component for this color.
     /// </summary>
-    public byte R => Kind is ColorKind.Rgb or ColorKind.RgbA ? (byte)(_value >> 32) : (byte)0;
+    /// <remarks>
+    /// For non-RGB colors, this value is <c>0</c>.
+    /// </remarks>
+    public byte R => (byte)(_value >> 32);
 
     /// <summary>
-    /// Gets the green component for <see cref="ColorKind.Rgb"/> and <see cref="ColorKind.RgbA"/>.
+    /// Gets the green component for this color.
     /// </summary>
-    public byte G => Kind is ColorKind.Rgb or ColorKind.RgbA ? (byte)(_value >> 40) : (byte)0;
+    /// <remarks>
+    /// For non-RGB colors, this value is <c>0</c>.
+    /// </remarks>
+    public byte G => (byte)(_value >> 40);
 
     /// <summary>
-    /// Gets the blue component for <see cref="ColorKind.Rgb"/> and <see cref="ColorKind.RgbA"/>.
+    /// Gets the blue component for this color.
     /// </summary>
-    public byte B => Kind is ColorKind.Rgb or ColorKind.RgbA ? (byte)(_value >> 48) : (byte)0;
+    /// <remarks>
+    /// For non-RGB colors, this value is <c>0</c>.
+    /// </remarks>
+    public byte B => (byte)(_value >> 48);
 
     /// <summary>
-    /// Gets the alpha component for <see cref="ColorKind.RgbA"/>.
+    /// Gets the alpha component for this color.
     /// </summary>
     /// <remarks>
     /// This alpha channel is a pseudo terminal feature used by this library to simulate transparency effects.
-    /// For non-RGBA colors, this property returns 255 (opaque).
+    /// For non-RGBA colors, this value is <c>0</c>.
     /// </remarks>
-    public byte A => Kind == ColorKind.RgbA ? (byte)(_value >> 56) : (byte)255;
+    public byte A => (byte)(_value >> 56);
 
     /// <summary>
     /// Gets the packed RGBA bytes as a 32-bit value (0xAABBGGRR).
@@ -181,9 +191,11 @@ public readonly record struct Color
 
     internal ulong ToRaw() => _value;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static ulong PackIndexed(ColorKind kind, byte index)
         => (ulong)(byte)kind | ((ulong)index << 8);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static ulong PackRgba(ColorKind kind, byte r, byte g, byte b, byte a)
     {
         var rgba = (uint)(r | (g << 8) | (b << 16) | (a << 24));
@@ -254,4 +266,3 @@ public enum ColorKind : byte
     /// </remarks>
     Rgba = RgbA,
 }
-

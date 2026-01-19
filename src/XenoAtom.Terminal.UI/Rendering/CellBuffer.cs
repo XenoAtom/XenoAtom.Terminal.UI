@@ -4,6 +4,8 @@
 
 using System.Buffers;
 using System.Globalization;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using XenoAtom.Ansi;
 using XenoAtom.Terminal.UI.Geometry;
@@ -716,38 +718,30 @@ public sealed class CellBuffer
         var sa = src.A * OneOverMaxByte;
         var invSa = 1.0f - sa;
 
-        var srcR = SrgbToLinear[src.R];
-        var srcG = SrgbToLinear[src.G];
-        var srcB = SrgbToLinear[src.B];
-
-        var dstR = SrgbToLinear[dst.R];
-        var dstG = SrgbToLinear[dst.G];
-        var dstB = SrgbToLinear[dst.B];
+        ref var srgbLinear = ref MemoryMarshal.GetArrayDataReference(SrgbToLinear);
+        var srcR = Unsafe.Add(ref srgbLinear, src.R);
+        var srcG = Unsafe.Add(ref srgbLinear, src.G);
+        var srcB = Unsafe.Add(ref srgbLinear, src.B);
+        var dstR = Unsafe.Add(ref srgbLinear, dst.R);
+        var dstG = Unsafe.Add(ref srgbLinear, dst.G);
+        var dstB = Unsafe.Add(ref srgbLinear, dst.B);
 
         var outR = (srcR * sa) + (dstR * invSa);
         var outG = (srcG * sa) + (dstG * invSa);
         var outB = (srcB * sa) + (dstB * invSa);
-
-        var r = LinearToSrgb[ClampLinearToIndex(outR)];
-        var g = LinearToSrgb[ClampLinearToIndex(outG)];
-        var b = LinearToSrgb[ClampLinearToIndex(outB)];
+        
+        ref var linearToSrgb = ref MemoryMarshal.GetArrayDataReference(LinearToSrgb);
+        var r = Unsafe.Add(ref linearToSrgb, ClampLinearToIndex(outR));
+        var g = Unsafe.Add(ref linearToSrgb, ClampLinearToIndex(outG));
+        var b = Unsafe.Add(ref linearToSrgb, ClampLinearToIndex(outB));
 
         return Color.Rgb(r, g, b);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int ClampLinearToIndex(float linear)
     {
         // Linear space is clamped to [0..1] and mapped to a small LUT.
-        if (linear <= 0)
-        {
-            return 0;
-        }
-
-        if (linear >= 1)
-        {
-            return LinearToSrgb.Length - 1;
-        }
-
         var index = (int)(linear * (LinearToSrgb.Length - 1) + 0.5f);
         if ((uint)index >= (uint)LinearToSrgb.Length)
         {
