@@ -84,7 +84,7 @@ public sealed class Theme : IStyle<Theme>
     /// <param name="brightness">How to interpret scheme brightness.</param>
     /// <param name="accent">Which scheme color to use as the accent.</param>
     /// <returns>The created theme.</returns>
-    public static Theme FromScheme(ColorScheme scheme, ThemeSchemeBrightness brightness = ThemeSchemeBrightness.Auto, ThemeAccentColor accent = ThemeAccentColor.Purple)
+    public static Theme FromScheme(ColorScheme scheme, ThemeSchemeBrightness brightness = ThemeSchemeBrightness.Auto, ThemeAccentColor accent = ThemeAccentColor.Blue)
     {
         ArgumentNullException.ThrowIfNull(scheme);
 
