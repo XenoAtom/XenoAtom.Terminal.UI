@@ -16,6 +16,8 @@ namespace XenoAtom.Terminal.UI.Rendering;
 /// </summary>
 public sealed class CellBuffer
 {
+    private const float OneOverMaxByte = 1.0f / byte.MaxValue;
+
     private readonly int[] _scalars;
     private readonly Style[] _cells;
     private readonly ulong[] _hyperlinks;
@@ -27,6 +29,10 @@ public sealed class CellBuffer
     private int _clipDepth;
 
     private readonly record struct TextElementEntry(string Text, int Width);
+
+    private static readonly float[] SrgbToLinear = CreateSrgbToLinearLut();
+
+    private static readonly byte[] LinearToSrgb = CreateLinearToSrgbLut();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CellBuffer"/> class.
@@ -153,7 +159,9 @@ public sealed class CellBuffer
 
         var index = (y * Width) + x;
         _scalars[index] = rune.Value;
-        var mergedStyle = style.WithoutContinuation().MergeUnspecified(_cells[index].WithoutContinuation());
+        var under = _cells[index].WithoutContinuation();
+        var overlay = style.WithoutContinuation();
+        var mergedStyle = ApplyAlphaBlending(overlay.MergeUnspecified(under), overlay, under);
         _cells[index] = mergedStyle;
         _hyperlinks[index] = hyperlinkToken;
 
@@ -197,7 +205,9 @@ public sealed class CellBuffer
 
         var index = (y * Width) + x;
         _scalars[index] = token;
-        var mergedStyle = style.WithoutContinuation().MergeUnspecified(_cells[index].WithoutContinuation());
+        var under = _cells[index].WithoutContinuation();
+        var overlay = style.WithoutContinuation();
+        var mergedStyle = ApplyAlphaBlending(overlay.MergeUnspecified(under), overlay, under);
         _cells[index] = mergedStyle;
         _hyperlinks[index] = hyperlinkToken;
 
@@ -612,7 +622,7 @@ public sealed class CellBuffer
 
     private static string ToMarkupColor(Color color)
     {
-        if (color.Kind == ColorKind.Rgb)
+        if (color.Kind is ColorKind.Rgb or ColorKind.RgbA)
         {
             var packed = (uint)((color.R << 16) | (color.G << 8) | color.B);
             return $"#{packed:x6}";
@@ -633,5 +643,146 @@ public sealed class CellBuffer
         }
 
         return "#000000";
+    }
+
+    private static Style ApplyAlphaBlending(Style merged, Style overlay, Style under)
+    {
+        // Only apply blending when the overlay contains explicit RGBA colors.
+        // Indexed colors (Default/Basic16/Indexed256) are treated as opaque and never blended.
+        if (overlay.TryGetBackground(out var overlayBg) && overlayBg.Kind == ColorKind.RgbA)
+        {
+            var bg = ApplyAlphaToBackground(overlayBg, under.GetBackgroundOrDefault());
+            merged = merged.WithBackground(bg);
+        }
+
+        if (overlay.TryGetForeground(out var overlayFg) && overlayFg.Kind == ColorKind.RgbA)
+        {
+            var bgForFg = merged.GetBackgroundOrDefault();
+            var fg = ApplyAlphaToForeground(overlayFg, bgForFg);
+            merged = merged.WithForeground(fg);
+        }
+
+        return merged;
+    }
+
+    private static Color ApplyAlphaToBackground(Color overlayBg, Color underBg)
+    {
+        // If the destination background is not RGB, we cannot blend. Treat the alpha channel as ignored.
+        if (underBg.Kind is not ColorKind.Rgb and not ColorKind.RgbA)
+        {
+            return Color.Rgb(overlayBg.R, overlayBg.G, overlayBg.B);
+        }
+
+        if (overlayBg.A >= byte.MaxValue)
+        {
+            return Color.Rgb(overlayBg.R, overlayBg.G, overlayBg.B);
+        }
+
+        if (overlayBg.A == 0)
+        {
+            return Color.Rgb(underBg.R, underBg.G, underBg.B);
+        }
+
+        return BlendRgbAOverRgb(overlayBg, underBg);
+    }
+
+    private static Color ApplyAlphaToForeground(Color overlayFg, Color background)
+    {
+        // Foreground is drawn "over" the resolved background, so the background is the destination for blending.
+        // If the background is not RGB, we cannot blend. Treat alpha as ignored.
+        if (background.Kind is not ColorKind.Rgb and not ColorKind.RgbA)
+        {
+            return Color.Rgb(overlayFg.R, overlayFg.G, overlayFg.B);
+        }
+
+        if (overlayFg.A >= byte.MaxValue)
+        {
+            return Color.Rgb(overlayFg.R, overlayFg.G, overlayFg.B);
+        }
+
+        if (overlayFg.A == 0)
+        {
+            return Color.Rgb(background.R, background.G, background.B);
+        }
+
+        return BlendRgbAOverRgb(overlayFg, background);
+    }
+
+    private static Color BlendRgbAOverRgb(Color src, Color dst)
+    {
+        // This routine blends src over dst in linear space using pre-multiplied alpha:
+        // out = src * sa + dst * (1 - sa)
+        // The output is returned as an opaque RGB color (alpha is not representable in SGR).
+        var sa = src.A * OneOverMaxByte;
+        var invSa = 1.0f - sa;
+
+        var srcR = SrgbToLinear[src.R];
+        var srcG = SrgbToLinear[src.G];
+        var srcB = SrgbToLinear[src.B];
+
+        var dstR = SrgbToLinear[dst.R];
+        var dstG = SrgbToLinear[dst.G];
+        var dstB = SrgbToLinear[dst.B];
+
+        var outR = (srcR * sa) + (dstR * invSa);
+        var outG = (srcG * sa) + (dstG * invSa);
+        var outB = (srcB * sa) + (dstB * invSa);
+
+        var r = LinearToSrgb[ClampLinearToIndex(outR)];
+        var g = LinearToSrgb[ClampLinearToIndex(outG)];
+        var b = LinearToSrgb[ClampLinearToIndex(outB)];
+
+        return Color.Rgb(r, g, b);
+    }
+
+    private static int ClampLinearToIndex(float linear)
+    {
+        // Linear space is clamped to [0..1] and mapped to a small LUT.
+        if (linear <= 0)
+        {
+            return 0;
+        }
+
+        if (linear >= 1)
+        {
+            return LinearToSrgb.Length - 1;
+        }
+
+        var index = (int)(linear * (LinearToSrgb.Length - 1) + 0.5f);
+        if ((uint)index >= (uint)LinearToSrgb.Length)
+        {
+            return linear < 0 ? 0 : LinearToSrgb.Length - 1;
+        }
+
+        return index;
+    }
+
+    private static float[] CreateSrgbToLinearLut()
+    {
+        var lut = new float[256];
+        for (var i = 0; i < lut.Length; i++)
+        {
+            var srgb = i * OneOverMaxByte;
+            lut[i] = srgb <= 0.04045f ? srgb / 12.92f : MathF.Pow((srgb + 0.055f) / 1.055f, 2.4f);
+        }
+
+        return lut;
+    }
+
+    private static byte[] CreateLinearToSrgbLut()
+    {
+        // The LUT size is a trade-off between speed and precision. 4096 samples are enough for stable output
+        // when simulating alpha blending in terminal cells.
+        const int lutSize = 4096;
+        var lut = new byte[lutSize + 1];
+        for (var i = 0; i < lut.Length; i++)
+        {
+            var linear = (float)i / lutSize;
+            var srgb = linear <= 0.0031308f ? 12.92f * linear : (1.055f * MathF.Pow(linear, 1.0f / 2.4f)) - 0.055f;
+            var value = (int)(srgb * byte.MaxValue + 0.5f);
+            lut[i] = (byte)Math.Clamp(value, 0, byte.MaxValue);
+        }
+
+        return lut;
     }
 }

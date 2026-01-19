@@ -24,36 +24,64 @@ public readonly record struct Color
     /// <summary>
     /// The terminal default color.
     /// </summary>
-    public static readonly Color Default = new(Pack(ColorKind.Default, payload0: 0, payload1: 0, payload2: 0));
+    public static readonly Color Default = default;
 
-    private readonly uint _value;
+    // Layout:
+    // - bits 0..7   : ColorKind
+    // - bits 8..15  : palette index (for Indexed kinds)
+    // - bits 16..31 : reserved (must be 0 for standalone Color values)
+    // - bits 32..39 : R
+    // - bits 40..47 : G
+    // - bits 48..55 : B
+    // - bits 56..63 : A (for RgbA)
+    //
+    // The upper 32 bits can be read as a packed 0xAABBGGRR (aka "ABGR" in hex, little-endian bytes are RGBA):
+    // (uint)(_value >> 32)
+    private readonly ulong _value;
 
-    private Color(uint value) => _value = value;
+    private Color(ulong value) => _value = value;
 
     /// <summary>
     /// Gets the kind of this color value.
     /// </summary>
-    public ColorKind Kind => (ColorKind)((_value >> 24) & 0xFF);
+    public ColorKind Kind => (ColorKind)(byte)_value;
 
     /// <summary>
     /// Gets the palette index for <see cref="ColorKind.Basic16"/> or <see cref="ColorKind.Indexed256"/>.
     /// </summary>
-    public byte Index => Kind is ColorKind.Basic16 or ColorKind.Indexed256 ? (byte)((_value >> 16) & 0xFF) : (byte)0;
+    public byte Index => Kind is ColorKind.Basic16 or ColorKind.Indexed256 ? (byte)(_value >> 8) : (byte)0;
 
     /// <summary>
-    /// Gets the red component for <see cref="ColorKind.Rgb"/>.
+    /// Gets the red component for <see cref="ColorKind.Rgb"/> and <see cref="ColorKind.RgbA"/>.
     /// </summary>
-    public byte R => Kind == ColorKind.Rgb ? (byte)((_value >> 16) & 0xFF) : (byte)0;
+    public byte R => Kind is ColorKind.Rgb or ColorKind.RgbA ? (byte)(_value >> 32) : (byte)0;
 
     /// <summary>
-    /// Gets the green component for <see cref="ColorKind.Rgb"/>.
+    /// Gets the green component for <see cref="ColorKind.Rgb"/> and <see cref="ColorKind.RgbA"/>.
     /// </summary>
-    public byte G => Kind == ColorKind.Rgb ? (byte)((_value >> 8) & 0xFF) : (byte)0;
+    public byte G => Kind is ColorKind.Rgb or ColorKind.RgbA ? (byte)(_value >> 40) : (byte)0;
 
     /// <summary>
-    /// Gets the blue component for <see cref="ColorKind.Rgb"/>.
+    /// Gets the blue component for <see cref="ColorKind.Rgb"/> and <see cref="ColorKind.RgbA"/>.
     /// </summary>
-    public byte B => Kind == ColorKind.Rgb ? (byte)(_value & 0xFF) : (byte)0;
+    public byte B => Kind is ColorKind.Rgb or ColorKind.RgbA ? (byte)(_value >> 48) : (byte)0;
+
+    /// <summary>
+    /// Gets the alpha component for <see cref="ColorKind.RgbA"/>.
+    /// </summary>
+    /// <remarks>
+    /// This alpha channel is a pseudo terminal feature used by this library to simulate transparency effects.
+    /// For non-RGBA colors, this property returns 255 (opaque).
+    /// </remarks>
+    public byte A => Kind == ColorKind.RgbA ? (byte)(_value >> 56) : (byte)255;
+
+    /// <summary>
+    /// Gets the packed RGBA bytes as a 32-bit value (0xAABBGGRR).
+    /// </summary>
+    /// <remarks>
+    /// This representation is optimized for fast extraction and SIMD conversion.
+    /// </remarks>
+    public uint RgbaPacked => (uint)(_value >> 32);
 
     /// <summary>
     /// Creates a basic 16-color palette value.
@@ -64,7 +92,7 @@ public readonly record struct Color
         ArgumentOutOfRangeException.ThrowIfLessThan(index, 0);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(index, 15);
 
-        return new Color(Pack(ColorKind.Basic16, payload0: (byte)index, payload1: 0, payload2: 0));
+        return new Color(PackIndexed(ColorKind.Basic16, (byte)index));
     }
 
     /// <summary>
@@ -76,13 +104,22 @@ public readonly record struct Color
         ArgumentOutOfRangeException.ThrowIfLessThan(index, 0);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(index, 255);
 
-        return new Color(Pack(ColorKind.Indexed256, payload0: (byte)index, payload1: 0, payload2: 0));
+        return new Color(PackIndexed(ColorKind.Indexed256, (byte)index));
     }
 
     /// <summary>
     /// Creates a truecolor RGB value.
     /// </summary>
-    public static Color Rgb(byte r, byte g, byte b) => new(Pack(ColorKind.Rgb, payload0: r, payload1: g, payload2: b));
+    public static Color Rgb(byte r, byte g, byte b) => new(PackRgba(ColorKind.Rgb, r, g, b, a: 255));
+
+    /// <summary>
+    /// Creates a truecolor RGBA value.
+    /// </summary>
+    /// <remarks>
+    /// This is a pseudo terminal color used by this library to simulate alpha blending during rendering.
+    /// Most terminals do not support alpha in SGR, so the alpha is ignored when converting to ANSI.
+    /// </remarks>
+    public static Color RgbA(byte r, byte g, byte b, byte a) => new(PackRgba(ColorKind.RgbA, r, g, b, a));
 
     /// <summary>
     /// Converts a <see cref="ConsoleColor"/> to an ANSI basic-16 color.
@@ -139,15 +176,18 @@ public readonly record struct Color
         downgraded = Default;
         return false;
     }
-   
-    private static uint Pack(ColorKind kind, byte payload0, byte payload1, byte payload2)
+
+    internal static Color FromRaw(ulong raw) => new(raw);
+
+    internal ulong ToRaw() => _value;
+
+    private static ulong PackIndexed(ColorKind kind, byte index)
+        => (ulong)(byte)kind | ((ulong)index << 8);
+
+    private static ulong PackRgba(ColorKind kind, byte r, byte g, byte b, byte a)
     {
-        // Layout (little endian view):
-        // - bits 24..31: kind
-        // - bits 16..23: payload0 (index for palette kinds, R for RGB)
-        // - bits 8..15 : payload1 (G for RGB)
-        // - bits 0..7  : payload2 (B for RGB)
-        return ((uint)kind << 24) | ((uint)payload0 << 16) | ((uint)payload1 << 8) | payload2;
+        var rgba = (uint)(r | (g << 8) | (b << 16) | (a << 24));
+        return (ulong)(byte)kind | ((ulong)rgba << 32);
     }
 
     /// <summary>
@@ -184,7 +224,7 @@ public readonly record struct Color
             ColorKind.Basic16 => AnsiColor.Basic16(color.Index),
             ColorKind.Indexed256 => AnsiColor.Indexed256(color.Index),
             ColorKind.Rgb => AnsiColor.Rgb(color.R, color.G, color.B),
-            ColorKind.Rgba => AnsiColor.Rgb(color.R, color.G, color.B),
+            ColorKind.RgbA => AnsiColor.Rgb(color.R, color.G, color.B),
             _ => AnsiColor.Default,
         };
     }
@@ -197,13 +237,21 @@ public enum ColorKind : byte
 {
     /// <summary>The terminal default color.</summary>
     Default,
-    /// <summary>One of the 16 basic palette indices (0–15).</summary>
+    /// <summary>One of the 16 basic palette indices (0-15).</summary>
     Basic16,
-    /// <summary>One of the 256-color xterm palette indices (0–255).</summary>
+    /// <summary>One of the 256-color xterm palette indices (0-255).</summary>
     Indexed256,
     /// <summary>A 24-bit RGB color (truecolor).</summary>
     Rgb,
     /// <summary>A 32-bit RGBA color (truecolor with alpha). This is a pseudo color for blending colors in Terminal UI.</summary>
-    Rgba,
+    RgbA,
+
+    /// <summary>
+    /// A 32-bit RGBA color (truecolor with alpha). This is a pseudo color for blending colors in Terminal UI.
+    /// </summary>
+    /// <remarks>
+    /// Prefer <see cref="RgbA"/>. This member exists for backward compatibility.
+    /// </remarks>
+    Rgba = RgbA,
 }
 

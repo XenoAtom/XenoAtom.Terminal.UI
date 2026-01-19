@@ -2,57 +2,49 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-
-// Copyright (c) Alexandre Mutel. All rights reserved.
-// Licensed under the BSD-Clause 2 license.
-// See license.txt file in the project root for full license information.
-
 using XenoAtom.Ansi;
 using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI;
 
 /// <summary>
-/// Packed per-cell style (foreground/background + decorations).
+/// Represents a packed per-cell style (foreground/background + decorations).
 /// </summary>
 /// <remarks>
-/// This type is a lightweight, value-type container optimized for cell buffers.
-/// It preserves the kind of ANSI colors (default / 16 / 256 / RGB) so renderers can
-/// emit the most appropriate escape sequences for the target terminal.
+/// This type is a lightweight, value-type container optimized for cell buffers. The foreground and background colors
+/// are stored as packed 64-bit <see cref="Color"/> values to make equality comparisons very fast.
 /// </remarks>
 public readonly struct Style : IEquatable<Style>
 {
-    // Layout:
-    // - Bits [0..7]   : TextStyle flags (matches AnsiDecorations bit positions)
-    // - Bit  [8]      : Continuation (wide glyph trailing cell)
-    // - Bits [9..34]  : Foreground (26 bits): [kind:2][value:24]
-    // - Bits [35..60] : Background (26 bits): [kind:2][value:24]
+    // This struct is intentionally 16 bytes:
+    // - 8 bytes foreground color
+    // - 8 bytes background color + flags
     //
-    // Color kind encoding (2 bits):
-    // - 0: unset (terminal default color)
-    // - 1: Basic16 index (value in [0..15])
-    // - 2: Indexed256 index (value in [0..255])
-    // - 3: RGB (value is packed 0xRRGGBB)
-    private const int BitsPerColor = 26;
-    private const int ContinuationBit = 8;
+    // Background's reserved bits [16..31] are used for style flags:
+    // - bits 16..23: TextStyle
+    // - bit  24    : Continuation (wide glyph trailing cell)
+    // - bits 25..31: reserved
 
-    private const int ForegroundShift = 9;
-    private const int BackgroundShift = ForegroundShift + BitsPerColor;
+    private const int TextStyleShift = 16;
+    private const ulong TextStyleMask = 0xFFul << TextStyleShift;
 
-    private const ulong TextStyleMask = 0xFFul;
+    private const int ContinuationBit = 24;
     private const ulong ContinuationMask = 1ul << ContinuationBit;
 
-    private const ulong ColorMask = (1ul << BitsPerColor) - 1ul;
-    private const ulong ForegroundMask = ColorMask << ForegroundShift;
-    private const ulong BackgroundMask = ColorMask << BackgroundShift;
+    // All bits except the background color payload (kind/index + RGBA bytes).
+    private const ulong BackgroundFlagsMask = 0x00000000FFFF0000ul;
 
-    private const int ColorKindBits = 2;
-    private const int ColorValueBits = 24;
-    private const uint ColorValueMask = (1u << ColorValueBits) - 1u;
+    // Background color is stored in bits 0..15 and 32..63 (16..31 reserved for flags).
+    private const ulong BackgroundColorMask = 0xFFFFFFFF0000FFFFul;
 
-    internal readonly ulong Value;
+    private readonly ulong _foreground;
+    private readonly ulong _backgroundAndFlags;
 
-    internal Style(ulong value) => Value = value;
+    private Style(ulong foreground, ulong backgroundAndFlags)
+    {
+        _foreground = foreground;
+        _backgroundAndFlags = backgroundAndFlags;
+    }
 
     /// <summary>
     /// Gets a style with default foreground/background and no decorations.
@@ -62,126 +54,154 @@ public readonly struct Style : IEquatable<Style>
     /// <summary>
     /// Gets the text style flags (decorations) for this cell.
     /// </summary>
-    public TextStyle TextStyle => (TextStyle)(Value & TextStyleMask);
+    public TextStyle TextStyle => (TextStyle)((_backgroundAndFlags & TextStyleMask) >> TextStyleShift);
 
-    internal bool IsContinuation => (Value & ContinuationMask) != 0;
+    internal bool IsContinuation => (_backgroundAndFlags & ContinuationMask) != 0;
 
-    internal Style WithoutContinuation() => new(Value & ~ContinuationMask);
+    internal Style WithoutContinuation()
+        => new(_foreground, _backgroundAndFlags & ~ContinuationMask);
 
     internal Style WithContinuation()
-        => new((Value & ~ContinuationMask) | ContinuationMask);
+        => new(_foreground, _backgroundAndFlags | ContinuationMask);
 
+    private bool HasForeground => (byte)_foreground != 0;
+
+    private bool HasBackground => (byte)(_backgroundAndFlags & 0xFF) != 0;
+
+    private ulong BackgroundColorRaw => _backgroundAndFlags & BackgroundColorMask;
+
+    private ulong BackgroundFlagsRaw => _backgroundAndFlags & BackgroundFlagsMask;
+
+    /// <summary>
+    /// Merges any unspecified components of this style from <paramref name="under"/>.
+    /// </summary>
+    /// <remarks>
+    /// This is used when rendering a cell buffer in layers: callers often write text with a foreground style without
+    /// specifying a background, expecting the previously filled background to remain.
+    /// </remarks>
     internal Style MergeUnspecified(Style under)
     {
-        var value = Value;
-        var underValue = under.Value;
-
-        if ((value & ForegroundMask) == 0)
+        var fg = _foreground;
+        if (!HasForeground)
         {
-            value |= underValue & ForegroundMask;
+            fg = under._foreground;
         }
 
-        if ((value & BackgroundMask) == 0)
+        var bg = BackgroundColorRaw;
+        if (!HasBackground)
         {
-            value |= underValue & BackgroundMask;
+            bg = under.BackgroundColorRaw;
         }
 
-        if ((value & TextStyleMask) == 0)
+        var textStyle = (byte)TextStyle;
+        if (textStyle == 0)
         {
-            value |= underValue & TextStyleMask;
+            textStyle = (byte)under.TextStyle;
         }
 
-        return new Style(value);
+        var flags = ((ulong)textStyle << TextStyleShift) | (BackgroundFlagsRaw & ContinuationMask);
+        return new Style(fg, bg | flags);
     }
 
     /// <summary>
     /// Returns a copy with the specified text style flags (replacing any existing flags).
     /// </summary>
     public Style WithTextStyle(TextStyle style)
-        => new((Value & ~TextStyleMask) | ((ulong)style & TextStyleMask));
+        => new(_foreground, (_backgroundAndFlags & ~TextStyleMask) | ((ulong)(byte)style << TextStyleShift));
 
     /// <summary>
     /// Returns a copy with the specified text style flags added.
     /// </summary>
     public Style AddTextStyle(TextStyle style)
-        => new(Value | ((ulong)style & TextStyleMask));
+        => new(_foreground, _backgroundAndFlags | ((ulong)(byte)style << TextStyleShift));
 
     /// <summary>
     /// Returns a copy with the specified text style flags removed.
     /// </summary>
     public Style RemoveTextStyle(TextStyle style)
-        => new(Value & ~((ulong)style & TextStyleMask));
+        => new(_foreground, _backgroundAndFlags & ~((ulong)(byte)style << TextStyleShift));
 
     /// <summary>
-    /// Returns a copy with the foreground cleared to terminal default.
+    /// Returns a copy with the foreground cleared to the terminal default (unspecified).
     /// </summary>
     public Style ClearForeground()
-        => new(Value & ~ForegroundMask);
+        => new(0, _backgroundAndFlags);
 
     /// <summary>
-    /// Returns a copy with the background cleared to terminal default.
+    /// Returns a copy with the background cleared to the terminal default (unspecified).
     /// </summary>
     public Style ClearBackground()
-        => new(Value & ~BackgroundMask);
+        => new(_foreground, BackgroundFlagsRaw);
 
     /// <summary>
     /// Returns a copy with the specified foreground color.
     /// </summary>
     public Style WithForeground(Color color)
-    {
-        var value = Value;
-        value = (value & ~ForegroundMask) | (Encode(color) << ForegroundShift);
-        return new Style(value);
-    }
+        => new(color.ToRaw(), _backgroundAndFlags);
 
     /// <summary>
     /// Returns a copy with the specified background color.
     /// </summary>
     public Style WithBackground(Color color)
-    {
-        var value = Value;
-        value = (value & ~BackgroundMask) | (Encode(color) << BackgroundShift);
-        return new Style(value);
-    }
+        => new(_foreground, (color.ToRaw() & BackgroundColorMask) | BackgroundFlagsRaw);
 
     /// <summary>
     /// Tries to get the foreground color.
     /// </summary>
     /// <param name="color">When this method returns, contains the foreground color if set.</param>
-    /// <returns><c>true</c> if a foreground is explicitly set; otherwise <c>false</c>.</returns>
+    /// <returns><see langword="true"/> if a foreground is explicitly set; otherwise <see langword="false"/>.</returns>
     public bool TryGetForeground(out Color color)
     {
-        var encoded = (Value & ForegroundMask) >> ForegroundShift;
-        if (encoded == 0)
+        if (!HasForeground)
         {
             color = default;
             return false;
         }
 
-        return TryDecodeToColor(encoded, out color);
+        color = Color.FromRaw(_foreground);
+        return true;
     }
 
     /// <summary>
     /// Tries to get the background color.
     /// </summary>
     /// <param name="color">When this method returns, contains the background color if set.</param>
-    /// <returns><c>true</c> if a background is explicitly set; otherwise <c>false</c>.</returns>
+    /// <returns><see langword="true"/> if a background is explicitly set; otherwise <see langword="false"/>.</returns>
     public bool TryGetBackground(out Color color)
     {
-        var encoded = (Value & BackgroundMask) >> BackgroundShift;
-        if (encoded == 0)
+        if (!HasBackground)
         {
             color = default;
             return false;
         }
 
-        return TryDecodeToColor(encoded, out color);
+        color = Color.FromRaw(BackgroundColorRaw);
+        return true;
     }
 
     /// <summary>
-    /// Combines two styles by OR-ing their packed representation.
+    /// Combines two styles.
     /// </summary>
-    public static Style operator |(Style a, Style b) => new(a.Value | b.Value);
+    /// <remarks>
+    /// This operator is intended for building composite styles. The decorations are combined via OR, while foreground
+    /// and background colors behave like overrides: if <paramref name="b"/> specifies a color, it replaces the
+    /// corresponding color from <paramref name="a"/>.
+    /// </remarks>
+    public static Style operator |(Style a, Style b)
+    {
+        var fg = b.HasForeground ? b._foreground : a._foreground;
+        var bg = b.HasBackground ? b.BackgroundColorRaw : a.BackgroundColorRaw;
+
+        var textStyle = (TextStyle)((byte)a.TextStyle | (byte)b.TextStyle);
+        var flags = ((ulong)(byte)textStyle << TextStyleShift);
+
+        if (a.IsContinuation || b.IsContinuation)
+        {
+            flags |= ContinuationMask;
+        }
+
+        return new Style(fg, bg | flags);
+    }
 
     /// <summary>
     /// Adds text style flags to a <see cref="Style"/>.
@@ -189,18 +209,18 @@ public readonly struct Style : IEquatable<Style>
     public static Style operator |(Style a, TextStyle style) => a.AddTextStyle(style);
 
     /// <summary>
-    /// ANDs the packed value with the provided style flags.
+    /// ANDs the current text style flags with the provided style flags.
     /// </summary>
-    public static Style operator &(Style a, TextStyle style) => new(a.Value & (ulong)style);
+    public static Style operator &(Style a, TextStyle style) => a.WithTextStyle(a.TextStyle & style);
 
     /// <inheritdoc />
-    public bool Equals(Style other) => Value == other.Value;
+    public bool Equals(Style other) => _foreground == other._foreground && _backgroundAndFlags == other._backgroundAndFlags;
 
     /// <inheritdoc />
     public override bool Equals(object? obj) => obj is Style other && Equals(other);
 
     /// <inheritdoc />
-    public override int GetHashCode() => Value.GetHashCode();
+    public override int GetHashCode() => HashCode.Combine(_foreground, _backgroundAndFlags);
 
     /// <summary>
     /// Returns whether two <see cref="Style"/> values are equal.
@@ -213,61 +233,12 @@ public readonly struct Style : IEquatable<Style>
     public static bool operator !=(Style left, Style right) => !left.Equals(right);
 
     internal AnsiDecorations ToAnsiDecorations()
-        => (AnsiDecorations)((int)TextStyle);
+        => (AnsiDecorations)(int)TextStyle;
 
-    private static ulong Encode(Color color)
-    {
-        switch (color.Kind)
-        {
-            case ColorKind.Default:
-                return 0;
-            case ColorKind.Basic16:
-                return EncodeColor(kind: 1u, value: (uint)color.Index);
-            case ColorKind.Indexed256:
-                return EncodeColor(kind: 2u, value: (uint)color.Index);
-            case ColorKind.Rgb:
-                return EncodeColor(kind: 3u, value: (uint)((color.R << 16) | (color.G << 8) | color.B));
-            default:
-                return 0;
-        }
-    }
+    internal Color GetForegroundOrDefault()
+        => HasForeground ? Color.FromRaw(_foreground) : Color.Default;
 
-    private static ulong EncodeColor(uint kind, uint value)
-    {
-        if ((kind & ((1u << ColorKindBits) - 1u)) == 0)
-        {
-            return 0;
-        }
-
-        value &= ColorValueMask;
-        return (ulong)((kind << ColorValueBits) | value);
-    }
-
-    private static bool TryDecodeToColor(ulong encoded, out Color color)
-    {
-        var kind = (uint)((encoded >> ColorValueBits) & 0b11);
-        var value = (uint)encoded & ColorValueMask;
-
-        switch (kind)
-        {
-            case 1:
-                color = Color.Basic16((int)(value & 0xF));
-                return true;
-            case 2:
-                color = Color.Indexed256((int)(value & 0xFF));
-                return true;
-            case 3:
-            {
-                var r = (byte)((value >> 16) & 0xFF);
-                var g = (byte)((value >> 8) & 0xFF);
-                var b = (byte)(value & 0xFF);
-                color = Color.Rgb(r, g, b);
-                return true;
-            }
-            default:
-                color = default;
-                return false;
-        }
-    }
+    internal Color GetBackgroundOrDefault()
+        => HasBackground ? Color.FromRaw(BackgroundColorRaw) : Color.Default;
 }
 
