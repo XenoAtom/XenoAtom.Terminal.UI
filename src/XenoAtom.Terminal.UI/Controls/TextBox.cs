@@ -115,8 +115,8 @@ public partial class TextBox : TextEditorBase
         var theme = GetTheme();
         var textBoxStyle = GetTextBoxStyle();
         var selectionStyle = textBoxStyle.SelectionStyle(theme);
-        var backgroundStyle = textBoxStyle.BackgroundStyle(theme);
-        var placeholderStyle = textBoxStyle.PlaceholderStyle(theme);
+        var backgroundStyle = textBoxStyle.BackgroundStyle(theme, isFocused);
+        var placeholderStyle = textBoxStyle.PlaceholderStyle(theme, isFocused);
         var padding = textBoxStyle.Padding;
 
         var innerLeft = rect.X;

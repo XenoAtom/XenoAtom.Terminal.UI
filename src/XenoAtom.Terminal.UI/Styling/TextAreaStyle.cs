@@ -87,9 +87,20 @@ public sealed record TextAreaStyle : IStyle<TextAreaStyle>
     /// </summary>
     public Style BackgroundStyle(Theme theme)
     {
+        return BackgroundStyle(theme, focused: false);
+    }
+
+    /// <summary>
+    /// Resolves the background style for the provided <paramref name="theme"/>.
+    /// </summary>
+    /// <param name="theme">The current theme.</param>
+    /// <param name="focused">Whether the input is focused.</param>
+    public Style BackgroundStyle(Theme theme, bool focused)
+    {
         var style = Style.None;
         if (theme.Foreground is { } fg) style = style.WithForeground(fg);
-        var bg = Background ?? theme.InputFill ?? theme.SurfaceAlt ?? theme.Surface ?? theme.Background;
+        var themeFill = focused ? (theme.InputFillFocused ?? theme.InputFill) : theme.InputFill;
+        var bg = Background ?? themeFill ?? theme.SurfaceAlt ?? theme.Surface ?? theme.Background;
         if (bg is { } b) style = style.WithBackground(b);
         return style;
     }
@@ -99,7 +110,17 @@ public sealed record TextAreaStyle : IStyle<TextAreaStyle>
     /// </summary>
     public Style PlaceholderStyle(Theme theme)
     {
-        var style = BackgroundStyle(theme);
+        return PlaceholderStyle(theme, focused: false);
+    }
+
+    /// <summary>
+    /// Resolves the placeholder style for the provided <paramref name="theme"/>.
+    /// </summary>
+    /// <param name="theme">The current theme.</param>
+    /// <param name="focused">Whether the input is focused.</param>
+    public Style PlaceholderStyle(Theme theme, bool focused)
+    {
+        var style = BackgroundStyle(theme, focused);
         var fg = Placeholder ?? theme.Muted ?? theme.Foreground;
         if (fg is { } c) style = style.WithForeground(c);
         return style;

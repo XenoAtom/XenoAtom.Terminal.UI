@@ -99,8 +99,8 @@ public sealed partial class TextArea : TextEditorBase
         var theme = GetTheme();
         var style = Get<TextAreaStyle>();
         var selectionStyle = style.SelectionStyle(theme);
-        var backgroundStyle = style.BackgroundStyle(theme);
-        var placeholderStyle = style.PlaceholderStyle(theme);
+        var backgroundStyle = style.BackgroundStyle(theme, isFocused);
+        var placeholderStyle = style.PlaceholderStyle(theme, isFocused);
         var padding = style.Padding;
 
         var innerLeft = rect.X;

@@ -25,6 +25,7 @@ public sealed class ThemeFromSchemeTests
         Assert.IsNotNull(theme.ControlFillHover);
         Assert.IsNotNull(theme.ControlFillPressed);
         Assert.IsNotNull(theme.InputFill);
+        Assert.IsNotNull(theme.InputFillFocused);
         Assert.IsNotNull(theme.Border);
         Assert.IsNotNull(theme.FocusBorder);
         Assert.IsNotNull(theme.Selection);
@@ -35,14 +36,18 @@ public sealed class ThemeFromSchemeTests
         Assert.AreEqual(ColorKind.Rgb, theme.PopupSurface!.Value.Kind);
         Assert.AreEqual(ColorKind.RgbA, theme.ControlFill!.Value.Kind);
         Assert.AreEqual(ColorKind.RgbA, theme.InputFill!.Value.Kind);
+        Assert.AreEqual(ColorKind.RgbA, theme.InputFillFocused!.Value.Kind);
         Assert.AreEqual(ColorKind.RgbA, theme.Border!.Value.Kind);
         Assert.AreEqual(ColorKind.Rgb, theme.FocusBorder!.Value.Kind);
         Assert.AreEqual(ColorKind.RgbA, theme.Selection!.Value.Kind);
 
-        // Dark theme: inputs are inset by darkening the background.
-        Assert.AreEqual(0, theme.InputFill.Value.R);
-        Assert.AreEqual(0, theme.InputFill.Value.G);
-        Assert.AreEqual(0, theme.InputFill.Value.B);
+        // Dark theme: unfocused inputs are slightly lifted (lighter), focused inputs are inset (darker).
+        Assert.AreEqual(255, theme.InputFill.Value.R);
+        Assert.AreEqual(255, theme.InputFill.Value.G);
+        Assert.AreEqual(255, theme.InputFill.Value.B);
+        Assert.AreEqual(0, theme.InputFillFocused.Value.R);
+        Assert.AreEqual(0, theme.InputFillFocused.Value.G);
+        Assert.AreEqual(0, theme.InputFillFocused.Value.B);
     }
 
     [TestMethod]
@@ -57,12 +62,14 @@ public sealed class ThemeFromSchemeTests
         Assert.IsNotNull(theme.Surface);
         Assert.IsNotNull(theme.ControlFill);
         Assert.IsNotNull(theme.InputFill);
+        Assert.IsNotNull(theme.InputFillFocused);
         Assert.IsNotNull(theme.PopupSurface);
         Assert.IsNotNull(theme.Border);
 
         Assert.AreEqual(ColorKind.Rgb, theme.Surface.Value.Kind);
         Assert.AreEqual(ColorKind.RgbA, theme.ControlFill!.Value.Kind);
-        Assert.AreEqual(ColorKind.Rgb, theme.InputFill!.Value.Kind);
+        Assert.AreEqual(ColorKind.RgbA, theme.InputFill!.Value.Kind);
+        Assert.AreEqual(ColorKind.Rgb, theme.InputFillFocused!.Value.Kind);
         Assert.AreEqual(ColorKind.Rgb, theme.PopupSurface!.Value.Kind);
         Assert.AreEqual(ColorKind.RgbA, theme.Border!.Value.Kind);
 

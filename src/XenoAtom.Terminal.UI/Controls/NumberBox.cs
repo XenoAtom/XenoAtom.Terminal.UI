@@ -282,11 +282,12 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
             UpdateTextFromValue();
         }
 
+        var isFocused = IsFocused;
         var theme = GetTheme();
         var textBoxStyle = GetTextBoxStyle();
         var selectionStyle = textBoxStyle.SelectionStyle(theme);
-        var backgroundStyle = textBoxStyle.BackgroundStyle(theme);
-        var placeholderStyle = textBoxStyle.PlaceholderStyle(theme);
+        var backgroundStyle = textBoxStyle.BackgroundStyle(theme, isFocused);
+        var placeholderStyle = textBoxStyle.PlaceholderStyle(theme, isFocused);
         var padding = textBoxStyle.Padding;
 
         var showValidation = ShowValidationMessage && !string.IsNullOrEmpty(_validationMessage);

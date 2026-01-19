@@ -119,6 +119,7 @@ public sealed class Theme : IStyle<Theme>
                 ControlFillHover = scheme.White,
                 ControlFillPressed = scheme.Blue,
                 InputFill = scheme.Black,
+                InputFillFocused = scheme.Black,
                 Border = border,
                 FocusBorder = focusBorder,
                 Accent = accentColor,
@@ -144,6 +145,7 @@ public sealed class Theme : IStyle<Theme>
         Color controlHover;
         Color controlPressed;
         Color inputFill;
+        Color inputFillFocused;
         Color popupSurface;
         Color borderStroke;
         Color focusBorderStroke;
@@ -164,8 +166,9 @@ public sealed class Theme : IStyle<Theme>
             controlHover = Color.RgbA(0, 0, 0, 0x14);
             controlPressed = Color.RgbA(0, 0, 0, 0x1E);
 
-            // Inputs are slightly elevated (solid white) with strokes.
-            inputFill = surface;
+            // Inputs: unfocused are slightly inset (darker); focused is lifted (solid surface).
+            inputFill = Color.RgbA(0, 0, 0, 0x10);
+            inputFillFocused = surface;
 
             borderStroke = Color.RgbA(0, 0, 0, 0x28);
             focusBorderStroke = accentColor;
@@ -186,7 +189,9 @@ public sealed class Theme : IStyle<Theme>
             controlHover = Color.RgbA(255, 255, 255, 0x17);
             controlPressed = Color.RgbA(255, 255, 255, 0x20);
 
-            inputFill = Color.RgbA(0, 0, 0, 0x28);
+            // Inputs: unfocused are slightly lifted (lighter); focused is inset (darker).
+            inputFill = Color.RgbA(255, 255, 255, 0x0C);
+            inputFillFocused = Color.RgbA(0, 0, 0, 0x28);
 
             borderStroke = Color.RgbA(255, 255, 255, 0x26);
             focusBorderStroke = accentColor;
@@ -207,6 +212,7 @@ public sealed class Theme : IStyle<Theme>
             ControlFillHover = controlHover,
             ControlFillPressed = controlPressed,
             InputFill = inputFill,
+            InputFillFocused = inputFillFocused,
             Border = borderStroke,
             FocusBorder = focusBorderStroke,
             Accent = accentColor,
@@ -266,6 +272,11 @@ public sealed class Theme : IStyle<Theme>
     /// Gets the fill used for editable regions (text inputs/editors), or <c>null</c>.
     /// </summary>
     public Color? InputFill { get; init; }
+
+    /// <summary>
+    /// Gets the fill used for focused editable regions (text inputs/editors), or <c>null</c>.
+    /// </summary>
+    public Color? InputFillFocused { get; init; }
 
     /// <summary>
     /// Gets the default border color, or <c>null</c>.
@@ -407,6 +418,21 @@ public sealed class Theme : IStyle<Theme>
     {
         var style = ForegroundTextStyle();
         if (InputFill is { } bg)
+        {
+            style = style.WithBackground(bg);
+        }
+        return style;
+    }
+
+    /// <summary>
+    /// Builds an input fill style for either focused or unfocused editors.
+    /// </summary>
+    /// <param name="focused">Whether the input is focused.</param>
+    public Style InputFillStyle(bool focused)
+    {
+        var style = ForegroundTextStyle();
+        var fill = focused ? (InputFillFocused ?? InputFill) : InputFill;
+        if (fill is { } bg)
         {
             style = style.WithBackground(bg);
         }
