@@ -186,7 +186,7 @@ public sealed class Theme : IStyle<Theme>
             controlHover = Color.RgbA(255, 255, 255, 0x17);
             controlPressed = Color.RgbA(255, 255, 255, 0x20);
 
-            inputFill = Color.RgbA(0, 0, 0, 0x19);
+            inputFill = Color.RgbA(0, 0, 0, 0x28);
 
             borderStroke = Color.RgbA(255, 255, 255, 0x26);
             focusBorderStroke = accentColor;
