@@ -11,6 +11,7 @@ using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Templating;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -24,7 +25,7 @@ public sealed partial class Select<T> : ContentVisual
     private int _contentIndex = -1;
     private bool _hasContentValue;
     private T _contentValue = default!;
-    private Func<T, Visual>? _lastContentFactory;
+    private DataTemplate<T> _lastResolvedTemplate;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Select{T}"/> class.
@@ -34,10 +35,6 @@ public sealed partial class Select<T> : ContentVisual
         Focusable = true;
         Items = new BindableList<T>(this, "Select.Items");
         this.SelectedIndex(0);
-
-        // Provide a sensible default factory. Note that this must be a typed delegate (not a lambda directly),
-        // otherwise the implicit conversion to Delegator{TDelegate} will not be applied.
-        ContentFactory = (Func<T, Visual>)CreateDefaultItemVisual;
     }
 
     /// <summary>
@@ -53,14 +50,14 @@ public sealed partial class Select<T> : ContentVisual
     public partial int SelectedIndex { get; set; }
 
     /// <summary>
-    /// Gets or sets the factory used to create visuals for items, both for the selected value and the popup list.
+    /// Gets or sets the template used to create visuals for items, both for the selected value and the popup list.
     /// </summary>
     /// <remarks>
-    /// When <see cref="ContentFactory"/> is not set (empty delegator), the control uses a default factory that
-    /// renders <c>value.ToString()</c> inside a <see cref="TextBlock"/>.
+    /// When this template is empty, the control resolves a display template from <see cref="DataTemplates"/> in the environment.
+    /// If no template can be resolved, the control falls back to rendering <c>value.ToString()</c> inside a <see cref="TextBlock"/>.
     /// </remarks>
     [Bindable]
-    public partial Delegator<Func<T, Visual>> ContentFactory { get; set; }
+    public partial DataTemplate<T> ItemTemplate { get; set; }
 
     partial void OnSelectedIndexChanged(int value)
     {
@@ -68,7 +65,7 @@ public sealed partial class Select<T> : ContentVisual
         UpdateSelectedContent();
     }
 
-    partial void OnContentFactoryChanged(Delegator<Func<T, Visual>> value)
+    partial void OnItemTemplateChanged(DataTemplate<T> value)
     {
         _ = value;
         UpdateSelectedContent(forceRebuild: true);
@@ -229,7 +226,7 @@ public sealed partial class Select<T> : ContentVisual
             _contentIndex = -1;
             _hasContentValue = false;
             _contentValue = default!;
-            _lastContentFactory = null;
+            _lastResolvedTemplate = default;
             return;
         }
 
@@ -241,13 +238,13 @@ public sealed partial class Select<T> : ContentVisual
         }
 
         var value = items[index];
-        var factory = ContentFactory.Invoke ?? CreateDefaultItemVisual;
+        var template = ResolveItemTemplate();
 
         if (!forceRebuild &&
             _contentIndex == index &&
             _hasContentValue &&
             EqualityComparer<T>.Default.Equals(_contentValue, value) &&
-            ReferenceEquals(_lastContentFactory, factory) &&
+            _lastResolvedTemplate.Equals(template) &&
             Content is not null)
         {
             return;
@@ -256,8 +253,8 @@ public sealed partial class Select<T> : ContentVisual
         _contentIndex = index;
         _hasContentValue = true;
         _contentValue = value;
-        _lastContentFactory = factory;
-        Content = factory(value);
+        _lastResolvedTemplate = template;
+        Content = MaterializeValue(value, template, index, DataTemplateItemState.None);
     }
 
     private void OpenPopup()
@@ -275,11 +272,11 @@ public sealed partial class Select<T> : ContentVisual
             return;
         }
 
+        var template = ResolveItemTemplate();
         var list = new ListBox();
-        var factory = ContentFactory.Invoke ?? CreateDefaultItemVisual;
         for (var i = 0; i < Items.Count; i++)
         {
-            list.Items.Add(factory(Items[i]));
+            list.Items.Add(MaterializeValue(Items[i], template, i, DataTemplateItemState.None));
         }
         list.SelectedIndex = Math.Clamp(SelectedIndex, 0, Math.Max(0, list.Items.Count - 1));
 
@@ -382,4 +379,32 @@ public sealed partial class Select<T> : ContentVisual
 
     private static Visual CreateDefaultItemVisual(T value)
         => new TextBlock(value is null ? string.Empty : value.ToString() ?? string.Empty);
+
+    private DataTemplate<T> ResolveItemTemplate()
+    {
+        var template = ItemTemplate;
+        if (!template.IsEmpty)
+        {
+            return template;
+        }
+
+        var templates = Get<DataTemplates>();
+        if (templates.TryResolve(DataTemplateRole.Display, out template))
+        {
+            return template;
+        }
+
+        return default;
+    }
+
+    private Visual MaterializeValue(T value, DataTemplate<T> template, int index, DataTemplateItemState state)
+    {
+        if (template.IsEmpty || template.Create is null)
+        {
+            return CreateDefaultItemVisual(value);
+        }
+
+        var ctx = new DataTemplateContext(this, DataTemplateRole.Display, index, state);
+        return template.Create(value, ctx);
+    }
 }
