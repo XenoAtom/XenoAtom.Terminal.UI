@@ -1,6 +1,6 @@
 # ListBox
 
-`ListBox` displays a scrollable list of visuals and supports selection/focus interaction.
+`ListBox<T>` displays a scrollable list of items and supports selection/focus interaction.
 
 Screenshot placeholder:
 
@@ -8,13 +8,23 @@ Screenshot placeholder:
 
 ## Items
 
-Items are visuals (not strings) to allow full composition.
+Items are data values. By default, the list resolves a `DataTemplate<T>` from the environment (`DataTemplates`) to render each item.
+You can override this per instance via `ItemTemplate`.
 
 ```csharp
-new ListBox().Items.Add(
-    new HStack("•", "First"),
-    new HStack("•", "Second")
-);
+new ListBox<string>()
+    .Items(["First", "Second"]);
+```
+
+## Custom item visuals
+
+```csharp
+using XenoAtom.Terminal.UI.Templating;
+
+new ListBox<string>()
+    .Items(["First", "Second"])
+    .ItemTemplate(new DataTemplate<string>(
+        (string value, in DataTemplateContext _) => new HStack(Symbols.ArrowRight, new TextBlock(value)).Spacing(1)));
 ```
 
 ## Styling

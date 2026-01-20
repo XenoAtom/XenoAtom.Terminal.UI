@@ -1,6 +1,6 @@
 # SelectionList
 
-`SelectionList` is a multi-select list widget (checkbox-style selection in-layout).
+`SelectionList<T>` is a multi-select list widget (checkbox-style selection in-layout).
 
 Screenshot placeholder:
 
@@ -9,16 +9,11 @@ Screenshot placeholder:
 ## Basic usage
 
 ```csharp
-var selected = new State<int>(0);
-
-new SelectionList()
-    .Items.Add(
-        new SelectionListItem("First"),
-        new SelectionListItem("Second")
-    );
+new SelectionList<string>()
+    .AddItem("First")
+    .AddItem("Second", isChecked: true);
 ```
 
 ## Styling
 
 `SelectionListStyle` controls glyphs, spacing, and selection visuals.
-

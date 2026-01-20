@@ -237,12 +237,14 @@ Notes:
 
 #### 3.4.3 Resolution matching
 
-Resolution SHOULD support:
+Resolution MUST support:
 
-- Exact match
-- Base type match
-- Interface match
-- Deterministic "most specific wins" ordering
+- Exact match for `TryResolve<T>(...)` (strongly typed; allocation-free).
+- For runtime-type resolution (`TryResolveForValue(...)`):
+  - Exact match
+  - Base type match
+  - Interface match
+  - Deterministic "most specific wins" ordering (interfaces)
 
 ### 3.5 `DataPresenter<T>`
 
@@ -308,6 +310,13 @@ To keep `DataPresenter<T>` allocation-free:
 
 - For value types: typed resolution (`TryResolve<T>`) is sufficient.
 - For reference types: controls MAY use runtime resolution (`TryResolveForValue`) to support derived-type templates.
+
+Notes:
+
+- `TryResolve<T>` is intentionally **exact-match only**. Because `DataTemplate<T>` is strongly typed, a template registered for
+  a base type or interface cannot be returned as `DataTemplate<T>` without introducing allocations (adapters).
+- The recommended way to support base/interface matching is to use `TryResolveForValue(...)` (or to register templates for the
+  exact types used by a control).
 
 If a consumer wants heterogeneous items without boxing, they should use a reference-type base/interface for `T`.
 
@@ -399,16 +408,16 @@ Recommended defaults for `DataTemplateRole.Display`:
 
 Recommended defaults:
 
-- `State<string>` / `Binding<string>` -> `new TextBlock(() => state.Value)`
+- `State<string?>` / `Binding<string?>` -> `new TextBlock(() => state.Value ?? string.Empty)`
 - `State<int>` / `Binding<int>` -> `new TextBlock(() => state.Value.ToString())`
 
 ### 7.3 Editor defaults (reactive + bidirectional)
 
 Editor templates should generally exist for bindable sources:
 
-- `State<string>` / `Binding<string>` -> `new TextBox().Text(binding)`
+- `State<string?>` / `Binding<string?>` -> `new TextBox().Text(binding)`
 - `State<int>` / `Binding<int>` -> `new NumberBox<int>().Value(binding)`
-- `State<bool>` / `Binding<bool>` -> `new Switch().Value(binding)` (or `CheckBox`)
+- `State<bool>` / `Binding<bool>` -> `new Switch().IsOn(binding)` (or `CheckBox`)
 
 This enables a future property grid/forms experience without adding a new framework layer.
 
@@ -444,92 +453,63 @@ new VStack(
 ### 8.3 `DataPresenter<T>` for “just show this value”
 
 ```csharp
-var name = new State<string>("Alex");
+var name = new State<string?>("Alex");
 
 new VStack(
-    new DataPresenter<State<string>> { Value = name, Role = DataTemplateRole.Display },
-    new DataPresenter<State<string>> { Value = name, Role = DataTemplateRole.Editor }
+    new DataPresenter<State<string?>> { Value = name, Role = DataTemplateRole.Display },
+    new DataPresenter<State<string?>> { Value = name, Role = DataTemplateRole.Editor }
 ).Spacing(1);
 ```
 
 ---
 
-## 9. Control migration plan (proposal)
-
-This section describes how existing controls can adopt data templating uniformly.
+## 9. Control adoption (status)
 
 This repository is pre-1.0; breaking changes are acceptable if they improve usability and consistency. The focus is on simplifying
 user code and making the framework more coherent, while keeping performance excellent. Tests, samples, and documentation MUST be
 updated accordingly.
 
-### 9.1 Controls already generic (`<T>`) that should adopt the model
+### 9.1 Controls already generic (`<T>`) that adopt the model
 
 #### `Select<T>`
 
-Current:
+Current implementation:
 
 - `Items : BindableList<T>`
-- Per-instance `ContentFactory : Delegator<Func<T, Visual>>`
-
-Proposed:
-
-- Replace `ContentFactory` with `ItemTemplate : DataTemplate<T>`
-- Default behavior:
-  - If `ItemTemplate` is empty: resolve `DataTemplateRole.Display` from `DataTemplates`
-  - Otherwise use `ItemTemplate`
+- `ItemTemplate : DataTemplate<T>`
+- If `ItemTemplate` is empty: resolve `DataTemplateRole.Display` from `DataTemplates`.
 
 Benefits:
 
 - Environment defaults become possible (app-wide item rendering).
 - Future virtualization can reuse the `TryUpdate` path.
 
-### 9.2 Controls that are not generic but should become generic
+### 9.2 Controls that became generic
 
-#### `OptionList` -> `OptionList<T>`
+#### `OptionList<T>`
 
-Current:
-
-- `Items : VisualList<OptionListItem>` where `OptionListItem` hosts visuals.
-
-Proposed:
+Current implementation:
 
 - `Items : BindableList<T>`
 - `ItemTemplate : DataTemplate<T>`
 - `SelectedIndex` remains.
 - The control owns the item chrome (marker, hover, selection highlight); template only produces content.
 
-Migration strategy:
+#### `SelectionList<T>`
 
-- Replace `OptionList` with `OptionList<T>`; update samples/tests/docs to use `OptionList<Visual>` when needed.
-
-#### `SelectionList` -> `SelectionList<T>`
-
-Current:
-
-- `Items : VisualList<SelectionListItem>` (content-based).
-
-Proposed:
+Current implementation:
 
 - `Items : BindableList<T>`
 - `ItemTemplate : DataTemplate<T>`
-- Add an explicit selection model:
-  - `SelectedIndex` + `Checked` state (e.g. `BindableList<bool>` or `ISelectionModel`)
+- `SelectedIndex` + `Checked : BindableList<bool>` (kept in sync with `Items`)
 
-Migration strategy:
+#### `ListBox<T>`
 
-- Replace `SelectionList` with `SelectionList<T>`; update samples/tests/docs to use `SelectionList<Visual>` when needed.
-
-#### `ListBox` -> `ListBox<T>`
-
-Current:
-
-- `Items : VisualList<Visual>`
-
-Proposed:
+Current implementation:
 
 - `Items : BindableList<T>`
 - `ItemTemplate : DataTemplate<T>`
-- When a visual list is desired, use `ListBox<Visual>` with the identity template.
+- When a visual list is desired, use `ListBox<Visual>` (the default registry includes `Visual` identity).
 
 #### `TreeView` -> `TreeView<TNode>` (or `TreeView<T>`)
 

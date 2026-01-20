@@ -19,10 +19,13 @@ var select = new Select<string>()
 ## Custom item visuals
 
 By default, `Select<T>` renders each item using `value.ToString()` in a `TextBlock`. To render richer content,
-set `ContentFactory`:
+set `ItemTemplate`:
 
 ```csharp
+using XenoAtom.Terminal.UI.Templating;
+
 var placements = new Select<PopupPlacement>()
-    .ContentFactory(p => new HStack(Symbols.ArrowRight, new TextBlock(p.ToString())).Spacing(1));
-placements.Items.AddRange(PopupPlacement.Below, PopupPlacement.Above, PopupPlacement.Right, PopupPlacement.Left);
+    .Items([PopupPlacement.Below, PopupPlacement.Above, PopupPlacement.Right, PopupPlacement.Left])
+    .ItemTemplate(new DataTemplate<PopupPlacement>(
+        (PopupPlacement p, in DataTemplateContext _) => new HStack(Symbols.ArrowRight, new TextBlock(p.ToString())).Spacing(1)));
 ```

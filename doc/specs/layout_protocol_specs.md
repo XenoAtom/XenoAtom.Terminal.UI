@@ -580,9 +580,9 @@ I'll group controls by how they should respect the spec: **leaf**, **decorator**
 
 These are similar in layout behavior. Grouping:
 
-* ListBox.cs
-* OptionList.cs / OptionListItem.cs
-* SelectionList.cs / SelectionListItem.cs
+* ListBox\<T>.cs
+* OptionList\<T>.cs (data-driven, often using `OptionListItem` as the item type)
+* SelectionList\<T>.cs
 * TreeView.cs
 * MenuItem.cs (when used in vertical menus)
 * CommandPaletteItem.cs
@@ -716,13 +716,13 @@ Keep global defaults `Left/Top`, but override these for better UX:
 * StatusBar
 * HSplitter
 * Horizontal ScrollBar
-* Most "row item" controls: `OptionListItem`, `SelectionListItem`, list items
+* Most "row item" controls: `OptionListItem`, selection/list items
 
 **Stretch both axes by default (viewport/container-like)**
 
 * ScrollViewer
 * TextArea
-* ListBox
+* ListBox\<T>
 * TreeView
 * Table
 * Grid

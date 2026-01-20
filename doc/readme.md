@@ -20,6 +20,7 @@ This guide documents the concepts, features, and controls of the library.
 
 - `doc/visual-tree.md` (Visuals, fluent API, dynamic composition)
 - `doc/binding.md` (`State<T>`, bindable properties, dependency tracking)
+- `doc/data-templating.md` (DataTemplates, DataPresenter<T>, item templates)
 - `doc/layout.md` (layout protocol, alignment, margin/padding)
 - `doc/input.md` (keyboard/mouse, focus, routed events, capture)
 - `doc/styling.md` (Theme, styles, environment)
