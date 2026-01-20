@@ -14,7 +14,7 @@ public sealed class OptionListTests
     [TestMethod]
     public void OptionList_ArrowDown_Raises_SelectionChanged()
     {
-        var list = new OptionList { MinHeight = 4, MaxHeight = 4 };
+        var list = new OptionList<OptionListItem> { MinHeight = 4, MaxHeight = 4 };
         list.Items.AddRange(
             new OptionListItem("First"),
             new OptionListItem("Second"),
@@ -37,7 +37,7 @@ public sealed class OptionListTests
     [TestMethod]
     public void OptionList_Enter_Raises_ItemActivated()
     {
-        var list = new OptionList { MinHeight = 4, MaxHeight = 4 };
+        var list = new OptionList<OptionListItem> { MinHeight = 4, MaxHeight = 4 };
         list.Items.AddRange(
             new OptionListItem("First"),
             new OptionListItem("Second"),
@@ -60,7 +60,7 @@ public sealed class OptionListTests
     [TestMethod]
     public void OptionList_Renders_Descriptions_On_Second_Line()
     {
-        var list = new OptionList { MinHeight = 4, MaxHeight = 4 };
+        var list = new OptionList<OptionListItem> { MinHeight = 4, MaxHeight = 4 };
         list.Items.AddRange(
             new OptionListItem("Build", "Ctrl+B") { Description = "Build the project" },
             new OptionListItem("Run", "F5") { Description = "Run the app" });
@@ -81,7 +81,7 @@ public sealed class OptionListTests
     [TestMethod]
     public void OptionList_MouseWheel_Skips_Disabled_Items()
     {
-        var list = new OptionList { MinHeight = 4, MaxHeight = 4 };
+        var list = new OptionList<OptionListItem> { MinHeight = 4, MaxHeight = 4 };
         list.Items.AddRange(
             new OptionListItem("Header") { IsEnabled = false },
             new OptionListItem("First"),

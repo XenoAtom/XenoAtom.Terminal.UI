@@ -6,6 +6,7 @@ using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Templating;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -15,11 +16,10 @@ namespace XenoAtom.Terminal.UI.Controls;
 public sealed partial class CommandPalette : Visual
 {
     private readonly TextBox _searchBox;
-    private readonly OptionList _results;
+    private readonly OptionList<CommandPaletteItem> _results;
     private readonly VStack _content;
 
     private Popup? _hostPopup;
-    private readonly List<CommandPaletteItem> _visibleItems;
     private int _resultsHeight = 8;
 
     /// <summary>
@@ -30,17 +30,23 @@ public sealed partial class CommandPalette : Visual
         Focusable = false;
         Items = new BindableList<CommandPaletteItem>(this, "CommandPalette.Items");
 
-        _visibleItems = new List<CommandPaletteItem>();
-
         _searchBox = new TextBox()
             .Placeholder("Type to search…")
             .HorizontalAlignment(HorizontalAlignment.Stretch);
 
-        _results = new OptionList()
+        _results = new OptionList<CommandPaletteItem>()
             .ActivateOnClick(true)
             .HorizontalAlignment(HorizontalAlignment.Stretch);
         _results.MinHeight = _resultsHeight;
         _results.MaxHeight = _resultsHeight;
+
+        _results.ItemIsEnabled = (Func<CommandPaletteItem, bool>)(item => item.IsEnabled);
+        _results.ItemSearchText = (Func<CommandPaletteItem, string?>)(item => item.SearchText);
+        _results.ItemTemplate = new DataTemplate<CommandPaletteItem>((CommandPaletteItem item, in DataTemplateContext _) =>
+            new OptionListItem(item.CreateContent(), item.CreateShortcut())
+            {
+                Description = item.CreateDescription(),
+            });
 
         _results.ItemActivated((_, e) => InvokeIndex(e.Index));
 
@@ -152,11 +158,10 @@ public sealed partial class CommandPalette : Visual
 
     private void RebuildResults()
     {
-        _visibleItems.Clear();
-
         var query = (_searchBox.Text ?? string.Empty).Trim();
         var hasQuery = query.Length > 0;
 
+        _results.Items.Clear();
         for (var i = 0; i < Items.Count; i++)
         {
             var item = Items[i];
@@ -169,15 +174,10 @@ public sealed partial class CommandPalette : Visual
                 }
             }
 
-            _visibleItems.Add(item);
-            _results.Items.Add(new OptionListItem(item.CreateContent(), item.CreateShortcut())
-            {
-                Description = item.CreateDescription(),
-                IsEnabled = item.IsEnabled,
-            });
+            _results.Items.Add(item);
         }
 
-        if (_visibleItems.Count == 0)
+        if (_results.Items.Count == 0)
         {
             _results.SelectedIndex = 0;
             return;
@@ -188,12 +188,12 @@ public sealed partial class CommandPalette : Visual
 
     private void InvokeIndex(int index)
     {
-        if ((uint)index >= (uint)_visibleItems.Count)
+        if ((uint)index >= (uint)_results.Items.Count)
         {
             return;
         }
 
-        var item = _visibleItems[index];
+        var item = _results.Items[index];
         item.Action?.Invoke();
         Close();
     }

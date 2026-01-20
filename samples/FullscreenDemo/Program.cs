@@ -30,7 +30,7 @@ selectionList.Items.AddRange(
     new SelectionListItem("Grumman"),
     new SelectionListItem("Kaitain"));
 
-var optionList = new OptionList().MinHeight(6).MaxHeight(6);
+var optionList = new OptionList<OptionListItem>().MinHeight(6).MaxHeight(6);
 optionList.Items.AddRange(
     new OptionListItem("Build", "Ctrl+B") { Description = "Build the project" },
     new OptionListItem("Run", "F5") { Description = "Run the app" },

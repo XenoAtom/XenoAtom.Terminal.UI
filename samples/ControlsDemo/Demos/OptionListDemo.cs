@@ -14,7 +14,7 @@ public sealed class OptionListDemo : ControlsDemoBase
     {
         var selected = new State<int>(0);
 
-        var list = new OptionList()
+        var list = new OptionList<OptionListItem>()
             .ActivateOnClick(true)
             .SelectedIndex(selected);
 

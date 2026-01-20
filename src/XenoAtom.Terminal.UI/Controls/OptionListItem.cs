@@ -9,7 +9,7 @@ using XenoAtom.Terminal.UI.Styling;
 namespace XenoAtom.Terminal.UI.Controls;
 
 /// <summary>
-/// Represents an item in an <see cref="OptionList"/>.
+/// Represents an item in an <see cref="OptionList{T}"/>.
 /// </summary>
 public sealed partial class OptionListItem : Visual
 {
@@ -54,7 +54,7 @@ public sealed partial class OptionListItem : Visual
     public partial Visual? Description { get; set; }
 
     /// <summary>
-    /// Optional search text used by <see cref="OptionList"/> for type-to-jump.
+    /// Optional search text used by <see cref="OptionList{T}"/> for type-to-jump.
     /// </summary>
     [Bindable]
     public partial string? SearchText { get; set; }

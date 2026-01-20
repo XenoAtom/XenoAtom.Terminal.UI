@@ -9,14 +9,19 @@ using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Templating;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
 /// <summary>
 /// Displays a vertical list of options with selection and activation.
 /// </summary>
-public sealed partial class OptionList : Visual
+/// <typeparam name="T">The item type.</typeparam>
+public sealed partial class OptionList<T> : Visual
 {
+    private readonly BindableList<Visual> _itemVisuals;
+    private readonly List<Visual> _recyclePool = new();
+
     private int _scrollOffset;
     private int _hoveredIndex = -1;
     private int _itemHeight = 1;
@@ -28,20 +33,33 @@ public sealed partial class OptionList : Visual
     private string _typeBuffer = string.Empty;
     private long _typeLastTick;
 
-    /// <summary>
-    /// Gets the option items displayed by this list.
-    /// </summary>
-    [Bindable]
-    public VisualList<OptionListItem> Items { get; }
+    private int _lastItemsVersion = -1;
+    private DataTemplate<T> _lastResolvedTemplate;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="OptionList"/> control.
+    /// Initializes a new instance of the <see cref="OptionList{T}"/> control.
     /// </summary>
     public OptionList()
     {
-        Items = new VisualList<OptionListItem>(this, "Items");
+        Items = new BindableList<T>(this, "OptionList.Items");
+        _itemVisuals = new BindableList<Visual>(
+            this,
+            "OptionList.ItemVisuals",
+            onAdding: AttachCollectionChild,
+            onRemoving: v =>
+            {
+                DetachCollectionChild(v);
+                _recyclePool.Add(v);
+            });
+
         Focusable = true;
     }
+
+    /// <summary>
+    /// Gets the items displayed by this list.
+    /// </summary>
+    [Bindable]
+    public BindableList<T> Items { get; }
 
     /// <summary>
     /// Gets or sets the selected item index.
@@ -55,10 +73,23 @@ public sealed partial class OptionList : Visual
     [Bindable]
     public partial bool ActivateOnClick { get; set; }
 
-    partial void OnActivateOnClickChanged(bool value)
-    {
-        _ = value;
-    }
+    /// <summary>
+    /// Gets or sets the template used to create visuals for items.
+    /// </summary>
+    [Bindable]
+    public partial DataTemplate<T> ItemTemplate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the factory used to determine whether an item is enabled.
+    /// </summary>
+    [Bindable]
+    public partial Delegator<Func<T, bool>> ItemIsEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the factory used to provide search text for type-to-jump.
+    /// </summary>
+    [Bindable]
+    public partial Delegator<Func<T, string?>> ItemSearchText { get; set; }
 
     partial void OnSelectedIndexChanging(ref int value)
     {
@@ -75,23 +106,24 @@ public sealed partial class OptionList : Visual
     }
 
     /// <inheritdoc/>
-    protected override int ChildrenCount => Items.Count;
+    protected override int ChildrenCount => _itemVisuals.Count;
 
     /// <inheritdoc/>
-    protected override Visual GetChild(int index) => Items[index];
+    protected override Visual GetChild(int index) => _itemVisuals[index];
 
     /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var style = Get<OptionListStyle>();
+        EnsureItemVisuals();
 
+        var style = Get<OptionListStyle>();
         var prefixWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.MarkerGlyph)) + Math.Max(0, style.SpaceBetweenGlyphAndText);
 
         var itemWidth = 0;
         var itemHeight = 1;
-        for (var i = 0; i < Items.Count; i++)
+        for (var i = 0; i < _itemVisuals.Count; i++)
         {
-            var item = Items[i];
+            var item = _itemVisuals[i];
             item.Measure(LayoutConstraints.Unbounded);
             itemWidth = Math.Max(itemWidth, item.DesiredSize.Width);
             itemHeight = Math.Max(itemHeight, Math.Max(1, item.DesiredSize.Height));
@@ -100,7 +132,7 @@ public sealed partial class OptionList : Visual
         _itemHeight = itemHeight;
 
         var width = prefixWidth + itemWidth;
-        var desiredHeight = Math.Max(1, Items.Count * itemHeight);
+        var desiredHeight = Math.Max(1, _itemVisuals.Count * itemHeight);
 
         var min = new Size(1, 1);
         var natural = new Size(Math.Max(min.Width, width), Math.Max(min.Height, desiredHeight));
@@ -111,8 +143,11 @@ public sealed partial class OptionList : Visual
     /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
+        Bounds = finalRect;
+        EnsureItemVisuals();
+
         var rect = finalRect;
-        if (rect.Width <= 0 || rect.Height <= 0 || Items.Count == 0)
+        if (rect.Width <= 0 || rect.Height <= 0 || _itemVisuals.Count == 0)
         {
             return;
         }
@@ -141,10 +176,10 @@ public sealed partial class OptionList : Visual
             _scrollOffset = Math.Max(0, selected - viewportItems + 1);
         }
 
-        for (var i = 0; i < count; i++)
+        for (var i = 0; i < _itemVisuals.Count; i++)
         {
             var y = innerTop + ((i - _scrollOffset) * itemHeight);
-            Items[i].Arrange(new Rectangle(itemLeft, y, itemWidth, itemHeight));
+            _itemVisuals[i].Arrange(new Rectangle(itemLeft, y, itemWidth, itemHeight));
         }
     }
 
@@ -192,10 +227,9 @@ public sealed partial class OptionList : Visual
                 continue;
             }
 
-            var item = Items[index];
-            var itemEnabled = item.IsEnabled;
             var isSelected = index == selected;
             var isHovered = index == _hoveredIndex;
+            var itemEnabled = IsItemEnabled(index);
             var rowStyle = style.ResolveItemStyle(theme, IsEnabled && itemEnabled, isSelected, isFocused, isHovered);
 
             var itemTop = innerTop + (visibleIndex * itemHeight);
@@ -259,24 +293,21 @@ public sealed partial class OptionList : Visual
     /// <inheritdoc/>
     protected override void OnPointerReleased(PointerEventArgs e)
     {
-        if (e.Button != TerminalMouseButton.Left)
+        if (!_pressed || e.Button != TerminalMouseButton.Left)
         {
             return;
         }
 
-        var wasPressed = _pressed;
         _pressed = false;
-        var releasedIndex = TryGetIndexAtPoint(e.UiX, e.UiY);
+        var index = TryGetIndexAtPoint(e.UiX, e.UiY);
+        var pressedIndex = _pressedIndex;
+        _pressedIndex = -1;
 
-        if (wasPressed && _pressedIndex >= 0 && releasedIndex == _pressedIndex)
+        if (ActivateOnClick && index >= 0 && index == pressedIndex && index == SelectedIndex)
         {
-            if (ActivateOnClick)
-            {
-                ActivateIndex(_pressedIndex);
-            }
+            ActivateIndex(index);
         }
 
-        _pressedIndex = -1;
         e.Handled = true;
         Invalidate();
     }
@@ -284,27 +315,15 @@ public sealed partial class OptionList : Visual
     /// <inheritdoc/>
     protected override void OnPointerWheel(PointerEventArgs e)
     {
-        if (Items.Count == 0)
+        var count = Items.Count;
+        if (count == 0 || e.WheelDelta == 0)
         {
             return;
         }
 
-        var delta = e.RawEvent.WheelDelta;
-        if (delta == 0)
-        {
-            return;
-        }
-
-        // WheelDelta > 0 is typically up. Skip disabled items, matching keyboard navigation behavior.
-        var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, Items.Count - 1));
-        if (delta > 0)
-        {
-            SelectedIndex = FindPreviousEnabledIndex(selected - 1);
-        }
-        else
-        {
-            SelectedIndex = FindNextEnabledIndex(selected + 1);
-        }
+        var selected = Math.Clamp(SelectedIndex, 0, count - 1);
+        var delta = e.WheelDelta > 0 ? -1 : 1;
+        SelectedIndex = selected + delta;
         e.Handled = true;
     }
 
@@ -323,27 +342,27 @@ public sealed partial class OptionList : Visual
         switch (e.Key)
         {
             case TerminalKey.Up:
-                SelectedIndex = FindPreviousEnabledIndex(selected - 1);
+                SelectedIndex = selected - 1;
                 e.Handled = true;
                 return;
             case TerminalKey.Down:
-                SelectedIndex = FindNextEnabledIndex(selected + 1);
+                SelectedIndex = selected + 1;
                 e.Handled = true;
                 return;
             case TerminalKey.Home:
-                SelectedIndex = FindNextEnabledIndex(0);
+                SelectedIndex = 0;
                 e.Handled = true;
                 return;
             case TerminalKey.End:
-                SelectedIndex = FindPreviousEnabledIndex(count - 1);
+                SelectedIndex = count - 1;
                 e.Handled = true;
                 return;
             case TerminalKey.PageUp:
-                SelectedIndex = FindPreviousEnabledIndex(Math.Max(0, selected - viewportHeight));
+                SelectedIndex = selected - viewportHeight;
                 e.Handled = true;
                 return;
             case TerminalKey.PageDown:
-                SelectedIndex = FindNextEnabledIndex(Math.Min(count - 1, selected + viewportHeight));
+                SelectedIndex = selected + viewportHeight;
                 e.Handled = true;
                 return;
             case TerminalKey.Enter:
@@ -353,73 +372,17 @@ public sealed partial class OptionList : Visual
                 return;
         }
 
-        // Type-to-jump.
-        if (e.Char is { } ch && !char.IsControl(ch) && !char.IsWhiteSpace(ch))
+        // Type-to-jump
+        if (e.Char is char ch && ch != '\0' && !char.IsControl(ch))
         {
-            var now = Environment.TickCount64;
-            if (_typeLastTick == 0 || now - _typeLastTick > 700)
-            {
-                _typeBuffer = string.Empty;
-            }
-
-            _typeLastTick = now;
-            _typeBuffer += ch;
-
-            var match = FindByPrefix(_typeBuffer, selected + 1);
-            if (match < 0)
-            {
-                match = FindByPrefix(_typeBuffer, 0);
-            }
-
-            if (match >= 0)
-            {
-                SelectedIndex = match;
-                e.Handled = true;
-            }
+            HandleTypeToJump(ch);
+            e.Handled = true;
         }
-    }
-
-    private int TryGetIndexAtPoint(int x, int y)
-    {
-        var rect = Bounds;
-        var style = Get<OptionListStyle>();
-        var innerTop = rect.Y;
-        var innerHeight = Math.Max(0, rect.Height);
-        var itemHeight = Math.Max(1, _itemHeight);
-
-        if (y < innerTop || y >= innerTop + innerHeight)
-        {
-            return -1;
-        }
-
-        var row = (y - innerTop) / itemHeight;
-        var index = _scrollOffset + row;
-        return (uint)index < (uint)Items.Count ? index : -1;
-    }
-
-    private void SelectIndexFromInteraction(int index)
-    {
-        if ((uint)index >= (uint)Items.Count)
-        {
-            return;
-        }
-
-        if (!Items[index].IsEnabled)
-        {
-            return;
-        }
-
-        SelectedIndex = index;
     }
 
     private void ActivateIndex(int index)
     {
-        if ((uint)index >= (uint)Items.Count)
-        {
-            return;
-        }
-
-        if (!Items[index].IsEnabled)
+        if (!IsItemEnabled(index))
         {
             return;
         }
@@ -427,76 +390,200 @@ public sealed partial class OptionList : Visual
         RaiseEvent(ItemActivatedEvent, new ItemActivatedEventArgs { Index = index });
     }
 
-    private int ClampToEnabledIndex(int index)
+    private void SelectIndexFromInteraction(int index)
     {
-        if (Items.Count == 0)
+        if (!IsItemEnabled(index))
         {
-            return 0;
+            return;
         }
 
-        index = Math.Clamp(index, 0, Items.Count - 1);
-        if (Items[index].IsEnabled)
-        {
-            return index;
-        }
-
-        var next = FindNextEnabledIndex(index);
-        if (next >= 0)
-        {
-            return next;
-        }
-
-        var prev = FindPreviousEnabledIndex(index);
-        return prev >= 0 ? prev : 0;
+        SelectedIndex = index;
     }
 
-    private int FindNextEnabledIndex(int start)
+    private int ClampToEnabledIndex(int value)
     {
-        for (var i = Math.Max(0, start); i < Items.Count; i++)
+        var count = Items.Count;
+        if (count == 0)
         {
-            if (Items[i].IsEnabled)
+            return -1;
+        }
+
+        var target = Math.Clamp(value, 0, count - 1);
+        if (IsItemEnabled(target))
+        {
+            return target;
+        }
+
+        var direction = value >= _selectedIndex ? 1 : -1;
+        for (var i = target; (uint)i < (uint)count; i += direction)
+        {
+            if (IsItemEnabled(i))
             {
                 return i;
             }
-        }
 
-        return Math.Max(0, Items.Count - 1);
-    }
-
-    private int FindPreviousEnabledIndex(int start)
-    {
-        for (var i = Math.Min(start, Items.Count - 1); i >= 0; i--)
-        {
-            if (Items[i].IsEnabled)
+            if (i == 0 || i == count - 1)
             {
-                return i;
+                break;
             }
         }
 
-        return 0;
+        return _selectedIndex;
     }
 
-    private int FindByPrefix(string prefix, int startIndex)
+    private bool IsItemEnabled(int index)
+    {
+        var count = Items.Count;
+        if ((uint)index >= (uint)count)
+        {
+            return false;
+        }
+
+        var value = Items[index];
+        var enabled = ItemIsEnabled.Invoke?.Invoke(value);
+        if (enabled.HasValue)
+        {
+            return enabled.Value;
+        }
+
+        if (value is Visual v)
+        {
+            return v.IsEnabled;
+        }
+
+        return true;
+    }
+
+    private void EnsureItemVisuals()
+    {
+        var items = Items;
+        var template = ResolveItemTemplate();
+
+        if (items.Version == _lastItemsVersion && template.Equals(_lastResolvedTemplate))
+        {
+            return;
+        }
+
+        _lastItemsVersion = items.Version;
+        _lastResolvedTemplate = template;
+
+        _itemVisuals.Clear();
+
+        if (items.Count == 0)
+        {
+            _recyclePool.Clear();
+            return;
+        }
+
+        var ctxBase = new DataTemplateContext(this, DataTemplateRole.Display, -1, DataTemplateItemState.None);
+        for (var i = 0; i < items.Count; i++)
+        {
+            var value = items[i];
+
+            if (value is Visual asVisual)
+            {
+                _itemVisuals.Add(asVisual);
+                continue;
+            }
+
+            if (template.IsEmpty || template.Create is null)
+            {
+                _itemVisuals.Add(new TextBlock(value?.ToString() ?? string.Empty));
+                continue;
+            }
+
+            Visual? reused = null;
+            if (_recyclePool.Count != 0)
+            {
+                var last = _recyclePool.Count - 1;
+                reused = _recyclePool[last];
+                _recyclePool.RemoveAt(last);
+            }
+
+            var ctx = ctxBase with { Index = i };
+            if (reused is not null && template.TryUpdate is { } updater && updater(reused, value, ctx))
+            {
+                _itemVisuals.Add(reused);
+                continue;
+            }
+
+            if (reused is not null && template.Release is { } release)
+            {
+                release(reused);
+            }
+
+            _itemVisuals.Add(template.Create(value, ctx));
+        }
+
+        _recyclePool.Clear();
+    }
+
+    private DataTemplate<T> ResolveItemTemplate()
+    {
+        var template = ItemTemplate;
+        if (!template.IsEmpty)
+        {
+            return template;
+        }
+
+        var templates = Get<DataTemplates>();
+        if (templates.TryResolve(DataTemplateRole.Display, out template))
+        {
+            return template;
+        }
+
+        return default;
+    }
+
+    private int TryGetIndexAtPoint(int x, int y)
+    {
+        var rect = Bounds;
+        if (rect.Width <= 0 || rect.Height <= 0)
+        {
+            return -1;
+        }
+
+        var innerY = y - rect.Y;
+        if (innerY < 0)
+        {
+            return -1;
+        }
+
+        var itemHeight = Math.Max(1, _itemHeight);
+        var index = _scrollOffset + (innerY / itemHeight);
+        return (uint)index < (uint)Items.Count ? index : -1;
+    }
+
+    private void HandleTypeToJump(char ch)
+    {
+        var now = Environment.TickCount64;
+        if (now - _typeLastTick > 1000)
+        {
+            _typeBuffer = string.Empty;
+        }
+
+        _typeLastTick = now;
+        _typeBuffer += ch;
+
+        var idx = FindByPrefix(_typeBuffer);
+        if (idx >= 0)
+        {
+            SelectedIndex = idx;
+        }
+    }
+
+    private int FindByPrefix(string prefix)
     {
         if (string.IsNullOrEmpty(prefix))
         {
             return -1;
         }
 
-        for (var i = startIndex; i < Items.Count; i++)
+        var items = Items;
+        for (var i = 0; i < items.Count; i++)
         {
-            if (!Items[i].IsEnabled)
-            {
-                continue;
-            }
-
-            var text = GetSearchText(Items[i]);
-            if (text is null)
-            {
-                continue;
-            }
-
-            if (text.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            var text = GetSearchText(i);
+            if (text is not null && text.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {
                 return i;
             }
@@ -505,19 +592,35 @@ public sealed partial class OptionList : Visual
         return -1;
     }
 
-    private static string? GetSearchText(OptionListItem item)
+    private string? GetSearchText(int index)
     {
-        if (!string.IsNullOrEmpty(item.SearchText))
+        var items = Items;
+        if ((uint)index >= (uint)items.Count)
         {
-            return item.SearchText;
+            return null;
         }
 
-        if (item.Content is TextBlock tb && tb.Text is { } text && text.Length > 0)
+        var value = items[index];
+        var search = ItemSearchText.Invoke?.Invoke(value);
+        if (!string.IsNullOrEmpty(search))
         {
-            return text;
+            return search;
         }
 
-        return null;
+        if (_itemVisuals.Count == items.Count && _itemVisuals[index] is OptionListItem item)
+        {
+            if (!string.IsNullOrEmpty(item.SearchText))
+            {
+                return item.SearchText;
+            }
+
+            if (item.Content is TextBlock tb && tb.Text is { } text && text.Length > 0)
+            {
+                return text;
+            }
+        }
+
+        return value?.ToString();
     }
 
     [RoutedEvent(RoutingStrategy.Bubble)]

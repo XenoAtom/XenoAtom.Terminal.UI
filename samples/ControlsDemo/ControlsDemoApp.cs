@@ -80,7 +80,7 @@ internal static class ControlsDemoApp
         var normalizedQuery = query.Trim();
         var hasQuery = normalizedQuery.Length > 0;
 
-        var list = new OptionList()
+        var list = new OptionList<OptionListItem>()
             .ActivateOnClick(true)
             .VerticalAlignment(VerticalAlignment.Stretch);
 

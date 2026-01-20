@@ -9,7 +9,7 @@ using XenoAtom.Terminal.UI;
 namespace XenoAtom.Terminal.UI.Styling;
 
 /// <summary>
-/// Defines rendering and theming options for an <see cref="Controls.OptionList"/>.
+/// Defines rendering and theming options for an <see cref="Controls.OptionList{T}"/>.
 /// </summary>
 public sealed record OptionListStyle : IStyle<OptionListStyle>
 {
