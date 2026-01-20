@@ -8,6 +8,7 @@ using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -100,9 +101,25 @@ public sealed partial class TextBlock : Visual
             return;
         }
 
+        var theme = GetTheme();
+        var textBlockStyle = Get<TextBlockStyle>();
+        var style = textBlockStyle.ResolveTextStyle(theme);
+
+        if (textBlockStyle.FillBackground && textBlockStyle.Background is not null)
+        {
+            var fill = textBlockStyle.ResolveFillStyle(theme);
+            for (var y = rect.Y; y < rect.Y + rect.Height; y++)
+            {
+                for (var x = rect.X; x < rect.X + rect.Width; x++)
+                {
+                    buffer.SetCell(x, y, new Rune(' '), fill);
+                }
+            }
+        }
+
         if (!Wrap || rect.Height == 1)
         {
-            WriteSingleLine(buffer, rect, text.AsSpan(), Style.None);
+            WriteSingleLine(buffer, rect, text.AsSpan(), style);
             return;
         }
 
@@ -119,7 +136,7 @@ public sealed partial class TextBlock : Visual
             }
 
             var slice = span.Slice(start, Math.Max(0, endExclusive - start));
-            WriteAlignedLine(buffer, rect, rect.Y + lineIndex, slice, Style.None, isLastLine: nextStart >= span.Length);
+            WriteAlignedLine(buffer, rect, rect.Y + lineIndex, slice, style, isLastLine: nextStart >= span.Length);
             lineIndex++;
             start = nextStart;
         }

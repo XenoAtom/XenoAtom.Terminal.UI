@@ -1,5 +1,6 @@
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
@@ -28,10 +29,20 @@ public sealed class TextBlockDemo : ControlsDemoBase
             .Wrap(false)
             .Trimming(TextTrimming.EndEllipsis);
 
+        var styled = new VStack(
+                new TextBlock("TextBlockStyle examples:") { TextAlignment = TextAlignment.Left },
+                new TextBlock("Styled foreground")
+                    .Style(TextBlockStyle.Default with { Foreground = Colors.DeepSkyBlue, TextStyle = TextStyle.Bold }),
+                new TextBlock("Filled background (alpha)")
+                    .HorizontalAlignment(HorizontalAlignment.Stretch)
+                    .Style(TextBlockStyle.Default with { Background = Color.RgbA(255, 255, 255, 0x10), FillBackground = true }))
+            .Spacing(1);
+
         return new VStack(
                 DemoUi.Hint("Resize the terminal to see wrapping and trimming behavior."),
                 new CheckBox("Wrap").IsChecked(wrap),
                 sample,
+                styled,
                 new Rule(),
                 singleLine)
             .Spacing(1);

@@ -5,6 +5,9 @@
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Hosting;
+using XenoAtom.Terminal.UI.Layout;
+using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -65,5 +68,67 @@ public sealed class TextBlockRenderingTests
 
         var outText = driver.Backend.GetOutText();
         StringAssert.Contains(outText, "    Hi");
+    }
+
+    [TestMethod]
+    public void TextBlock_Can_Apply_TextBlockStyle_Foreground()
+    {
+        var tb = new TextBlock("Hi")
+            .Style(Theme.Default)
+            .Style(TextBlockStyle.Default with { Foreground = Colors.Red });
+
+        tb.Measure(new LayoutConstraints(0, 10, 0, 1));
+        tb.Arrange(new Rectangle(0, 0, 10, 1));
+
+        var buffer = new CellBuffer(10, 1);
+        buffer.Clear(tb.GetTheme().BaseTextStyle());
+        tb.RenderTree(buffer);
+
+        Assert.IsTrue(buffer.UnsafeCells[0].TryGetForeground(out var fg));
+        Assert.AreEqual(Colors.Red, fg);
+    }
+
+    [TestMethod]
+    public void TextBlock_Can_Apply_TextBlockStyle_Background_Without_Fill()
+    {
+        var tb = new TextBlock("Hi")
+            .Style(Theme.Default)
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .Style(TextBlockStyle.Default with { Background = Colors.Blue, FillBackground = false });
+
+        tb.Measure(new LayoutConstraints(0, 6, 0, 1));
+        tb.Arrange(new Rectangle(0, 0, 6, 1));
+
+        var buffer = new CellBuffer(6, 1);
+        buffer.Clear(tb.GetTheme().BaseTextStyle());
+        tb.RenderTree(buffer);
+
+        Assert.IsTrue(buffer.UnsafeCells[0].TryGetBackground(out var bg0));
+        Assert.AreEqual(Colors.Blue, bg0);
+
+        Assert.IsTrue(buffer.UnsafeCells[4].TryGetBackground(out var bg4));
+        Assert.AreNotEqual(Colors.Blue, bg4);
+    }
+
+    [TestMethod]
+    public void TextBlock_Can_Fill_Background_With_TextBlockStyle()
+    {
+        var tb = new TextBlock("Hi")
+            .Style(Theme.Default)
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .Style(TextBlockStyle.Default with { Background = Colors.Blue, FillBackground = true });
+
+        tb.Measure(new LayoutConstraints(0, 6, 0, 1));
+        tb.Arrange(new Rectangle(0, 0, 6, 1));
+
+        var buffer = new CellBuffer(6, 1);
+        buffer.Clear(tb.GetTheme().BaseTextStyle());
+        tb.RenderTree(buffer);
+
+        Assert.IsTrue(buffer.UnsafeCells[0].TryGetBackground(out var bg0));
+        Assert.AreEqual(Colors.Blue, bg0);
+
+        Assert.IsTrue(buffer.UnsafeCells[4].TryGetBackground(out var bg4));
+        Assert.AreEqual(Colors.Blue, bg4);
     }
 }
