@@ -147,7 +147,7 @@ Normative rules:
 
 `DataTemplates` SHOULD be immutable and *replaced* via `Visual.Set(...)` when changed.
 
-To avoid “copy the world to override one entry”, `DataTemplates` supports cheap overrides by chaining:
+To avoid "copy the world to override one entry", `DataTemplates` supports cheap overrides by chaining:
 
 - Each `DataTemplates` instance stores only the templates registered in that layer.
 - Resolution checks the current layer first, then walks `Parent` until a match is found.
@@ -189,14 +189,60 @@ Why immutability works well with bindings:
 - The registry itself does not need to be bindable or mutable to be reactive; *replacing* the environment value is enough.
   This keeps the templating model simple and allocation-free in hot paths.
 
-#### 3.4.2 Resolution matching
+#### 3.4.2 Registry construction (builder-style)
+
+For usability, the API SHOULD include a builder-style entry point to avoid repeatedly copying internal tables when registering
+multiple templates at once.
+
+Example:
+
+```csharp
+var templates = DataTemplates.Default.Derive(builder => builder
+    .Register<string>(DataTemplateRole.Display, new((s, _) => new TextBlock(s)))
+    .Register<DateTime>(DataTemplateRole.Display, new((dt, _) => new TextBlock(dt.ToString("u"))))
+);
+
+root.Set(templates);
+```
+
+Proposed API:
+
+```csharp
+public sealed record DataTemplates : IStyle<DataTemplates>
+{
+    public static DataTemplates Default { get; }
+    public static StyleKey<DataTemplates> Key { get; }
+
+    public DataTemplates? Parent { get; init; }
+
+    // Convenience: single registration for simple cases.
+    public DataTemplates Register<T>(DataTemplateRole role, DataTemplate<T> template);
+
+    // Preferred for multiple registrations: the builder mutates a temporary table once.
+    public DataTemplates Derive(Func<DataTemplatesBuilder, DataTemplatesBuilder> configure);
+}
+
+public sealed class DataTemplatesBuilder
+{
+    public DataTemplatesBuilder Register<T>(DataTemplateRole role, DataTemplate<T> template);
+}
+```
+
+Notes:
+
+- `Derive(...)` returns a new `DataTemplates` instance whose `Parent` defaults to the receiver, so you don't need to pass
+  `Parent = ...` manually for common overlay cases.
+- `Register(...)` can remain as a convenience method, but the documentation SHOULD recommend `Derive(...)` for any non-trivial
+  set of registrations.
+
+#### 3.4.3 Resolution matching
 
 Resolution SHOULD support:
 
 - Exact match
 - Base type match
 - Interface match
-- Deterministic “most specific wins” ordering
+- Deterministic "most specific wins" ordering
 
 ### 3.5 `DataPresenter<T>`
 
@@ -412,6 +458,10 @@ new VStack(
 
 This section describes how existing controls can adopt data templating uniformly.
 
+This repository is pre-1.0; breaking changes are acceptable if they improve usability and consistency. The focus is on simplifying
+user code and making the framework more coherent, while keeping performance excellent. Tests, samples, and documentation MUST be
+updated accordingly.
+
 ### 9.1 Controls already generic (`<T>`) that should adopt the model
 
 #### `Select<T>`
@@ -450,7 +500,7 @@ Proposed:
 
 Migration strategy:
 
-- Keep `OptionList` (non-generic) as a convenience wrapper: `OptionList : OptionList<Visual>` with identity template.
+- Replace `OptionList` with `OptionList<T>`; update samples/tests/docs to use `OptionList<Visual>` when needed.
 
 #### `SelectionList` -> `SelectionList<T>`
 
@@ -467,7 +517,7 @@ Proposed:
 
 Migration strategy:
 
-- Keep `SelectionList` as `SelectionList<Visual>` wrapper.
+- Replace `SelectionList` with `SelectionList<T>`; update samples/tests/docs to use `SelectionList<Visual>` when needed.
 
 #### `ListBox` -> `ListBox<T>`
 
@@ -479,7 +529,7 @@ Proposed:
 
 - `Items : BindableList<T>`
 - `ItemTemplate : DataTemplate<T>`
-- Provide wrappers for old usage where `T == Visual`.
+- When a visual list is desired, use `ListBox<Visual>` with the identity template.
 
 #### `TreeView` -> `TreeView<TNode>` (or `TreeView<T>`)
 
