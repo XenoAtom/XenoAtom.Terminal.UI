@@ -50,16 +50,6 @@ public sealed partial class DataPresenter<T> : ContentVisual
         var role = Role;
         var ctx = new DataTemplateContext(owner, role, -1, DataTemplateItemState.None);
 
-        var template = Template;
-        if (template.IsEmpty)
-        {
-            var templates = Get<DataTemplates>();
-            if (!templates.TryResolve(role, out template))
-            {
-                template = default;
-            }
-        }
-
         var value = Value;
         if (value is Visual visual)
         {
@@ -67,25 +57,49 @@ public sealed partial class DataPresenter<T> : ContentVisual
             return;
         }
 
+        var content = Content;
+        var template = Template;
+
+        DataTemplate<object?> templateUntyped = default;
+        var useUntyped = false;
+
+        if (template.IsEmpty)
+        {
+            var templates = Get<DataTemplates>();
+            if (!templates.TryResolve(role, out template))
+            {
+                // For reference types, attempt runtime-type resolution to support derived-type templates.
+                if (!typeof(T).IsValueType && templates.TryResolveForValue(value, role, out templateUntyped, out _))
+                {
+                    useUntyped = true;
+                }
+            }
+        }
+
+        if (useUntyped)
+        {
+            if (content is not null && templateUntyped.TryUpdate is { } updater && updater(content, value, ctx))
+            {
+                return;
+            }
+
+            var create = templateUntyped.Create;
+            Content = create is null ? new TextBlock(value?.ToString() ?? string.Empty) : create(value, ctx);
+            return;
+        }
+
         if (template.IsEmpty)
         {
             Content = new TextBlock(value?.ToString() ?? string.Empty);
             return;
         }
 
-        var content = Content;
-        if (content is not null && template.TryUpdate is { } updater && updater(content, value, ctx))
+        if (content is not null && template.TryUpdate is { } typedUpdater && typedUpdater(content, value, ctx))
         {
             return;
         }
 
-        var create = template.Create;
-        if (create is null)
-        {
-            Content = new TextBlock(value?.ToString() ?? string.Empty);
-            return;
-        }
-
-        Content = create(value, ctx);
+        var typedCreate = template.Create;
+        Content = typedCreate is null ? new TextBlock(value?.ToString() ?? string.Empty) : typedCreate(value, ctx);
     }
 }

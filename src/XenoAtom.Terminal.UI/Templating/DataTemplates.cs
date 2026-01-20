@@ -178,6 +178,57 @@ public sealed record DataTemplates : IStyle<DataTemplates>
             }
         }
 
+        Type? bestInterface = null;
+        DataTemplate<object?> bestTemplate = default;
+
+        foreach (var kvp in dict)
+        {
+            var candidateType = kvp.Key;
+            if (!candidateType.IsInterface || !candidateType.IsAssignableFrom(valueType))
+            {
+                continue;
+            }
+
+            if (kvp.Value is not DataTemplate<object?> candidateTemplate)
+            {
+                continue;
+            }
+
+            if (bestInterface is null)
+            {
+                bestInterface = candidateType;
+                bestTemplate = candidateTemplate;
+                continue;
+            }
+
+            // Prefer the most specific interface: if A is assignable from B, then B is more specific than A.
+            if (bestInterface.IsAssignableFrom(candidateType))
+            {
+                bestInterface = candidateType;
+                bestTemplate = candidateTemplate;
+                continue;
+            }
+
+            if (!candidateType.IsAssignableFrom(bestInterface))
+            {
+                // Unrelated interfaces: pick deterministically by name.
+                var bestName = bestInterface.FullName ?? bestInterface.Name;
+                var candidateName = candidateType.FullName ?? candidateType.Name;
+                if (string.CompareOrdinal(candidateName, bestName) < 0)
+                {
+                    bestInterface = candidateType;
+                    bestTemplate = candidateTemplate;
+                }
+            }
+        }
+
+        if (bestInterface is not null)
+        {
+            template = bestTemplate;
+            resolvedDataType = bestInterface;
+            return true;
+        }
+
         template = default;
         resolvedDataType = null;
         return false;
@@ -186,24 +237,146 @@ public sealed record DataTemplates : IStyle<DataTemplates>
     private static DataTemplates CreateDefault()
     {
         var display = new Dictionary<Type, object>();
+        var editor = new Dictionary<Type, object>();
         var displayUntyped = new Dictionary<Type, object>();
+        var editorUntyped = new Dictionary<Type, object>();
+
+        static void RegisterDisplay<T>(Dictionary<Type, object> table, Dictionary<Type, object> tableUntyped, DataTemplate<T> template)
+        {
+            table[typeof(T)] = template;
+            tableUntyped[typeof(T)] = ToUntyped(template);
+        }
+
+        static void RegisterEditor<T>(Dictionary<Type, object> table, Dictionary<Type, object> tableUntyped, DataTemplate<T> template)
+        {
+            table[typeof(T)] = template;
+            tableUntyped[typeof(T)] = ToUntyped(template);
+        }
 
         static Visual DisplayString(string? value, in DataTemplateContext _) => new TextBlock(value ?? string.Empty);
-        var stringTemplate = new DataTemplate<string?>(DisplayString);
-        display[typeof(string)] = stringTemplate;
-        displayUntyped[typeof(string)] = ToUntyped(stringTemplate);
+        static bool TryUpdateString(Visual visual, string? value, in DataTemplateContext _)
+        {
+            if (visual is TextBlock textBlock)
+            {
+                textBlock.Text = value ?? string.Empty;
+                return true;
+            }
+
+            return false;
+        }
+        var stringTemplate = new DataTemplate<string?>(DisplayString, TryUpdateString);
+        RegisterDisplay(display, displayUntyped, stringTemplate);
 
         static Visual DisplayBool(bool value, in DataTemplateContext _) => new TextBlock(value ? "True" : "False");
-        var boolTemplate = new DataTemplate<bool>(DisplayBool);
-        display[typeof(bool)] = boolTemplate;
-        displayUntyped[typeof(bool)] = ToUntyped(boolTemplate);
+        static bool TryUpdateBool(Visual visual, bool value, in DataTemplateContext _)
+        {
+            if (visual is TextBlock textBlock)
+            {
+                textBlock.Text = value ? "True" : "False";
+                return true;
+            }
+
+            return false;
+        }
+        var boolTemplate = new DataTemplate<bool>(DisplayBool, TryUpdateBool);
+        RegisterDisplay(display, displayUntyped, boolTemplate);
 
         static Visual DisplayVisual(Visual value, in DataTemplateContext _) => value;
         var visualTemplate = new DataTemplate<Visual>(DisplayVisual);
-        display[typeof(Visual)] = visualTemplate;
-        displayUntyped[typeof(Visual)] = ToUntyped(visualTemplate);
+        RegisterDisplay(display, displayUntyped, visualTemplate);
+        RegisterEditor(editor, editorUntyped, visualTemplate);
 
-        return new DataTemplates(display, null, displayUntyped, null, null);
+        static Visual DisplayInt32(int value, in DataTemplateContext _) => new TextBlock(value.ToString());
+        static bool TryUpdateInt32(Visual visual, int value, in DataTemplateContext _)
+        {
+            if (visual is TextBlock textBlock)
+            {
+                textBlock.Text = value.ToString();
+                return true;
+            }
+            return false;
+        }
+        RegisterDisplay(display, displayUntyped, new DataTemplate<int>(DisplayInt32, TryUpdateInt32));
+
+        static Visual DisplayDouble(double value, in DataTemplateContext _) => new TextBlock(value.ToString());
+        static bool TryUpdateDouble(Visual visual, double value, in DataTemplateContext _)
+        {
+            if (visual is TextBlock textBlock)
+            {
+                textBlock.Text = value.ToString();
+                return true;
+            }
+            return false;
+        }
+        RegisterDisplay(display, displayUntyped, new DataTemplate<double>(DisplayDouble, TryUpdateDouble));
+
+        static Visual DisplayDecimal(decimal value, in DataTemplateContext _) => new TextBlock(value.ToString());
+        static bool TryUpdateDecimal(Visual visual, decimal value, in DataTemplateContext _)
+        {
+            if (visual is TextBlock textBlock)
+            {
+                textBlock.Text = value.ToString();
+                return true;
+            }
+            return false;
+        }
+        RegisterDisplay(display, displayUntyped, new DataTemplate<decimal>(DisplayDecimal, TryUpdateDecimal));
+
+        static Visual DisplayInt64(long value, in DataTemplateContext _) => new TextBlock(value.ToString());
+        static bool TryUpdateInt64(Visual visual, long value, in DataTemplateContext _)
+        {
+            if (visual is TextBlock textBlock)
+            {
+                textBlock.Text = value.ToString();
+                return true;
+            }
+            return false;
+        }
+        RegisterDisplay(display, displayUntyped, new DataTemplate<long>(DisplayInt64, TryUpdateInt64));
+
+        static Visual DisplayStateString(State<string> state, in DataTemplateContext _) => new TextBlock(() => state.Value);
+        RegisterDisplay(display, displayUntyped, new DataTemplate<State<string>>(DisplayStateString));
+
+        static Visual DisplayStateNullableString(State<string?> state, in DataTemplateContext _) => new TextBlock(() => state.Value ?? string.Empty);
+        RegisterDisplay(display, displayUntyped, new DataTemplate<State<string?>>(DisplayStateNullableString));
+
+        static Visual DisplayStateInt32(State<int> state, in DataTemplateContext _) => new TextBlock(() => state.Value.ToString());
+        RegisterDisplay(display, displayUntyped, new DataTemplate<State<int>>(DisplayStateInt32));
+
+        static Visual DisplayStateBool(State<bool> state, in DataTemplateContext _) => new TextBlock(() => state.Value ? "True" : "False");
+        RegisterDisplay(display, displayUntyped, new DataTemplate<State<bool>>(DisplayStateBool));
+
+        static Visual DisplayBindingString(Binding<string> binding, in DataTemplateContext _) => new TextBlock(() => binding.GetValue());
+        RegisterDisplay(display, displayUntyped, new DataTemplate<Binding<string>>(DisplayBindingString));
+
+        static Visual DisplayBindingNullableString(Binding<string?> binding, in DataTemplateContext _) => new TextBlock(() => binding.GetValue() ?? string.Empty);
+        RegisterDisplay(display, displayUntyped, new DataTemplate<Binding<string?>>(DisplayBindingNullableString));
+
+        static Visual DisplayBindingInt32(Binding<int> binding, in DataTemplateContext _) => new TextBlock(() => binding.GetValue().ToString());
+        RegisterDisplay(display, displayUntyped, new DataTemplate<Binding<int>>(DisplayBindingInt32));
+
+        static Visual DisplayBindingBool(Binding<bool> binding, in DataTemplateContext _) => new TextBlock(() => binding.GetValue() ? "True" : "False");
+        RegisterDisplay(display, displayUntyped, new DataTemplate<Binding<bool>>(DisplayBindingBool));
+
+        static Visual EditStateNullableString(State<string?> state, in DataTemplateContext _) => new TextBox().Text(state);
+        RegisterEditor(editor, editorUntyped, new DataTemplate<State<string?>>(EditStateNullableString));
+
+        static Visual EditBindingNullableString(Binding<string?> binding, in DataTemplateContext _) => new TextBox().Text(binding);
+        RegisterEditor(editor, editorUntyped, new DataTemplate<Binding<string?>>(EditBindingNullableString));
+
+        static Visual EditStateInt32(State<int> state, in DataTemplateContext _) => new NumberBox<int>().Value(state);
+        RegisterEditor(editor, editorUntyped, new DataTemplate<State<int>>(EditStateInt32));
+
+        static Visual EditBindingInt32(Binding<int> binding, in DataTemplateContext _) => new NumberBox<int>().Value(binding);
+        RegisterEditor(editor, editorUntyped, new DataTemplate<Binding<int>>(EditBindingInt32));
+
+        static Visual EditStateBool(State<bool> state, in DataTemplateContext _) => new Switch().IsOn(state);
+        RegisterEditor(editor, editorUntyped, new DataTemplate<State<bool>>(EditStateBool));
+
+        static Visual EditBindingBool(Binding<bool> binding, in DataTemplateContext _) => new Switch().IsOn(binding);
+        RegisterEditor(editor, editorUntyped, new DataTemplate<Binding<bool>>(EditBindingBool));
+
+        return new DataTemplates(display, editor, displayUntyped, editorUntyped, null);
     }
 
     internal static DataTemplate<object?> ToUntyped<T>(DataTemplate<T> template)
