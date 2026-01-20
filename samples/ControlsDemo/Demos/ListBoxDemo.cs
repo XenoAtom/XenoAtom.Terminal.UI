@@ -14,7 +14,7 @@ public sealed class ListBoxDemo : ControlsDemoBase
     {
         var selected = new State<int>(1);
 
-        var list = new ListBox().SelectedIndex(selected);
+        var list = new ListBox<string>().SelectedIndex(selected);
         list.Items.AddRange("First", "Second", "Third", "Fourth", "Fifth", "Sixth");
 
         return new VStack(

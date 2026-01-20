@@ -7,7 +7,7 @@ using System.Text;
 namespace XenoAtom.Terminal.UI.Styling;
 
 /// <summary>
-/// Defines styling for <see cref="Controls.ListBox"/>.
+/// Defines styling for <see cref="Controls.ListBox{T}"/>.
 /// </summary>
 public sealed record ListBoxStyle : IStyle<ListBoxStyle>
 {

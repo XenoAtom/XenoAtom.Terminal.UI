@@ -13,7 +13,7 @@ public sealed class ListBoxInteractionTests
     [TestMethod]
     public void ListBox_Changes_Selection_On_Down()
     {
-        var listBox = new ListBox
+        var listBox = new ListBox<string>
         {
             SelectedIndex = 0,
             MinHeight = 3,
@@ -29,4 +29,3 @@ public sealed class ListBoxInteractionTests
         driver.TickUntil(() => listBox.SelectedIndex == 1);
     }
 }
-

@@ -273,7 +273,7 @@ public sealed partial class Select<T> : ContentVisual
         }
 
         var template = ResolveItemTemplate();
-        var list = new ListBox();
+        var list = new ListBox<Visual>();
         for (var i = 0; i < Items.Count; i++)
         {
             list.Items.Add(MaterializeValue(Items[i], template, i, DataTemplateItemState.None));
@@ -343,11 +343,11 @@ public sealed partial class Select<T> : ContentVisual
         _popup = popup;
     }
 
-    private static bool TryFindSelectPopupParent(Visual? visual, [MaybeNullWhen(false)] out ListBox lb, [MaybeNullWhen(false)] out Select<T> select)
+    private static bool TryFindSelectPopupParent(Visual? visual, [MaybeNullWhen(false)] out ListBox<Visual> lb, [MaybeNullWhen(false)] out Select<T> select)
     {
         lb = null;
         select = null;
-        if (visual is not ListBox lbInstance)
+        if (visual is not ListBox<Visual> lbInstance)
         {
             return false;
         }

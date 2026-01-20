@@ -12,7 +12,7 @@ Terminal.WriteLine();
 
 var name = new TextBox();
 var accept = new CheckBox("Accept terms");
-var list = new ListBox()
+var list = new ListBox<string>()
     .Items(["First", "Second", "Third", "Fourth", "Fifth"])
     .MinHeight(4).MaxHeight(4);
 var status = new State<string>("ready");
