@@ -13,7 +13,7 @@ using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-internal delegate void TextSegmentWriter(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, Style style, bool isPlaceholder);
+internal delegate void TextSegmentWriter(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, Style style, bool isPlaceholder, int textIndexStart);
 
 internal readonly record struct TextEditorOptions(
     bool SingleLine,
@@ -686,11 +686,11 @@ internal sealed class TextEditorCore
                     }
                 }
 
-                context.SegmentWriter(context.Buffer, contentXAligned, _contentY, placeholder, context.PlaceholderStyle, isPlaceholder: true);
+                context.SegmentWriter(context.Buffer, contentXAligned, _contentY, placeholder, context.PlaceholderStyle, isPlaceholder: true, textIndexStart: -1);
             }
             else if (endIndex > startIndex)
             {
-                context.SegmentWriter(context.Buffer, contentXAligned, _contentY, text.AsSpan(startIndex, endIndex - startIndex), context.TextStyle, isPlaceholder: false);
+                context.SegmentWriter(context.Buffer, contentXAligned, _contentY, text.AsSpan(startIndex, endIndex - startIndex), context.TextStyle, isPlaceholder: false, textIndexStart: startIndex);
             }
         }
         else
@@ -701,19 +701,19 @@ internal sealed class TextEditorCore
 
             if (visSelStart > startIndex)
             {
-                context.SegmentWriter(context.Buffer, contentXAligned, _contentY, text.AsSpan(startIndex, visSelStart - startIndex), context.TextStyle, isPlaceholder: false);
+                context.SegmentWriter(context.Buffer, contentXAligned, _contentY, text.AsSpan(startIndex, visSelStart - startIndex), context.TextStyle, isPlaceholder: false, textIndexStart: startIndex);
             }
 
             if (visSelEnd > visSelStart)
             {
                 var selStartCells = GetTextCells(text.AsSpan(startIndex, visSelStart - startIndex), options.TabSize);
-                context.SegmentWriter(context.Buffer, contentXAligned + selStartCells, _contentY, text.AsSpan(visSelStart, visSelEnd - visSelStart), context.SelectionStyle, isPlaceholder: false);
+                context.SegmentWriter(context.Buffer, contentXAligned + selStartCells, _contentY, text.AsSpan(visSelStart, visSelEnd - visSelStart), context.SelectionStyle, isPlaceholder: false, textIndexStart: visSelStart);
             }
 
             if (endIndex > visSelEnd)
             {
                 var selEndCells = GetTextCells(text.AsSpan(startIndex, visSelEnd - startIndex), options.TabSize);
-                context.SegmentWriter(context.Buffer, contentXAligned + selEndCells, _contentY, text.AsSpan(visSelEnd, endIndex - visSelEnd), context.TextStyle, isPlaceholder: false);
+                context.SegmentWriter(context.Buffer, contentXAligned + selEndCells, _contentY, text.AsSpan(visSelEnd, endIndex - visSelEnd), context.TextStyle, isPlaceholder: false, textIndexStart: visSelEnd);
             }
         }
     }
@@ -727,7 +727,7 @@ internal sealed class TextEditorCore
 
         if (text.Length == 0 && !string.IsNullOrEmpty(context.Placeholder))
         {
-            context.SegmentWriter(context.Buffer, _contentX, _contentY, context.Placeholder.AsSpan(), context.PlaceholderStyle, isPlaceholder: true);
+            context.SegmentWriter(context.Buffer, _contentX, _contentY, context.Placeholder.AsSpan(), context.PlaceholderStyle, isPlaceholder: true, textIndexStart: -1);
             return;
         }
 
@@ -783,7 +783,7 @@ internal sealed class TextEditorCore
                 if (row >= startRow)
                 {
                     var y = _contentY + (row - startRow);
-                    context.SegmentWriter(context.Buffer, _contentX, y, ReadOnlySpan<char>.Empty, context.TextStyle, isPlaceholder: false);
+                    context.SegmentWriter(context.Buffer, _contentX, y, ReadOnlySpan<char>.Empty, context.TextStyle, isPlaceholder: false, textIndexStart: line.Start);
                 }
 
                 row++;
@@ -842,7 +842,7 @@ internal sealed class TextEditorCore
         {
             if (endIndex > startIndex)
             {
-                context.SegmentWriter(context.Buffer, _contentX, y, lineSpan.Slice(startIndex, endIndex - startIndex), context.TextStyle, isPlaceholder: false);
+                context.SegmentWriter(context.Buffer, _contentX, y, lineSpan.Slice(startIndex, endIndex - startIndex), context.TextStyle, isPlaceholder: false, textIndexStart: lineStartIndex + startIndex);
             }
 
             return;
@@ -855,7 +855,7 @@ internal sealed class TextEditorCore
         {
             if (endIndex > startIndex)
             {
-                context.SegmentWriter(context.Buffer, _contentX, y, lineSpan.Slice(startIndex, endIndex - startIndex), context.TextStyle, isPlaceholder: false);
+                context.SegmentWriter(context.Buffer, _contentX, y, lineSpan.Slice(startIndex, endIndex - startIndex), context.TextStyle, isPlaceholder: false, textIndexStart: lineStartIndex + startIndex);
             }
             return;
         }
@@ -872,20 +872,20 @@ internal sealed class TextEditorCore
 
         if (!left.IsEmpty)
         {
-            context.SegmentWriter(context.Buffer, _contentX, y, left, context.TextStyle, isPlaceholder: false);
+            context.SegmentWriter(context.Buffer, _contentX, y, left, context.TextStyle, isPlaceholder: false, textIndexStart: lineStartIndex + startIndex);
         }
 
         if (!sel.IsEmpty)
         {
             var selStartCells = GetTextCells(left, options.TabSize);
-            context.SegmentWriter(context.Buffer, _contentX + selStartCells, y, sel, context.SelectionStyle, isPlaceholder: false);
+            context.SegmentWriter(context.Buffer, _contentX + selStartCells, y, sel, context.SelectionStyle, isPlaceholder: false, textIndexStart: lineStartIndex + startIndex + visSelStart);
         }
 
         if (!right.IsEmpty)
         {
             var leftCells = GetTextCells(left, options.TabSize);
             var selCells = GetTextCells(sel, options.TabSize);
-            context.SegmentWriter(context.Buffer, _contentX + leftCells + selCells, y, right, context.TextStyle, isPlaceholder: false);
+            context.SegmentWriter(context.Buffer, _contentX + leftCells + selCells, y, right, context.TextStyle, isPlaceholder: false, textIndexStart: lineStartIndex + startIndex + visSelEnd);
         }
     }
 
@@ -905,7 +905,7 @@ internal sealed class TextEditorCore
 
         if (!HasSelection)
         {
-            context.SegmentWriter(context.Buffer, _contentX, y, segment, context.TextStyle, isPlaceholder: false);
+            context.SegmentWriter(context.Buffer, _contentX, y, segment, context.TextStyle, isPlaceholder: false, textIndexStart: lineStartIndex + segmentStart);
             return;
         }
 
@@ -917,7 +917,7 @@ internal sealed class TextEditorCore
 
         if (selEnd <= selStart)
         {
-            context.SegmentWriter(context.Buffer, _contentX, y, segment, context.TextStyle, isPlaceholder: false);
+            context.SegmentWriter(context.Buffer, _contentX, y, segment, context.TextStyle, isPlaceholder: false, textIndexStart: lineStartIndex + segmentStart);
             return;
         }
 
@@ -930,20 +930,20 @@ internal sealed class TextEditorCore
 
         if (!left.IsEmpty)
         {
-            context.SegmentWriter(context.Buffer, _contentX, y, left, context.TextStyle, isPlaceholder: false);
+            context.SegmentWriter(context.Buffer, _contentX, y, left, context.TextStyle, isPlaceholder: false, textIndexStart: lineStartIndex + segmentStart);
         }
 
         if (!sel.IsEmpty)
         {
             var selStartCells = GetTextCells(left, options.TabSize);
-            context.SegmentWriter(context.Buffer, _contentX + selStartCells, y, sel, context.SelectionStyle, isPlaceholder: false);
+            context.SegmentWriter(context.Buffer, _contentX + selStartCells, y, sel, context.SelectionStyle, isPlaceholder: false, textIndexStart: lineStartIndex + segmentStart + localSelStart);
         }
 
         if (!right.IsEmpty)
         {
             var leftCells = GetTextCells(left, options.TabSize);
             var selCells = GetTextCells(sel, options.TabSize);
-            context.SegmentWriter(context.Buffer, _contentX + leftCells + selCells, y, right, context.TextStyle, isPlaceholder: false);
+            context.SegmentWriter(context.Buffer, _contentX + leftCells + selCells, y, right, context.TextStyle, isPlaceholder: false, textIndexStart: lineStartIndex + segmentStart + localSelEnd);
         }
     }
     private int ComputeExtent(ITextSnapshot snapshot, in TextEditorOptions options, out int extentWidth)

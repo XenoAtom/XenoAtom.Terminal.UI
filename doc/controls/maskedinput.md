@@ -12,8 +12,9 @@ Screenshot placeholder:
 new MaskedInput("9999-9999-9999-9999;_");
 ```
 
-The mask is always visible: literal separators from the template are always drawn, and unfilled slots use a placeholder
-character (`_` in the example above).
+The mask is always visible: literal separators from the template are always drawn, and unfilled slots render as a placeholder.
+When the template includes the `;c` suffix, the placeholder is `c` for all empty slots. Otherwise, the placeholder glyphs are
+selected from the current `MaskedInputStyle` (for example digits use `MaskedInputStyle.DigitPlaceholderChar`).
 
 ## Template format
 
@@ -23,6 +24,7 @@ The `Template` is a string where:
 - Any other character is treated as a **literal separator**.
 - Use `\` to escape token characters so they are treated as literals.
 - The template can end with `;c` to specify the placeholder character for empty slots.
+  When omitted, placeholders are chosen per token kind from the current `MaskedInputStyle`.
 
 ### Token characters
 
@@ -78,4 +80,5 @@ new VStack(
 ## Styling
 
 `MaskedInput` uses `MaskedInputStyle` (derived from `TextBoxStyle`) for padding and background fill. Placeholder and
-separator foregrounds are also configurable.
+separator foregrounds are also configurable. The style also controls the placeholder glyphs used when the template does not
+specify a `;c` suffix.

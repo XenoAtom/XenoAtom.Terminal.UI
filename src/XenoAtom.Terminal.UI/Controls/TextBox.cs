@@ -131,11 +131,11 @@ public partial class TextBox : TextEditorBase
     protected virtual TextBoxStyle GetTextBoxStyle() => Get<TextBoxStyle>();
 
     /// <inheritdoc />
-    protected override void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, Style style, bool isPlaceholder)
+    protected override void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, Style style, bool isPlaceholder, int textIndexStart)
     {
         if (isPlaceholder || !IsPassword || ShouldRevealPassword())
         {
-            base.WriteTextSegment(buffer, x, y, text, style, isPlaceholder);
+            base.WriteTextSegment(buffer, x, y, text, style, isPlaceholder, textIndexStart);
             return;
         }
 

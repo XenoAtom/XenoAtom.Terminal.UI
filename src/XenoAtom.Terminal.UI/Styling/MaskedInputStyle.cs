@@ -24,9 +24,19 @@ public sealed record MaskedInputStyle : TextBoxStyle, IStyle<MaskedInputStyle>
     public new static StyleKey<MaskedInputStyle> Key { get; } = new("MaskedInputStyle", Default);
 
     /// <summary>
-    /// Gets the default placeholder character used when the template does not specify one.
+    /// Gets the default placeholder character used when no more specific placeholder is configured.
     /// </summary>
     public char DefaultPlaceholderChar { get; init; } = '_';
+
+    /// <summary>
+    /// Gets the placeholder glyph used for digit-like slots when the template does not specify a placeholder.
+    /// </summary>
+    public char DigitPlaceholderChar { get; init; } = '0';
+
+    /// <summary>
+    /// Gets the placeholder glyph used for alphabetic slots when the template does not specify a placeholder.
+    /// </summary>
+    public char AlphaPlaceholderChar { get; init; } = 'A';
 
     /// <summary>
     /// Gets an optional foreground color override for literal separators (e.g. <c>-</c>, <c>/</c>).
@@ -73,4 +83,3 @@ public sealed record MaskedInputStyle : TextBoxStyle, IStyle<MaskedInputStyle>
     public Style ValueStyle(Theme theme, bool focused)
         => BackgroundStyle(theme, focused);
 }
-

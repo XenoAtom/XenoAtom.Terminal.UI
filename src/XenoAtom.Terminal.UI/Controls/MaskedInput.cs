@@ -2,7 +2,6 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using System.Globalization;
 using System.Text;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Geometry;
@@ -10,6 +9,7 @@ using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -17,11 +17,13 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// An input control that restricts user input according to a template mask.
 /// </summary>
 /// <remarks>
-/// The template defines a fixed set of editable positions and literal separators (e.g. <c>9999-9999-9999-9999</c>).
-/// Non-editable characters in the template are always displayed. Unfilled editable positions display a placeholder
-/// character (customizable via the template suffix <c>;c</c> or <see cref="MaskedInputStyle.DefaultPlaceholderChar"/>).
+/// The template defines a fixed set of editable positions and literal separators (for example <c>9999-9999-9999-9999</c>).
+/// Non-editable characters in the template are always displayed. Empty editable positions render a placeholder glyph.
+/// <para />
+/// This control reuses the text editor infrastructure (<see cref="TextEditorCore"/>) so it supports selection,
+/// copy/cut/paste, mouse selection, and standard navigation.
 /// </remarks>
-public sealed partial class MaskedInput : Visual, ICursorProvider
+public sealed partial class MaskedInput : TextEditorBase
 {
     private enum CaseMode
     {
@@ -43,31 +45,43 @@ public sealed partial class MaskedInput : Visual, ICursorProvider
         Bit,
     }
 
-    private readonly record struct TemplateToken(TokenKind Kind, bool Required, CaseMode Case, char Literal)
+    private readonly record struct TemplateToken(TokenKind Kind, bool Required, CaseMode Case, char Literal, int SlotIndex)
     {
         public bool IsEditable => Kind != TokenKind.Literal;
     }
 
-    private Rectangle _contentRect;
-    private int _caretSlotIndex;
-    private int _scrollX;
+    private readonly MaskedInputDocument _document;
 
     private string _cachedTemplate = string.Empty;
     private TemplateToken[] _tokens = Array.Empty<TemplateToken>();
     private int[] _slotTokenIndexes = Array.Empty<int>();
-
-    private char[] _slots = Array.Empty<char>();
     private int _slotCount;
     private bool _hasTemplatePlaceholderChar;
     private char _templatePlaceholderChar;
+
+    private bool _updatingValueFromDocument;
+    private bool _updatingDocumentFromValue;
+
+    private Rectangle _contentRect;
+
+    private Color? _separatorForeground;
+    private Color? _placeholderForeground;
+    private bool _placeholderDim;
+    private Color? _mutedForeground;
+    private bool _renderStateValid;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MaskedInput"/> class.
     /// </summary>
     public MaskedInput()
     {
+        _document = new MaskedInputDocument();
+        TextDocument = _document;
+        _document.Changed += OnMaskedDocumentChanged;
+
         Focusable = true;
         this.HorizontalAlignment(HorizontalAlignment.Stretch);
+        this.WordWrap(false);
         this.Template(string.Empty);
         this.Value(string.Empty);
     }
@@ -85,9 +99,26 @@ public sealed partial class MaskedInput : Visual, ICursorProvider
     /// Gets or sets the template mask string.
     /// </summary>
     /// <remarks>
-    /// See the control documentation for the supported template tokens. Any other character is treated as a literal
-    /// separator. Use <c>\</c> to escape token characters. The template may end with <c>;c</c> to specify a placeholder
-    /// character for empty slots.
+    /// Supported tokens:
+    /// <list type="bullet">
+    /// <item><description><c>A</c>/<c>a</c>: alphabetic character (required/optional)</description></item>
+    /// <item><description><c>N</c>/<c>n</c>: alphanumeric character (required/optional)</description></item>
+    /// <item><description><c>X</c>/<c>x</c>: non-space character (required/optional)</description></item>
+    /// <item><description><c>9</c>/<c>0</c>: digit (required/optional)</description></item>
+    /// <item><description><c>D</c>/<c>d</c>: digit 1-9 (required/optional)</description></item>
+    /// <item><description><c>#</c>: digit or sign (+/-)</description></item>
+    /// <item><description><c>H</c>/<c>h</c>: hexadecimal digit (required/optional)</description></item>
+    /// <item><description><c>B</c>/<c>b</c>: binary digit (required/optional)</description></item>
+    /// </list>
+    /// Any other character is treated as a literal separator. Use <c>\</c> to escape token characters. The template may end with
+    /// <c>;c</c> to specify a placeholder glyph for all empty slots.
+    /// <para />
+    /// Case conversion directives:
+    /// <list type="bullet">
+    /// <item><description><c>&gt;</c>: uppercase subsequent alphabetic tokens</description></item>
+    /// <item><description><c>&lt;</c>: lowercase subsequent alphabetic tokens</description></item>
+    /// <item><description><c>!</c>: stop applying case conversion</description></item>
+    /// </list>
     /// </remarks>
     [Bindable]
     public partial string? Template { get; set; }
@@ -96,9 +127,8 @@ public sealed partial class MaskedInput : Visual, ICursorProvider
     /// Gets or sets the current input value.
     /// </summary>
     /// <remarks>
-    /// The value represents the slot characters (separators are not included). The string is positional: index 0
-    /// corresponds to the first editable slot, index 1 to the second, etc. Empty slots are represented by a space
-    /// character. Trailing empty slots are trimmed.
+    /// The value represents the slot characters (separators are not included). The string is positional: index 0 corresponds to the
+    /// first editable slot, index 1 to the second, etc. Empty slots are represented by a space character. Trailing empty slots are trimmed.
     /// </remarks>
     [Bindable]
     public partial string? Value { get; set; }
@@ -107,29 +137,50 @@ public sealed partial class MaskedInput : Visual, ICursorProvider
     /// Gets the current value without any empty-slot markers.
     /// </summary>
     /// <remarks>
-    /// This property is convenient when the consumer wants only the typed characters (e.g. credit-card digits).
+    /// This property is convenient when the consumer wants only the typed characters (for example credit-card digits).
     /// </remarks>
     public string CompactValue
     {
         get
         {
             EnsureTemplateParsed();
-            ApplyValueToSlots(Value ?? string.Empty);
-            return BuildCompactValue();
+            var value = Value ?? string.Empty;
+            if (value.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            var chars = new char[value.Length];
+            var count = 0;
+            for (var i = 0; i < value.Length; i++)
+            {
+                var ch = value[i];
+                if (ch == ' ')
+                {
+                    continue;
+                }
+                chars[count++] = ch;
+            }
+
+            return count == 0 ? string.Empty : new string(chars, 0, count);
         }
     }
 
     /// <summary>
-    /// Gets a value indicating whether all required slots are filled and the value matches the template constraints.
+    /// Gets a value indicating whether all required slots are filled and the current value matches the template constraints.
     /// </summary>
     public bool IsValid
     {
         get
         {
             EnsureTemplateParsed();
-            ApplyValueToSlots(Value ?? string.Empty);
+            var text = _document.Text;
+            if (text.Length == 0 || _tokens.Length == 0)
+            {
+                return true;
+            }
 
-            for (var i = 0; i < _tokens.Length; i++)
+            for (var i = 0; i < _tokens.Length && i < text.Length; i++)
             {
                 var token = _tokens[i];
                 if (!token.IsEditable)
@@ -137,9 +188,8 @@ public sealed partial class MaskedInput : Visual, ICursorProvider
                     continue;
                 }
 
-                var slotIndex = token.Literal; // stored as slot index for editable tokens
-                var ch = _slots[slotIndex];
-                if (ch == '\0')
+                var ch = text[i];
+                if (ch == ' ')
                 {
                     if (token.Required)
                     {
@@ -159,23 +209,20 @@ public sealed partial class MaskedInput : Visual, ICursorProvider
     }
 
     /// <inheritdoc />
+    protected override bool IsSingleLine => true;
+
+    /// <inheritdoc />
+    protected override bool AcceptsReturn => false;
+
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         EnsureTemplateParsed();
 
         var style = Get<MaskedInputStyle>();
         var padding = style.Padding;
-        var padW = padding.Horizontal;
-        var padH = padding.Vertical;
-
-        var availableW = constraints.MaxWidth;
-        var availableH = constraints.MaxHeight;
-
-        var display = BuildDisplayText(GetPlaceholderChar(style));
-        var contentWidth = TerminalTextUtility.GetWidth(display.AsSpan());
-        var width = Math.Max(0, Math.Min(availableW, contentWidth + padW));
-        var height = Math.Max(1, Math.Min(availableH, 1 + padH));
-
+        var width = Math.Max(0, Math.Min(constraints.MaxWidth, _tokens.Length + padding.Horizontal));
+        var height = Math.Max(1, Math.Min(constraints.MaxHeight, 1 + padding.Vertical));
         return SizeHints.Fixed(new Size(width, height));
     }
 
@@ -193,7 +240,7 @@ public sealed partial class MaskedInput : Visual, ICursorProvider
             Math.Max(0, finalRect.Width - padding.Horizontal),
             Math.Max(0, finalRect.Height - padding.Vertical));
 
-        EnsureCaretVisible();
+        UpdateEditorLayout(_contentRect);
     }
 
     /// <inheritdoc />
@@ -206,325 +253,241 @@ public sealed partial class MaskedInput : Visual, ICursorProvider
         }
 
         EnsureTemplateParsed();
-        ApplyValueToSlots(Value ?? string.Empty);
+        _ = Template;
+        _ = Value;
 
+        var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var focused = ReferenceEquals(App?.FocusedElement, this);
         var style = Get<MaskedInputStyle>();
-        var backgroundStyle = style.BackgroundStyle(theme, focused);
-        var placeholderChar = GetPlaceholderChar(style);
 
-        if (_contentRect.Width > 0 && _contentRect.Height > 0)
+        var selectionStyle = style.SelectionStyle(theme);
+        var backgroundStyle = style.BackgroundStyle(theme, isFocused);
+        var placeholderStyle = style.PlaceholderCellStyle(theme, isFocused);
+
+        var padding = style.Padding;
+        var baseRect = new Rectangle(
+            rect.X + padding.Left,
+            rect.Y + padding.Top,
+            Math.Max(0, rect.Width - padding.Horizontal),
+            Math.Max(0, rect.Height - padding.Vertical));
+
+        if (baseRect.Width > 0 && baseRect.Height > 0)
         {
-            for (var y = _contentRect.Y; y < _contentRect.Y + _contentRect.Height; y++)
+            for (var y = baseRect.Y; y < baseRect.Y + baseRect.Height; y++)
             {
-                for (var x = _contentRect.X; x < _contentRect.X + _contentRect.Width; x++)
+                for (var x = baseRect.X; x < baseRect.X + baseRect.Width; x++)
                 {
                     buffer.SetCell(x, y, new Rune(' '), backgroundStyle);
                 }
             }
         }
 
-        if (_contentRect.Width <= 0 || _contentRect.Height <= 0)
-        {
-            return;
-        }
+        _separatorForeground = style.SeparatorForeground ?? theme.Muted ?? theme.Foreground;
+        _placeholderForeground = style.Placeholder ?? theme.Muted ?? theme.Foreground;
+        _placeholderDim = true;
+        _mutedForeground = theme.Muted;
+        _renderStateValid = true;
 
-        var valueStyle = style.ValueStyle(theme, focused);
-        var placeholderStyle = style.PlaceholderCellStyle(theme, focused);
-        var separatorStyle = style.SeparatorCellStyle(theme, focused);
+        RenderEditor(buffer, baseRect, backgroundStyle, selectionStyle, placeholderStyle);
 
-        var displayText = BuildDisplayText(placeholderChar);
-        RenderTemplateText(buffer, _contentRect.X, _contentRect.Y, _contentRect.Width, displayText, placeholderChar, valueStyle, placeholderStyle, separatorStyle);
+        _renderStateValid = false;
     }
 
     /// <inheritdoc />
-    protected override void OnKeyDown(KeyEventArgs e)
+    protected override void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, Style style, bool isPlaceholder, int textIndexStart)
     {
-        EnsureTemplateParsed();
-        ApplyValueToSlots(Value ?? string.Empty);
-
-        if ((e.Modifiers & TerminalModifiers.Ctrl) != 0)
+        if (isPlaceholder || !_renderStateValid || _tokens.Length == 0 || textIndexStart < 0)
         {
-            if (e.Char is TerminalChar.CtrlC)
-            {
-                var raw = CompactValue;
-                if (!string.IsNullOrEmpty(raw))
-                {
-                    App?.Terminal.Clipboard.TrySetText(raw);
-                }
-                e.Handled = true;
-                return;
-            }
-
-            if (e.Char is TerminalChar.CtrlV)
-            {
-                var clip = App?.Terminal.Clipboard.Text;
-                if (!string.IsNullOrEmpty(clip))
-                {
-                    InsertText(clip.AsSpan());
-                }
-                e.Handled = true;
-                return;
-            }
+            base.WriteTextSegment(buffer, x, y, text, style, isPlaceholder, textIndexStart);
+            return;
         }
 
-        switch (e.Key)
+        var theme = GetTheme();
+        var focused = ReferenceEquals(App?.FocusedElement, this);
+        var maskedStyle = Get<MaskedInputStyle>();
+
+        var cellX = x;
+        for (var i = 0; i < text.Length; i++)
         {
-            case TerminalKey.Left:
-                MoveCaret(-1);
-                e.Handled = true;
-                return;
-            case TerminalKey.Right:
-                MoveCaret(1);
-                e.Handled = true;
-                return;
-            case TerminalKey.Home:
-                _caretSlotIndex = 0;
-                EnsureCaretVisible();
-                e.Handled = true;
-                return;
-            case TerminalKey.End:
-                _caretSlotIndex = Math.Max(0, _slotCount - 1);
-                EnsureCaretVisible();
-                e.Handled = true;
-                return;
-            case TerminalKey.Backspace:
-                Backspace();
-                e.Handled = true;
-                return;
-            case TerminalKey.Delete:
-                Delete();
-                e.Handled = true;
-                return;
+            var index = textIndexStart + i;
+            if (index < 0 || index >= _tokens.Length)
+            {
+                buffer.SetCell(cellX++, y, new Rune(text[i]), style);
+                continue;
+            }
+
+            var token = _tokens[index];
+            if (token.Kind == TokenKind.Literal)
+            {
+                var s = style;
+                if (_separatorForeground is { } c)
+                {
+                    s = s.WithForeground(c);
+                }
+                buffer.SetCell(cellX++, y, new Rune(text[i]), s);
+                continue;
+            }
+
+            var ch = text[i];
+            if (ch == ' ')
+            {
+                var placeholderChar = GetPlaceholderChar(maskedStyle, token);
+                var s = style;
+                if (_placeholderForeground is { } c)
+                {
+                    s = s.WithForeground(c);
+                }
+                if (_placeholderDim)
+                {
+                    s |= TextStyle.Dim;
+                }
+                buffer.SetCell(cellX++, y, new Rune(placeholderChar), s);
+                continue;
+            }
+
+            buffer.SetCell(cellX++, y, new Rune(ch), style);
         }
     }
 
     /// <inheritdoc />
     protected override void OnTextInput(TextInputEventArgs e)
     {
-        if (string.IsNullOrEmpty(e.Text))
+        base.OnTextInput(e);
+        if (!string.IsNullOrEmpty(e.Text) && e.Handled)
+        {
+            SnapCaretToNextEmptySlot();
+        }
+    }
+
+    /// <inheritdoc />
+    protected override void OnPaste(PasteEventArgs e)
+    {
+        base.OnPaste(e);
+        if (!string.IsNullOrEmpty(e.Text) && e.Handled)
+        {
+            SnapCaretToNextEmptySlot();
+        }
+    }
+
+    /// <inheritdoc />
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+
+        if (!e.Handled)
+        {
+            return;
+        }
+
+        if ((e.Modifiers & TerminalModifiers.Ctrl) != 0 && e.Char is TerminalChar.CtrlV or TerminalChar.CtrlX)
+        {
+            SnapCaretToNextEmptySlot();
+        }
+    }
+
+    private void OnMaskedDocumentChanged(object? sender, TextDocumentChangedEventArgs e)
+    {
+        EnsureTemplateParsed();
+
+        if (_updatingDocumentFromValue)
+        {
+            return;
+        }
+
+        var newValue = ExtractValueFromDocument();
+        if (string.Equals(newValue, Value ?? string.Empty, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _updatingValueFromDocument = true;
+        try
+        {
+            Value = newValue;
+        }
+        finally
+        {
+            _updatingValueFromDocument = false;
+        }
+    }
+
+    partial void OnTemplateChanged(string? value)
+    {
+        _ = value;
+        EnsureTemplateParsed(force: true);
+        SyncDocumentFromValue();
+        MarkArrangeDirty();
+    }
+
+    partial void OnValueChanged(string? value)
+    {
+        _ = value;
+
+        if (_updatingValueFromDocument)
         {
             return;
         }
 
         EnsureTemplateParsed();
-        ApplyValueToSlots(Value ?? string.Empty);
-
-        InsertText(e.Text.AsSpan());
-        e.Handled = true;
+        SyncDocumentFromValue();
     }
 
-    /// <inheritdoc />
-    protected override void OnPointerPressed(PointerEventArgs e)
+    private void EnsureTemplateParsed(bool force = false)
     {
-        if (e.Button != TerminalMouseButton.Left)
+        var template = Template ?? string.Empty;
+        if (!force && string.Equals(_cachedTemplate, template, StringComparison.Ordinal))
         {
             return;
         }
 
+        _cachedTemplate = template;
+        ParseTemplate(template, out _tokens, out _slotTokenIndexes, out _slotCount, out _hasTemplatePlaceholderChar, out _templatePlaceholderChar);
+        _document.SetTemplate(_tokens);
+    }
+
+    private void SyncDocumentFromValue()
+    {
         EnsureTemplateParsed();
 
-        if (_contentRect.Width <= 0 || _contentRect.Height <= 0 || !_contentRect.Contains(e.X, e.Y))
+        var templateText = BuildTemplateText();
+        var text = ApplyValueToTemplateText(templateText, Value ?? string.Empty);
+
+        _updatingDocumentFromValue = true;
+        try
         {
-            return;
+            _document.SetText(text);
         }
-
-        ApplyValueToSlots(Value ?? string.Empty);
-
-        var cellX = Math.Max(0, (e.X - _contentRect.X) + _scrollX);
-        var slot = SlotIndexFromCellX(cellX);
-        _caretSlotIndex = Math.Clamp(slot, 0, Math.Max(0, _slotCount - 1));
-        EnsureCaretVisible();
-
-        e.Handled = true;
+        finally
+        {
+            _updatingDocumentFromValue = false;
+        }
     }
 
-    /// <inheritdoc />
-    protected override void OnPointerWheel(PointerEventArgs e)
+    private string BuildTemplateText()
     {
-        // Masked input uses horizontal scrolling only; wheel is ignored for now.
-        _ = e;
-    }
-
-    /// <inheritdoc />
-    public bool TryGetCursorCell(out int x, out int y)
-    {
-        x = 0;
-        y = 0;
-
-        if (!ReferenceEquals(App?.FocusedElement, this))
-        {
-            return false;
-        }
-
-        if (_contentRect.Width <= 0 || _contentRect.Height <= 0)
-        {
-            return false;
-        }
-
-        EnsureTemplateParsed();
-
-        var caretCell = GetSlotCellX(Math.Clamp(_caretSlotIndex, 0, Math.Max(0, _slotCount - 1)));
-        x = _contentRect.X + Math.Clamp(caretCell - _scrollX, 0, Math.Max(0, _contentRect.Width - 1));
-        y = _contentRect.Y;
-        return true;
-    }
-
-    private void MoveCaret(int delta)
-    {
-        if (_slotCount <= 0)
-        {
-            return;
-        }
-
-        _caretSlotIndex = Math.Clamp(_caretSlotIndex + delta, 0, _slotCount - 1);
-        EnsureCaretVisible();
-    }
-
-    private void Backspace()
-    {
-        if (_slotCount <= 0)
-        {
-            return;
-        }
-
-        var slot = Math.Clamp(_caretSlotIndex - 1, 0, _slotCount - 1);
-        _slots[slot] = '\0';
-        _caretSlotIndex = slot;
-        CommitSlotsToValue();
-    }
-
-    private void Delete()
-    {
-        if (_slotCount <= 0)
-        {
-            return;
-        }
-
-        var slot = Math.Clamp(_caretSlotIndex, 0, _slotCount - 1);
-        _slots[slot] = '\0';
-        CommitSlotsToValue();
-    }
-
-    private void InsertText(ReadOnlySpan<char> text)
-    {
-        if (_slotCount <= 0)
-        {
-            return;
-        }
-
-        var slot = Math.Clamp(_caretSlotIndex, 0, _slotCount - 1);
-        var index = 0;
-        while (index < text.Length && slot < _slotCount)
-        {
-            var elementLength = StringInfo.GetNextTextElementLength(text[index..]);
-            if (elementLength <= 0)
-            {
-                elementLength = 1;
-            }
-
-            var elementSpan = text.Slice(index, Math.Min(elementLength, text.Length - index));
-            index += elementLength;
-
-            if (elementSpan.Length != 1)
-            {
-                continue;
-            }
-
-            var ch = elementSpan[0];
-            var tokenIndex = _slotTokenIndexes[slot];
-            var token = _tokens[tokenIndex];
-
-            if (!IsCharAllowed(token, ch))
-            {
-                continue;
-            }
-
-            ch = ApplyCase(token, ch);
-            _slots[slot] = ch;
-            slot++;
-        }
-
-        _caretSlotIndex = Math.Clamp(slot, 0, Math.Max(0, _slotCount - 1));
-        CommitSlotsToValue();
-    }
-
-    private void CommitSlotsToValue()
-    {
-        var newValue = BuildValueString();
-        Value = newValue;
-        EnsureCaretVisible();
-    }
-
-    private string BuildCompactValue()
-    {
-        if (_slotCount == 0)
+        if (_tokens.Length == 0)
         {
             return string.Empty;
         }
 
-        var buffer = new char[_slotCount];
-        var count = 0;
-        for (var i = 0; i < _slotCount; i++)
+        var chars = new char[_tokens.Length];
+        for (var i = 0; i < _tokens.Length; i++)
         {
-            var ch = _slots[i];
-            if (ch == '\0')
-            {
-                continue;
-            }
-
-            buffer[count++] = ch;
-        }
-
-        return count == 0 ? string.Empty : new string(buffer, 0, count);
-    }
-
-    private string BuildValueString()
-    {
-        if (_slotCount == 0)
-        {
-            return string.Empty;
-        }
-
-        var last = -1;
-        for (var i = _slotCount - 1; i >= 0; i--)
-        {
-            if (_slots[i] != '\0')
-            {
-                last = i;
-                break;
-            }
-        }
-
-        if (last < 0)
-        {
-            return string.Empty;
-        }
-
-        var chars = new char[last + 1];
-        for (var i = 0; i <= last; i++)
-        {
-            chars[i] = _slots[i] == '\0' ? ' ' : _slots[i];
+            var token = _tokens[i];
+            chars[i] = token.Kind == TokenKind.Literal ? token.Literal : ' ';
         }
 
         return new string(chars);
     }
 
-    private void ApplyValueToSlots(string value)
+    private string ApplyValueToTemplateText(string templateText, string value)
     {
-        if (_slotCount == 0)
+        if (_slotCount == 0 || templateText.Length == 0)
         {
-            return;
+            return templateText;
         }
 
-        if (_slots.Length != _slotCount)
-        {
-            _slots = new char[_slotCount];
-        }
-
-        Array.Fill(_slots, '\0');
-
+        var chars = templateText.ToCharArray();
         for (var slot = 0; slot < _slotCount; slot++)
         {
             if (slot >= value.Length)
@@ -539,121 +502,113 @@ public sealed partial class MaskedInput : Visual, ICursorProvider
             }
 
             var tokenIndex = _slotTokenIndexes[slot];
+            if (tokenIndex < 0 || tokenIndex >= _tokens.Length)
+            {
+                continue;
+            }
+
             var token = _tokens[tokenIndex];
             if (!IsCharAllowed(token, ch))
             {
                 continue;
             }
 
-            ch = ApplyCase(token, ch);
-            _slots[slot] = ch;
-        }
-    }
-
-    private string BuildDisplayText()
-        => BuildDisplayText(GetPlaceholderChar(Get<MaskedInputStyle>()));
-
-    private string BuildDisplayText(char placeholderChar)
-    {
-        if (_tokens.Length == 0)
-        {
-            return string.Empty;
-        }
-
-        var chars = new char[_tokens.Length];
-        for (var i = 0; i < _tokens.Length; i++)
-        {
-            var token = _tokens[i];
-            if (!token.IsEditable)
-            {
-                chars[i] = token.Literal;
-                continue;
-            }
-
-            var slotIndex = token.Literal;
-            var ch = slotIndex >= 0 && slotIndex < _slots.Length ? _slots[slotIndex] : '\0';
-            chars[i] = ch == '\0' ? placeholderChar : ch;
+            chars[tokenIndex] = ApplyCase(token, ch);
         }
 
         return new string(chars);
     }
 
-    private int SlotIndexFromCellX(int cellX)
+    private string ExtractValueFromDocument()
     {
         if (_slotCount == 0)
         {
-            return 0;
+            return string.Empty;
         }
 
-        var display = BuildDisplayText().AsSpan();
+        var text = _document.Text;
+        if (text.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var last = -1;
+        var chars = new char[_slotCount];
         for (var slot = 0; slot < _slotCount; slot++)
         {
             var tokenIndex = _slotTokenIndexes[slot];
-            var tokenCharIndex = tokenIndex;
-            var cellAtToken = TerminalTextUtility.GetWidth(display[..Math.Clamp(tokenCharIndex, 0, display.Length)]);
-            if (cellX <= cellAtToken)
+            if (tokenIndex < 0 || tokenIndex >= text.Length)
             {
-                return slot;
+                chars[slot] = ' ';
+                continue;
+            }
+
+            var ch = text[tokenIndex];
+            if (ch == ' ')
+            {
+                chars[slot] = ' ';
+                continue;
+            }
+
+            chars[slot] = ch;
+            last = slot;
+        }
+
+        return last < 0 ? string.Empty : new string(chars, 0, last + 1);
+    }
+
+    private void SnapCaretToNextEmptySlot()
+    {
+        EnsureTemplateParsed();
+
+        if (_tokens.Length == 0)
+        {
+            return;
+        }
+
+        var text = _document.Text;
+        var start = Math.Clamp(CaretIndex, 0, _tokens.Length);
+
+        for (var i = start; i < _tokens.Length; i++)
+        {
+            var token = _tokens[i];
+            if (!token.IsEditable)
+            {
+                continue;
+            }
+
+            if (i >= text.Length || text[i] == ' ')
+            {
+                CaretIndex = i;
+                return;
             }
         }
 
-        return _slotCount - 1;
+        CaretIndex = _tokens.Length;
     }
 
-    private int GetSlotCellX(int slotIndex)
+    private char GetPlaceholderChar(MaskedInputStyle style, TemplateToken token)
     {
-        if (_slotCount == 0)
+        if (_hasTemplatePlaceholderChar && _templatePlaceholderChar != '\0')
         {
-            return 0;
+            return _templatePlaceholderChar;
         }
 
-        slotIndex = Math.Clamp(slotIndex, 0, _slotCount - 1);
-        var tokenIndex = _slotTokenIndexes[slotIndex];
-        var display = BuildDisplayText().AsSpan();
-        return TerminalTextUtility.GetWidth(display[..Math.Clamp(tokenIndex, 0, display.Length)]);
+        return token.Kind switch
+        {
+            TokenKind.Digit or TokenKind.DigitNonZero or TokenKind.DigitSign or TokenKind.Hex or TokenKind.Bit => style.DigitPlaceholderChar,
+            TokenKind.Alpha or TokenKind.AlphaNum => style.AlphaPlaceholderChar,
+            _ => style.DefaultPlaceholderChar,
+        };
     }
 
-    private void EnsureCaretVisible()
-    {
-        if (_contentRect.Width <= 0)
-        {
-            _scrollX = 0;
-            return;
-        }
-
-        if (_slotCount <= 0)
-        {
-            _scrollX = 0;
-            return;
-        }
-
-        var caretCell = GetSlotCellX(Math.Clamp(_caretSlotIndex, 0, _slotCount - 1));
-        if (caretCell < _scrollX)
-        {
-            _scrollX = caretCell;
-        }
-        else if (caretCell >= _scrollX + _contentRect.Width)
-        {
-            _scrollX = Math.Max(0, caretCell - Math.Max(0, _contentRect.Width - 1));
-        }
-    }
-
-    private void EnsureTemplateParsed()
-    {
-        var template = Template ?? string.Empty;
-        if (string.Equals(_cachedTemplate, template, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        _cachedTemplate = template;
-        ParseTemplate(template, out _tokens, out _slotTokenIndexes, out _slotCount, out _hasTemplatePlaceholderChar, out _templatePlaceholderChar);
-        _caretSlotIndex = 0;
-        _scrollX = 0;
-        _slots = _slotCount == 0 ? Array.Empty<char>() : new char[_slotCount];
-    }
-
-    private static void ParseTemplate(string template, out TemplateToken[] tokens, out int[] slotTokenIndexes, out int slotCount, out bool hasPlaceholderChar, out char placeholderChar)
+    private static void ParseTemplate(
+        string template,
+        out TemplateToken[] tokens,
+        out int[] slotTokenIndexes,
+        out int slotCount,
+        out bool hasPlaceholderChar,
+        out char placeholderChar)
     {
         hasPlaceholderChar = false;
         placeholderChar = '\0';
@@ -667,26 +622,27 @@ public sealed partial class MaskedInput : Visual, ICursorProvider
         }
 
         // Template terminator: ;c
+        var effectiveLength = template.Length;
         if (template.Length >= 2 && template[^2] == ';')
         {
             hasPlaceholderChar = true;
             placeholderChar = template[^1];
-            template = template[..^2];
+            effectiveLength -= 2;
         }
 
-        var list = new List<TemplateToken>(template.Length);
-        var slots = new List<int>(template.Length);
-
-        var caseMode = CaseMode.None;
+        var tokenList = new List<TemplateToken>(effectiveLength);
+        var slotTokenIndexList = new List<int>(capacity: effectiveLength);
+        var slotIndex = 0;
         var escape = false;
-        var currentSlot = 0;
+        var caseMode = CaseMode.None;
 
-        for (var i = 0; i < template.Length; i++)
+        for (var i = 0; i < effectiveLength; i++)
         {
             var ch = template[i];
+
             if (escape)
             {
-                list.Add(new TemplateToken(TokenKind.Literal, Required: false, Case: CaseMode.None, Literal: ch));
+                tokenList.Add(new TemplateToken(TokenKind.Literal, Required: false, CaseMode.None, Literal: ch, SlotIndex: -1));
                 escape = false;
                 continue;
             }
@@ -697,49 +653,35 @@ public sealed partial class MaskedInput : Visual, ICursorProvider
                 continue;
             }
 
-            if (ch == '>')
+            if (ch == '>' || ch == '<' || ch == '!')
             {
-                caseMode = CaseMode.Upper;
+                caseMode = ch switch
+                {
+                    '>' => CaseMode.Upper,
+                    '<' => CaseMode.Lower,
+                    _ => CaseMode.None,
+                };
                 continue;
             }
 
-            if (ch == '<')
+            if (TryParseToken(ch, slotIndex, caseMode, out var token))
             {
-                caseMode = CaseMode.Lower;
+                slotTokenIndexList.Add(tokenList.Count);
+                tokenList.Add(token);
+                slotIndex++;
                 continue;
             }
 
-            if (ch == '!')
-            {
-                caseMode = CaseMode.None;
-                continue;
-            }
-
-            if (TryGetToken(ch, caseMode, currentSlot, out var token))
-            {
-                list.Add(token);
-                slots.Add(list.Count - 1);
-                currentSlot++;
-            }
-            else
-            {
-                list.Add(new TemplateToken(TokenKind.Literal, Required: false, Case: CaseMode.None, Literal: ch));
-            }
+            tokenList.Add(new TemplateToken(TokenKind.Literal, Required: false, CaseMode.None, Literal: ch, SlotIndex: -1));
         }
 
-        tokens = list.ToArray();
-        slotCount = currentSlot;
-        slotTokenIndexes = new int[slotCount];
-        for (var i = 0; i < slotCount; i++)
-        {
-            slotTokenIndexes[i] = slots[i];
-        }
+        tokens = tokenList.ToArray();
+        slotTokenIndexes = slotTokenIndexList.ToArray();
+        slotCount = slotIndex;
     }
 
-    private static bool TryGetToken(char ch, CaseMode caseMode, int slotIndex, out TemplateToken token)
+    private static bool TryParseToken(char ch, int slotIndex, CaseMode caseMode, out TemplateToken token)
     {
-        // Textual template token set:
-        // A/a: alpha, N/n: alnum, X/x: non-space, 9/0: digit, D/d: digit 1-9, #: digit/sign, H/h: hex, B/b: bit
         token = default;
         TokenKind kind;
         bool required;
@@ -765,7 +707,7 @@ public sealed partial class MaskedInput : Visual, ICursorProvider
                 return false;
         }
 
-        token = new TemplateToken(kind, required, caseMode, Literal: (char)slotIndex);
+        token = new TemplateToken(kind, required, caseMode, Literal: '\0', SlotIndex: slotIndex);
         return true;
     }
 
@@ -801,57 +743,228 @@ public sealed partial class MaskedInput : Visual, ICursorProvider
         return ch;
     }
 
-    private void RenderTemplateText(CellBuffer buffer, int x, int y, int width, string displayText, char placeholderChar, Style valueStyle, Style placeholderStyle, Style separatorStyle)
+    private sealed class MaskedInputDocument : ITextDocument
     {
-        if (width <= 0)
+        private TemplateToken[] _tokens = Array.Empty<TemplateToken>();
+        private string _text = string.Empty;
+        private int _version;
+        private TextSnapshot _snapshot = new(version: 0, text: string.Empty, lineStarts: [0], lineBreakLengths: [0]);
+
+        private int _updateDepth;
+
+        public string Text => _text;
+
+        public ITextSnapshot CurrentSnapshot => _snapshot;
+
+        public int Version => _version;
+
+        public event EventHandler<TextDocumentChangedEventArgs>? Changed;
+
+        public void SetTemplate(TemplateToken[] tokens)
         {
-            return;
+            _tokens = tokens ?? Array.Empty<TemplateToken>();
         }
 
-        var cell = 0;
-        var span = displayText.AsSpan();
-
-        for (var i = 0; i < span.Length && cell < _scrollX + width; i++)
+        public IDisposable BeginUpdate()
         {
-            var token = _tokens[i];
-            var ch = span[i];
-
-            var w = TerminalTextUtility.GetWidth(span.Slice(i, 1));
-            if (w <= 0)
-            {
-                continue;
-            }
-
-            var startCell = cell;
-            var endCell = cell + w;
-            cell = endCell;
-
-            if (endCell <= _scrollX)
-            {
-                continue;
-            }
-
-            var drawX = x + (startCell - _scrollX);
-            if (drawX < x || drawX >= x + width)
-            {
-                continue;
-            }
-
-            var style = token.Kind == TokenKind.Literal
-                ? separatorStyle
-                : (ch == placeholderChar ? placeholderStyle : valueStyle);
-
-            buffer.WriteText(drawX, y, span.Slice(i, 1), style);
-        }
-    }
-
-    private char GetPlaceholderChar(MaskedInputStyle style)
-    {
-        if (_hasTemplatePlaceholderChar && _templatePlaceholderChar != '\0')
-        {
-            return _templatePlaceholderChar;
+            _updateDepth++;
+            return new UpdateScope(this);
         }
 
-        return style.DefaultPlaceholderChar;
+        public void Insert(int position, ReadOnlySpan<char> text)
+            => Replace(position, length: 0, text);
+
+        public void Remove(int position, int length)
+            => Replace(position, length, ReadOnlySpan<char>.Empty);
+
+        public void Replace(int position, int length, ReadOnlySpan<char> text)
+        {
+            if (position < 0 || position > _text.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(position));
+            }
+
+            if (length < 0 || position + length > _text.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(length));
+            }
+
+            if (length == 0 && text.IsEmpty)
+            {
+                return;
+            }
+
+            if (_tokens.Length == 0)
+            {
+                SetText(string.Empty);
+                return;
+            }
+
+            var chars = _text.Length == 0 ? new char[_tokens.Length] : _text.ToCharArray();
+            if (chars.Length != _tokens.Length)
+            {
+                chars = new char[_tokens.Length];
+                for (var i = 0; i < _tokens.Length; i++)
+                {
+                    chars[i] = _tokens[i].Kind == TokenKind.Literal ? _tokens[i].Literal : ' ';
+                }
+            }
+
+            var changed = false;
+
+            var clearEnd = Math.Min(position + length, _tokens.Length);
+            for (var i = position; i < clearEnd; i++)
+            {
+                if (_tokens[i].IsEditable)
+                {
+                    if (chars[i] != ' ')
+                    {
+                        chars[i] = ' ';
+                        changed = true;
+                    }
+                }
+            }
+
+            if (!text.IsEmpty)
+            {
+                var insertIndex = position;
+                var i = 0;
+                while (i < text.Length)
+                {
+                    insertIndex = FindNextEditableIndex(insertIndex);
+                    if (insertIndex < 0)
+                    {
+                        break;
+                    }
+
+                    var next = TerminalTextUtility.GetNextTextElementIndex(text, i);
+                    if (next <= i)
+                    {
+                        next = i + 1;
+                    }
+
+                    var element = text.Slice(i, next - i);
+                    i = next;
+
+                    if (element.Length != 1)
+                    {
+                        continue;
+                    }
+
+                    var ch = element[0];
+                    if (ch == '\r' || ch == '\n')
+                    {
+                        continue;
+                    }
+
+                    var token = _tokens[insertIndex];
+                    if (!IsCharAllowed(token, ch))
+                    {
+                        continue;
+                    }
+
+                    ch = ApplyCase(token, ch);
+                    if (chars[insertIndex] != ch)
+                    {
+                        chars[insertIndex] = ch;
+                        changed = true;
+                    }
+
+                    insertIndex++;
+                }
+            }
+
+            if (!changed)
+            {
+                return;
+            }
+
+            var oldVersion = _version;
+            _version++;
+            _text = new string(chars);
+            _snapshot = new TextSnapshot(_version, _text, [0], [0]);
+
+            RaiseChanged(new TextDocumentChangedEventArgs
+            {
+                OldVersion = oldVersion,
+                NewVersion = _version,
+                Position = position,
+                RemovedLength = length,
+                InsertedLength = text.Length,
+                OldLineCount = 1,
+                NewLineCount = 1,
+                InsertedTextHint = text.IsEmpty ? null : text.ToString(),
+            });
+        }
+
+        public void SetText(string text)
+        {
+            if (string.Equals(text, _text, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            var oldVersion = _version;
+            _version++;
+            _text = text ?? string.Empty;
+            _snapshot = new TextSnapshot(_version, _text, [0], [0]);
+
+            RaiseChanged(new TextDocumentChangedEventArgs
+            {
+                OldVersion = oldVersion,
+                NewVersion = _version,
+                Position = 0,
+                RemovedLength = 0,
+                InsertedLength = 0,
+                OldLineCount = 1,
+                NewLineCount = 1,
+                InsertedTextHint = null,
+            });
+        }
+
+        private int FindNextEditableIndex(int startIndex)
+        {
+            for (var i = Math.Clamp(startIndex, 0, _tokens.Length); i < _tokens.Length; i++)
+            {
+                if (_tokens[i].IsEditable)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private void RaiseChanged(TextDocumentChangedEventArgs args)
+        {
+            if (_updateDepth > 0)
+            {
+                // V1 keeps the change events simple; batching can be added later.
+            }
+
+            Changed?.Invoke(this, args);
+        }
+
+        private sealed class UpdateScope : IDisposable
+        {
+            private MaskedInputDocument? _owner;
+
+            public UpdateScope(MaskedInputDocument owner)
+            {
+                _owner = owner;
+            }
+
+            public void Dispose()
+            {
+                var owner = _owner;
+                if (owner is null)
+                {
+                    return;
+                }
+
+                owner._updateDepth = Math.Max(0, owner._updateDepth - 1);
+                _owner = null;
+            }
+        }
     }
 }

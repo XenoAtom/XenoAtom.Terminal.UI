@@ -127,8 +127,9 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     /// <remarks>
     /// Derived controls can override this to customize how characters are rendered (e.g. masking).
     /// </remarks>
-    protected virtual void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, Style style, bool isPlaceholder)
+    protected virtual void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, Style style, bool isPlaceholder, int textIndexStart)
     {
+        _ = textIndexStart;
         buffer.WriteText(x, y, text, style);
     }
 
