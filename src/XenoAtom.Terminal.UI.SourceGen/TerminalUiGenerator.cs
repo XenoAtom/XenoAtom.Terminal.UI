@@ -945,7 +945,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 }
 
                 sb.Append(baseIndent).AppendLine("[global::System.Diagnostics.DebuggerBrowsable(global::System.Diagnostics.DebuggerBrowsableState.Never)]");
-                sb.Append(baseIndent).Append("private ").Append(p.PropertyTypeFullyQualified).Append(' ').Append(p.BackingFieldName).AppendLine(";");
+                sb.Append(baseIndent).Append("private ").Append(p.PropertyTypeFullyQualified).Append(' ').Append(p.BackingFieldName).AppendLine(" = default!;");
                 sb.AppendLine();
 
                 sb.Append(baseIndent).AppendLine("[global::System.Diagnostics.DebuggerBrowsable(global::System.Diagnostics.DebuggerBrowsableState.Never)]");
