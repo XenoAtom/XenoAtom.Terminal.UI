@@ -10,22 +10,39 @@ using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Templating;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
 /// <summary>
 /// Represents a list control that supports multi-selection via checkboxes.
 /// </summary>
-public sealed partial class SelectionList : Visual
+/// <typeparam name="T">The item type.</typeparam>
+public sealed partial class SelectionList<T> : Visual
 {
+    private readonly BindableList<Visual> _itemVisuals;
+    private readonly List<Visual> _recyclePool = new();
     private int _scrollOffset;
+    private int _lastItemsVersion = -1;
+    private DataTemplate<T> _lastResolvedTemplate;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SelectionList"/> class.
+    /// Initializes a new instance of the <see cref="SelectionList{T}"/> class.
     /// </summary>
     public SelectionList()
     {
-        Items = new VisualList<SelectionListItem>(this, "SelectionList.Items");
+        Items = new BindableList<T>(this, "SelectionList.Items");
+        Checked = new BindableList<bool>(this, "SelectionList.Checked");
+        _itemVisuals = new BindableList<Visual>(
+            this,
+            "SelectionList.ItemVisuals",
+            onAdding: AttachCollectionChild,
+            onRemoving: v =>
+            {
+                DetachCollectionChild(v);
+                _recyclePool.Add(v);
+            });
+
         Focusable = true;
     }
 
@@ -33,7 +50,16 @@ public sealed partial class SelectionList : Visual
     /// Gets the collection of selectable items.
     /// </summary>
     [Bindable]
-    public VisualList<SelectionListItem> Items { get; }
+    public BindableList<T> Items { get; }
+
+    /// <summary>
+    /// Gets the checked state for each item.
+    /// </summary>
+    /// <remarks>
+    /// The control keeps this list aligned with <see cref="Items"/> (same count). Missing entries default to <see langword="false"/>.
+    /// </remarks>
+    [Bindable]
+    public BindableList<bool> Checked { get; }
 
     /// <summary>
     /// Gets or sets the selected item index.
@@ -41,22 +67,43 @@ public sealed partial class SelectionList : Visual
     [Bindable]
     public partial int SelectedIndex { get; set; }
 
-    /// <inheritdoc />
-    protected override int ChildrenCount => Items.Count;
+    /// <summary>
+    /// Gets or sets the template used to create visuals for items.
+    /// </summary>
+    [Bindable]
+    public partial DataTemplate<T> ItemTemplate { get; set; }
+
+    /// <summary>
+    /// Adds an item to the list and sets its initial checked state.
+    /// </summary>
+    /// <param name="item">The item to add.</param>
+    /// <param name="isChecked">The initial checked state.</param>
+    /// <returns>This instance.</returns>
+    public SelectionList<T> AddItem(T item, bool isChecked = false)
+    {
+        Items.Add(item);
+        Checked.Add(isChecked);
+        return this;
+    }
 
     /// <inheritdoc />
-    protected override Visual GetChild(int index) => Items[index];
+    protected override int ChildrenCount => _itemVisuals.Count;
+
+    /// <inheritdoc />
+    protected override Visual GetChild(int index) => _itemVisuals[index];
 
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        EnsureItemVisuals();
+
         var style = Get<SelectionListStyle>();
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
         var checkWidth = Math.Max(1, Math.Max(TerminalTextUtility.GetRuneWidth(style.CheckedGlyph), TerminalTextUtility.GetRuneWidth(style.UncheckedGlyph)));
         var prefixWidth = markerWidth + checkWidth + gap;
 
-        var items = Items;
+        var items = _itemVisuals;
         var itemWidth = 0;
         for (var i = 0; i < items.Count; i++)
         {
@@ -77,9 +124,11 @@ public sealed partial class SelectionList : Visual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
+        Bounds = finalRect;
+        EnsureItemVisuals();
+
         var rect = finalRect;
-        var items = Items;
-        if (rect.Width <= 0 || rect.Height <= 0 || items.Count == 0)
+        if (rect.Width <= 0 || rect.Height <= 0 || _itemVisuals.Count == 0)
         {
             return;
         }
@@ -93,7 +142,7 @@ public sealed partial class SelectionList : Visual
         var innerWidth = Math.Max(0, rect.Width);
         var innerHeight = Math.Max(0, rect.Height);
 
-        var count = items.Count;
+        var count = Items.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
 
         if (selected < _scrollOffset)
@@ -108,10 +157,10 @@ public sealed partial class SelectionList : Visual
         var prefixWidth = Math.Min(innerWidth, markerWidth + checkWidth + gap);
         var itemLeft = innerLeft + prefixWidth;
         var itemWidth = Math.Max(0, innerWidth - prefixWidth);
-        for (var i = 0; i < count; i++)
+        for (var i = 0; i < _itemVisuals.Count; i++)
         {
             var y = innerTop + (i - _scrollOffset);
-            items[i].Arrange(new Rectangle(itemLeft, y, itemWidth, 1));
+            _itemVisuals[i].Arrange(new Rectangle(itemLeft, y, itemWidth, 1));
         }
     }
 
@@ -124,7 +173,6 @@ public sealed partial class SelectionList : Visual
             return;
         }
 
-        var items = Items;
         var style = Get<SelectionListStyle>();
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
@@ -134,19 +182,18 @@ public sealed partial class SelectionList : Visual
         var innerWidth = Math.Max(0, rect.Width);
         var innerHeight = Math.Max(0, rect.Height);
 
-        var count = items.Count;
+        var count = Items.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
 
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
 
         // Fill background.
-        var background = Style.None;
         for (var y = rect.Y; y < rect.Y + rect.Height; y++)
         {
             for (var x = rect.X; x < rect.X + rect.Width; x++)
             {
-                buffer.SetCell(x, y, new Rune(' '), background);
+                buffer.SetCell(x, y, new Rune(' '), Style.None);
             }
         }
 
@@ -160,11 +207,9 @@ public sealed partial class SelectionList : Visual
                 continue;
             }
 
-            var item = items[itemIndex];
             var isSelected = itemIndex == selected;
             var rowStyle = style.ResolveItemStyle(theme, IsEnabled, isSelected, isFocused);
 
-            // Fill row background/style so that child visuals using CellStyle.None inherit.
             for (var x = 0; x < innerWidth; x++)
             {
                 buffer.SetCell(innerLeft + x, y, new Rune(' '), rowStyle);
@@ -180,7 +225,7 @@ public sealed partial class SelectionList : Visual
 
             if (xCursor < innerLeft + innerWidth)
             {
-                var check = item.IsChecked ? style.CheckedGlyph : style.UncheckedGlyph;
+                var check = Checked[itemIndex] ? style.CheckedGlyph : style.UncheckedGlyph;
                 buffer.SetCell(xCursor, y, check, rowStyle);
                 xCursor += checkWidth;
             }
@@ -202,7 +247,6 @@ public sealed partial class SelectionList : Visual
             return;
         }
 
-        var style = Get<SelectionListStyle>();
         var viewportHeight = Math.Max(1, Bounds.Height);
 
         var selected = Math.Clamp(SelectedIndex, 0, count - 1);
@@ -210,9 +254,10 @@ public sealed partial class SelectionList : Visual
 
         if (ctrl && e.Char is TerminalChar.CtrlA)
         {
+            EnsureCheckedCount();
             for (var i = 0; i < count; i++)
             {
-                Items[i].IsChecked = true;
+                Checked[i] = true;
             }
             e.Handled = true;
             return;
@@ -220,9 +265,10 @@ public sealed partial class SelectionList : Visual
 
         if (ctrl && e.Char is TerminalChar.CtrlI)
         {
+            EnsureCheckedCount();
             for (var i = 0; i < count; i++)
             {
-                Items[i].IsChecked = !Items[i].IsChecked;
+                Checked[i] = !Checked[i];
             }
             e.Handled = true;
             return;
@@ -256,7 +302,8 @@ public sealed partial class SelectionList : Visual
                 return;
             case TerminalKey.Space:
             case TerminalKey.Enter:
-                Items[selected].IsChecked = !Items[selected].IsChecked;
+                EnsureCheckedCount();
+                Checked[selected] = !Checked[selected];
                 e.Handled = true;
                 return;
         }
@@ -276,7 +323,6 @@ public sealed partial class SelectionList : Visual
             return;
         }
 
-        var style = Get<SelectionListStyle>();
         var innerY = e.UiY - Bounds.Y;
         var innerHeight = Math.Max(0, Bounds.Height);
         if ((uint)innerY >= (uint)innerHeight)
@@ -287,8 +333,9 @@ public sealed partial class SelectionList : Visual
         var index = _scrollOffset + innerY;
         if ((uint)index < (uint)count)
         {
+            EnsureCheckedCount();
             SelectedIndex = index;
-            Items[index].IsChecked = !Items[index].IsChecked;
+            Checked[index] = !Checked[index];
             e.Handled = true;
         }
     }
@@ -306,4 +353,101 @@ public sealed partial class SelectionList : Visual
         SelectedIndex = e.WheelDelta > 0 ? Math.Max(0, selected - 1) : Math.Min(count - 1, selected + 1);
         e.Handled = true;
     }
+
+    private void EnsureCheckedCount()
+    {
+        var itemsCount = Items.Count;
+        while (Checked.Count < itemsCount)
+        {
+            Checked.Add(false);
+        }
+        while (Checked.Count > itemsCount)
+        {
+            Checked.RemoveAt(Checked.Count - 1);
+        }
+    }
+
+    private void EnsureItemVisuals()
+    {
+        EnsureCheckedCount();
+
+        var items = Items;
+        var template = ResolveItemTemplate();
+
+        if (items.Version == _lastItemsVersion && template.Equals(_lastResolvedTemplate))
+        {
+            return;
+        }
+
+        _lastItemsVersion = items.Version;
+        _lastResolvedTemplate = template;
+
+        _itemVisuals.Clear();
+
+        if (items.Count == 0)
+        {
+            _recyclePool.Clear();
+            return;
+        }
+
+        var ctxBase = new DataTemplateContext(this, DataTemplateRole.Display, -1, DataTemplateItemState.None);
+        for (var i = 0; i < items.Count; i++)
+        {
+            var value = items[i];
+
+            if (value is Visual asVisual)
+            {
+                _itemVisuals.Add(asVisual);
+                continue;
+            }
+
+            if (template.IsEmpty || template.Create is null)
+            {
+                _itemVisuals.Add(new TextBlock(value?.ToString() ?? string.Empty));
+                continue;
+            }
+
+            Visual? reused = null;
+            if (_recyclePool.Count != 0)
+            {
+                var last = _recyclePool.Count - 1;
+                reused = _recyclePool[last];
+                _recyclePool.RemoveAt(last);
+            }
+
+            var ctx = ctxBase with { Index = i };
+            if (reused is not null && template.TryUpdate is { } updater && updater(reused, value, ctx))
+            {
+                _itemVisuals.Add(reused);
+                continue;
+            }
+
+            if (reused is not null && template.Release is { } release)
+            {
+                release(reused);
+            }
+
+            _itemVisuals.Add(template.Create(value, ctx));
+        }
+
+        _recyclePool.Clear();
+    }
+
+    private DataTemplate<T> ResolveItemTemplate()
+    {
+        var template = ItemTemplate;
+        if (!template.IsEmpty)
+        {
+            return template;
+        }
+
+        var templates = Get<DataTemplates>();
+        if (templates.TryResolve(DataTemplateRole.Display, out template))
+        {
+            return template;
+        }
+
+        return default;
+    }
 }
+

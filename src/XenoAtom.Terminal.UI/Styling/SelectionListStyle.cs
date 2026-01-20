@@ -7,7 +7,7 @@ using System.Text;
 namespace XenoAtom.Terminal.UI.Styling;
 
 /// <summary>
-/// Defines rendering and theming options for a <see cref="Controls.SelectionList"/>.
+/// Defines rendering and theming options for a <see cref="Controls.SelectionList{T}"/>.
 /// </summary>
 public sealed record SelectionListStyle : IStyle<SelectionListStyle>
 {

@@ -13,10 +13,10 @@ public sealed class SelectionListTests
     [TestMethod]
     public void SelectionList_Space_Toggles_Checked_Item()
     {
-        var list = new SelectionList { MinHeight = 4, MaxHeight = 4 };
+        var list = new SelectionList<string> { MinHeight = 4, MaxHeight = 4 };
         for (var i = 0; i < 6; i++)
         {
-            list.Items.Add(new SelectionListItem($"Item {i}"));
+            list.AddItem($"Item {i}");
         }
 
         var root = new VStack { list };
@@ -25,18 +25,18 @@ public sealed class SelectionListTests
 
         driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
         driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Space });
-        driver.TickUntil(() => list.Items[1].IsChecked);
+        driver.TickUntil(() => list.Checked[1]);
 
-        Assert.IsTrue(list.Items[1].IsChecked);
+        Assert.IsTrue(list.Checked[1]);
     }
 
     [TestMethod]
     public void SelectionList_Scrolling_Keeps_Selected_Row_Visible()
     {
-        var list = new SelectionList { MinHeight = 4, MaxHeight = 4 };
+        var list = new SelectionList<string> { MinHeight = 4, MaxHeight = 4 };
         for (var i = 0; i < 10; i++)
         {
-            list.Items.Add(new SelectionListItem($"Item {i}"));
+            list.AddItem($"Item {i}");
         }
 
         var root = new VStack { list };
@@ -58,4 +58,3 @@ public sealed class SelectionListTests
         Assert.IsFalse(rendered.Contains("Item 0", StringComparison.Ordinal), "After scrolling down, Item 0 should no longer be visible in the viewport.");
     }
 }
-

@@ -19,16 +19,16 @@ var chartValues = new double[80];
 var select = new Select<string>()
     .Items(["First", "Second", "Third", "Fourth"]);
 
-var selectionList = new SelectionList()
+var selectionList = new SelectionList<string>()
     .MinHeight(5).MaxHeight(5);
-selectionList.Items.AddRange(
-    new SelectionListItem("Arrakis", isChecked: true),
-    new SelectionListItem("Caladan"),
-    new SelectionListItem("Chusuk"),
-    new SelectionListItem("Giedi Prime"),
-    new SelectionListItem("Ginaz"),
-    new SelectionListItem("Grumman"),
-    new SelectionListItem("Kaitain"));
+selectionList
+    .AddItem("Arrakis", isChecked: true)
+    .AddItem("Caladan")
+    .AddItem("Chusuk")
+    .AddItem("Giedi Prime")
+    .AddItem("Ginaz")
+    .AddItem("Grumman")
+    .AddItem("Kaitain");
 
 var optionList = new OptionList<OptionListItem>().MinHeight(6).MaxHeight(6);
 optionList.Items.AddRange(
@@ -355,7 +355,7 @@ var rightColumn = new VStack(
                         .HorizontalAlignment(HorizontalAlignment.Stretch))
                 ,
                 new TabPage(
-                    new HStack("Lists", new TextBlock().Text(() => $"(Select={select.SelectedIndex}, Checked={selectionList.Items.Count(i => i.IsChecked)})"))
+                    new HStack("Lists", new TextBlock().Text(() => $"(Select={select.SelectedIndex}, Checked={selectionList.Checked.Count(i => i)})"))
                         .Spacing(1),
                     new VStack(
                             new Group()

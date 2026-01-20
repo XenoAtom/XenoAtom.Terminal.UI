@@ -569,7 +569,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     sb.Append(methodIndent).Append("/// Replaces the contents of <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> and returns the same instance.");
                     sb.Append(methodIndent).AppendLine("/// </summary>");
                     sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
-                    sb.Append(methodIndent).Append("/// <param name=\"").Append(EscapeIdentifier(argName)).AppendLine("\">The items to populate the list with, or <c>null</c> to clear.</param>");
+                    sb.Append(methodIndent).Append("/// <param name=\"").Append(argName).AppendLine("\">The items to populate the list with, or <c>null</c> to clear.</param>");
                     sb.Append(methodIndent).AppendLine("/// <returns>The same instance for chaining.</returns>");
                     sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                     if (canUseGeneric)
@@ -616,7 +616,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     sb.Append(methodIndent).Append("/// Replaces the contents of <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> and returns the same instance.");
                     sb.Append(methodIndent).AppendLine("/// </summary>");
                     sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
-                    sb.Append(methodIndent).Append("/// <param name=\"").Append(EscapeIdentifier(argName)).AppendLine("\">The items to populate the list with.</param>");
+                    sb.Append(methodIndent).Append("/// <param name=\"").Append(argName).AppendLine("\">The items to populate the list with.</param>");
                     sb.Append(methodIndent).AppendLine("/// <returns>The same instance for chaining.</returns>");
                     sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                     if (canUseGeneric)

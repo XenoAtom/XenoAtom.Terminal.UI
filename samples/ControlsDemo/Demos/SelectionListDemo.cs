@@ -13,16 +13,16 @@ public sealed class SelectionListDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
-        var list = new SelectionList();
-        list.Items.Add(new SelectionListItem("Alpha"));
-        list.Items.Add(new SelectionListItem("Beta"));
-        list.Items.Add(new SelectionListItem("Gamma"));
-        list.Items.Add(new SelectionListItem("Delta"));
-        list.Items.Add(new SelectionListItem("Epsilon"));
+        var list = new SelectionList<string>()
+            .AddItem("Alpha")
+            .AddItem("Beta")
+            .AddItem("Gamma")
+            .AddItem("Delta")
+            .AddItem("Epsilon");
 
         var checkedCount = new TextBlock(() =>
         {
-            var count = list.Items.Count(i => i.IsChecked);
+            var count = list.Checked.Count(i => i);
             return $"Checked: {count}";
         });
 
@@ -30,7 +30,7 @@ public sealed class SelectionListDemo : ControlsDemoBase
                 DemoUi.Hint("Use Space/Enter to toggle an item. Use arrows to move."),
                 list,
                 checkedCount,
-                new Button("Log").Click(() => context.Log($"Checked: {list.Items.Count(i => i.IsChecked)}")))
+                new Button("Log").Click(() => context.Log($"Checked: {list.Checked.Count(i => i)}")))
             .Spacing(1);
     }
 }
