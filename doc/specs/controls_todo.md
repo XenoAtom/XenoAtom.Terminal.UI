@@ -176,14 +176,21 @@ Beyond the following specs, if there are improvements or features that would mak
 * **Shared size groups**: optional "SharedGroup" to equalize column widths across multiple grids (great for property panels)
 * **Hit-testing / focus order**: cell-aware navigation ordering (row-major default; configurable)
 
-## MaskedInput (password/secret)
+## Password mode (TextBox)
 
-* **API**: `Text` (string), `MaskGlyph` (Rune/string), `RevealMode` (Never/WhileFocused/Always), `Placeholder` (Visual?)
-* **Editing**: TextBox-like movement/selection/clipboard; respects max length; optional allowed character filter
-* **Reveal**: optional "momentary reveal" (e.g. last typed char) as a style/behavior flag
-* **Clipboard**: configurable copy/cut behavior (copy real text vs disabled)
-* **Interaction**: focus, mouse click to set caret, keyboard editing, paste
-* **Theming**: same surface/border/caret/selection model as TextBox
+* **API**: `IsPassword` (bool), `PasswordRevealMode` (Never/WhileFocused/Always), `ClipboardMode` (Disabled/CopyText)
+* **Masking**: glyph configured by `TextBoxStyle.PasswordMaskGlyph`
+* **Clipboard**: can disable copy/cut shortcuts (Ctrl+C / Ctrl+X) while still allowing paste
+* **Reveal ideas**: optional "momentary reveal" (e.g. last typed char) as a behavior flag
+
+## MaskedInput (template)
+
+* **API**: `Template` (string), `Value` (string), `IsValid` (bool)
+* **Template tokens**: per-position constraints (digits/letters/hex/etc.), plus case conversion directives (`>`, `<`, `!`)
+* **Placeholder**: always-visible mask; default placeholder from `MaskedInputStyle.DefaultPlaceholderChar` and override via template suffix `;c`
+* **Interaction**: focus, click to place caret, typing fills slots, backspace/delete clears
+* **Clipboard**: Ctrl+C copies raw value; Ctrl+V pastes and fills next slots (skipping invalid chars)
+* **Theming**: reuses input fill/padding logic from `TextBoxStyle` (via `MaskedInputStyle`)
 
 ## OptionList (fast menu list)
 

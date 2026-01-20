@@ -264,7 +264,11 @@ var rightColumn = new VStack(
                                         .Cell("User:", 0, 0)
                                         .Cell(new TextBox("alex").HorizontalAlignment(HorizontalAlignment.Stretch), 0, 1)
                                         .Cell("Password:", 1, 0)
-                                        .Cell(new MaskedInput().Text("hunter2").RevealMode(MaskedInputRevealMode.WhileFocused).HorizontalAlignment(HorizontalAlignment.Stretch), 1, 1)
+                                        .Cell(new TextBox("hunter2")
+                                                .IsPassword(true)
+                                                .ClipboardMode(TextBoxClipboardMode.Disabled)
+                                                .PasswordRevealMode(PasswordRevealMode.WhileFocused)
+                                                .HorizontalAlignment(HorizontalAlignment.Stretch), 1, 1)
                                         .Cell("Status:", 2, 0)
                                         .Cell(new TextBlock().Text(() => statusState.Value), 2, 1)),
                             new Rule
@@ -327,10 +331,14 @@ var rightColumn = new VStack(
                                 .IsOn(switchState)
                                 .Toggled((_, e) => statusState.Value = $"switch={e.NewValue}")
                                 .HorizontalAlignment(HorizontalAlignment.Left),
-                            new MaskedInput()
-                                .Text("hunter2")
+                            new TextBox("hunter2")
+                                .IsPassword(true)
+                                .ClipboardMode(TextBoxClipboardMode.Disabled)
+                                .PasswordRevealMode(PasswordRevealMode.WhileFocused)
                                 .Placeholder("Password")
-                                .RevealMode(MaskedInputRevealMode.WhileFocused)
+                                .HorizontalAlignment(HorizontalAlignment.Stretch),
+                            new MaskedInput("9999-9999-9999-9999;_")
+                                .Value("4242424242424242")
                                 .HorizontalAlignment(HorizontalAlignment.Stretch),
                             new Group()
                                 .TopLeftText("Accordion")

@@ -3,7 +3,7 @@ using XenoAtom.Terminal.UI.Controls;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
-[Demo("MaskedInput", "Input", Description = "Password-style input with optional reveal.")]
+[Demo("MaskedInput", "Input", Description = "Template-based masked input (credit cards, dates, identifiers…).")]
 public sealed class MaskedInputDemo : ControlsDemoBase
 {
     public MaskedInputDemo() : base(DemoSource.Get())
@@ -12,18 +12,21 @@ public sealed class MaskedInputDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
-        var reveal = new State<bool>(false);
+        _ = context;
 
-        var input = new MaskedInput()
-            .Placeholder("Secret…")
-            .RevealMode(() => reveal.Value ? MaskedInputRevealMode.WhileFocused : MaskedInputRevealMode.Never);
+        var card = new MaskedInput("9999-9999-9999-9999;_");
+        var upper = new MaskedInput(">AAAA;_");
 
         return new VStack(
-                DemoUi.Hint("MaskedInput hides characters; reveal can be enabled while focused."),
-                input,
-                new CheckBox("Reveal while focused").IsChecked(reveal),
-                new Button("Log length").Click(() => context.Log($"Length: {(input.Text ?? string.Empty).Length}")))
+                DemoUi.Hint("MaskedInput renders a template mask and restricts input per position."),
+                DemoUi.Title("Credit card"),
+                card,
+                new TextBlock(() => $"Value: {card.Value}"),
+                new TextBlock(() => $"Compact: {card.CompactValue}  (valid: {card.IsValid})"),
+                new Rule(),
+                DemoUi.Title("Case conversion (>)"),
+                upper,
+                new TextBlock(() => $"Value: {upper.Value}  (valid: {upper.IsValid})"))
             .Spacing(1);
     }
 }
-

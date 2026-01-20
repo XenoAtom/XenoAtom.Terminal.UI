@@ -11,7 +11,7 @@ using XenoAtom.Terminal.UI.Text;
 namespace XenoAtom.Terminal.UI.Controls;
 
 /// <summary>
-/// Base class for text editor controls (TextBox, TextArea, MaskedInput).
+/// Base class for text editor controls (TextBox, TextArea).
 /// </summary>
 /// <remarks>
 /// This type wires together:

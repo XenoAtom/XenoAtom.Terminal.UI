@@ -19,6 +19,19 @@ new TextBox().Text(name);
 - selection (keyboard and mouse)
 - clipboard shortcuts (Ctrl+C/X/V) when enabled by the control mode
 
+## Password mode
+
+`TextBox` can mask its text to behave like a password input:
+
+```csharp
+new TextBox("hunter2")
+    .IsPassword(true)
+    .ClipboardMode(TextBoxClipboardMode.Disabled)
+    .PasswordRevealMode(PasswordRevealMode.WhileFocused);
+```
+
+Masking uses the glyph configured by `TextBoxStyle.PasswordMaskGlyph`.
+
 ## Overflow indicators
 
 When content is wider than the viewport, the TextBox can show start/end indicators configured by `TextBoxStyle` (arrows/ellipsis variants).
@@ -30,4 +43,3 @@ TextBox uses background on the text region while keeping borders visually compat
 See also:
 
 - `doc/text-editing.md`
-

@@ -47,6 +47,14 @@ public record TextBoxStyle : IStyle<TextBoxStyle>
     public Thickness Padding { get; init; } = new(1, 0, 1, 0);
 
     /// <summary>
+    /// Gets the glyph used to mask characters when <see cref="Controls.TextBox.IsPassword"/> is enabled.
+    /// </summary>
+    /// <remarks>
+    /// The glyph must be single-cell wide; if it is not, the control falls back to <c>*</c>.
+    /// </remarks>
+    public Rune PasswordMaskGlyph { get; init; } = new('\u2022');
+
+    /// <summary>
     /// Gets the optional overflow indicator displayed on the left when content is horizontally scrolled.
     /// </summary>
     public Rune? OverflowIndicatorLeft { get; init; } = new('←');

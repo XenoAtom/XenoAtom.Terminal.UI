@@ -3,13 +3,52 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
+using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.Controls;
+
+/// <summary>
+/// Specifies when a password text box should reveal its text instead of masking it.
+/// </summary>
+public enum PasswordRevealMode
+{
+    /// <summary>
+    /// Never reveal the text (always masked).
+    /// </summary>
+    Never = 0,
+
+    /// <summary>
+    /// Reveal the text while the control is focused.
+    /// </summary>
+    WhileFocused = 1,
+
+    /// <summary>
+    /// Always reveal the text.
+    /// </summary>
+    Always = 2,
+}
+
+/// <summary>
+/// Specifies clipboard behavior for a <see cref="TextBox"/>.
+/// </summary>
+public enum TextBoxClipboardMode
+{
+    /// <summary>
+    /// Disable copy/cut operations via keyboard shortcuts (Ctrl+C / Ctrl+X).
+    /// </summary>
+    Disabled = 0,
+
+    /// <summary>
+    /// Allow copy/cut operations.
+    /// </summary>
+    CopyText = 1,
+}
 
 /// <summary>
 /// Represents a single-line text editor with optional overflow indicators.
@@ -26,6 +65,9 @@ public partial class TextBox : TextEditorBase
     public TextBox()
     {
         this.HorizontalAlignment(HorizontalAlignment.Stretch);
+        this.IsPassword(false);
+        this.PasswordRevealMode(PasswordRevealMode.Never);
+        this.ClipboardMode(TextBoxClipboardMode.CopyText);
         TextDocument = new DynamicTextDocument(
             getter: () => Text ?? string.Empty,
             setter: value => Text = value);
@@ -45,6 +87,24 @@ public partial class TextBox : TextEditorBase
     /// </summary>
     [Bindable]
     public partial string? Text { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the text should be masked (password mode).
+    /// </summary>
+    [Bindable]
+    public partial bool IsPassword { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reveal behavior used when <see cref="IsPassword"/> is enabled.
+    /// </summary>
+    [Bindable]
+    public partial PasswordRevealMode PasswordRevealMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the clipboard behavior for this text box.
+    /// </summary>
+    [Bindable]
+    public partial TextBoxClipboardMode ClipboardMode { get; set; }
 
     /// <summary>
     /// Gets or sets the horizontal alignment of the text within the editor.
@@ -69,6 +129,45 @@ public partial class TextBox : TextEditorBase
     /// </summary>
     /// <returns>The current <see cref="TextBoxStyle"/>.</returns>
     protected virtual TextBoxStyle GetTextBoxStyle() => Get<TextBoxStyle>();
+
+    /// <inheritdoc />
+    protected override void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, Style style, bool isPlaceholder)
+    {
+        if (isPlaceholder || !IsPassword || ShouldRevealPassword())
+        {
+            base.WriteTextSegment(buffer, x, y, text, style, isPlaceholder);
+            return;
+        }
+
+        var textBoxStyle = GetTextBoxStyle();
+        var rune = textBoxStyle.PasswordMaskGlyph;
+        var runeWidth = TerminalTextUtility.GetRuneWidth(rune);
+        if (runeWidth != 1)
+        {
+            rune = new Rune('*');
+        }
+
+        var totalCells = TerminalTextUtility.GetWidth(text);
+        for (var i = 0; i < totalCells; i++)
+        {
+            buffer.SetCell(x + i, y, rune, style);
+        }
+    }
+
+    /// <inheritdoc />
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (ClipboardMode != TextBoxClipboardMode.CopyText && (e.Modifiers & TerminalModifiers.Ctrl) != 0)
+        {
+            if (e.Char is TerminalChar.CtrlC or TerminalChar.CtrlX)
+            {
+                e.Handled = true;
+                return;
+            }
+        }
+
+        base.OnKeyDown(e);
+    }
 
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
@@ -167,6 +266,13 @@ public partial class TextBox : TextEditorBase
                 }
             }
         }
+    }
+
+    private bool ShouldRevealPassword()
+    {
+        var mode = PasswordRevealMode;
+        return mode == PasswordRevealMode.Always
+               || (mode == PasswordRevealMode.WhileFocused && ReferenceEquals(App?.FocusedElement, this));
     }
 
     private void UpdateEditorLayoutForOverflowIndicators(Rectangle baseRect, TextBoxStyle style)
