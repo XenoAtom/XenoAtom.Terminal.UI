@@ -566,3 +566,30 @@ The V1 primitives above are chosen to unlock:
    - Reflect over a model and use `Editor` templates for `Binding<T>` properties.
 4. **Source generator helpers**:
    - Generate strongly typed `.ItemTemplate(...)` extensions and diagnostics for missing templates.
+
+---
+
+## 11. Namespaces and code organization (proposal)
+
+Data templating types SHOULD live in a dedicated namespace to keep the public API discoverable:
+
+- `XenoAtom.Terminal.UI.Templating`
+  - `DataTemplateRole`
+  - `DataTemplateContext`
+  - `DataTemplateItemState`
+  - `DataTemplate<T>` and related delegates
+  - `DataTemplates` and `DataTemplatesBuilder`
+- `XenoAtom.Terminal.UI.Controls`
+  - `DataPresenter<T>` (as a visual/control)
+  - Control-specific `ItemTemplate` properties (e.g. `Select<T>.ItemTemplate`)
+
+File layout (suggested):
+
+- `src/XenoAtom.Terminal.UI/Templating/`
+  - `DataTemplateRole.cs`
+  - `DataTemplateContext.cs`
+  - `DataTemplate{T}.cs`
+  - `DataTemplates.cs`
+  - `DataTemplatesBuilder.cs`
+- `src/XenoAtom.Terminal.UI/Controls/`
+  - `DataPresenter{T}.cs`
