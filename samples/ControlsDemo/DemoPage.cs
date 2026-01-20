@@ -20,6 +20,7 @@ internal static class DemoPage
             Log = log.Add,
             NavigateToDemoId = context.NavigateToDemoId,
             Runtime = context.Runtime,
+            Theme = context.Theme
         });
 
         var link = BuildSourceLink(meta, log);

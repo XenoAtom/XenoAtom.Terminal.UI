@@ -18,26 +18,12 @@ public sealed class WelcomeDemo : ControlsDemoBase
     {
         _ = context;
 
-        var banner = new TextFiglet("Welcome")
-            .Font(FigletPredefinedFont.Slant)
-            .LetterSpacing(1)
-            .TextAlignment(TextAlignment.Left);
-
-        var title = new Markup("[bold]XenoAtom.Terminal.UI[/]") { Wrap = false };
-
-        var hints = new Markup("""
-            [bold]Tips[/]
-            - Use the [bold]Search[/] box to filter controls and demos.
-            - Use [bold]Tab[/] to move focus and [bold]Mouse wheel[/] to scroll lists.
-            - Use [bold]Ctrl+Q[/] to quit.
-            """)
-        { Wrap = true };
+        var theme = context.Theme.Value;
 
         var spectrum = new Canvas()
             .MinHeight(6)
             .Painter(ctx =>
             {
-                var theme = DemoThemes.Dark;
                 var baseStyle = theme.BaseTextStyle();
                 var width = Math.Max(1, ctx.Bounds.Width);
                 var height = Math.Max(1, ctx.Bounds.Height);
@@ -63,18 +49,31 @@ public sealed class WelcomeDemo : ControlsDemoBase
                 }
             }).HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch);
 
+        var banner = new TextFiglet("Welcome")
+            .Font(FigletPredefinedFont.Slant)
+            .LetterSpacing(1)
+            .TextAlignment(TextAlignment.Left);
+            //.Style(new TextFigletStyle { TextStyle = Style.None.WithForeground(theme.Scheme?.Black ?? Colors.Black) | TextStyle.Bold });
+
+        var title = new Markup("[bold]XenoAtom.Terminal.UI[/]") { Wrap = false };
+
+        var hints = new Markup("""
+            [bold]Tips[/]
+            - Use the [bold]Search[/] box to filter controls and demos.
+            - Use [bold]Tab[/] to move focus and [bold]Mouse wheel[/] to scroll lists.
+            - Use [bold]Ctrl+Q[/] to quit.
+            """)
+        { Wrap = true };
+
+
         var schemePanel = BuildSchemePanel(DemoThemes.Dark);
 
         return new VStack(
-                banner,
+                new ZStack(spectrum, banner),
                 title,
                 new Rule(),
                 hints,
                 new Rule(),
-                new Group()
-                    .TopLeftText("Spectrum")
-                    .Padding(1)
-                    .Content(spectrum).VerticalAlignment(VerticalAlignment.Stretch).HorizontalAlignment(HorizontalAlignment.Stretch),
                 schemePanel)
             .Spacing(1);
     }
@@ -84,7 +83,7 @@ public sealed class WelcomeDemo : ControlsDemoBase
         var scheme = theme.Scheme;
         if (scheme is null)
         {
-            return (Visual)"[dim]No ColorScheme available for this theme.[/]";
+            return "[dim]No ColorScheme available for this theme.[/]";
         }
 
         var table = new Table()
@@ -126,29 +125,7 @@ public sealed class WelcomeDemo : ControlsDemoBase
     private static Visual CreateSwatch(Theme theme, Color? color)
     {
         const int width = 10;
-        const int height = 1;
-
-        return new Canvas()
-            .MinWidth(width)
-            .MaxWidth(width)
-            .MinHeight(height)
-            .MaxHeight(height)
-            .Painter(ctx =>
-            {
-                var style = theme.BaseTextStyle();
-                if (color is { } c && c.Kind != ColorKind.Default)
-                {
-                    style = style.WithBackground(c);
-                }
-
-                for (var y = 0; y < ctx.Bounds.Height; y++)
-                {
-                    for (var x = 0; x < ctx.Bounds.Width; x++)
-                    {
-                        ctx.SetPixel(x, y, new Rune(' '), style);
-                    }
-                }
-            });
+        return new TextBlock(new string(' ', width)).Style(TextBlockStyle.Default with { Background = color });
     }
 
     private static string FormatColor(Color? color)

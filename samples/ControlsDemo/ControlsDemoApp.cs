@@ -49,6 +49,8 @@ internal static class ControlsDemoApp
                 sidebarList)
             .Spacing(1);
 
+        var themeState = new State<Theme>(Theme.Default);
+
         var page = new ComputedVisual(() =>
         {
             var id = selectedDemoId.Value;
@@ -64,13 +66,13 @@ internal static class ControlsDemoApp
 
             return demo is null
                 ? new Center().Content("No demos found.")
-                : DemoPage.Build(demo, new DemoContext { NavigateToDemoId = NavigateToId, Log = _ => { }, Runtime = runtime });
+                : DemoPage.Build(demo, new DemoContext { NavigateToDemoId = NavigateToId, Log = _ => { }, Runtime = runtime, Theme = themeState });
         }).Pad(1).HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch);
 
         return new DockLayout()
             .Content(new HSplitter(sidebar, page).Ratio(0.16))
             .Bottom(new Footer().Left("Tab focus | Mouse | Resize").Right("F12 debug | Ctrl+Q quit"))
-            .Style(DemoThemes.Dark);
+            .Update(x => x.Set(Theme.Key, themeState.Value));
     }
 
     private static Visual BuildSidebarList(IReadOnlyList<IControlsDemo> demos, State<string> selectedDemoId, string query)
