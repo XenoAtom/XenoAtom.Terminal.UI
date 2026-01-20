@@ -19,6 +19,7 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
     private readonly List<T> _items;
     private readonly Action<T>? _onAdding;
     private readonly Action<T>? _onRemoving;
+    private int _version;
     private bool _touchedDuringInitialization;
     private bool _hasStaticMutations;
     private bool _hasDynamicMutations;
@@ -43,6 +44,18 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
     internal object Owner => _owner;
 
     internal BindingAccessor Accessor => _accessor;
+
+    /// <summary>
+    /// Gets a monotonically increasing version number that changes whenever the list is mutated.
+    /// </summary>
+    public int Version
+    {
+        get
+        {
+            BindingManager.Current.RegisterRead(_owner, _accessor);
+            return _version;
+        }
+    }
 
     /// <inheritdoc />
     public int Count
@@ -280,11 +293,20 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
         }
 
         _items.Clear();
+        unchecked
+        {
+            _version++;
+        }
         _touchedDuringInitialization = false;
     }
 
     private void TrackMutation()
     {
+        unchecked
+        {
+            _version++;
+        }
+
         var isDynamicContext = ReferenceEquals(BindingManager.Current.DynamicUpdateOwner, _owner);
 
         if (isDynamicContext)

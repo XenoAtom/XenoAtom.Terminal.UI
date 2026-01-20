@@ -22,7 +22,7 @@ public sealed partial class ListBox<T> : Visual
     private int _scrollOffset;
     private readonly BindableList<Visual> _itemVisuals;
     private readonly List<Visual> _recyclePool = new();
-    private int _lastItemsCount = -1;
+    private int _lastItemsVersion = -1;
     private DataTemplate<T> _lastResolvedTemplate;
 
     /// <summary>
@@ -282,12 +282,12 @@ public sealed partial class ListBox<T> : Visual
         var items = Items;
         var template = ResolveItemTemplate();
 
-        if (items.Count == _lastItemsCount && template.Equals(_lastResolvedTemplate))
+        if (items.Version == _lastItemsVersion && template.Equals(_lastResolvedTemplate))
         {
             return;
         }
 
-        _lastItemsCount = items.Count;
+        _lastItemsVersion = items.Version;
         _lastResolvedTemplate = template;
 
         _itemVisuals.Clear();
