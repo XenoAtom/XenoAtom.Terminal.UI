@@ -45,8 +45,8 @@ using XenoAtom.Terminal.UI.Templating;
 var name = new State<string?>("Alex");
 
 new VStack(
-        new DataPresenter<State<string?>> { Value = name, Role = DataTemplateRole.Display },
-        new DataPresenter<State<string?>> { Value = name, Role = DataTemplateRole.Editor })
+        new DataPresenter<string?>().Value(name).Role(DataTemplateRole.Display),
+        new DataPresenter<string?>().Value(name).Role(DataTemplateRole.Editor))
     .Spacing(1);
 ```
 
@@ -69,8 +69,8 @@ using XenoAtom.Terminal.UI.Templating;
 new Select<string>()
     .Items(["First", "Second", "Third"])
     .ItemTemplate(new DataTemplate<string>(
-        (string value, in DataTemplateContext _) =>
-            new HStack(Symbols.ArrowRight, new TextBlock(value)).Spacing(1)));
+        (Binding<string> binding, in DataTemplateContext _) =>
+            new HStack(Symbols.ArrowRight, new TextBlock(() => binding.GetValue())).Spacing(1)));
 ```
 
 ## Notes on performance and recycling
@@ -82,4 +82,3 @@ Controls may reuse visuals when items scroll in/out of view:
 
 For best results, templates should prefer updating bindable properties on an existing subtree rather than capturing item values in
 dynamic updates that are registered once and never cleared.
-

@@ -753,10 +753,10 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     if (!p.IsDelegateProperty)
                     {
                         sb.Append(methodIndent).AppendLine("/// <summary>");
-                        sb.Append(methodIndent).Append("/// Registers a dynamic update that assigns <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> from a computed value and returns the same instance.");
+                        sb.Append(methodIndent).Append("/// Configures <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> from a computed value and returns the same instance.");
                         sb.Append(methodIndent).AppendLine("/// </summary>");
                         sb.Append(methodIndent).AppendLine("/// <remarks>");
-                        sb.Append(methodIndent).AppendLine("/// The delegate is evaluated during the dynamic update pass; accessed bindings are tracked so only affected visuals are refreshed.");
+                        sb.Append(methodIndent).AppendLine("/// The delegate is evaluated as needed; accessed bindings are tracked so only affected visuals are refreshed.");
                         sb.Append(methodIndent).AppendLine("/// </remarks>");
                         sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
                         sb.Append(methodIndent).Append("/// <param name=\"").Append(EscapeIdentifier(argName)).AppendLine("\">A delegate that computes the current value.</param>");
@@ -766,7 +766,19 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                         {
                             sb.Append(methodIndent).Append("public static T ").Append(EscapeIdentifier(propName)).Append("<T>(this T obj, global::System.Func<").Append(argType).Append("> ").Append(EscapeIdentifier(argName))
                                 .Append(") where T : ").Append(receiverType).AppendLine();
-                            sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
+                            if (p.GenerateImplementation && !p.IsVisualChildProperty)
+                            {
+                                sb.Append(methodIndent).AppendLine("{");
+                                sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
+                                sb.Append(methodIndent).Append("    var state = new global::XenoAtom.Terminal.UI.FuncState<").Append(argType).Append(">(").Append(EscapeIdentifier(argName)).AppendLine(");");
+                                sb.Append(methodIndent).Append("    obj.Bind").Append(propName).AppendLine("(state.@ref.Value);");
+                                sb.Append(methodIndent).AppendLine("    return obj;");
+                                sb.Append(methodIndent).AppendLine("}");
+                            }
+                            else
+                            {
+                                sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
+                            }
                         }
                         else
                         {
@@ -785,7 +797,19 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                             {
                                 sb.AppendLine();
                             }
-                            sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
+                            if (p.GenerateImplementation && !p.IsVisualChildProperty)
+                            {
+                                sb.Append(methodIndent).AppendLine("{");
+                                sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
+                                sb.Append(methodIndent).Append("    var state = new global::XenoAtom.Terminal.UI.FuncState<").Append(argType).Append(">(").Append(EscapeIdentifier(argName)).AppendLine(");");
+                                sb.Append(methodIndent).Append("    obj.Bind").Append(propName).AppendLine("(state.@ref.Value);");
+                                sb.Append(methodIndent).AppendLine("    return obj;");
+                                sb.Append(methodIndent).AppendLine("}");
+                            }
+                            else
+                            {
+                                sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
+                            }
                         }
 
                         sb.AppendLine();
@@ -1121,7 +1145,17 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
 
                 sb.Append(baseIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                 sb.Append(baseIndent).Append("global::XenoAtom.Terminal.UI.Binding<").Append(p.PropertyTypeFullyQualified).Append("> IBindings.").Append(p.PropertyName)
-                    .Append(" => new global::XenoAtom.Terminal.UI.Binding<").Append(p.PropertyTypeFullyQualified).Append(">(this, ").Append(p.AccessorClassName).AppendLine(".Instance);");
+                    .Append(" => ");
+
+                if (p.GenerateImplementation)
+                {
+                    var boundFieldNameForBindings = p.BackingFieldName + "Bound";
+                    sb.Append(boundFieldNameForBindings).Append(".IsEmpty ? new global::XenoAtom.Terminal.UI.Binding<").Append(p.PropertyTypeFullyQualified).Append(">(this, ").Append(p.AccessorClassName).Append(".Instance) : ").Append(boundFieldNameForBindings).AppendLine(";");
+                }
+                else
+                {
+                    sb.Append("new global::XenoAtom.Terminal.UI.Binding<").Append(p.PropertyTypeFullyQualified).Append(">(this, ").Append(p.AccessorClassName).AppendLine(".Instance);");
+                }
                 sb.AppendLine();
 
                 sb.Append(baseIndent).Append("private sealed class ").Append(p.AccessorClassName).Append(" : global::XenoAtom.Terminal.UI.BindingAccessor<").Append(p.PropertyTypeFullyQualified).AppendLine(">");

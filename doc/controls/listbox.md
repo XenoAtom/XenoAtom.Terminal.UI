@@ -24,10 +24,9 @@ using XenoAtom.Terminal.UI.Templating;
 new ListBox<string>()
     .Items(["First", "Second"])
     .ItemTemplate(new DataTemplate<string>(
-        (string value, in DataTemplateContext _) => new HStack(Symbols.ArrowRight, new TextBlock(value)).Spacing(1)));
+        (Binding<string> binding, in DataTemplateContext _) => new HStack(Symbols.ArrowRight, new TextBlock(() => binding.GetValue())).Spacing(1)));
 ```
 
 ## Styling
 
 `ListBoxStyle` controls selection/hover colors and spacing.
-

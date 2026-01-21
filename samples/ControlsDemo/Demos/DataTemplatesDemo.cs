@@ -13,7 +13,7 @@ public sealed class DataTemplatesDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
-        var name = new State<string?>("Alex");
+        var name = new State<string>("Alex");
         var port = new State<int>(8080);
 
         var presenter = new VStack(
@@ -21,23 +21,23 @@ public sealed class DataTemplatesDemo : ControlsDemoBase
                 DemoUi.Hint("Use Role=Display for viewing and Role=Editor for editing when the value is a bindable source (State<T>/Binding<T>)."),
                 new HStack(
                         "Name:",
-                        new DataPresenter<State<string?>> { Value = name, Role = DataTemplateRole.Editor }.HorizontalAlignment(HorizontalAlignment.Stretch))
+                        new DataPresenter<string>().Value(name).Role(DataTemplateRole.Editor).HorizontalAlignment(HorizontalAlignment.Stretch))
                     .Spacing(1)
                     .HorizontalAlignment(HorizontalAlignment.Stretch),
                 new HStack(
                         "Port:",
-                        new DataPresenter<State<int>> { Value = port, Role = DataTemplateRole.Editor }.HorizontalAlignment(HorizontalAlignment.Stretch))
+                        new DataPresenter<int>().Value(port).Role(DataTemplateRole.Editor).HorizontalAlignment(HorizontalAlignment.Stretch))
                     .Spacing(1)
                     .HorizontalAlignment(HorizontalAlignment.Stretch),
                 new HStack(
                         "Summary:",
-                        new DataPresenter<State<string?>> { Value = name, Role = DataTemplateRole.Display })
+                        new DataPresenter<string>().Value(name).Role(DataTemplateRole.Display))
                     .Spacing(1))
             .Spacing(1)
             .HorizontalAlignment(HorizontalAlignment.Stretch);
 
         var calloutTemplates = DataTemplates.Default.Derive(builder => builder
-            .Register<string>(DataTemplateRole.Display, new((string value, in DataTemplateContext _) => new TextBlock($"> {value}")))
+            .Register<string>(DataTemplateRole.Display, new((Binding<string> binding, in DataTemplateContext _) => new TextBlock(() => $"> {binding.GetValue()}")))
         );
 
         var listDefaults = new VStack(
@@ -60,4 +60,3 @@ public sealed class DataTemplatesDemo : ControlsDemoBase
             .Spacing(2);
     }
 }
-

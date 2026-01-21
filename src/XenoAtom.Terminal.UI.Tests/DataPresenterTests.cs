@@ -12,60 +12,89 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class DataPresenterTests
 {
     [TestMethod]
-    public void DataPresenter_Uses_Default_Display_Template_For_State_String()
+    public void DataPresenter_Uses_Default_Display_Template_When_Value_Is_Bound()
     {
         var name = new State<string>("Alex");
 
-        var presenter = new DataPresenter<State<string>>
-        {
-            Role = DataTemplateRole.Display,
-            Value = name
-        };
+        var presenter = new DataPresenter<string>()
+            .Value(name)
+            .Role(DataTemplateRole.Display);
 
         using var driver = new TerminalAppTestDriver(new VStack { presenter }, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
         driver.Tick();
 
-        Assert.IsInstanceOfType<TextBlock>(presenter.Content);
-        Assert.AreEqual("Alex", ((TextBlock)presenter.Content!).Text);
+        Assert.AreEqual(1, presenter.GetChildrenCount());
+        Assert.IsInstanceOfType<TextBlock>(presenter.GetChildUnsafe(0));
+
+        var textBlock = (TextBlock)presenter.GetChildUnsafe(0);
+        Assert.AreEqual("Alex", textBlock.Text);
+
+        name.Value = "Bob";
+        driver.Tick();
+
+        Assert.AreEqual("Bob", textBlock.Text);
     }
 
     [TestMethod]
-    public void DataPresenter_Uses_Default_Editor_Template_For_State_String()
+    public void DataPresenter_Uses_Default_Editor_Template_When_Value_Is_Bound()
     {
         var name = new State<string?>("Alex");
 
-        var presenter = new DataPresenter<State<string?>>
-        {
-            Role = DataTemplateRole.Editor,
-            Value = name
-        };
+        var presenter = new DataPresenter<string?>()
+            .Value(name)
+            .Role(DataTemplateRole.Editor);
 
         using var driver = new TerminalAppTestDriver(new VStack { presenter }, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
         driver.Tick();
 
-        Assert.IsInstanceOfType<TextBox>(presenter.Content);
-        var textBox = (TextBox)presenter.Content!;
+        Assert.AreEqual(1, presenter.GetChildrenCount());
+        Assert.IsInstanceOfType<TextBox>(presenter.GetChildUnsafe(0));
+
+        var textBox = (TextBox)presenter.GetChildUnsafe(0);
         textBox.Text = "Bob";
+
         Assert.AreEqual("Bob", name.Value);
     }
 
     [TestMethod]
-    public void DataPresenter_Uses_Default_Editor_Template_For_State_Int32()
+    public void DataPresenter_Uses_Default_Editor_Template_For_Int32()
     {
         var value = new State<int>(10);
 
-        var presenter = new DataPresenter<State<int>>
-        {
-            Role = DataTemplateRole.Editor,
-            Value = value
-        };
+        var presenter = new DataPresenter<int>()
+            .Value(value)
+            .Role(DataTemplateRole.Editor);
 
         using var driver = new TerminalAppTestDriver(new VStack { presenter }, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
         driver.Tick();
 
-        Assert.IsInstanceOfType<NumberBox<int>>(presenter.Content);
-        var numberBox = (NumberBox<int>)presenter.Content!;
+        Assert.AreEqual(1, presenter.GetChildrenCount());
+        Assert.IsInstanceOfType<NumberBox<int>>(presenter.GetChildUnsafe(0));
+
+        var numberBox = (NumberBox<int>)presenter.GetChildUnsafe(0);
         numberBox.Value = 42;
+
         Assert.AreEqual(42, value.Value);
     }
+
+    [TestMethod]
+    public void DataPresenter_Uses_Environment_Overrides()
+    {
+        var name = new State<string>("Alex");
+
+        var templates = DataTemplates.Default.Derive(builder => builder
+            .Register<string>(DataTemplateRole.Display, new((Binding<string> binding, in DataTemplateContext _) => new TextBlock(() => $"> {binding.GetValue()}")))
+        );
+
+        var presenter = new DataPresenter<string>()
+            .Value(name)
+            .Role(DataTemplateRole.Display);
+
+        using var driver = new TerminalAppTestDriver(new VStack { presenter }.Style(templates), TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        var textBlock = (TextBlock)presenter.GetChildUnsafe(0);
+        Assert.AreEqual("> Alex", textBlock.Text);
+    }
 }
+

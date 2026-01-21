@@ -110,9 +110,9 @@ The core template representation is a **struct** so template slots are not thems
 and keeps bindable properties simple). Internally it can still wrap delegates.
 
 ```csharp
-public delegate Visual DataTemplateFactory<in T>(T value, in DataTemplateContext context);
+public delegate Visual DataTemplateFactory<T>(Binding<T> binding, in DataTemplateContext context);
 
-public delegate bool DataTemplateUpdater<in T>(Visual visual, T value, in DataTemplateContext context);
+public delegate bool DataTemplateUpdater<T>(Visual visual, Binding<T> binding, in DataTemplateContext context);
 
 public delegate void DataTemplateReleaser(Visual visual);
 
@@ -127,8 +127,8 @@ public readonly record struct DataTemplate<T>(
 
 Semantics:
 
-- `Create` builds a new `Visual` for a value.
-- `TryUpdate` enables recycling: update an existing visual instance to represent a different value.
+- `Create` builds a new `Visual` for a binding.
+- `TryUpdate` enables recycling: update an existing visual instance to represent a different binding.
   - Returns `true` if the visual was updated successfully.
   - Returns `false` if the visual cannot be reused for that value (caller should fall back to `Create`).
 - `Release` is called when a visual is removed from a recycling pool permanently (optional hook to dispose resources).
@@ -167,13 +167,6 @@ public sealed record DataTemplates : IStyle<DataTemplates>
 
     // Resolve prefers the current layer and falls back to Parent.
     public bool TryResolve<T>(DataTemplateRole role, out DataTemplate<T> template);
-
-    // Runtime-type resolution for heterogeneous values (reference types).
-    public bool TryResolveForValue(
-        object? value,
-        DataTemplateRole role,
-        out DataTemplate<object?> template,
-        out Type resolvedDataType);
 }
 ```
 
@@ -198,8 +191,8 @@ Example:
 
 ```csharp
 var templates = DataTemplates.Default.Derive(builder => builder
-    .Register<string>(DataTemplateRole.Display, new((s, _) => new TextBlock(s)))
-    .Register<DateTime>(DataTemplateRole.Display, new((dt, _) => new TextBlock(dt.ToString("u"))))
+    .Register<string>(DataTemplateRole.Display, new((Binding<string> b, in DataTemplateContext _) => new TextBlock(() => b.GetValue())))
+    .Register<DateTime>(DataTemplateRole.Display, new((Binding<DateTime> b, in DataTemplateContext _) => new TextBlock(() => b.GetValue().ToString("u"))))
 );
 
 root.Set(templates);
@@ -240,11 +233,6 @@ Notes:
 Resolution MUST support:
 
 - Exact match for `TryResolve<T>(...)` (strongly typed; allocation-free).
-- For runtime-type resolution (`TryResolveForValue(...)`):
-  - Exact match
-  - Base type match
-  - Interface match
-  - Deterministic "most specific wins" ordering (interfaces)
 
 ### 3.5 `DataPresenter<T>`
 
@@ -253,7 +241,7 @@ Resolution MUST support:
 It is generic to avoid boxing for value types and to keep binding paths type-safe.
 
 ```csharp
-public sealed class DataPresenter<T> : ContentVisual
+public sealed class DataPresenter<T> : Visual
 {
     [Bindable] public partial T Value { get; set; }
     [Bindable] public partial DataTemplateRole Role { get; set; }
@@ -267,12 +255,12 @@ Behavior:
 
 1. If `Template` is non-empty: use it.
 2. Else resolve via `Get<DataTemplates>()`.
-3. The produced visual becomes `Content` (via the `ContentVisual` pattern).
+3. The produced visual becomes the presenter's single child visual.
 
 Caching guidance:
 
-- The presenter SHOULD keep the produced `Content` until the *effective template* changes.
-- For reference types, the presenter MAY also use runtime-type resolution so derived types can use their own templates.
+- The presenter SHOULD keep the produced child visual until the *effective template* changes.
+- The presenter MUST NOT rebuild solely because the value changes: templates receive a `Binding<T>` and should react via bindings.
 
 ### 3.6 Template properties on item controls
 
@@ -294,29 +282,26 @@ Rules:
 
 ## 4. Resolution rules (normative)
 
-When a control needs a visual for a value `value` and role `role`:
+When a control needs a visual for a bindable value `binding` and role `role`:
 
 1. If the control has a non-empty per-instance template slot for that operation:
    - Use it.
 2. Otherwise resolve via environment:
    - `var templates = Get<DataTemplates>();`
 3. If no template is found, fall back:
-   - If `value` is `Visual`, use it directly (identity).
-   - Else render `new TextBlock(value?.ToString())`.
+   - If the current value is `Visual`, use it directly (identity).
+   - Else render `new TextBlock(() => binding.GetValue()?.ToString())`.
 
 ### 4.1 Typed vs runtime resolution
 
 To keep `DataPresenter<T>` allocation-free:
 
-- For value types: typed resolution (`TryResolve<T>`) is sufficient.
-- For reference types: controls MAY use runtime resolution (`TryResolveForValue`) to support derived-type templates.
+- Typed resolution (`TryResolve<T>`) is sufficient.
 
 Notes:
 
 - `TryResolve<T>` is intentionally **exact-match only**. Because `DataTemplate<T>` is strongly typed, a template registered for
   a base type or interface cannot be returned as `DataTemplate<T>` without introducing allocations (adapters).
-- The recommended way to support base/interface matching is to use `TryResolveForValue(...)` (or to register templates for the
-  exact types used by a control).
 
 If a consumer wants heterogeneous items without boxing, they should use a reference-type base/interface for `T`.
 
@@ -399,25 +384,25 @@ The default theme should ship with templates that make “drop data in UI” pro
 
 Recommended defaults for `DataTemplateRole.Display`:
 
-- `string` -> `new TextBlock(value)`
-- `bool` -> `new TextBlock(value ? "True" : "False")`
-- Numeric primitives -> `new TextBlock(value.ToString())`
+- `string` -> `new TextBlock(() => binding.GetValue())`
+- `string?` -> `new TextBlock(() => binding.GetValue() ?? string.Empty)`
+- `bool` -> `new TextBlock(() => binding.GetValue() ? "True" : "False")`
+- Numeric primitives -> `new TextBlock(() => binding.GetValue().ToString())`
 - `Visual` -> identity (already a visual)
 
 ### 7.2 Reactive display defaults
 
-Recommended defaults:
+Recommended guidance:
 
-- `State<string?>` / `Binding<string?>` -> `new TextBlock(() => state.Value ?? string.Empty)`
-- `State<int>` / `Binding<int>` -> `new TextBlock(() => state.Value.ToString())`
+- Prefer building visuals that read `binding.GetValue()` inside a lambda so changes are tracked automatically.
 
 ### 7.3 Editor defaults (reactive + bidirectional)
 
-Editor templates should generally exist for bindable sources:
+Editor templates should generally exist for types that have built-in editor controls:
 
-- `State<string?>` / `Binding<string?>` -> `new TextBox().Text(binding)`
-- `State<int>` / `Binding<int>` -> `new NumberBox<int>().Value(binding)`
-- `State<bool>` / `Binding<bool>` -> `new Switch().IsOn(binding)` (or `CheckBox`)
+- `string?` -> `new TextBox().Text(binding)`
+- `int` -> `new NumberBox<int>().Value(binding)`
+- `bool` -> `new Switch().IsOn(binding)` (or `CheckBox`)
 
 This enables a future property grid/forms experience without adding a new framework layer.
 
@@ -431,17 +416,21 @@ This enables a future property grid/forms experience without adding a new framew
 new Select<MyModel>()
     .Items(models)
     .ItemTemplate(new DataTemplate<MyModel>(
-        (m, ctx) => new HStack(
-            new TextBlock(m.Name),
-            new TextBlock(() => $"#{m.Id}").Style(TextBlockStyle.Muted)
-        ).Spacing(2)));
+        (Binding<MyModel> binding, in DataTemplateContext _) =>
+        {
+            var m = binding.GetValue();
+            return new HStack(
+                    new TextBlock(m.Name),
+                    new TextBlock(() => $"#{m.Id}").Style(TextBlockStyle.Muted))
+                .Spacing(2);
+        }));
 ```
 
 ### 8.2 Subtree-scoped defaults (overlay chaining)
 
 ```csharp
 var templates = new DataTemplates { Parent = DataTemplates.Default }
-    .Register<string>(DataTemplateRole.Display, new((s, _) => new TextBlock($"> {s}")));
+    .Register<string>(DataTemplateRole.Display, new((Binding<string> b, in DataTemplateContext _) => new TextBlock(() => $"> {b.GetValue()}")));
 
 new VStack(
     new Select<string>().Items(["One", "Two", "Three"]),
@@ -456,8 +445,8 @@ new VStack(
 var name = new State<string?>("Alex");
 
 new VStack(
-    new DataPresenter<State<string?>> { Value = name, Role = DataTemplateRole.Display },
-    new DataPresenter<State<string?>> { Value = name, Role = DataTemplateRole.Editor }
+    new DataPresenter<string?>().Value(name).Role(DataTemplateRole.Display),
+    new DataPresenter<string?>().Value(name).Role(DataTemplateRole.Editor)
 ).Spacing(1);
 ```
 

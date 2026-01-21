@@ -7,23 +7,23 @@ using XenoAtom.Terminal.UI;
 namespace XenoAtom.Terminal.UI.Templating;
 
 /// <summary>
-/// A factory that creates a visual subtree for a data value.
+/// A factory that creates a visual subtree for a bindable data value.
 /// </summary>
 /// <typeparam name="T">The data type.</typeparam>
-/// <param name="value">The data value to represent.</param>
+/// <param name="binding">A binding that provides read/write access to the value.</param>
 /// <param name="context">Additional templating context.</param>
-/// <returns>A visual representing <paramref name="value"/>.</returns>
-public delegate Visual DataTemplateFactory<in T>(T value, in DataTemplateContext context);
+/// <returns>A visual representing the current value.</returns>
+public delegate Visual DataTemplateFactory<T>(Binding<T> binding, in DataTemplateContext context);
 
 /// <summary>
-/// Attempts to update an existing visual instance to represent a different data value.
+/// Attempts to update an existing visual instance to represent the current value of the provided binding.
 /// </summary>
 /// <typeparam name="T">The data type.</typeparam>
 /// <param name="visual">The visual to update.</param>
-/// <param name="value">The new value to represent.</param>
+/// <param name="binding">A binding that provides read/write access to the value.</param>
 /// <param name="context">Additional templating context.</param>
 /// <returns><see langword="true"/> if the visual was updated and can be reused; otherwise <see langword="false"/>.</returns>
-public delegate bool DataTemplateUpdater<in T>(Visual visual, T value, in DataTemplateContext context);
+public delegate bool DataTemplateUpdater<T>(Visual visual, Binding<T> binding, in DataTemplateContext context);
 
 /// <summary>
 /// Releases a visual that will no longer be reused by a recycling pool.

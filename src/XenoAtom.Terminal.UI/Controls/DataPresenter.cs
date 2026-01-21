@@ -2,6 +2,8 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Templating;
 
 namespace XenoAtom.Terminal.UI.Controls;
@@ -10,8 +12,14 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// Presents a single data value using a resolved data template.
 /// </summary>
 /// <typeparam name="T">The type of data presented by this control.</typeparam>
-public sealed partial class DataPresenter<T> : ContentVisual
+public sealed partial class DataPresenter<T> : Visual
 {
+    private Visual? _content;
+    private DataTemplateRole _lastRole;
+    private DataTemplate<T> _lastResolvedTemplate;
+    private bool _hasLastTemplate;
+    private bool _isVisualContent;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DataPresenter{T}"/> class.
     /// </summary>
@@ -20,7 +28,9 @@ public sealed partial class DataPresenter<T> : ContentVisual
         Focusable = false;
         Role = DataTemplateRole.Display;
         Value = default!;
-        this.Update(_ => UpdateContent());
+        _lastRole = Role;
+        _lastResolvedTemplate = default;
+        _hasLastTemplate = false;
     }
 
     /// <summary>
@@ -44,62 +54,92 @@ public sealed partial class DataPresenter<T> : ContentVisual
     [Bindable]
     public partial DataTemplate<T> Template { get; set; }
 
-    private void UpdateContent()
+    /// <inheritdoc />
+    protected override int ChildrenCount => EnsureContent() is null ? 0 : 1;
+
+    /// <inheritdoc />
+    protected override Visual GetChild(int index)
+    {
+        var content = EnsureContent();
+        return index == 0 && content is not null ? content : throw new ArgumentOutOfRangeException(nameof(index));
+    }
+
+    /// <inheritdoc />
+    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+    {
+        var content = EnsureContent();
+        return content?.Measure(constraints) ?? SizeHints.Fixed(Size.Zero);
+    }
+
+    /// <inheritdoc />
+    protected override void ArrangeCore(in Rectangle finalRect)
+    {
+        Bounds = finalRect;
+        EnsureContent()?.Arrange(finalRect);
+    }
+    
+    private Visual? EnsureContent()
     {
         var owner = (Visual)this;
         var role = Role;
+        var binding = this.@ref.Value;
+        var value = binding.GetValue();
+
         var ctx = new DataTemplateContext(owner, role, -1, DataTemplateItemState.None);
 
-        var value = Value;
+        // Special-case Visual values: present the visual directly (no templating). This is the common "already a Visual" scenario.
         if (value is Visual visual)
         {
-            Content = visual;
-            return;
+            if (!_isVisualContent || !ReferenceEquals(_content, visual))
+            {
+                if (_content is not null)
+                {
+                    DetachChild(_content);
+                }
+
+                _content = visual;
+                AttachChild(_content);
+                _isVisualContent = true;
+            }
+
+            _hasLastTemplate = false;
+            return _content;
         }
 
-        var content = Content;
+        _isVisualContent = false;
+
         var template = Template;
-
-        DataTemplate<object?> templateUntyped = default;
-        var useUntyped = false;
-
         if (template.IsEmpty)
         {
             var templates = Get<DataTemplates>();
-            if (!templates.TryResolve(role, out template))
-            {
-                // For reference types, attempt runtime-type resolution to support derived-type templates.
-                if (!typeof(T).IsValueType && templates.TryResolveForValue(value, role, out templateUntyped, out _))
-                {
-                    useUntyped = true;
-                }
-            }
+            templates.TryResolve(role, out template);
         }
 
-        if (useUntyped)
+        if (_content is not null && _hasLastTemplate && _lastRole == role && _lastResolvedTemplate.Equals(template))
         {
-            if (content is not null && templateUntyped.TryUpdate is { } updater && updater(content, value, ctx))
-            {
-                return;
-            }
-
-            var create = templateUntyped.Create;
-            Content = create is null ? new TextBlock(value?.ToString() ?? string.Empty) : create(value, ctx);
-            return;
+            return _content;
         }
 
-        if (template.IsEmpty)
+        _lastRole = role;
+        _lastResolvedTemplate = template;
+        _hasLastTemplate = true;
+
+        if (_content is not null)
         {
-            Content = new TextBlock(value?.ToString() ?? string.Empty);
-            return;
+            DetachChild(_content);
+            _content = null;
         }
 
-        if (content is not null && template.TryUpdate is { } typedUpdater && typedUpdater(content, value, ctx))
+        if (template.IsEmpty || template.Create is null)
         {
-            return;
+            _content = new TextBlock(() => (binding.GetValue() as object)?.ToString() ?? string.Empty);
+        }
+        else
+        {
+            _content = template.Create(binding, ctx);
         }
 
-        var typedCreate = template.Create;
-        Content = typedCreate is null ? new TextBlock(value?.ToString() ?? string.Empty) : typedCreate(value, ctx);
+        AttachChild(_content);
+        return _content;
     }
 }

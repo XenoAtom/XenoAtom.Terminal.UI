@@ -42,11 +42,14 @@ public sealed partial class CommandPalette : Visual
 
         _results.ItemIsEnabled = (Func<CommandPaletteItem, bool>)(item => item.IsEnabled);
         _results.ItemSearchText = (Func<CommandPaletteItem, string?>)(item => item.SearchText);
-        _results.ItemTemplate = new DataTemplate<CommandPaletteItem>((CommandPaletteItem item, in DataTemplateContext _) =>
-            new OptionListItem(item.CreateContent(), item.CreateShortcut())
+        _results.ItemTemplate = new DataTemplate<CommandPaletteItem>((Binding<CommandPaletteItem> binding, in DataTemplateContext _) =>
+        {
+            var item = binding.GetValue();
+            return new OptionListItem(item.CreateContent(), item.CreateShortcut())
             {
                 Description = item.CreateDescription(),
-            });
+            };
+        });
 
         _results.ItemActivated((_, e) => InvokeIndex(e.Index));
 

@@ -23,9 +23,8 @@ public sealed partial class Select<T> : ContentVisual
 {
     private Popup? _popup;
     private int _contentIndex = -1;
-    private bool _hasContentValue;
-    private T _contentValue = default!;
     private DataTemplate<T> _lastResolvedTemplate;
+    private readonly State<T> _selectedState;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Select{T}"/> class.
@@ -35,6 +34,7 @@ public sealed partial class Select<T> : ContentVisual
         Focusable = true;
         Items = new BindableList<T>(this, "Select.Items");
         this.SelectedIndex(0);
+        _selectedState = new State<T>(default!);
     }
 
     /// <summary>
@@ -220,15 +220,13 @@ public sealed partial class Select<T> : ContentVisual
         {
             if (Content is not null)
             {
-                Content = null;
-            }
-
-            _contentIndex = -1;
-            _hasContentValue = false;
-            _contentValue = default!;
-            _lastResolvedTemplate = default;
-            return;
+            Content = null;
         }
+
+        _contentIndex = -1;
+        _lastResolvedTemplate = default;
+        return;
+    }
 
         var index = Math.Clamp(SelectedIndex, 0, items.Count - 1);
         if (index != SelectedIndex)
@@ -240,21 +238,28 @@ public sealed partial class Select<T> : ContentVisual
         var value = items[index];
         var template = ResolveItemTemplate();
 
-        if (!forceRebuild &&
-            _contentIndex == index &&
-            _hasContentValue &&
-            EqualityComparer<T>.Default.Equals(_contentValue, value) &&
-            _lastResolvedTemplate.Equals(template) &&
-            Content is not null)
+        _contentIndex = index;
+
+        if (value is Visual asVisual)
+        {
+            Content = asVisual;
+            _lastResolvedTemplate = template;
+            return;
+        }
+
+        _selectedState.Value = value;
+
+        if (!forceRebuild && _lastResolvedTemplate.Equals(template) && Content is not null)
         {
             return;
         }
 
-        _contentIndex = index;
-        _hasContentValue = true;
-        _contentValue = value;
         _lastResolvedTemplate = template;
-        Content = MaterializeValue(value, template, index, DataTemplateItemState.None);
+        var binding = (Binding<T>)_selectedState;
+        var ctx = new DataTemplateContext(this, DataTemplateRole.Display, index, DataTemplateItemState.None);
+        Content = template.IsEmpty || template.Create is null
+            ? new TextBlock(() => (binding.GetValue() as object)?.ToString() ?? string.Empty)
+            : template.Create(binding, ctx);
     }
 
     private void OpenPopup()
@@ -273,11 +278,9 @@ public sealed partial class Select<T> : ContentVisual
         }
 
         var template = ResolveItemTemplate();
-        var list = new ListBox<Visual>();
-        for (var i = 0; i < Items.Count; i++)
-        {
-            list.Items.Add(MaterializeValue(Items[i], template, i, DataTemplateItemState.None));
-        }
+        var list = new ListBox<T>()
+            .Items(Items)
+            .ItemTemplate(template);
         list.SelectedIndex = Math.Clamp(SelectedIndex, 0, Math.Max(0, list.Items.Count - 1));
 
         var style = Get<SelectStyle>();
@@ -343,11 +346,11 @@ public sealed partial class Select<T> : ContentVisual
         _popup = popup;
     }
 
-    private static bool TryFindSelectPopupParent(Visual? visual, [MaybeNullWhen(false)] out ListBox<Visual> lb, [MaybeNullWhen(false)] out Select<T> select)
+    private static bool TryFindSelectPopupParent(Visual? visual, [MaybeNullWhen(false)] out ListBox<T> lb, [MaybeNullWhen(false)] out Select<T> select)
     {
         lb = null;
         select = null;
-        if (visual is not ListBox<Visual> lbInstance)
+        if (visual is not ListBox<T> lbInstance)
         {
             return false;
         }
@@ -377,9 +380,6 @@ public sealed partial class Select<T> : ContentVisual
         _popup.Close();
     }
 
-    private static Visual CreateDefaultItemVisual(T value)
-        => new TextBlock(value is null ? string.Empty : value.ToString() ?? string.Empty);
-
     private DataTemplate<T> ResolveItemTemplate()
     {
         var template = ItemTemplate;
@@ -395,16 +395,5 @@ public sealed partial class Select<T> : ContentVisual
         }
 
         return default;
-    }
-
-    private Visual MaterializeValue(T value, DataTemplate<T> template, int index, DataTemplateItemState state)
-    {
-        if (template.IsEmpty || template.Create is null)
-        {
-            return CreateDefaultItemVisual(value);
-        }
-
-        var ctx = new DataTemplateContext(this, DataTemplateRole.Display, index, state);
-        return template.Create(value, ctx);
     }
 }

@@ -22,6 +22,8 @@ public sealed partial class ListBox<T> : Visual
     private int _scrollOffset;
     private readonly BindableList<Visual> _itemVisuals;
     private readonly List<Visual> _recyclePool = new();
+    private readonly List<State<T>> _itemStates = new();
+    private readonly List<State<T>> _recycleStatePool = new();
     private int _lastItemsVersion = -1;
     private DataTemplate<T> _lastResolvedTemplate;
 
@@ -290,10 +292,17 @@ public sealed partial class ListBox<T> : Visual
         _lastItemsVersion = items.Version;
         _lastResolvedTemplate = template;
 
+        if (_itemStates.Count != 0)
+        {
+            _recycleStatePool.AddRange(_itemStates);
+            _itemStates.Clear();
+        }
+
         _itemVisuals.Clear();
 
         if (items.Count == 0)
         {
+            _recycleStatePool.Clear();
             _recyclePool.Clear();
             return;
         }
@@ -303,15 +312,23 @@ public sealed partial class ListBox<T> : Visual
         for (var i = 0; i < items.Count; i++)
         {
             var value = items[i];
+            var state = _recycleStatePool.Count != 0
+                ? PopLastState()
+                : new State<T>(default!);
+            state.Value = value;
+            _itemStates.Add(state);
+
             if (value is Visual asVisual)
             {
                 _itemVisuals.Add(asVisual);
                 continue;
             }
 
+            var binding = (Binding<T>)state;
+
             if (template.IsEmpty || template.Create is null)
             {
-                _itemVisuals.Add(new TextBlock(value?.ToString() ?? string.Empty));
+                _itemVisuals.Add(new TextBlock(() => (binding.GetValue() as object)?.ToString() ?? string.Empty));
                 continue;
             }
 
@@ -324,7 +341,7 @@ public sealed partial class ListBox<T> : Visual
             }
 
             var ctx = ctxBase with { Index = i };
-            if (reused is not null && template.TryUpdate is { } updater && updater(reused, value, ctx))
+            if (reused is not null && template.TryUpdate is { } updater && updater(reused, binding, ctx))
             {
                 _itemVisuals.Add(reused);
                 continue;
@@ -335,10 +352,19 @@ public sealed partial class ListBox<T> : Visual
                 release(reused);
             }
 
-            _itemVisuals.Add(template.Create(value, ctx));
+            _itemVisuals.Add(template.Create(binding, ctx));
         }
 
         _recyclePool.Clear();
+        _recycleStatePool.Clear();
+    }
+
+    private State<T> PopLastState()
+    {
+        var last = _recycleStatePool.Count - 1;
+        var state = _recycleStatePool[last];
+        _recycleStatePool.RemoveAt(last);
+        return state;
     }
 
     private DataTemplate<T> ResolveItemTemplate()

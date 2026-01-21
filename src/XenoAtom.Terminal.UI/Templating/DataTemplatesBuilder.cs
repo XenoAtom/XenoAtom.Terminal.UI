@@ -21,10 +21,6 @@ public sealed class DataTemplatesBuilder
 
     internal Dictionary<Type, object>? Editor { get; private set; }
 
-    internal Dictionary<Type, object>? DisplayUntyped { get; private set; }
-
-    internal Dictionary<Type, object>? EditorUntyped { get; private set; }
-
     /// <summary>
     /// Registers a template for the specified role and data type.
     /// </summary>
@@ -43,12 +39,10 @@ public sealed class DataTemplatesBuilder
         if (role == DataTemplateRole.Editor)
         {
             (Editor ??= new Dictionary<Type, object>())[type] = template;
-            (EditorUntyped ??= new Dictionary<Type, object>())[type] = DataTemplates.ToUntyped(template);
         }
         else
         {
             (Display ??= new Dictionary<Type, object>())[type] = template;
-            (DisplayUntyped ??= new Dictionary<Type, object>())[type] = DataTemplates.ToUntyped(template);
         }
         return this;
     }
