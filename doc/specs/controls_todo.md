@@ -28,7 +28,7 @@ Following this list, you will find compact specs for high and medium priority co
 | [x] | **Medium** | **Switch (toggle)**                                   | Input                      | Modern toggle UI                     | Nice settings affordance                          |
 | [x] | **Medium** | **Sparkline**                                         | Visualization              | Tiny trends                          | High value / low scope                            |
 | [x] | **Medium** | **Basic charts (bar/line)**                           | Visualization              | Dashboards/telemetry                 | Highly desirable                                  |
-| [ ] | **Medium** | **LogControl (scrolling log viewer)**                 | Status/diagnostics         | Live logs with search + copy         | Common need for apps, progress, and debugging     |
+| [x] | **Medium** | **LogControl (scrolling log viewer)**                 | Status/diagnostics         | Live logs with search + copy         | Common need for apps, progress, and debugging     |
 | [x] | **Medium** | **Links (clickable/open URL)**                        | Interaction/content        | Hyperlinks in terminal               | Terminal support varies                           |
 | [x] | **Medium** | **ContentSwitcher (view routing)**                  | Layout/state               | Swap views without rebuild           | Great for navigation/wizards                      |
 | [ ] | **Low**   | **Toast / Notification**                               | UX feedback                | Non-blocking feedback                | Modern UX; avoids modal spam                      |

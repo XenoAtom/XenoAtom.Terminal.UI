@@ -42,6 +42,16 @@ optionList.ItemActivated((_, e) => statusState.Value = $"option[{e.Index}] activ
 var textArea = new TextArea("Line 1\nLine 2\nLine 3")
     .Placeholder("Type multi-line text here...");
 
+var logControl = new LogControl
+{
+    MaxCapacity = 2000,
+}.WrapText(true);
+for (var i = 0; i < 50; i++)
+{
+    logControl.AppendLine($"Log line {i}");
+}
+logControl.AppendMarkupLine("[dim]Try Ctrl+F, Ctrl+A, Ctrl+C, PageUp/Down[/]");
+
 var tree = new TreeView();
 var treeRoot = new TreeNode("XenoAtom") { Icon = TreeNodeIcons.FolderGlyph, IsExpanded = true };
 treeRoot.Children.Add(new TreeNode("src") { Icon = TreeNodeIcons.FolderGlyph, IsExpanded = true });
@@ -303,8 +313,7 @@ var rightColumn = new VStack(
                             "Logs",
                             new TextBlock().Text(() => $"({(int)(progressState.Value * 100)}%)"))
                         .Spacing(1),
-                    new ScrollViewer(new VStack().Add(Enumerable.Range(0, 12).Select(i => (Visual)new TextBlock($"Log line {i}")).ToArray()))
-                        .HorizontalAlignment(HorizontalAlignment.Stretch))
+                    logControl.HorizontalAlignment(HorizontalAlignment.Stretch))
                 ,
                 new TabPage(
                     "Switcher",

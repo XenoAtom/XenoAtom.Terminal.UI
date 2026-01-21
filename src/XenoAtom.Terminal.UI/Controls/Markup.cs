@@ -10,6 +10,7 @@ using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -20,8 +21,7 @@ public sealed partial class Markup : Visual
 {
     private static readonly Rune Ellipsis = new(0x2026);
 
-    private readonly MarkupCaptureWriter _writer;
-    private readonly AnsiMarkup _markup;
+    private readonly MarkupTextParser _parser;
 
     private string? _cachedMarkup;
     private string _plainText = string.Empty;
@@ -32,8 +32,7 @@ public sealed partial class Markup : Visual
     /// </summary>
     public Markup()
     {
-        _writer = new MarkupCaptureWriter();
-        _markup = new AnsiMarkup(_writer);
+        _parser = new MarkupTextParser();
     }
 
     /// <summary>
@@ -288,11 +287,7 @@ public sealed partial class Markup : Visual
         }
 
         _cachedMarkup = text;
-
-        _writer.Reset();
-        _markup.Write(text);
-
-        _plainText = _writer.GetTextAndRuns(out _runs);
+        _plainText = _parser.Parse(text, out _runs);
     }
 
     private void WriteStyledSpan(CellBuffer buffer, int x, int y, int startIndex, int endIndex)
@@ -596,85 +591,4 @@ public sealed partial class Markup : Visual
         return endExclusive > start;
     }
 
-    private readonly record struct StyledRun(int Start, int Length, Style Style);
-
-    private sealed class MarkupCaptureWriter : IAnsiBasicWriter
-    {
-        private readonly StringBuilder _buffer;
-        private readonly List<StyledRun> _runs;
-        private AnsiStyle _style;
-
-        public MarkupCaptureWriter()
-        {
-            _buffer = new StringBuilder(256);
-            _runs = new List<StyledRun>(16);
-            _style = AnsiStyle.Default;
-            Capabilities = AnsiCapabilities.Default;
-        }
-
-        public AnsiCapabilities Capabilities { get; }
-
-        public void Reset()
-        {
-            _buffer.Clear();
-            _runs.Clear();
-            _style = AnsiStyle.Default;
-        }
-
-        public string GetTextAndRuns(out StyledRun[] runs)
-        {
-            runs = _runs.Count == 0 ? Array.Empty<StyledRun>() : _runs.ToArray();
-            return _buffer.ToString();
-        }
-
-        public void Write(ReadOnlySpan<char> text)
-        {
-            if (text.IsEmpty)
-            {
-                return;
-            }
-
-            var start = _buffer.Length;
-            _buffer.Append(text);
-
-            var runStyle = ConvertStyle(_style);
-            if (_runs.Count > 0)
-            {
-                var last = _runs[_runs.Count - 1];
-                if (last.Style == runStyle && last.Start + last.Length == start)
-                {
-                    _runs[_runs.Count - 1] = last with { Length = last.Length + text.Length };
-                    return;
-                }
-            }
-
-            _runs.Add(new StyledRun(start, text.Length, runStyle));
-        }
-
-        public void StyleTransition(AnsiStyle from, AnsiStyle to)
-        {
-            _style = to.ResolveMissingFrom(from);
-        }
-
-        private static Style ConvertStyle(AnsiStyle style)
-        {
-            var cellStyle = Style.None;
-            if (style.Foreground is { } fg)
-            {
-                cellStyle = cellStyle.WithForeground(fg);
-            }
-
-            if (style.Background is { } bg)
-            {
-                cellStyle = cellStyle.WithBackground(bg);
-            }
-
-            if (style.Decorations != AnsiDecorations.None)
-            {
-                cellStyle = cellStyle.AddTextStyle((TextStyle)((int)style.Decorations));
-            }
-
-            return cellStyle;
-        }
-    }
 }

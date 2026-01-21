@@ -35,6 +35,16 @@ public sealed partial class ScrollViewer : Visual
     private bool _syncingOffsets;
 
     /// <summary>
+    /// Gets the width of the scroll viewer viewport (the visible content area excluding scroll bars).
+    /// </summary>
+    public int ViewportWidth => _contentHost.Bounds.Width;
+
+    /// <summary>
+    /// Gets the height of the scroll viewer viewport (the visible content area excluding scroll bars).
+    /// </summary>
+    public int ViewportHeight => _contentHost.Bounds.Height;
+
+    /// <summary>
     /// Initializes a new instance of the ScrollViewer class with default settings, enabling content scrolling and
     /// displaying scroll bars as needed.
     /// </summary>
@@ -42,9 +52,17 @@ public sealed partial class ScrollViewer : Visual
     /// default. It automatically creates and attaches vertical and horizontal scroll bars, as well as a content host
     /// and scroll corner visual, to support scrolling functionality. After construction, you can add content to the
     /// ScrollViewer and customize its behavior as required.</remarks>
-    public ScrollViewer()
+    public ScrollViewer() : this(focusable: true)
     {
-        Focusable = true;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ScrollViewer"/> class.
+    /// </summary>
+    /// <param name="focusable">Whether the control can receive focus.</param>
+    public ScrollViewer(bool focusable)
+    {
+        Focusable = focusable;
         VerticalAlignment = VerticalAlignment.Stretch;
         HorizontalAlignment = HorizontalAlignment.Stretch;
         this.HorizontalScrollEnabled(true);
@@ -77,10 +95,30 @@ public sealed partial class ScrollViewer : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ScrollViewer"/> with content.
+    /// </summary>
+    /// <param name="content">The content visual.</param>
+    /// <param name="focusable">Whether the control can receive focus.</param>
+    public ScrollViewer(Visual? content, bool focusable) : this(focusable)
+    {
+        Content = content;
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ScrollViewer"/> with dynamic content.
     /// </summary>
     /// <param name="contentFactory">A factory that produces the content visual.</param>
     public ScrollViewer(Func<Visual?> contentFactory) : this()
+    {
+        this.Content(contentFactory);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ScrollViewer"/> with dynamic content.
+    /// </summary>
+    /// <param name="contentFactory">A factory that produces the content visual.</param>
+    /// <param name="focusable">Whether the control can receive focus.</param>
+    public ScrollViewer(Func<Visual?> contentFactory, bool focusable) : this(focusable)
     {
         this.Content(contentFactory);
     }

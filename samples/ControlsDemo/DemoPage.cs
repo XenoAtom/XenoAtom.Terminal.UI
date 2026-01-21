@@ -14,16 +14,31 @@ internal static class DemoPage
 
         var meta = demo.Metadata;
 
-        var log = new DemoLog();
+        var logControl = new LogControl
+        {
+            MaxCapacity = 500,
+        }.WrapText(true);
+
+        void AppendLog(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return;
+            }
+
+            var prefix = $"[dim][{DateTime.Now:HH:mm:ss}] [/]";
+            logControl.AppendMarkupLine(prefix + message);
+        }
+
         var content = demo.Build(new DemoContext
         {
-            Log = log.Add,
+            Log = AppendLog,
             NavigateToDemoId = context.NavigateToDemoId,
             Runtime = context.Runtime,
             Theme = context.Theme
         });
 
-        var link = BuildSourceLink(meta, log);
+        var link = BuildSourceLink(meta);
         var header = new Header()
             .Left(meta.Name)
             .Right(link);
@@ -34,7 +49,7 @@ internal static class DemoPage
         var demoContent = new ScrollViewer(content)
             .HorizontalScrollEnabled(false);
 
-        var logPanel = BuildLogPanel(log);
+        var logPanel = BuildLogPanel(logControl);
 
         return new DockLayout()
             .Top(new VStack(header, new Rule()).Spacing(0))
@@ -42,69 +57,21 @@ internal static class DemoPage
             .Bottom(logPanel);
     }
 
-    private static Visual BuildLogPanel(DemoLog log)
+    private static Visual BuildLogPanel(LogControl logControl)
     {
-        var logLines = new ComputedVisual(() =>
-        {
-            _ = log.Version.Value;
-
-            var lines = log.Lines;
-            if (lines.Count == 0)
-            {
-                return (Visual)"[dim]Log is empty.[/]";
-            }
-
-            var stack = new VStack().Spacing(0);
-            var start = Math.Max(0, lines.Count - 4);
-            for (var i = start; i < lines.Count; i++)
-            {
-                stack.Add(lines[i]);
-            }
-
-            return stack;
-        });
-
-        // Always visible, but small: show up to the last 4 lines.
+        // Always visible, but small: log entries are scrollable, searchable, and selectable.
         return new VStack(
             new Rule(),
-            logLines.MaxHeight(4)).Spacing(0);
+            logControl.MaxHeight(8)).Spacing(0);
     }
 
-    private static Visual BuildSourceLink(DemoMetadata meta, DemoLog log)
+    private static Visual BuildSourceLink(DemoMetadata meta)
     {
         if (GitHubLinks.TryGetSourceUri(meta.SourcePath, out var sourceUri))
         {
             return new Link(sourceUri.ToString(), "Source");
         }
 
-        _ = log;
         return new Markup("[dim]Source unavailable[/]");
-    }
-
-    private sealed class DemoLog
-    {
-        private readonly List<string> _lines = new();
-
-        public State<int> Version { get; } = new(0);
-
-        public int Count => _lines.Count;
-
-        public IReadOnlyList<string> Lines => _lines;
-
-        public void Add(string message)
-        {
-            if (string.IsNullOrWhiteSpace(message))
-            {
-                return;
-            }
-
-            var text = $"[{DateTime.Now:HH:mm:ss}] {message}";
-            _lines.Add(text);
-            if (_lines.Count > 200)
-            {
-                _lines.RemoveAt(0);
-            }
-            Version.Value++;
-        }
     }
 }
