@@ -45,8 +45,8 @@ using XenoAtom.Terminal.UI.Templating;
 var name = new State<string?>("Alex");
 
 new VStack(
-        new DataPresenter<string?>().Value(name).Role(DataTemplateRole.Display),
-        new DataPresenter<string?>().Value(name).Role(DataTemplateRole.Editor))
+        name.PresentAs(DataTemplateRole.Display),
+        name.PresentAs(DataTemplateRole.Editor))
     .Spacing(1);
 ```
 

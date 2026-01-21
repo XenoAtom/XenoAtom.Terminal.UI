@@ -21,17 +21,17 @@ public sealed class DataTemplatesDemo : ControlsDemoBase
                 DemoUi.Hint("Use Role=Display for viewing and Role=Editor for editing when the value is a bindable source (State<T>/Binding<T>)."),
                 new HStack(
                         "Name:",
-                        new DataPresenter<string>().Value(name).Role(DataTemplateRole.Editor).HorizontalAlignment(HorizontalAlignment.Stretch))
+                        name.PresentAs(DataTemplateRole.Editor).HorizontalAlignment(HorizontalAlignment.Stretch))
                     .Spacing(1)
                     .HorizontalAlignment(HorizontalAlignment.Stretch),
                 new HStack(
                         "Port:",
-                        new DataPresenter<int>().Value(port).Role(DataTemplateRole.Editor).HorizontalAlignment(HorizontalAlignment.Stretch))
+                        port.PresentAs(DataTemplateRole.Editor).HorizontalAlignment(HorizontalAlignment.Stretch))
                     .Spacing(1)
                     .HorizontalAlignment(HorizontalAlignment.Stretch),
                 new HStack(
                         "Summary:",
-                        new DataPresenter<string>().Value(name).Role(DataTemplateRole.Display))
+                        name.PresentAs(DataTemplateRole.Display))
                     .Spacing(1))
             .Spacing(1)
             .HorizontalAlignment(HorizontalAlignment.Stretch);

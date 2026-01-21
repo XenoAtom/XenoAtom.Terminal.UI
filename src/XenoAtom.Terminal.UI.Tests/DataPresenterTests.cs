@@ -16,9 +16,7 @@ public sealed class DataPresenterTests
     {
         var name = new State<string>("Alex");
 
-        var presenter = new DataPresenter<string>()
-            .Value(name)
-            .Role(DataTemplateRole.Display);
+        var presenter = name.PresentAs(DataTemplateRole.Display);
 
         using var driver = new TerminalAppTestDriver(new VStack { presenter }, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
         driver.Tick();
@@ -40,9 +38,7 @@ public sealed class DataPresenterTests
     {
         var name = new State<string?>("Alex");
 
-        var presenter = new DataPresenter<string?>()
-            .Value(name)
-            .Role(DataTemplateRole.Editor);
+        var presenter = name.PresentAs(DataTemplateRole.Editor);
 
         using var driver = new TerminalAppTestDriver(new VStack { presenter }, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
         driver.Tick();
@@ -61,9 +57,7 @@ public sealed class DataPresenterTests
     {
         var value = new State<int>(10);
 
-        var presenter = new DataPresenter<int>()
-            .Value(value)
-            .Role(DataTemplateRole.Editor);
+        var presenter = value.PresentAs(DataTemplateRole.Editor);
 
         using var driver = new TerminalAppTestDriver(new VStack { presenter }, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
         driver.Tick();
@@ -86,9 +80,7 @@ public sealed class DataPresenterTests
             .Register<string>(DataTemplateRole.Display, new((Binding<string> binding, in DataTemplateContext _) => new TextBlock(() => $"> {binding.GetValue()}")))
         );
 
-        var presenter = new DataPresenter<string>()
-            .Value(name)
-            .Role(DataTemplateRole.Display);
+        var presenter = name.PresentAs(DataTemplateRole.Display);
 
         using var driver = new TerminalAppTestDriver(new VStack { presenter }.Style(templates), TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
         driver.Tick();
