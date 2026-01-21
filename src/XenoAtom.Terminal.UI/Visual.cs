@@ -881,6 +881,8 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             {
                 _dynamicUpdates[i](this);
             }
+
+            OnDynamicUpdated();
         }
         finally
         {
@@ -891,6 +893,13 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         {
             App.UpdateDependencies(this, TerminalApp.DependencyKind.DynamicUpdate, _dynamicUpdateDeps!);
         }
+    }
+
+    /// <summary>
+    /// Invoked when the dynamic state of the object has been updated.
+    /// </summary>
+    protected virtual void OnDynamicUpdated()
+    {
     }
 
     private static bool ReplaceDependencies(ref HashSet<Binding>? target, IReadOnlyCollection<Binding> dependencies)
