@@ -82,7 +82,7 @@ public sealed partial class DataPresenter<T> : Visual
     {
         var owner = (Visual)this;
         var role = Role;
-        var binding = this.@ref.Value;
+        var binding = this.Bind.Value;
         var value = binding.GetValue();
 
         var ctx = new DataTemplateContext(owner, role, -1, DataTemplateItemState.None);

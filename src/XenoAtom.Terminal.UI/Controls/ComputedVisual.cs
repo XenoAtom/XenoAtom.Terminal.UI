@@ -46,15 +46,15 @@ public sealed partial class ComputedVisual : Visual
         if (value is null) return;
 
         // We make sure that all visual properties are bound to the child.
-        this.BindHorizontalAlignment(value.@ref.HorizontalAlignment);
-        this.BindVerticalAlignment(value.@ref.VerticalAlignment);
-        this.BindMinWidth(value.@ref.MinWidth);
-        this.BindMinHeight(value.@ref.MinHeight);
-        this.BindMaxWidth(value.@ref.MaxWidth);
-        this.BindMaxHeight(value.@ref.MaxHeight);
-        this.BindMargin(value.@ref.Margin);
-        this.BindIsVisible(value.@ref.IsVisible);
-        this.BindIsEnabled(value.@ref.IsEnabled);
+        this.BindHorizontalAlignment(value.Bind.HorizontalAlignment);
+        this.BindVerticalAlignment(value.Bind.VerticalAlignment);
+        this.BindMinWidth(value.Bind.MinWidth);
+        this.BindMinHeight(value.Bind.MinHeight);
+        this.BindMaxWidth(value.Bind.MaxWidth);
+        this.BindMaxHeight(value.Bind.MaxHeight);
+        this.BindMargin(value.Bind.Margin);
+        this.BindIsVisible(value.Bind.IsVisible);
+        this.BindIsEnabled(value.Bind.IsEnabled);
     }
 
     /// <inheritdoc />

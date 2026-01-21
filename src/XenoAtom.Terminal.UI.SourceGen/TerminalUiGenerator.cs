@@ -547,6 +547,34 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             var canUseGeneric = containingType.TypeKind == TypeKind.Class && !containingType.IsSealed && containingType.TypeParameters.Length == 0;
             var needsTypeParameters = containingType.TypeParameters.Length > 0;
 
+            if (properties.Any(static p => p.IncludeInBindings))
+            {
+                sb.Append(methodIndent).AppendLine("/// <summary>");
+                sb.Append(methodIndent).AppendLine("/// Gets a typed view over this instance bindable properties as <see cref=\"global::XenoAtom.Terminal.UI.Binding{T}\"/> values.");
+                sb.Append(methodIndent).AppendLine("/// </summary>");
+
+                if (needsTypeParameters)
+                {
+                    sb.Append(methodIndent).Append("extension");
+                    AppendTypeParameters(sb, containingType);
+                    sb.Append('(').Append(receiverType).Append(" obj)");
+                    AppendTypeParameterConstraints(sb, containingType, methodIndent);
+                }
+                else
+                {
+                    sb.Append(methodIndent).Append("extension(").Append(receiverType).AppendLine(" obj)");
+                }
+
+                sb.Append(methodIndent).AppendLine("{");
+                sb.Append(methodIndent).AppendLine("    /// <summary>");
+                sb.Append(methodIndent).AppendLine("    /// Gets access to bindable properties of this instance.");
+                sb.Append(methodIndent).AppendLine("    /// </summary>");
+                sb.Append(methodIndent).AppendLine("    [global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
+                sb.Append(methodIndent).Append("    public ").Append(receiverType).Append(".IBindings Bind => (").Append(receiverType).AppendLine(".IBindings)obj;");
+                sb.Append(methodIndent).AppendLine("}");
+                sb.AppendLine();
+            }
+
             foreach (var p in properties)
             {
                 var propName = p.PropertyName;
@@ -771,7 +799,8 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                                 sb.Append(methodIndent).AppendLine("{");
                                 sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
                                 sb.Append(methodIndent).Append("    var state = new global::XenoAtom.Terminal.UI.FuncState<").Append(argType).Append(">(").Append(EscapeIdentifier(argName)).AppendLine(");");
-                                sb.Append(methodIndent).Append("    obj.Bind").Append(propName).AppendLine("(state.@ref.Value);");
+                                sb.Append(methodIndent).Append("    obj.Bind").Append(propName).Append("(((")
+                                    .Append("global::XenoAtom.Terminal.UI.FuncState<").Append(argType).Append(">.IBindings)state).Value").AppendLine(");");
                                 sb.Append(methodIndent).AppendLine("    return obj;");
                                 sb.Append(methodIndent).AppendLine("}");
                             }
@@ -802,7 +831,8 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                                 sb.Append(methodIndent).AppendLine("{");
                                 sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
                                 sb.Append(methodIndent).Append("    var state = new global::XenoAtom.Terminal.UI.FuncState<").Append(argType).Append(">(").Append(EscapeIdentifier(argName)).AppendLine(");");
-                                sb.Append(methodIndent).Append("    obj.Bind").Append(propName).AppendLine("(state.@ref.Value);");
+                                sb.Append(methodIndent).Append("    obj.Bind").Append(propName).Append("(((")
+                                    .Append("global::XenoAtom.Terminal.UI.FuncState<").Append(argType).Append(">.IBindings)state).Value").AppendLine(");");
                                 sb.Append(methodIndent).AppendLine("    return obj;");
                                 sb.Append(methodIndent).AppendLine("}");
                             }
@@ -952,14 +982,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
 
             var baseBindings = FindBaseBindings(containingType, typesWithBindings);
 
-            // @ref property
-            sb.Append(baseIndent).AppendLine("/// <summary>");
-            sb.Append(baseIndent).AppendLine("/// Gets a typed view over this instance bindable properties as <see cref=\"global::XenoAtom.Terminal.UI.Binding{T}\"/> values.");
-            sb.Append(baseIndent).AppendLine("/// </summary>");
-            sb.Append(baseIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
-            sb.Append(baseIndent).Append(string.IsNullOrEmpty(baseBindings) ? "public IBindings @ref => this;" : "public new IBindings @ref => this;").AppendLine();
-            sb.AppendLine();
-
+            // Bind property is provided as a C# 14 extension member in the generated fluent extensions.
             // Backing fields
             foreach (var p in properties)
             {

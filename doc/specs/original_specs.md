@@ -136,9 +136,9 @@ partial class MyComponent : MyComponent.IBindings
         set => BindingManager.Current.SetValue(ref _isActive, value, __IsActive__BindingAccessor);
     }
 
-    // Allow to access bindings via interface this.@ref.IsActive
+    // Allow to access bindings via interface this.Bind.IsActive
     [global::System.CodeDom.Compiler.GeneratedCode("XenoAtom.Terminal.UI.SourceGen", "1.0.0")]
-    public  IBindings @ref => this;
+    // Access to bindings is provided via a C# extension member (this.Bind)
 
     [global::System.CodeDom.Compiler.GeneratedCode("XenoAtom.Terminal.UI.SourceGen", "1.0.0")]
     Binding<bool> IBindings.IsActive => new Binding<bool>(this, new Binding);

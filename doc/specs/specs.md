@@ -327,7 +327,7 @@ partial class MyComponent : MyComponent.IBindings
         set => BindingManager.Current.SetValue(ref _isActive, value, __IsActive__Accessor.Instance);
     }
 
-    public IBindings @ref => this;
+    // Access to bindings is provided via a C# extension member (this.Bind).
 
     Binding<bool> IBindings.IsActive => new Binding<bool>(this, __IsActive__Accessor.Instance);
 
@@ -349,7 +349,7 @@ partial class MyComponent : MyComponent.IBindings
 Notes:
 
 - `Binding<T>` is a lightweight struct used to reference a bindable property without allocations.
-- The generated `IBindings` interface exposes binding handles (e.g. `this.@ref.IsActive`) without reflection.
+- The generated `IBindings` interface exposes binding handles (e.g. `this.Bind.IsActive`) without reflection.
 - `BindingAccessor<T>` is a generated, cached descriptor for the property (name + getter/setter delegates).
 - Bindable objects are UI-thread affine:
   - They inherit from a `BindableObject` base (name TBD) which is a `DispatcherObject`, or they implement `IDispatcherObject`.
