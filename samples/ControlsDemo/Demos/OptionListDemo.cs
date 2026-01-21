@@ -3,7 +3,7 @@ using XenoAtom.Terminal.UI.Controls;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
-[Demo("OptionList", "Navigation", Description = "List items with activation, shortcuts, and disabled entries.")]
+[Demo("OptionList", "Input", Description = "List items with activation, shortcuts, and disabled entries.")]
 public sealed class OptionListDemo : ControlsDemoBase
 {
     public OptionListDemo() : base(DemoSource.Get())

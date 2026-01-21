@@ -4,7 +4,7 @@ using XenoAtom.Terminal.UI.Controls;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
-[Demo("SelectionList", "Navigation", Description = "Multi-select list widget (Space toggles).")]
+[Demo("SelectionList", "Input", Description = "Multi-select list widget (Space toggles).")]
 public sealed class SelectionListDemo : ControlsDemoBase
 {
     public SelectionListDemo() : base(DemoSource.Get())

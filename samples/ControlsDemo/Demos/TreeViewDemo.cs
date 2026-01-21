@@ -4,7 +4,7 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
-[Demo("TreeView", "Navigation", Description = "Hierarchical navigation with expand/collapse.")]
+[Demo("TreeView", "Input", Description = "Hierarchical navigation with expand/collapse.")]
 public sealed class TreeViewDemo : ControlsDemoBase
 {
     public TreeViewDemo() : base(DemoSource.Get())

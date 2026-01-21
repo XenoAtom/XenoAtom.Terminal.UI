@@ -3,7 +3,7 @@ using XenoAtom.Terminal.UI.Controls;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
-[Demo("TabControl", "Navigation", Description = "Tabs with Visual headers and dynamic header content.")]
+[Demo("TabControl", "Layout", Description = "Tabs with Visual headers and dynamic header content.")]
 public sealed class TabControlDemo : ControlsDemoBase
 {
     public TabControlDemo() : base(DemoSource.Get())

@@ -3,7 +3,7 @@ using XenoAtom.Terminal.UI.Controls;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
-[Demo("ListBox", "Navigation", Description = "Simple single selection list.")]
+[Demo("ListBox", "Input", Description = "Simple single selection list.")]
 public sealed class ListBoxDemo : ControlsDemoBase
 {
     public ListBoxDemo() : base(DemoSource.Get())
