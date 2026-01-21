@@ -28,6 +28,7 @@ Following this list, you will find compact specs for high and medium priority co
 | [x] | **Medium** | **Switch (toggle)**                                   | Input                      | Modern toggle UI                     | Nice settings affordance                          |
 | [x] | **Medium** | **Sparkline**                                         | Visualization              | Tiny trends                          | High value / low scope                            |
 | [x] | **Medium** | **Basic charts (bar/line)**                           | Visualization              | Dashboards/telemetry                 | Highly desirable                                  |
+| [ ] | **Medium** | **LogControl (scrolling log viewer)**                 | Status/diagnostics         | Live logs with search + copy         | Common need for apps, progress, and debugging     |
 | [x] | **Medium** | **Links (clickable/open URL)**                        | Interaction/content        | Hyperlinks in terminal               | Terminal support varies                           |
 | [x] | **Medium** | **ContentSwitcher (view routing)**                  | Layout/state               | Swap views without rebuild           | Great for navigation/wizards                      |
 | [ ] | **Low**   | **Toast / Notification**                               | UX feedback                | Non-blocking feedback                | Modern UX; avoids modal spam                      |
@@ -218,6 +219,75 @@ Beyond the following specs, if there are improvements or features that would mak
 * **Rendering**: style-driven track/thumb glyphs (and optional On/Off labels); width measured from glyphs + content
 * **States**: normal/hover/focused/disabled styling, including distinct pressed visual
 * **Events**: `Toggled` (and/or `IsOn` bindable)
+
+## LogControl (scrolling log viewer)
+
+* **Goal**: a high-performance scrolling log viewer that behaves like “tail -f”, supports appending at high frequency, and still allows selection/copy and search.
+* **Core API**
+  * `AppendLine(string message)`
+  * `AppendMarkupLine(string markup)`
+  * `AppendMarkupLine(ref AnsiMarkupInterpolatedStringHandler handler)`
+  * `Clear()`
+  * `Search(string searchText)`
+* **Capacity**
+  * `MaxCapacity` (int, optional): limits number of retained entries; when exceeded, oldest entries are removed.
+  * Optional future extension: “max total characters” or “max bytes” (more predictable memory cap).
+* **Auto-scroll / follow mode**
+  * Default: “follow tail” enabled; appending scrolls to bottom.
+  * User scroll/selection temporarily disables follow mode; re-enabled by End key / explicit command (future: a small “Follow” toggle).
+* **Wrapping**
+  * `WrapText` (bool): controls whether long lines wrap; affects measurement and vertical extent.
+* **Selectable/copyable**
+  * Supports keyboard/mouse selection and copy.
+  * Copy operation exports plain text (markup stripped); selected ranges can span multiple entries.
+* **Keyboard + mouse navigation**
+  * Mouse wheel scroll; trackpad deltas mapped to line scroll.
+  * Arrow keys, PageUp/PageDown, Home/End scroll or move caret/selection depending on selection state.
+  * Optional: Ctrl+F focuses search box (if present) or starts search mode.
+* **Markup support**
+  * Supports ANSI markup for display formatting (bold/italic/colors).
+  * For selection/search, keep a plain-text representation per entry (used for hit-testing, copying, and match computation).
+  * Search highlighting applies on top of markup (overlay highlight style), without mutating original markup.
+* **Built-in search (required for v1)**
+  * **Shortcut**: Ctrl+F opens the search UI (Esc closes it). Search UI is part of the control (not external).
+  * **UI**: a small popup overlay anchored to the log viewer (top-right recommended) showing:
+    * Search input box
+    * Match count (e.g. `12/57` for current match / total matches, or `0 matches`)
+    * Next/Previous controls (buttons and/or key gestures)
+    * Toggles/options: Case sensitive, Whole word, Regex
+  * **API**:
+    * `Search(string)` sets the current query, computes matches, and highlights them.
+    * `SearchText` (string?) bindable is recommended so apps can drive/search externally if needed.
+    * `SearchOptions` (flags) includes CaseSensitive / WholeWord / Regex.
+    * `GoToNextMatch()` / `GoToPreviousMatch()` scrolls to the match and sets the active match index.
+  * **Key gestures** (suggested defaults):
+    * Ctrl+F: open search (focus search box)
+    * Enter / F3: next match
+    * Shift+Enter / Shift+F3: previous match
+    * Esc: close search
+  * **Behavior**:
+    * Searching highlights all matches; “active match” is highlighted more strongly.
+    * Navigating matches scrolls to reveal the match and may temporarily disable follow-tail.
+    * Regex errors should be shown inline in the search UI (e.g. “invalid regex”) and matches treated as 0.
+* **Rendering and performance**
+  * Virtualizes entries (only materialize visuals for visible viewport + small overscan).
+  * Reuse/pool visuals and parsed markup runs where possible.
+  * Avoid per-append full rebuild; append should be O(1) for data + amortized minimal invalidation.
+* **Integration**
+  * Prefer composition over custom rendering where possible:
+    * A `ScrollViewer` hosting a virtualized stack of entry visuals (likely a specialized internal list).
+  * The log viewer itself owns scrolling even without explicit ScrollViewer wrapping (it should be usable standalone).
+* **Optional future features**
+  * Severity levels (info/warn/error) with per-entry styles.
+  * Timestamps and/or source/category columns (structured log entries).
+  * Filtering by text/severity.
+  * “Pause” mode to stop auto-append rendering while still buffering entries.
+  * Export to file / copy-with-styles (rich text) if terminal supports it.
+* **Styling**
+  * The main log viewport style should mirror `TextAreaStyle` (padding, input fill, focused/hovered states, selection styling), except that placeholder concepts are not relevant.
+  * Search UI should have its own style (derived from popup/dialog conventions) and expose:
+    * Highlight styles for matches (match/all-matches/active-match)
+    * Colors for search chrome and error message
 
 ## Sparkline
 
