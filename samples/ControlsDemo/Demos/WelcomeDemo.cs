@@ -18,7 +18,7 @@ public sealed class WelcomeDemo : ControlsDemoBase
     {
         _ = context;
 
-        var theme = context.Theme.Value;
+        var theme = context.Theme;
 
         var spectrum = new Canvas()
             .MinHeight(6)
@@ -66,7 +66,7 @@ public sealed class WelcomeDemo : ControlsDemoBase
         { Wrap = true };
 
 
-        var schemePanel = BuildSchemePanel(DemoThemes.Dark);
+        var schemePanel = BuildSchemePanel(theme);
 
         return new VStack(
                 new ZStack(spectrum, banner),

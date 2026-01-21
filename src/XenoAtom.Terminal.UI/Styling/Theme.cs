@@ -180,7 +180,7 @@ public sealed class Theme : IStyle<Theme>
             inputFill = Color.RgbA(0, 0, 0, 0x10);
             inputFillFocused = surface;
 
-            borderStroke = Color.RgbA(0, 0, 0, 0x28);
+            borderStroke = Color.RgbA(0, 0, 0, 0x80);
             focusBorderStroke = accentColor;
 
             selectionFill = accentColor.WithAlpha(0x30);

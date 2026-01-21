@@ -10,5 +10,5 @@ public sealed class DemoContext
 
     public required DemoRuntime Runtime { get; init; }
 
-    public required State<Theme> Theme { get; init; }
+    public required Theme Theme { get; init; }
 }

@@ -49,7 +49,9 @@ internal static class ControlsDemoApp
                 sidebarList)
             .Spacing(1);
 
-        var themeState = new State<Theme>(Theme.Default);
+        // Initialize color scheme selector.
+        var colorSchemes = new Select<ColorScheme>().Items(ColorScheme.GetPredefinedSchemes());
+        colorSchemes.SelectedIndex = colorSchemes.Items.IndexOf(ColorScheme.ElderberryDarkSoft);
 
         var page = new ComputedVisual(() =>
         {
@@ -64,15 +66,28 @@ internal static class ControlsDemoApp
                 }
             }
 
+            var colorScheme = colorSchemes.Items[colorSchemes.SelectedIndex];
+            var theme = Theme.FromScheme(colorScheme);
+
             return demo is null
                 ? new Center().Content("No demos found.")
-                : DemoPage.Build(demo, new DemoContext { NavigateToDemoId = NavigateToId, Log = _ => { }, Runtime = runtime, Theme = themeState });
+                : DemoPage.Build(demo, new DemoContext { NavigateToDemoId = NavigateToId, Log = _ => { }, Runtime = runtime, Theme = theme });
         }).Pad(1).HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch);
 
-        return new DockLayout()
+
+        var root = new DockLayout()
             .Content(new HSplitter(sidebar, page).Ratio(0.16))
-            .Bottom(new Footer().Left("Tab focus | Mouse | Resize").Right("F12 debug | Ctrl+Q quit"))
-            .Update(x => x.Set(Theme.Key, themeState.Value));
+            .Bottom(new Footer().Left("Tab focus | Mouse | Resize")
+                .Center(new HStack("🎨 Select Theme: ", colorSchemes))
+                .Right("F12 debug | Ctrl+Q quit"));
+
+        root.Update(c =>
+        {
+            var colorScheme = colorSchemes.Items[colorSchemes.SelectedIndex];
+            c.Style(Theme.FromScheme(colorScheme));
+        });
+
+        return root;
     }
 
     private static Visual BuildSidebarList(IReadOnlyList<IControlsDemo> demos, State<string> selectedDemoId, string query)

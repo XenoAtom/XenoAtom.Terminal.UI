@@ -1,0 +1,64 @@
+<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+<#
+    var colors = new string[] { "Cherry", "Tomato", "Orange", "Pineapple", "Apple", "Kiwi", "Kale", "Blueberry", "Plum", "Elderberry", "Blackberry", "Raspberry" };
+    var milks = new string[] { "None", "Splash", "Glug", "Cup" };
+    var modes = new string[] { "Dark", "Dark Soft", "Light Soft", "Light" };
+#>
+// Copyright (c) Alexandre Mutel. All rights reserved.
+// Licensed under the BSD-Clause 2 license.
+// See license.txt file in the project root for full license information.
+
+using XenoAtom.Ansi;
+
+namespace XenoAtom.Terminal.UI.Styling;
+
+partial record ColorScheme
+{
+    /// <summary>
+    /// Returns a list of all predefined <see cref="ColorScheme"/> instances.
+    /// </summary>
+    public static List<ColorScheme> GetPredefinedSchemes()
+        => [
+<#
+    foreach (var color in colors)
+    {
+        for (int i = 0; i < milks.Length; i++)
+        {
+            var milk = milks[i];
+            var mode = modes[i];
+#>
+            <#= color #><#= mode.Replace(" ","") #>,
+<#
+        }
+    }
+#>
+        ];
+
+<#
+    foreach (var color in colors)
+    {
+        for (int i = 0; i < milks.Length; i++)
+        {
+            var milk = milks[i];
+            var mode = modes[i];
+#>
+
+    /// <summary>
+    /// A <see cref="ColorScheme"/> with <c><#= color #></c> color and <c><#= milk #></c> milk in <c><#= mode #></c> mode.
+    /// </summary>
+    public static ColorScheme <#= color #><#= mode.Replace(" ","") #> => <#= color #><#= mode.Replace(" ","") #>Holder.Instance;
+
+    private static class <#= color #><#= mode.Replace(" ","") #>Holder
+    {
+        public static readonly ColorScheme Instance = ColorScheme.Generate(6, 8, 4, RootLoopsFlavor.Intense, RootLoopsFruit.<#= color #>, RootLoopsMilkAmount.<#= milk #>, "<#= color #> <#= mode #>");
+    }
+<#
+        }
+    }
+#>
+}

@@ -45,4 +45,23 @@
   <ItemGroup>
     <ProjectReference Include="..\XenoAtom.Terminal.UI.SourceGen\XenoAtom.Terminal.UI.SourceGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Styling\ColorScheme.gen.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ColorScheme.gen.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Styling\ColorScheme.gen.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>ColorScheme.gen.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
 </Project>

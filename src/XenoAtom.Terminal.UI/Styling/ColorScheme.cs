@@ -106,6 +106,9 @@ public sealed partial record ColorScheme
     /// </summary>
     public required Color BrightYellow { get; init; }
 
+    /// <inheritdoc/>
+    public override string? ToString() => Name;
+
     /// <summary>
     /// Gets a scheme that maps to the terminal indexed 16-color palette and uses terminal default background/foreground.
     /// </summary>
