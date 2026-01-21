@@ -314,6 +314,21 @@ public sealed class CellBuffer
             return 0;
         }
 
+        // Some grapheme clusters (notably emoji presentation sequences) are composed of narrow code points
+        // (e.g. U+2328 KEYBOARD) combined with U+FE0F (VS16), ZWJ sequences, or keycap combining marks.
+        // Most terminals render such clusters as a 2-cell glyph. Treat them as width 2 to avoid visual "shifts"
+        // where the following characters appear displaced because the cluster occupies more cells than measured.
+        var forceDoubleWidth = false;
+        for (var j = 0; j < element.Length; j++)
+        {
+            var ch = element[j];
+            if (ch is '\uFE0F' or '\u200D' or '\u20E3')
+            {
+                forceDoubleWidth = true;
+                break;
+            }
+        }
+
         // Preserve the behavior of treating a tab as a fixed number of cells.
         // Text editors generally expand tabs themselves; this is a safe fallback.
         if (element.Length == 1 && element[0] == '\t')
@@ -328,7 +343,8 @@ public sealed class CellBuffer
 
         if (element.Length == consumed)
         {
-            return Math.Max(1, TerminalTextUtility.GetRuneWidth(rune));
+            var width = Math.Max(1, TerminalTextUtility.GetRuneWidth(rune));
+            return forceDoubleWidth ? Math.Max(2, width) : width;
         }
 
         var maxWidth = Math.Max(0, TerminalTextUtility.GetRuneWidth(rune));
@@ -346,7 +362,8 @@ public sealed class CellBuffer
             i += c;
         }
 
-        return Math.Max(0, maxWidth);
+        maxWidth = Math.Max(0, maxWidth);
+        return forceDoubleWidth ? Math.Max(2, maxWidth) : maxWidth;
     }
 
     private int RegisterTextElement(ReadOnlySpan<char> element, int width)
