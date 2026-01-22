@@ -31,7 +31,7 @@ public partial class Button : ContentVisual
     /// Initializes a new instance of the <see cref="Button"/> class with string content.
     /// </summary>
     /// <param name="text">The button text.</param>
-    public Button(string text) : this()
+    public Button(Visual text) : this()
     {
         this.Content(text);
     }
