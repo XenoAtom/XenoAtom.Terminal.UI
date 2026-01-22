@@ -19,12 +19,20 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// A generic dropdown/select control that displays a popup list to pick a single item.
 /// </summary>
 /// <typeparam name="T">The item type.</typeparam>
-public sealed partial class Select<T> : ContentVisual
+public partial class Select<T> : ContentVisual
 {
     private Popup? _popup;
     private int _contentIndex = -1;
+    private int _selectionChangedIndex = -1;
     private DataTemplate<T> _lastResolvedTemplate;
     private readonly State<T> _selectedState;
+
+    /// <summary>
+    /// Called when <see cref="SelectedIndex"/> changes.
+    /// </summary>
+    /// <param name="e">The event arguments.</param>
+    [RoutedEvent(RoutingStrategy.Bubble)]
+    protected virtual void OnSelectionChanged(SelectSelectionChangedEventArgs e) { }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Select{T}"/> class.
@@ -63,6 +71,15 @@ public sealed partial class Select<T> : ContentVisual
     {
         _ = value;
         UpdateSelectedContent();
+
+        // Notify only when the final (clamped) selection differs.
+        var currentIndex = _contentIndex;
+        if (currentIndex != _selectionChangedIndex)
+        {
+            var oldIndex = _selectionChangedIndex;
+            _selectionChangedIndex = currentIndex;
+            RaiseEvent(Select<T>.SelectionChangedEvent, new SelectSelectionChangedEventArgs(oldIndex, currentIndex));
+        }
     }
 
     partial void OnItemTemplateChanged(DataTemplate<T> value)

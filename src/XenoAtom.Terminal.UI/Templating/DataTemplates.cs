@@ -4,7 +4,12 @@
 
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Text;
+using System.Globalization;
+using System.Numerics;
 
 namespace XenoAtom.Terminal.UI.Templating;
 
@@ -90,6 +95,18 @@ public sealed record DataTemplates : IStyle<DataTemplates>
     }
 
     /// <summary>
+    /// Creates a derived registry that registers default templates for an enum type.
+    /// </summary>
+    /// <typeparam name="TEnum">The enum type.</typeparam>
+    /// <param name="displayTemplate">Optional display template.</param>
+    /// <param name="editorTemplate">Optional editor template.</param>
+    /// <param name="itemTemplate">Optional item template used by the editor dropdown.</param>
+    /// <returns>A new registry whose <see cref="Parent"/> is the current registry.</returns>
+    public DataTemplates RegisterEnum<TEnum>(DataTemplate<TEnum> displayTemplate = default, DataTemplate<TEnum> editorTemplate = default, DataTemplate<TEnum> itemTemplate = default)
+        where TEnum : struct, Enum
+        => Derive(builder => builder.RegisterEnum(displayTemplate, editorTemplate, itemTemplate));
+
+    /// <summary>
     /// Attempts to resolve a template for the specified role and data type.
     /// </summary>
     /// <typeparam name="T">The data type.</typeparam>
@@ -108,6 +125,12 @@ public sealed record DataTemplates : IStyle<DataTemplates>
             }
         }
 
+        if (role == DataTemplateRole.Editor && typeof(T).IsEnum)
+        {
+            template = new DataTemplate<T>(static (Binding<T> binding, in DataTemplateContext context) => new EnumEditorTextBox<T>(binding, context.Owner));
+            return true;
+        }
+
         template = default;
         return false;
     }
@@ -117,59 +140,305 @@ public sealed record DataTemplates : IStyle<DataTemplates>
         var display = new Dictionary<Type, object>();
         var editor = new Dictionary<Type, object>();
 
-        static void RegisterDisplay<T>(Dictionary<Type, object> table, DataTemplate<T> template)
+        static void RegisterDisplay<T>(Dictionary<Type, object> table, DataTemplate<T> template) => table[typeof(T)] = template;
+
+        static void RegisterEditor<T>(Dictionary<Type, object> table, DataTemplate<T> template) => table[typeof(T)] = template;
+
+        static Visual DisplayNullableString(Binding<string?> binding, in DataTemplateContext _)
+            => new TextBlock(() => binding.GetValue() ?? string.Empty);
+
+        static Visual DisplayString(Binding<string> binding, in DataTemplateContext _)
+            => new TextBlock(() => binding.GetValue());
+
+        static Visual EditBindingNullableString(Binding<string?> binding, in DataTemplateContext _)
+            => new TextBox().Text(binding);
+
+        static Visual EditBindingString(Binding<string> binding, in DataTemplateContext _)
+            => new TextBox().Text(AsNullable(binding));
+
+        static Binding<string?> AsNullable(Binding<string> binding)
+            // The binding points to a string instance at runtime. We surface it as nullable to match TextBox.Text.
+            => new(binding.Owner, (BindingAccessor<string?>)(object)binding.Accessor);
+
+        static Visual DisplayBool(Binding<bool> binding, in DataTemplateContext _)
+            => new TextBlock(() => binding.GetValue() ? "true" : "false");
+
+        static Visual EditBindingBool(Binding<bool> binding, in DataTemplateContext _)
+            => new Switch().IsOn(binding);
+
+        static Visual DisplayFormattable<T>(Binding<T> binding, in DataTemplateContext context)
         {
-            table[typeof(T)] = template;
+            var owner = context.Owner;
+            return new TextBlock(() => owner.ToStringValue(binding.GetValue()));
         }
 
-        static void RegisterEditor<T>(Dictionary<Type, object> table, DataTemplate<T> template)
-        {
-            table[typeof(T)] = template;
-        }
+        static Visual EditBindingNumber<T>(Binding<T> binding, in DataTemplateContext _) where T : struct, INumber<T>
+            => new NumberBox<T>().Value(binding);
 
-        static Visual EditBindingNullableString(Binding<string?> binding, in DataTemplateContext _) => new TextBox().Text(binding);
+        static Visual EditBindingChar(Binding<char> binding, in DataTemplateContext _)
+            => new BoundTextBox<char>(binding,
+                static (char value, CultureInfo _) => value.ToString(),
+                static (string text, CultureInfo _, out char value) =>
+                {
+                    if (!string.IsNullOrEmpty(text) && text.Length == 1)
+                    {
+                        value = text[0];
+                        return true;
+                    }
 
-        static Visual EditBindingInt32(Binding<int> binding, in DataTemplateContext _) => new NumberBox<int>().Value(binding);
+                    value = default;
+                    return false;
+                });
 
-        static Visual EditBindingBool(Binding<bool> binding, in DataTemplateContext _) => new Switch().IsOn(binding);
+        static Visual EditBindingGuid(Binding<Guid> binding, in DataTemplateContext _)
+            => new BoundTextBox<Guid>(binding,
+                static (Guid value, CultureInfo _) => value.ToString("D"),
+                static (string text, CultureInfo _, out Guid value) => Guid.TryParse(text, out value));
 
-        static Visual DisplayString(Binding<string?> binding, in DataTemplateContext _) => new TextBlock(() => binding.GetValue() ?? string.Empty);
-        RegisterDisplay(display, new DataTemplate<string?>(DisplayString));
+        static Visual EditBindingDateOnly(Binding<DateOnly> binding, in DataTemplateContext _)
+            => new BoundTextBox<DateOnly>(binding,
+                static (DateOnly value, CultureInfo _) => value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                static (string text, CultureInfo culture, out DateOnly value)
+                    => DateOnly.TryParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out value)
+                       || DateOnly.TryParse(text, culture, DateTimeStyles.None, out value));
+
+        static Visual EditBindingTimeOnly(Binding<TimeOnly> binding, in DataTemplateContext _)
+            => new BoundTextBox<TimeOnly>(binding,
+                static (TimeOnly value, CultureInfo _) => value.ToString("HH:mm:ss", CultureInfo.InvariantCulture),
+                static (string text, CultureInfo culture, out TimeOnly value)
+                    => TimeOnly.TryParseExact(text, ["HH:mm:ss", "HH:mm"], CultureInfo.InvariantCulture, DateTimeStyles.None, out value)
+                       || TimeOnly.TryParse(text, culture, DateTimeStyles.None, out value));
+
+        static Visual EditBindingTimeSpan(Binding<TimeSpan> binding, in DataTemplateContext _)
+            => new BoundTextBox<TimeSpan>(binding,
+                static (TimeSpan value, CultureInfo _) => value.ToString("c", CultureInfo.InvariantCulture),
+                static (string text, CultureInfo culture, out TimeSpan value)
+                    => TimeSpan.TryParseExact(text, "c", CultureInfo.InvariantCulture, out value)
+                       || TimeSpan.TryParse(text, culture, out value));
+
+        static Visual EditBindingDateTime(Binding<DateTime> binding, in DataTemplateContext _)
+            => new BoundTextBox<DateTime>(binding,
+                static (DateTime value, CultureInfo _) => value.ToString("O", CultureInfo.InvariantCulture),
+                static (string text, CultureInfo culture, out DateTime value)
+                    => DateTime.TryParseExact(text, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out value)
+                       || DateTime.TryParse(text, culture, DateTimeStyles.RoundtripKind, out value));
+
+        static Visual EditBindingDateTimeOffset(Binding<DateTimeOffset> binding, in DataTemplateContext _)
+            => new BoundTextBox<DateTimeOffset>(binding,
+                static (DateTimeOffset value, CultureInfo _) => value.ToString("O", CultureInfo.InvariantCulture),
+                static (string text, CultureInfo culture, out DateTimeOffset value)
+                    => DateTimeOffset.TryParseExact(text, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out value)
+                       || DateTimeOffset.TryParse(text, culture, DateTimeStyles.RoundtripKind, out value));
+
+        RegisterDisplay(display, new DataTemplate<string?>(DisplayNullableString));
         RegisterEditor(editor, new DataTemplate<string?>(EditBindingNullableString));
 
-        static Visual DisplayBool(Binding<bool> binding, in DataTemplateContext _) => new TextBlock(() => binding.GetValue() ? "True" : "False");
+        RegisterDisplay(display, new DataTemplate<string>(DisplayString));
+        RegisterEditor(editor, new DataTemplate<string>(EditBindingString));
+
         RegisterDisplay(display, new DataTemplate<bool>(DisplayBool));
         RegisterEditor(editor, new DataTemplate<bool>(EditBindingBool));
 
-        static Visual DisplayInt32(Binding<int> binding, in DataTemplateContext context)
-        {
-            var owner = context.Owner;
-            return new TextBlock(() => owner.ToStringValue(binding.GetValue()));
-        }
-        RegisterDisplay(display, new DataTemplate<int>(DisplayInt32));
-        RegisterEditor(editor, new DataTemplate<int>(EditBindingInt32));
+        RegisterDisplay(display, new DataTemplate<char>(DisplayFormattable<char>));
+        RegisterEditor(editor, new DataTemplate<char>(EditBindingChar));
 
-        static Visual DisplayInt64(Binding<long> binding, in DataTemplateContext context)
-        {
-            var owner = context.Owner;
-            return new TextBlock(() => owner.ToStringValue(binding.GetValue()));
-        }
-        RegisterDisplay(display, new DataTemplate<long>(DisplayInt64));
+        RegisterDisplay(display, new DataTemplate<Guid>(DisplayFormattable<Guid>));
+        RegisterEditor(editor, new DataTemplate<Guid>(EditBindingGuid));
 
-        static Visual DisplayDouble(Binding<double> binding, in DataTemplateContext context)
-        {
-            var owner = context.Owner;
-            return new TextBlock(() => owner.ToStringValue(binding.GetValue()));
-        }
-        RegisterDisplay(display, new DataTemplate<double>(DisplayDouble));
+        RegisterDisplay(display, new DataTemplate<sbyte>(DisplayFormattable<sbyte>));
+        RegisterEditor(editor, new DataTemplate<sbyte>(EditBindingNumber<sbyte>));
 
-        static Visual DisplayDecimal(Binding<decimal> binding, in DataTemplateContext context)
-        {
-            var owner = context.Owner;
-            return new TextBlock(() => owner.ToStringValue(binding.GetValue()));
-        }
-        RegisterDisplay(display, new DataTemplate<decimal>(DisplayDecimal));
+        RegisterDisplay(display, new DataTemplate<byte>(DisplayFormattable<byte>));
+        RegisterEditor(editor, new DataTemplate<byte>(EditBindingNumber<byte>));
+
+        RegisterDisplay(display, new DataTemplate<short>(DisplayFormattable<short>));
+        RegisterEditor(editor, new DataTemplate<short>(EditBindingNumber<short>));
+
+        RegisterDisplay(display, new DataTemplate<ushort>(DisplayFormattable<ushort>));
+        RegisterEditor(editor, new DataTemplate<ushort>(EditBindingNumber<ushort>));
+
+        RegisterDisplay(display, new DataTemplate<int>(DisplayFormattable<int>));
+        RegisterEditor(editor, new DataTemplate<int>(EditBindingNumber<int>));
+
+        RegisterDisplay(display, new DataTemplate<uint>(DisplayFormattable<uint>));
+        RegisterEditor(editor, new DataTemplate<uint>(EditBindingNumber<uint>));
+
+        RegisterDisplay(display, new DataTemplate<long>(DisplayFormattable<long>));
+        RegisterEditor(editor, new DataTemplate<long>(EditBindingNumber<long>));
+
+        RegisterDisplay(display, new DataTemplate<ulong>(DisplayFormattable<ulong>));
+        RegisterEditor(editor, new DataTemplate<ulong>(EditBindingNumber<ulong>));
+
+        RegisterDisplay(display, new DataTemplate<float>(DisplayFormattable<float>));
+        RegisterEditor(editor, new DataTemplate<float>(EditBindingNumber<float>));
+
+        RegisterDisplay(display, new DataTemplate<double>(DisplayFormattable<double>));
+        RegisterEditor(editor, new DataTemplate<double>(EditBindingNumber<double>));
+
+        RegisterDisplay(display, new DataTemplate<decimal>(DisplayFormattable<decimal>));
+        RegisterEditor(editor, new DataTemplate<decimal>(EditBindingNumber<decimal>));
+
+        RegisterDisplay(display, new DataTemplate<DateOnly>(DisplayFormattable<DateOnly>));
+        RegisterEditor(editor, new DataTemplate<DateOnly>(EditBindingDateOnly));
+
+        RegisterDisplay(display, new DataTemplate<TimeOnly>(DisplayFormattable<TimeOnly>));
+        RegisterEditor(editor, new DataTemplate<TimeOnly>(EditBindingTimeOnly));
+
+        RegisterDisplay(display, new DataTemplate<TimeSpan>(DisplayFormattable<TimeSpan>));
+        RegisterEditor(editor, new DataTemplate<TimeSpan>(EditBindingTimeSpan));
+
+        RegisterDisplay(display, new DataTemplate<DateTime>(DisplayFormattable<DateTime>));
+        RegisterEditor(editor, new DataTemplate<DateTime>(EditBindingDateTime));
+
+        RegisterDisplay(display, new DataTemplate<DateTimeOffset>(DisplayFormattable<DateTimeOffset>));
+        RegisterEditor(editor, new DataTemplate<DateTimeOffset>(EditBindingDateTimeOffset));
 
         return new DataTemplates(display, editor, null);
+    }
+
+    private sealed class BoundTextBox<T> : TextBox
+    {
+        private readonly Binding<T> _binding;
+        private readonly Func<T, CultureInfo, string> _format;
+        private readonly TryParseWithCulture _tryParse;
+        private bool _updatingFromBinding;
+
+        public BoundTextBox(Binding<T> binding, Func<T, CultureInfo, string> format, TryParseWithCulture tryParse)
+        {
+            _binding = binding;
+            _format = format;
+            _tryParse = tryParse;
+
+            TextDocument.Changed += OnTextDocumentChanged;
+
+            // Initialize immediately (before first layout).
+            SyncFromBinding(force: true);
+        }
+
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+        {
+            SyncFromBinding(force: false);
+            return base.MeasureCore(constraints);
+        }
+
+        protected override void ArrangeCore(in Rectangle finalRect)
+        {
+            SyncFromBinding(force: false);
+            base.ArrangeCore(finalRect);
+        }
+
+        private void SyncFromBinding(bool force)
+        {
+            // Avoid overwriting user edits while the editor is focused.
+            if (!force && ReferenceEquals(App?.FocusedElement, this))
+            {
+                return;
+            }
+
+            var culture = GetCulture();
+            var value = _binding.GetValue();
+            var formatted = _format(value, culture);
+
+            if (string.Equals(Text, formatted, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _updatingFromBinding = true;
+            try
+            {
+                Text = formatted;
+            }
+            finally
+            {
+                _updatingFromBinding = false;
+            }
+        }
+
+        private void OnTextDocumentChanged(object? sender, TextDocumentChangedEventArgs e)
+        {
+            _ = sender;
+            _ = e;
+            if (_updatingFromBinding)
+            {
+                return;
+            }
+
+            var text = Text ?? string.Empty;
+            var culture = GetCulture();
+            if (_tryParse(text, culture, out var parsed))
+            {
+                _binding.SetValue(parsed);
+            }
+        }
+
+        public delegate bool TryParseWithCulture(string text, CultureInfo culture, out T value);
+    }
+
+    private sealed class EnumEditorTextBox<T> : TextBox
+    {
+        private readonly Binding<T> _binding;
+        private bool _updatingFromBinding;
+
+        public EnumEditorTextBox(Binding<T> binding, Visual _)
+        {
+            _binding = binding;
+
+            TextDocument.Changed += OnTextDocumentChanged;
+            SyncFromBinding(force: true);
+        }
+
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+        {
+            SyncFromBinding(force: false);
+            return base.MeasureCore(constraints);
+        }
+
+        protected override void ArrangeCore(in Rectangle finalRect)
+        {
+            SyncFromBinding(force: false);
+            base.ArrangeCore(finalRect);
+        }
+
+        private void SyncFromBinding(bool force)
+        {
+            if (!force && ReferenceEquals(App?.FocusedElement, this))
+            {
+                return;
+            }
+
+            var value = _binding.GetValue();
+            var formatted = value?.ToString() ?? string.Empty;
+            if (string.Equals(Text, formatted, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _updatingFromBinding = true;
+            try
+            {
+                Text = formatted;
+            }
+            finally
+            {
+                _updatingFromBinding = false;
+            }
+        }
+
+        private void OnTextDocumentChanged(object? sender, TextDocumentChangedEventArgs e)
+        {
+            _ = sender;
+            _ = e;
+            if (_updatingFromBinding)
+            {
+                return;
+            }
+
+            var text = Text ?? string.Empty;
+            if (Enum.TryParse(typeof(T), text, ignoreCase: true, out var parsed) && parsed is T typed)
+            {
+                _binding.SetValue(typed);
+            }
+        }
     }
 }

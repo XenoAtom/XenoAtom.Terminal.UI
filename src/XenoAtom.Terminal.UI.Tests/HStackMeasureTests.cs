@@ -17,8 +17,14 @@ public sealed class HStackMeasureTests
         var a = new ProbeVisual { HorizontalAlignment = HorizontalAlignment.Stretch };
         var b = new ProbeVisual { HorizontalAlignment = HorizontalAlignment.Stretch };
 
-        var stack = new HStack(a, b) { Spacing = 1 };
+        var stack = new HStack(a, b) { Spacing = 1, HorizontalAlignment = HorizontalAlignment.Stretch };
         stack.Measure(new Size(10, 1));
+
+        Assert.AreEqual(HorizontalAlignment.Stretch, a.HorizontalAlignment);
+        Assert.AreEqual(int.MaxValue, a.MaxWidth);
+        Assert.AreEqual(int.MaxValue, a.MeasureHints.Max.Width);
+        Assert.IsGreaterThan(0, a.MeasureHints.FlexGrowX);
+
         stack.Arrange(new Rectangle(0, 0, 10, 1));
 
         Assert.IsGreaterThan(0, a.Bounds.Width);

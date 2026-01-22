@@ -52,6 +52,50 @@ new VStack(
 
 `Editor` templates are intended for bindable sources (such as `State<T>` or `Binding<T>`), so that the editor can update the source.
 
+## Built-in default templates
+
+`DataTemplates.Default` includes built-in templates for common .NET types.
+
+**Display templates** render a value in a `TextBlock` (culture-aware when possible).
+
+**Editor templates** render an editor that can update a bindable value (for example, `State<T>` or `Binding<T>`).
+
+The default registry currently includes:
+
+- `string` / `string?` (TextBox editor)
+- `bool` (Switch editor; display is `true`/`false` lowercase)
+- `char` (TextBox editor)
+- Numeric primitives: `sbyte`, `byte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`, `float`, `double`, `decimal` (NumberBox editor)
+- `Guid` (TextBox editor, parses standard GUID formats)
+- `DateOnly` (TextBox editor, `yyyy-MM-dd`)
+- `TimeOnly` (TextBox editor, `HH:mm:ss` / `HH:mm`)
+- `TimeSpan` (TextBox editor, `c`)
+- `DateTime` / `DateTimeOffset` (TextBox editor, round-trip `O`)
+
+### Enums
+
+By default, enums have a display template (via `ToString()`), and the editor template may fall back to a text editor.
+For a better UX, register a specific enum type as a dropdown editor (powered by `EnumSelect<TEnum>`):
+
+```csharp
+using XenoAtom.Terminal.UI.Templating;
+
+var templates = DataTemplates.Default.Derive(b => b.RegisterEnum<MyEnum>());
+
+var ui = new VStack(
+        new State<MyEnum>(MyEnum.Second).PresentAs(DataTemplateRole.Editor))
+    .Style(templates);
+```
+
+You can also use the control directly without registering a template:
+
+```csharp
+var mode = new State<MyEnum>(MyEnum.Second);
+
+var ui = new EnumSelect<MyEnum>()
+    .Value(mode);
+```
+
 ## Per-control templates
 
 Item controls expose template slots to override the environment:
