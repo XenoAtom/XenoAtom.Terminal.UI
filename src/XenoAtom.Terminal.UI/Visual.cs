@@ -38,6 +38,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     private bool _dynamicUpdatesDirty;
     private bool _measureDirty = true;
     private bool _arrangeDirty = true;
+    private bool _isHitTestVisible = true;
     private HashSet<Binding>? _dynamicUpdateDeps;
     private HashSet<Binding>? _measureDeps;
     private HashSet<Binding>? _arrangeDeps;
@@ -124,6 +125,23 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
     [Bindable]
     public partial bool IsEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether this visual participates in hit testing.
+    /// </summary>
+    /// <remarks>
+    /// When set to <see langword="false"/>, the visual is treated as “transparent” for pointer hit testing and input
+    /// routing. This is useful for non-interactive overlays such as tooltips.
+    /// </remarks>
+    public bool IsHitTestVisible
+    {
+        get => _isHitTestVisible;
+        set
+        {
+            VerifyAccess();
+            _isHitTestVisible = value;
+        }
+    }
 
     [Bindable]
     public partial bool IsHovered { get; internal set; }
@@ -836,7 +854,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     public Visual? HitTest(int x, int y)
     {
         VerifyAccess();
-        if (!IsVisible || !Bounds.Contains(x, y))
+        if (!IsVisible || !_isHitTestVisible || !Bounds.Contains(x, y))
         {
             return null;
         }

@@ -61,6 +61,19 @@ public static partial class VisualExtensions
     }
 
     /// <summary>
+    /// Wraps the visual in a <see cref="TooltipHost"/> and configures a tooltip for it.
+    /// </summary>
+    /// <param name="visual">The visual to wrap.</param>
+    /// <param name="tooltip">The tooltip content.</param>
+    /// <returns>A <see cref="TooltipHost"/> containing <paramref name="visual"/>.</returns>
+    public static TooltipHost Tooltip(this Visual visual, Visual tooltip)
+    {
+        ArgumentNullException.ThrowIfNull(visual);
+        ArgumentNullException.ThrowIfNull(tooltip);
+        return new TooltipHost(visual).TooltipContent(tooltip);
+    }
+
+    /// <summary>
     /// Adds a header cell to the table and returns the same instance.
     /// </summary>
     /// <param name="obj">The table to configure.</param>

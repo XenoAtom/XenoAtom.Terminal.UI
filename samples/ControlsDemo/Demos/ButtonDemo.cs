@@ -19,11 +19,25 @@ public sealed class ButtonDemo : ControlsDemoBase
         return new VStack(
                 DemoUi.Title("Tones"),
                 new HStack(
-                        new Button("Default").Click(() => context.Log("Default clicked")),
-                        new Button("Primary").Tone(ControlTone.Primary).Click(() => context.Log("Primary clicked")),
-                        new Button("Success").Tone(ControlTone.Success).Click(() => context.Log("Success clicked")),
-                        new Button("Warning").Tone(ControlTone.Warning).Click(() => context.Log("Warning clicked")),
-                        new Button("Error").Tone(ControlTone.Error).Click(() => context.Log("Error clicked")))
+                        new Button("Default")
+                            .Click(() => context.Log("Default clicked"))
+                            .Tooltip("Default tone"),
+                        new Button("Primary")
+                            .Tone(ControlTone.Primary)
+                            .Click(() => context.Log("Primary clicked"))
+                            .Tooltip("Primary tone"),
+                        new Button("Success")
+                            .Tone(ControlTone.Success)
+                            .Click(() => context.Log("Success clicked"))
+                            .Tooltip("Success tone"),
+                        new Button("Warning")
+                            .Tone(ControlTone.Warning)
+                            .Click(() => context.Log("Warning clicked"))
+                            .Tooltip("Warning tone"),
+                        new Button("Error")
+                            .Tone(ControlTone.Error)
+                            .Click(() => context.Log("Error clicked"))
+                            .Tooltip("Error tone"))
                     .Spacing(1),
                 new Rule(),
                 DemoUi.Title("Enabled / Disabled"),
@@ -41,4 +55,3 @@ public sealed class ButtonDemo : ControlsDemoBase
             .Spacing(1);
     }
 }
-

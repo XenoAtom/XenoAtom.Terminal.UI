@@ -28,6 +28,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private readonly TerminalInstance _terminal;
     private readonly TerminalAppOptions _options;
     private readonly WindowLayer? _windowLayer;
+    private Visual? _activeTooltipWindow;
     private readonly InlineInteractiveHost? _inlineHost;
     private readonly FullscreenHost? _fullscreenHost;
     private readonly AsyncAutoResetEvent _wakeUp = new();
@@ -517,6 +518,12 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         _wakeUp.Set();
     }
 
+    internal void RequestAnimation()
+    {
+        _nextAnimationTick = 0;
+        _wakeUp.Set();
+    }
+
     internal void ClearInlineLiveRegion()
     {
         _inlineHost?.PrepareForUserUpdate();
@@ -542,6 +549,13 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
             throw new InvalidOperationException("The visual is already part of the UI tree.");
         }
 
+        // Tooltips are non-interactive overlays and should not remain visible while opening other windows.
+        if (_activeTooltipWindow is not null && !ReferenceEquals(_activeTooltipWindow, window))
+        {
+            _windowLayer.RemoveWindow(_activeTooltipWindow);
+            _activeTooltipWindow = null;
+        }
+
         _windowLayer.AddWindow(window);
 
         var focusCandidate = window.Focusable
@@ -554,6 +568,43 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         }
     }
 
+    internal void ShowTooltipWindow(Visual tooltipWindow)
+    {
+        ArgumentNullException.ThrowIfNull(tooltipWindow);
+        VerifyAccess();
+
+        if (_windowLayer is null)
+        {
+            throw new InvalidOperationException("Showing tooltips is only supported in fullscreen apps.");
+        }
+
+        if (_activeTooltipWindow is not null && !ReferenceEquals(_activeTooltipWindow, tooltipWindow))
+        {
+            _windowLayer.RemoveWindow(_activeTooltipWindow);
+        }
+
+        _activeTooltipWindow = tooltipWindow;
+        ShowWindow(tooltipWindow);
+    }
+
+    internal void CloseTooltipWindow(Visual tooltipWindow)
+    {
+        ArgumentNullException.ThrowIfNull(tooltipWindow);
+        VerifyAccess();
+
+        if (_windowLayer is null)
+        {
+            return;
+        }
+
+        if (ReferenceEquals(_activeTooltipWindow, tooltipWindow))
+        {
+            _activeTooltipWindow = null;
+        }
+
+        _windowLayer.RemoveWindow(tooltipWindow);
+    }
+
     internal bool CloseWindow(Visual window)
     {
         ArgumentNullException.ThrowIfNull(window);
@@ -562,6 +613,11 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         if (_windowLayer is null)
         {
             throw new InvalidOperationException("Closing dialogs/windows is only supported in fullscreen apps.");
+        }
+
+        if (ReferenceEquals(_activeTooltipWindow, window))
+        {
+            _activeTooltipWindow = null;
         }
 
         return _windowLayer.RemoveWindow(window);
