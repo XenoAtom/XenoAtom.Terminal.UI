@@ -61,6 +61,7 @@ public sealed class WelcomeDemo : ControlsDemoBase
             [bold]Tips[/]
             - Use the [bold]Search[/] box to filter controls and demos.
             - Use [bold]Tab[/] to move focus and [bold]Mouse wheel[/] to scroll lists.
+            - Use the theme selector in the footer to change the look of the entire demo.
             - Use [bold]Ctrl+Q[/] to quit.
             """)
         { Wrap = true };
