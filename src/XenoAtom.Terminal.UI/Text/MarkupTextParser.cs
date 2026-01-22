@@ -14,26 +14,43 @@ namespace XenoAtom.Terminal.UI.Text;
 /// <param name="Start">The start index (UTF-16) within the plain text.</param>
 /// <param name="Length">The length (UTF-16) of the span.</param>
 /// <param name="Style">The style to apply to this span.</param>
-internal readonly record struct StyledRun(int Start, int Length, Style Style);
+public readonly record struct StyledRun(int Start, int Length, Style Style);
 
 /// <summary>
-/// Parses ANSI markup into plain text + style runs.
+/// Parses ANSI markup into plain text plus <see cref="StyledRun"/> style runs.
 /// </summary>
 /// <remarks>
-/// This parser is shared between controls that need to render markup efficiently without allocating a full visual per
-/// line (e.g. <c>LogControl</c>). It reuses internal buffers across parses to minimize allocations.
+/// <para>
+/// This parser is useful when you need to render markup efficiently without allocating a visual per line. It produces:
+/// </para>
+/// <list type="bullet">
+/// <item><description>The plain text output (with markup stripped).</description></item>
+/// <item><description>A set of style runs, each describing a span in the plain text.</description></item>
+/// </list>
+/// <para>
+/// Instances are reusable and keep internal buffers to minimize allocations. They are not thread-safe.
+/// </para>
 /// </remarks>
-internal sealed class MarkupTextParser
+public sealed class MarkupTextParser
 {
     private readonly MarkupCaptureWriter _writer;
     private readonly AnsiMarkup _markup;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MarkupTextParser"/> class.
+    /// </summary>
     public MarkupTextParser()
     {
         _writer = new MarkupCaptureWriter();
         _markup = new AnsiMarkup(_writer);
     }
 
+    /// <summary>
+    /// Parses the specified markup text into plain text and style runs.
+    /// </summary>
+    /// <param name="markup">The markup input. If <see langword="null"/>, it is treated as an empty string.</param>
+    /// <param name="runs">Receives the style runs describing spans in the returned plain text.</param>
+    /// <returns>The plain text produced by stripping markup from the input.</returns>
     public string Parse(string? markup, out StyledRun[] runs)
     {
         _writer.Reset();
@@ -121,4 +138,3 @@ internal sealed class MarkupTextParser
         }
     }
 }
-

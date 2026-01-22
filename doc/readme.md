@@ -27,6 +27,7 @@ This guide documents the concepts, features, and controls of the library.
 - `doc/rendering.md` (cell buffer, diff renderer, performance)
 - `doc/scrolling.md` (ScrollViewer, scroll models, scrollbars)
 - `doc/text-editing.md` (TextBox/TextArea/MaskedInput and the text subsystem)
+- `doc/markup-parsing.md` (`MarkupTextParser`, styled runs)
 
 ## Controls reference
 
