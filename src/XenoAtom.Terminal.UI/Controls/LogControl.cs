@@ -186,6 +186,26 @@ public sealed partial class LogControl : Visual
     public bool FollowTail { get; private set; } = true;
 
     /// <summary>
+    /// Scrolls to the end of the log and enables follow-tail mode so subsequent appends keep the view pinned to the bottom.
+    /// </summary>
+    /// <remarks>
+    /// This method clears any active selection, as a selection pins the viewport and disables follow-tail behavior.
+    /// </remarks>
+    public void ScrollToTail()
+    {
+        VerifyAccess();
+        ClearSelection();
+        FollowTail = true;
+        _pendingFollowTailScroll = true;
+
+        // Try to apply immediately when we have a known viewport; otherwise, the pending flag will be applied on the next Arrange.
+        ApplyFollowTailIfNeeded();
+
+        // Ensure the ScrollViewer re-arranges in case the offset was changed after its last Arrange call.
+        _scrollViewer.MarkArrangeDirty();
+    }
+
+    /// <summary>
     /// Gets a value indicating whether a selection is active.
     /// </summary>
     public bool HasSelection => _selectionAnchor is not null && _selectionActive is not null && _selectionAnchor.Value != _selectionActive.Value;
@@ -203,7 +223,7 @@ public sealed partial class LogControl : Visual
     public void AppendLine(string message)
     {
         VerifyAccess();
-        if (message is null)
+        if (string.IsNullOrEmpty(message))
         {
             AppendEntry(string.Empty, runs: null);
             return;
@@ -413,7 +433,14 @@ public sealed partial class LogControl : Visual
         // Anchor search popup to the top-right inside the padded viewport.
         _searchAnchor.Arrange(new Rectangle(innerRect.Right, innerRect.Y, 0, 0));
 
-        ApplyFollowTailIfNeeded();
+        if (ApplyFollowTailIfNeeded())
+        {
+            // Follow-tail can change the ScrollViewer offset after it was arranged; ensure the content host is re-arranged
+            // in the same pass so the view updates immediately (without relying on a second layout tick).
+            _scrollViewer.Arrange(innerRect);
+        }
+
+        UpdateFollowTailState();
     }
 
     /// <inheritdoc/>
@@ -802,17 +829,37 @@ public sealed partial class LogControl : Visual
         RebuildMatches();
     }
 
-    private void ApplyFollowTailIfNeeded()
+    private bool ApplyFollowTailIfNeeded()
     {
         if (!_pendingFollowTailScroll || !FollowTail || HasSelection)
         {
+            return false;
+        }
+
+        var viewportHeight = Math.Max(1, _scrollViewer.ViewportHeight);
+        var maxOffset = Math.Max(0, _content.ExtentHeight - viewportHeight);
+        _pendingFollowTailScroll = false;
+
+        if (_scrollViewer.VerticalOffset == maxOffset)
+        {
+            return false;
+        }
+
+        _scrollViewer.VerticalOffset = maxOffset;
+        return true;
+    }
+
+    private void UpdateFollowTailState()
+    {
+        if (HasSelection)
+        {
+            FollowTail = false;
             return;
         }
 
         var viewportHeight = Math.Max(1, _scrollViewer.ViewportHeight);
         var maxOffset = Math.Max(0, _content.ExtentHeight - viewportHeight);
-        _scrollViewer.VerticalOffset = maxOffset;
-        _pendingFollowTailScroll = false;
+        FollowTail = _scrollViewer.VerticalOffset >= maxOffset;
     }
 
     private void RebuildMatches()

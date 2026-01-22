@@ -36,6 +36,45 @@ public sealed class LogControlTests
     }
 
     [TestMethod]
+    public void LogControl_Can_Reset_FollowTail_Programmatically()
+    {
+        var log = new LogControl();
+
+        using var driver = new TerminalAppTestDriver(log, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        for (var i = 0; i < 20; i++)
+        {
+            log.AppendLine($"Line {i}");
+        }
+
+        driver.Tick();
+
+        // Scroll away from the tail (disables follow-tail).
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.PageUp });
+        driver.Tick();
+        Assert.IsFalse(log.FollowTail);
+
+        log.AppendLine("AfterScroll");
+        driver.Tick();
+
+        // Still not at the tail.
+        var screen = new AnsiTestScreen(40, 6);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText();
+        Assert.IsFalse(rendered.Contains("AfterScroll", StringComparison.Ordinal), "Appending while not following tail should not jump to the bottom.");
+
+        // Programmatically re-enable follow-tail and pin to the bottom.
+        log.ScrollToTail();
+        driver.Tick();
+
+        screen.Apply(driver.Backend.GetOutText());
+        rendered = screen.GetText();
+        StringAssert.Contains(rendered, "AfterScroll");
+        Assert.IsTrue(log.FollowTail);
+    }
+
+    [TestMethod]
     public void LogControl_Trims_MaxCapacity()
     {
         var log = new LogControl
