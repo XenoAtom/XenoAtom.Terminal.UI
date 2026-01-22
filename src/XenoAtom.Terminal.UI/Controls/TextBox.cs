@@ -128,7 +128,7 @@ public partial class TextBox : TextEditorBase
     /// Gets the style used to render the text box.
     /// </summary>
     /// <returns>The current <see cref="TextBoxStyle"/>.</returns>
-    protected virtual TextBoxStyle GetTextBoxStyle() => Get<TextBoxStyle>();
+    protected virtual TextBoxStyle GetTextBoxStyle() => GetStyle<TextBoxStyle>();
 
     /// <inheritdoc />
     protected override void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, Style style, bool isPlaceholder, int textIndexStart)

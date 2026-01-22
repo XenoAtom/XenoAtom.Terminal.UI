@@ -69,7 +69,7 @@ public sealed partial class TextArea : TextEditorBase
     {
         Bounds = finalRect;
 
-        var style = Get<TextAreaStyle>();
+        var style = GetStyle<TextAreaStyle>();
         var padding = style.Padding;
 
         var innerLeft = finalRect.X;
@@ -97,7 +97,7 @@ public sealed partial class TextArea : TextEditorBase
 
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var style = Get<TextAreaStyle>();
+        var style = GetStyle<TextAreaStyle>();
         var selectionStyle = style.SelectionStyle(theme);
         var backgroundStyle = style.BackgroundStyle(theme, isFocused);
         var placeholderStyle = style.PlaceholderStyle(theme, isFocused);

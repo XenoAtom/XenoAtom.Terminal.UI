@@ -80,7 +80,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
             return false;
         }
 
-        var style = Get<SpinnerStyle>();
+        var style = GetStyle<SpinnerStyle>();
         if (!ReferenceEquals(_cachedStyle, style))
         {
             _cachedStyle = style;
@@ -116,7 +116,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var style = Get<SpinnerStyle>();
+        var style = GetStyle<SpinnerStyle>();
         var frameWidth = Math.Max(1, style.FrameWidth);
 
         var label = Label;
@@ -141,7 +141,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
             return;
         }
 
-        var style = Get<SpinnerStyle>();
+        var style = GetStyle<SpinnerStyle>();
         var frameWidth = Math.Max(1, style.FrameWidth);
         var labelX = finalRect.X + frameWidth + 1;
         if (labelX >= finalRect.Right)
@@ -164,7 +164,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
         }
 
         var theme = GetTheme();
-        var style = Get<SpinnerStyle>();
+        var style = GetStyle<SpinnerStyle>();
 
         var spinnerStyle = style.Resolve(theme, IsEnabled, Tone);
         var labelStyle = theme.ForegroundTextStyle();

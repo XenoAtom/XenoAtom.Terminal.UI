@@ -44,11 +44,10 @@ log.GoToNextMatch();
 Use `LogControlStyle` and `LogControlSearchStyle` to customize colors and rendering:
 
 ```csharp
-log.SetStyle(LogControlStyle.Default with
+log.Style(LogControlStyle.Default with
 {
     Padding = new Thickness(1, 0, 1, 0),
 });
 ```
 
 > Note: `WrapText` is a control property (not a style) so you can toggle it dynamically without cloning styles.
-

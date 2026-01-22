@@ -57,7 +57,7 @@ public sealed partial class CheckBox : Visual
     /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var checkBoxStyle = Get<CheckBoxStyle>();
+        var checkBoxStyle = GetStyle<CheckBoxStyle>();
         var gap = Math.Max(0, checkBoxStyle.SpaceBetweenGlyphAndText);
         var glyph = IsChecked ? checkBoxStyle.CheckedGlyph : checkBoxStyle.UncheckedGlyph;
         var glyphWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(glyph));
@@ -85,7 +85,7 @@ public sealed partial class CheckBox : Visual
             return;
         }
 
-        var checkBoxStyle = Get<CheckBoxStyle>();
+        var checkBoxStyle = GetStyle<CheckBoxStyle>();
         var gap = Math.Max(0, checkBoxStyle.SpaceBetweenGlyphAndText);
         var glyph = IsChecked ? checkBoxStyle.CheckedGlyph : checkBoxStyle.UncheckedGlyph;
         var glyphWidth = TerminalTextUtility.GetRuneWidth(glyph);
@@ -101,7 +101,7 @@ public sealed partial class CheckBox : Visual
     {
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var checkBoxStyle = Get<CheckBoxStyle>();
+        var checkBoxStyle = GetStyle<CheckBoxStyle>();
         var style = checkBoxStyle.Resolve(theme, IsEnabled, isFocused, IsHovered);
         var gap = Math.Max(0, checkBoxStyle.SpaceBetweenGlyphAndText);
 

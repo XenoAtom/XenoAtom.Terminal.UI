@@ -79,7 +79,7 @@ public sealed partial class Link : Visual
         }
 
         var theme = GetTheme();
-        var style = Get<LinkStyle>();
+        var style = GetStyle<LinkStyle>();
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var resolved = style.Resolve(theme, IsEnabled, focused: isFocused, hovered: IsHovered);
 

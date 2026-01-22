@@ -111,7 +111,7 @@ public sealed partial class CommandPalette : Visual
             return;
         }
 
-        var style = Get<CommandPaletteStyle>();
+        var style = GetStyle<CommandPaletteStyle>();
         var content = style.PopupTemplateFactory?.Invoke(this) ?? this;
         _hostPopup.Content = content;
 

@@ -20,7 +20,7 @@ public sealed class TabControlRenderingTests
             new TabPage("Two", new TextBlock("B")));
 
         var theme = Theme.FromScheme(ColorScheme.RootLoopsDark);
-        tabControl.SetStyle(Theme.Key, theme);
+        tabControl.Style(theme);
 
         tabControl.Measure(new Size(40, 6));
         tabControl.Arrange(new Rectangle(0, 0, 40, 6));
@@ -62,8 +62,8 @@ public sealed class TabControlRenderingTests
         var tabControl = new TabControl(
             new TabPage("One", new TextBlock("A")));
 
-        tabControl.SetStyle(Theme.Key, Theme.FromScheme(ColorScheme.RootLoopsDark));
-        tabControl.SetStyle(TabControlStyle.Rounded);
+        tabControl.Style(Theme.FromScheme(ColorScheme.RootLoopsDark));
+        tabControl.Style(TabControlStyle.Rounded);
 
         tabControl.Measure(new Size(20, 6));
         tabControl.Arrange(new Rectangle(0, 0, 20, 6));

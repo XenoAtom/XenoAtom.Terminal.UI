@@ -111,7 +111,7 @@ public sealed partial class DataPresenter<T> : Visual
         var template = Template;
         if (template.IsEmpty)
         {
-            var templates = Get<DataTemplates>();
+            var templates = GetStyle<DataTemplates>();
             templates.TryResolve(role, out template);
         }
 

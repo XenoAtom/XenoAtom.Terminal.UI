@@ -159,7 +159,7 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         _layoutSlot = slot;
         Bounds = slot;
 
-        var style = Get<PopupStyle>();
+        var style = GetStyle<PopupStyle>();
         var padding = style.Padding;
 
         var content = Content;
@@ -295,7 +295,7 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         }
 
         var theme = GetTheme();
-        var style = Get<PopupStyle>();
+        var style = GetStyle<PopupStyle>();
         var surface = style.ResolveSurfaceStyle(theme);
 
         // Fill popup surface.

@@ -130,7 +130,7 @@ public sealed partial class Footer : Visual
         }
 
         var theme = GetTheme();
-        var style = Get<FooterStyle>().Resolve(theme);
+        var style = GetStyle<FooterStyle>().Resolve(theme);
 
         for (var x = rect.X; x < rect.X + rect.Width; x++)
         {

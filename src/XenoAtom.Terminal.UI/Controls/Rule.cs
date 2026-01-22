@@ -71,7 +71,7 @@ public sealed partial class Rule : Visual
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var style = Get<RuleStyle>();
+        var style = GetStyle<RuleStyle>();
         var pad = Math.Max(0, style.LabelPadding);
 
         var start = StartLabel;
@@ -104,7 +104,7 @@ public sealed partial class Rule : Visual
             return;
         }
 
-        var style = Get<RuleStyle>();
+        var style = GetStyle<RuleStyle>();
         var pad = Math.Max(0, style.LabelPadding);
 
         ArrangeHorizontal(finalRect, pad);
@@ -158,7 +158,7 @@ public sealed partial class Rule : Visual
         }
 
         var theme = GetTheme();
-        var style = Get<RuleStyle>();
+        var style = GetStyle<RuleStyle>();
         var pad = Math.Max(0, style.LabelPadding);
         var glyphs = style.ResolveGlyphs(theme);
         var lineStyle = style.ResolveLineStyle(theme);

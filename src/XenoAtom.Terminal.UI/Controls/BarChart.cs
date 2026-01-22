@@ -107,7 +107,7 @@ public sealed partial class BarChart : Visual
         }
 
         var theme = GetTheme();
-        var style = Get<BarChartStyle>();
+        var style = GetStyle<BarChartStyle>();
         var glyphs = style.Glyphs;
         var fillStyle = style.ResolveFill(theme);
 

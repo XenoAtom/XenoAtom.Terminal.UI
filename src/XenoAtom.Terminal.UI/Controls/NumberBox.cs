@@ -146,13 +146,13 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
     /// Gets the style used to render the editor portion of the number box.
     /// </summary>
     /// <returns>The current <see cref="TextBoxStyle"/>.</returns>
-    protected virtual TextBoxStyle GetTextBoxStyle() => Get<TextBoxStyle>();
+    protected virtual TextBoxStyle GetTextBoxStyle() => GetStyle<TextBoxStyle>();
 
     /// <summary>
     /// Gets the style used to render the validation message portion of the number box.
     /// </summary>
     /// <returns>The current <see cref="NumberBoxStyle"/>.</returns>
-    protected virtual NumberBoxStyle GetNumberBoxStyle() => Get<NumberBoxStyle>();
+    protected virtual NumberBoxStyle GetNumberBoxStyle() => GetStyle<NumberBoxStyle>();
 
     partial void OnInvalidNumberMessageChanged(string? value)
     {

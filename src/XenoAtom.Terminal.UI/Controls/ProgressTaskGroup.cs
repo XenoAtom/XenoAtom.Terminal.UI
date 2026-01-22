@@ -70,7 +70,7 @@ public sealed partial class ProgressTaskGroup : Visual
 
     private Visual? Build()
     {
-        var style = Get<ProgressTaskGroupStyle>();
+        var style = GetStyle<ProgressTaskGroupStyle>();
 
         var tasks = Tasks;
         var columns = Columns;

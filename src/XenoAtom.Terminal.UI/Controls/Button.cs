@@ -51,7 +51,7 @@ public partial class Button : ContentVisual
     /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var style = Get<ButtonStyle>();
+        var style = GetStyle<ButtonStyle>();
         var padding = style.Padding;
         var padH = LayoutConstants.ClampFinite(Math.Max(0, padding.Horizontal));
         var padV = LayoutConstants.ClampFinite(Math.Max(0, padding.Vertical));
@@ -126,7 +126,7 @@ public partial class Button : ContentVisual
             return;
         }
 
-        var buttonStyle = Get<ButtonStyle>();
+        var buttonStyle = GetStyle<ButtonStyle>();
         var borderPad = buttonStyle.ShowBorder ? 1 : 0;
 
         var padding = buttonStyle.Padding;
@@ -152,7 +152,7 @@ public partial class Button : ContentVisual
     {
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var buttonStyle = Get<ButtonStyle>();
+        var buttonStyle = GetStyle<ButtonStyle>();
         var pressed = IsPressed && _pressedInside;
         var hovered = IsPressed ? _pressedInside : IsHovered;
         var style = buttonStyle.Resolve(theme, IsEnabled, isFocused, hovered: hovered, pressed: pressed, Tone);

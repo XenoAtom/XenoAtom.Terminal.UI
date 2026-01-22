@@ -335,7 +335,7 @@ public sealed partial class ScrollViewer : Visual
         var verticalScrollEnabled = VerticalScrollEnabled;
         var horizontalScrollEnabled = HorizontalScrollEnabled;
 
-        var style = Get<ScrollViewerStyle>();
+        var style = GetStyle<ScrollViewerStyle>();
         var thickness = Math.Max(1, style.ScrollBarThickness);
         var viewportWidth = Math.Max(1, finalRect.Width);
         var viewportHeight = Math.Max(1, finalRect.Height);
@@ -519,8 +519,8 @@ public sealed partial class ScrollViewer : Visual
         if (!Equals(_internalScrollBarStyle, scrollBarStyle))
         {
             _internalScrollBarStyle = scrollBarStyle;
-            _verticalBar.SetStyle(scrollBarStyle);
-            _horizontalBar.SetStyle(scrollBarStyle);
+            _verticalBar.Style(scrollBarStyle);
+            _horizontalBar.Style(scrollBarStyle);
         }
 
         if (_showVerticalBar)
@@ -824,7 +824,7 @@ public sealed partial class ScrollViewer : Visual
             }
 
             var theme = GetTheme();
-            var style = _owner.Get<ScrollViewerStyle>();
+            var style = _owner.GetStyle<ScrollViewerStyle>();
             var trackStyle = style.ResolveTrackStyle(theme);
             var glyphs = theme.ScrollBars;
 

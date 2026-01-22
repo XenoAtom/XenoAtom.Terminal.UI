@@ -215,7 +215,7 @@ public sealed partial class Slider<T> : Visual where T: struct, INumber<T>
         }
 
         var theme = GetTheme();
-        var style = Get<SliderStyle>();
+        var style = GetStyle<SliderStyle>();
         var focused = ReferenceEquals(App?.FocusedElement, this);
         var hovered = IsHovered;
         var pressed = _dragging;

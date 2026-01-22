@@ -132,7 +132,7 @@ public sealed partial class Header : Visual
         }
 
         var theme = GetTheme();
-        var style = Get<HeaderStyle>().Resolve(theme);
+        var style = GetStyle<HeaderStyle>().Resolve(theme);
 
         for (var x = rect.X; x < rect.X + rect.Width; x++)
         {

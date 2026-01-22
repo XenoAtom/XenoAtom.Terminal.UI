@@ -270,7 +270,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// </summary>
     /// <typeparam name="T">The style type.</typeparam>
     /// <returns>The resolved style value.</returns>
-    public T Get<T>() where T : IStyle<T> => Get(T.Key);
+    public T GetStyle<T>() where T : IStyle<T> => GetStyle(T.Key);
 
     /// <summary>
     /// Gets a style value from the environment.
@@ -278,7 +278,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// <typeparam name="T">The style type.</typeparam>
     /// <param name="key">The style key.</param>
     /// <returns>The resolved style value.</returns>
-    public T Get<T>(StyleKey<T> key)
+    public T GetStyle<T>(StyleKey<T> key)
     {
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(key);
@@ -309,7 +309,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// <summary>
     /// Gets the current theme resolved from the environment.
     /// </summary>
-    public Theme GetTheme() => Get<Theme>();
+    public Theme GetTheme() => GetStyle<Theme>();
 
     /// <summary>
     /// Registers a dynamic update callback for this visual.

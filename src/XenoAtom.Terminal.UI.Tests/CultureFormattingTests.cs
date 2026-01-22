@@ -41,7 +41,7 @@ public sealed class CultureFormattingTests
         var subtreeCulture = CultureInfo.GetCultureInfo("fr-FR");
 
         var presenter = new DataPresenter<double>().Value(1.5);
-        presenter.SetStyle(CultureStyle.Key, CultureStyle.Default with { Culture = subtreeCulture });
+        presenter.Style(CultureStyle.Default with { Culture = subtreeCulture });
 
         using var driver = new TerminalAppTestDriver(
             presenter,
@@ -58,4 +58,3 @@ public sealed class CultureFormattingTests
         StringAssert.Contains(rendered, "1,5");
     }
 }
-

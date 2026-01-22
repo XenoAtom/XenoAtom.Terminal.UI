@@ -150,7 +150,7 @@ public sealed partial class TextFiglet : Visual
             return;
         }
 
-        var style = Get<TextFigletStyle>().ResolveTextStyle(GetTheme());
+        var style = GetStyle<TextFigletStyle>().ResolveTextStyle(GetTheme());
         var alignment = TextAlignment;
 
         var maxLines = Math.Min(rect.Height, _cachedLines.Length);

@@ -41,7 +41,7 @@ public sealed class ComputedVisualTests
         var key = new StyleKey<string>("Title", "A");
 
         ComputedVisual? view = null;
-        view = new ComputedVisual(() => new TextBlock($"Env:{view!.Get(key)}"));
+        view = new ComputedVisual(() => new TextBlock($"Env:{view!.GetStyle(key)}"));
 
         var root = new VStack();
         root.Add(view);

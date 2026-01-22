@@ -45,7 +45,7 @@ public sealed partial class ProgressBar : Visual
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var progressStyle = Get<ProgressBarStyle>();
+        var progressStyle = GetStyle<ProgressBarStyle>();
 
         var minBarWidth = 10;
         var required = minBarWidth;
@@ -79,7 +79,7 @@ public sealed partial class ProgressBar : Visual
         }
 
         var theme = GetTheme();
-        var progressStyle = Get<ProgressBarStyle>();
+        var progressStyle = GetStyle<ProgressBarStyle>();
 
         var value = Math.Clamp(Value, 0.0, 1.0);
 

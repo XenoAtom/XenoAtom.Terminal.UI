@@ -100,7 +100,7 @@ public sealed partial class Sparkline : Visual
         }
 
         var theme = GetTheme();
-        var style = Get<SparklineStyle>();
+        var style = GetStyle<SparklineStyle>();
         var glyphs = style.Glyphs;
         var cellStyle = style.Resolve(theme);
 

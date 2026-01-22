@@ -110,12 +110,12 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
         if (_options.HostKind == TerminalHostKind.Inline && !Root.HasLocal(Theme.Key))
         {
-            Root.SetStyle(Theme.Key, Theme.Terminal);
+            Root.Style(Theme.Terminal);
         }
 
         if (!Root.HasLocal(CultureStyle.Key))
         {
-            Root.SetStyle(CultureStyle.Key, CultureStyle.Default with { Culture = _options.Culture });
+            Root.Style(CultureStyle.Default with { Culture = _options.Culture });
         }
 
         if (_options.HostKind == TerminalHostKind.Fullscreen)

@@ -145,7 +145,7 @@ public sealed partial class TabControl : Visual
     /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var style = Get<TabControlStyle>();
+        var style = GetStyle<TabControlStyle>();
         EnsureContentTemplate(style);
         UpdateSelectedContent();
         var pad = style.TabPadding;
@@ -200,7 +200,7 @@ public sealed partial class TabControl : Visual
     {
         Bounds = finalRect;
 
-        var style = Get<TabControlStyle>();
+        var style = GetStyle<TabControlStyle>();
         EnsureContentTemplate(style);
         UpdateSelectedContent();
         var pad = style.TabPadding;
@@ -257,7 +257,7 @@ public sealed partial class TabControl : Visual
         }
 
         var theme = GetTheme();
-        var style = Get<TabControlStyle>();
+        var style = GetStyle<TabControlStyle>();
         var focused = ReferenceEquals(App?.FocusedElement, this);
 
         var headerHeight = Math.Min(Math.Max(1, _headerHeight), rect.Height);

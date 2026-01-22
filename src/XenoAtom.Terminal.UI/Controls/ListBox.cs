@@ -105,7 +105,7 @@ public sealed partial class ListBox<T> : Visual
             return;
         }
 
-        var listBoxStyle = Get<ListBoxStyle>();
+        var listBoxStyle = GetStyle<ListBoxStyle>();
         var innerLeft = rect.X;
         var innerTop = rect.Y;
         var innerWidth = Math.Max(0, rect.Width);
@@ -142,7 +142,7 @@ public sealed partial class ListBox<T> : Visual
             return;
         }
 
-        var listBoxStyle = Get<ListBoxStyle>();
+        var listBoxStyle = GetStyle<ListBoxStyle>();
         var innerLeft = rect.X;
         var innerTop = rect.Y;
         var innerWidth = Math.Max(0, rect.Width);
@@ -375,7 +375,7 @@ public sealed partial class ListBox<T> : Visual
             return template;
         }
 
-        var templates = Get<DataTemplates>();
+        var templates = GetStyle<DataTemplates>();
         if (templates.TryResolve(DataTemplateRole.Display, out template))
         {
             return template;

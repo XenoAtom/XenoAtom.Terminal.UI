@@ -117,7 +117,7 @@ public abstract partial class ScrollBar : Visual
     /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var thickness = Math.Max(1, Get<ScrollBarStyle>().Thickness);
+        var thickness = Math.Max(1, GetStyle<ScrollBarStyle>().Thickness);
         thickness = LayoutConstants.ClampFinite(thickness);
 
         if (Orientation == Orientation.Vertical)
@@ -151,7 +151,7 @@ public abstract partial class ScrollBar : Visual
         }
 
         var theme = GetTheme();
-        var style = Get<ScrollBarStyle>();
+        var style = GetStyle<ScrollBarStyle>();
         var glyphs = theme.ScrollBars;
 
         var highlighted = IsHovered || _dragging || ReferenceEquals(App?.FocusedElement, this);
@@ -234,7 +234,7 @@ public abstract partial class ScrollBar : Visual
 
         var viewport = Math.Max(0, ViewportSize);
         var contentSize = range + viewport;
-        var minThumb = Math.Max(1, Get<ScrollBarStyle>().MinThumbLength);
+        var minThumb = Math.Max(1, GetStyle<ScrollBarStyle>().MinThumbLength);
 
         var thumbLength = viewport <= 0 || contentSize <= 0
             ? minThumb

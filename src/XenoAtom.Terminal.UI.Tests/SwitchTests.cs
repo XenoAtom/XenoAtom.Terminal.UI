@@ -51,7 +51,7 @@ public sealed class SwitchTests
         var theme = Theme.FromScheme(XenoAtom.Terminal.UI.Styling.ColorScheme.RootLoopsDark);
 
         var sw = new Switch();
-        sw.SetStyle(Theme.Key, theme);
+        sw.Style(theme);
 
         sw.Measure(new Size(10, 1));
         sw.Arrange(new Rectangle(0, 0, 10, 1));

@@ -34,10 +34,7 @@ public sealed class CheckBoxTests
 
         // Use a wide glyph to ensure the label offset accounts for rune width.
         var wideGlyph = new Rune(0x1F600); // 😀
-        checkBox.SetStyle(CheckBoxStyle.Key, new CheckBoxStyle
-        {
-            CheckedGlyph = wideGlyph,
-        });
+        checkBox.Style(CheckBoxStyle.Default with { CheckedGlyph = wideGlyph });
 
         checkBox.Measure(new Size(10, 1));
         checkBox.Arrange(new Rectangle(0, 0, 10, 1));

@@ -14,7 +14,7 @@ This spec borrows proven ideas from WPF/Avalonia/SwiftUI (DataTemplates, content
 but adapts them to a retained-mode terminal UI with:
 
 - Binding-driven invalidation (no diff engine).
-- Environment-scoped configuration (`Visual.Get<T>()` / `Visual.Set<T>(...)`).
+- Environment-scoped configuration (`Visual.GetStyle<T>()` / `Visual.SetStyle<T>(...)` / `visual.Style(...)`).
 - Fluent API patterns.
 
 ---
@@ -141,7 +141,7 @@ Normative rules:
 
 ### 3.4 `DataTemplates` (environment-scoped registry)
 
-`DataTemplates` is an environment-scoped registry of templates, resolved via `Visual.Get<DataTemplates>()`.
+`DataTemplates` is an environment-scoped registry of templates, resolved via `Visual.GetStyle<DataTemplates>()`.
 
 #### 3.4.1 Immutability without duplication (overlay chaining)
 

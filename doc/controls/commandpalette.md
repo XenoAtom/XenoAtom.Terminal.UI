@@ -15,7 +15,7 @@ using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Styling;
 
 var palette = new CommandPalette();
-palette.SetStyle(CommandPaletteStyle.Default with
+palette.Style(CommandPaletteStyle.Default with
 {
     PopupTemplateFactory = visual => new Border(visual),
 });

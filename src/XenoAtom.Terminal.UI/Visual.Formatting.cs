@@ -20,7 +20,7 @@ public abstract partial class Visual
     public CultureInfo GetCulture()
     {
         VerifyAccess();
-        return Get<CultureStyle>().Culture;
+        return GetStyle<CultureStyle>().Culture;
     }
 
     /// <summary>

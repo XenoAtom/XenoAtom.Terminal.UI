@@ -30,7 +30,7 @@ public sealed class BorderDefaultsTests
 
         var borderedButton = new Button("OK");
         var borderedRoot = new VStack(borderedButton);
-        borderedRoot.SetStyle(ButtonStyle.Key, new ButtonStyle { ShowBorder = true });
+        borderedRoot.Style(ButtonStyle.Default with { ShowBorder = true });
 
         using (var driver2 = new TerminalAppTestDriver(borderedRoot, TerminalHostKind.Fullscreen, new TerminalSize(24, 6)))
         {

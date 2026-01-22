@@ -219,7 +219,7 @@ public sealed partial class MaskedInput : TextEditorBase
     {
         EnsureTemplateParsed();
 
-        var style = Get<MaskedInputStyle>();
+        var style = GetStyle<MaskedInputStyle>();
         var padding = style.Padding;
         var width = Math.Max(0, Math.Min(constraints.MaxWidth, _tokens.Length + padding.Horizontal));
         var height = Math.Max(1, Math.Min(constraints.MaxHeight, 1 + padding.Vertical));
@@ -231,7 +231,7 @@ public sealed partial class MaskedInput : TextEditorBase
     {
         Bounds = finalRect;
 
-        var style = Get<MaskedInputStyle>();
+        var style = GetStyle<MaskedInputStyle>();
         var padding = style.Padding;
 
         _contentRect = new Rectangle(
@@ -258,7 +258,7 @@ public sealed partial class MaskedInput : TextEditorBase
 
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
-        var style = Get<MaskedInputStyle>();
+        var style = GetStyle<MaskedInputStyle>();
 
         var selectionStyle = style.SelectionStyle(theme);
         var backgroundStyle = style.BackgroundStyle(theme, isFocused);
@@ -304,7 +304,7 @@ public sealed partial class MaskedInput : TextEditorBase
 
         var theme = GetTheme();
         var focused = ReferenceEquals(App?.FocusedElement, this);
-        var maskedStyle = Get<MaskedInputStyle>();
+        var maskedStyle = GetStyle<MaskedInputStyle>();
 
         var cellX = x;
         for (var i = 0; i < text.Length; i++)

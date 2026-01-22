@@ -118,7 +118,7 @@ public sealed partial class OptionList<T> : Visual
     {
         EnsureItemVisuals();
 
-        var style = Get<OptionListStyle>();
+        var style = GetStyle<OptionListStyle>();
         var prefixWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.MarkerGlyph)) + Math.Max(0, style.SpaceBetweenGlyphAndText);
 
         var itemWidth = 0;
@@ -154,7 +154,7 @@ public sealed partial class OptionList<T> : Visual
             return;
         }
 
-        var style = Get<OptionListStyle>();
+        var style = GetStyle<OptionListStyle>();
         var innerLeft = rect.X;
         var innerTop = rect.Y;
         var innerWidth = Math.Max(0, rect.Width);
@@ -195,7 +195,7 @@ public sealed partial class OptionList<T> : Visual
         }
 
         var theme = GetTheme();
-        var style = Get<OptionListStyle>();
+        var style = GetStyle<OptionListStyle>();
 
         var innerLeft = rect.X;
         var innerTop = rect.Y;
@@ -551,7 +551,7 @@ public sealed partial class OptionList<T> : Visual
             return template;
         }
 
-        var templates = Get<DataTemplates>();
+        var templates = GetStyle<DataTemplates>();
         if (templates.TryResolve(DataTemplateRole.Display, out template))
         {
             return template;

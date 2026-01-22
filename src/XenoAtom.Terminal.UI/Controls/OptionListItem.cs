@@ -90,7 +90,7 @@ public sealed partial class OptionListItem : Visual
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var style = Get<OptionListStyle>();
+        var style = GetStyle<OptionListStyle>();
         var gap = Math.Max(0, style.SpaceBetweenContentAndShortcut);
         var descriptionIndent = Math.Max(0, style.DescriptionIndent);
 
@@ -134,7 +134,7 @@ public sealed partial class OptionListItem : Visual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        var style = Get<OptionListStyle>();
+        var style = GetStyle<OptionListStyle>();
         var gap = Math.Max(0, style.SpaceBetweenContentAndShortcut);
         var descriptionIndent = Math.Max(0, style.DescriptionIndent);
 

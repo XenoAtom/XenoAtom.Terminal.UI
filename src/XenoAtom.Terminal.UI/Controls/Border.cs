@@ -53,7 +53,7 @@ public sealed partial class Border : Padder
         }
 
         var theme = GetTheme();
-        var borderStyle = Get<BorderStyle>();
+        var borderStyle = GetStyle<BorderStyle>();
         var glyphs = borderStyle.Glyphs ?? theme.Lines;
 
         var focusedWithin = false;

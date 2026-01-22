@@ -75,7 +75,7 @@ public sealed partial class Canvas : Visual
         }
 
         var theme = GetTheme();
-        var style = Get<CanvasStyle>();
+        var style = GetStyle<CanvasStyle>();
         var ctx = new CanvasContext(buffer, rect, style.ResolveDefaultStyle(theme), style.DefaultRune);
         painter(ctx);
     }

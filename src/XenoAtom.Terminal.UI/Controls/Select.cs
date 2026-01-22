@@ -77,7 +77,7 @@ public sealed partial class Select<T> : ContentVisual
         // Rebuild selected content before measuring when needed.
         UpdateSelectedContent();
 
-        var style = Get<SelectStyle>();
+        var style = GetStyle<SelectStyle>();
         var padding = style.Padding;
         var arrowWidth = TerminalTextUtility.GetWidth(style.ArrowGlyph.ToString().AsSpan());
 
@@ -129,7 +129,7 @@ public sealed partial class Select<T> : ContentVisual
     {
         Bounds = finalRect;
 
-        var style = Get<SelectStyle>();
+        var style = GetStyle<SelectStyle>();
         var padding = style.Padding;
         var arrowWidth = TerminalTextUtility.GetWidth(style.ArrowGlyph.ToString().AsSpan());
 
@@ -162,7 +162,7 @@ public sealed partial class Select<T> : ContentVisual
         }
 
         var theme = GetTheme();
-        var style = Get<SelectStyle>();
+        var style = GetStyle<SelectStyle>();
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var resolved = style.ResolveStyle(theme, IsEnabled, isFocused, IsHovered);
 
@@ -283,7 +283,7 @@ public sealed partial class Select<T> : ContentVisual
             .ItemTemplate(template);
         list.SelectedIndex = Math.Clamp(SelectedIndex, 0, Math.Max(0, list.Items.Count - 1));
 
-        var style = Get<SelectStyle>();
+        var style = GetStyle<SelectStyle>();
         var content = style.PopupTemplateFactory?.Invoke(list) ?? list;
 
         list.PointerPressed((s, e) =>
@@ -388,7 +388,7 @@ public sealed partial class Select<T> : ContentVisual
             return template;
         }
 
-        var templates = Get<DataTemplates>();
+        var templates = GetStyle<DataTemplates>();
         if (templates.TryResolve(DataTemplateRole.Display, out template))
         {
             return template;

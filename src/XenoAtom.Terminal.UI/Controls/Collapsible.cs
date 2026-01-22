@@ -116,7 +116,7 @@ public sealed partial class Collapsible : Visual
     /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var style = Get<CollapsibleStyle>();
+        var style = GetStyle<CollapsibleStyle>();
         var glyph = IsExpanded ? style.ExpandedGlyph : style.CollapsedGlyph;
         var glyphWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(glyph));
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndHeader);
@@ -172,7 +172,7 @@ public sealed partial class Collapsible : Visual
 
     private SizeHints MeasureExpanded(in LayoutConstraints constraints, int prefixWidth, SizeHints headerHints)
     {
-        var style = Get<CollapsibleStyle>();
+        var style = GetStyle<CollapsibleStyle>();
         var spacing = Math.Max(0, style.ContentSpacing);
 
         var content = Content!;
@@ -219,7 +219,7 @@ public sealed partial class Collapsible : Visual
     {
         Bounds = finalRect;
 
-        var style = Get<CollapsibleStyle>();
+        var style = GetStyle<CollapsibleStyle>();
         var glyph = IsExpanded ? style.ExpandedGlyph : style.CollapsedGlyph;
         var glyphWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(glyph));
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndHeader);
@@ -274,7 +274,7 @@ public sealed partial class Collapsible : Visual
         }
 
         var theme = GetTheme();
-        var style = Get<CollapsibleStyle>();
+        var style = GetStyle<CollapsibleStyle>();
         var isFocused = IsFocusWithin();
         var headerStyle = style.ResolveHeader(theme, IsEnabled, isFocused, _headerHovered, _pressedHeader);
 

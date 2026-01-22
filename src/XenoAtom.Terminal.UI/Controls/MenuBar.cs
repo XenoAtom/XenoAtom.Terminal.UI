@@ -58,7 +58,7 @@ public sealed partial class MenuBar : Visual
     {
         EnsurePresenters();
 
-        var style = Get<MenuBarStyle>();
+        var style = GetStyle<MenuBarStyle>();
         var padding = style.Padding;
         var spacing = Math.Max(0, style.ItemSpacing);
 
@@ -89,7 +89,7 @@ public sealed partial class MenuBar : Visual
     {
         EnsurePresenters();
 
-        var style = Get<MenuBarStyle>();
+        var style = GetStyle<MenuBarStyle>();
         var padding = style.Padding;
         var spacing = Math.Max(0, style.ItemSpacing);
 
@@ -116,7 +116,7 @@ public sealed partial class MenuBar : Visual
         }
 
         var theme = GetTheme();
-        var style = Get<MenuBarStyle>();
+        var style = GetStyle<MenuBarStyle>();
         var barStyle = style.ResolveBarStyle(theme);
 
         for (var y = rect.Y; y < rect.Y + rect.Height; y++)
@@ -190,7 +190,7 @@ public sealed partial class MenuBar : Visual
         _openIndex = index;
 
         var list = new MenuList(this, menu.Items, parent: null);
-        var menuListStyle = Get<MenuListStyle>();
+        var menuListStyle = GetStyle<MenuListStyle>();
         var popupContent = menuListStyle.PopupTemplateFactory?.Invoke(list) ?? list;
 
         var popup = new Popup
@@ -328,7 +328,7 @@ public sealed partial class MenuBar : Visual
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints)
         {
-            var style = Get<MenuBarStyle>();
+            var style = GetStyle<MenuBarStyle>();
             var padding = style.ItemPadding;
 
             var content = Content;
@@ -344,7 +344,7 @@ public sealed partial class MenuBar : Visual
 
         protected override void ArrangeCore(in Rectangle finalRect)
         {
-            var style = Get<MenuBarStyle>();
+            var style = GetStyle<MenuBarStyle>();
             var padding = style.ItemPadding;
 
             var content = Content;
@@ -367,7 +367,7 @@ public sealed partial class MenuBar : Visual
             }
 
             var theme = GetTheme();
-            var style = Get<MenuBarStyle>();
+            var style = GetStyle<MenuBarStyle>();
 
             var bar = Parent as MenuBar;
             var open = bar is not null && bar.OpenIndex == _index;
@@ -457,7 +457,7 @@ public sealed partial class MenuBar : Visual
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints)
         {
-            var style = Get<MenuListStyle>();
+            var style = GetStyle<MenuListStyle>();
             var padding = style.Padding;
 
             var maxRowWidth = 0;
@@ -487,7 +487,7 @@ public sealed partial class MenuBar : Visual
 
         protected override void ArrangeCore(in Rectangle finalRect)
         {
-            var style = Get<MenuListStyle>();
+            var style = GetStyle<MenuListStyle>();
             var padding = style.Padding;
 
             _innerRect = new Rectangle(
@@ -514,7 +514,7 @@ public sealed partial class MenuBar : Visual
             }
 
             var theme = GetTheme();
-            var style = Get<MenuListStyle>();
+            var style = GetStyle<MenuListStyle>();
             var inner = _innerRect;
 
             for (var i = 0; i < _items.Count; i++)
@@ -760,7 +760,7 @@ public sealed partial class MenuBar : Visual
             CloseSubmenu();
 
             var list = new MenuList(_owner, item.Items, parent: this);
-            var menuListStyle = Get<MenuListStyle>();
+            var menuListStyle = GetStyle<MenuListStyle>();
             var popupContent = menuListStyle.PopupTemplateFactory?.Invoke(list) ?? list;
 
             var popup = new Popup
@@ -889,7 +889,7 @@ public sealed partial class MenuBar : Visual
                 return SizeHints.Fixed(constraints.Clamp(new Size(1, 1)));
             }
 
-            var style = Get<MenuListStyle>();
+            var style = GetStyle<MenuListStyle>();
             var iconGap = Math.Max(0, style.SpaceBetweenIconAndText);
             var shortcutGap = Math.Max(0, style.SpaceBetweenTextAndShortcut);
 
@@ -935,7 +935,7 @@ public sealed partial class MenuBar : Visual
                 return;
             }
 
-            var style = Get<MenuListStyle>();
+            var style = GetStyle<MenuListStyle>();
             var iconGap = Math.Max(0, style.SpaceBetweenIconAndText);
             var shortcutGap = Math.Max(0, style.SpaceBetweenTextAndShortcut);
 

@@ -126,7 +126,7 @@ public sealed partial class Table : Visual
             }
         }
 
-        var tableStyle = Get<TableStyle>();
+        var tableStyle = GetStyle<TableStyle>();
         var (showOuterBorder, showVerticalLines, showRowSeparators, showHeaderSeparator, padding) = ResolveOptions(tableStyle);
 
         FitColumnWidthsToWidth(widths, constraints.MaxWidth, padding.Horizontal, showOuterBorder, showVerticalLines, expandToAvailable: false);
@@ -156,7 +156,7 @@ public sealed partial class Table : Visual
             return;
         }
 
-        var tableStyle = Get<TableStyle>();
+        var tableStyle = GetStyle<TableStyle>();
         var (showOuterBorder, showVerticalLines, showRowSeparators, showHeaderSeparator, padding) = ResolveOptions(tableStyle);
 
         FitColumnWidthsToWidth(widths, finalRect.Width, padding.Horizontal, showOuterBorder, showVerticalLines, expandToAvailable: true);
@@ -205,7 +205,7 @@ public sealed partial class Table : Visual
             return;
         }
 
-        var tableStyle = Get<TableStyle>();
+        var tableStyle = GetStyle<TableStyle>();
         var (showOuterBorder, showVerticalLines, showRowSeparators, showHeaderSeparator, padding) = ResolveOptions(tableStyle);
 
         var theme = GetTheme();

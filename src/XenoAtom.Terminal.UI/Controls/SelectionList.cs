@@ -99,7 +99,7 @@ public sealed partial class SelectionList<T> : Visual
     {
         EnsureItemVisuals();
 
-        var style = Get<SelectionListStyle>();
+        var style = GetStyle<SelectionListStyle>();
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
         var checkWidth = Math.Max(1, Math.Max(TerminalTextUtility.GetRuneWidth(style.CheckedGlyph), TerminalTextUtility.GetRuneWidth(style.UncheckedGlyph)));
@@ -135,7 +135,7 @@ public sealed partial class SelectionList<T> : Visual
             return;
         }
 
-        var style = Get<SelectionListStyle>();
+        var style = GetStyle<SelectionListStyle>();
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
         var checkWidth = Math.Max(1, Math.Max(TerminalTextUtility.GetRuneWidth(style.CheckedGlyph), TerminalTextUtility.GetRuneWidth(style.UncheckedGlyph)));
@@ -175,7 +175,7 @@ public sealed partial class SelectionList<T> : Visual
             return;
         }
 
-        var style = Get<SelectionListStyle>();
+        var style = GetStyle<SelectionListStyle>();
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
         var checkWidth = Math.Max(1, Math.Max(TerminalTextUtility.GetRuneWidth(style.CheckedGlyph), TerminalTextUtility.GetRuneWidth(style.UncheckedGlyph)));
@@ -466,7 +466,7 @@ public sealed partial class SelectionList<T> : Visual
             return template;
         }
 
-        var templates = Get<DataTemplates>();
+        var templates = GetStyle<DataTemplates>();
         if (templates.TryResolve(DataTemplateRole.Display, out template))
         {
             return template;

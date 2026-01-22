@@ -16,8 +16,8 @@ Screenshot placeholder:
 
 The active template registry is stored in the visual environment and resolved with:
 
-- `Visual.Get<DataTemplates>()`
-- `Visual.SetStyle(templates)` (or `visual.Style(templates)`)
+- `Visual.GetStyle<DataTemplates>()`
+- `visual.Style(templates)`
 
 `DataTemplates` is immutable and supports overlay chaining via `Derive(...)`:
 

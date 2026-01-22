@@ -114,7 +114,7 @@ public sealed partial class LineChart : Visual
         }
 
         var theme = GetTheme();
-        var style = Get<LineChartStyle>();
+        var style = GetStyle<LineChartStyle>();
         var point = style.PointGlyph;
         var pointStyle = style.ResolvePointStyle(theme);
 

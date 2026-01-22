@@ -144,7 +144,7 @@ public sealed partial class TreeView : Visual
     {
         EnsureVisibleList();
 
-        var style = Get<TreeViewStyle>();
+        var style = GetStyle<TreeViewStyle>();
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
         var gapAfterIcon = Math.Max(0, style.SpaceBetweenGlyphAndText);
 
@@ -178,7 +178,7 @@ public sealed partial class TreeView : Visual
         Bounds = finalRect;
         EnsureVisibleList();
 
-        var style = Get<TreeViewStyle>();
+        var style = GetStyle<TreeViewStyle>();
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
         var gapAfterIcon = Math.Max(0, style.SpaceBetweenGlyphAndText);
         var innerLeft = finalRect.X;
@@ -223,7 +223,7 @@ public sealed partial class TreeView : Visual
 
         EnsureVisibleList();
 
-        var style = Get<TreeViewStyle>();
+        var style = GetStyle<TreeViewStyle>();
         var innerLeft = rect.X;
         var innerTop = rect.Y;
         var innerWidth = Math.Max(0, rect.Width);
@@ -314,7 +314,7 @@ public sealed partial class TreeView : Visual
             return;
         }
 
-        var style = Get<TreeViewStyle>();
+        var style = GetStyle<TreeViewStyle>();
         var viewportHeight = Math.Max(1, Bounds.Height);
 
         var count = _visible.Count;
@@ -372,7 +372,7 @@ public sealed partial class TreeView : Visual
 
         EnsureVisibleList();
 
-        var style = Get<TreeViewStyle>();
+        var style = GetStyle<TreeViewStyle>();
 
         var innerY = e.UiY - Bounds.Y;
         var innerHeight = Math.Max(0, Bounds.Height);

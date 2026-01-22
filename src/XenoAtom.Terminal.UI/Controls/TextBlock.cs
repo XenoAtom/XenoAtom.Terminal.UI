@@ -102,7 +102,7 @@ public sealed partial class TextBlock : Visual
         }
 
         var theme = GetTheme();
-        var textBlockStyle = Get<TextBlockStyle>();
+        var textBlockStyle = GetStyle<TextBlockStyle>();
         var style = textBlockStyle.ResolveTextStyle(theme);
 
         if (textBlockStyle.FillBackground && textBlockStyle.Background is not null)

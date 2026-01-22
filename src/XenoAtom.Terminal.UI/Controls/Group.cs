@@ -298,7 +298,7 @@ public sealed partial class Group : Visual
         }
 
         var theme = GetTheme();
-        var groupStyle = Get<GroupStyle>();
+        var groupStyle = GetStyle<GroupStyle>();
         var glyphs = groupStyle.Glyphs ?? theme.Lines;
         var borderStyle = groupStyle.ResolveBorderStyle(theme, focused);
 

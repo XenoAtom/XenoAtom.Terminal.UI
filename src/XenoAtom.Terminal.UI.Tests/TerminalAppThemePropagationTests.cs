@@ -20,7 +20,7 @@ public sealed class TerminalAppThemePropagationTests
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
         var root = new TabControl(new TabPage("Tab1", "Content"));
-        root.SetStyle(Theme.DefaultLight);
+        root.Style(Theme.DefaultLight);
 
         var options = new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen };
         await using var app = new TerminalApp(root, session.Instance, options);

@@ -51,7 +51,7 @@ public sealed partial class Switch : ContentVisual
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var style = Get<SwitchStyle>();
+        var style = GetStyle<SwitchStyle>();
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
 
         var content = Content;
@@ -72,7 +72,7 @@ public sealed partial class Switch : ContentVisual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        var style = Get<SwitchStyle>();
+        var style = GetStyle<SwitchStyle>();
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
 
         var contentLeft = finalRect.X + Math.Min(finalRect.Width, TrackWidth + gap);
@@ -91,7 +91,7 @@ public sealed partial class Switch : ContentVisual
             return;
         }
 
-        var style = Get<SwitchStyle>();
+        var style = GetStyle<SwitchStyle>();
         var theme = GetTheme();
         var focused = ReferenceEquals(App?.FocusedElement, this);
 

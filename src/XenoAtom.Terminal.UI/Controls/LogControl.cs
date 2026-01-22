@@ -368,7 +368,7 @@ public sealed partial class LogControl : Visual
     /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var style = Get<LogControlStyle>();
+        var style = GetStyle<LogControlStyle>();
         var padding = style.Padding;
 
         var innerConstraints = new LayoutConstraints(
@@ -399,7 +399,7 @@ public sealed partial class LogControl : Visual
     {
         Bounds = finalRect;
 
-        var style = Get<LogControlStyle>();
+        var style = GetStyle<LogControlStyle>();
         var padding = style.Padding;
 
         var innerRect = new Rectangle(
@@ -426,7 +426,7 @@ public sealed partial class LogControl : Visual
         }
 
         // Selection and match highlights live in the content visual, but the main control fills the background.
-        var style = Get<LogControlStyle>();
+        var style = GetStyle<LogControlStyle>();
         var theme = GetTheme();
         var focused = ReferenceEquals(App?.FocusedElement, this);
         var background = style.BackgroundStyle(theme, focused);
@@ -560,7 +560,7 @@ public sealed partial class LogControl : Visual
             }
 
             var theme = GetTheme();
-            var style = Get<LogControlSearchStyle>().ResolveErrorStyle(theme);
+            var style = GetStyle<LogControlSearchStyle>().ResolveErrorStyle(theme);
             var fg = style.TryGetForeground(out var c) ? c : (Color?)null;
             return new TextBlock(text).Style(new TextBlockStyle { Foreground = fg });
         });
@@ -1218,8 +1218,8 @@ public sealed partial class LogControl : Visual
             var wrapWidth = Math.Max(1, rect.Width);
 
             var theme = GetTheme();
-            var logStyle = Get<LogControlStyle>();
-            var searchStyle = Get<LogControlSearchStyle>();
+            var logStyle = GetStyle<LogControlStyle>();
+            var searchStyle = GetStyle<LogControlSearchStyle>();
             var focused = ReferenceEquals(App?.FocusedElement, _owner);
             var baseStyle = logStyle.BackgroundStyle(theme, focused);
             var selectionStyle = logStyle.SelectionStyle(theme);

@@ -298,7 +298,7 @@ public abstract partial class Splitter : Visual
         }
 
         var theme = GetTheme();
-        var style = Get<SplitterStyle>();
+        var style = GetStyle<SplitterStyle>();
         var focused = ReferenceEquals(App?.FocusedElement, this);
 
         var barStyle = style.Resolve(theme, IsEnabled, focused, _barHovered, _dragging);
