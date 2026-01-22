@@ -67,6 +67,9 @@ public sealed record BackdropStyle : IStyle<BackdropStyle>
 
         var style = Style.None;
 
+        var fg = Foreground ?? theme.Foreground ?? Color.Default;
+        style = style.WithForeground(fg);
+
         var bg = Background;
         if (bg is null)
         {
@@ -76,11 +79,6 @@ public sealed record BackdropStyle : IStyle<BackdropStyle>
         if (bg is { } bgc)
         {
             style = style.WithBackground(bgc);
-        }
-
-        if (Foreground is { } fgc)
-        {
-            style = style.WithForeground(fgc);
         }
 
         if (Dim)
