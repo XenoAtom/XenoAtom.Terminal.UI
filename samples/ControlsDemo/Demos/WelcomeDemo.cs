@@ -83,7 +83,7 @@ public sealed class WelcomeDemo : ControlsDemoBase
         var scheme = theme.Scheme;
         if (scheme is null)
         {
-            return "[dim]No ColorScheme available for this theme.[/]";
+            return new Markup("[dim]No ColorScheme available for this theme.[/]");
         }
 
         var table = new Table()
