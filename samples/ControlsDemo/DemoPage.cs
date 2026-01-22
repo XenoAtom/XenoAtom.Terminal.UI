@@ -60,9 +60,7 @@ internal static class DemoPage
     private static Visual BuildLogPanel(LogControl logControl)
     {
         // Always visible, but small: log entries are scrollable, searchable, and selectable.
-        return new VStack(
-            new Rule(),
-            logControl.MaxHeight(8)).Spacing(0);
+        return new Group("Logs").Content(logControl).HorizontalAlignment(HorizontalAlignment.Stretch).MaxHeight(12);
     }
 
     private static Visual BuildSourceLink(DemoMetadata meta)

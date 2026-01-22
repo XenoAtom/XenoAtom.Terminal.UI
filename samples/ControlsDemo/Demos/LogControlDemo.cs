@@ -1,5 +1,6 @@
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Templating;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
@@ -14,6 +15,7 @@ public sealed class LogControlDemo : ControlsDemoBase
     {
         var nextId = new State<int>(1);
         var wrap = new State<bool>(true);
+        var lineToAdd = new State<int>(5);
 
         var log = new LogControl
         {
@@ -25,17 +27,25 @@ public sealed class LogControlDemo : ControlsDemoBase
         return new VStack(
                 DemoUi.Hint("LogControl is optimized for appending and renders only the visible rows."),
                 new HStack(
-                        new Button("Append line").Click(() =>
+                        new Button("Append Lines").Click(() =>
                         {
-                            log.AppendLine($"Message {nextId.Value++}");
+                            for (int j = 0; j < lineToAdd.Value; j++)
+                            {
+                                log.AppendLine($"Message {nextId.Value++}");
+                            }
                         }),
                         new Button("Append markup").Click(() =>
                         {
-                            var i = nextId.Value++;
-                            log.AppendMarkupLine($"[green]✔[/] [dim]#{i}[/] [bold]Downloaded[/] [cyan]🗃️[/] item");
+                            for (int j = 0; j < lineToAdd.Value; j++)
+                            {
+                                var i = nextId.Value++;
+                                log.AppendMarkupLine($"[green]✔[/] [dim]#{i}[/] [bold]Downloaded[/] [cyan]🗃️[/] item");
+                            }
                         }),
                         new Button("Clear").Click(log.Clear),
-                        new Switch("Wrap").IsOn(wrap))
+                        new Switch("Wrap").IsOn(wrap),
+                        "| Line Count To Add:", lineToAdd.PresentAs(DataTemplateRole.Editor)
+                        )
                     .Spacing(1),
                 new Border(log).HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch).MinWidth(20).MaxWidth(120).MinHeight(8).MaxHeight(25),
                 new Markup("[dim]Search supports case/word/regex and navigation via buttons or keyboard.[/]"))
