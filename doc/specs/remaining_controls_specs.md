@@ -380,6 +380,7 @@ mechanism used by prompts, pickers, and any text input control.
 - Message content is a `Visual` (supports `Markup`, links, icons, etc.).
 - Supports severity: `Info`, `Warning`, `Error` (theme-driven colors).
 - Supports placement: above or below the control (default: below).
+- Validation must be able to change dynamically (severity and content) based on bindings/state.
 - Must not steal focus and must not intercept pointer events intended for the wrapped control.
 - Must be easy to use from controls and user code (minimal boilerplate).
 
@@ -408,16 +409,69 @@ public sealed class ValidationPresenter : ContentVisual
 }
 ```
 
+Layout behavior:
+
+- When `Message` is null, the presenter must not reserve space for the message (0 height).
+- The message line should measure/arrange with the same width as the wrapped content and wrap by default.
+
 ### Fluent usage (v1 required)
 
 Provide convenience wrappers similar to `Tooltip(...)`:
 
 ```csharp
+// Fixed message:
 new TextBox("Port")
     .Validation(new ValidationMessage(ValidationSeverity.Error, new TextBlock("Port is required.")));
+
+// Dynamic message (recommended pattern):
+var port = new State<string>("8080");
+
+new TextBox().Text(port)
+    .Validate(
+        port.Bind.Value,
+        value =>
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return new(ValidationSeverity.Error, new TextBlock("Port is required."));
+            }
+
+            if (!int.TryParse(value, out var parsed) || parsed is < 1 or > 65535)
+            {
+                return new(ValidationSeverity.Error, new TextBlock("Port must be in [1..65535]."));
+            }
+
+            return null;
+        });
 ```
 
-This should return a `ValidationPresenter` wrapping the original visual.
+The `.Validation(...)` / `.Validate(...)` helpers should return a `ValidationPresenter` wrapping the original visual.
+
+### Validation helpers (recommended)
+
+To make dynamic validation ergonomic without requiring users to manually create a derived state, provide helpers:
+
+```csharp
+public static partial class ValidationExtensions
+{
+    public static ValidationPresenter Validation(this Visual content, ValidationMessage? message);
+    public static ValidationPresenter Validation(this Visual content, Binding<ValidationMessage?> message);
+    public static ValidationPresenter Validation(this Visual content, State<ValidationMessage?> message);
+
+    // The validator is called as part of the binding system (dependency tracking).
+    public static ValidationPresenter Validate<T>(
+        this Visual content,
+        Binding<T> value,
+        Func<T, ValidationMessage?> validator,
+        ValidationPlacement placement = ValidationPlacement.Below);
+}
+```
+
+Notes:
+
+- The `Validate<T>(...)` helper can be implemented by binding `Message` to a computed value based on `value`.
+- Exceptions should not be used as the primary validation mechanism (avoid exceptions as control flow). If desired, a
+  small optional helper can catch a custom `ValidationException` and convert it to a `ValidationMessage`.
 
 ### Style
 
@@ -434,8 +488,11 @@ default; it should look like a compact status line aligned with the input.
 
 - Prompts should use `ValidationPresenter` (not ad-hoc text under the input).
 - Controls that currently render bespoke validation UI (notably `NumberBox<T>`) should be refactored to use this shared
-  infrastructure in v1.
-- For text inputs, validation should be opt-in (wrapper) and should not affect the editor core.
+  infrastructure in v1 by composing `ValidationPresenter` internally.
+  - The control should compute its `ValidationMessage?` from its current value + validator and bind it to the presenter.
+  - This enables dynamic severity/message changes without imperative “set message on every key press” logic.
+- For ad-hoc validation, users should be able to wrap any input control (e.g. `TextBox`) externally using `.Validate(...)`.
+- Validation presentation should remain separate from the editor core (selection/caret/scrolling logic).
 
 ---
 
