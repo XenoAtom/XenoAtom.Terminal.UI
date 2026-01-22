@@ -21,7 +21,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// </remarks>
 public sealed partial class TooltipHost : ContentVisual, IAnimatedVisual
 {
-    private readonly TooltipPopup _tooltipPopup;
+    private readonly TooltipWindow _tooltipWindow;
     private Visual? _tooltipContent;
     private bool _isOpen;
     private long _scheduledShowTick = long.MaxValue;
@@ -31,7 +31,7 @@ public sealed partial class TooltipHost : ContentVisual, IAnimatedVisual
     /// </summary>
     public TooltipHost()
     {
-        _tooltipPopup = new TooltipPopup();
+        _tooltipWindow = new TooltipWindow();
         this.ShowDelayMilliseconds(500);
         this.Placement(PopupPlacement.Below);
         this.OffsetY(1);
@@ -171,14 +171,15 @@ public sealed partial class TooltipHost : ContentVisual, IAnimatedVisual
             throw new InvalidOperationException("Tooltip content is already part of a UI tree.");
         }
 
-        _tooltipPopup.Anchor = Content ?? this;
-        _tooltipPopup.Placement = Placement;
-        _tooltipPopup.OffsetX = OffsetX;
-        _tooltipPopup.OffsetY = OffsetY;
-        _tooltipPopup.Content = tooltipContent;
+        _tooltipWindow.Anchor = Content ?? this;
+        _tooltipWindow.AnchorRect = null;
+        _tooltipWindow.Placement = Placement;
+        _tooltipWindow.OffsetX = OffsetX;
+        _tooltipWindow.OffsetY = OffsetY;
+        _tooltipWindow.Content = tooltipContent;
 
         _isOpen = true;
-        app.ShowTooltipWindow(_tooltipPopup);
+        app.ShowTooltipWindow(_tooltipWindow);
     }
 
     private void CloseTooltip()
@@ -196,8 +197,8 @@ public sealed partial class TooltipHost : ContentVisual, IAnimatedVisual
         }
 
         _isOpen = false;
-        app.CloseTooltipWindow(_tooltipPopup);
-        _tooltipPopup.Content = null;
+        app.CloseTooltipWindow(_tooltipWindow);
+        _tooltipWindow.Content = null;
     }
 
     private static long ToStopwatchTicks(TimeSpan interval)
@@ -216,185 +217,4 @@ public sealed partial class TooltipHost : ContentVisual, IAnimatedVisual
         return (long)ticks;
     }
 
-    private sealed class TooltipPopup : ContentVisual
-    {
-        private Rectangle _popupRect;
-
-        public TooltipPopup()
-        {
-            HorizontalAlignment = HorizontalAlignment.Stretch;
-            VerticalAlignment = VerticalAlignment.Stretch;
-            IsHitTestVisible = false;
-            IsEnabled = false;
-        }
-
-        public Visual? Anchor { get; set; }
-
-        public PopupPlacement Placement { get; set; } = PopupPlacement.Below;
-
-        public int OffsetX { get; set; }
-
-        public int OffsetY { get; set; } = 1;
-
-        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
-        {
-            var style = GetStyle<TooltipStyle>();
-            var padding = style.Padding;
-
-            var maxWidth = constraints.MaxWidth;
-            if (style.MaxWidth is int cap)
-            {
-                maxWidth = Math.Min(maxWidth, cap);
-            }
-
-            var innerWidth = Math.Max(0, maxWidth - padding.Horizontal - 2);
-            var innerHeight = constraints.MaxHeight == LayoutConstants.Infinite
-                ? LayoutConstants.Infinite
-                : Math.Max(0, constraints.MaxHeight - padding.Vertical - 2);
-
-            Content?.Measure(new LayoutConstraints(0, innerWidth, 0, innerHeight));
-
-            // Fill the available space so we can position relative to the anchor.
-            return SizeHints.Flex(
-                min: Size.Zero,
-                natural: Size.Zero,
-                max: new Size(LayoutConstants.Infinite, LayoutConstants.Infinite),
-                growX: 1,
-                growY: 1,
-                shrinkX: 0,
-                shrinkY: 0);
-        }
-
-        protected override void ArrangeCore(in Rectangle finalRect)
-        {
-            Bounds = finalRect;
-
-            var style = GetStyle<TooltipStyle>();
-            var padding = style.Padding;
-
-            var content = Content;
-            var desired = content?.DesiredSize ?? default;
-
-            var desiredWidth = Math.Clamp(desired.Width + padding.Horizontal + 2, 1, finalRect.Width);
-            var desiredHeight = Math.Clamp(desired.Height + padding.Vertical + 2, 1, finalRect.Height);
-
-            var x = finalRect.X + Math.Max(0, (finalRect.Width - desiredWidth) / 2);
-            var y = finalRect.Y + Math.Max(0, (finalRect.Height - desiredHeight) / 2);
-
-            if (Anchor is { } anchor)
-            {
-                var belowY = anchor.Bounds.Y + anchor.Bounds.Height;
-                var aboveY = anchor.Bounds.Y - desiredHeight;
-                var rightX = anchor.Bounds.X + anchor.Bounds.Width;
-                var leftX = anchor.Bounds.X - desiredWidth;
-
-                switch (Placement)
-                {
-                    case PopupPlacement.Above:
-                        x = anchor.Bounds.X;
-                        y = aboveY;
-                        if (y < finalRect.Y && belowY + desiredHeight <= finalRect.Bottom)
-                        {
-                            y = belowY;
-                        }
-                        break;
-
-                    case PopupPlacement.Right:
-                        x = rightX;
-                        y = anchor.Bounds.Y;
-                        if (x + desiredWidth > finalRect.Right && leftX >= finalRect.X)
-                        {
-                            x = leftX;
-                        }
-                        break;
-
-                    case PopupPlacement.Left:
-                        x = leftX;
-                        y = anchor.Bounds.Y;
-                        if (x < finalRect.X && rightX + desiredWidth <= finalRect.Right)
-                        {
-                            x = rightX;
-                        }
-                        break;
-
-                    case PopupPlacement.Below:
-                    default:
-                        x = anchor.Bounds.X;
-                        y = belowY;
-                        if (y + desiredHeight > finalRect.Bottom && aboveY >= finalRect.Y)
-                        {
-                            y = aboveY;
-                        }
-                        break;
-                }
-            }
-
-            x += OffsetX;
-            y += OffsetY;
-
-            x = Math.Clamp(x, finalRect.X, Math.Max(finalRect.X, finalRect.Right - desiredWidth));
-            y = Math.Clamp(y, finalRect.Y, Math.Max(finalRect.Y, finalRect.Bottom - desiredHeight));
-
-            _popupRect = new Rectangle(x, y, desiredWidth, desiredHeight);
-
-            if (content is not null)
-            {
-                var inner = new Rectangle(
-                    _popupRect.X + 1 + padding.Left,
-                    _popupRect.Y + 1 + padding.Top,
-                    Math.Max(0, _popupRect.Width - 2 - padding.Horizontal),
-                    Math.Max(0, _popupRect.Height - 2 - padding.Vertical));
-
-                content.Arrange(inner);
-            }
-        }
-
-        protected override void RenderOverride(CellBuffer buffer)
-        {
-            var rect = _popupRect;
-            if (rect.Width <= 0 || rect.Height <= 0)
-            {
-                return;
-            }
-
-            var theme = GetTheme();
-            var style = GetStyle<TooltipStyle>();
-
-            var surface = style.ResolveSurfaceStyle(theme);
-            var border = style.ResolveBorderStyle(theme);
-            var glyphs = style.Glyphs;
-
-            // Fill surface.
-            for (var y = rect.Y; y < rect.Bottom; y++)
-            {
-                for (var x = rect.X; x < rect.Right; x++)
-                {
-                    buffer.SetCell(x, y, new Rune(' '), surface);
-                }
-            }
-
-            if (rect.Width < 2 || rect.Height < 2)
-            {
-                return;
-            }
-
-            // Draw border.
-            buffer.SetCell(rect.X, rect.Y, glyphs.TopLeft, border);
-            buffer.SetCell(rect.Right - 1, rect.Y, glyphs.TopRight, border);
-            buffer.SetCell(rect.X, rect.Bottom - 1, glyphs.BottomLeft, border);
-            buffer.SetCell(rect.Right - 1, rect.Bottom - 1, glyphs.BottomRight, border);
-
-            for (var x = rect.X + 1; x < rect.Right - 1; x++)
-            {
-                buffer.SetCell(x, rect.Y, glyphs.Horizontal, border);
-                buffer.SetCell(x, rect.Bottom - 1, glyphs.Horizontal, border);
-            }
-
-            for (var y = rect.Y + 1; y < rect.Bottom - 1; y++)
-            {
-                buffer.SetCell(rect.X, y, glyphs.Vertical, border);
-                buffer.SetCell(rect.Right - 1, y, glyphs.Vertical, border);
-            }
-        }
-    }
 }
