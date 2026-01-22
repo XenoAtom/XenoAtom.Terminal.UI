@@ -2,65 +2,62 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using System.Text;
+using System.Collections.Generic;
+using XenoAtom.Terminal.UI.Geometry;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
 /// <summary>
-/// Specifies glyphs used by bar charts.
-/// </summary>
-/// <param name="Full">The full-height glyph.</param>
-/// <param name="Partials">Partial-height glyphs.</param>
-public readonly record struct BarChartGlyphs(Rune Full, SparklineGlyphs Partials)
-{
-    /// <summary>
-    /// Gets a glyph set based on block characters.
-    /// </summary>
-    public static BarChartGlyphs Blocks { get; } = new(new Rune(0x2588), SparklineGlyphs.Blocks8);
-}
-
-/// <summary>
-/// Defines styling for bar chart controls.
+/// Defines styling options for the <see cref="Controls.BarChart"/> control.
 /// </summary>
 public sealed record BarChartStyle : IStyle<BarChartStyle>
 {
     /// <summary>
     /// Gets the default bar chart style.
     /// </summary>
-    public static BarChartStyle Default { get; } = new();
+    public static BarChartStyle Default { get; } = new()
+    {
+        Padding = new Thickness(0),
+        RowSpacing = 0,
+        BarStyle = ProgressBarStyle.Segmented,
+    };
 
     /// <summary>
-    /// Gets the style key for bar charts.
+    /// Gets the environment key for <see cref="BarChartStyle"/>.
     /// </summary>
     public static StyleKey<BarChartStyle> Key { get; } = new("BarChartStyle", Default);
 
     /// <summary>
-    /// Gets the glyphs used for the bars.
+    /// Gets the padding applied around the chart content.
     /// </summary>
-    public BarChartGlyphs Glyphs { get; init; } = BarChartGlyphs.Blocks;
+    public Thickness Padding { get; init; }
 
     /// <summary>
-    /// Gets the optional fill style for bars.
+    /// Gets the spacing between item rows.
     /// </summary>
-    public Style? FillStyle { get; init; }
+    public int RowSpacing { get; init; }
 
     /// <summary>
-    /// Resolves the fill style for the given theme.
+    /// Gets an optional text block style applied to label cells.
     /// </summary>
-    /// <param name="theme">The current theme.</param>
-    /// <returns>The resolved cell style.</returns>
-    public Style ResolveFill(Theme theme)
-    {
-        if (FillStyle is { } s)
-        {
-            return s;
-        }
+    public TextBlockStyle? LabelTextStyle { get; init; }
 
-        var style = theme.ForegroundTextStyle();
-        if (theme.Accent is { } accent)
-        {
-            style = style.WithForeground(accent);
-        }
-        return style;
-    }
+    /// <summary>
+    /// Gets an optional text block style applied to value cells.
+    /// </summary>
+    public TextBlockStyle? ValueTextStyle { get; init; }
+
+    /// <summary>
+    /// Gets the progress bar style used to render each bar row.
+    /// </summary>
+    public ProgressBarStyle BarStyle { get; init; } = ProgressBarStyle.Segmented;
+
+    /// <summary>
+    /// Gets an optional list of default bar colors.
+    /// </summary>
+    /// <remarks>
+    /// When an item does not specify a bar color, the chart cycles through this list. When not provided, the chart
+    /// falls back to theme tones (Primary/Success/Warning/Error).
+    /// </remarks>
+    public IReadOnlyList<Color?>? DefaultBarColors { get; init; }
 }

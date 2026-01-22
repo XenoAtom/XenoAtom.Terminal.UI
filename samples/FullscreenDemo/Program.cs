@@ -422,14 +422,28 @@ var rightColumn = new VStack(
                                 .Padding(Thickness.Zero)
                                 .HorizontalAlignment(HorizontalAlignment.Stretch)
                                 .Content(new BarChart()
-                                    .Values(() =>
+                                    .Title("Samples")
+                                    .Minimum(0.0)
+                                    .Maximum(1.0)
+                                    .ShowValues(false)
+                                    .ShowPercentages(true)
+                                    .Items(
+                                        new BarChartItem("A", 0),
+                                        new BarChartItem("B", 0),
+                                        new BarChartItem("C", 0),
+                                        new BarChartItem("D", 0),
+                                        new BarChartItem("E", 0),
+                                        new BarChartItem("F", 0))
+                                    .Update(chart =>
                                     {
                                         _ = chartTickState.Value;
-                                        return chartValues;
+                                        for (var i = 0; i < chart.Items.Count && i < chartValues.Length; i++)
+                                        {
+                                            chart.Items[i].Value = chartValues[i];
+                                        }
                                     })
-                                    .Orientation(Orientation.Vertical)
-                                    .MinHeight(4)
-                                    .MaxHeight(4)
+                                    .MinHeight(6)
+                                    .MaxHeight(6)
                                     .HorizontalAlignment(HorizontalAlignment.Stretch)),
                             new Group()
                                 .TopLeftText("LineChart")

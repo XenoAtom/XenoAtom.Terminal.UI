@@ -31,20 +31,21 @@ public sealed class VisualizationTests
     [TestMethod]
     public void BarChart_Renders_Filled_Bars()
     {
-        var backend = new InMemoryTerminalBackend(new TerminalSize(6, 6));
+        var backend = new InMemoryTerminalBackend(new TerminalSize(30, 6));
         using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
 
-        session.Instance.Write(new BarChart
-        {
-            Values = new[] { 0.0, 1.0, 0.5 },
-            Minimum = 0.0,
-            Maximum = 1.0,
-            Orientation = Orientation.Vertical,
-            MinHeight = 4,
-            MaxHeight = 4,
-        });
+        session.Instance.Write(new BarChart()
+            .Minimum(0.0)
+            .Maximum(1.0)
+            .ShowValues(false)
+            .Items(
+                new BarChartItem("A", 0.0),
+                new BarChartItem("B", 1.0),
+                new BarChartItem("C", 0.5))
+            .MinHeight(3)
+            .MaxHeight(3));
 
-        var screen = new AnsiTestScreen(6, 6);
+        var screen = new AnsiTestScreen(30, 6);
         screen.Apply(backend.GetOutText());
         var rendered = screen.GetText();
 
