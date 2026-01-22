@@ -1128,6 +1128,8 @@ public sealed partial class LogControl : Visual
         public LogContentVisual(LogControl owner)
         {
             _owner = owner;
+            HorizontalAlignment = HorizontalAlignment.Stretch;
+            VerticalAlignment = VerticalAlignment.Stretch;
             Focusable = false;
         }
 

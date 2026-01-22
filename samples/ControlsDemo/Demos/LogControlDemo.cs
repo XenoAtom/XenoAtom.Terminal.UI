@@ -37,7 +37,7 @@ public sealed class LogControlDemo : ControlsDemoBase
                         new Button("Clear").Click(log.Clear),
                         new Switch("Wrap").IsOn(wrap))
                     .Spacing(1),
-                new Border(log).MinHeight(8).MaxHeight(12),
+                new Border(log).HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch).MinWidth(20).MaxWidth(120).MinHeight(8).MaxHeight(25),
                 new TextBlock("[dim]Search supports case/word/regex and navigation via buttons or keyboard.[/]"))
             .Spacing(1);
     }
