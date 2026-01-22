@@ -115,10 +115,15 @@ public sealed class ColorSchemeDemo : ControlsDemoBase
 
         var schemePanel = new ComputedVisual(() => BuildSchemePanel(BuildScheme()));
 
-        var themedArea = new HStack(new VStack(
-                recipe,
-                preview).Spacing(1), schemePanel)
+        var themedContent = new HStack(
+                new VStack(recipe, preview).Spacing(1),
+                schemePanel)
             .Spacing(1);
+
+        var themedArea = new ZStack(
+                new Backdrop().Style(BackdropStyle.ThemeBackground),
+                new Padder(themedContent).Padding(1))
+            .HorizontalAlignment(HorizontalAlignment.Stretch);
 
         // Apply the generated theme locally so it doesn't affect the ControlsDemo UI chrome.
         themedArea.Update(v => v.Style(Theme.FromScheme(BuildScheme())));
@@ -195,4 +200,3 @@ public sealed class ColorSchemeDemo : ControlsDemoBase
         };
     }
 }
-

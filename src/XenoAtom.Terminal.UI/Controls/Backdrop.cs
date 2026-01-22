@@ -15,6 +15,15 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// </summary>
 public sealed partial class Backdrop : Visual
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Backdrop"/> class.
+    /// </summary>
+    public Backdrop()
+    {
+        HorizontalAlignment = HorizontalAlignment.Stretch;
+        VerticalAlignment = VerticalAlignment.Stretch;
+    }
+
     /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
         => SizeHints.Flex(
@@ -39,14 +48,15 @@ public sealed partial class Backdrop : Visual
         }
 
         var theme = GetTheme();
-        var style = Style.None | TextStyle.Dim;
-        if (theme.Disabled is { } c) style = style.WithBackground(c);
+        var backdropStyle = GetStyle<BackdropStyle>();
+        var style = backdropStyle.Resolve(theme);
+        var rune = backdropStyle.FillRune;
 
         for (var y = rect.Y; y < rect.Y + rect.Height; y++)
         {
             for (var x = rect.X; x < rect.X + rect.Width; x++)
             {
-                buffer.SetCell(x, y, new Rune(' '), style);
+                buffer.SetCell(x, y, rune, style);
             }
         }
     }
