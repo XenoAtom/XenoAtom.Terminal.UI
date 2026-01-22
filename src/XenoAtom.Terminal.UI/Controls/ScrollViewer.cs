@@ -519,8 +519,8 @@ public sealed partial class ScrollViewer : Visual
         if (!Equals(_internalScrollBarStyle, scrollBarStyle))
         {
             _internalScrollBarStyle = scrollBarStyle;
-            _verticalBar.Set(scrollBarStyle);
-            _horizontalBar.Set(scrollBarStyle);
+            _verticalBar.SetStyle(scrollBarStyle);
+            _horizontalBar.SetStyle(scrollBarStyle);
         }
 
         if (_showVerticalBar)

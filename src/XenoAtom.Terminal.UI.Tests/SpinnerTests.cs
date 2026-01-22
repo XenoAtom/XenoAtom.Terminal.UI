@@ -17,7 +17,7 @@ public sealed class SpinnerTests
     public void Spinner_Animates_Without_User_Input()
     {
         var spinner = new Spinner();
-        spinner.Set(SpinnerStyle.Key, new SpinnerStyle("Test", TimeSpan.FromMilliseconds(10), "a", "b")
+        spinner.SetStyle(SpinnerStyle.Key, new SpinnerStyle("Test", TimeSpan.FromMilliseconds(10), "a", "b")
         {
             TextStyle = TextStyle.None,
         });

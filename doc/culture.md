@@ -49,7 +49,7 @@ You can override formatting for a specific subtree by setting `CultureStyle` in 
 using System.Globalization;
 using XenoAtom.Terminal.UI.Styling;
 
-root.Set(CultureStyle.Key, CultureStyle.Default with
+root.SetStyle(CultureStyle.Default with
 {
     Culture = CultureInfo.GetCultureInfo("fr-FR"),
 });

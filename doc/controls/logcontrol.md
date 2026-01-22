@@ -44,7 +44,7 @@ log.GoToNextMatch();
 Use `LogControlStyle` and `LogControlSearchStyle` to customize colors and rendering:
 
 ```csharp
-log.Set(LogControlStyle.Key, LogControlStyle.Default with
+log.SetStyle(LogControlStyle.Default with
 {
     Padding = new Thickness(1, 0, 1, 0),
 });

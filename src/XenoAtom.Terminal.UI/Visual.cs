@@ -248,7 +248,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// </summary>
     /// <typeparam name="T">The style type.</typeparam>
     /// <param name="value">The style value.</param>
-    public void Set<T>(T value) where T : IStyle<T> => Set(T.Key, value);
+    public void SetStyle<T>(T value) where T : IStyle<T> => SetStyle(T.Key, value);
 
     /// <summary>
     /// Sets a style value in the environment of this visual.
@@ -256,7 +256,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// <typeparam name="T">The style type.</typeparam>
     /// <param name="key">The style key.</param>
     /// <param name="value">The style value.</param>
-    public void Set<T>(StyleKey<T> key, T value)
+    public void SetStyle<T>(StyleKey<T> key, T value)
     {
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(key);

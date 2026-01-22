@@ -14,7 +14,7 @@ namespace XenoAtom.Terminal.UI.Templating;
 /// <remarks>
 /// <para>
 /// The registry is immutable and is typically overridden by creating a derived registry and setting it in a subtree via
-/// <see cref="Visual.Set{T}(T)"/>.
+/// <see cref="Visual.SetStyle{T}"/>.
 /// </para>
 /// <para>
 /// A registry can be layered by setting <see cref="Parent"/>; resolution checks the current registry first and then

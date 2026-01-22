@@ -18,7 +18,7 @@ internal sealed class ThemedHost : ContentVisual
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(theme);
-        Set(Theme.Key, theme);
+        SetStyle(Theme.Key, theme);
         Content = content;
     }
 

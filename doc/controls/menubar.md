@@ -18,7 +18,7 @@ overriding `MenuListStyle.PopupTemplateFactory` via the visual environment:
 ```csharp
 using XenoAtom.Terminal.UI.Styling;
 
-menuBar.Set(MenuListStyle.Key, MenuListStyle.Default with
+menuBar.SetStyle(MenuListStyle.Default with
 {
     PopupTemplateFactory = null, // no wrapper
 });

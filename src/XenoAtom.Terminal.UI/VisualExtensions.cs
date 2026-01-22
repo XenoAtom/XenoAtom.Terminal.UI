@@ -164,7 +164,7 @@ public static partial class VisualExtensions
     {
         ArgumentNullException.ThrowIfNull(obj);
         obj.VerifyAccess();
-        obj.Set(style);
+        obj.SetStyle(style);
         return obj;
     }
 }

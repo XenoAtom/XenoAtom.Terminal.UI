@@ -49,7 +49,7 @@ public sealed class ComputedVisualTests
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Inline, new TerminalSize(40, 10));
         driver.Tick();
 
-        root.Set(key, "B");
+        root.SetStyle(key, "B");
         driver.Tick();
 
         var outText = driver.Backend.GetOutText();

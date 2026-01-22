@@ -15,7 +15,7 @@ namespace XenoAtom.Terminal.UI.Styling;
 /// for a visual subtree by setting this style in the environment:
 /// </para>
 /// <code>
-/// root.Set(CultureStyle.Key, new CultureStyle { Culture = CultureInfo.GetCultureInfo("fr-FR") });
+/// root.SetStyle(new CultureStyle { Culture = CultureInfo.GetCultureInfo("fr-FR") });
 /// </code>
 /// <para>
 /// Controls and helpers that need culture-aware formatting typically use <see cref="Visual.ToStringValue{T}"/> or
