@@ -21,8 +21,10 @@ public sealed partial class TreeView : Visual
     private readonly VisualList<Visual> _headers;
 
     private int _scrollOffset;
-    private readonly List<(TreeNode Node, int Depth)> _visible = new(64);
+    private readonly List<VisibleRow> _visible = new(64);
     private bool _visibleDirty = true;
+
+    private readonly record struct VisibleRow(TreeNode Node, int Depth, ulong ContinuationMask, bool IsLastSibling);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TreeView"/> class.
@@ -103,7 +105,7 @@ public sealed partial class TreeView : Visual
         _visible.Clear();
         for (var i = 0; i < _roots.Count; i++)
         {
-            AddVisible(_roots[i], depth: 0);
+            AddVisible(_roots[i], depth: 0, continuationMask: 0, isLastSibling: i == _roots.Count - 1);
         }
 
         _visibleDirty = false;
@@ -127,15 +129,29 @@ public sealed partial class TreeView : Visual
     /// </summary>
     private void AddVisible(TreeNode node, int depth)
     {
-        _visible.Add((node, depth));
+        AddVisible(node, depth, continuationMask: 0, isLastSibling: true);
+    }
+
+    /// <summary>
+    /// Adds a node and its expanded descendants to the visible list while tracking hierarchy line information.
+    /// </summary>
+    private void AddVisible(TreeNode node, int depth, ulong continuationMask, bool isLastSibling)
+    {
+        _visible.Add(new VisibleRow(node, depth, continuationMask, isLastSibling));
         if (!node.IsExpanded)
         {
             return;
         }
 
+        var childContinuationMask = continuationMask;
+        if (!isLastSibling && (uint)depth < 64)
+        {
+            childContinuationMask |= 1ul << depth;
+        }
+
         for (var i = 0; i < node.Children.Count; i++)
         {
-            AddVisible(node.Children[i], depth + 1);
+            AddVisible(node.Children[i], depth + 1, childContinuationMask, isLastSibling: i == node.Children.Count - 1);
         }
     }
 
@@ -145,6 +161,7 @@ public sealed partial class TreeView : Visual
         EnsureVisibleList();
 
         var style = GetStyle<TreeViewStyle>();
+        var indentSize = style.HierarchyLines is null ? style.IndentSize : Math.Max(2, style.IndentSize);
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
         var gapAfterIcon = Math.Max(0, style.SpaceBetweenGlyphAndText);
 
@@ -152,13 +169,13 @@ public sealed partial class TreeView : Visual
         var headerConstraints = new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1);
         for (var i = 0; i < _visible.Count; i++)
         {
-            var (node, depth) = _visible[i];
+            var (node, depth, _, _) = _visible[i];
             var expander = node.Children.Count > 0 ? (node.IsExpanded ? style.ExpandedGlyph : style.CollapsedGlyph) : new Rune(' ');
             var expanderWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(expander));
             var icon = style.ResolveIcon(node.Data, node.Icon);
             var iconWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(icon));
 
-            var prefix = depth * style.IndentSize + markerWidth + expanderWidth + 1 + iconWidth + gapAfterIcon;
+            var prefix = depth * indentSize + markerWidth + expanderWidth + 1 + iconWidth + gapAfterIcon;
             node.Header.Measure(headerConstraints);
             maxWidth = Math.Max(maxWidth, prefix + node.Header.DesiredSize.Width);
         }
@@ -179,6 +196,7 @@ public sealed partial class TreeView : Visual
         EnsureVisibleList();
 
         var style = GetStyle<TreeViewStyle>();
+        var indentSize = style.HierarchyLines is null ? style.IndentSize : Math.Max(2, style.IndentSize);
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
         var gapAfterIcon = Math.Max(0, style.SpaceBetweenGlyphAndText);
         var innerLeft = finalRect.X;
@@ -200,13 +218,13 @@ public sealed partial class TreeView : Visual
 
         for (var i = 0; i < count; i++)
         {
-            var (node, depth) = _visible[i];
+            var (node, depth, _, _) = _visible[i];
             var expander = node.Children.Count > 0 ? (node.IsExpanded ? style.ExpandedGlyph : style.CollapsedGlyph) : new Rune(' ');
             var expanderWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(expander));
             var icon = style.ResolveIcon(node.Data, node.Icon);
             var iconWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(icon));
 
-            var prefix = depth * style.IndentSize + markerWidth + expanderWidth + 1 + iconWidth + gapAfterIcon;
+            var prefix = depth * indentSize + markerWidth + expanderWidth + 1 + iconWidth + gapAfterIcon;
             var y = innerTop + (i - _scrollOffset);
             node.Header.Arrange(new Rectangle(innerLeft + prefix, y, Math.Max(0, innerWidth - prefix), 1));
         }
@@ -224,6 +242,7 @@ public sealed partial class TreeView : Visual
         EnsureVisibleList();
 
         var style = GetStyle<TreeViewStyle>();
+        var indentSize = style.HierarchyLines is null ? style.IndentSize : Math.Max(2, style.IndentSize);
         var innerLeft = rect.X;
         var innerTop = rect.Y;
         var innerWidth = Math.Max(0, rect.Width);
@@ -253,7 +272,7 @@ public sealed partial class TreeView : Visual
                 continue;
             }
 
-            var (node, depth) = _visible[index];
+            var (node, depth, continuationMask, isLastSibling) = _visible[index];
             var isSelected = index == selected;
             var rowStyle = style.ResolveItemStyle(theme, IsEnabled, isSelected, isFocused);
 
@@ -269,12 +288,42 @@ public sealed partial class TreeView : Visual
             buffer.SetCell(xCursor, y, isSelected ? style.FocusMarkerGlyph : new Rune(' '), rowStyle);
             xCursor += markerWidth;
 
-            var indent = depth * style.IndentSize;
-            for (var i = 0; i < indent && xCursor < innerLeft + innerWidth; i++)
+            var indentStart = xCursor;
+            var indent = depth * indentSize;
+
+            if (style.HierarchyLines is { } lines && depth > 0 && indentSize >= 2)
             {
-                buffer.SetCell(xCursor, y, new Rune(' '), rowStyle);
-                xCursor++;
+                var lineBaseStyle = style.HierarchyLineStyle ?? (theme.BorderStyle(focused: false) | TextStyle.Dim);
+                var lineStyle = rowStyle | lineBaseStyle;
+
+                var parentLevel = depth - 1;
+                for (var level = 0; level < parentLevel; level++)
+                {
+                    var x = indentStart + level * indentSize;
+                    if (x >= innerLeft + innerWidth)
+                    {
+                        break;
+                    }
+
+                    var hasContinuation = (continuationMask & (1ul << level)) != 0;
+                    buffer.SetCell(x, y, hasContinuation ? lines.Vertical : new Rune(' '), lineStyle);
+                }
+
+                var branchX = indentStart + parentLevel * indentSize;
+                if (branchX < innerLeft + innerWidth)
+                {
+                    buffer.SetCell(branchX, y, isLastSibling ? lines.BottomLeft : lines.TeeLeft, lineStyle);
+                }
+
+                var branchHorizontalX = branchX + 1;
+                if (branchHorizontalX < innerLeft + innerWidth)
+                {
+                    buffer.SetCell(branchHorizontalX, y, lines.Horizontal, lineStyle);
+                }
             }
+
+            var indentAdvance = Math.Max(0, Math.Min(indent, innerLeft + innerWidth - xCursor));
+            xCursor += indentAdvance;
 
             var expander = node.Children.Count > 0 ? (node.IsExpanded ? style.ExpandedGlyph : style.CollapsedGlyph) : new Rune(' ');
             if (xCursor < innerLeft + innerWidth)
@@ -390,9 +439,10 @@ public sealed partial class TreeView : Visual
         SelectedIndex = index;
 
         // Click on the expander glyph toggles expansion.
+        var indentSize = style.HierarchyLines is null ? style.IndentSize : Math.Max(2, style.IndentSize);
         var depth = _visible[index].Depth;
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
-        var expanderX = markerWidth + depth * style.IndentSize; // marker + indent
+        var expanderX = markerWidth + depth * indentSize; // marker + indent
         if (e.LocalX == expanderX)
         {
             ToggleExpand(index, expand: null);

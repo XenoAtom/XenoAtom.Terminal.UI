@@ -50,7 +50,38 @@ public sealed record TreeViewStyle : IStyle<TreeViewStyle>
     /// <summary>
     /// Gets the number of spaces between the node glyph and its content.
     /// </summary>
-    public int SpaceBetweenGlyphAndText { get; init; } = 2;
+    public int SpaceBetweenGlyphAndText { get; init; } = 1;
+
+    /// <summary>
+    /// Gets the optional glyph set used to draw hierarchy guide lines.
+    /// </summary>
+    /// <remarks>
+    /// When <see langword="null"/>, no hierarchy lines are drawn.
+    /// </remarks>
+    public LineGlyphs? HierarchyLines { get; init; } = LineGlyphs.Single;
+
+    /// <summary>
+    /// Gets the optional style used to draw hierarchy guide lines.
+    /// </summary>
+    /// <remarks>
+    /// When <see langword="null"/>, the tree view uses a muted border style derived from the current theme.
+    /// </remarks>
+    public Style? HierarchyLineStyle { get; init; }
+
+    /// <summary>
+    /// Gets a style variant with hierarchy lines disabled.
+    /// </summary>
+    public static TreeViewStyle NoLines { get; } = Default with { HierarchyLines = null };
+
+    /// <summary>
+    /// Gets a style variant with heavy hierarchy lines.
+    /// </summary>
+    public static TreeViewStyle HeavyLines { get; } = Default with { HierarchyLines = LineGlyphs.Heavy };
+
+    /// <summary>
+    /// Gets a style variant with double hierarchy lines.
+    /// </summary>
+    public static TreeViewStyle DoubleLines { get; } = Default with { HierarchyLines = LineGlyphs.Double };
 
     /// <summary>
     /// Gets the glyph used for expanded nodes.

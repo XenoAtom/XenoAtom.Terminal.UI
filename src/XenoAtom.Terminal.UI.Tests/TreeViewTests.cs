@@ -34,5 +34,66 @@ public sealed class TreeViewTests
         StringAssert.Contains(rendered, "Root");
         StringAssert.Contains(rendered, "Child");
     }
-}
 
+    [TestMethod]
+    public void TreeView_Renders_Hierarchy_Lines_By_Default()
+    {
+        var tree = new TreeView();
+
+        var root1 = new TreeNode("Root1") { Icon = TreeNodeIcons.FolderGlyph, IsExpanded = true };
+        root1.Children.Add(new TreeNode("Child1") { Icon = TreeNodeIcons.FileGlyph });
+        root1.Children.Add(new TreeNode("Child2") { Icon = TreeNodeIcons.FileGlyph });
+
+        var folder = new TreeNode("Folder") { Icon = TreeNodeIcons.FolderGlyph, IsExpanded = true };
+        folder.Children.Add(new TreeNode("Nested1") { Icon = TreeNodeIcons.DocumentGlyph });
+        folder.Children.Add(new TreeNode("Nested2") { Icon = TreeNodeIcons.DocumentGlyph });
+        root1.Children.Add(folder);
+        tree.Roots.Add(root1);
+
+        // Adding a second root ensures continuation lines are visible under Root1's children.
+        tree.Roots.Add(new TreeNode("Root2") { Icon = TreeNodeIcons.FolderGlyph });
+
+        var root = new VStack { tree };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(40, 10);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText();
+
+        StringAssert.Contains(rendered, "Root1");
+        StringAssert.Contains(rendered, "Child1");
+        StringAssert.Contains(rendered, "Child2");
+        StringAssert.Contains(rendered, "Nested1");
+        StringAssert.Contains(rendered, "Nested2");
+
+        // Tree line glyphs (single line set).
+        StringAssert.Contains(rendered, "│");
+        StringAssert.Contains(rendered, "├");
+        StringAssert.Contains(rendered, "└");
+    }
+
+    [TestMethod]
+    public void TreeView_Does_Not_Render_Hierarchy_Lines_When_Disabled()
+    {
+        var tree = new TreeView().Style(TreeViewStyle.NoLines);
+
+        var root1 = new TreeNode("Root1") { Icon = TreeNodeIcons.FolderGlyph, IsExpanded = true };
+        root1.Children.Add(new TreeNode("Child1") { Icon = TreeNodeIcons.FileGlyph });
+        root1.Children.Add(new TreeNode("Child2") { Icon = TreeNodeIcons.FileGlyph });
+        tree.Roots.Add(root1);
+        tree.Roots.Add(new TreeNode("Root2") { Icon = TreeNodeIcons.FolderGlyph });
+
+        var root = new VStack { tree };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(40, 10);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText();
+
+        Assert.DoesNotContain("│", rendered);
+        Assert.DoesNotContain("├", rendered);
+        Assert.DoesNotContain("└", rendered);
+    }
+}
