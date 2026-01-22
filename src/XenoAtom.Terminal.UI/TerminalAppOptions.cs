@@ -4,6 +4,7 @@
 
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Hosting;
+using System.Globalization;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -58,4 +59,13 @@ public sealed class TerminalAppOptions
     /// </list>
     /// </remarks>
     public Input.TerminalKeyGesture? ExitGesture { get; init; }
+
+    /// <summary>
+    /// Gets the culture used for formatting values (for example when converting numbers to strings).
+    /// </summary>
+    /// <remarks>
+    /// The default value is <see cref="CultureInfo.InvariantCulture"/>. You can override culture for a visual subtree
+    /// by setting <see cref="Styling.CultureStyle.Key"/>.
+    /// </remarks>
+    public CultureInfo Culture { get; init; } = CultureInfo.InvariantCulture;
 }

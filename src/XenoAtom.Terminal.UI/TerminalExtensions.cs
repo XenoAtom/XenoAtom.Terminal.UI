@@ -5,6 +5,7 @@
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Rendering;
+using System.Globalization;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -26,24 +27,14 @@ public static partial class TerminalExtensions
     private static async ValueTask RunHostedAsync(
         TerminalInstance terminal,
         Visual root,
-        TerminalHostKind hostKind,
+        TerminalAppOptions appOptions,
         Func<TerminalRunningContext, TerminalLoopResult> onUpdate,
-        TerminalRunOptions runOptions,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(terminal);
-        EnsureVisualNotAttached(root, hostKind == TerminalHostKind.Inline ? "a live region" : "a fullscreen app");
+        ArgumentNullException.ThrowIfNull(appOptions);
+        EnsureVisualNotAttached(root, appOptions.HostKind == TerminalHostKind.Inline ? "a live region" : "a fullscreen app");
         ArgumentNullException.ThrowIfNull(onUpdate);
-
-        var appOptions = new TerminalAppOptions { HostKind = hostKind };
-        if (hostKind == TerminalHostKind.Fullscreen)
-        {
-            appOptions = new TerminalAppOptions
-            {
-                HostKind = TerminalHostKind.Fullscreen,
-                ExitGesture = runOptions.ExitGesture,
-            };
-        }
 
         var app = new TerminalApp(root, terminal, appOptions);
         app.SetUpdateCallback(onUpdate);
@@ -51,7 +42,7 @@ public static partial class TerminalExtensions
         try
         {
             app.Run(cancellationToken);
-            if (hostKind == TerminalHostKind.Inline)
+            if (appOptions.HostKind == TerminalHostKind.Inline)
             {
                 if (app.InlineRemoveOnEnd)
                 {
@@ -87,6 +78,18 @@ public static partial class TerminalExtensions
         public static TerminalInstance Live(Visual visual, Func<TerminalRunningContext, TerminalLoopResult> onUpdate) => XenoAtom.Terminal.Terminal.Instance.Live(visual, onUpdate);
 
         /// <summary>
+        /// Runs an inline live region on the default terminal instance with options.
+        /// </summary>
+        public static TerminalInstance Live(Visual visual, Func<TerminalLoopResult> onUpdate, TerminalLiveOptions options)
+            => XenoAtom.Terminal.Terminal.Instance.Live(visual, _ => onUpdate(), options);
+
+        /// <summary>
+        /// Runs an inline live region on the default terminal instance with options.
+        /// </summary>
+        public static TerminalInstance Live(Visual visual, Func<TerminalRunningContext, TerminalLoopResult> onUpdate, TerminalLiveOptions options)
+            => XenoAtom.Terminal.Terminal.Instance.Live(visual, onUpdate, options);
+
+        /// <summary>
         /// Runs an inline live region on the default terminal instance.
         /// </summary>
         public static ValueTask<TerminalInstance> LiveAsync(Visual visual, Func<TerminalLoopResult> onUpdate, CancellationToken cancellationToken = default)
@@ -97,6 +100,18 @@ public static partial class TerminalExtensions
         /// </summary>
         public static ValueTask<TerminalInstance> LiveAsync(Visual visual, Func<TerminalRunningContext, TerminalLoopResult> onUpdate, CancellationToken cancellationToken = default)
             => XenoAtom.Terminal.Terminal.Instance.LiveAsync(visual, onUpdate, cancellationToken);
+
+        /// <summary>
+        /// Runs an inline live region on the default terminal instance with options.
+        /// </summary>
+        public static ValueTask<TerminalInstance> LiveAsync(Visual visual, Func<TerminalLoopResult> onUpdate, TerminalLiveOptions options, CancellationToken cancellationToken = default)
+            => XenoAtom.Terminal.Terminal.Instance.LiveAsync(visual, _ => onUpdate(), options, cancellationToken);
+
+        /// <summary>
+        /// Runs an inline live region on the default terminal instance with options.
+        /// </summary>
+        public static ValueTask<TerminalInstance> LiveAsync(Visual visual, Func<TerminalRunningContext, TerminalLoopResult> onUpdate, TerminalLiveOptions options, CancellationToken cancellationToken = default)
+            => XenoAtom.Terminal.Terminal.Instance.LiveAsync(visual, onUpdate, options, cancellationToken);
 
         /// <summary>
         /// Runs a fullscreen terminal UI application on the default terminal instance.
@@ -148,7 +163,23 @@ public static partial class TerminalExtensions
         public TerminalInstance Live(Visual visual, Func<TerminalRunningContext, TerminalLoopResult> onUpdate)
         {
             ArgumentNullException.ThrowIfNull(instance);
-            RunHostedAsync(instance, visual, TerminalHostKind.Inline, onUpdate, runOptions: default, CancellationToken.None)
+            var appOptions = new TerminalAppOptions { HostKind = TerminalHostKind.Inline, Culture = CultureInfo.InvariantCulture };
+            RunHostedAsync(instance, visual, appOptions, onUpdate, CancellationToken.None)
+                .AsTask()
+                .GetAwaiter()
+                .GetResult();
+
+            return instance;
+        }
+
+        /// <summary>
+        /// Runs an inline live region on this terminal instance with options.
+        /// </summary>
+        public TerminalInstance Live(Visual visual, Func<TerminalRunningContext, TerminalLoopResult> onUpdate, TerminalLiveOptions options)
+        {
+            ArgumentNullException.ThrowIfNull(instance);
+            var appOptions = new TerminalAppOptions { HostKind = TerminalHostKind.Inline, Culture = options.Culture ?? CultureInfo.InvariantCulture };
+            RunHostedAsync(instance, visual, appOptions, onUpdate, CancellationToken.None)
                 .AsTask()
                 .GetAwaiter()
                 .GetResult();
@@ -168,7 +199,20 @@ public static partial class TerminalExtensions
         public async ValueTask<TerminalInstance> LiveAsync(Visual visual, Func<TerminalRunningContext, TerminalLoopResult> onUpdate, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(instance);
-            await RunHostedAsync(instance, visual, TerminalHostKind.Inline, onUpdate, runOptions: default, cancellationToken).ConfigureAwait(false);
+            var appOptions = new TerminalAppOptions { HostKind = TerminalHostKind.Inline, Culture = CultureInfo.InvariantCulture };
+            await RunHostedAsync(instance, visual, appOptions, onUpdate, cancellationToken).ConfigureAwait(false);
+
+            return instance;
+        }
+
+        /// <summary>
+        /// Runs an inline live region on this terminal instance with options.
+        /// </summary>
+        public async ValueTask<TerminalInstance> LiveAsync(Visual visual, Func<TerminalRunningContext, TerminalLoopResult> onUpdate, TerminalLiveOptions options, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(instance);
+            var appOptions = new TerminalAppOptions { HostKind = TerminalHostKind.Inline, Culture = options.Culture ?? CultureInfo.InvariantCulture };
+            await RunHostedAsync(instance, visual, appOptions, onUpdate, cancellationToken).ConfigureAwait(false);
 
             return instance;
         }
@@ -185,7 +229,13 @@ public static partial class TerminalExtensions
         public TerminalInstance Run(Visual visual, Func<TerminalRunningContext, TerminalLoopResult> onUpdate, TerminalRunOptions options)
         {
             ArgumentNullException.ThrowIfNull(instance);
-            RunHostedAsync(instance, visual, TerminalHostKind.Fullscreen, onUpdate, options, CancellationToken.None)
+            var appOptions = new TerminalAppOptions
+            {
+                HostKind = TerminalHostKind.Fullscreen,
+                ExitGesture = options.ExitGesture,
+                Culture = options.Culture ?? CultureInfo.InvariantCulture,
+            };
+            RunHostedAsync(instance, visual, appOptions, onUpdate, CancellationToken.None)
                 .AsTask()
                 .GetAwaiter()
                 .GetResult();
@@ -205,7 +255,13 @@ public static partial class TerminalExtensions
         public async ValueTask<TerminalInstance> RunAsync(Visual visual, Func<TerminalRunningContext, TerminalLoopResult> onUpdate, TerminalRunOptions options, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(instance);
-            await RunHostedAsync(instance, visual, TerminalHostKind.Fullscreen, onUpdate, options, cancellationToken).ConfigureAwait(false);
+            var appOptions = new TerminalAppOptions
+            {
+                HostKind = TerminalHostKind.Fullscreen,
+                ExitGesture = options.ExitGesture,
+                Culture = options.Culture ?? CultureInfo.InvariantCulture,
+            };
+            await RunHostedAsync(instance, visual, appOptions, onUpdate, cancellationToken).ConfigureAwait(false);
 
             return instance;
         }

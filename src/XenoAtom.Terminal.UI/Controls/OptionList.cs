@@ -504,7 +504,7 @@ public sealed partial class OptionList<T> : Visual
 
             if (template.IsEmpty || template.Create is null)
             {
-                _itemVisuals.Add(new TextBlock(() => (binding.GetValue() as object)?.ToString() ?? string.Empty));
+                _itemVisuals.Add(new TextBlock(() => ToStringObject(binding.GetValue())));
                 continue;
             }
 

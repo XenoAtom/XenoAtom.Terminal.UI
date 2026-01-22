@@ -332,7 +332,7 @@ public sealed partial class Slider<T> : Visual where T: struct, INumber<T>
         }
 
         //var percent = Maximum > Minimum ? (value - Minimum) / (Maximum - Minimum) : T.Zero;
-        return value.ToString() ?? string.Empty;
+        return ToStringValue(value);
     }
 
     /// <inheritdoc />

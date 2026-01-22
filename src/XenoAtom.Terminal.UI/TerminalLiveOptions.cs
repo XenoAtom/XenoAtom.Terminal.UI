@@ -5,10 +5,10 @@
 namespace XenoAtom.Terminal.UI;
 
 /// <summary>
-/// Provides options for fullscreen hosting via
-/// <see cref="TerminalExtensions.Run(Visual, System.Func{TerminalRunningContext, TerminalLoopResult}, TerminalRunOptions)"/>.
+/// Provides options for inline hosting via
+/// <see cref="TerminalExtensions.Live(Visual, System.Func{TerminalRunningContext, TerminalLoopResult}, TerminalLiveOptions)"/>.
 /// </summary>
-public readonly record struct TerminalRunOptions
+public readonly record struct TerminalLiveOptions
 {
     /// <summary>
     /// Gets the culture used for formatting values (for example when converting numbers to strings).
@@ -17,12 +17,4 @@ public readonly record struct TerminalRunOptions
     /// When <see langword="null"/>, <see cref="System.Globalization.CultureInfo.InvariantCulture"/> is used.
     /// </remarks>
     public System.Globalization.CultureInfo? Culture { get; init; }
-
-    /// <summary>
-    /// Gets the key gesture used to exit the fullscreen application.
-    /// </summary>
-    /// <remarks>
-    /// When <see langword="null"/>, the default gesture is used (<c>Ctrl+Q</c>).
-    /// </remarks>
-    public global::XenoAtom.Terminal.UI.Input.TerminalKeyGesture? ExitGesture { get; init; }
 }

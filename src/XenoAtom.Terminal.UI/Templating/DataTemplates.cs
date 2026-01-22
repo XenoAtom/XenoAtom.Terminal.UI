@@ -141,17 +141,33 @@ public sealed record DataTemplates : IStyle<DataTemplates>
         RegisterDisplay(display, new DataTemplate<bool>(DisplayBool));
         RegisterEditor(editor, new DataTemplate<bool>(EditBindingBool));
 
-        static Visual DisplayInt32(Binding<int> binding, in DataTemplateContext _) => new TextBlock(() => binding.GetValue().ToString());
+        static Visual DisplayInt32(Binding<int> binding, in DataTemplateContext context)
+        {
+            var owner = context.Owner;
+            return new TextBlock(() => owner.ToStringValue(binding.GetValue()));
+        }
         RegisterDisplay(display, new DataTemplate<int>(DisplayInt32));
         RegisterEditor(editor, new DataTemplate<int>(EditBindingInt32));
 
-        static Visual DisplayInt64(Binding<long> binding, in DataTemplateContext _) => new TextBlock(() => binding.GetValue().ToString());
+        static Visual DisplayInt64(Binding<long> binding, in DataTemplateContext context)
+        {
+            var owner = context.Owner;
+            return new TextBlock(() => owner.ToStringValue(binding.GetValue()));
+        }
         RegisterDisplay(display, new DataTemplate<long>(DisplayInt64));
 
-        static Visual DisplayDouble(Binding<double> binding, in DataTemplateContext _) => new TextBlock(() => binding.GetValue().ToString());
+        static Visual DisplayDouble(Binding<double> binding, in DataTemplateContext context)
+        {
+            var owner = context.Owner;
+            return new TextBlock(() => owner.ToStringValue(binding.GetValue()));
+        }
         RegisterDisplay(display, new DataTemplate<double>(DisplayDouble));
 
-        static Visual DisplayDecimal(Binding<decimal> binding, in DataTemplateContext _) => new TextBlock(() => binding.GetValue().ToString());
+        static Visual DisplayDecimal(Binding<decimal> binding, in DataTemplateContext context)
+        {
+            var owner = context.Owner;
+            return new TextBlock(() => owner.ToStringValue(binding.GetValue()));
+        }
         RegisterDisplay(display, new DataTemplate<decimal>(DisplayDecimal));
 
         return new DataTemplates(display, editor, null);

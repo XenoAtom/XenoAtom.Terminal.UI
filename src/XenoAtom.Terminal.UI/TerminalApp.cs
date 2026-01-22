@@ -113,6 +113,11 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
             Root.Set(Theme.Key, Theme.Terminal);
         }
 
+        if (!Root.HasLocal(CultureStyle.Key))
+        {
+            Root.Set(CultureStyle.Key, CultureStyle.Default with { Culture = _options.Culture });
+        }
+
         if (_options.HostKind == TerminalHostKind.Fullscreen)
         {
             _fullscreenHost = new FullscreenHost(_terminal);

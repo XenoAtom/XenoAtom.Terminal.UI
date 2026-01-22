@@ -132,7 +132,7 @@ public sealed partial class DataPresenter<T> : Visual
 
         if (template.IsEmpty || template.Create is null)
         {
-            _content = new TextBlock(() => (binding.GetValue() as object)?.ToString() ?? string.Empty);
+            _content = new TextBlock(() => owner.ToStringObject(binding.GetValue()));
         }
         else
         {

@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.Backends;
+using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Hosting;
 using System.Diagnostics;
 
@@ -16,13 +17,25 @@ internal sealed class TerminalAppTestDriver : IDisposable
     private long _timestamp;
     private readonly long _tickStep;
 
-    public TerminalAppTestDriver(Visual root, TerminalHostKind hostKind = TerminalHostKind.Fullscreen, TerminalSize? size = null)
+    public TerminalAppTestDriver(Visual root, TerminalHostKind hostKind = TerminalHostKind.Fullscreen, TerminalSize? size = null, TerminalAppOptions? appOptions = null)
     {
         ArgumentNullException.ThrowIfNull(root);
 
         _backend = new InMemoryTerminalBackend(size ?? new TerminalSize(80, 25));
         _session = global::XenoAtom.Terminal.Terminal.Open(_backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
-        _app = new TerminalApp(root, _session.Instance, new TerminalAppOptions { HostKind = hostKind });
+        var effectiveOptions = new TerminalAppOptions
+        {
+            HostKind = hostKind,
+            RawMode = appOptions?.RawMode ?? TerminalRawModeKind.CBreak,
+            DisableInputEcho = appOptions?.DisableInputEcho ?? true,
+            EnableMouse = appOptions?.EnableMouse ?? true,
+            MouseMode = appOptions?.MouseMode ?? TerminalMouseMode.Move,
+            EnableBracketedPaste = appOptions?.EnableBracketedPaste ?? true,
+            ToggleDebugOverlayGesture = appOptions?.ToggleDebugOverlayGesture ?? new Input.TerminalKeyGesture(TerminalKey.F12),
+            ExitGesture = appOptions?.ExitGesture,
+            Culture = appOptions?.Culture ?? System.Globalization.CultureInfo.InvariantCulture,
+        };
+        _app = new TerminalApp(root, _session.Instance, effectiveOptions);
         _app.BeginRun();
 
         _timestamp = Stopwatch.GetTimestamp();

@@ -258,7 +258,7 @@ public sealed partial class Select<T> : ContentVisual
         var binding = (Binding<T>)_selectedState;
         var ctx = new DataTemplateContext(this, DataTemplateRole.Display, index, DataTemplateItemState.None);
         Content = template.IsEmpty || template.Create is null
-            ? new TextBlock(() => (binding.GetValue() as object)?.ToString() ?? string.Empty)
+            ? new TextBlock(() => ToStringObject(binding.GetValue()))
             : template.Create(binding, ctx);
     }
 
