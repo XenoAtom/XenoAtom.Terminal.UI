@@ -170,12 +170,13 @@ public sealed partial class TreeView : Visual
         for (var i = 0; i < _visible.Count; i++)
         {
             var (node, depth, _, _) = _visible[i];
+            var visualDepth = style.HierarchyLines is null ? depth : depth + 1;
             var expander = node.Children.Count > 0 ? (node.IsExpanded ? style.ExpandedGlyph : style.CollapsedGlyph) : new Rune(' ');
             var expanderWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(expander));
             var icon = style.ResolveIcon(node.Data, node.Icon);
             var iconWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(icon));
 
-            var prefix = depth * indentSize + markerWidth + expanderWidth + 1 + iconWidth + gapAfterIcon;
+            var prefix = visualDepth * indentSize + markerWidth + expanderWidth + 1 + iconWidth + gapAfterIcon;
             node.Header.Measure(headerConstraints);
             maxWidth = Math.Max(maxWidth, prefix + node.Header.DesiredSize.Width);
         }
@@ -219,12 +220,13 @@ public sealed partial class TreeView : Visual
         for (var i = 0; i < count; i++)
         {
             var (node, depth, _, _) = _visible[i];
+            var visualDepth = style.HierarchyLines is null ? depth : depth + 1;
             var expander = node.Children.Count > 0 ? (node.IsExpanded ? style.ExpandedGlyph : style.CollapsedGlyph) : new Rune(' ');
             var expanderWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(expander));
             var icon = style.ResolveIcon(node.Data, node.Icon);
             var iconWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(icon));
 
-            var prefix = depth * indentSize + markerWidth + expanderWidth + 1 + iconWidth + gapAfterIcon;
+            var prefix = visualDepth * indentSize + markerWidth + expanderWidth + 1 + iconWidth + gapAfterIcon;
             var y = innerTop + (i - _scrollOffset);
             node.Header.Arrange(new Rectangle(innerLeft + prefix, y, Math.Max(0, innerWidth - prefix), 1));
         }
@@ -289,14 +291,15 @@ public sealed partial class TreeView : Visual
             xCursor += markerWidth;
 
             var indentStart = xCursor;
-            var indent = depth * indentSize;
+            var visualDepth = style.HierarchyLines is null ? depth : depth + 1;
+            var indent = visualDepth * indentSize;
 
-            if (style.HierarchyLines is { } lines && depth > 0 && indentSize >= 2)
+            if (style.HierarchyLines is { } lines && visualDepth > 0 && indentSize >= 2)
             {
                 var lineBaseStyle = style.HierarchyLineStyle ?? (theme.BorderStyle(focused: false) | TextStyle.Dim);
                 var lineStyle = rowStyle | lineBaseStyle;
 
-                var parentLevel = depth - 1;
+                var parentLevel = visualDepth - 1;
                 for (var level = 0; level < parentLevel; level++)
                 {
                     var x = indentStart + level * indentSize;
@@ -442,7 +445,8 @@ public sealed partial class TreeView : Visual
         var indentSize = style.HierarchyLines is null ? style.IndentSize : Math.Max(2, style.IndentSize);
         var depth = _visible[index].Depth;
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
-        var expanderX = markerWidth + depth * indentSize; // marker + indent
+        var visualDepth = style.HierarchyLines is null ? depth : depth + 1;
+        var expanderX = markerWidth + visualDepth * indentSize; // marker + indent
         if (e.LocalX == expanderX)
         {
             ToggleExpand(index, expand: null);

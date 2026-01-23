@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Linq;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Styling;
@@ -71,6 +72,33 @@ public sealed class TreeViewTests
         StringAssert.Contains(rendered, "│");
         StringAssert.Contains(rendered, "├");
         StringAssert.Contains(rendered, "└");
+    }
+
+    [TestMethod]
+    public void TreeView_Renders_Connecting_Lines_For_Root_Siblings()
+    {
+        var tree = new TreeView();
+
+        var root1 = new TreeNode("Root1") { Icon = TreeNodeIcons.FolderGlyph, IsExpanded = true };
+        root1.Children.Add(new TreeNode("Child1") { Icon = TreeNodeIcons.FileGlyph });
+        tree.Roots.Add(root1);
+        tree.Roots.Add(new TreeNode("Root2") { Icon = TreeNodeIcons.FolderGlyph });
+
+        var root = new VStack { tree };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 8));
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(40, 8);
+        screen.Apply(driver.Backend.GetOutText());
+        var lines = screen.GetText().Split('\n');
+
+        var root1Line = lines.FirstOrDefault(l => l.Contains("Root1", StringComparison.Ordinal));
+        Assert.IsNotNull(root1Line);
+        StringAssert.Contains(root1Line, "├");
+
+        var root2Line = lines.FirstOrDefault(l => l.Contains("Root2", StringComparison.Ordinal));
+        Assert.IsNotNull(root2Line);
+        StringAssert.Contains(root2Line, "└");
     }
 
     [TestMethod]
