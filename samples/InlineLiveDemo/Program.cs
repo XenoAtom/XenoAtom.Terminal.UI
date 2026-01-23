@@ -4,7 +4,6 @@ using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Figlet;
-using XenoAtom.Terminal.UI.Prompts;
 using XenoAtom.Terminal.UI.Styling;
 
 using var session = Terminal.Open();
@@ -37,7 +36,7 @@ Terminal.Write(new VStack(
                         var tX = width <= 1 ? 0.0 : (double)x / (width - 1);
                         var hue = (float)(360.0 * tX);
                         var color = Color.FromHsl(hue, 1.0f, (float)lightness);
-                        ctx.SetPixel(x, y, Style.None.WithBackground(color));
+                        ctx.SetPixel(x, y, Style.None.WithForeground(color));
                     }
                 }
             }),
@@ -50,22 +49,43 @@ Terminal.WriteLine();
 
 var name = Terminal.Ask(new Markup("[bold]What’s your name?[/]"), prompt =>
 {
-    prompt.Placeholder(Environment.UserName ?? "Ada");
-    prompt.Default(Environment.UserName ?? "Ada");
+    prompt.Placeholder = Environment.UserName ?? "Ada";
+    prompt.DefaultValue = Environment.UserName ?? "Ada";
     prompt.Help = "Press Enter to accept the default.";
 });
 
 var updateMs = Terminal.AskNumber<int>(new Markup("[bold]Update speed (ms)[/]:"), prompt =>
 {
-    prompt.Default(33);
+    prompt.DefaultValue = 33;
     prompt.Validator = value => value is >= 10 and <= 250 ? null : "Pick a value in [10..250].";
     prompt.Help = "Smaller values animate more smoothly.";
 });
 
-var themePrompt = new SelectionPrompt<string>(new Markup("[bold]Theme for the live dashboard[/]"))
-    .Items(["Terminal (no background)", "Default (dark)", "DefaultLight (light)"]);
-themePrompt.Help = "This affects only the live visual tree.";
-var demoTheme = Terminal.Prompt(themePrompt);
+var demoTheme = Terminal.Ask(new Markup("[bold]Theme for the live dashboard[/]"), prompt =>
+{
+    prompt.DefaultValue = "Terminal";
+    prompt.Placeholder = "Terminal | Default | DefaultLight";
+    prompt.Help = "This affects only the live visual tree.";
+    prompt.Validator = value =>
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "Theme is required.";
+        }
+
+        var trimmed = value.Trim();
+        if (trimmed.Length == 0)
+        {
+            return "Theme is required.";
+        }
+
+        return trimmed.Equals("Terminal", StringComparison.OrdinalIgnoreCase) ||
+               trimmed.Equals("Default", StringComparison.OrdinalIgnoreCase) ||
+               trimmed.Equals("DefaultLight", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : "Allowed: Terminal, Default, DefaultLight.";
+    };
+});
 
 Terminal.WriteLine();
 Terminal.WriteMarkupLine($"Hello [cyan]{name}[/]! Starting the live dashboard…");
@@ -97,10 +117,10 @@ var barChart = new BarChart()
 var breakdownChart = new BreakdownChart()
     .Title("Disk usage")
     .Segments([
-        new BreakdownSegment(42, "🗂️  Data"),
-        new BreakdownSegment(18, "📦  Packages"),
-        new BreakdownSegment(9, "🧹  Temp"),
-        new BreakdownSegment(3, "🧯  Other")
+        new BreakdownSegment(42, "🗂️ Data"),
+        new BreakdownSegment(18, "📦 Packages"),
+        new BreakdownSegment(9,  "🧹 Temp"),
+        new BreakdownSegment(3,  "🧯 Other")
     ])
     .ShowValues(true);
 
@@ -144,11 +164,11 @@ var root = new VStack(
     .Spacing(1)
     .HorizontalAlignment(HorizontalAlignment.Stretch);
 
-if (demoTheme.Contains("DefaultLight", StringComparison.Ordinal))
+if (demoTheme.Trim().Equals("DefaultLight", StringComparison.OrdinalIgnoreCase))
 {
     root.Style(Theme.DefaultLight);
 }
-else if (demoTheme.Contains("Default", StringComparison.Ordinal))
+else if (demoTheme.Trim().Equals("Default", StringComparison.OrdinalIgnoreCase))
 {
     root.Style(Theme.Default);
 }
