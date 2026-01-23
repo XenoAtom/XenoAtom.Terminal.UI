@@ -27,17 +27,9 @@ public sealed class SearchReplacePopupDemo : ControlsDemoBase
             .VerticalAlignment(VerticalAlignment.Stretch)
             .HorizontalAlignment(HorizontalAlignment.Stretch);
 
-        var log = new LogControl { MaxCapacity = 2000 }.WrapText(true);
-        log.AppendLine("LogControl search is read-only.");
-        log.AppendLine("Try Ctrl+F, then type: foo");
-        log.AppendLine("foo bar foo");
-
         return new VStack(
                 DemoUi.Hint("SearchReplacePopup is a reusable component hosted by controls like TextArea and LogControl."),
-                new HStack(
-                        new Group("TextArea").Padding(1).Content(new Border(editor).HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch)),
-                        new Group("LogControl").Padding(1).Content(new Border(log).HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch).MinHeight(10)))
-                    .Spacing(2)
+                new Group("TextArea").Padding(1).Content(new Border(editor).HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch))
                     .HorizontalAlignment(HorizontalAlignment.Stretch)
                     .VerticalAlignment(VerticalAlignment.Stretch))
             .Spacing(1)
