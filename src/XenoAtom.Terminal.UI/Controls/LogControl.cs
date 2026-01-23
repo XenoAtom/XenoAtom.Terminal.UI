@@ -31,12 +31,9 @@ public sealed partial class LogControl : Visual
 {
     private readonly ScrollViewer _scrollViewer;
     private readonly LogContentVisual _content;
-    private readonly SearchAnchorVisual _searchAnchor;
+    private readonly SearchReplacePopup _searchPopup;
     private readonly BindableList<LogEntry> _entries;
     private readonly MarkupTextParser _markupParser;
-
-    private Popup? _searchPopup;
-    private TextBox? _searchTextBox;
 
     private readonly List<LogMatch> _matches;
     private List<LogMatch>?[]? _matchesByEntry;
@@ -70,10 +67,10 @@ public sealed partial class LogControl : Visual
         // Default behavior: wrap long lines to the viewport width.
         this.WrapText(true);
 
-        _searchAnchor = new SearchAnchorVisual();
+        _searchPopup = new SearchReplacePopup(new LogSearchTarget(this));
 
         AttachChild(_scrollViewer);
-        AttachChild(_searchAnchor);
+        AttachChild(_searchPopup);
     }
 
     /// <inheritdoc/>
@@ -84,7 +81,7 @@ public sealed partial class LogControl : Visual
         => index switch
         {
             0 => _scrollViewer,
-            1 => _searchAnchor,
+            1 => _searchPopup,
             _ => throw new ArgumentOutOfRangeException(nameof(index)),
         };
 
@@ -333,9 +330,7 @@ public sealed partial class LogControl : Visual
     public void OpenSearch()
     {
         VerifyAccess();
-        EnsureSearchPopup();
-
-        _searchTextBox?.App?.Focus(_searchTextBox);
+        _searchPopup.OpenFind(SearchText);
     }
 
     /// <summary>
@@ -344,9 +339,7 @@ public sealed partial class LogControl : Visual
     public void CloseSearch()
     {
         VerifyAccess();
-        _searchPopup?.Close();
-        _searchPopup = null;
-        _searchTextBox = null;
+        _searchPopup.Close();
     }
 
     partial void OnMaxCapacityChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
@@ -431,7 +424,7 @@ public sealed partial class LogControl : Visual
         _scrollViewer.Arrange(innerRect);
 
         // Anchor search popup to the top-right inside the padded viewport.
-        _searchAnchor.Arrange(new Rectangle(innerRect.Right, innerRect.Y, 0, 0));
+        _searchPopup.ArrangeWithin(innerRect);
 
         if (ApplyFollowTailIfNeeded())
         {
@@ -557,96 +550,6 @@ public sealed partial class LogControl : Visual
         {
             FollowTail = false;
         }
-    }
-
-    private void EnsureSearchPopup()
-    {
-        if (_searchPopup is not null)
-        {
-            return;
-        }
-
-        var searchBox = new TextBox()
-            .Placeholder("Find…")
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .Text(((IBindings)this).SearchText);
-
-        var caseToggle = new Switch("Case").IsOn(((IBindings)this).SearchCaseSensitive);
-        var wordToggle = new Switch("Word").IsOn(((IBindings)this).SearchWholeWord);
-        var regexToggle = new Switch("Regex").IsOn(((IBindings)this).SearchRegex);
-
-        var status = new TextBlock(() => GetSearchStatusText())
-            .HorizontalAlignment(HorizontalAlignment.Stretch);
-
-        var error = new ComputedVisual(() =>
-        {
-            var text = GetSearchErrorText();
-            if (string.IsNullOrEmpty(text))
-            {
-                return null;
-            }
-
-            var theme = GetTheme();
-            var style = GetStyle<LogControlSearchStyle>().ResolveErrorStyle(theme);
-            var fg = style.TryGetForeground(out var c) ? c : (Color?)null;
-            return new TextBlock(text).Style(new TextBlockStyle { Foreground = fg });
-        });
-
-        var prev = new Button("Prev").Click(GoToPreviousMatch);
-        var next = new Button("Next").Click(GoToNextMatch);
-
-        var row1 = new HStack(prev, next, status).Spacing(1).HorizontalAlignment(HorizontalAlignment.Stretch);
-        var row2 = new HStack(caseToggle, wordToggle, regexToggle).Spacing(2);
-
-        var body = new VStack(searchBox, row1, row2, error)
-            .Spacing(1)
-            .HorizontalAlignment(HorizontalAlignment.Stretch);
-
-        var content = new Group("Search")
-            .Padding(1)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .Content(body);
-
-        var popup = new Popup
-        {
-            Anchor = _searchAnchor,
-            Content = content,
-            MatchAnchorWidth = false,
-            Placement = PopupPlacement.Left,
-        };
-
-        popup.KeyDown((_, args) =>
-        {
-            if (args.Key == TerminalKey.Escape)
-            {
-                CloseSearch();
-                args.Handled = true;
-                return;
-            }
-
-            if (args.Key == TerminalKey.Enter || args.Key == TerminalKey.F3)
-            {
-                if ((args.Modifiers & TerminalModifiers.Shift) != 0)
-                {
-                    GoToPreviousMatch();
-                }
-                else
-                {
-                    GoToNextMatch();
-                }
-                args.Handled = true;
-            }
-        });
-
-        popup.Closed((_, _) =>
-        {
-            _searchPopup = null;
-            _searchTextBox = null;
-        });
-
-        _searchPopup = popup;
-        _searchTextBox = searchBox;
-        popup.Show();
     }
 
     private string GetSearchStatusText()
@@ -1155,13 +1058,60 @@ public sealed partial class LogControl : Visual
         }
     }
 
-    private sealed class SearchAnchorVisual : Visual
+    private sealed class LogSearchTarget : ISearchReplaceTarget
     {
-        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
-            => SizeHints.Fixed(new Size(0, 0));
+        private readonly LogControl _owner;
 
-        protected override void ArrangeCore(in Rectangle finalRect)
-            => Bounds = finalRect;
+        public LogSearchTarget(LogControl owner)
+        {
+            _owner = owner;
+        }
+
+        public string Title => "Search";
+
+        public bool SupportsReplace => false;
+
+        public void SetQuery(in SearchQuery query)
+        {
+            var bulk = _owner._bulkUpdatingSearchFlags;
+            _owner._bulkUpdatingSearchFlags = true;
+            try
+            {
+                _owner.SearchText = query.Text;
+                _owner.SearchCaseSensitive = query.CaseSensitive;
+                _owner.SearchWholeWord = query.WholeWord;
+                _owner.SearchRegex = query.UseRegex;
+            }
+            finally
+            {
+                _owner._bulkUpdatingSearchFlags = bulk;
+            }
+
+            if (!bulk)
+            {
+                _owner.RebuildMatches();
+            }
+        }
+
+        public void NextMatch() => _owner.GoToNextMatch();
+
+        public void PreviousMatch() => _owner.GoToPreviousMatch();
+
+        public int ReplaceCurrent(string replacement)
+        {
+            _ = replacement;
+            return 0;
+        }
+
+        public int ReplaceAll(string replacement)
+        {
+            _ = replacement;
+            return 0;
+        }
+
+        public string GetStatusText() => _owner.GetSearchStatusText();
+
+        public string? GetErrorText() => _owner.GetSearchErrorText();
     }
 
     private sealed class LogContentVisual : Visual

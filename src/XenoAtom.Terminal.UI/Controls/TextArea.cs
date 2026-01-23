@@ -16,6 +16,8 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// </summary>
 public sealed partial class TextArea : TextEditorBase
 {
+    private readonly SearchReplacePopup _searchPopup;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="TextArea"/> class.
     /// </summary>
@@ -29,6 +31,9 @@ public sealed partial class TextArea : TextEditorBase
         TextDocument = new DynamicTextDocument(
             getter: () => Text ?? string.Empty,
             setter: value => Text = value);
+
+        _searchPopup = new SearchReplacePopup(CreateSearchReplaceTarget());
+        AttachChild(_searchPopup);
     }
 
     /// <summary>
@@ -64,6 +69,13 @@ public sealed partial class TextArea : TextEditorBase
         return SizeHints.Fixed(constraints.Clamp(new Size(width, height)));
     }
 
+    /// <inheritdoc/>
+    protected override int ChildrenCount => 1;
+
+    /// <inheritdoc/>
+    protected override Visual GetChild(int index)
+        => index == 0 ? _searchPopup : throw new ArgumentOutOfRangeException(nameof(index));
+
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
@@ -84,6 +96,7 @@ public sealed partial class TextArea : TextEditorBase
             Math.Max(0, innerHeight - padding.Vertical));
 
         UpdateEditorLayout(contentRect);
+        _searchPopup.ArrangeWithin(contentRect);
     }
 
     /// <inheritdoc />
@@ -127,4 +140,10 @@ public sealed partial class TextArea : TextEditorBase
 
         RenderEditor(buffer, contentRect, backgroundStyle, selectionStyle, placeholderStyle);
     }
+
+    /// <inheritdoc />
+    protected override bool TryOpenSearchReplacePopup(SearchReplaceMode mode, string? initialSearchText)
+        => mode == SearchReplaceMode.Replace
+            ? _searchPopup.OpenReplace(initialSearchText)
+            : _searchPopup.OpenFind(initialSearchText);
 }

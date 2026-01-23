@@ -31,6 +31,7 @@ log.AppendMarkupLine("[green]✔[/] Ready");
 ## Built-in search
 
 Press `Ctrl+F` while the control is focused to open the search popup. Matches are highlighted in the log view.
+Use `Alt+Arrow` to move the popup.
 
 You can also drive search programmatically:
 

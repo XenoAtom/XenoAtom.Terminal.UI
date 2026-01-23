@@ -12,6 +12,15 @@ Screenshot placeholder:
 new TextArea("Hello\nWorld");
 ```
 
+## Find / Replace
+
+`TextArea` includes a built-in Find / Replace popup:
+
+- `Ctrl+F`: Find
+- `Ctrl+H`: Replace
+
+See also `doc/controls/searchreplacepopup.md`.
+
 ## Scroll integration
 
 TextArea implements `IScrollable`, so it integrates with `ScrollViewer`:
@@ -28,4 +37,3 @@ See also:
 
 - `doc/text-editing.md`
 - `doc/controls/scrollviewer.md`
-

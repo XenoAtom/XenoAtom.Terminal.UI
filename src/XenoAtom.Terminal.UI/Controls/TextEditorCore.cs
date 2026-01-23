@@ -40,6 +40,7 @@ internal interface ITextEditorHost
     bool IsFocused { get; }
     void InvalidateEditor();
     void MarkEditorArrangeDirty();
+    bool TryOpenSearchReplacePopup(SearchReplaceMode mode, string? initialSearchText);
 }
 
 internal sealed class TextEditorCore
@@ -63,6 +64,11 @@ internal sealed class TextEditorCore
     private int _contentHeight;
 
     private bool _draggingSelection;
+
+    private SearchQuery _searchQuery;
+    private readonly List<TextMatch> _searchMatches = new(32);
+    private int _activeSearchMatchIndex = -1;
+    private string? _searchError;
 
     public TextEditorCore(ITextEditorHost host, ITextDocument document, ScrollModel scroll)
     {
@@ -387,6 +393,27 @@ internal sealed class TextEditorCore
 
         var ctrl = (e.Modifiers & TerminalModifiers.Ctrl) != 0;
         var shift = (e.Modifiers & TerminalModifiers.Shift) != 0;
+
+        if (ctrl && !options.SingleLine)
+        {
+            if (e.Char is TerminalChar.CtrlF)
+            {
+                var selection = GetSelectedTextSpan(text.AsSpan());
+                var initial = selection.IsEmpty ? null : selection.ToString();
+                _host.TryOpenSearchReplacePopup(SearchReplaceMode.Find, initial);
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Char is TerminalChar.CtrlH)
+            {
+                var selection = GetSelectedTextSpan(text.AsSpan());
+                var initial = selection.IsEmpty ? null : selection.ToString();
+                _host.TryOpenSearchReplacePopup(SearchReplaceMode.Replace, initial);
+                e.Handled = true;
+                return;
+            }
+        }
 
         if (!shift && HasSelection && e.Key is TerminalKey.Left or TerminalKey.Right or TerminalKey.Home or TerminalKey.End
             or TerminalKey.Up or TerminalKey.Down)
@@ -1976,4 +2003,247 @@ internal sealed class TextEditorCore
 
         return rune;
     }
+
+    internal void SetSearchQuery(in SearchQuery query, in TextEditorOptions options)
+    {
+        _searchQuery = query;
+        RebuildSearchMatches();
+
+        if (_searchMatches.Count == 0)
+        {
+            _activeSearchMatchIndex = -1;
+            _host.InvalidateEditor();
+            return;
+        }
+
+        // Prefer the first match at/after the caret when applying a query.
+        var caret = Math.Clamp(_caretIndex, 0, GetText().Length);
+        var active = 0;
+        for (var i = 0; i < _searchMatches.Count; i++)
+        {
+            if (_searchMatches[i].Start >= caret)
+            {
+                active = i;
+                break;
+            }
+        }
+
+        _activeSearchMatchIndex = active;
+        SelectActiveSearchMatch(options);
+        _host.InvalidateEditor();
+    }
+
+    internal void GoToNextSearchMatch(in TextEditorOptions options)
+    {
+        if (_searchMatches.Count == 0)
+        {
+            return;
+        }
+
+        _activeSearchMatchIndex++;
+        if (_activeSearchMatchIndex >= _searchMatches.Count)
+        {
+            _activeSearchMatchIndex = 0;
+        }
+
+        SelectActiveSearchMatch(options);
+        _host.InvalidateEditor();
+    }
+
+    internal void GoToPreviousSearchMatch(in TextEditorOptions options)
+    {
+        if (_searchMatches.Count == 0)
+        {
+            return;
+        }
+
+        _activeSearchMatchIndex--;
+        if (_activeSearchMatchIndex < 0)
+        {
+            _activeSearchMatchIndex = _searchMatches.Count - 1;
+        }
+
+        SelectActiveSearchMatch(options);
+        _host.InvalidateEditor();
+    }
+
+    internal int ReplaceCurrentSearchMatch(string replacement, in TextEditorOptions options)
+    {
+        if (_searchMatches.Count == 0 || (uint)_activeSearchMatchIndex >= (uint)_searchMatches.Count)
+        {
+            return 0;
+        }
+
+        var match = _searchMatches[_activeSearchMatchIndex];
+        _document.Replace(match.Start, match.Length, replacement.AsSpan());
+        _caretIndex = match.Start + replacement.Length;
+        _preferredColumn = -1;
+
+        UpdateAfterDocumentChange(options);
+        RebuildSearchMatches();
+        _host.InvalidateEditor();
+        return 1;
+    }
+
+    internal int ReplaceAllSearchMatches(string replacement, in TextEditorOptions options)
+    {
+        if (_searchMatches.Count == 0)
+        {
+            return 0;
+        }
+
+        var replaced = 0;
+        using var _ = _document.BeginUpdate();
+
+        for (var i = _searchMatches.Count - 1; i >= 0; i--)
+        {
+            var match = _searchMatches[i];
+            _document.Replace(match.Start, match.Length, replacement.AsSpan());
+            replaced++;
+        }
+
+        _preferredColumn = -1;
+        UpdateAfterDocumentChange(options);
+        RebuildSearchMatches();
+        _host.InvalidateEditor();
+        return replaced;
+    }
+
+    internal string GetSearchStatusText()
+    {
+        if (string.IsNullOrEmpty(_searchQuery.Text))
+        {
+            return "No search";
+        }
+
+        if (_searchMatches.Count == 0)
+        {
+            return "0 matches";
+        }
+
+        var active = _activeSearchMatchIndex < 0 ? 0 : _activeSearchMatchIndex + 1;
+        return $"{active}/{_searchMatches.Count}";
+    }
+
+    internal string? GetSearchErrorText() => _searchError;
+
+    private void SelectActiveSearchMatch(in TextEditorOptions options)
+    {
+        if ((uint)_activeSearchMatchIndex >= (uint)_searchMatches.Count)
+        {
+            return;
+        }
+
+        var match = _searchMatches[_activeSearchMatchIndex];
+        _selectionAnchor = match.Start;
+        _selectionEnd = match.Start + match.Length;
+        _caretIndex = _selectionEnd;
+        _preferredColumn = -1;
+        EnsureCaretVisible(options);
+    }
+
+    private void RebuildSearchMatches()
+    {
+        _searchError = null;
+        _searchMatches.Clear();
+
+        var queryText = _searchQuery.Text ?? string.Empty;
+        if (string.IsNullOrEmpty(queryText))
+        {
+            _activeSearchMatchIndex = -1;
+            return;
+        }
+
+        var text = GetText();
+        if (text.Length == 0)
+        {
+            _activeSearchMatchIndex = -1;
+            return;
+        }
+
+        try
+        {
+            BuildSearchMatches(text, queryText, _searchQuery);
+        }
+        catch (ArgumentException ex) when (_searchQuery.UseRegex)
+        {
+            _searchError = ex.Message;
+            _searchMatches.Clear();
+            _activeSearchMatchIndex = -1;
+        }
+
+        if (_searchMatches.Count == 0)
+        {
+            _activeSearchMatchIndex = -1;
+        }
+        else if (_activeSearchMatchIndex < 0)
+        {
+            _activeSearchMatchIndex = 0;
+        }
+    }
+
+    private void BuildSearchMatches(string text, string queryText, SearchQuery query)
+    {
+        if (query.UseRegex)
+        {
+            var pattern = query.WholeWord ? $"\\b(?:{queryText})\\b" : queryText;
+            var options = System.Text.RegularExpressions.RegexOptions.CultureInvariant;
+            if (!query.CaseSensitive)
+            {
+                options |= System.Text.RegularExpressions.RegexOptions.IgnoreCase;
+            }
+
+            var regex = new System.Text.RegularExpressions.Regex(pattern, options);
+            foreach (System.Text.RegularExpressions.Match match in regex.Matches(text))
+            {
+                if (!match.Success || match.Length <= 0)
+                {
+                    continue;
+                }
+
+                _searchMatches.Add(new TextMatch(match.Index, match.Length));
+            }
+
+            return;
+        }
+
+        var comparison = query.CaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+        var start = 0;
+        while (start < text.Length)
+        {
+            var found = text.IndexOf(queryText, start, comparison);
+            if (found < 0)
+            {
+                break;
+            }
+
+            var ok = true;
+            if (query.WholeWord)
+            {
+                ok = IsWordBoundary(text, found, queryText.Length);
+            }
+
+            if (ok)
+            {
+                _searchMatches.Add(new TextMatch(found, queryText.Length));
+            }
+
+            start = found + Math.Max(1, queryText.Length);
+        }
+    }
+
+    private static bool IsWordBoundary(string text, int start, int length)
+    {
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
+
+        var before = start > 0 ? text[start - 1] : '\0';
+        var afterIndex = start + length;
+        var after = afterIndex < text.Length ? text[afterIndex] : '\0';
+
+        var beforeOk = start == 0 || !IsWordChar(before);
+        var afterOk = afterIndex >= text.Length || !IsWordChar(after);
+        return beforeOk && afterOk;
+    }
+
+    private readonly record struct TextMatch(int Start, int Length);
 }

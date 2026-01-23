@@ -238,6 +238,28 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
         App?.RequestRender();
     }
 
+    bool ITextEditorHost.TryOpenSearchReplacePopup(SearchReplaceMode mode, string? initialSearchText)
+        => TryOpenSearchReplacePopup(mode, initialSearchText);
+
+    /// <summary>
+    /// Attempts to open a search/replace popup for this editor.
+    /// </summary>
+    /// <remarks>
+    /// The base implementation returns <see langword="false"/>. Multi-line editors can override this to
+    /// provide an integrated find/replace UI.
+    /// </remarks>
+    /// <param name="mode">The requested mode.</param>
+    /// <param name="initialSearchText">An optional initial search text (typically the current selection).</param>
+    /// <returns><see langword="true"/> if a popup was opened; otherwise <see langword="false"/>.</returns>
+    protected virtual bool TryOpenSearchReplacePopup(SearchReplaceMode mode, string? initialSearchText)
+    {
+        _ = mode;
+        _ = initialSearchText;
+        return false;
+    }
+
+    internal ISearchReplaceTarget CreateSearchReplaceTarget() => new TextEditorSearchTarget(this);
+
     /// <summary>
     /// Tries to get the desired terminal cursor position for this editor.
     /// </summary>
@@ -246,4 +268,37 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     /// <returns><c>true</c> if a cursor position is available; otherwise <c>false</c>.</returns>
     public bool TryGetCursorCell(out int x, out int y)
         => _core.TryGetCursorCell(BuildEditorOptions(), out x, out y);
+
+    private sealed class TextEditorSearchTarget : ISearchReplaceTarget
+    {
+        private readonly TextEditorBase _owner;
+
+        public TextEditorSearchTarget(TextEditorBase owner)
+        {
+            _owner = owner;
+        }
+
+        public string Title => "Find";
+
+        public bool SupportsReplace => !_owner.IsSingleLine;
+
+        public void SetQuery(in SearchQuery query)
+            => _owner._core.SetSearchQuery(query, _owner.BuildEditorOptions());
+
+        public void NextMatch()
+            => _owner._core.GoToNextSearchMatch(_owner.BuildEditorOptions());
+
+        public void PreviousMatch()
+            => _owner._core.GoToPreviousSearchMatch(_owner.BuildEditorOptions());
+
+        public int ReplaceCurrent(string replacement)
+            => _owner._core.ReplaceCurrentSearchMatch(replacement, _owner.BuildEditorOptions());
+
+        public int ReplaceAll(string replacement)
+            => _owner._core.ReplaceAllSearchMatches(replacement, _owner.BuildEditorOptions());
+
+        public string GetStatusText() => _owner._core.GetSearchStatusText();
+
+        public string? GetErrorText() => _owner._core.GetSearchErrorText();
+    }
 }

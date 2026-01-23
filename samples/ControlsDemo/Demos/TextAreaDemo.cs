@@ -3,7 +3,7 @@ using XenoAtom.Terminal.UI.Controls;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
-[Demo("TextArea", "Input", Description = "Multi-line editing with selection and scrolling (use Border for outlines).")]
+[Demo("TextArea", "Input", Description = "Multi-line editing with selection/scrolling and built-in Find/Replace (Ctrl+F/Ctrl+H).")]
 public sealed class TextAreaDemo : ControlsDemoBase
 {
     public TextAreaDemo() : base(DemoSource.Get())
@@ -15,7 +15,7 @@ public sealed class TextAreaDemo : ControlsDemoBase
         var text = new State<string?>("Line 1\nLine 2\nLine 3");
 
         return new VStack(
-                DemoUi.Hint("TextArea supports multi-line editing and selection."),
+                DemoUi.Hint("TextArea supports multi-line editing, selection, and Find/Replace (Ctrl+F / Ctrl+H)."),
                 new TextArea()
                     .Text(text)
                     .Placeholder("Type multiple lines.")
