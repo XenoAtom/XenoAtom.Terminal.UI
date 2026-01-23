@@ -14,7 +14,7 @@ Prompts are intended for *inline* scenarios (live regions). For fullscreen appli
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Prompts;
 
-var name = TerminalPrompts.Prompt(new TextPrompt("Name:")
+var name = Terminal.Prompt(new TextPrompt("Name:")
 {
     Placeholder = "Type your name…",
 });
@@ -28,7 +28,7 @@ Terminal.WriteLine($"Hello {name}!");
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Prompts;
 
-var port = TerminalPrompts.Prompt(new NumberPrompt<int>("Port:")
+var port = Terminal.Prompt(new NumberPrompt<int>("Port:")
 {
     InitialValue = 8080,
     Validator = v => v is >= 1 and <= 65535 ? null : "Port must be in [1..65535]",
@@ -41,7 +41,7 @@ var port = TerminalPrompts.Prompt(new NumberPrompt<int>("Port:")
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Prompts;
 
-var color = TerminalPrompts.Prompt(new SelectionPrompt<string>("Pick a color:")
+var color = Terminal.Prompt(new SelectionPrompt<string>("Pick a color:")
 {
     Items = ["Red", "Green", "Blue"],
 });
@@ -50,4 +50,3 @@ var color = TerminalPrompts.Prompt(new SelectionPrompt<string>("Pick a color:")
 ## Cancellation
 
 Prompts can be canceled with `Esc`. The prompt methods throw `OperationCanceledException` when canceled.
-

@@ -15,6 +15,7 @@ This guide documents the concepts, features, and controls of the library.
 ## Hosting & integration
 
 - `doc/hosting.md` (inline vs fullscreen, update loops)
+- `doc/prompts.md` (inline prompts built on top of `Terminal.Live`)
 
 ## Core concepts
 

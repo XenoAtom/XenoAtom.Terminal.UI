@@ -4,6 +4,7 @@
 
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Hosting;
+using XenoAtom.Terminal.UI.Prompts;
 using XenoAtom.Terminal.UI.Rendering;
 using System.Globalization;
 
@@ -135,6 +136,22 @@ public static partial class TerminalExtensions
         /// </summary>
         public static ValueTask<TerminalInstance> RunAsync(Visual visual, Func<TerminalRunningContext, TerminalLoopResult> onUpdate, TerminalRunOptions options, CancellationToken cancellationToken = default)
             => XenoAtom.Terminal.Terminal.Instance.RunAsync(visual, onUpdate, options, cancellationToken);
+
+        /// <summary>
+        /// Runs an inline prompt on the default terminal instance and returns the result.
+        /// </summary>
+        /// <typeparam name="T">The prompt result type.</typeparam>
+        /// <param name="prompt">The prompt to run.</param>
+        public static T Prompt<T>(TerminalPrompt<T> prompt) => TerminalPrompts.Prompt(prompt);
+
+        /// <summary>
+        /// Runs an inline prompt on the default terminal instance and returns the result.
+        /// </summary>
+        /// <typeparam name="T">The prompt result type.</typeparam>
+        /// <param name="prompt">The prompt to run.</param>
+        /// <param name="cancellationToken">A cancellation token.</param>
+        public static ValueTask<T> PromptAsync<T>(TerminalPrompt<T> prompt, CancellationToken cancellationToken = default)
+            => TerminalPrompts.PromptAsync(prompt, cancellationToken);
     }
 
     extension(TerminalInstance instance)
@@ -265,5 +282,21 @@ public static partial class TerminalExtensions
 
             return instance;
         }
+
+        /// <summary>
+        /// Runs an inline prompt on this terminal instance and returns the result.
+        /// </summary>
+        /// <typeparam name="T">The prompt result type.</typeparam>
+        /// <param name="prompt">The prompt to run.</param>
+        public T Prompt<T>(TerminalPrompt<T> prompt) => TerminalPrompts.Prompt(instance, prompt);
+
+        /// <summary>
+        /// Runs an inline prompt on this terminal instance and returns the result.
+        /// </summary>
+        /// <typeparam name="T">The prompt result type.</typeparam>
+        /// <param name="prompt">The prompt to run.</param>
+        /// <param name="cancellationToken">A cancellation token.</param>
+        public ValueTask<T> PromptAsync<T>(TerminalPrompt<T> prompt, CancellationToken cancellationToken = default)
+            => TerminalPrompts.PromptAsync(instance, prompt, cancellationToken);
     }
 }
