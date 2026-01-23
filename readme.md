@@ -11,8 +11,9 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
   - **Inline** widgets via `Terminal.Write(...)` and `Terminal.Live(...)`
   - **Fullscreen** apps via `Terminal.Run(...)` (alternate screen + input loop)
 - **Modern control library**:
-  - Buttons, toggles, lists, selection lists, tables, tabs, menus, dialogs/popups, charts, progress, spinners…
-  - Text editing: **TextBox**, **TextArea**, **MaskedInput**
+  - Buttons, toggles, lists, tables, tabs, menus, dialogs/popups, charts, progress, spinners, tooltips…
+  - Text editing: **TextBox**, **TextArea**, **MaskedInput**, **NumberBox**
+  - Advanced widgets: **LogControl**, **CommandPalette**, **Breakdown**, **ColorPicker**
 - **Binding-first UI**:
   - Bindable properties, `State<T>`, automatic dependency tracking, minimal boilerplate
 - **Layout system**: consistent measure/arrange protocol (integer cell UI), panels and containers
@@ -74,6 +75,19 @@ Terminal.Run(
     ),
     onUpdate: () => true);
 ```
+
+## 🧩 Controls included
+
+The library ships with a large set of built-in controls. See `doc/controls/index.md` for the full reference.
+
+Highlights:
+
+- Text input: `TextBox`, `TextArea`, `MaskedInput`, `NumberBox`, `ValidationPresenter`
+- Lists: `ListBox`, `OptionList`, `SelectionList`, `Select<T>`, `TreeView`
+- Layout: `VStack`, `HStack`, `Grid`, `DockLayout`, `Splitters`, `Border`, `Group`, `Padder`
+- Overlays: `Popup`, `Dialog`, `TooltipHost`, `Backdrop`
+- Visualization: `BarChart`, `LineChart`, `Sparkline`, `Canvas`, `Breakdown`, `TextFiglet`
+- Progress: `ProgressBar`, `ProgressTaskGroup`, `Spinner`
 
 
 ## 📖 User guide

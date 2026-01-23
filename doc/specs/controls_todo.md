@@ -18,6 +18,10 @@ Following this list, you will find compact specs for high and medium priority co
 | [x] | **High**   | **Header / Footer (app chrome)**                      | App chrome                 | Key hints, status, breadcrumbs       | Better whole-app structure                        |
 | [x] | **High**   | **TextArea (multiline editor)**                       | Input                      | Multi-line editing                   | "Real app" workflows beyond TextBox               |
 | [x] | **High**   | **TreeView**                                          | Navigation                 | Hierarchical navigation              | Big UX upgrade over flat lists                    |
+| [x] | **High**   | **TooltipHost / Tooltip**                             | Overlays                   | Contextual help everywhere           | Modern UX + pairs well with complex UIs           |
+| [x] | **High**   | **Breakdown (segmented bar)**                         | Visualization              | Proportional parts of a whole        | Great dashboards + interactive UX                 |
+| [x] | **High**   | **Inline prompt API**                                 | Input/API                  | Interactive prompts (inline)         | Great CLI UX without full apps                    |
+| [x] | **High**   | **ColorPicker**                                       | Input                      | Picking colors + palettes            | Essential for theming/tools + great demo value    |
 | [x] | **Medium** | **LoadingIndicator / Spinner**                        | Status                     | Busy state (unknown duration)        | Complements ProgressBar                           |
 | [x] | **Medium** | **Collapsible / Accordion**                           | Layout                     | Progressive disclosure               | Keeps screens navigable                           |
 | [x] | **Medium** | **Advanced Grid Layout**                              | Layout                     | 2D composition for forms/inspectors/dashboards with consistent alignment | "Killer" layout that removes deep nesting and covers most real screens |
