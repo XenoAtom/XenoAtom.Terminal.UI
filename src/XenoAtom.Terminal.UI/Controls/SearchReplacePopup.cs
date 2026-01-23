@@ -99,7 +99,7 @@ public interface ISearchReplaceTarget
 /// <remarks>
 /// This visual is used as an anchor within a host control. The popup itself is rendered in the app window layer.
 /// The host should arrange this visual to a 0-sized rectangle inside its bounds (typically top-right) and call
-/// <see cref="ArrangeWithin"/> from its arrange pass.
+/// <see cref="ArrangeWithin"/> from its arrange pass. The popup can be repositioned by dragging its header with the mouse.
 /// </remarks>
 public sealed partial class SearchReplacePopup : Visual
 {
@@ -112,6 +112,12 @@ public sealed partial class SearchReplacePopup : Visual
 
     private bool _bulkUpdating;
     private bool _rebuildingPopup;
+
+    private bool _isDragging;
+    private int _dragStartUiX;
+    private int _dragStartUiY;
+    private int _dragStartOffsetX;
+    private int _dragStartOffsetY;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SearchReplacePopup"/> class.
@@ -178,6 +184,7 @@ public sealed partial class SearchReplacePopup : Visual
         VerifyAccess();
         _offsetX = 0;
         _offsetY = 0;
+        _isDragging = false;
         MarkArrangeDirty();
         App?.RequestRender();
     }
@@ -414,10 +421,20 @@ public sealed partial class SearchReplacePopup : Visual
             .HorizontalAlignment(HorizontalAlignment.Stretch)
             .Content(body);
 
+        var dragHandle = new PopupDragHandle(this)
+            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .VerticalAlignment(VerticalAlignment.Top)
+            .MinHeight(1)
+            .MaxHeight(1);
+
+        // Overlay a 1-row invisible drag handle on top of the header line, so the popup can be repositioned by mouse.
+        // This avoids relying on Alt+Arrow key combinations, which are not reliably available across terminals/platforms.
+        var contentWithDragHandle = new ZStack(content, dragHandle);
+
         var popup = new Popup
         {
             Anchor = this,
-            Content = content,
+            Content = contentWithDragHandle,
             MatchAnchorWidth = false,
             CloseOnTab = false,
             Placement = PopupPlacement.Left,
@@ -446,28 +463,12 @@ public sealed partial class SearchReplacePopup : Visual
                 args.Handled = true;
                 return;
             }
-
-            if ((args.Modifiers & TerminalModifiers.Alt) != 0)
-            {
-                var moved = args.Key switch
-                {
-                    TerminalKey.Left => MoveAnchor(-1, 0),
-                    TerminalKey.Right => MoveAnchor(1, 0),
-                    TerminalKey.Up => MoveAnchor(0, -1),
-                    TerminalKey.Down => MoveAnchor(0, 1),
-                    _ => false,
-                };
-
-                if (moved)
-                {
-                    args.Handled = true;
-                }
-            }
         });
 
         popup.Closed((_, _) =>
         {
             _popup = null;
+            _isDragging = false;
             if (!_rebuildingPopup && _restoreFocus is not null)
             {
                 var app = App ?? Dispatcher.AttachedApp;
@@ -489,22 +490,41 @@ public sealed partial class SearchReplacePopup : Visual
         }
     }
 
-    private bool MoveAnchor(int dx, int dy)
+    internal void BeginDrag(int uiX, int uiY)
     {
-        if (_hostRect.Width <= 0 || _hostRect.Height <= 0)
+        VerifyAccess();
+        _isDragging = true;
+        _dragStartUiX = uiX;
+        _dragStartUiY = uiY;
+        _dragStartOffsetX = _offsetX;
+        _dragStartOffsetY = _offsetY;
+    }
+
+    internal void UpdateDrag(int uiX, int uiY)
+    {
+        VerifyAccess();
+        if (!_isDragging)
         {
-            _offsetX += dx;
-            _offsetY += dy;
-        }
-        else
-        {
-            _offsetX += dx;
-            _offsetY += dy;
+            return;
         }
 
+        var newOffsetX = _dragStartOffsetX + (uiX - _dragStartUiX);
+        var newOffsetY = _dragStartOffsetY + (uiY - _dragStartUiY);
+        if (newOffsetX == _offsetX && newOffsetY == _offsetY)
+        {
+            return;
+        }
+
+        _offsetX = newOffsetX;
+        _offsetY = newOffsetY;
         MarkArrangeDirty();
         App?.RequestRender();
-        return true;
+    }
+
+    internal void EndDrag()
+    {
+        VerifyAccess();
+        _isDragging = false;
     }
 
     private void RebuildPopupIfOpen()
@@ -521,5 +541,52 @@ public sealed partial class SearchReplacePopup : Visual
 
         // Reopen using the current mode/query state.
         EnsurePopup();
+    }
+
+    private sealed class PopupDragHandle : Visual
+    {
+        private readonly SearchReplacePopup _owner;
+
+        public PopupDragHandle(SearchReplacePopup owner)
+        {
+            Focusable = false;
+            _owner = owner;
+        }
+
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+            => SizeHints.Fixed(constraints.Clamp(Size.Zero));
+
+        protected override void ArrangeCore(in Rectangle finalRect) => Bounds = finalRect;
+
+        protected override void OnPointerPressed(PointerEventArgs e)
+        {
+            if (e.Button != TerminalMouseButton.Left)
+            {
+                return;
+            }
+
+            _owner.BeginDrag(e.UiX, e.UiY);
+            e.Handled = true;
+        }
+
+        protected override void OnPointerMoved(PointerEventArgs e)
+        {
+            _owner.UpdateDrag(e.UiX, e.UiY);
+            if (_owner._isDragging)
+            {
+                e.Handled = true;
+            }
+        }
+
+        protected override void OnPointerReleased(PointerEventArgs e)
+        {
+            if (e.Button != TerminalMouseButton.Left)
+            {
+                return;
+            }
+
+            _owner.EndDrag();
+            e.Handled = true;
+        }
     }
 }
