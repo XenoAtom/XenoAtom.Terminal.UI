@@ -419,6 +419,7 @@ public sealed partial class SearchReplacePopup : Visual
             Anchor = this,
             Content = content,
             MatchAnchorWidth = false,
+            CloseOnTab = false,
             Placement = PopupPlacement.Left,
         };
 

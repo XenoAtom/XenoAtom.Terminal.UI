@@ -55,6 +55,7 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         this.VerticalAlignment(VerticalAlignment.Stretch);
         this.MatchAnchorWidth(true);
         this.Placement(PopupPlacement.Below);
+        this.CloseOnTab(true);
     }
 
     /// <summary>
@@ -84,6 +85,21 @@ public sealed partial class Popup : ContentVisual, IModalVisual
     /// </summary>
     [Bindable]
     public partial PopupPlacement Placement { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the popup closes when the user presses Tab.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// By default, popups close on Tab to allow focus traversal to continue in the underlying UI (useful for dropdowns).
+    /// </para>
+    /// <para>
+    /// Set this to <see langword="false"/> for popups that should allow keyboard navigation within their content,
+    /// such as a Find/Replace popup.
+    /// </para>
+    /// </remarks>
+    [Bindable]
+    public partial bool CloseOnTab { get; set; }
 
     /// <summary>
     /// Opens the popup by adding it to the active <see cref="TerminalApp"/> window layer.

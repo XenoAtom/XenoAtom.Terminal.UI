@@ -1060,7 +1060,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         if (keyEvent.Key == TerminalKey.Tab)
         {
             // Transient popups should close on Tab before focus moves in the underlying UI.
-            if (activeModal is Popup popup)
+            if (activeModal is Popup popup && popup.CloseOnTab)
             {
                 popup.Close();
             }

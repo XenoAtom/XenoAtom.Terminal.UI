@@ -5,12 +5,27 @@
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Hosting;
+using System.Linq;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
 [TestClass]
 public sealed class TextAreaSearchReplaceTests
 {
+    private static bool IsDescendantOf(Visual? visual, Visual ancestor)
+    {
+        while (visual is not null)
+        {
+            if (ReferenceEquals(visual, ancestor))
+            {
+                return true;
+            }
+            visual = visual.Parent;
+        }
+
+        return false;
+    }
+
     [TestMethod]
     public void TextArea_CtrlF_Opens_Find_Popup()
     {
@@ -27,6 +42,35 @@ public sealed class TextAreaSearchReplaceTests
 
         StringAssert.Contains(rendered, "Find");
         StringAssert.Contains(rendered, "Case");
+    }
+
+    [TestMethod]
+    public void TextArea_Find_Popup_Tab_Stays_Inside_Popup()
+    {
+        var editor = new TextArea("foo bar foo");
+        using var driver = new TerminalAppTestDriver(editor, TerminalHostKind.Fullscreen, new TerminalSize(60, 10));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlF, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+
+        var popup = driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().FirstOrDefault();
+        Assert.IsNotNull(popup);
+        Assert.IsFalse(popup.CloseOnTab);
+
+        var focused = driver.App.FocusedElement;
+        Assert.IsNotNull(focused);
+        Assert.IsTrue(IsDescendantOf(focused, popup));
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
+        driver.Tick();
+
+        var popupAfter = driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().FirstOrDefault();
+        Assert.AreSame(popup, popupAfter);
+
+        var focusedAfter = driver.App.FocusedElement;
+        Assert.IsNotNull(focusedAfter);
+        Assert.IsTrue(IsDescendantOf(focusedAfter, popup));
     }
 
     [TestMethod]
