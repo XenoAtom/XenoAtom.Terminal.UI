@@ -519,6 +519,13 @@ public sealed partial class SearchReplacePopup : Visual
         _offsetX = newOffsetX;
         _offsetY = newOffsetY;
 
+        // Update the anchor position immediately so the popup can re-layout during the same frame.
+        // The popup is hosted in the window layer and may be arranged before the host calls ArrangeWithin again.
+        if (_hostRect.Width != 0 || _hostRect.Height != 0)
+        {
+            ArrangeWithin(_hostRect);
+        }
+
         // The Popup positions itself based on Anchor.Bounds, which is not a bindable property.
         // Ensure the popup is re-arranged when the anchor moves so it updates immediately.
         _popup?.MarkArrangeDirty();

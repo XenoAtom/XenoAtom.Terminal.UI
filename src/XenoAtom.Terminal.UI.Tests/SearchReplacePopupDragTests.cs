@@ -61,7 +61,7 @@ public sealed class SearchReplacePopupDragTests
 
         var movedCol = FindTextColumn(driver.Backend.GetOutText(), 50, 12, "DragMe");
         Assert.AreNotEqual(-1, movedCol);
-        Assert.IsLessThan(movedCol, initialCol);
+        Assert.IsLessThan(initialCol, movedCol);
     }
 
     private sealed class AnchorHost : Visual
@@ -140,4 +140,5 @@ public sealed class SearchReplacePopupDragTests
 
         return -1;
     }
+
 }
