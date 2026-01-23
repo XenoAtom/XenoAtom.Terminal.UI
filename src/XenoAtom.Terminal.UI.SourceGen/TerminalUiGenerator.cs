@@ -22,6 +22,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
 {
     private const string BindableAttributeMetadataName = "XenoAtom.Terminal.UI.BindableAttribute";
     private const string RoutedEventAttributeMetadataName = "XenoAtom.Terminal.UI.RoutedEventAttribute";
+    private const string FluentAttributeMetadataName = "XenoAtom.Terminal.UI.FluentAttribute";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -34,6 +35,16 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(
             bindableProperties.Collect(),
             static (spc, items) => BindableEmitter.Emit(spc, items));
+
+        var fluentProperties = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                FluentAttributeMetadataName,
+                static (node, _) => node is PropertyDeclarationSyntax { AttributeLists.Count: > 0 },
+                static (ctx, ct) => FluentPropertyInfo.TryCreate(ctx, ct));
+
+        context.RegisterSourceOutput(
+            fluentProperties.Collect(),
+            static (spc, items) => FluentEmitter.Emit(spc, items));
 
         var routedEventMethods = context.SyntaxProvider
             .ForAttributeWithMetadataName(
@@ -84,6 +95,14 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             id: "XATUI005",
             title: "Bindable list property must be get-only",
             messageFormat: "The bindable list property '{0}' must be declared as a non-partial get-only property (no setter)",
+            category: "XenoAtom.Terminal.UI.SourceGen",
+            defaultSeverity: DiagnosticSeverity.Error,
+            isEnabledByDefault: true);
+
+        public static readonly DiagnosticDescriptor FluentPropertyMustBeSettable = new(
+            id: "XATUI006",
+            title: "Fluent property must be settable",
+            messageFormat: "The fluent property '{0}' must have a setter (not init-only)",
             category: "XenoAtom.Terminal.UI.SourceGen",
             defaultSeverity: DiagnosticSeverity.Error,
             isEnabledByDefault: true);
@@ -447,6 +466,8 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
 
 
     private sealed record BindablePropertyResult(BindablePropertyInfo? Info, ImmutableArray<Diagnostic> Diagnostics);
+
+    private sealed record FluentPropertyResult(FluentPropertyInfo? Info, ImmutableArray<Diagnostic> Diagnostics);
 
     private static class BindableEmitter
     {
@@ -1360,6 +1381,374 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
         }
 
         internal static string SanitizeFileName(string fullTypeName)
+        {
+            if (fullTypeName.StartsWith("global::", StringComparison.Ordinal))
+            {
+                fullTypeName = fullTypeName.Substring("global::".Length);
+            }
+
+            var sb = new StringBuilder(fullTypeName.Length);
+            foreach (var ch in fullTypeName)
+            {
+                sb.Append(char.IsLetterOrDigit(ch) ? ch : '_');
+            }
+            return sb.ToString();
+        }
+    }
+
+    private sealed record FluentPropertyInfo(
+        INamedTypeSymbol ContainingType,
+        string Namespace,
+        string PropertyName,
+        string MethodName,
+        string PropertyTypeFullyQualified,
+        bool IsDelegateProperty)
+    {
+        public static FluentPropertyResult TryCreate(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (context.TargetNode is not PropertyDeclarationSyntax propertySyntax)
+            {
+                return new FluentPropertyResult(null, ImmutableArray<Diagnostic>.Empty);
+            }
+
+            if (context.TargetSymbol is not IPropertySymbol propertySymbol)
+            {
+                return new FluentPropertyResult(null, ImmutableArray<Diagnostic>.Empty);
+            }
+
+            var containingType = propertySymbol.ContainingType;
+            if (containingType is null)
+            {
+                return new FluentPropertyResult(null, ImmutableArray<Diagnostic>.Empty);
+            }
+
+            var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
+
+            var setMethod = propertySymbol.SetMethod;
+            if (setMethod is null || setMethod.IsInitOnly)
+            {
+                diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.FluentPropertyMustBeSettable, propertySyntax.Identifier.GetLocation(), propertySymbol.ToDisplayString()));
+                return new FluentPropertyResult(null, diagnostics.ToImmutable());
+            }
+
+            string? configuredMethodName = null;
+            foreach (var attribute in propertySymbol.GetAttributes())
+            {
+                if (attribute.AttributeClass?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == "global::XenoAtom.Terminal.UI.FluentAttribute")
+                {
+                    if (attribute.ConstructorArguments.Length == 1 && attribute.ConstructorArguments[0].Value is string s && !string.IsNullOrWhiteSpace(s))
+                    {
+                        configuredMethodName = s;
+                    }
+                    break;
+                }
+            }
+
+            var isDelegateProperty = propertySymbol.Type.TypeKind == TypeKind.Delegate;
+
+            var propertyName = propertySymbol.Name;
+            string resolvedMethodName = configuredMethodName ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(resolvedMethodName))
+            {
+                resolvedMethodName = isDelegateProperty ? $"With{propertyName}" : propertyName;
+            }
+
+            var format = SymbolDisplayFormat.FullyQualifiedFormat.WithMiscellaneousOptions(
+                SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
+
+            var ns = containingType.ContainingNamespace?.ToDisplayString() ?? string.Empty;
+
+            var info = new FluentPropertyInfo(
+                ContainingType: containingType,
+                Namespace: ns,
+                PropertyName: propertyName,
+                MethodName: resolvedMethodName,
+                PropertyTypeFullyQualified: propertySymbol.Type.ToDisplayString(format),
+                IsDelegateProperty: isDelegateProperty);
+
+            return new FluentPropertyResult(info, diagnostics.ToImmutable());
+        }
+    }
+
+    private static class FluentEmitter
+    {
+        public static void Emit(SourceProductionContext context, ImmutableArray<FluentPropertyResult> items)
+        {
+            if (items.IsDefaultOrEmpty)
+            {
+                return;
+            }
+
+            foreach (var item in items)
+            {
+                foreach (var diagnostic in item.Diagnostics)
+                {
+                    context.ReportDiagnostic(diagnostic);
+                }
+            }
+
+            var infos = items
+                .Select(static item => item.Info)
+                .Where(static info => info is not null)
+                .Select(static info => info!)
+                .ToList();
+
+            var grouped = infos
+                .GroupBy(static item => item.ContainingType, (IEqualityComparer<INamedTypeSymbol>)SymbolEqualityComparer.Default)
+                .ToList();
+
+            foreach (var group in grouped)
+            {
+                var containingType = group.Key;
+                if (containingType is null)
+                {
+                    continue;
+                }
+
+                var ordered = group.OrderBy(static item => item.MethodName, StringComparer.Ordinal).ToList();
+                if (ordered.Count == 0)
+                {
+                    continue;
+                }
+
+                var hintName = $"{SanitizeFileName(containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))}.FluentOnly.g.cs";
+                var source = GenerateFluentOnlyExtensionsSource(containingType, ordered);
+                context.AddSource(hintName, SourceText.From(source, Encoding.UTF8));
+            }
+        }
+
+        private static string GenerateFluentOnlyExtensionsSource(INamedTypeSymbol containingType, List<FluentPropertyInfo> properties)
+        {
+            var sb = new StringBuilder(8 * 1024);
+            sb.AppendLine("// <auto-generated/>");
+            sb.AppendLine("#nullable enable");
+
+            var ns = containingType.ContainingNamespace?.ToDisplayString() ?? string.Empty;
+            if (!string.IsNullOrEmpty(ns))
+            {
+                sb.Append("namespace ").Append(ns).AppendLine();
+                sb.AppendLine("{");
+            }
+
+            var indent = new string(' ', string.IsNullOrEmpty(ns) ? 0 : 4);
+            var extensionClassName = GetExtensionClassName(containingType);
+
+            var receiverTypeXml = DocumentationCommentId.CreateDeclarationId(containingType);
+
+            sb.Append(indent).AppendLine("/// <summary>");
+            sb.Append(indent).Append("/// Fluent extension methods for configuring instances of <see cref=\"")
+                .Append(receiverTypeXml)
+                .AppendLine("\"/>.");
+            sb.Append(indent).AppendLine("/// </summary>");
+            sb.Append(indent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
+            sb.Append(indent).Append("public static partial class ").Append(extensionClassName).AppendLine();
+            sb.Append(indent).AppendLine("{");
+
+            var methodIndent = indent + "    ";
+            var receiverType = containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+            // Use a generic receiver for non-sealed classes to enable fluent chaining on derived types.
+            var canUseGenericReceiver = containingType.TypeKind == TypeKind.Class && !containingType.IsSealed;
+            var needsTypeParameters = containingType.TypeParameters.Length > 0;
+
+            foreach (var p in properties)
+            {
+                var propName = p.PropertyName;
+                var methodName = p.MethodName;
+                var argName = ToLowerCamel(methodName);
+                var argType = p.PropertyTypeFullyQualified;
+
+                sb.Append(methodIndent).AppendLine("/// <summary>");
+                sb.Append(methodIndent).Append("/// Sets <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> and returns the same instance.");
+                sb.Append(methodIndent).AppendLine("/// </summary>");
+                sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
+                sb.Append(methodIndent).Append("/// <param name=\"").Append(EscapeIdentifier(argName)).AppendLine("\">The value to set.</param>");
+                sb.Append(methodIndent).AppendLine("/// <returns>The same instance for chaining.</returns>");
+                sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
+
+                if (canUseGenericReceiver)
+                {
+                    if (needsTypeParameters)
+                    {
+                        sb.Append(methodIndent).Append("public static TObj ").Append(EscapeIdentifier(methodName)).Append("<TObj");
+                        for (var i = 0; i < containingType.TypeParameters.Length; i++)
+                        {
+                            sb.Append(", ").Append(containingType.TypeParameters[i].Name);
+                        }
+                        sb.Append(">(this TObj obj, ").Append(argType).Append(' ').Append(EscapeIdentifier(argName)).Append(')');
+
+                        sb.Append(" where TObj : ").Append(receiverType);
+                        AppendTypeParameters(sb, containingType);
+                        AppendTypeParameterConstraints(sb, containingType, methodIndent);
+                    }
+                    else
+                    {
+                        sb.Append(methodIndent).Append("public static T ").Append(EscapeIdentifier(methodName)).Append("<T>(this T obj, ").Append(argType).Append(' ').Append(EscapeIdentifier(argName))
+                            .Append(") where T : ").Append(receiverType).AppendLine();
+                    }
+
+                    sb.Append(methodIndent).AppendLine("{");
+                    sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
+                    sb.Append(methodIndent).Append("    obj.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine(";");
+                    sb.Append(methodIndent).AppendLine("    return obj;");
+                    sb.Append(methodIndent).AppendLine("}");
+                }
+                else
+                {
+                    sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(methodName));
+                    if (needsTypeParameters)
+                    {
+                        AppendTypeParameters(sb, containingType);
+                    }
+                    sb.Append("(this ").Append(receiverType).Append(" obj, ").Append(argType).Append(' ').Append(EscapeIdentifier(argName)).Append(')');
+                    if (needsTypeParameters)
+                    {
+                        AppendTypeParameterConstraints(sb, containingType, methodIndent);
+                    }
+                    else
+                    {
+                        sb.AppendLine();
+                    }
+
+                    sb.Append(methodIndent).AppendLine("{");
+                    sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
+                    sb.Append(methodIndent).Append("    obj.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine(";");
+                    sb.Append(methodIndent).AppendLine("    return obj;");
+                    sb.Append(methodIndent).AppendLine("}");
+                }
+
+                sb.AppendLine();
+            }
+
+            sb.Append(indent).AppendLine("}");
+
+            if (!string.IsNullOrEmpty(ns))
+            {
+                sb.AppendLine("}");
+            }
+
+            return sb.ToString();
+        }
+
+        private static string GetExtensionClassName(INamedTypeSymbol type)
+        {
+            var containingName = type.Name;
+            if (type.ContainingType is { } containingType)
+            {
+                containingName = containingType.Name + "_" + containingName;
+            }
+            return containingName + "Extensions";
+        }
+
+        private static string EscapeIdentifier(string identifier)
+        {
+            return SyntaxFacts.GetKeywordKind(identifier) != SyntaxKind.None ? "@" + identifier : identifier;
+        }
+
+        private static string ToLowerCamel(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+            {
+                return name;
+            }
+
+            var first = name[0];
+            if (char.IsLower(first))
+            {
+                return name;
+            }
+
+            return char.ToLowerInvariant(first) + name.Substring(1);
+        }
+
+        private static void AppendTypeParameters(StringBuilder sb, INamedTypeSymbol type)
+        {
+            if (type.TypeParameters.Length == 0)
+            {
+                return;
+            }
+
+            sb.Append('<');
+            for (var i = 0; i < type.TypeParameters.Length; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                sb.Append(type.TypeParameters[i].Name);
+            }
+            sb.Append('>');
+        }
+
+        private static void AppendTypeParameterConstraints(StringBuilder sb, INamedTypeSymbol type, string indent)
+        {
+            var format = SymbolDisplayFormat.FullyQualifiedFormat.WithMiscellaneousOptions(
+                SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
+
+            var wroteAny = false;
+
+            foreach (var tp in type.TypeParameters)
+            {
+                var first = true;
+
+                void AppendConstraint(string value)
+                {
+                    if (first)
+                    {
+                        if (!wroteAny)
+                        {
+                            sb.Append(' ');
+                        }
+                        else
+                        {
+                            sb.AppendLine();
+                            sb.Append(indent);
+                        }
+
+                        sb.Append("where ").Append(tp.Name).Append(" : ");
+                        first = false;
+                        wroteAny = true;
+                    }
+                    else
+                    {
+                        sb.Append(", ");
+                    }
+
+                    sb.Append(value);
+                }
+
+                if (tp.HasNotNullConstraint)
+                {
+                    AppendConstraint("notnull");
+                }
+
+                if (tp.HasUnmanagedTypeConstraint)
+                {
+                    AppendConstraint("unmanaged");
+                }
+                else if (tp.HasValueTypeConstraint)
+                {
+                    AppendConstraint("struct");
+                }
+                else if (tp.HasReferenceTypeConstraint)
+                {
+                    AppendConstraint(tp.ReferenceTypeConstraintNullableAnnotation == NullableAnnotation.Annotated ? "class?" : "class");
+                }
+
+                foreach (var c in tp.ConstraintTypes)
+                {
+                    AppendConstraint(c.ToDisplayString(format));
+                }
+
+                if (tp.HasConstructorConstraint)
+                {
+                    AppendConstraint("new()");
+                }
+            }
+
+            sb.AppendLine();
+        }
+
+        private static string SanitizeFileName(string fullTypeName)
         {
             if (fullTypeName.StartsWith("global::", StringComparison.Ordinal))
             {
