@@ -41,7 +41,7 @@ The `samples` folder contains end-to-end demos:
 
 - `samples/FullscreenDemo`: fullscreen UI showcase.
 - `samples/ControlsDemo`: catalog-style demo.
-- `samples/MvpDemo`: inline + fullscreen examples.
+- `samples/InlineLiveDemo`: inline/live example (interactive).
 - `samples/Playground`: experiments and minimal repros.
 
 ## Specs and design notes

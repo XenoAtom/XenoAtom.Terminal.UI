@@ -14,7 +14,7 @@
   <Folder Name="/samples/">
     <Project Path="../samples/ControlsDemo/ControlsDemo.csproj" />
     <Project Path="../samples/FullscreenDemo/FullscreenDemo.csproj" />
-    <Project Path="../samples/MvpDemo/MvpDemo.csproj" />
+    <Project Path="../samples/InlineLiveDemo/InlineLiveDemo.csproj" />
     <Project Path="../samples/Playground/Playground.csproj" Id="45880fed-b308-4d0c-8ee1-cc6e732d9873" />
   </Folder>
   <Folder Name="/tools/">

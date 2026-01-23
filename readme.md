@@ -97,7 +97,7 @@ For details, see `doc/readme.md`.
 ## 🧪 Samples
 
 - `samples/Playground`: quick manual repros and experiments.
-- `samples/MvpDemo`: inline and fullscreen demos.
+- `samples/InlineLiveDemo`: inline/live demo (interactive).
 - `samples/FullscreenDemo`: fullscreen UI showcase.
 - `samples/ControlsDemo`: catalog-style demo of controls and styles.
 
