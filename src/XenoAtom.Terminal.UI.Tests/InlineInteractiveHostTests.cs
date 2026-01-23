@@ -78,4 +78,25 @@ public sealed class InlineInteractiveHostTests
 
         host.Render(CreateBuffer(20, "L1", "L2", "L3", "L4", "L5"), wantsCursor: false, cursorX: 0, cursorY: 0);
     }
+
+    [TestMethod]
+    public void Render_After_HandleResize_Forces_Repaint()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(10, 5));
+        using var session = Terminal.Open(backend, new TerminalOptions(), force: true);
+
+        var host = new InlineInteractiveHost(session.Instance);
+
+        host.Render(CreateBuffer(10, "Hello"), wantsCursor: false, cursorX: 0, cursorY: 0);
+        var len1 = backend.GetOutText().Length;
+
+        // Simulate terminal resize behavior that can invalidate saved cursor state.
+        host.HandleResize();
+
+        // Keep the same content and size, but ensure the host still repaints (it must not early-return).
+        host.Render(CreateBuffer(10, "Hello"), wantsCursor: false, cursorX: 0, cursorY: 0);
+        var len2 = backend.GetOutText().Length;
+
+        Assert.IsGreaterThan(len1, len2, "Expected additional output after HandleResize().");
+    }
 }

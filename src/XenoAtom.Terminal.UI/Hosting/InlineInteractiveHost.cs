@@ -53,6 +53,21 @@ public sealed class InlineInteractiveHost : IDisposable
     /// </summary>
     public int? LiveRegionTopRow => _liveRegionTopRow;
 
+    internal void HandleResize()
+    {
+        // Some terminals invalidate the saved/restore cursor state on resize. If we keep relying on restore,
+        // subsequent inline renders can end up writing to an incorrect location (appearing as if the region
+        // didn't resize/re-render). Force the next render to fully repaint and re-anchor via absolute cursor moves.
+        _hasSavedCursorPosition = false;
+        _lastScalars = null;
+        _lastCells = null;
+        _lastHyperlinks = null;
+        _lastHyperlinkTable = null;
+        _lastTextElementTable = null;
+        _lastWidth = 0;
+        _lastHeight = 0;
+    }
+
     internal void PrepareForUserUpdate()
     {
         if (!_hasSavedCursorPosition || _reservedHeight <= 0)
@@ -182,10 +197,21 @@ public sealed class InlineInteractiveHost : IDisposable
         _lastCursorX = cursorX;
         _lastCursorY = cursorY;
 
-        var width = Math.Max(1, _terminal.Size.Columns);
+        var viewportWidth = Math.Max(1, _terminal.Size.Columns);
         var visibleHeight = Math.Max(1, _terminal.Size.Rows);
-        var previousHeight = _hasSavedCursorPosition ? Math.Min(_reservedHeight, visibleHeight) : 0;
+        var existingHeight = _reservedHeight <= 0 ? 0 : Math.Min(_reservedHeight, visibleHeight);
         var height = Math.Clamp(Math.Max(1, buffer.Height), 1, visibleHeight);
+
+        // It's possible for the terminal size to change between when the caller sized the buffer
+        // and when we actually render it (e.g., during resize). Avoid throwing and let the next
+        // frame repaint with the new viewport size.
+        if (buffer.Width != viewportWidth)
+        {
+            HandleResize();
+            return;
+        }
+
+        var width = buffer.Width;
 
         if (_liveRegionTopRow is null)
         {
@@ -199,12 +225,7 @@ public sealed class InlineInteractiveHost : IDisposable
             }
         }
 
-        if (buffer.Width != width)
-        {
-            throw new InvalidOperationException("Inline render requires a buffer sized to the current viewport width.");
-        }
-
-        var forceFull = _lastScalars is null || _lastCells is null || _lastWidth != width || _lastHeight != height || previousHeight != height;
+        var forceFull = _lastScalars is null || _lastCells is null || _lastWidth != width || _lastHeight != height || existingHeight != height;
         EnsureLastBuffers(width, height);
 
         var cursorChanged = wantsCursor != _lastCursorVisible;
@@ -294,12 +315,20 @@ public sealed class InlineInteractiveHost : IDisposable
             writer.RestoreCursorPosition();
         }
 
-        if (previousHeight > 0)
+        if (_hasSavedCursorPosition && existingHeight > 0)
         {
-            writer.CursorUp(previousHeight);
+            writer.CursorUp(existingHeight);
         }
 
-        writer.CursorHorizontalAbsolute(1);
+        if (!_hasSavedCursorPosition && existingHeight > 0 && _liveRegionTopRow is { } topRow)
+        {
+            topRow = Math.Clamp(topRow, 0, visibleHeight - 1);
+            writer.CursorPosition(topRow + 1, 1);
+        }
+        else
+        {
+            writer.CursorHorizontalAbsolute(1);
+        }
 
         var currentStyle = AnsiStyle.Default;
         ulong currentHyperlink = 0;
@@ -495,15 +524,15 @@ public sealed class InlineInteractiveHost : IDisposable
             }
         }
 
-        if (previousHeight > height)
+        if (existingHeight > height)
         {
-            for (var i = height; i < previousHeight; i++)
+            for (var i = height; i < existingHeight; i++)
             {
                 writer.EraseLine(2);
                 writer.NextLine();
             }
 
-            writer.CursorUp(previousHeight - height);
+            writer.CursorUp(existingHeight - height);
             writer.CursorHorizontalAbsolute(1);
         }
 

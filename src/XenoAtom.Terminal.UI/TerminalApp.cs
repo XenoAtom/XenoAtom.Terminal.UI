@@ -1011,6 +1011,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         if (ev is TerminalResizeEvent)
         {
             _fullscreenHost?.Reset();
+            _inlineHost?.HandleResize();
             RequestRender();
             return;
         }
