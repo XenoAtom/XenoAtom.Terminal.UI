@@ -173,18 +173,18 @@ Introduce `TooltipStyle`:
 - Add tests verifying:
   - Tooltip appears after delay and closes on leave.
   - Tooltip does not steal focus and does not intercept clicks.
-- Add ControlsDemo usage (e.g. tooltips in Button demo and in the Breakdown control when implemented).
+- Add ControlsDemo usage (e.g. tooltips in Button demo and in the BreakdownChart control when implemented).
 
 ---
 
-## Breakdown Control (Segmented Proportional Bar)
+## BreakdownChart Control (Segmented Proportional Bar)
 
 Goal: show proportional parts of a whole (resource usage, KPI breakdown, category proportions), with interactivity.
 
 ### Public API
 
 ```csharp
-public sealed class Breakdown : Visual
+public sealed class BreakdownChart : Visual
 {
     [Bindable] public BindableList<BreakdownSegment> Segments { get; }
 
@@ -218,10 +218,10 @@ In addition to the generator-provided fluent methods for bindable properties (e.
 the list replacement methods for `Segments(...)`, provide a convenience helper that appends a segment in one call:
 
 ```csharp
-public static partial class BreakdownExtensions
+public static partial class BreakdownChartExtensions
 {
-    public static Breakdown Segment(
-        this Breakdown breakdown,
+    public static BreakdownChart Segment(
+        this BreakdownChart breakdown,
         double value,
         Visual? label = null,
         Color? color = null,
@@ -246,6 +246,8 @@ Introduce `BreakdownStyle` (record):
 
 - `Rune FillRune` (default `' '`)
 - `int SegmentGap` (default 0 or 1)
+- `BreakdownLegendLayout LegendLayout` (default: Compact)
+- `int LegendItemSpacing` (spacing between items in Compact mode)
 - `Style? BarStyle` (base style used for segments)
 - `Style? LegendStyle` / `Style? LegendMutedStyle`
 - `IReadOnlyList<Color?>? DefaultSegmentColors` (optional override; otherwise derived from scheme)

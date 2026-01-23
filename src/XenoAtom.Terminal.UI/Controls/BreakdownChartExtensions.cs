@@ -5,20 +5,20 @@
 namespace XenoAtom.Terminal.UI.Controls;
 
 /// <summary>
-/// Provides convenience extension methods for building <see cref="Breakdown"/> instances.
+/// Provides convenience extension methods for building <see cref="BreakdownChart"/> instances.
 /// </summary>
-public static partial class BreakdownExtensions
+public static partial class BreakdownChartExtensions
 {
     /// <summary>
     /// Appends a segment to a breakdown.
     /// </summary>
-    /// <param name="breakdown">The breakdown to update.</param>
+    /// <param name="breakdown">The breakdown chart to update.</param>
     /// <param name="value">The segment value.</param>
     /// <param name="label">The optional segment label visual.</param>
     /// <param name="color">The optional segment color.</param>
     /// <param name="tooltip">The optional tooltip visual displayed when hovered.</param>
-    /// <returns>The same breakdown instance for chaining.</returns>
-    public static Breakdown Segment(this Breakdown breakdown, double value, Visual? label = null, Color? color = null, Visual? tooltip = null)
+    /// <returns>The same breakdown chart instance for chaining.</returns>
+    public static BreakdownChart Segment(this BreakdownChart breakdown, double value, Visual? label = null, Color? color = null, Visual? tooltip = null)
     {
         ArgumentNullException.ThrowIfNull(breakdown);
 
@@ -34,4 +34,3 @@ public static partial class BreakdownExtensions
         return breakdown;
     }
 }
-

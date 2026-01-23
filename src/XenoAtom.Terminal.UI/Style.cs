@@ -31,12 +31,6 @@ public readonly struct Style : IEquatable<Style>
     private const int ContinuationBit = 24;
     private const ulong ContinuationMask = 1ul << ContinuationBit;
 
-    private const int ForegroundSpecifiedBit = 25;
-    private const ulong ForegroundSpecifiedMask = 1ul << ForegroundSpecifiedBit;
-
-    private const int BackgroundSpecifiedBit = 26;
-    private const ulong BackgroundSpecifiedMask = 1ul << BackgroundSpecifiedBit;
-
     // All bits except the background color payload (kind/index + RGBA bytes).
     private const ulong BackgroundFlagsMask = 0x00000000FFFF0000ul;
 
@@ -70,9 +64,9 @@ public readonly struct Style : IEquatable<Style>
     internal Style WithContinuation()
         => new(_foreground, _backgroundAndFlags | ContinuationMask);
 
-    private bool HasForeground => (_backgroundAndFlags & ForegroundSpecifiedMask) != 0;
+    private bool HasForeground => (byte)_foreground != 0;
 
-    private bool HasBackground => (_backgroundAndFlags & BackgroundSpecifiedMask) != 0;
+    private bool HasBackground => (byte)(_backgroundAndFlags & 0xFF) != 0;
 
     private ulong BackgroundColorRaw => _backgroundAndFlags & BackgroundColorMask;
 
@@ -88,19 +82,15 @@ public readonly struct Style : IEquatable<Style>
     internal Style MergeUnspecified(Style under)
     {
         var fg = _foreground;
-        var fgSpecified = HasForeground;
-        if (!fgSpecified)
+        if (!HasForeground)
         {
             fg = under._foreground;
-            fgSpecified = under.HasForeground;
         }
 
         var bg = BackgroundColorRaw;
-        var bgSpecified = HasBackground;
-        if (!bgSpecified)
+        if (!HasBackground)
         {
             bg = under.BackgroundColorRaw;
-            bgSpecified = under.HasBackground;
         }
 
         var textStyle = (byte)TextStyle;
@@ -110,14 +100,6 @@ public readonly struct Style : IEquatable<Style>
         }
 
         var flags = ((ulong)textStyle << TextStyleShift) | (BackgroundFlagsRaw & ContinuationMask);
-        if (fgSpecified)
-        {
-            flags |= ForegroundSpecifiedMask;
-        }
-        if (bgSpecified)
-        {
-            flags |= BackgroundSpecifiedMask;
-        }
         return new Style(fg, bg | flags);
     }
 
@@ -143,25 +125,25 @@ public readonly struct Style : IEquatable<Style>
     /// Returns a copy with the foreground cleared to the terminal default (unspecified).
     /// </summary>
     public Style ClearForeground()
-        => new(0, _backgroundAndFlags & ~ForegroundSpecifiedMask);
+        => new(0, _backgroundAndFlags);
 
     /// <summary>
     /// Returns a copy with the background cleared to the terminal default (unspecified).
     /// </summary>
     public Style ClearBackground()
-        => new(_foreground, BackgroundFlagsRaw & ~BackgroundSpecifiedMask);
+        => new(_foreground, BackgroundFlagsRaw);
 
     /// <summary>
     /// Returns a copy with the specified foreground color.
     /// </summary>
     public Style WithForeground(Color color)
-        => new(color.ToRaw(), _backgroundAndFlags | ForegroundSpecifiedMask);
+        => new(color.ToRaw(), _backgroundAndFlags);
 
     /// <summary>
     /// Returns a copy with the specified background color.
     /// </summary>
     public Style WithBackground(Color color)
-        => new(_foreground, (color.ToRaw() & BackgroundColorMask) | (BackgroundFlagsRaw | BackgroundSpecifiedMask));
+        => new(_foreground, (color.ToRaw() & BackgroundColorMask) | BackgroundFlagsRaw);
 
     /// <summary>
     /// Tries to get the foreground color.
@@ -208,10 +190,7 @@ public readonly struct Style : IEquatable<Style>
     public static Style operator |(Style a, Style b)
     {
         var fg = b.HasForeground ? b._foreground : a._foreground;
-        var fgSpecified = b.HasForeground || a.HasForeground;
-
         var bg = b.HasBackground ? b.BackgroundColorRaw : a.BackgroundColorRaw;
-        var bgSpecified = b.HasBackground || a.HasBackground;
 
         var textStyle = (TextStyle)((byte)a.TextStyle | (byte)b.TextStyle);
         var flags = ((ulong)(byte)textStyle << TextStyleShift);
@@ -219,16 +198,6 @@ public readonly struct Style : IEquatable<Style>
         if (a.IsContinuation || b.IsContinuation)
         {
             flags |= ContinuationMask;
-        }
-
-        if (fgSpecified)
-        {
-            flags |= ForegroundSpecifiedMask;
-        }
-
-        if (bgSpecified)
-        {
-            flags |= BackgroundSpecifiedMask;
         }
 
         return new Style(fg, bg | flags);
@@ -272,3 +241,4 @@ public readonly struct Style : IEquatable<Style>
     internal Color GetBackgroundOrDefault()
         => HasBackground ? Color.FromRaw(BackgroundColorRaw) : Color.Default;
 }
+

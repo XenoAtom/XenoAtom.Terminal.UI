@@ -19,7 +19,7 @@ Following this list, you will find compact specs for high and medium priority co
 | [x] | **High**   | **TextArea (multiline editor)**                       | Input                      | Multi-line editing                   | "Real app" workflows beyond TextBox               |
 | [x] | **High**   | **TreeView**                                          | Navigation                 | Hierarchical navigation              | Big UX upgrade over flat lists                    |
 | [x] | **High**   | **TooltipHost / Tooltip**                             | Overlays                   | Contextual help everywhere           | Modern UX + pairs well with complex UIs           |
-| [x] | **High**   | **Breakdown (segmented bar)**                         | Visualization              | Proportional parts of a whole        | Great dashboards + interactive UX                 |
+| [x] | **High**   | **BreakdownChart (segmented bar)**                    | Visualization              | Proportional parts of a whole        | Great dashboards + interactive UX                 |
 | [x] | **High**   | **Inline prompt API**                                 | Input/API                  | Interactive prompts (inline)         | Great CLI UX without full apps                    |
 | [x] | **High**   | **ColorPicker**                                       | Input                      | Picking colors + palettes            | Essential for theming/tools + great demo value    |
 | [x] | **Medium** | **LoadingIndicator / Spinner**                        | Status                     | Busy state (unknown duration)        | Complements ProgressBar                           |

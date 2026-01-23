@@ -31,7 +31,7 @@ public sealed class BarChartDemo : ControlsDemoBase
                 new BarChartItem("Delta", 1) { BarColor = Colors.IndianRed });
 
         return new VStack(
-                DemoUi.Hint("BarChart displays items as horizontal bars. Use Value/Percentage toggles to control the right column."),
+                DemoUi.Hint("BarChart displays items as horizontal bars. Values are displayed near the end of each bar."),
                 new HStack(
                         new CheckBox().Text("Show values").IsChecked(showValues),
                         new CheckBox().Text("Show %").IsChecked(showPercentages))

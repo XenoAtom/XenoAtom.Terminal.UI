@@ -43,8 +43,7 @@ public sealed partial class BarChart : Visual
 
         _grid.Columns(
             new ColumnDefinition { Width = GridLength.Auto },
-            new ColumnDefinition { Width = GridLength.Star(1) },
-            new ColumnDefinition { Width = GridLength.Auto });
+            new ColumnDefinition { Width = GridLength.Star(1) });
 
         AttachChild(_grid);
 
@@ -259,7 +258,6 @@ public sealed partial class BarChart : Visual
 
             _grid.Cell(entry.LabelHost, i, 0);
             _grid.Cell(entry.Bar, i, 1);
-            _grid.Cell(entry.ValueHost, i, 2);
         }
     }
 
@@ -282,23 +280,11 @@ public sealed partial class BarChart : Visual
 
             Bar = new BarCell(_owner, _item, _index);
             Bar.HorizontalAlignment = HorizontalAlignment.Stretch;
-
-            _defaultValueText = new TextBlock(() => _owner.BuildDefaultValueText(_item))
-            {
-                HorizontalAlignment = HorizontalAlignment.Right,
-            };
-
-            ValueHost = new ComputedVisual(() => _item.ValueLabel ?? _defaultValueText);
-            ValueHost.HorizontalAlignment = HorizontalAlignment.Right;
         }
-
-        private readonly TextBlock _defaultValueText;
 
         public Visual LabelHost { get; }
 
         public Visual Bar { get; }
-
-        public Visual ValueHost { get; }
 
         public void ApplyStyle(BarChartStyle style)
         {
@@ -313,11 +299,8 @@ public sealed partial class BarChart : Visual
             {
                 LabelHost.SetStyle(TextBlockStyle.Key, label);
             }
-
-            if (style.ValueTextStyle is { } value)
-            {
-                ValueHost.SetStyle(TextBlockStyle.Key, value);
-            }
+            
+            ((BarCell)Bar).ApplyStyle(style);
         }
     }
 
@@ -362,26 +345,101 @@ public sealed partial class BarChart : Visual
         private readonly BarChartItem _item;
         private readonly int _index;
 
+        private readonly ComputedVisual _valueHost;
+        private BarChartStyle? _style;
+
         public BarCell(BarChart owner, BarChartItem item, int index)
         {
             _owner = owner;
             _item = item;
             _index = index;
             HorizontalAlignment = HorizontalAlignment.Stretch;
+
+            _valueHost = new ComputedVisual(() => _item.ValueLabel);
+            _valueHost.IsHitTestVisible = false;
+            AttachChild(_valueHost);
+        }
+
+        protected override int ChildrenCount => 1;
+
+        protected override Visual GetChild(int index)
+        {
+            if (index == 0)
+            {
+                return _valueHost;
+            }
+
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+
+        public void ApplyStyle(BarChartStyle style)
+        {
+            _style = style;
+            if (style.ValueTextStyle is { } value)
+            {
+                _valueHost.SetStyle(TextBlockStyle.Key, value);
+            }
         }
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints)
         {
-            _ = constraints;
+            _valueHost.Measure(new LayoutConstraints(0, constraints.MaxWidth, 0, constraints.MaxHeight));
             var min = new Size(10, 1);
-            var natural = min;
-            var max = new Size(LayoutConstants.Infinite, 1);
+            var natural = new Size(Math.Max(min.Width, _valueHost.DesiredSize.Width), Math.Max(1, _valueHost.DesiredSize.Height));
+            var max = new Size(LayoutConstants.Infinite, natural.Height);
             return SizeHints.Flex(min, natural, max, growX: 1, growY: 0, shrinkX: 1, shrinkY: 0);
         }
 
         protected override void ArrangeCore(in Rectangle finalRect)
         {
             Bounds = finalRect;
+
+            var custom = _item.ValueLabel;
+            if (custom is null)
+            {
+                _valueHost.Arrange(new Rectangle(finalRect.X, finalRect.Y, 0, 0));
+                return;
+            }
+
+            var chartStyle = _style ?? GetStyle<BarChartStyle>();
+            var progressStyle = chartStyle.BarStyle;
+
+            var (min, max) = _owner.ResolveRange();
+            var value = _item.Value;
+            if (double.IsNaN(value) || double.IsInfinity(value))
+            {
+                value = min;
+            }
+            var t = (value - min) / (max - min);
+            t = Math.Clamp(t, 0.0, 1.0);
+
+            var barY = finalRect.Y + Math.Max(0, (finalRect.Height - 1) / 2);
+            var barStartX = finalRect.X;
+            var barEndX = finalRect.Right;
+
+            var showFrame = progressStyle.ShowFrame || progressStyle.Variant == ProgressBarVariant.Bracketed;
+            if (showFrame && barEndX - barStartX >= 2)
+            {
+                barStartX++;
+                barEndX--;
+            }
+
+            var barWidth = Math.Max(0, barEndX - barStartX);
+            var valueWidth = Math.Max(0, _valueHost.DesiredSize.Width);
+            if (barWidth <= 0 || valueWidth <= 0)
+            {
+                _valueHost.Arrange(new Rectangle(finalRect.X, barY, 0, 1));
+                return;
+            }
+
+            var filledCells = GetFilledCells(barWidth, t, progressStyle.Variant);
+            // Place the custom value label at the end of the filled bar, like Spectre/Rich.
+            // We intentionally avoid adding an extra gap cell so the label stays visually tied to the bar.
+            var preferredX = barStartX + Math.Clamp(filledCells, 0, barWidth);
+
+            var maxX = Math.Max(finalRect.X, barEndX - valueWidth);
+            var x = Math.Clamp(preferredX, finalRect.X, maxX);
+            _valueHost.Arrange(new Rectangle(x, barY, Math.Min(valueWidth, finalRect.Right - x), 1));
         }
 
         protected override void RenderOverride(CellBuffer buffer)
@@ -393,7 +451,7 @@ public sealed partial class BarChart : Visual
             }
 
             var theme = GetTheme();
-            var chartStyle = GetStyle<BarChartStyle>();
+            var chartStyle = _style ?? GetStyle<BarChartStyle>();
             var progressStyle = chartStyle.BarStyle;
 
             var (min, max) = _owner.ResolveRange();
@@ -452,16 +510,85 @@ public sealed partial class BarChart : Visual
             if (progressStyle.Variant == ProgressBarVariant.Segmented)
             {
                 RenderSegmented(buffer, rect.Y, barStartX, barWidth, t, progressStyle.FillGlyph, progressStyle.TrackGlyph, filledStyle, unfilledStyle);
+                RenderValueIfNeeded(buffer, rect.Y, barStartX, barEndX, barWidth, t, progressStyle.Variant, itemColor.Value, chartStyle, theme);
                 return;
             }
 
             if (progressStyle.Variant == ProgressBarVariant.Shaded)
             {
                 RenderSolid(buffer, rect.Y, barStartX, barWidth, t, new Rune(0x2593), new Rune(0x2591), filledStyle, unfilledStyle);
+                RenderValueIfNeeded(buffer, rect.Y, barStartX, barEndX, barWidth, t, progressStyle.Variant, itemColor.Value, chartStyle, theme);
                 return;
             }
 
             RenderSolid(buffer, rect.Y, barStartX, barWidth, t, progressStyle.FillGlyph, progressStyle.TrackGlyph, filledStyle, unfilledStyle);
+            RenderValueIfNeeded(buffer, rect.Y, barStartX, barEndX, barWidth, t, progressStyle.Variant, itemColor.Value, chartStyle, theme);
+        }
+
+        private void RenderValueIfNeeded(CellBuffer buffer, int y, int barStartX, int maxX, int barWidth, double t, ProgressBarVariant variant, Color barColor, BarChartStyle chartStyle, Theme theme)
+        {
+            if (_item.ValueLabel is not null)
+            {
+                return;
+            }
+
+            var text = _owner.BuildDefaultValueText(_item);
+            if (string.IsNullOrEmpty(text))
+            {
+                return;
+            }
+
+            var valueWidth = TerminalTextUtility.GetWidth(text.AsSpan());
+            if (valueWidth <= 0)
+            {
+                return;
+            }
+
+            var filledCells = GetFilledCells(barWidth, t, variant);
+            // Place the text at the end of the filled bar segment.
+            var x = barStartX + Math.Clamp(filledCells, 0, barWidth);
+
+            if (x + valueWidth > maxX)
+            {
+                x = maxX - valueWidth;
+            }
+
+            if (x < Bounds.X)
+            {
+                x = Bounds.X;
+            }
+
+            TextBlockStyle textStyle = chartStyle.ValueTextStyle ?? TextBlockStyle.Default;
+            if (textStyle.Foreground is null)
+            {
+                textStyle = textStyle with { Foreground = barColor };
+            }
+
+            var style = textStyle.ResolveTextStyle(theme);
+            buffer.WriteText(x, y, text.AsSpan(), style);
+        }
+
+        private static int GetFilledCells(int width, double value, ProgressBarVariant variant)
+        {
+            value = Math.Clamp(value, 0.0, 1.0);
+            if (width <= 0)
+            {
+                return 0;
+            }
+
+            if (variant == ProgressBarVariant.Segmented)
+            {
+                var scaled = value * width;
+                var whole = (int)Math.Floor(scaled);
+                var frac = scaled - whole;
+                whole = Math.Clamp(whole, 0, width);
+                var remainder = (int)Math.Round(frac * 8.0);
+                remainder = Math.Clamp(remainder, 0, 8);
+                return remainder > 0 && whole < width ? whole + 1 : whole;
+            }
+
+            var filled = (int)Math.Round(width * value);
+            return Math.Clamp(filled, 0, width);
         }
 
         private static readonly Rune[] SegmentGlyphs =

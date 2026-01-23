@@ -8,7 +8,7 @@ using System.Text;
 namespace XenoAtom.Terminal.UI.Styling;
 
 /// <summary>
-/// Defines styling options for the <see cref="Controls.Breakdown"/> control.
+/// Defines styling options for the <see cref="Controls.BreakdownChart"/> control.
 /// </summary>
 public sealed record BreakdownStyle : IStyle<BreakdownStyle>
 {
@@ -29,12 +29,34 @@ public sealed record BreakdownStyle : IStyle<BreakdownStyle>
     /// <summary>
     /// Gets the rune used to fill segment cells.
     /// </summary>
-    public Rune FillRune { get; init; }
+    /// <remarks>
+    /// This defaults to a space so segments are rendered via background colors. When creating a new
+    /// <see cref="BreakdownStyle"/> instance, prefer overriding only the properties you need.
+    /// </remarks>
+    public Rune FillRune { get; init; } = new(' ');
 
     /// <summary>
     /// Gets the number of empty cells inserted between segments.
     /// </summary>
-    public int SegmentGap { get; init; }
+    public int SegmentGap { get; init; } = 1;
+
+    /// <summary>
+    /// Gets how legend items are laid out.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The compact layout packs legend items into as few lines as possible, similar to Spectre.Console/Rich.
+    /// </para>
+    /// <para>
+    /// The expanded layout renders one item per line.
+    /// </para>
+    /// </remarks>
+    public Controls.BreakdownLegendLayout LegendLayout { get; init; } = Controls.BreakdownLegendLayout.Compact;
+
+    /// <summary>
+    /// Gets the spacing (in cells) between legend items when using the compact layout.
+    /// </summary>
+    public int LegendItemSpacing { get; init; } = 4;
 
     /// <summary>
     /// Gets an optional base style applied to all bar cells.

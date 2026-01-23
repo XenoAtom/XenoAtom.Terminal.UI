@@ -19,21 +19,21 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// <remarks>
 /// The breakdown is useful for visualizing how a total is distributed across multiple categories.
 /// </remarks>
-public sealed partial class Breakdown : Visual
+public sealed partial class BreakdownChart : Visual
 {
     private readonly BreakdownBar _bar;
     private readonly BreakdownLegend _legend;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Breakdown"/> class.
+    /// Initializes a new instance of the <see cref="BreakdownChart"/> class.
     /// </summary>
-    public Breakdown()
+    public BreakdownChart()
     {
         HorizontalAlignment = HorizontalAlignment.Stretch;
 
         Segments = new BindableList<BreakdownSegment>(
             owner: this,
-            name: $"{nameof(Breakdown)}.{nameof(Segments)}",
+            name: $"{nameof(BreakdownChart)}.{nameof(Segments)}",
             onAdding: segment => segment.Attach(this),
             onRemoving: segment => segment.Detach(this));
 
@@ -193,7 +193,7 @@ public sealed partial class Breakdown : Visual
 
     private sealed class BreakdownBar : Visual, IAnimatedVisual
     {
-        private readonly Breakdown _owner;
+        private readonly BreakdownChart _owner;
         private TooltipWindow? _tooltipWindow;
         private bool _tooltipVisible;
         private int _hoveredIndex = -1;
@@ -201,7 +201,7 @@ public sealed partial class Breakdown : Visual
         private int _lastPointerUiX;
         private int _lastPointerUiY;
 
-        public BreakdownBar(Breakdown owner)
+        public BreakdownBar(BreakdownChart owner)
         {
             _owner = owner;
             HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -307,7 +307,7 @@ public sealed partial class Breakdown : Visual
             if (releasedIndex == _pressedIndex && releasedIndex >= 0 && releasedIndex < _owner.Segments.Count)
             {
                 var segment = _owner.Segments[releasedIndex];
-                _owner.RaiseEvent(Breakdown.SegmentClickedEvent, new BreakdownSegmentClickedEventArgs { Index = releasedIndex, Segment = segment });
+                _owner.RaiseEvent(BreakdownChart.SegmentClickedEvent, new BreakdownSegmentClickedEventArgs { Index = releasedIndex, Segment = segment });
                 e.Handled = true;
             }
 
@@ -572,11 +572,17 @@ public sealed partial class Breakdown : Visual
 
     private sealed class BreakdownLegend : Visual
     {
-        private readonly Breakdown _owner;
+        private readonly BreakdownChart _owner;
         private readonly List<LegendRow> _rows = new();
+        private readonly List<LegendItem> _items = new();
         private int _segmentsVersion = -1;
+        private int _lastMaxWidth = -1;
+        private BreakdownLegendLayout _lastLayout;
+        private int _lastLegendItemSpacing = -1;
+        private bool _lastShowValues;
+        private bool _lastShowPercentages;
 
-        public BreakdownLegend(Breakdown owner)
+        public BreakdownLegend(BreakdownChart owner)
         {
             _owner = owner;
             HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -588,7 +594,7 @@ public sealed partial class Breakdown : Visual
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints)
         {
-            EnsureRows();
+            EnsureRows(constraints.MaxWidth);
 
             var width = 0;
             var height = 0;
@@ -609,7 +615,7 @@ public sealed partial class Breakdown : Visual
         {
             Bounds = finalRect;
 
-            EnsureRows();
+            EnsureRows(finalRect.Width);
 
             var y = finalRect.Y;
             for (var i = 0; i < _rows.Count; i++)
@@ -621,53 +627,148 @@ public sealed partial class Breakdown : Visual
             }
         }
 
-        private void EnsureRows()
+        private void EnsureRows(int maxWidth)
         {
             var segments = _owner.Segments;
             var version = segments.Version;
+            var style = GetStyle<BreakdownStyle>();
+            var layout = style.LegendLayout;
+            var legendItemSpacing = Math.Max(0, style.LegendItemSpacing);
+            var showValues = _owner.ShowValues;
+            var showPercentages = _owner.ShowPercentages;
+
+            if (version == _segmentsVersion
+                && maxWidth == _lastMaxWidth
+                && layout == _lastLayout
+                && legendItemSpacing == _lastLegendItemSpacing
+                && showValues == _lastShowValues
+                && showPercentages == _lastShowPercentages)
+            {
+                return;
+            }
+
+            _lastMaxWidth = maxWidth;
+            _lastLayout = layout;
+            _lastLegendItemSpacing = legendItemSpacing;
+            _lastShowValues = showValues;
+            _lastShowPercentages = showPercentages;
+
+            EnsureItems(version);
+            ClearRows();
+
+            if (segments.Count == 0)
+            {
+                return;
+            }
+
+            if (layout == BreakdownLegendLayout.Expanded || maxWidth <= 0 || maxWidth == LayoutConstants.Infinite)
+            {
+                for (var i = 0; i < _items.Count; i++)
+                {
+                    var row = new LegendRow(_items[i], legendItemSpacing);
+                    _rows.Add(row);
+                    AttachChild(row);
+                }
+
+                return;
+            }
+
+            // Compact layout: pack legend items into as few rows as possible.
+            for (var i = 0; i < _items.Count; i++)
+            {
+                _items[i].Measure(new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1));
+            }
+
+            var rowItems = new List<LegendItem>();
+            var rowWidth = 0;
+
+            for (var i = 0; i < _items.Count; i++)
+            {
+                var item = _items[i];
+                var itemWidth = item.DesiredSize.Width;
+                if (rowItems.Count > 0 && rowWidth + legendItemSpacing + itemWidth > maxWidth)
+                {
+                    var packed = new LegendRow(rowItems.ToArray(), legendItemSpacing);
+                    _rows.Add(packed);
+                    AttachChild(packed);
+                    rowItems.Clear();
+                    rowWidth = 0;
+                }
+
+                if (rowItems.Count > 0)
+                {
+                    rowWidth += legendItemSpacing;
+                }
+
+                rowItems.Add(item);
+                rowWidth += itemWidth;
+            }
+
+            if (rowItems.Count > 0)
+            {
+                var packed = new LegendRow(rowItems.ToArray(), legendItemSpacing);
+                _rows.Add(packed);
+                AttachChild(packed);
+            }
+        }
+
+        private void EnsureItems(int version)
+        {
             if (version == _segmentsVersion)
             {
                 return;
             }
 
             _segmentsVersion = version;
+
+            // When the segment list changes, rebuild the legend item visuals (one per segment).
+            // We keep these visuals stable across width/layout changes so segment label visuals are not re-parented.
+            _items.Clear();
+
+            var segments = _owner.Segments;
+            for (var i = 0; i < segments.Count; i++)
+            {
+                _items.Add(new LegendItem(_owner, i));
+            }
+        }
+
+        private void ClearRows()
+        {
             for (var i = 0; i < _rows.Count; i++)
             {
+                _rows[i].ClearItems();
                 DetachChild(_rows[i]);
             }
 
             _rows.Clear();
-
-            for (var i = 0; i < segments.Count; i++)
-            {
-                var row = new LegendRow(_owner, i);
-                _rows.Add(row);
-                AttachChild(row);
-            }
         }
 
         private sealed class LegendRow : Visual
         {
-            private readonly Breakdown _owner;
-            private readonly int _index;
             private readonly HStack _layout;
 
-            public LegendRow(Breakdown owner, int index)
+            public LegendRow(LegendItem item, int legendItemSpacing)
+                : this([item], legendItemSpacing)
             {
-                _owner = owner;
-                _index = index;
+            }
 
-                var label = new ComputedVisual(() => ResolveSegment()?.Label ?? string.Empty);
-                var value = new TextBlock(() => BuildValueText()).HorizontalAlignment(HorizontalAlignment.Right);
+            public LegendRow(LegendItem[] items, int legendItemSpacing)
+            {
+                ArgumentNullException.ThrowIfNull(items);
 
-                _layout = new HStack
+                _layout = new HStack(items)
                 {
-                    new LegendSwatch(owner, index),
-                    label,
-                    value,
-                }.Spacing(1).HorizontalAlignment(HorizontalAlignment.Stretch);
+                    Spacing = Math.Max(0, legendItemSpacing),
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                };
 
                 AttachChild(_layout);
+            }
+
+            public void ClearItems()
+            {
+                // Detach items from this row so they can be re-attached in a different row when the legend reflows.
+                _layout.Children.Clear();
             }
 
             protected override int ChildrenCount => 1;
@@ -681,14 +782,91 @@ public sealed partial class Breakdown : Visual
                 Bounds = finalRect;
                 _layout.Arrange(finalRect);
             }
+        }
+
+        private sealed class LegendItem : Visual
+        {
+            private readonly BreakdownChart _owner;
+            private readonly int _index;
+            private readonly HStack _layout;
+            private readonly TextBlock _suffix;
+            private BreakdownStyle? _appliedStyle;
+
+            public LegendItem(BreakdownChart owner, int index)
+            {
+                _owner = owner;
+                _index = index;
+
+                var label = new ComputedVisual(() => ResolveSegment()?.Label ?? string.Empty);
+                _suffix = new TextBlock(() =>
+                {
+                    var text = BuildSuffixText();
+                    return string.IsNullOrEmpty(text) ? string.Empty : " " + text;
+                });
+
+                var labelWithSuffix = new HStack(label, _suffix).Spacing(0);
+
+                _layout = new HStack
+                {
+                    new LegendSwatch(owner, index),
+                    labelWithSuffix,
+                }.Spacing(1);
+
+                AttachChild(_layout);
+            }
+
+            protected override int ChildrenCount => 1;
+
+            protected override Visual GetChild(int index) => index == 0 ? _layout : throw new ArgumentOutOfRangeException(nameof(index));
+
+            protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+            {
+                ApplyStyle();
+                return _layout.Measure(constraints);
+            }
+
+            protected override void ArrangeCore(in Rectangle finalRect)
+            {
+                Bounds = finalRect;
+                ApplyStyle();
+                _layout.Arrange(finalRect);
+            }
+
+            private void ApplyStyle()
+            {
+                var style = GetStyle<BreakdownStyle>();
+                if (ReferenceEquals(_appliedStyle, style))
+                {
+                    return;
+                }
+
+                _appliedStyle = style;
+
+                if (style.LegendStyle is { } legendStyle)
+                {
+                    SetStyle(TextBlockStyle.Key, ToTextBlockStyle(legendStyle));
+                }
+
+                if (style.LegendMutedStyle is { } mutedStyle)
+                {
+                    _suffix.SetStyle(TextBlockStyle.Key, ToTextBlockStyle(mutedStyle));
+                }
+            }
 
             private BreakdownSegment? ResolveSegment()
                 => _index >= 0 && _index < _owner.Segments.Count ? _owner.Segments[_index] : null;
 
-            private string BuildValueText()
+            private string BuildSuffixText()
             {
                 var segment = ResolveSegment();
                 if (segment is null)
+                {
+                    return string.Empty;
+                }
+
+                var showValues = _owner.ShowValues;
+                var showPct = _owner.ShowPercentages;
+                if (!showValues && !showPct)
                 {
                     return string.Empty;
                 }
@@ -699,35 +877,59 @@ public sealed partial class Breakdown : Visual
                     total += Math.Max(0.0, _owner.Segments[i].Value);
                 }
 
-                var showValues = _owner.ShowValues;
-                var showPct = _owner.ShowPercentages;
-                if (!showValues && !showPct)
-                {
-                    return string.Empty;
-                }
+                var builder = new StringBuilder();
+                var first = true;
 
-                var valueText = showValues ? _owner.ToStringValue(segment.Value) : string.Empty;
-                var pctText = string.Empty;
                 if (showPct)
                 {
                     var pct = total <= 0.0 ? 0.0 : (Math.Max(0.0, segment.Value) / total) * 100.0;
-                    pctText = _owner.ToStringValue(pct, "0") + "%";
+                    builder.Append('(');
+                    builder.Append(_owner.ToStringValue(pct, "0"));
+                    builder.Append("%)");
+                    first = false;
                 }
 
-                if (showValues && showPct)
+                if (showValues)
                 {
-                    return valueText + "  " + pctText;
+                    if (!first)
+                    {
+                        builder.Append(' ');
+                    }
+                    builder.Append(_owner.ToStringValue(segment.Value));
                 }
 
-                return showValues ? valueText : pctText;
+                return builder.ToString();
+            }
+
+            private static TextBlockStyle ToTextBlockStyle(Style style)
+            {
+                Color? fg = null;
+                Color? bg = null;
+
+                if (style.TryGetForeground(out var foreground))
+                {
+                    fg = foreground;
+                }
+
+                if (style.TryGetBackground(out var background))
+                {
+                    bg = background;
+                }
+
+                return new TextBlockStyle
+                {
+                    Foreground = fg,
+                    Background = bg,
+                    TextStyle = style.TextStyle,
+                };
             }
 
             private sealed class LegendSwatch : Visual
             {
-                private readonly Breakdown _owner;
+                private readonly BreakdownChart _owner;
                 private readonly int _index;
 
-                public LegendSwatch(Breakdown owner, int index)
+                public LegendSwatch(BreakdownChart owner, int index)
                 {
                     _owner = owner;
                     _index = index;

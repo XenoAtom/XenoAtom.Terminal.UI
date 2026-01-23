@@ -4,7 +4,7 @@ using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
-[Demo("Breakdown", "Visualization", Description = "Segmented proportional bar with optional legend and tooltips.")]
+[Demo("BreakdownChart", "Visualization", Description = "Segmented proportional bar with optional legend and tooltips.")]
 public sealed class BreakdownDemo : ControlsDemoBase
 {
     public BreakdownDemo() : base(DemoSource.Get())
@@ -17,7 +17,7 @@ public sealed class BreakdownDemo : ControlsDemoBase
 
         var clicked = new State<string>("(none)");
 
-        var breakdown = new Breakdown()
+        var breakdown = new BreakdownChart()
             .Title("Disk usage")
             .ShowValues(true)
             .ShowPercentages(true)
@@ -29,11 +29,10 @@ public sealed class BreakdownDemo : ControlsDemoBase
         breakdown.SegmentClicked((_, e) => clicked.Value = $"Clicked segment {e.Index}: {breakdown.ToStringValue(e.Segment.Value)}");
 
         return new VStack(
-                DemoUi.Hint("Breakdown shows the proportional distribution of values as colored segments."),
+                DemoUi.Hint("BreakdownChart shows the proportional distribution of values as colored segments."),
                 breakdown.Style(new BreakdownStyle { SegmentGap = 1 }),
                 new Rule(),
                 new TextBlock(() => $"Last click: {clicked.Value}"))
             .Spacing(1);
     }
 }
-

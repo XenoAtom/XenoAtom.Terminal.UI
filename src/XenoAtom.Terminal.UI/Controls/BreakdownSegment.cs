@@ -7,7 +7,7 @@ using XenoAtom.Terminal.UI.Threading;
 namespace XenoAtom.Terminal.UI.Controls;
 
 /// <summary>
-/// Represents a segment displayed by <see cref="Breakdown"/>.
+/// Represents a segment displayed by <see cref="BreakdownChart"/>.
 /// </summary>
 /// <remarks>
 /// This type is a state container and is not itself a <see cref="Visual"/>. It participates in binding tracking once
@@ -15,7 +15,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// </remarks>
 public sealed partial class BreakdownSegment : DispatcherObject, IVisualElement
 {
-    private Breakdown? _owner;
+    private BreakdownChart? _owner;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BreakdownSegment"/> class.
@@ -61,12 +61,12 @@ public sealed partial class BreakdownSegment : DispatcherObject, IVisualElement
     [Bindable]
     public partial Visual? Tooltip { get; set; }
 
-    internal void Attach(Breakdown owner)
+    internal void Attach(BreakdownChart owner)
     {
         _owner = owner;
     }
 
-    internal void Detach(Breakdown owner)
+    internal void Detach(BreakdownChart owner)
     {
         if (ReferenceEquals(_owner, owner))
         {
@@ -74,4 +74,3 @@ public sealed partial class BreakdownSegment : DispatcherObject, IVisualElement
         }
     }
 }
-
