@@ -60,6 +60,7 @@ public sealed partial class ValidationPresenter : ContentVisual
     private readonly ValidationMessageHost _messageHost;
     private Rectangle _contentRect;
     private Rectangle _messageRect;
+    private ValidationMessage? _resolvedMessage;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ValidationPresenter"/> class.
@@ -84,7 +85,24 @@ public sealed partial class ValidationPresenter : ContentVisual
     [Bindable]
     public partial ValidationPlacement Placement { get; set; }
 
-    partial void OnMessageChanged(ValidationMessage? value) => _messageHost.SetMessage(value);
+    partial void OnMessageChanged(ValidationMessage? value)
+    {
+        _resolvedMessage = value;
+        _messageHost.SetMessage(value);
+    }
+
+    private void EnsureMessageApplied()
+    {
+        // When Message is bound (two-way binding), the generated property setter is not used for updates.
+        // ValidationPresenter needs to actively read the current Message during layout so the host visual
+        // can attach/detach the content and measure/arrange it correctly.
+        var message = Message;
+        if (!EqualityComparer<ValidationMessage?>.Default.Equals(message, _resolvedMessage))
+        {
+            _resolvedMessage = message;
+            _messageHost.SetMessage(message);
+        }
+    }
 
     /// <inheritdoc />
     protected override int ChildrenCount
@@ -122,6 +140,7 @@ public sealed partial class ValidationPresenter : ContentVisual
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        EnsureMessageApplied();
         var content = Content;
         var contentHints = content?.Measure(constraints) ?? SizeHints.Fixed(Size.Zero);
 

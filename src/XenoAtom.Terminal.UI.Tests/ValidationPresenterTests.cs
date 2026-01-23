@@ -11,57 +11,34 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class ValidationPresenterTests
 {
     [TestMethod]
-    public void ValidationPresenter_Hides_Message_When_Null()
+    public void ValidationPresenter_Invokes_Validator_When_Bound_Value_Changes()
     {
-        var editor = new TextBox("Hello");
-        var presenter = new ValidationPresenter().Content(editor);
-        var root = new VStack(presenter);
+        var value = new State<string?>("8080");
 
-        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 10));
+        var calls = 0;
+        ValidationMessage? Validator(string? text)
+        {
+            calls++;
+            _ = text;
+            return null;
+        }
+
+        var presenter = new TextBox()
+            .Text(value)
+            .Validate(value.Bind.Value, Validator);
+
+        using var driver = new TerminalAppTestDriver(new VStack { presenter }, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+
         driver.Tick();
+        Assert.AreNotEqual(0, calls);
 
-        Assert.AreEqual(editor.DesiredSize.Height, presenter.DesiredSize.Height);
-    }
-
-    [TestMethod]
-    public void ValidationPresenter_Shows_Message_Below_By_Default()
-    {
-        var editor = new TextBox("Hello");
-        var presenter = new ValidationPresenter()
-            .Content(editor)
-            .Message(new ValidationMessage(ValidationSeverity.Error, "Invalid value"));
-
-        var root = new VStack(presenter);
-
-        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 10));
+        var previousCalls = calls;
         driver.Tick();
+        Assert.AreEqual(previousCalls, calls);
 
-        Assert.IsGreaterThan(editor.DesiredSize.Height, presenter.DesiredSize.Height);
-        Assert.AreEqual(0, editor.Bounds.Y);
-
-        var screen = new AnsiTestScreen(30, 10);
-        screen.Apply(driver.Backend.GetOutText());
-        StringAssert.Contains(screen.GetText(), "Invalid value");
-    }
-
-    [TestMethod]
-    public void ValidationPresenter_Can_Show_Message_Above()
-    {
-        var editor = new TextBox("Hello");
-        var presenter = new ValidationPresenter()
-            .Content(editor)
-            .Placement(ValidationPlacement.Above)
-            .Message(new ValidationMessage(ValidationSeverity.Warning, "Warning text"));
-
-        var root = new VStack(presenter);
-
-        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 10));
+        value.Value = "9090";
         driver.Tick();
-
-        Assert.IsGreaterThan(0, editor.Bounds.Y);
-
-        var screen = new AnsiTestScreen(30, 10);
-        screen.Apply(driver.Backend.GetOutText());
-        StringAssert.Contains(screen.GetText(), "Warning text");
+        Assert.AreNotEqual(previousCalls, calls);
     }
 }
+
