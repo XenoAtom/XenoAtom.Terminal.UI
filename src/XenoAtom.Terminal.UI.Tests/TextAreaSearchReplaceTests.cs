@@ -30,6 +30,24 @@ public sealed class TextAreaSearchReplaceTests
     }
 
     [TestMethod]
+    public void TextArea_CtrlH_Opens_FindReplace_Popup()
+    {
+        var editor = new TextArea("foo bar foo");
+        using var driver = new TerminalAppTestDriver(editor, TerminalHostKind.Fullscreen, new TerminalSize(60, 10));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlH, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(60, 10);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText();
+
+        StringAssert.Contains(rendered, "Find / Replace");
+        StringAssert.Contains(rendered, "Replace");
+    }
+
+    [TestMethod]
     public void TextArea_Find_Next_Selects_Next_Match()
     {
         var editor = new TextArea("foo bar foo");
@@ -63,4 +81,3 @@ public sealed class TextAreaSearchReplaceTests
         Assert.AreEqual("baz bar baz", editor.Text);
     }
 }
-

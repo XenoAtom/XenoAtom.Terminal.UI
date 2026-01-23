@@ -349,10 +349,6 @@ public sealed partial class SearchReplacePopup : Visual
         var prev = new Button("Prev").Click(_target.PreviousMatch);
         var next = new Button("Next").Click(_target.NextMatch);
 
-        var row1 = new HStack(prev, next, status)
-            .Spacing(1)
-            .HorizontalAlignment(HorizontalAlignment.Stretch);
-
         var row2 = new HStack(caseToggle, wordToggle, regexToggle)
             .Spacing(2);
 
@@ -360,6 +356,7 @@ public sealed partial class SearchReplacePopup : Visual
             .Spacing(1)
             .HorizontalAlignment(HorizontalAlignment.Stretch);
 
+        Visual row1;
         if (_target.SupportsReplace && Mode == SearchReplaceMode.Replace)
         {
             var replace = new Button("Replace").Click(() =>
@@ -379,6 +376,12 @@ public sealed partial class SearchReplacePopup : Visual
                 .HorizontalAlignment(HorizontalAlignment.Stretch);
 
             body.Add(replaceBox);
+        }
+        else
+        {
+            row1 = new HStack(prev, next, status)
+                .Spacing(1)
+                .HorizontalAlignment(HorizontalAlignment.Stretch);
         }
 
         body.Add(row1);
