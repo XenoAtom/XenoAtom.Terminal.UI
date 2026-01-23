@@ -185,6 +185,7 @@ public sealed partial class SearchReplacePopup : Visual
         _offsetX = 0;
         _offsetY = 0;
         _isDragging = false;
+        _popup?.MarkArrangeDirty();
         MarkArrangeDirty();
         App?.RequestRender();
     }
@@ -517,6 +518,10 @@ public sealed partial class SearchReplacePopup : Visual
 
         _offsetX = newOffsetX;
         _offsetY = newOffsetY;
+
+        // The Popup positions itself based on Anchor.Bounds, which is not a bindable property.
+        // Ensure the popup is re-arranged when the anchor moves so it updates immediately.
+        _popup?.MarkArrangeDirty();
         MarkArrangeDirty();
         App?.RequestRender();
     }

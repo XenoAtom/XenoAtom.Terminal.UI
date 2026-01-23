@@ -35,6 +35,35 @@ public sealed class SearchReplacePopupDragTests
         Assert.AreEqual(2, popup.Bounds.Y);
     }
 
+    [TestMethod]
+    public void SearchReplacePopup_Repositions_Immediately_While_Open()
+    {
+        var target = new DummyTarget { SupportsReplace = false, Title = "DragMe" };
+        var popup = new SearchReplacePopup(target);
+        var host = new AnchorHost(popup);
+
+        using var driver = new TerminalAppTestDriver(host, TerminalHostKind.Fullscreen, new TerminalSize(50, 12));
+        driver.Tick();
+
+        driver.App.Post(() => popup.OpenFind());
+        driver.Tick();
+
+        var initialCol = FindTextColumn(driver.Backend.GetOutText(), 50, 12, "DragMe");
+        Assert.AreNotEqual(-1, initialCol);
+
+        driver.App.Post(() =>
+        {
+            popup.BeginDrag(uiX: 50, uiY: 0);
+            popup.UpdateDrag(uiX: 45, uiY: 0);
+            popup.EndDrag();
+        });
+        driver.Tick();
+
+        var movedCol = FindTextColumn(driver.Backend.GetOutText(), 50, 12, "DragMe");
+        Assert.AreNotEqual(-1, movedCol);
+        Assert.IsLessThan(movedCol, initialCol);
+    }
+
     private sealed class AnchorHost : Visual
     {
         private readonly SearchReplacePopup _popup;
@@ -62,9 +91,9 @@ public sealed class SearchReplacePopupDragTests
 
     private sealed class DummyTarget : ISearchReplaceTarget
     {
-        public string Title => "Target";
+        public string Title { get; set; } = "Target";
 
-        public bool SupportsReplace => true;
+        public bool SupportsReplace { get; set; } = true;
 
         public void SetQuery(in SearchQuery query)
         {
@@ -86,5 +115,29 @@ public sealed class SearchReplacePopupDragTests
 
         public string? GetErrorText() => null;
     }
-}
 
+    private static int FindTextColumn(string outText, int width, int height, string token)
+    {
+        var screen = new AnsiTestScreen(width, height);
+        screen.Apply(outText);
+        var rendered = screen.GetText();
+
+        var lines = rendered.Split('\n');
+        for (var y = 0; y < lines.Length; y++)
+        {
+            var line = lines[y];
+            if (line.Length > 0 && line[^1] == '\r')
+            {
+                line = line[..^1];
+            }
+
+            var index = line.IndexOf(token, StringComparison.Ordinal);
+            if (index >= 0)
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+}
