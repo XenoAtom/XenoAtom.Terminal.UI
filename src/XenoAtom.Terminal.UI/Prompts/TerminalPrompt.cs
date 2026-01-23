@@ -1,0 +1,49 @@
+// Copyright (c) Alexandre Mutel. All rights reserved.
+// Licensed under the BSD-Clause 2 license.
+// See license.txt file in the project root for full license information.
+
+using XenoAtom.Terminal.UI.Controls;
+
+namespace XenoAtom.Terminal.UI.Prompts;
+
+/// <summary>
+/// Defines an inline prompt that can be run using <see cref="TerminalPrompts"/>.
+/// </summary>
+/// <typeparam name="T">The result type produced by the prompt.</typeparam>
+/// <remarks>
+/// Prompts are intended for inline/live hosting scenarios (see <see cref="TerminalExtensions.Live(Visual, System.Func{TerminalLoopResult})"/>).
+/// They are composed from existing controls (for example <see cref="TextBox"/>, <see cref="NumberBox{T}"/>, <see cref="Select{T}"/>),
+/// and use the binding system for validation message presentation.
+/// </remarks>
+public abstract class TerminalPrompt<T>
+{
+    /// <summary>
+    /// Gets or sets the prompt message displayed above the input.
+    /// </summary>
+    public Visual Message { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets optional help content displayed under the input.
+    /// </summary>
+    public Visual? Help { get; init; }
+
+    /// <summary>
+    /// Gets or sets an optional validator.
+    /// </summary>
+    /// <remarks>
+    /// The validator returns <see langword="null"/> when the value is valid; otherwise it returns an error message.
+    /// </remarks>
+    public Func<T, string?>? Validator { get; init; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the final visual should remain on screen when the prompt completes successfully.
+    /// </summary>
+    /// <remarks>
+    /// When <see langword="true"/>, the prompt uses <see cref="TerminalLoopResult.StopAndKeepVisual"/>.
+    /// When <see langword="false"/>, the prompt uses <see cref="TerminalLoopResult.Stop"/>.
+    /// </remarks>
+    public bool KeepOnSuccess { get; init; } = true;
+
+    internal abstract PromptSession<T> CreateSession();
+}
+

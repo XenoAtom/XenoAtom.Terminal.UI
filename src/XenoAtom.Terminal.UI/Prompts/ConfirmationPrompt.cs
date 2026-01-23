@@ -1,0 +1,69 @@
+// Copyright (c) Alexandre Mutel. All rights reserved.
+// Licensed under the BSD-Clause 2 license.
+// See license.txt file in the project root for full license information.
+
+using XenoAtom.Terminal.UI.Controls;
+
+namespace XenoAtom.Terminal.UI.Prompts;
+
+/// <summary>
+/// Represents an inline prompt that captures a boolean confirmation.
+/// </summary>
+public sealed class ConfirmationPrompt : TerminalPrompt<bool>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConfirmationPrompt"/> class.
+    /// </summary>
+    public ConfirmationPrompt()
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConfirmationPrompt"/> class with a message.
+    /// </summary>
+    /// <param name="message">The prompt message.</param>
+    public ConfirmationPrompt(Visual message)
+    {
+        Message = message;
+    }
+
+    /// <summary>
+    /// Gets or sets the initial value.
+    /// </summary>
+    public bool InitialValue { get; init; }
+
+    /// <summary>
+    /// Gets or sets the label displayed next to the toggle.
+    /// </summary>
+    public Visual Label { get; init; } = "Confirm";
+
+    internal override PromptSession<bool> CreateSession()
+    {
+        var toggle = new Switch(Label) { IsOn = InitialValue };
+
+        var content = BuildPromptLayout(toggle);
+        var session = new PromptSession<bool>(
+            tryGetValue: () => (true, toggle.IsOn),
+            validator: Validator,
+            keepOnSuccess: KeepOnSuccess);
+
+        var host = new PromptHost(content, session.TryConfirm, session.Cancel);
+        session.SetRoot(host, toggle);
+        return session;
+    }
+
+    private Visual BuildPromptLayout(Visual editor)
+    {
+        var message = Message;
+        var help = Help;
+
+        var stack = help is null
+            ? new VStack(message, editor).Spacing(1)
+            : new VStack(message, editor, help).Spacing(1);
+
+        return new Group()
+            .Padding(1)
+            .Content(stack);
+    }
+}
+
