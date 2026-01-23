@@ -7,6 +7,7 @@ using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Prompts;
 using XenoAtom.Terminal.UI.Rendering;
 using System.Globalization;
+using System.Numerics;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -152,6 +153,106 @@ public static partial class TerminalExtensions
         /// <param name="cancellationToken">A cancellation token.</param>
         public static ValueTask<T> PromptAsync<T>(TerminalPrompt<T> prompt, CancellationToken cancellationToken = default)
             => TerminalPrompts.PromptAsync(prompt, cancellationToken);
+
+        /// <summary>
+        /// Runs a text prompt on the default terminal instance and returns the captured string.
+        /// </summary>
+        /// <param name="message">The prompt message.</param>
+        /// <param name="configure">An optional action used to configure the prompt.</param>
+        /// <returns>The captured string.</returns>
+        public static string Ask(string message, Action<TextPrompt>? configure = null)
+            => Ask((Visual)message, configure);
+
+        /// <summary>
+        /// Runs a text prompt on the default terminal instance and returns the captured string.
+        /// </summary>
+        /// <param name="message">The prompt message.</param>
+        /// <param name="configure">An optional action used to configure the prompt.</param>
+        /// <returns>The captured string.</returns>
+        public static string Ask(Visual message, Action<TextPrompt>? configure = null)
+        {
+            var prompt = new TextPrompt(message);
+            configure?.Invoke(prompt);
+            return Prompt(prompt);
+        }
+
+        /// <summary>
+        /// Runs a text prompt asynchronously on the default terminal instance and returns the captured string.
+        /// </summary>
+        /// <param name="message">The prompt message.</param>
+        /// <param name="configure">An optional action used to configure the prompt.</param>
+        /// <param name="cancellationToken">A cancellation token.</param>
+        /// <returns>The captured string.</returns>
+        public static ValueTask<string> AskAsync(string message, Action<TextPrompt>? configure = null, CancellationToken cancellationToken = default)
+            => AskAsync((Visual)message, configure, cancellationToken);
+
+        /// <summary>
+        /// Runs a text prompt asynchronously on the default terminal instance and returns the captured string.
+        /// </summary>
+        /// <param name="message">The prompt message.</param>
+        /// <param name="configure">An optional action used to configure the prompt.</param>
+        /// <param name="cancellationToken">A cancellation token.</param>
+        /// <returns>The captured string.</returns>
+        public static ValueTask<string> AskAsync(Visual message, Action<TextPrompt>? configure = null, CancellationToken cancellationToken = default)
+        {
+            var prompt = new TextPrompt(message);
+            configure?.Invoke(prompt);
+            return PromptAsync(prompt, cancellationToken);
+        }
+
+        /// <summary>
+        /// Runs a number prompt on the default terminal instance and returns the captured value.
+        /// </summary>
+        /// <typeparam name="T">The numeric type.</typeparam>
+        /// <param name="message">The prompt message.</param>
+        /// <param name="configure">An optional action used to configure the prompt.</param>
+        /// <returns>The captured value.</returns>
+        public static T AskNumber<T>(string message, Action<NumberPrompt<T>>? configure = null)
+            where T : struct, INumber<T>
+            => AskNumber((Visual)message, configure);
+
+        /// <summary>
+        /// Runs a number prompt on the default terminal instance and returns the captured value.
+        /// </summary>
+        /// <typeparam name="T">The numeric type.</typeparam>
+        /// <param name="message">The prompt message.</param>
+        /// <param name="configure">An optional action used to configure the prompt.</param>
+        /// <returns>The captured value.</returns>
+        public static T AskNumber<T>(Visual message, Action<NumberPrompt<T>>? configure = null)
+            where T : struct, INumber<T>
+        {
+            var prompt = new NumberPrompt<T>(message);
+            configure?.Invoke(prompt);
+            return Prompt(prompt);
+        }
+
+        /// <summary>
+        /// Runs a number prompt asynchronously on the default terminal instance and returns the captured value.
+        /// </summary>
+        /// <typeparam name="T">The numeric type.</typeparam>
+        /// <param name="message">The prompt message.</param>
+        /// <param name="configure">An optional action used to configure the prompt.</param>
+        /// <param name="cancellationToken">A cancellation token.</param>
+        /// <returns>The captured value.</returns>
+        public static ValueTask<T> AskNumberAsync<T>(string message, Action<NumberPrompt<T>>? configure = null, CancellationToken cancellationToken = default)
+            where T : struct, INumber<T>
+            => AskNumberAsync((Visual)message, configure, cancellationToken);
+
+        /// <summary>
+        /// Runs a number prompt asynchronously on the default terminal instance and returns the captured value.
+        /// </summary>
+        /// <typeparam name="T">The numeric type.</typeparam>
+        /// <param name="message">The prompt message.</param>
+        /// <param name="configure">An optional action used to configure the prompt.</param>
+        /// <param name="cancellationToken">A cancellation token.</param>
+        /// <returns>The captured value.</returns>
+        public static ValueTask<T> AskNumberAsync<T>(Visual message, Action<NumberPrompt<T>>? configure = null, CancellationToken cancellationToken = default)
+            where T : struct, INumber<T>
+        {
+            var prompt = new NumberPrompt<T>(message);
+            configure?.Invoke(prompt);
+            return PromptAsync(prompt, cancellationToken);
+        }
     }
 
     extension(TerminalInstance instance)
@@ -298,5 +399,105 @@ public static partial class TerminalExtensions
         /// <param name="cancellationToken">A cancellation token.</param>
         public ValueTask<T> PromptAsync<T>(TerminalPrompt<T> prompt, CancellationToken cancellationToken = default)
             => TerminalPrompts.PromptAsync(instance, prompt, cancellationToken);
+
+        /// <summary>
+        /// Runs a text prompt on this terminal instance and returns the captured string.
+        /// </summary>
+        /// <param name="message">The prompt message.</param>
+        /// <param name="configure">An optional action used to configure the prompt.</param>
+        /// <returns>The captured string.</returns>
+        public string Ask(string message, Action<TextPrompt>? configure = null)
+            => Ask((Visual)message, configure);
+
+        /// <summary>
+        /// Runs a text prompt on this terminal instance and returns the captured string.
+        /// </summary>
+        /// <param name="message">The prompt message.</param>
+        /// <param name="configure">An optional action used to configure the prompt.</param>
+        /// <returns>The captured string.</returns>
+        public string Ask(Visual message, Action<TextPrompt>? configure = null)
+        {
+            var prompt = new TextPrompt(message);
+            configure?.Invoke(prompt);
+            return Prompt(prompt);
+        }
+
+        /// <summary>
+        /// Runs a text prompt asynchronously on this terminal instance and returns the captured string.
+        /// </summary>
+        /// <param name="message">The prompt message.</param>
+        /// <param name="configure">An optional action used to configure the prompt.</param>
+        /// <param name="cancellationToken">A cancellation token.</param>
+        /// <returns>The captured string.</returns>
+        public ValueTask<string> AskAsync(string message, Action<TextPrompt>? configure = null, CancellationToken cancellationToken = default)
+            => AskAsync((Visual)message, configure, cancellationToken);
+
+        /// <summary>
+        /// Runs a text prompt asynchronously on this terminal instance and returns the captured string.
+        /// </summary>
+        /// <param name="message">The prompt message.</param>
+        /// <param name="configure">An optional action used to configure the prompt.</param>
+        /// <param name="cancellationToken">A cancellation token.</param>
+        /// <returns>The captured string.</returns>
+        public ValueTask<string> AskAsync(Visual message, Action<TextPrompt>? configure = null, CancellationToken cancellationToken = default)
+        {
+            var prompt = new TextPrompt(message);
+            configure?.Invoke(prompt);
+            return PromptAsync(prompt, cancellationToken);
+        }
+
+        /// <summary>
+        /// Runs a number prompt on this terminal instance and returns the captured value.
+        /// </summary>
+        /// <typeparam name="T">The numeric type.</typeparam>
+        /// <param name="message">The prompt message.</param>
+        /// <param name="configure">An optional action used to configure the prompt.</param>
+        /// <returns>The captured value.</returns>
+        public T AskNumber<T>(string message, Action<NumberPrompt<T>>? configure = null)
+            where T : struct, INumber<T>
+            => AskNumber((Visual)message, configure);
+
+        /// <summary>
+        /// Runs a number prompt on this terminal instance and returns the captured value.
+        /// </summary>
+        /// <typeparam name="T">The numeric type.</typeparam>
+        /// <param name="message">The prompt message.</param>
+        /// <param name="configure">An optional action used to configure the prompt.</param>
+        /// <returns>The captured value.</returns>
+        public T AskNumber<T>(Visual message, Action<NumberPrompt<T>>? configure = null)
+            where T : struct, INumber<T>
+        {
+            var prompt = new NumberPrompt<T>(message);
+            configure?.Invoke(prompt);
+            return Prompt(prompt);
+        }
+
+        /// <summary>
+        /// Runs a number prompt asynchronously on this terminal instance and returns the captured value.
+        /// </summary>
+        /// <typeparam name="T">The numeric type.</typeparam>
+        /// <param name="message">The prompt message.</param>
+        /// <param name="configure">An optional action used to configure the prompt.</param>
+        /// <param name="cancellationToken">A cancellation token.</param>
+        /// <returns>The captured value.</returns>
+        public ValueTask<T> AskNumberAsync<T>(string message, Action<NumberPrompt<T>>? configure = null, CancellationToken cancellationToken = default)
+            where T : struct, INumber<T>
+            => AskNumberAsync((Visual)message, configure, cancellationToken);
+
+        /// <summary>
+        /// Runs a number prompt asynchronously on this terminal instance and returns the captured value.
+        /// </summary>
+        /// <typeparam name="T">The numeric type.</typeparam>
+        /// <param name="message">The prompt message.</param>
+        /// <param name="configure">An optional action used to configure the prompt.</param>
+        /// <param name="cancellationToken">A cancellation token.</param>
+        /// <returns>The captured value.</returns>
+        public ValueTask<T> AskNumberAsync<T>(Visual message, Action<NumberPrompt<T>>? configure = null, CancellationToken cancellationToken = default)
+            where T : struct, INumber<T>
+        {
+            var prompt = new NumberPrompt<T>(message);
+            configure?.Invoke(prompt);
+            return PromptAsync(prompt, cancellationToken);
+        }
     }
 }

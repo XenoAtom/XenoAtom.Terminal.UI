@@ -14,10 +14,7 @@ Prompts are intended for *inline* scenarios (live regions). For fullscreen appli
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Prompts;
 
-var name = Terminal.Prompt(new TextPrompt("Name:")
-{
-    Placeholder = "Type your name…",
-});
+var name = Terminal.Ask("Name:", p => p.Placeholder("Type your name…"));
 
 Terminal.WriteLine($"Hello {name}!");
 ```
@@ -28,11 +25,11 @@ Terminal.WriteLine($"Hello {name}!");
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Prompts;
 
-var port = Terminal.Prompt(new NumberPrompt<int>("Port:")
-{
-    InitialValue = 8080,
-    Validator = v => v is >= 1 and <= 65535 ? null : "Port must be in [1..65535]",
-});
+var port = Terminal.AskNumber<int>(
+    "Port:",
+    p => p
+        .Default(8080)
+        .Validate(v => v is >= 1 and <= 65535 ? null : "Port must be in [1..65535]"));
 ```
 
 ## Selection prompt
@@ -42,9 +39,7 @@ using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Prompts;
 
 var color = Terminal.Prompt(new SelectionPrompt<string>("Pick a color:")
-{
-    Items = ["Red", "Green", "Blue"],
-});
+    .Items(["Red", "Green", "Blue"]));
 ```
 
 ## Cancellation

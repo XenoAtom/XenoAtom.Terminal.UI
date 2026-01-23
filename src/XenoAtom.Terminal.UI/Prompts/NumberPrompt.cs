@@ -4,6 +4,7 @@
 
 using System.Globalization;
 using System.Numerics;
+using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 
 namespace XenoAtom.Terminal.UI.Prompts;
@@ -31,28 +32,32 @@ public sealed class NumberPrompt<T> : TerminalPrompt<T> where T : struct, INumbe
     }
 
     /// <summary>
-    /// Gets or sets the initial value displayed in the editor.
+    /// Gets or sets the default value displayed in the editor.
     /// </summary>
-    public T InitialValue { get; init; }
+    [Fluent("Default")]
+    public T DefaultValue { get; set; }
 
     /// <summary>
     /// Gets or sets the message displayed when the input cannot be parsed as a number.
     /// </summary>
-    public string? InvalidNumberMessage { get; init; }
+    [Fluent]
+    public string? InvalidNumberMessage { get; set; }
 
     /// <summary>
     /// Gets or sets the number styles used to parse the input text.
     /// </summary>
-    public NumberStyles ParseStyles { get; init; } = NumberStyles.Number;
+    [Fluent]
+    public NumberStyles ParseStyles { get; set; } = NumberStyles.Number;
 
     /// <summary>
     /// Gets or sets the format provider used to parse and format values.
     /// </summary>
-    public IFormatProvider? FormatProvider { get; init; }
+    [Fluent]
+    public IFormatProvider? FormatProvider { get; set; }
 
     internal override PromptSession<T> CreateSession()
     {
-        var numberBox = new NumberBox<T>(InitialValue)
+        var numberBox = new NumberBox<T>(DefaultValue)
         {
             ShowValidationMessage = true,
             ParseStyles = ParseStyles,
@@ -94,18 +99,4 @@ public sealed class NumberPrompt<T> : TerminalPrompt<T> where T : struct, INumbe
             : (false, default);
     }
 
-    private Visual BuildPromptLayout(Visual editor)
-    {
-        var message = Message;
-        var help = Help;
-
-        var stack = help is null
-            ? new VStack(message, editor).Spacing(1)
-            : new VStack(message, editor, help).Spacing(1);
-
-        return new Group()
-            .Padding(1)
-            .Content(stack);
-    }
 }
-

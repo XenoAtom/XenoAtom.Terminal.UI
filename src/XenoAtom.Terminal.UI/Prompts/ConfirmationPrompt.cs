@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 
 namespace XenoAtom.Terminal.UI.Prompts;
@@ -28,18 +29,20 @@ public sealed class ConfirmationPrompt : TerminalPrompt<bool>
     }
 
     /// <summary>
-    /// Gets or sets the initial value.
+    /// Gets or sets the default value.
     /// </summary>
-    public bool InitialValue { get; init; }
+    [Fluent("Default")]
+    public bool DefaultValue { get; set; }
 
     /// <summary>
     /// Gets or sets the label displayed next to the toggle.
     /// </summary>
-    public Visual Label { get; init; } = "Confirm";
+    [Fluent]
+    public Visual Label { get; set; } = "Confirm";
 
     internal override PromptSession<bool> CreateSession()
     {
-        var toggle = new Switch(Label) { IsOn = InitialValue };
+        var toggle = new Switch(Label) { IsOn = DefaultValue };
 
         var content = BuildPromptLayout(toggle);
         var session = new PromptSession<bool>(
@@ -51,19 +54,4 @@ public sealed class ConfirmationPrompt : TerminalPrompt<bool>
         session.SetRoot(host, toggle);
         return session;
     }
-
-    private Visual BuildPromptLayout(Visual editor)
-    {
-        var message = Message;
-        var help = Help;
-
-        var stack = help is null
-            ? new VStack(message, editor).Spacing(1)
-            : new VStack(message, editor, help).Spacing(1);
-
-        return new Group()
-            .Padding(1)
-            .Content(stack);
-    }
 }
-

@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Collections.Generic;
+using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 
 namespace XenoAtom.Terminal.UI.Prompts;
@@ -32,17 +33,20 @@ public sealed class MultiSelectionPrompt<T> : TerminalPrompt<IReadOnlyList<T>>
     /// <summary>
     /// Gets the selectable items.
     /// </summary>
-    public IReadOnlyList<T> Items { get; init; } = Array.Empty<T>();
+    [Fluent]
+    public IReadOnlyList<T> Items { get; set; } = Array.Empty<T>();
 
     /// <summary>
     /// Gets the indexes of items that should be initially checked.
     /// </summary>
-    public IReadOnlyList<int> InitialCheckedIndices { get; init; } = Array.Empty<int>();
+    [Fluent]
+    public IReadOnlyList<int> InitialCheckedIndices { get; set; } = Array.Empty<int>();
 
     /// <summary>
     /// Gets or sets the item template used by the underlying selection list control.
     /// </summary>
-    public Templating.DataTemplate<T> ItemTemplate { get; init; }
+    [Fluent]
+    public Templating.DataTemplate<T> ItemTemplate { get; set; }
 
     internal override PromptSession<IReadOnlyList<T>> CreateSession()
     {
@@ -106,18 +110,4 @@ public sealed class MultiSelectionPrompt<T> : TerminalPrompt<IReadOnlyList<T>>
         return result;
     }
 
-    private Visual BuildPromptLayout(Visual editor)
-    {
-        var message = Message;
-        var help = Help;
-
-        var stack = help is null
-            ? new VStack(message, editor).Spacing(1)
-            : new VStack(message, editor, help).Spacing(1);
-
-        return new Group()
-            .Padding(1)
-            .Content(stack);
-    }
 }
-
