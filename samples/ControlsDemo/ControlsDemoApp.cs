@@ -46,7 +46,7 @@ internal static class ControlsDemoApp
         var sidebar = new VStack(
                 "Browse",
                 searchBox,
-                sidebarList)
+                new ScrollViewer(sidebarList))
             .Spacing(1);
 
         // Initialize color scheme selector.
