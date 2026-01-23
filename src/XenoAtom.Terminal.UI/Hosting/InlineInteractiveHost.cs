@@ -70,13 +70,16 @@ public sealed class InlineInteractiveHost : IDisposable
 
     internal void PrepareForUserUpdate()
     {
-        if (!_hasSavedCursorPosition || _reservedHeight <= 0)
+        if (_reservedHeight <= 0)
         {
             return;
         }
 
         var visibleHeight = Math.Max(1, _terminal.Size.Rows);
         var regionHeight = Math.Min(_reservedHeight, visibleHeight);
+        var cursorOffset = _lastCursorVisible
+            ? Math.Clamp(_lastRenderedCursorY, 0, Math.Max(0, regionHeight - 1))
+            : regionHeight;
 
         _terminal.WriteAtomic(writer =>
         {
@@ -87,8 +90,10 @@ public sealed class InlineInteractiveHost : IDisposable
                 writer.ShowCursor(false);
             }
 
-            writer.RestoreCursorPosition();
-            writer.CursorUp(regionHeight);
+            if (cursorOffset > 0)
+            {
+                writer.CursorUp(cursorOffset);
+            }
             writer.CursorHorizontalAbsolute(1);
 
             for (var i = 0; i < regionHeight; i++)
@@ -111,10 +116,16 @@ public sealed class InlineInteractiveHost : IDisposable
 
     internal void FinalizeAfterLive()
     {
-        if (!_hasSavedCursorPosition)
+        if (_reservedHeight <= 0)
         {
             return;
         }
+
+        var visibleHeight = Math.Max(1, _terminal.Size.Rows);
+        var regionHeight = Math.Min(_reservedHeight, visibleHeight);
+        var cursorOffset = _lastCursorVisible
+            ? Math.Clamp(_lastRenderedCursorY, 0, Math.Max(0, regionHeight - 1))
+            : regionHeight;
 
         _terminal.WriteAtomic(writer =>
         {
@@ -126,7 +137,10 @@ public sealed class InlineInteractiveHost : IDisposable
                 writer.ShowCursor(false);
             }
 
-            writer.RestoreCursorPosition();
+            if (_lastCursorVisible)
+            {
+                writer.CursorDown(regionHeight - cursorOffset);
+            }
             writer.CursorHorizontalAbsolute(1);
             writer.ResetStyle();
             writer.ShowCursor(true);
@@ -212,6 +226,14 @@ public sealed class InlineInteractiveHost : IDisposable
         }
 
         var width = buffer.Width;
+
+        // When the viewport width changes, terminals may reflow the content above the live region which can
+        // invalidate both the saved cursor position and our cached notion of the region top row. Even if we
+        // haven't processed the resize event yet, we must not use RestoreCursorPosition in that case.
+        if (_hasSavedCursorPosition && _lastWidth != 0 && _lastWidth != width)
+        {
+            HandleResize();
+        }
 
         if (_liveRegionTopRow is null)
         {
@@ -320,15 +342,19 @@ public sealed class InlineInteractiveHost : IDisposable
             writer.CursorUp(existingHeight);
         }
 
-        if (!_hasSavedCursorPosition && existingHeight > 0 && _liveRegionTopRow is { } topRow)
+        if (!_hasSavedCursorPosition && existingHeight > 0)
         {
-            topRow = Math.Clamp(topRow, 0, visibleHeight - 1);
-            writer.CursorPosition(topRow + 1, 1);
+            var cursorOffset = _lastCursorVisible
+                ? Math.Clamp(_lastRenderedCursorY, 0, Math.Max(0, existingHeight - 1))
+                : existingHeight;
+
+            if (cursorOffset > 0)
+            {
+                writer.CursorUp(cursorOffset);
+            }
         }
-        else
-        {
-            writer.CursorHorizontalAbsolute(1);
-        }
+
+        writer.CursorHorizontalAbsolute(1);
 
         var currentStyle = AnsiStyle.Default;
         ulong currentHyperlink = 0;
