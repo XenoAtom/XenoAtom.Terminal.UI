@@ -32,7 +32,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
 {
     private Rectangle _editorRect;
-    private Rectangle _validationRect;
+    private Rectangle _editorOuterRect;
     private bool _showOverflowIndicatorLeft;
     private bool _showOverflowIndicatorRight;
 
@@ -41,6 +41,8 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
     private bool _hasUserEditedText;
 
     private string? _validationMessage;
+    private readonly ValidationMessageHost _validationHost;
+    private readonly TextBlock _validationText;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NumberBox{T}"/> class.
@@ -48,6 +50,10 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
     public NumberBox()
     {
         this.HorizontalAlignment(HorizontalAlignment.Stretch);
+        _validationHost = new ValidationMessageHost();
+        _validationText = new TextBlock();
+        AttachChild(_validationHost);
+
         ShowValidationMessage = true;
         InvalidNumberMessage = "Invalid number";
         ParseStyles = NumberStyles.Number;
@@ -148,12 +154,6 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
     /// <returns>The current <see cref="TextBoxStyle"/>.</returns>
     protected virtual TextBoxStyle GetTextBoxStyle() => GetStyle<TextBoxStyle>();
 
-    /// <summary>
-    /// Gets the style used to render the validation message portion of the number box.
-    /// </summary>
-    /// <returns>The current <see cref="NumberBoxStyle"/>.</returns>
-    protected virtual NumberBoxStyle GetNumberBoxStyle() => GetStyle<NumberBoxStyle>();
-
     partial void OnInvalidNumberMessageChanged(string? value)
     {
         _ = value;
@@ -163,8 +163,8 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
     partial void OnShowValidationMessageChanged(bool value)
     {
         _ = value;
+        UpdateValidationHost();
         MarkMeasureDirty();
-        App?.RequestRender();
     }
 
     partial void OnParseStylesChanged(NumberStyles value)
@@ -217,6 +217,13 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
     }
 
     /// <inheritdoc />
+    protected override int ChildrenCount => 1;
+
+    /// <inheritdoc />
+    protected override Visual GetChild(int index)
+        => index == 0 ? _validationHost : throw new ArgumentOutOfRangeException(nameof(index));
+
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
@@ -226,10 +233,25 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
         var padding = textBoxStyle.Padding;
         var editorHeight = Math.Max(1, 1 + padding.Vertical);
 
-        var showValidation = ShowValidationMessage && !string.IsNullOrEmpty(_validationMessage);
-        var validationHeight = showValidation ? 1 : 0;
+        var height = editorHeight;
 
-        var height = editorHeight + validationHeight;
+        if (ShowValidationMessage && _validationHost.HasMessage)
+        {
+            var validationStyle = GetStyle<ValidationStyle>();
+            var validationConstraints = new LayoutConstraints(
+                0,
+                width,
+                0,
+                Math.Max(0, constraints.MaxHeight - editorHeight));
+
+            var validationHints = _validationHost.Measure(validationConstraints);
+            var validationHeight = validationHints.Natural.Height;
+            if (validationHeight > 0)
+            {
+                height += Math.Max(0, validationStyle.Gap) + validationHeight;
+            }
+        }
+
         return SizeHints.Fixed(new Size(width, Math.Min(availableSize.Height, height)));
     }
 
@@ -242,17 +264,46 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
         if (rect.Width <= 0 || rect.Height <= 0)
         {
             _editorRect = new Rectangle(0, 0, 0, 0);
-            _validationRect = new Rectangle(0, 0, 0, 0);
+            _editorOuterRect = new Rectangle(0, 0, 0, 0);
+            _validationHost.Arrange(new Rectangle(0, 0, 0, 0));
             return;
         }
 
-        var showValidation = ShowValidationMessage && !string.IsNullOrEmpty(_validationMessage);
-        var validationHeight = showValidation ? 1 : 0;
+        var showValidation = ShowValidationMessage && _validationHost.HasMessage;
+        var validationGap = 0;
+        var validationHeight = 0;
 
-        var editorRect = new Rectangle(rect.X, rect.Y, rect.Width, Math.Max(0, rect.Height - validationHeight));
-        _validationRect = showValidation
-            ? new Rectangle(rect.X, rect.Y + rect.Height - 1, rect.Width, 1)
+        if (showValidation)
+        {
+            var validationStyle = GetStyle<ValidationStyle>();
+            validationGap = Math.Max(0, validationStyle.Gap);
+
+            var validationConstraints = new LayoutConstraints(0, rect.Width, 0, rect.Height);
+            var validationHints = _validationHost.Measure(validationConstraints);
+            validationHeight = Math.Min(rect.Height, validationHints.Natural.Height);
+
+            if (validationHeight <= 0)
+            {
+                showValidation = false;
+                validationGap = 0;
+                validationHeight = 0;
+            }
+            else if (validationHeight + validationGap > rect.Height)
+            {
+                validationGap = 0;
+            }
+        }
+
+        var reserved = showValidation ? validationGap + validationHeight : 0;
+        var editorHeight = Math.Max(0, rect.Height - reserved);
+        var editorRect = new Rectangle(rect.X, rect.Y, rect.Width, editorHeight);
+
+        var validationRect = showValidation
+            ? new Rectangle(rect.X, rect.Y + editorHeight + validationGap, rect.Width, validationHeight)
             : new Rectangle(0, 0, 0, 0);
+
+        _validationHost.Arrange(validationRect);
+        _editorOuterRect = editorRect;
 
         var style = GetTextBoxStyle();
         var padding = style.Padding;
@@ -290,10 +341,9 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
         var placeholderStyle = textBoxStyle.PlaceholderStyle(theme, isFocused);
         var padding = textBoxStyle.Padding;
 
-        var showValidation = ShowValidationMessage && !string.IsNullOrEmpty(_validationMessage);
-        var validationHeight = showValidation ? 1 : 0;
-
-        var editorRect = new Rectangle(rect.X, rect.Y, rect.Width, Math.Max(0, rect.Height - validationHeight));
+        var editorRect = _editorOuterRect.Width <= 0 || _editorOuterRect.Height <= 0
+            ? new Rectangle(rect.X, rect.Y, rect.Width, rect.Height)
+            : _editorOuterRect;
 
         var baseRect = new Rectangle(
             editorRect.X + padding.Left,
@@ -338,45 +388,6 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
                 }
             }
         }
-
-        if (showValidation && _validationRect.Width > 0 && _validationRect.Height > 0)
-        {
-            RenderValidationMessage(buffer, _validationRect, theme);
-        }
-    }
-
-    private void RenderValidationMessage(CellBuffer buffer, Rectangle rect, Theme theme)
-    {
-        var style = GetNumberBoxStyle();
-        var padding = style.ValidationPadding;
-        var contentRect = new Rectangle(
-            rect.X + padding.Left,
-            rect.Y + padding.Top,
-            Math.Max(0, rect.Width - padding.Horizontal),
-            Math.Max(0, rect.Height - padding.Vertical));
-
-        var textStyle = style.ValidationStyle(theme);
-
-        for (var y = rect.Y; y < rect.Y + rect.Height; y++)
-        {
-            for (var x = rect.X; x < rect.X + rect.Width; x++)
-            {
-                buffer.SetCell(x, y, new Rune(' '), textStyle);
-            }
-        }
-
-        if (contentRect.Width <= 0 || string.IsNullOrEmpty(_validationMessage))
-        {
-            return;
-        }
-
-        var message = style.ValidationPrefix + _validationMessage;
-        if (message.Length > contentRect.Width)
-        {
-            message = message.Substring(0, contentRect.Width);
-        }
-
-        buffer.WriteText(contentRect.X, contentRect.Y, message.AsSpan(), textStyle);
     }
 
     private void UpdateEditorLayoutForOverflowIndicators(Rectangle baseRect, TextBoxStyle style)
@@ -478,16 +489,12 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
         }
 
         _validationMessage = message;
+        UpdateValidationHost();
         MarkMeasureDirty();
-        App?.RequestRender();
     }
 
     private void UpdateTextFromValue()
     {
-        // We should not try to update the text if the App is null (not initialized yet).
-        // Otherwise we could end up in an infinite loop of updates between Value and Text during initialization.
-        if (App is null) return;
-
         var formatter = ValueFormatter.Invoke;
         string text;
         if (formatter is not null)
@@ -518,5 +525,21 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
         {
             _updatingTextFromValue = false;
         }
+    }
+
+    private void UpdateValidationHost()
+    {
+        if (!ShowValidationMessage || string.IsNullOrEmpty(_validationMessage))
+        {
+            if (_validationHost.HasMessage)
+            {
+                _validationHost.SetMessage(null);
+            }
+
+            return;
+        }
+
+        _validationText.Text = _validationMessage;
+        _validationHost.SetMessage(new ValidationMessage(ValidationSeverity.Error, _validationText));
     }
 }
