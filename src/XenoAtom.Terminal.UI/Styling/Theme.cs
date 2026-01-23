@@ -354,16 +354,11 @@ public sealed class Theme : IStyle<Theme>
     /// </summary>
     public Style BaseTextStyle()
     {
-        var style = Style.None;
-        if (Foreground is { } fg)
-        {
-            style = style.WithForeground(fg);
-        }
-        if (Background is { } bg)
-        {
-            style = style.WithBackground(bg);
-        }
-        return style;
+        // Treat null theme colors as terminal defaults. This ensures overlays that only specify a background
+        // don't accidentally inherit a foreground from content behind them (cell-buffer compositing).
+        return Style.None
+            .WithForeground(Foreground ?? Color.Default)
+            .WithBackground(Background ?? Color.Default);
     }
 
     /// <summary>
@@ -371,12 +366,7 @@ public sealed class Theme : IStyle<Theme>
     /// </summary>
     public Style ForegroundTextStyle()
     {
-        var style = Style.None;
-        if (Foreground is { } fg)
-        {
-            style = style.WithForeground(fg);
-        }
-        return style;
+        return Style.None.WithForeground(Foreground ?? Color.Default);
     }
 
     /// <summary>
@@ -384,11 +374,7 @@ public sealed class Theme : IStyle<Theme>
     /// </summary>
     public Style SurfaceStyle()
     {
-        var style = Style.None;
-        if (Foreground is { } fg)
-        {
-            style = style.WithForeground(fg);
-        }
+        var style = ForegroundTextStyle();
         if (Surface is { } bg)
         {
             style = style.WithBackground(bg);
@@ -470,12 +456,8 @@ public sealed class Theme : IStyle<Theme>
     public Style BorderStyle(bool focused)
     {
         var color = focused ? FocusBorder : Border;
-        var style = Style.None;
-        if (color is { } c)
-        {
-            style = style.WithForeground(c);
-        }
-        return style;
+        var style = ForegroundTextStyle();
+        return color is { } c ? style.WithForeground(c) : style;
     }
 
     /// <summary>
@@ -483,7 +465,7 @@ public sealed class Theme : IStyle<Theme>
     /// </summary>
     public Style SelectionStyle()
     {
-        var style = Style.None;
+        var style = ForegroundTextStyle();
         if (Selection is { } c)
         {
             style = style.WithBackground(c);

@@ -27,7 +27,9 @@ public sealed class MarkupTextParserTests
 
         Assert.AreEqual(1, runs[1].Start);
         Assert.AreEqual(1, runs[1].Length);
-        Assert.IsFalse(runs[1].Style.TryGetForeground(out _));
-        Assert.IsFalse(runs[1].Style.TryGetBackground(out _));
+        Assert.IsTrue(runs[1].Style.TryGetForeground(out var fgDefault));
+        Assert.AreEqual(ColorKind.Default, fgDefault.Kind);
+        Assert.IsTrue(runs[1].Style.TryGetBackground(out var bgDefault));
+        Assert.AreEqual(ColorKind.Default, bgDefault.Kind);
     }
 }
