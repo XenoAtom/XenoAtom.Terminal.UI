@@ -10,6 +10,7 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 - `doc/controls/textarea.md`
 - `doc/controls/maskedinput.md`
 - `doc/controls/numberbox.md`
+- `doc/controls/colorpicker.md`
 - `doc/controls/validation.md`
 
 ## Buttons & toggles
