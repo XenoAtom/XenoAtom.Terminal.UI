@@ -39,6 +39,7 @@ public sealed class WrapStackDemo : ControlsDemoBase
                     .MeasureMode(measureMode)
                     .VerticalAlignment(Align.Stretch))
             .MinHeight(10)
+            .MaxHeight(20)
             .Padding(new Thickness(1, 0, 1, 0))
             .Style(BorderStyle.Rounded);
 
@@ -73,15 +74,15 @@ public sealed class WrapStackDemo : ControlsDemoBase
     private static Visual[] CreateChips()
         =>
         [
-            Chip("alpha"),
-            Chip("beta"),
-            Chip("gamma"),
-            Chip("delta"),
-            Chip("epsilon"),
-            Chip("zeta"),
-            Chip("eta"),
-            Chip("theta"),
-            Chip("iota"),
-            Chip("kappa"),
+            Chip("🍎 alpha"),
+            Chip("🫐 beta"),
+            Chip("🍇 gamma"),
+            Chip("🐬 delta"),
+            Chip("🥚 epsilon"),
+            Chip("🦓 zeta"),
+            Chip("🎓 eta"),
+            Chip("🌩️ theta"),
+            Chip("🧊 iota"),
+            Chip("🪁 kappa"),
         ];
 }
