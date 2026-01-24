@@ -2,6 +2,8 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Terminal.UI.Styling;
+
 namespace XenoAtom.Terminal.UI.Controls;
 
 /// <summary>
@@ -31,6 +33,21 @@ public static partial class BreakdownChartExtensions
         };
 
         breakdown.Segments.Add(segment);
+        return breakdown;
+    }
+
+    /// <summary>
+    /// Sets how leftover space is distributed along each compact legend line.
+    /// </summary>
+    /// <param name="breakdown">The breakdown chart to update.</param>
+    /// <param name="justify">The legend justification.</param>
+    /// <returns>The same breakdown chart instance for chaining.</returns>
+    public static BreakdownChart LegendJustify(this BreakdownChart breakdown, WrapJustify justify)
+    {
+        ArgumentNullException.ThrowIfNull(breakdown);
+
+        var style = breakdown.GetStyle<BreakdownStyle>();
+        breakdown.Style(style with { LegendJustify = justify });
         return breakdown;
     }
 }

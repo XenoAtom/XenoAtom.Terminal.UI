@@ -61,7 +61,7 @@ public sealed record BreakdownStyle : IStyle<BreakdownStyle>
     /// <summary>
     /// Gets how leftover space is distributed along the legend line when using the compact layout.
     /// </summary>
-    public Controls.WrapJustify LegendJustify { get; init; } = Controls.WrapJustify.Start;
+    public Controls.WrapJustify LegendJustify { get; init; } = Controls.WrapJustify.SpaceBetween;
 
     /// <summary>
     /// Gets an optional base style applied to all bar cells.
