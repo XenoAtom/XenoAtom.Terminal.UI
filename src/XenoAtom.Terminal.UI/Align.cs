@@ -5,24 +5,24 @@
 namespace XenoAtom.Terminal.UI;
 
 /// <summary>
-/// Specifies how a visual is aligned vertically within its parent.
+/// Specifies how a visual is aligned horizontally / vertically within its parent.
 /// </summary>
-public enum VerticalAlignment
+public enum Align
 {
     /// <summary>
-    /// Align to the top.
+    /// Align to the left / top.
     /// </summary>
-    Top = 0,
+    Start = 0,
     /// <summary>
-    /// Center vertically.
+    /// Center horizontally / vertically.
     /// </summary>
     Center = 1,
     /// <summary>
-    /// Align to the bottom.
+    /// Align to the right / bottom.
     /// </summary>
-    Bottom = 2,
+    End = 2,
     /// <summary>
-    /// Stretch to fill the available height.
+    /// Stretch to fill the available width / height.
     /// </summary>
     Stretch = 3,
 }

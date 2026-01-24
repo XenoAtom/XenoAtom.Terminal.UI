@@ -78,8 +78,8 @@ public sealed class TabControlInteractionTests
         var tabControl = new TabControl(
             new TabPage("One", new TextBlock("A")),
             new TabPage("Two", new TextBlock("B")))
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .VerticalAlignment(VerticalAlignment.Stretch);
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Stretch);
 
         tabControl.Measure(new Size(80, 25));
         tabControl.Arrange(new Rectangle(0, 0, 80, 25));

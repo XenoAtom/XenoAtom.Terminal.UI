@@ -20,7 +20,7 @@ public sealed partial class Footer : Visual
     /// </summary>
     public Footer()
     {
-        HorizontalAlignment = HorizontalAlignment.Stretch;
+        HorizontalAlignment = Align.Stretch;
     }
 
     /// <summary>

@@ -34,7 +34,7 @@ public static class ProgressTaskColumns
     /// <summary>
     /// Creates a column that displays <see cref="ProgressTask.Label"/>.
     /// </summary>
-    public static ProgressTaskColumn Label(HorizontalAlignment alignment = HorizontalAlignment.Right)
+    public static ProgressTaskColumn Label(Align alignment = Align.End)
         => new(task => task.Label.HorizontalAlignment(alignment)) { Id = LabelColumnId, Width = GridLength.Auto };
 
     /// <summary>
@@ -46,7 +46,7 @@ public static class ProgressTaskColumns
         => new(task => new ProgressBar()
             .Value(() => task.Progress01)
             .Style(style ?? ProgressBarStyle.Default)
-            .HorizontalAlignment(HorizontalAlignment.Stretch))
+            .HorizontalAlignment(Align.Stretch))
         {
             Id = BarColumnId,
             Width = GridLength.Star(1),

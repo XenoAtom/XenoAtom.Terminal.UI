@@ -326,12 +326,12 @@ public sealed partial class SearchReplacePopup : Visual
 
         var searchBox = new TextBox()
             .Placeholder("Find…")
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .HorizontalAlignment(Align.Stretch)
             .Text(((IBindings)this).SearchText);
 
         var replaceBox = new TextBox()
             .Placeholder("Replace…")
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .HorizontalAlignment(Align.Stretch)
             .Text(((IBindings)this).ReplaceText);
 
         var caseToggle = new Switch("Case").IsOn(((IBindings)this).CaseSensitive);
@@ -339,7 +339,7 @@ public sealed partial class SearchReplacePopup : Visual
         var regexToggle = new Switch("Regex").IsOn(((IBindings)this).UseRegex);
 
         var status = new TextBlock(() => _target.GetStatusText())
-            .HorizontalAlignment(HorizontalAlignment.Stretch);
+            .HorizontalAlignment(Align.Stretch);
 
         var error = new ComputedVisual(() =>
         {
@@ -362,7 +362,7 @@ public sealed partial class SearchReplacePopup : Visual
 
         var body = new VStack(searchBox)
             .Spacing(1)
-            .HorizontalAlignment(HorizontalAlignment.Stretch);
+            .HorizontalAlignment(Align.Stretch);
 
         Visual row1;
         if (_target.SupportsReplace && Mode == SearchReplaceMode.Replace)
@@ -381,7 +381,7 @@ public sealed partial class SearchReplacePopup : Visual
 
             row1 = new HStack(prev, next, replace, replaceAll, status)
                 .Spacing(1)
-                .HorizontalAlignment(HorizontalAlignment.Stretch);
+                .HorizontalAlignment(Align.Stretch);
 
             body.Add(replaceBox);
         }
@@ -389,7 +389,7 @@ public sealed partial class SearchReplacePopup : Visual
         {
             row1 = new HStack(prev, next, status)
                 .Spacing(1)
-                .HorizontalAlignment(HorizontalAlignment.Stretch);
+                .HorizontalAlignment(Align.Stretch);
         }
 
         body.Add(row1);
@@ -419,12 +419,12 @@ public sealed partial class SearchReplacePopup : Visual
 
         var content = new Group(title)
             .Padding(1)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .HorizontalAlignment(Align.Stretch)
             .Content(body);
 
         var dragHandle = new PopupDragHandle(this)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .VerticalAlignment(VerticalAlignment.Top)
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Start)
             .MinHeight(1)
             .MaxHeight(1);
 

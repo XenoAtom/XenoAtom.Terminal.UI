@@ -67,10 +67,10 @@ void ShowModalDialog()
             "Modal dialog",
             new TextBlock("This is a wrapped paragraph demonstrating document-style text rendering.").Wrap(true),
             new Button("Close")
-                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                .HorizontalAlignment(Align.Stretch)
                 .Click(() => dialog!.Close()))
         .Spacing(1)
-        .HorizontalAlignment(HorizontalAlignment.Stretch);
+        .HorizontalAlignment(Align.Stretch);
 
     dialog = new Dialog()
         .Title("Modal dialog")
@@ -83,7 +83,7 @@ void ShowModalDialog()
 }
 
 var showDialog = new Button("Show modal")
-    .HorizontalAlignment(HorizontalAlignment.Left)
+    .HorizontalAlignment(Align.Start)
     .Click(ShowModalDialog);
 
 var menuBar = new MenuBar();
@@ -136,49 +136,49 @@ var progressBars = new VStack(
                     "Thin",
                     new ProgressBar()
                         .Value(progressState)
-                        .HorizontalAlignment(HorizontalAlignment.Stretch)
+                        .HorizontalAlignment(Align.Stretch)
                         .Style(ProgressBarStyle.Thin),
                     new TextBlock().Text(() => $"{(int)(progressState.Value * 100),3}%"))
                 .Spacing(1)
-                .HorizontalAlignment(HorizontalAlignment.Stretch),
+                .HorizontalAlignment(Align.Stretch),
             new HStack(
                     "Segmented",
                     new ProgressBar()
                         .Value(progressState)
-                        .HorizontalAlignment(HorizontalAlignment.Stretch)
+                        .HorizontalAlignment(Align.Stretch)
                         .Style(ProgressBarStyle.Segmented),
                     new TextBlock().Text(() => $"{(int)(progressState.Value * 100),3}%"))
                 .Spacing(1)
-                .HorizontalAlignment(HorizontalAlignment.Stretch))
+                .HorizontalAlignment(Align.Stretch))
         .Spacing(2)
-        .HorizontalAlignment(HorizontalAlignment.Stretch),
+        .HorizontalAlignment(Align.Stretch),
     new HStack(
             new HStack(
                     "Shaded",
                     new ProgressBar()
                         .Value(progressState)
-                        .HorizontalAlignment(HorizontalAlignment.Stretch)
+                        .HorizontalAlignment(Align.Stretch)
                         .Style(ProgressBarStyle.Shaded),
                     new TextBlock().Text(() => $"{(int)(progressState.Value * 100),3}%"))
                 .Spacing(1)
-                .HorizontalAlignment(HorizontalAlignment.Stretch),
+                .HorizontalAlignment(Align.Stretch),
             new HStack(
                     "Bracketed",
                     new ProgressBar()
                         .Value(progressState)
-                        .HorizontalAlignment(HorizontalAlignment.Stretch)
+                        .HorizontalAlignment(Align.Stretch)
                         .Style(ProgressBarStyle.Bracketed),
                     new TextBlock().Text(() => $"{(int)(progressState.Value * 100),3}%"))
                 .Spacing(1)
-                .HorizontalAlignment(HorizontalAlignment.Stretch))
+                .HorizontalAlignment(Align.Stretch))
         .Spacing(2)
-        .HorizontalAlignment(HorizontalAlignment.Stretch))
+        .HorizontalAlignment(Align.Stretch))
     .Spacing(0)
-    .HorizontalAlignment(HorizontalAlignment.Stretch);
+    .HorizontalAlignment(Align.Stretch);
 
 var leftColumn = new VStack(
         new TextBox("Type here (Ctrl+A, Shift+Arrows, Ctrl+Left/Right)")
-            .HorizontalAlignment(HorizontalAlignment.Stretch),
+            .HorizontalAlignment(Align.Stretch),
         new CheckBox().Text("Accept terms"),
         showDialog,
         new HStack(
@@ -187,15 +187,15 @@ var leftColumn = new VStack(
                     .AddRow("Download", "Running")
                     .AddRow("Render", "OK")
                     .Style(TableStyle.Minimal)
-                    .HorizontalAlignment(HorizontalAlignment.Stretch),
+                    .HorizontalAlignment(Align.Stretch),
                 new Table()
                     .Headers("Task", "Status")
                     .AddRow("Download", "Running")
                     .AddRow("Render", "OK")
                     .Style(TableStyle.DoubleGrid)
-                    .HorizontalAlignment(HorizontalAlignment.Stretch))
+                    .HorizontalAlignment(Align.Stretch))
             .Spacing(2)
-            .HorizontalAlignment(HorizontalAlignment.Stretch),
+            .HorizontalAlignment(Align.Stretch),
         new HStack(
                 "Slider:",
                 new Slider<double>()
@@ -205,21 +205,21 @@ var leftColumn = new VStack(
                     .LargeStep(0.2)
                     .Value(sliderState.Value)
                     .ShowValueLabel(true)
-                    .HorizontalAlignment(HorizontalAlignment.Stretch)
+                    .HorizontalAlignment(Align.Stretch)
                     .ValueChanged((_, e) => sliderState.Value = e.NewValue))
             .Spacing(1)
-            .HorizontalAlignment(HorizontalAlignment.Stretch),
+            .HorizontalAlignment(Align.Stretch),
         new VStack(
                 "Port (1..65535):",
                 new NumberBox<int>()
                     .ValueValidator(v => v is >= 1 and <= 65535 ? null : "Port must be in [1..65535]")
                     .Value(portState))
             .Spacing(1)
-            .HorizontalAlignment(HorizontalAlignment.Stretch),
+            .HorizontalAlignment(Align.Stretch),
         progressBars)
     .Spacing(0)
-    .HorizontalAlignment(HorizontalAlignment.Stretch)
-    .VerticalAlignment(VerticalAlignment.Stretch);
+    .HorizontalAlignment(Align.Stretch)
+    .VerticalAlignment(Align.Stretch);
 
 var rightColumn = new VStack(
         new VSplitter(
@@ -227,7 +227,7 @@ var rightColumn = new VStack(
                 new Center().Content("Bottom pane (drag splitter bar)"))
             .MinHeight(4)
             .MaxHeight(4)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .HorizontalAlignment(Align.Stretch)
             .Ratio(0.5),
         new TabControl(new[]
             {
@@ -260,7 +260,7 @@ var rightColumn = new VStack(
                             new Group()
                                 .TopLeftText("Grid")
                                 .Padding(Thickness.Zero)
-                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .HorizontalAlignment(Align.Stretch)
                                 .Content(
                                     new Grid()
                                         .Columns(
@@ -272,13 +272,13 @@ var rightColumn = new VStack(
                                             new RowDefinition { Height = GridLength.Auto })
                                         .ColumnGap(1)
                                         .Cell("User:", 0, 0)
-                                        .Cell(new TextBox("alex").HorizontalAlignment(HorizontalAlignment.Stretch), 0, 1)
+                                        .Cell(new TextBox("alex").HorizontalAlignment(Align.Stretch), 0, 1)
                                         .Cell("Password:", 1, 0)
                                         .Cell(new TextBox("hunter2")
                                                 .IsPassword(true)
                                                 .ClipboardMode(TextBoxClipboardMode.Disabled)
                                                 .PasswordRevealMode(PasswordRevealMode.WhileFocused)
-                                                .HorizontalAlignment(HorizontalAlignment.Stretch), 1, 1)
+                                                .HorizontalAlignment(Align.Stretch), 1, 1)
                                         .Cell("Status:", 2, 0)
                                         .Cell(new TextBlock().Text(() => statusState.Value), 2, 1)),
                             new Rule
@@ -287,7 +287,7 @@ var rightColumn = new VStack(
                                 CenterLabel = "Rule",
                                 EndLabel = "End",
                             }.Style(RuleStyle.Default with { Glyphs = RuleGlyphs.Dotted })
-                                .HorizontalAlignment(HorizontalAlignment.Stretch),
+                                .HorizontalAlignment(Align.Stretch),
                             "Spinners:",
                             new VStack(
                                     new HStack(
@@ -304,7 +304,7 @@ var rightColumn = new VStack(
                                         .Spacing(2))
                                 .Spacing(0),
                             new Button("Click me (mouse or Enter)")
-                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .HorizontalAlignment(Align.Stretch)
                                 .Click(() => statusState.Value = "click received"))
                         .Spacing(1)),
                 new TabPage(
@@ -313,7 +313,7 @@ var rightColumn = new VStack(
                             "Logs",
                             new TextBlock().Text(() => $"({(int)(progressState.Value * 100)}%)"))
                         .Spacing(1),
-                    logControl.HorizontalAlignment(HorizontalAlignment.Stretch))
+                    logControl.HorizontalAlignment(Align.Stretch))
                 ,
                 new TabPage(
                     "Switcher",
@@ -325,7 +325,7 @@ var rightColumn = new VStack(
                                 .Spacing(1),
                             new ContentSwitcher()
                                 .SelectedIndex(switcherIndexState)
-                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .HorizontalAlignment(Align.Stretch)
                                 .Add(
                                     new Group()
                                         .TopLeftText("First view")
@@ -339,29 +339,29 @@ var rightColumn = new VStack(
                             new Switch("Enable feature")
                                 .IsOn(switchState)
                                 .Toggled((_, e) => statusState.Value = $"switch={e.NewValue}")
-                                .HorizontalAlignment(HorizontalAlignment.Left),
+                                .HorizontalAlignment(Align.Start),
                             new TextBox("hunter2")
                                 .IsPassword(true)
                                 .ClipboardMode(TextBoxClipboardMode.Disabled)
                                 .PasswordRevealMode(PasswordRevealMode.WhileFocused)
                                 .Placeholder("Password")
-                                .HorizontalAlignment(HorizontalAlignment.Stretch),
+                                .HorizontalAlignment(Align.Stretch),
                             new MaskedInput("9999-9999-9999-9999;_")
                                 .Value("4242424242424242")
-                                .HorizontalAlignment(HorizontalAlignment.Stretch),
+                                .HorizontalAlignment(Align.Stretch),
                             new Group()
                                 .TopLeftText("Accordion")
                                 .Padding(Thickness.Zero)
-                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .HorizontalAlignment(Align.Stretch)
                                 .Content(
                                     new Accordion(
                                             new Collapsible("Section A", new TextBlock("First section content")).IsExpanded(true),
                                             new Collapsible("Section B", new TextBlock("Second section content")),
                                             new Collapsible("Section C", new TextBlock("Third section content")))
                                         .Spacing(0)
-                                        .HorizontalAlignment(HorizontalAlignment.Stretch)))
+                                        .HorizontalAlignment(Align.Stretch)))
                         .Spacing(1)
-                        .HorizontalAlignment(HorizontalAlignment.Stretch))
+                        .HorizontalAlignment(Align.Stretch))
                 ,
                 new TabPage(
                     new HStack("Lists", new TextBlock().Text(() => $"(Select={select.SelectedIndex}, Checked={selectionList.Checked.Count(i => i)})"))
@@ -370,37 +370,37 @@ var rightColumn = new VStack(
                             new Group()
                                 .TopLeftText("Select / Dropdown")
                                 .Padding(Thickness.Zero)
-                                .HorizontalAlignment(HorizontalAlignment.Stretch)
-                                .Content(select.HorizontalAlignment(HorizontalAlignment.Stretch)),
+                                .HorizontalAlignment(Align.Stretch)
+                                .Content(select.HorizontalAlignment(Align.Stretch)),
                             new Group()
                                 .TopLeftText("SelectionList (multi-select)")
                                 .TopRightText("Space/Click toggles")
                                 .Padding(Thickness.Zero)
-                                .HorizontalAlignment(HorizontalAlignment.Stretch)
-                                .Content(selectionList.HorizontalAlignment(HorizontalAlignment.Stretch)),
+                                .HorizontalAlignment(Align.Stretch)
+                                .Content(selectionList.HorizontalAlignment(Align.Stretch)),
                             new Group()
                                 .TopLeftText("OptionList")
                                 .TopRightText("Enter/Click activates")
                                 .Padding(Thickness.Zero)
-                                .HorizontalAlignment(HorizontalAlignment.Stretch)
-                                .Content(optionList.HorizontalAlignment(HorizontalAlignment.Stretch)),
+                                .HorizontalAlignment(Align.Stretch)
+                                .Content(optionList.HorizontalAlignment(Align.Stretch)),
                             new Group()
                                 .TopLeftText("Explicit ScrollBar")
                                 .Padding(Thickness.Zero)
-                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .HorizontalAlignment(Align.Stretch)
                                 .Content(new HStack(
                                         new VScrollBar().Minimum(0).Maximum(100).ViewportSize(25).Value(() => (int)(progressState.Value * 100)),
-                                        new HScrollBar().Minimum(0).Maximum(100).ViewportSize(25).Value(() => (int)(progressState.Value * 100)).HorizontalAlignment(HorizontalAlignment.Stretch))
+                                        new HScrollBar().Minimum(0).Maximum(100).ViewportSize(25).Value(() => (int)(progressState.Value * 100)).HorizontalAlignment(Align.Stretch))
                                     .Spacing(2)
-                                    .HorizontalAlignment(HorizontalAlignment.Stretch)))
+                                    .HorizontalAlignment(Align.Stretch)))
                         .Spacing(1)
-                        .HorizontalAlignment(HorizontalAlignment.Stretch)),
+                        .HorizontalAlignment(Align.Stretch)),
                 new TabPage(
                     "TextArea",
-                    textArea.HorizontalAlignment(HorizontalAlignment.Stretch)),
+                    textArea.HorizontalAlignment(Align.Stretch)),
                 new TabPage(
                     "Tree",
-                    tree.HorizontalAlignment(HorizontalAlignment.Stretch))
+                    tree.HorizontalAlignment(Align.Stretch))
                 ,
                 new TabPage(
                     "Viz",
@@ -408,19 +408,19 @@ var rightColumn = new VStack(
                             new Group()
                                 .TopLeftText("Sparkline")
                                 .Padding(Thickness.Zero)
-                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .HorizontalAlignment(Align.Stretch)
                                 .Content(new Sparkline()
                                     .Update(x =>
                                     {
                                         x.Values(chartValues);
                                         _ = chartTickState.Value;
                                     })
-                                    .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                    .HorizontalAlignment(Align.Stretch)
                                     .Style(SparklineStyle.Default with { Glyphs = SparklineGlyphs.Blocks8 })),
                             new Group()
                                 .TopLeftText("BarChart")
                                 .Padding(Thickness.Zero)
-                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .HorizontalAlignment(Align.Stretch)
                                 .Content(new BarChart()
                                     .Title("Samples")
                                     .Minimum(0.0)
@@ -444,11 +444,11 @@ var rightColumn = new VStack(
                                     })
                                     .MinHeight(6)
                                     .MaxHeight(6)
-                                    .HorizontalAlignment(HorizontalAlignment.Stretch)),
+                                    .HorizontalAlignment(Align.Stretch)),
                             new Group()
                                 .TopLeftText("LineChart")
                                 .Padding(Thickness.Zero)
-                                .HorizontalAlignment(HorizontalAlignment.Stretch)
+                                .HorizontalAlignment(Align.Stretch)
                                 .Content(new LineChart()
                                     .Update(x =>
                                     {
@@ -457,15 +457,15 @@ var rightColumn = new VStack(
                                     })
                                     .MinHeight(4)
                                     .MaxHeight(4)
-                                    .HorizontalAlignment(HorizontalAlignment.Stretch)))
+                                    .HorizontalAlignment(Align.Stretch)))
                         .Spacing(1)
-                        .HorizontalAlignment(HorizontalAlignment.Stretch))
+                        .HorizontalAlignment(Align.Stretch))
             })
-            .HorizontalAlignment(HorizontalAlignment.Stretch),
+            .HorizontalAlignment(Align.Stretch),
         new TextBlock().Text(() => $"Status: {statusState.Value} | Slider: {sliderState.Value:0.00} | Port: {portState.Value}"))
     .Spacing(1)
-    .HorizontalAlignment(HorizontalAlignment.Stretch)
-    .VerticalAlignment(VerticalAlignment.Stretch);
+    .HorizontalAlignment(Align.Stretch)
+    .VerticalAlignment(Align.Stretch);
 
 var header = new Header
 {
@@ -481,16 +481,16 @@ var footer = new Footer
 };
 
 var root = new DockLayout()
-    .HorizontalAlignment(HorizontalAlignment.Stretch)
-    .VerticalAlignment(VerticalAlignment.Stretch)
+    .HorizontalAlignment(Align.Stretch)
+    .VerticalAlignment(Align.Stretch)
     .Top(new VStack(header, menuBar).Spacing(0))
     .Content(
         new HSplitter(leftColumn, rightColumn)
             .MinFirst(20)
             .MinSecond(25)
             .Ratio(0.45)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .VerticalAlignment(VerticalAlignment.Stretch))
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Stretch))
     .Bottom(footer);
 
 root.AddKeyBinding(new XenoAtom.Terminal.UI.Input.TerminalKeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl), commandPalette.Show);

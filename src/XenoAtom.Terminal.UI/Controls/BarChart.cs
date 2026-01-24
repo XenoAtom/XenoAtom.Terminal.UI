@@ -26,7 +26,7 @@ public sealed partial class BarChart : Visual
     /// </summary>
     public BarChart()
     {
-        HorizontalAlignment = HorizontalAlignment.Stretch;
+        HorizontalAlignment = Align.Stretch;
 
         Items = new BindableList<BarChartItem>(
             owner: this,
@@ -276,10 +276,10 @@ public sealed partial class BarChart : Visual
             _index = index;
 
             LabelHost = new ComputedVisual(() => _item.Label);
-            LabelHost.HorizontalAlignment = HorizontalAlignment.Left;
+            LabelHost.HorizontalAlignment = Align.Start;
 
             Bar = new BarCell(_owner, _item, _index);
-            Bar.HorizontalAlignment = HorizontalAlignment.Stretch;
+            Bar.HorizontalAlignment = Align.Stretch;
         }
 
         public Visual LabelHost { get; }
@@ -353,7 +353,7 @@ public sealed partial class BarChart : Visual
             _owner = owner;
             _item = item;
             _index = index;
-            HorizontalAlignment = HorizontalAlignment.Stretch;
+            HorizontalAlignment = Align.Stretch;
 
             _valueHost = new ComputedVisual(() => _item.ValueLabel);
             _valueHost.IsHitTestVisible = false;

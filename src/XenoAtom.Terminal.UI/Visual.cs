@@ -100,10 +100,10 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     }
 
     [Bindable]
-    public partial HorizontalAlignment HorizontalAlignment { get; set; }
+    public partial Align HorizontalAlignment { get; set; }
 
     [Bindable]
-    public partial VerticalAlignment VerticalAlignment { get; set; }
+    public partial Align VerticalAlignment { get; set; }
 
     [Bindable]
     public partial int MinWidth { get; set; }
@@ -555,8 +555,8 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         var maxW = MaxWidth == LayoutConstants.Infinite ? LayoutConstants.Infinite : Math.Clamp(MaxWidth, natural.Width, LayoutConstants.MaxFinite);
         var maxH = MaxHeight == LayoutConstants.Infinite ? LayoutConstants.Infinite : Math.Clamp(MaxHeight, natural.Height, LayoutConstants.MaxFinite);
 
-        var growX = HorizontalAlignment == HorizontalAlignment.Stretch ? 1 : 0;
-        var growY = VerticalAlignment == VerticalAlignment.Stretch ? 1 : 0;
+        var growX = HorizontalAlignment == Align.Stretch ? 1 : 0;
+        var growY = VerticalAlignment == Align.Stretch ? 1 : 0;
         var shrinkX = natural.Width > min.Width ? 1 : 0;
         var shrinkY = natural.Height > min.Height ? 1 : 0;
 
@@ -686,14 +686,14 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         var shrinkY = normalized.FlexShrinkY;
 
         // Treat Stretch as willingness to grow on that axis (bounded by MaxWidth/MaxHeight).
-        if (HorizontalAlignment == HorizontalAlignment.Stretch && MaxWidth == LayoutConstants.Infinite)
+        if (HorizontalAlignment == Align.Stretch && MaxWidth == LayoutConstants.Infinite)
         {
             maxW = LayoutConstants.Infinite;
             growX = Math.Max(growX, 1);
             shrinkX = Math.Max(shrinkX, 1);
         }
 
-        if (VerticalAlignment == VerticalAlignment.Stretch && MaxHeight == LayoutConstants.Infinite)
+        if (VerticalAlignment == Align.Stretch && MaxHeight == LayoutConstants.Infinite)
         {
             maxH = LayoutConstants.Infinite;
             growY = Math.Max(growY, 1);
@@ -731,8 +731,8 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         var slotW = Math.Max(0, slot.Width);
         var slotH = Math.Max(0, slot.Height);
 
-        var w = HorizontalAlignment == HorizontalAlignment.Stretch ? slotW : Math.Min(slotW, desiredW);
-        var h = VerticalAlignment == VerticalAlignment.Stretch ? slotH : Math.Min(slotH, desiredH);
+        var w = HorizontalAlignment == Align.Stretch ? slotW : Math.Min(slotW, desiredW);
+        var h = VerticalAlignment == Align.Stretch ? slotH : Math.Min(slotH, desiredH);
 
         w = Math.Clamp(w, 0, maxW == int.MaxValue ? w : maxW);
         h = Math.Clamp(h, 0, maxH == int.MaxValue ? h : maxH);
@@ -740,20 +740,20 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         var x = slot.X;
         var y = slot.Y;
 
-        if (HorizontalAlignment == HorizontalAlignment.Center)
+        if (HorizontalAlignment == Align.Center)
         {
             x += (slotW - w) / 2;
         }
-        else if (HorizontalAlignment == HorizontalAlignment.Right)
+        else if (HorizontalAlignment == Align.End)
         {
             x += slotW - w;
         }
 
-        if (VerticalAlignment == VerticalAlignment.Center)
+        if (VerticalAlignment == Align.Center)
         {
             y += (slotH - h) / 2;
         }
-        else if (VerticalAlignment == VerticalAlignment.Bottom)
+        else if (VerticalAlignment == Align.End)
         {
             y += slotH - h;
         }

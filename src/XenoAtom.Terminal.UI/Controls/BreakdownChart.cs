@@ -29,7 +29,7 @@ public sealed partial class BreakdownChart : Visual
     /// </summary>
     public BreakdownChart()
     {
-        HorizontalAlignment = HorizontalAlignment.Stretch;
+        HorizontalAlignment = Align.Stretch;
 
         Segments = new BindableList<BreakdownSegment>(
             owner: this,
@@ -204,8 +204,8 @@ public sealed partial class BreakdownChart : Visual
         public BreakdownBar(BreakdownChart owner)
         {
             _owner = owner;
-            HorizontalAlignment = HorizontalAlignment.Stretch;
-            VerticalAlignment = VerticalAlignment.Top;
+            HorizontalAlignment = Align.Stretch;
+            VerticalAlignment = Align.Start;
             Focusable = false;
         }
 
@@ -585,7 +585,7 @@ public sealed partial class BreakdownChart : Visual
         public BreakdownLegend(BreakdownChart owner)
         {
             _owner = owner;
-            HorizontalAlignment = HorizontalAlignment.Stretch;
+            HorizontalAlignment = Align.Stretch;
         }
 
         protected override int ChildrenCount => _rows.Count;
@@ -759,7 +759,7 @@ public sealed partial class BreakdownChart : Visual
                 _layout = new HStack(items)
                 {
                     Spacing = Math.Max(0, legendItemSpacing),
-                    HorizontalAlignment = HorizontalAlignment.Left,
+                    HorizontalAlignment = Align.Start,
                 };
 
                 AttachChild(_layout);

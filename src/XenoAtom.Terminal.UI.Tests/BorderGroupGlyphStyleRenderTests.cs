@@ -17,8 +17,8 @@ public sealed class BorderGroupGlyphStyleRenderTests
     {
         var border = new Border("X")
             .Style(BorderStyle.Ascii)
-            .HorizontalAlignment(HorizontalAlignment.Left)
-            .VerticalAlignment(VerticalAlignment.Top);
+            .HorizontalAlignment(Align.Start)
+            .VerticalAlignment(Align.Start);
 
         using var driver = new TerminalAppTestDriver(border, TerminalHostKind.Fullscreen, new TerminalSize(10, 5));
         driver.Tick();
@@ -38,8 +38,8 @@ public sealed class BorderGroupGlyphStyleRenderTests
         var group = new Group("Title")
             .Style(GroupStyle.Ascii)
             .Content("X")
-            .HorizontalAlignment(HorizontalAlignment.Left)
-            .VerticalAlignment(VerticalAlignment.Top);
+            .HorizontalAlignment(Align.Start)
+            .VerticalAlignment(Align.Start);
 
         using var driver = new TerminalAppTestDriver(group, TerminalHostKind.Fullscreen, new TerminalSize(20, 6));
         driver.Tick();

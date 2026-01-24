@@ -20,8 +20,8 @@ public sealed partial class Backdrop : Visual
     /// </summary>
     public Backdrop()
     {
-        HorizontalAlignment = HorizontalAlignment.Stretch;
-        VerticalAlignment = VerticalAlignment.Stretch;
+        HorizontalAlignment = Align.Stretch;
+        VerticalAlignment = Align.Stretch;
     }
 
     /// <inheritdoc/>

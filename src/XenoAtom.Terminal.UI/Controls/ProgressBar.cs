@@ -33,7 +33,7 @@ public sealed partial class ProgressBar : Visual
     /// </summary>
     public ProgressBar()
     {
-        HorizontalAlignment = HorizontalAlignment.Stretch;
+        HorizontalAlignment = Align.Stretch;
     }
 
     /// <summary>

@@ -42,7 +42,7 @@ public sealed class ProgressTaskGroupRenderingTests
         var second = new ProgressTask("Second") { Value = 0.5 };
 
         var group = new ProgressTaskGroup()
-            .Columns([ProgressTaskColumns.Label(HorizontalAlignment.Left), ProgressTaskColumns.Bar()])
+            .Columns([ProgressTaskColumns.Label(Align.Start), ProgressTaskColumns.Bar()])
             .Tasks([first, second]);
 
         session.Instance.Write(group);

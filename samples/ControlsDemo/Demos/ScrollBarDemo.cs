@@ -29,8 +29,8 @@ public sealed class ScrollBarDemo : ControlsDemoBase
         return new VStack(
                 DemoUi.Hint("ScrollBar exposes Minimum/Maximum/Value and a ValueChanged event."),
                 new HStack(
-                        new VStack(v.MinHeight(20).MaxHeight(20)).HorizontalAlignment(HorizontalAlignment.Left).VerticalAlignment(VerticalAlignment.Top),
-                        new VStack(h).MinWidth(50).MaxWidth(50).HorizontalAlignment(HorizontalAlignment.Left).VerticalAlignment(VerticalAlignment.Top))
+                        new VStack(v.MinHeight(20).MaxHeight(20)).HorizontalAlignment(Align.Start).VerticalAlignment(Align.Start),
+                        new VStack(h).MinWidth(50).MaxWidth(50).HorizontalAlignment(Align.Start).VerticalAlignment(Align.Start))
                     .Spacing(2),
                 new TextBlock(() => $"Vertical: {v.Value}, Horizontal: {h.Value}"))
             .Spacing(1);

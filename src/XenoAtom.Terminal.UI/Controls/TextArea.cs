@@ -25,8 +25,8 @@ public sealed partial class TextArea : TextEditorBase
     {
         this.AcceptTab(true);
         this.WordWrap(true);
-        this.HorizontalAlignment(HorizontalAlignment.Stretch);
-        this.VerticalAlignment(VerticalAlignment.Stretch);
+        this.HorizontalAlignment(Align.Stretch);
+        this.VerticalAlignment(Align.Stretch);
 
         TextDocument = new DynamicTextDocument(
             getter: () => Text ?? string.Empty,

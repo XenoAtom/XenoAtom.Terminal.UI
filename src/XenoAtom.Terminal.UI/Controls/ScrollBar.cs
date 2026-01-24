@@ -31,11 +31,11 @@ public abstract partial class ScrollBar : Visual
         Focusable = focusable;
         if (Orientation == Orientation.Vertical)
         {
-            VerticalAlignment = VerticalAlignment.Stretch;
+            VerticalAlignment = Align.Stretch;
         }
         else
         {
-            HorizontalAlignment = HorizontalAlignment.Stretch;
+            HorizontalAlignment = Align.Stretch;
         }
 
         this.SmallChange = 1;

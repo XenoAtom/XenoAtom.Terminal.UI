@@ -31,8 +31,8 @@ public sealed partial class Canvas : Visual
     /// </summary>
     public Canvas()
     {
-        HorizontalAlignment = HorizontalAlignment.Stretch;
-        VerticalAlignment = VerticalAlignment.Stretch;
+        HorizontalAlignment = Align.Stretch;
+        VerticalAlignment = Align.Stretch;
     }
 
     /// <summary>
@@ -51,8 +51,8 @@ public sealed partial class Canvas : Visual
             min: Size.Zero,
             natural: Size.Zero,
             max: new Size(LayoutConstants.Infinite, LayoutConstants.Infinite),
-            growX: HorizontalAlignment == HorizontalAlignment.Stretch ? 1 : 0,
-            growY: VerticalAlignment == VerticalAlignment.Stretch ? 1 : 0,
+            growX: HorizontalAlignment == Align.Stretch ? 1 : 0,
+            growY: VerticalAlignment == Align.Stretch ? 1 : 0,
             shrinkX: 1,
             shrinkY: 1);
 

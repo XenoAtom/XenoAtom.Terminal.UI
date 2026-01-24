@@ -20,7 +20,7 @@ public sealed partial class Rule : Visual
     /// </summary>
     public Rule()
     {
-        HorizontalAlignment = HorizontalAlignment.Stretch;
+        HorizontalAlignment = Align.Stretch;
     }
 
     /// <summary>

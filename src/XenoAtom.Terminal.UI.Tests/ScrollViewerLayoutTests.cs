@@ -15,7 +15,7 @@ public sealed class ScrollViewerLayoutTests
     [TestMethod]
     public void ScrollViewer_Stretches_Content_To_Viewport_When_NoHorizontalScrolling()
     {
-        var content = new VStack("Hello").VerticalAlignment(VerticalAlignment.Stretch);
+        var content = new VStack("Hello").VerticalAlignment(Align.Stretch);
         var scroll = new ScrollViewer(content);
 
         var root = new DockLayout().Content(scroll);
@@ -51,8 +51,8 @@ public sealed class ScrollViewerLayoutTests
 
         var scroll = new ScrollViewer(content)
         {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch,
+            HorizontalAlignment = Align.Stretch,
+            VerticalAlignment = Align.Stretch,
         };
 
         scroll.Measure(new Size(20, 3));
@@ -74,8 +74,8 @@ public sealed class ScrollViewerLayoutTests
         var content = new ScrollableVisual();
         var scroll = new ScrollViewer(content)
         {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch,
+            HorizontalAlignment = Align.Stretch,
+            VerticalAlignment = Align.Stretch,
         };
 
         scroll.Measure(new Size(10, 5));
@@ -100,8 +100,8 @@ public sealed class ScrollViewerLayoutTests
         public WrapLikeVisual(int totalCells)
         {
             _totalCells = Math.Max(0, totalCells);
-            HorizontalAlignment = HorizontalAlignment.Stretch;
-            VerticalAlignment = VerticalAlignment.Stretch;
+            HorizontalAlignment = Align.Stretch;
+            VerticalAlignment = Align.Stretch;
         }
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints)
@@ -144,8 +144,8 @@ public sealed class ScrollViewerLayoutTests
 
         public ScrollableVisual()
         {
-            HorizontalAlignment = HorizontalAlignment.Stretch;
-            VerticalAlignment = VerticalAlignment.Stretch;
+            HorizontalAlignment = Align.Stretch;
+            VerticalAlignment = Align.Stretch;
         }
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints)

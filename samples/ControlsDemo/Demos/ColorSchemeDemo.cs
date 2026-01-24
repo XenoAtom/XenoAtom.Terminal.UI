@@ -61,25 +61,25 @@ public sealed class ColorSchemeDemo : ControlsDemoBase
 
         recipeGrid
             .Cell("Sugar:", 0, 0)
-            .Cell(new Slider<int>().Minimum(0).Maximum(10).Value(sugar).HorizontalAlignment(HorizontalAlignment.Stretch), 0, 1)
+            .Cell(new Slider<int>().Minimum(0).Maximum(10).Value(sugar).HorizontalAlignment(Align.Stretch), 0, 1)
             .Cell(new TextBlock(() => sugar.Value.ToString()), 0, 2)
 
             .Cell("Colors:", 1, 0)
-            .Cell(new Slider<int>().Minimum(0).Maximum(10).Value(colors).HorizontalAlignment(HorizontalAlignment.Stretch), 1, 1)
+            .Cell(new Slider<int>().Minimum(0).Maximum(10).Value(colors).HorizontalAlignment(Align.Stretch), 1, 1)
             .Cell(new TextBlock(() => colors.Value.ToString()), 1, 2)
 
             .Cell("Sogginess:", 2, 0)
-            .Cell(new Slider<int>().Minimum(0).Maximum(10).Value(sogginess).HorizontalAlignment(HorizontalAlignment.Stretch), 2, 1)
+            .Cell(new Slider<int>().Minimum(0).Maximum(10).Value(sogginess).HorizontalAlignment(Align.Stretch), 2, 1)
             .Cell(new TextBlock(() => sogginess.Value.ToString()), 2, 2)
 
             .Cell("Flavor:", 3, 0)
-            .Cell(new EnumSelect<RootLoopsFlavor>().Value(flavor).HorizontalAlignment(HorizontalAlignment.Stretch), 3, 1)
+            .Cell(new EnumSelect<RootLoopsFlavor>().Value(flavor).HorizontalAlignment(Align.Stretch), 3, 1)
 
             .Cell("Fruit:", 4, 0)
-            .Cell(new EnumSelect<RootLoopsFruit>().Value(fruit).HorizontalAlignment(HorizontalAlignment.Stretch), 4, 1)
+            .Cell(new EnumSelect<RootLoopsFruit>().Value(fruit).HorizontalAlignment(Align.Stretch), 4, 1)
 
             .Cell("Milk:", 5, 0)
-            .Cell(new EnumSelect<RootLoopsMilkAmount>().Value(milk).HorizontalAlignment(HorizontalAlignment.Stretch), 5, 1);
+            .Cell(new EnumSelect<RootLoopsMilkAmount>().Value(milk).HorizontalAlignment(Align.Stretch), 5, 1);
 
         var recipe = new Group()
             .TopLeftText("Recipe")
@@ -96,14 +96,14 @@ public sealed class ColorSchemeDemo : ControlsDemoBase
                         new Button("Error").Tone(ControlTone.Error))
                     .Spacing(1),
                 new Rule(),
-                new TextBox("TextBox (editable)").HorizontalAlignment(HorizontalAlignment.Stretch),
-                new Select<string>().Items("Alpha", "Beta", "Gamma").HorizontalAlignment(HorizontalAlignment.Stretch),
+                new TextBox("TextBox (editable)").HorizontalAlignment(Align.Stretch),
+                new Select<string>().Items("Alpha", "Beta", "Gamma").HorizontalAlignment(Align.Stretch),
                 new HStack(
                         new CheckBox().IsChecked(true),
                         "Enabled")
                     .Spacing(1),
                 new HStack(
-                        new ProgressBar().Value(0.66).HorizontalAlignment(HorizontalAlignment.Stretch),
+                        new ProgressBar().Value(0.66).HorizontalAlignment(Align.Stretch),
                         new TextBlock("66%"))
                     .Spacing(1))
             .Spacing(1);
@@ -123,7 +123,7 @@ public sealed class ColorSchemeDemo : ControlsDemoBase
         var themedArea = new ZStack(
                 new Backdrop().Style(BackdropStyle.ThemeBackground),
                 new Padder(themedContent).Padding(1))
-            .HorizontalAlignment(HorizontalAlignment.Stretch);
+            .HorizontalAlignment(Align.Stretch);
 
         // Apply the generated theme locally so it doesn't affect the ControlsDemo UI chrome.
         themedArea.Update(v => v.Style(Theme.FromScheme(BuildScheme())));

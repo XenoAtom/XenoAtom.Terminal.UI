@@ -51,8 +51,8 @@ public sealed partial class LogControl : Visual
     public LogControl()
     {
         Focusable = true;
-        HorizontalAlignment = HorizontalAlignment.Stretch;
-        VerticalAlignment = VerticalAlignment.Stretch;
+        HorizontalAlignment = Align.Stretch;
+        VerticalAlignment = Align.Stretch;
 
         _markupParser = new MarkupTextParser();
         _entries = new BindableList<LogEntry>(this, "LogControl.Entries");
@@ -401,8 +401,8 @@ public sealed partial class LogControl : Visual
             min: constraints.Clamp(new Size(4, 1)),
             natural: constraints.Clamp(desired),
             max: new Size(LayoutConstants.Infinite, LayoutConstants.Infinite),
-            growX: HorizontalAlignment == HorizontalAlignment.Stretch ? 1 : 0,
-            growY: VerticalAlignment == VerticalAlignment.Stretch ? 1 : 0,
+            growX: HorizontalAlignment == Align.Stretch ? 1 : 0,
+            growY: VerticalAlignment == Align.Stretch ? 1 : 0,
             shrinkX: 1,
             shrinkY: 1);
     }
@@ -1125,8 +1125,8 @@ public sealed partial class LogControl : Visual
         public LogContentVisual(LogControl owner)
         {
             _owner = owner;
-            HorizontalAlignment = HorizontalAlignment.Stretch;
-            VerticalAlignment = VerticalAlignment.Stretch;
+            HorizontalAlignment = Align.Stretch;
+            VerticalAlignment = Align.Stretch;
             Focusable = false;
         }
 

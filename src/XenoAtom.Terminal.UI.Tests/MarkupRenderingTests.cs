@@ -15,8 +15,8 @@ public sealed class MarkupRenderingTests
     public void Markup_Respects_NewLines()
     {
         var root = new Markup("[bold]Markup[/] supports inline styling:\n- [green]success[/]\n- [yellow]warning[/]")
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .VerticalAlignment(VerticalAlignment.Stretch);
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Stretch);
 
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 8));
         driver.Tick();

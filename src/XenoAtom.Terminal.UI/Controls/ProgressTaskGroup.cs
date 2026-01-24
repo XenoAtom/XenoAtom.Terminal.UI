@@ -25,8 +25,8 @@ public sealed partial class ProgressTaskGroup : Visual
     /// </summary>
     public ProgressTaskGroup()
     {
-        HorizontalAlignment = HorizontalAlignment.Stretch;
-        VerticalAlignment = VerticalAlignment.Top;
+        HorizontalAlignment = Align.Stretch;
+        VerticalAlignment = Align.Start;
 
         Tasks = new BindableList<ProgressTask>(this, $"{nameof(ProgressTaskGroup)}.{nameof(Tasks)}");
         Columns = new BindableList<ProgressTaskColumn>(this, $"{nameof(ProgressTaskGroup)}.{nameof(Columns)}");
@@ -94,8 +94,8 @@ public sealed partial class ProgressTaskGroup : Visual
         var colCount = (effectiveColumns.Count * colStride) - (includeColumnGaps ? 1 : 0);
 
         var grid = new Grid()
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .VerticalAlignment(VerticalAlignment.Top);
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Start);
 
         for (var c = 0; c < effectiveColumns.Count; c++)
         {

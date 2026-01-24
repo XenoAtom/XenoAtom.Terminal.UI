@@ -12,8 +12,8 @@ public sealed class SplitterLayoutTests
     [TestMethod]
     public void HSplitter_Allocates_Space_With_Bar()
     {
-        var first = new TextBlock("A").HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch);
-        var second = new TextBlock("B").HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch);
+        var first = new TextBlock("A").HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
+        var second = new TextBlock("B").HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
         var splitter = new HSplitter(first, second)
         {
             Ratio = 0.5,
@@ -23,8 +23,8 @@ public sealed class SplitterLayoutTests
         splitter.Measure(new Size(11, 3));
         splitter.Arrange(new Rectangle(0, 0, 11, 3));
 
-        Assert.AreEqual(HorizontalAlignment.Stretch, first.HorizontalAlignment);
-        Assert.AreEqual(VerticalAlignment.Stretch, first.VerticalAlignment);
+        Assert.AreEqual(Align.Stretch, first.HorizontalAlignment);
+        Assert.AreEqual(Align.Stretch, first.VerticalAlignment);
 
         Assert.AreEqual(5, first.Bounds.Width);
         Assert.AreEqual(3, first.Bounds.Height);
@@ -35,8 +35,8 @@ public sealed class SplitterLayoutTests
     [TestMethod]
     public void VSplitter_Allocates_Space_With_Bar()
     {
-        var first = new TextBlock("A").HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch);
-        var second = new TextBlock("B").HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch);
+        var first = new TextBlock("A").HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
+        var second = new TextBlock("B").HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
         var splitter = new VSplitter(first, second)
         {
             Ratio = 0.5,
@@ -46,7 +46,7 @@ public sealed class SplitterLayoutTests
         splitter.Measure(new Size(10, 5));
         splitter.Arrange(new Rectangle(0, 0, 10, 5));
 
-        Assert.AreEqual(VerticalAlignment.Stretch, first.VerticalAlignment);
+        Assert.AreEqual(Align.Stretch, first.VerticalAlignment);
 
         Assert.AreEqual(2, first.Bounds.Height);
         Assert.AreEqual(2 + 1, second.Bounds.Y);

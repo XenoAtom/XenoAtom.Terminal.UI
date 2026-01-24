@@ -29,20 +29,20 @@ public sealed class DataTemplatesDemo : ControlsDemoBase
                 DemoUi.Hint("Use Role=Display for viewing and Role=Editor for editing when the value is a bindable source (State<T>/Binding<T>)."),
                 new HStack(
                         "Name:",
-                        text.PresentAs(DataTemplateRole.Editor).HorizontalAlignment(HorizontalAlignment.Stretch))
+                        text.PresentAs(DataTemplateRole.Editor).HorizontalAlignment(Align.Stretch))
                     .Spacing(1)
-                    .HorizontalAlignment(HorizontalAlignment.Stretch),
+                    .HorizontalAlignment(Align.Stretch),
                 new HStack(
                         "Port:",
-                        port.PresentAs(DataTemplateRole.Editor).HorizontalAlignment(HorizontalAlignment.Stretch))
+                        port.PresentAs(DataTemplateRole.Editor).HorizontalAlignment(Align.Stretch))
                     .Spacing(1)
-                    .HorizontalAlignment(HorizontalAlignment.Stretch),
+                    .HorizontalAlignment(Align.Stretch),
                 new HStack(
                         "Summary:",
                         text.PresentAs(DataTemplateRole.Display))
                     .Spacing(1))
             .Spacing(1)
-            .HorizontalAlignment(HorizontalAlignment.Stretch);
+            .HorizontalAlignment(Align.Stretch);
 
         var boolValue = new State<bool>(true);
         var charValue = new State<char>('A');
@@ -74,7 +74,7 @@ public sealed class DataTemplatesDemo : ControlsDemoBase
             commonTable.AddRow(
                 new TextBlock(typeName),
                 state.PresentAs(DataTemplateRole.Display),
-                state.PresentAs(DataTemplateRole.Editor).HorizontalAlignment(HorizontalAlignment.Stretch));
+                state.PresentAs(DataTemplateRole.Editor).HorizontalAlignment(Align.Stretch));
         }
 
         Add("string", text);
@@ -96,7 +96,7 @@ public sealed class DataTemplatesDemo : ControlsDemoBase
             numericTable.AddRow(
                 new TextBlock(typeName),
                 state.PresentAs(DataTemplateRole.Display),
-                state.PresentAs(DataTemplateRole.Editor).HorizontalAlignment(HorizontalAlignment.Stretch));
+                state.PresentAs(DataTemplateRole.Editor).HorizontalAlignment(Align.Stretch));
         }
 
         AddNumber("sbyte", sbyteValue);
@@ -118,7 +118,7 @@ public sealed class DataTemplatesDemo : ControlsDemoBase
                         new VStack(DemoUi.Title("Common"), commonTable).Spacing(1),
                         new VStack(DemoUi.Title("Numbers"), numericTable).Spacing(1))
                     .Spacing(2)
-                    .HorizontalAlignment(HorizontalAlignment.Stretch))
+                    .HorizontalAlignment(Align.Stretch))
             .Spacing(1);
 
         var calloutTemplates = DataTemplates.Default.Derive(builder => builder

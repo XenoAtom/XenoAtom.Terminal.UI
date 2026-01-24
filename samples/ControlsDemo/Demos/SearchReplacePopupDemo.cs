@@ -24,17 +24,17 @@ public sealed class SearchReplacePopupDemo : ControlsDemoBase
                 foo bar foo
                 """)
             .MinHeight(10)
-            .VerticalAlignment(VerticalAlignment.Stretch)
-            .HorizontalAlignment(HorizontalAlignment.Stretch);
+            .VerticalAlignment(Align.Stretch)
+            .HorizontalAlignment(Align.Stretch);
 
         return new VStack(
                 DemoUi.Hint("SearchReplacePopup is a reusable component hosted by controls like TextArea and LogControl."),
-                new Group("TextArea").Padding(1).Content(new Border(editor).HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch))
-                    .HorizontalAlignment(HorizontalAlignment.Stretch)
-                    .VerticalAlignment(VerticalAlignment.Stretch))
+                new Group("TextArea").Padding(1).Content(new Border(editor).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch))
+                    .HorizontalAlignment(Align.Stretch)
+                    .VerticalAlignment(Align.Stretch))
             .Spacing(1)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .VerticalAlignment(VerticalAlignment.Stretch);
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Stretch);
     }
 }
 

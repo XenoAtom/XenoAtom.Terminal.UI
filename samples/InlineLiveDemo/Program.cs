@@ -98,10 +98,10 @@ try
         .Title("Disk usage")
         .ShowValues(true)
         .ShowPercentages(true)
-        .Segment(42, "🗃️  Data", color: Colors.DodgerBlue)
-        .Segment(18, "📦  Packages", color: Colors.LimeGreen)
-        .Segment(9, "🧹  Temp", color: Colors.Orange)
-        .Segment(3, "🧯  Other", color: Colors.IndianRed));
+        .Segment(42, "🗃️ Data", color: Colors.DodgerBlue)
+        .Segment(18, "📦 Packages", color: Colors.LimeGreen)
+        .Segment(9, "🧹 Temp", color: Colors.Orange)
+        .Segment(3, "🧯 Other", color: Colors.IndianRed));
 
     Terminal.WriteLine();
     var port = Terminal.AskNumber<int>("Pick a port number:", prompt =>

@@ -51,8 +51,8 @@ public sealed partial class Popup : ContentVisual, IModalVisual
     /// </summary>
     public Popup()
     {
-        this.HorizontalAlignment(HorizontalAlignment.Stretch);
-        this.VerticalAlignment(VerticalAlignment.Stretch);
+        this.HorizontalAlignment(Align.Stretch);
+        this.VerticalAlignment(Align.Stretch);
         this.MatchAnchorWidth(true);
         this.Placement(PopupPlacement.Below);
         this.CloseOnTab(true);

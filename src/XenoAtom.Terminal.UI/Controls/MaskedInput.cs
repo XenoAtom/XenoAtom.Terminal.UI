@@ -80,7 +80,7 @@ public sealed partial class MaskedInput : TextEditorBase
         _document.Changed += OnMaskedDocumentChanged;
 
         Focusable = true;
-        this.HorizontalAlignment(HorizontalAlignment.Stretch);
+        this.HorizontalAlignment(Align.Stretch);
         this.WordWrap(false);
         this.Template(string.Empty);
         this.Value(string.Empty);

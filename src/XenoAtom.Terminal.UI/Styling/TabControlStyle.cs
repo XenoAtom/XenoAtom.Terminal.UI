@@ -18,8 +18,8 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     public static TabControlStyle Default { get; } = new()
     {
         TabContentTemplateFactory = host => new Border(host)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .VerticalAlignment(VerticalAlignment.Stretch),
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Stretch),
     };
 
     /// <summary>
@@ -34,8 +34,8 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     {
         TabContentTemplateFactory = host => new Border(host)
             .Style(BorderStyle.Rounded)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .VerticalAlignment(VerticalAlignment.Stretch),
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Stretch),
     };
 
     /// <summary>
@@ -45,8 +45,8 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     {
         TabContentTemplateFactory = host => new Border(host)
             .Style(BorderStyle.Single)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .VerticalAlignment(VerticalAlignment.Stretch),
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Stretch),
     };
 
     /// <summary>
@@ -56,8 +56,8 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     {
         TabContentTemplateFactory = host => new Border(host)
             .Style(BorderStyle.Double)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .VerticalAlignment(VerticalAlignment.Stretch),
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Stretch),
     };
 
     /// <summary>
@@ -67,8 +67,8 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     {
         TabContentTemplateFactory = host => new Border(host)
             .Style(BorderStyle.Heavy)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .VerticalAlignment(VerticalAlignment.Stretch),
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Stretch),
     };
 
     /// <summary>
@@ -78,8 +78,8 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     {
         TabContentTemplateFactory = host => new Border(host)
             .Style(BorderStyle.Ascii)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .VerticalAlignment(VerticalAlignment.Stretch),
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Stretch),
     };
 
     /// <summary>
@@ -89,8 +89,8 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     {
         TabContentTemplateFactory = host => new Border(host)
             .Style(BorderStyle.AsciiHeavy)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .VerticalAlignment(VerticalAlignment.Stretch),
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Stretch),
     };
 
     /// <summary>
@@ -100,8 +100,8 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     {
         TabContentTemplateFactory = host => new Border(host)
             .Style(BorderStyle.Dashed)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
-            .VerticalAlignment(VerticalAlignment.Stretch),
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Stretch),
     };
 
     /// <summary>

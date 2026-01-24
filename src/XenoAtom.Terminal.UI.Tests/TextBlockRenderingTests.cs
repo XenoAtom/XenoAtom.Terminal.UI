@@ -21,7 +21,7 @@ public sealed class TextBlockRenderingTests
         {
             Wrap = false,
             Trimming = TextTrimming.EndEllipsis,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalAlignment = Align.Stretch,
             MaxWidth = 5,
         };
 
@@ -40,7 +40,7 @@ public sealed class TextBlockRenderingTests
         {
             Wrap = false,
             Trimming = TextTrimming.StartEllipsis,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalAlignment = Align.Stretch,
             MaxWidth = 5,
         };
 
@@ -58,7 +58,7 @@ public sealed class TextBlockRenderingTests
         var tb = new TextBlock("Hi")
         {
             Wrap = false,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalAlignment = Align.Stretch,
             TextAlignment = TextAlignment.Center,
         };
 
@@ -93,7 +93,7 @@ public sealed class TextBlockRenderingTests
     {
         var tb = new TextBlock("Hi")
             .Style(Theme.Default)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .HorizontalAlignment(Align.Stretch)
             .Style(TextBlockStyle.Default with { Background = Colors.Blue, FillBackground = false });
 
         tb.Measure(new LayoutConstraints(0, 6, 0, 1));
@@ -115,7 +115,7 @@ public sealed class TextBlockRenderingTests
     {
         var tb = new TextBlock("Hi")
             .Style(Theme.Default)
-            .HorizontalAlignment(HorizontalAlignment.Stretch)
+            .HorizontalAlignment(Align.Stretch)
             .Style(TextBlockStyle.Default with { Background = Colors.Blue, FillBackground = true });
 
         tb.Measure(new LayoutConstraints(0, 6, 0, 1));

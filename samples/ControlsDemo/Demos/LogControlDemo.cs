@@ -47,7 +47,7 @@ public sealed class LogControlDemo : ControlsDemoBase
                         "| Line Count To Add:", lineToAdd.PresentAs(DataTemplateRole.Editor)
                         )
                     .Spacing(1),
-                new Border(log).HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch).MinWidth(20).MaxWidth(120).MinHeight(8).MaxHeight(25),
+                new Border(log).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch).MinWidth(20).MaxWidth(120).MinHeight(8).MaxHeight(25),
                 new Markup("[dim]Search supports case/word/regex and navigation via buttons or keyboard.[/]"))
             .Spacing(1);
     }

@@ -26,7 +26,7 @@ public sealed partial class Slider<T> : Visual where T: struct, INumber<T>
     public Slider()
     {
         Focusable = true;
-        HorizontalAlignment = HorizontalAlignment.Stretch;
+        HorizontalAlignment = Align.Stretch;
         this.Minimum(T.Zero);
         // 10 (TODO: figure out a better way to express 10 in generic way)
         this.Maximum(T.One + T.One + T.One + T.One + T.One + T.One + T.One + T.One + T.One + T.One);

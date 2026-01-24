@@ -22,8 +22,8 @@ internal sealed class TooltipWindow : ContentVisual
 
     public TooltipWindow()
     {
-        HorizontalAlignment = HorizontalAlignment.Stretch;
-        VerticalAlignment = VerticalAlignment.Stretch;
+        HorizontalAlignment = Align.Stretch;
+        VerticalAlignment = Align.Stretch;
         IsHitTestVisible = false;
         IsEnabled = false;
     }

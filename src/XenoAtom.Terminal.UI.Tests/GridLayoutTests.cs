@@ -121,8 +121,8 @@ public sealed class GridLayoutTests
         public FillVisual(Size desired)
         {
             _desired = desired;
-            HorizontalAlignment = HorizontalAlignment.Stretch;
-            VerticalAlignment = VerticalAlignment.Stretch;
+            HorizontalAlignment = Align.Stretch;
+            VerticalAlignment = Align.Stretch;
         }
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints)
@@ -140,8 +140,8 @@ public sealed class GridLayoutTests
         {
             _desiredWidth = desiredWidth;
             _minWidth = minWidth;
-            HorizontalAlignment = HorizontalAlignment.Stretch;
-            VerticalAlignment = VerticalAlignment.Stretch;
+            HorizontalAlignment = Align.Stretch;
+            VerticalAlignment = Align.Stretch;
         }
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints)

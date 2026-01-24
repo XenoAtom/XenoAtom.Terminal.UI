@@ -14,7 +14,7 @@ public sealed class RuleLayoutTests
     {
         var rule = new Rule
         {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalAlignment = Align.Stretch,
             StartLabel = "A",
             CenterLabel = "B",
             EndLabel = "C",

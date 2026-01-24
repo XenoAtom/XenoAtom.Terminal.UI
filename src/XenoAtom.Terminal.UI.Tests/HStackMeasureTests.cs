@@ -14,13 +14,13 @@ public sealed class HStackMeasureTests
     [TestMethod]
     public void HStack_Distributes_Width_To_Stretch_Children_During_Arrange()
     {
-        var a = new ProbeVisual { HorizontalAlignment = HorizontalAlignment.Stretch };
-        var b = new ProbeVisual { HorizontalAlignment = HorizontalAlignment.Stretch };
+        var a = new ProbeVisual { HorizontalAlignment = Align.Stretch };
+        var b = new ProbeVisual { HorizontalAlignment = Align.Stretch };
 
-        var stack = new HStack(a, b) { Spacing = 1, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var stack = new HStack(a, b) { Spacing = 1, HorizontalAlignment = Align.Stretch };
         stack.Measure(new Size(10, 1));
 
-        Assert.AreEqual(HorizontalAlignment.Stretch, a.HorizontalAlignment);
+        Assert.AreEqual(Align.Stretch, a.HorizontalAlignment);
         Assert.AreEqual(int.MaxValue, a.MaxWidth);
         Assert.AreEqual(int.MaxValue, a.MeasureHints.Max.Width);
         Assert.IsGreaterThan(0, a.MeasureHints.FlexGrowX);

@@ -14,8 +14,8 @@ public sealed partial class GridCell : ContentVisual
     /// </summary>
     public GridCell()
     {
-        HorizontalAlignment = HorizontalAlignment.Stretch;
-        VerticalAlignment = VerticalAlignment.Stretch;
+        HorizontalAlignment = Align.Stretch;
+        VerticalAlignment = Align.Stretch;
         RowSpan = 1;
         ColumnSpan = 1;
     }

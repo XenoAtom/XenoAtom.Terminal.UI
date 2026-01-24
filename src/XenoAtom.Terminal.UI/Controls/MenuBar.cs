@@ -32,7 +32,7 @@ public sealed partial class MenuBar : Visual
     public MenuBar()
     {
         Focusable = true;
-        this.HorizontalAlignment(HorizontalAlignment.Stretch);
+        this.HorizontalAlignment(Align.Stretch);
         _items = new BindableList<MenuItem>(this, "MenuBar.Items");
         _presenters = new VisualList<MenuBarItem>(this, "MenuBar.Presenters");
     }

@@ -38,8 +38,8 @@ public sealed partial class Grid : Visual
     /// </summary>
     public Grid()
     {
-        HorizontalAlignment = HorizontalAlignment.Stretch;
-        VerticalAlignment = VerticalAlignment.Stretch;
+        HorizontalAlignment = Align.Stretch;
+        VerticalAlignment = Align.Stretch;
 
         _cells = new VisualList<GridCell>(this, "Cells");
         Cells = _cells;

@@ -32,8 +32,8 @@ public sealed partial class TreeView : Visual
     public TreeView()
     {
         Focusable = true;
-        HorizontalAlignment = HorizontalAlignment.Stretch;
-        VerticalAlignment = VerticalAlignment.Stretch;
+        HorizontalAlignment = Align.Stretch;
+        VerticalAlignment = Align.Stretch;
 
         _headers = new VisualList<Visual>(this, "TreeView.Headers");
         _roots = new BindableList<TreeNode>(

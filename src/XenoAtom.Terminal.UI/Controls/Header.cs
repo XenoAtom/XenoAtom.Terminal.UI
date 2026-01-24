@@ -20,7 +20,7 @@ public sealed partial class Header : Visual
     /// </summary>
     public Header()
     {
-        HorizontalAlignment = HorizontalAlignment.Stretch;
+        HorizontalAlignment = Align.Stretch;
     }
 
     /// <summary>

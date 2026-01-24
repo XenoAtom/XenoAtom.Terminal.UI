@@ -33,7 +33,7 @@ public sealed class LayoutProtocolNestedTests
                     new Rule(),
                     new TextBlock("Side text"))
                 .Spacing(1)
-                .HorizontalAlignment(HorizontalAlignment.Stretch));
+                .HorizontalAlignment(Align.Stretch));
 
         var root = new HStack(
             new Group { Content = viewer },

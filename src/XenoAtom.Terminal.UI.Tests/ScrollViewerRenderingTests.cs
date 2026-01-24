@@ -13,18 +13,18 @@ public sealed class ScrollViewerRenderingTests
     [TestMethod]
     public void ScrollViewer_Renders_Content_When_Inside_TabControl()
     {
-        var demoTab = new ScrollViewer(new VStack(new TextBlock("Hello from ScrollViewer")).Spacing(1).HorizontalAlignment(HorizontalAlignment.Stretch))
+        var demoTab = new ScrollViewer(new VStack(new TextBlock("Hello from ScrollViewer")).Spacing(1).HorizontalAlignment(Align.Stretch))
         {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch,
+            HorizontalAlignment = Align.Stretch,
+            VerticalAlignment = Align.Stretch,
         };
 
         var root = new TabControl(
             new TabPage("Demo", demoTab),
             new TabPage("Other", new TextBlock("Other")))
         {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch,
+            HorizontalAlignment = Align.Stretch,
+            VerticalAlignment = Align.Stretch,
         };
 
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(80, 20));
@@ -64,7 +64,7 @@ public sealed class ScrollViewerRenderingTests
             content.Add($"Item {i}");
         }
 
-        var root = new ScrollViewer(content) { HorizontalAlignment = HorizontalAlignment.Stretch };
+        var root = new ScrollViewer(content) { HorizontalAlignment = Align.Stretch };
 
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(20, 6));
         driver.Tick();
@@ -83,7 +83,7 @@ public sealed class ScrollViewerRenderingTests
     [TestMethod]
     public void ScrollViewer_Renders_Content_When_Set_After_Initial_Render()
     {
-        var root = new ScrollViewer((Visual?)null) { HorizontalAlignment = HorizontalAlignment.Stretch };
+        var root = new ScrollViewer((Visual?)null) { HorizontalAlignment = Align.Stretch };
 
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
         driver.Tick();
@@ -106,8 +106,8 @@ public sealed class ScrollViewerRenderingTests
 
         var root = new ScrollViewer(items)
         {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch,
+            HorizontalAlignment = Align.Stretch,
+            VerticalAlignment = Align.Stretch,
         };
 
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 10));

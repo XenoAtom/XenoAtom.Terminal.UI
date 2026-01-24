@@ -25,8 +25,8 @@ public sealed class VisualLayoutTests
     {
         var v = new FixedSizeVisual(new Size(4, 2))
         {
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = Align.Center,
+            VerticalAlignment = Align.Center,
         };
 
         v.Measure(new Size(100, 100));
@@ -40,8 +40,8 @@ public sealed class VisualLayoutTests
     {
         var v = new FixedSizeVisual(new Size(4, 2))
         {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch,
+            HorizontalAlignment = Align.Stretch,
+            VerticalAlignment = Align.Stretch,
         };
 
         v.Measure(new Size(100, 100));

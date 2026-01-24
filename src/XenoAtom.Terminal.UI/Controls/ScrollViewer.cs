@@ -63,8 +63,8 @@ public sealed partial class ScrollViewer : Visual
     public ScrollViewer(bool focusable)
     {
         Focusable = focusable;
-        VerticalAlignment = VerticalAlignment.Stretch;
-        HorizontalAlignment = HorizontalAlignment.Stretch;
+        VerticalAlignment = Align.Stretch;
+        HorizontalAlignment = Align.Stretch;
         this.HorizontalScrollEnabled(true);
         this.VerticalScrollEnabled(true);
 
@@ -72,8 +72,8 @@ public sealed partial class ScrollViewer : Visual
         // Internal scrollbars may receive their Thickness style during Arrange (when ScrollViewerStyle is bridged to
         // ScrollBarStyle). Stretch the cross axis so they still fill the allocated slot even if their desired size
         // was measured with a different thickness.
-        _verticalBar = new VScrollBar(focusable: false).HorizontalAlignment(HorizontalAlignment.Stretch);
-        _horizontalBar = new HScrollBar(focusable: false).VerticalAlignment(VerticalAlignment.Stretch);
+        _verticalBar = new VScrollBar(focusable: false).HorizontalAlignment(Align.Stretch);
+        _horizontalBar = new HScrollBar(focusable: false).VerticalAlignment(Align.Stretch);
         _corner = new ScrollCornerVisual(this);
 
         _verticalBar.ValueChanged(OnVerticalBarValueChanged);
@@ -316,8 +316,8 @@ public sealed partial class ScrollViewer : Visual
             min,
             natural,
             max,
-            growX: HorizontalAlignment == HorizontalAlignment.Stretch ? 1 : 0,
-            growY: VerticalAlignment == VerticalAlignment.Stretch ? 1 : 0,
+            growX: HorizontalAlignment == Align.Stretch ? 1 : 0,
+            growY: VerticalAlignment == Align.Stretch ? 1 : 0,
             shrinkX: 1,
             shrinkY: 1);
     }
@@ -750,8 +750,8 @@ public sealed partial class ScrollViewer : Visual
         public ContentViewportHost(ScrollViewer owner)
         {
             _owner = owner;
-            this.HorizontalAlignment(HorizontalAlignment.Stretch);
-            this.VerticalAlignment(VerticalAlignment.Stretch);
+            this.HorizontalAlignment(Align.Stretch);
+            this.VerticalAlignment(Align.Stretch);
         }
 
         public void SetContent(Visual? child)
@@ -811,8 +811,8 @@ public sealed partial class ScrollViewer : Visual
         public ScrollCornerVisual(ScrollViewer owner)
         {
             _owner = owner;
-            this.HorizontalAlignment(HorizontalAlignment.Stretch);
-            this.VerticalAlignment(VerticalAlignment.Stretch);
+            this.HorizontalAlignment(Align.Stretch);
+            this.VerticalAlignment(Align.Stretch);
         }
 
         protected override void RenderOverride(CellBuffer buffer)

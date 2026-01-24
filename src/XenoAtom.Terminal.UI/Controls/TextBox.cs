@@ -64,7 +64,7 @@ public partial class TextBox : TextEditorBase
     /// </summary>
     public TextBox()
     {
-        this.HorizontalAlignment(HorizontalAlignment.Stretch);
+        this.HorizontalAlignment(Align.Stretch);
         this.IsPassword(false);
         this.PasswordRevealMode(PasswordRevealMode.Never);
         this.ClipboardMode(TextBoxClipboardMode.CopyText);

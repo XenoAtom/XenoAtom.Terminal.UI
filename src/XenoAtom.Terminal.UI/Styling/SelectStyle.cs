@@ -18,7 +18,7 @@ public sealed record SelectStyle : IStyle<SelectStyle>
     /// </summary>
     public static SelectStyle Default { get; } = new()
     {
-        PopupTemplateFactory = visual => new Border(visual).HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch),
+        PopupTemplateFactory = visual => new Border(visual).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch),
     };
 
     /// <summary>

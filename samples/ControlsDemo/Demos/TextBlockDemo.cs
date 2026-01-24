@@ -34,7 +34,7 @@ public sealed class TextBlockDemo : ControlsDemoBase
                 new TextBlock("Styled foreground")
                     .Style(TextBlockStyle.Default with { Foreground = Colors.DeepSkyBlue, TextStyle = TextStyle.Bold }),
                 new TextBlock("Filled background (alpha)")
-                    .HorizontalAlignment(HorizontalAlignment.Stretch)
+                    .HorizontalAlignment(Align.Stretch)
                     .Style(TextBlockStyle.Default with { Background = Color.RgbA(255, 255, 255, 0x10), FillBackground = true }))
             .Spacing(1);
 

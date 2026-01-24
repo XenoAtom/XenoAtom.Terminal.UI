@@ -33,11 +33,11 @@ public sealed partial class TabControl : Visual
     public TabControl()
     {
         Focusable = true;
-        HorizontalAlignment = HorizontalAlignment.Stretch;
-        VerticalAlignment = VerticalAlignment.Stretch;
+        HorizontalAlignment = Align.Stretch;
+        VerticalAlignment = Align.Stretch;
 
-        _contentHost.HorizontalAlignment = HorizontalAlignment.Stretch;
-        _contentHost.VerticalAlignment = VerticalAlignment.Stretch;
+        _contentHost.HorizontalAlignment = Align.Stretch;
+        _contentHost.VerticalAlignment = Align.Stretch;
     }
 
     /// <summary>
@@ -491,8 +491,8 @@ public sealed partial class TabControl : Visual
             _contentRoot = template;
         }
 
-        _contentRoot.HorizontalAlignment = HorizontalAlignment.Stretch;
-        _contentRoot.VerticalAlignment = VerticalAlignment.Stretch;
+        _contentRoot.HorizontalAlignment = Align.Stretch;
+        _contentRoot.VerticalAlignment = Align.Stretch;
         AttachChild(_contentRoot);
     }
 

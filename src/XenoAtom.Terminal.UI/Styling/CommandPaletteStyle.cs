@@ -22,7 +22,7 @@ public sealed record CommandPaletteStyle : IStyle<CommandPaletteStyle>
             TopLeftText = "Command palette",
             Padding = new Thickness(1),
             Content = visual,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalAlignment = Align.Stretch,
         },
     };
 

@@ -22,8 +22,8 @@ public sealed partial class DockLayout : Visual
     /// </summary>
     public DockLayout()
     {
-        HorizontalAlignment = HorizontalAlignment.Stretch;
-        VerticalAlignment = VerticalAlignment.Stretch;
+        HorizontalAlignment = Align.Stretch;
+        VerticalAlignment = Align.Stretch;
     }
 
     /// <summary>

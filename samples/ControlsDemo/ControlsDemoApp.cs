@@ -72,7 +72,7 @@ internal static class ControlsDemoApp
             return demo is null
                 ? new Center().Content("No demos found.")
                 : DemoPage.Build(demo, new DemoContext { NavigateToDemoId = NavigateToId, Log = _ => { }, Runtime = runtime, Theme = theme });
-        }).Pad(1).HorizontalAlignment(HorizontalAlignment.Stretch).VerticalAlignment(VerticalAlignment.Stretch);
+        }).Pad(1).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
 
 
         var root = new DockLayout()
@@ -97,7 +97,7 @@ internal static class ControlsDemoApp
 
         var list = new OptionList<OptionListItem>()
             .ActivateOnClick(true)
-            .VerticalAlignment(VerticalAlignment.Stretch);
+            .VerticalAlignment(Align.Stretch);
 
         // Make category headers stand out by giving disabled rows a stronger style.
         // (Category headers are represented as disabled items so they cannot be selected.)

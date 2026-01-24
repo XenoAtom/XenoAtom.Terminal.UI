@@ -18,10 +18,10 @@ public sealed class ProgressBarDemo : ControlsDemoBase
         Visual Row(string label, ProgressBarStyle style)
             => new HStack(
                     label,
-                    new ProgressBar().Value(progress).HorizontalAlignment(HorizontalAlignment.Stretch).Style(style),
+                    new ProgressBar().Value(progress).HorizontalAlignment(Align.Stretch).Style(style),
                     new TextBlock(() => $"{(int)(progress.Value * 100),3}%"))
                 .Spacing(1)
-                .HorizontalAlignment(HorizontalAlignment.Stretch);
+                .HorizontalAlignment(Align.Stretch);
 
         return new VStack(
                 DemoUi.Hint("ProgressBar is bindable; any value update triggers a render."),

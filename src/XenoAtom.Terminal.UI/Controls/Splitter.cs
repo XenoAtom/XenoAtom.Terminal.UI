@@ -28,8 +28,8 @@ public abstract partial class Splitter : Visual
     protected Splitter()
     {
         Focusable = true;
-        this.HorizontalAlignment(HorizontalAlignment.Stretch);
-        this.VerticalAlignment(VerticalAlignment.Stretch);
+        this.HorizontalAlignment(Align.Stretch);
+        this.VerticalAlignment(Align.Stretch);
         _ratio = 0.5;
         _barSize = 1;
     }
@@ -177,8 +177,8 @@ public abstract partial class Splitter : Visual
                 Min = new Size(0, 0),
                 Natural = natural,
                 Max = natural,
-                FlexGrowX = HorizontalAlignment == HorizontalAlignment.Stretch ? 1 : 0,
-                FlexGrowY = VerticalAlignment == VerticalAlignment.Stretch ? 1 : 0,
+                FlexGrowX = HorizontalAlignment == Align.Stretch ? 1 : 0,
+                FlexGrowY = VerticalAlignment == Align.Stretch ? 1 : 0,
                 FlexShrinkX = 1,
                 FlexShrinkY = 1,
             }.Normalize();
@@ -207,8 +207,8 @@ public abstract partial class Splitter : Visual
                 Min = new Size(0, 0),
                 Natural = natural,
                 Max = natural,
-                FlexGrowX = HorizontalAlignment == HorizontalAlignment.Stretch ? 1 : 0,
-                FlexGrowY = VerticalAlignment == VerticalAlignment.Stretch ? 1 : 0,
+                FlexGrowX = HorizontalAlignment == Align.Stretch ? 1 : 0,
+                FlexGrowY = VerticalAlignment == Align.Stretch ? 1 : 0,
                 FlexShrinkX = 1,
                 FlexShrinkY = 1,
             }.Normalize();

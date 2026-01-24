@@ -49,7 +49,7 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
     /// </summary>
     public NumberBox()
     {
-        this.HorizontalAlignment(HorizontalAlignment.Stretch);
+        this.HorizontalAlignment(Align.Stretch);
         _validationHost = new ValidationMessageHost();
         _validationText = new TextBlock();
         AttachChild(_validationHost);

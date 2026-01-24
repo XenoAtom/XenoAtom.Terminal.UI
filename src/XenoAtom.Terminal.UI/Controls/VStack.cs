@@ -17,7 +17,7 @@ public sealed partial class VStack : Panel
     /// </summary>
     public VStack()
     {
-        VerticalAlignment = VerticalAlignment.Top;
+        VerticalAlignment = Align.Start;
     }
 
     /// <summary>
@@ -26,7 +26,7 @@ public sealed partial class VStack : Panel
     /// <param name="children">The child visuals.</param>
     public VStack(params Visual[] children)
     {
-        VerticalAlignment = VerticalAlignment.Top;
+        VerticalAlignment = Align.Start;
         AddRange(children);
     }
 

@@ -33,7 +33,7 @@ public sealed class TextFigletDemo : ControlsDemoBase
                         new TextBlock(() => $"{spacing.Value}"),
                         new Select<FigletFont>().Items(fonts).SelectedIndex(selectedFontIndex)
                         )
-                    .Spacing(1).VerticalAlignment(VerticalAlignment.Top),
+                    .Spacing(1).VerticalAlignment(Align.Start),
                 new Border(
                     new TextFiglet()
                         .Text(text)

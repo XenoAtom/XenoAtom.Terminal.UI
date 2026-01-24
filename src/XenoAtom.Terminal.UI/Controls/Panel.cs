@@ -20,8 +20,8 @@ public abstract partial class Panel : Visual, IEnumerable<Visual>
     /// </summary>
     protected Panel()
     {
-        this.HorizontalAlignment = HorizontalAlignment.Stretch;
-        this.VerticalAlignment = VerticalAlignment.Stretch;
+        this.HorizontalAlignment = Align.Stretch;
+        this.VerticalAlignment = Align.Stretch;
         _children = new VisualList<Visual>(this, "Children");
     }
 

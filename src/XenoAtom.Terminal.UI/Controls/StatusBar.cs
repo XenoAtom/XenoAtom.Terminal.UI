@@ -20,7 +20,7 @@ public sealed partial class StatusBar : Visual
     /// </summary>
     public StatusBar()
     {
-        HorizontalAlignment = HorizontalAlignment.Stretch;
+        HorizontalAlignment = Align.Stretch;
     }
 
     /// <summary>

@@ -44,8 +44,8 @@ public sealed partial class ColorPicker : Visual
     public ColorPicker()
     {
         Focusable = false;
-        HorizontalAlignment = HorizontalAlignment.Stretch;
-        VerticalAlignment = VerticalAlignment.Top;
+        HorizontalAlignment = Align.Stretch;
+        VerticalAlignment = Align.Start;
 
         _swatch = new SwatchVisual(this);
 
@@ -92,12 +92,12 @@ public sealed partial class ColorPicker : Visual
                         new VStack("Hex", _hexValidation).Spacing(1)
                     )
                     .Spacing(1)
-                    .HorizontalAlignment(HorizontalAlignment.Stretch)
+                    .HorizontalAlignment(Align.Stretch)
             )
             .Spacing(2)
-            .HorizontalAlignment(HorizontalAlignment.Stretch);
+            .HorizontalAlignment(Align.Stretch);
 
-        _root = new VStack(top, _paletteHost).Spacing(1).HorizontalAlignment(HorizontalAlignment.Stretch);
+        _root = new VStack(top, _paletteHost).Spacing(1).HorizontalAlignment(Align.Stretch);
         AttachChild(_root);
 
         this.AllowAlpha(true);
@@ -192,7 +192,7 @@ public sealed partial class ColorPicker : Visual
             .Step(1)
             .LargeStep(16)
             .ShowValueLabel(true)
-            .HorizontalAlignment(HorizontalAlignment.Stretch);
+            .HorizontalAlignment(Align.Stretch);
 
     private void UpdateControlsFromValue()
     {
@@ -482,8 +482,8 @@ public sealed partial class ColorPicker : Visual
             _owner = owner;
             _color = color;
             Focusable = false;
-            HorizontalAlignment = HorizontalAlignment.Left;
-            VerticalAlignment = VerticalAlignment.Top;
+            HorizontalAlignment = Align.Start;
+            VerticalAlignment = Align.Start;
         }
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints)
@@ -551,8 +551,8 @@ public sealed partial class ColorPicker : Visual
         {
             _owner = owner;
             Focusable = false;
-            HorizontalAlignment = HorizontalAlignment.Left;
-            VerticalAlignment = VerticalAlignment.Top;
+            HorizontalAlignment = Align.Start;
+            VerticalAlignment = Align.Start;
         }
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints)

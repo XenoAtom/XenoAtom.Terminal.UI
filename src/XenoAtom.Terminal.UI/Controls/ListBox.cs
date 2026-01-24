@@ -49,8 +49,8 @@ public sealed partial class ListBox<T> : Visual
                 _recyclePool.Add(v);
             });
         Focusable = true;
-        HorizontalAlignment = HorizontalAlignment.Stretch;
-        VerticalAlignment = VerticalAlignment.Stretch;
+        HorizontalAlignment = Align.Stretch;
+        VerticalAlignment = Align.Stretch;
     }
 
     /// <summary>

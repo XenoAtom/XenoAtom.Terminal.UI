@@ -32,11 +32,11 @@ public sealed partial class CommandPalette : Visual
 
         _searchBox = new TextBox()
             .Placeholder("Type to search…")
-            .HorizontalAlignment(HorizontalAlignment.Stretch);
+            .HorizontalAlignment(Align.Stretch);
 
         _results = new OptionList<CommandPaletteItem>()
             .ActivateOnClick(true)
-            .HorizontalAlignment(HorizontalAlignment.Stretch);
+            .HorizontalAlignment(Align.Stretch);
         _results.MinHeight = _resultsHeight;
         _results.MaxHeight = _resultsHeight;
 
@@ -55,7 +55,7 @@ public sealed partial class CommandPalette : Visual
 
         _content = new VStack(_searchBox, _results)
             .Spacing(1)
-            .HorizontalAlignment(HorizontalAlignment.Stretch);
+            .HorizontalAlignment(Align.Stretch);
 
         AttachChild(_content);
 
