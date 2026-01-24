@@ -6,6 +6,7 @@ The project is in a pre-release state. Remove this line when the project reaches
 
 - In the `readme.md` file, you will find general information about the XenoAtom.Terminal.UI project.
 - In the `doc/readme.md` file you will find the user guide documentation for the XenoAtom.Terminal.UI library.
+- For control/framework implementation guidelines, you must follow `doc/control-development.md`.
 
 ## Project Structure
 
