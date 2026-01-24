@@ -24,6 +24,7 @@ public sealed partial class Markup : Visual
     private readonly MarkupTextParser _parser;
 
     private string? _cachedMarkup;
+    private Dictionary<string, AnsiStyle>? _cachedMarkupStyles;
     private string _plainText = string.Empty;
     private StyledRun[] _runs = Array.Empty<StyledRun>();
 
@@ -281,13 +282,15 @@ public sealed partial class Markup : Visual
     private void EnsureParsed()
     {
         var text = Text ?? string.Empty;
-        if (ReferenceEquals(_cachedMarkup, text))
+        var styles = GetTheme().GetMarkupStyles();
+        if (ReferenceEquals(_cachedMarkup, text) && ReferenceEquals(_cachedMarkupStyles, styles))
         {
             return;
         }
 
         _cachedMarkup = text;
-        _plainText = _parser.Parse(text, out _runs);
+        _cachedMarkupStyles = styles;
+        _plainText = _parser.Parse(text, out _runs, styles);
     }
 
     private void WriteStyledSpan(CellBuffer buffer, int x, int y, int startIndex, int endIndex)

@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Ansi;
+using System.Threading;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
@@ -57,6 +58,8 @@ public enum ThemeAccentColor
 /// </remarks>
 public sealed class Theme : IStyle<Theme>
 {
+    private Dictionary<string, AnsiStyle>? _markupStyles;
+
     /// <summary>
     /// Gets the default theme (Root Loops dark).
     /// </summary>
@@ -490,6 +493,55 @@ public sealed class Theme : IStyle<Theme>
         }
         style |= TextStyle.Bold;
         return style;
+    }
+
+    /// <summary>
+    /// Gets a dictionary of ANSI markup style tokens derived from this theme.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The returned dictionary can be used with <see cref="AnsiMarkup"/> (or <see cref="XenoAtom.Terminal.TerminalInstance.MarkupStyles"/>)
+    /// to support semantic tokens such as <c>[primary]</c>, <c>[success]</c>, <c>[warning]</c>, and <c>[error]</c>.
+    /// </para>
+    /// <para>
+    /// The dictionary is created lazily and cached per theme instance.
+    /// </para>
+    /// </remarks>
+    public Dictionary<string, AnsiStyle> GetMarkupStyles()
+    {
+        if (_markupStyles is not null)
+        {
+            return _markupStyles;
+        }
+
+        var created = CreateMarkupStyles();
+        Interlocked.CompareExchange(ref _markupStyles, created, null);
+        return _markupStyles;
+    }
+
+    private Dictionary<string, AnsiStyle> CreateMarkupStyles()
+    {
+        static AnsiStyle ForegroundStyle(Color color) => new() { Foreground = (AnsiColor)color };
+
+        var foreground = Foreground ?? Color.Default;
+        var primary = Primary ?? Accent ?? foreground;
+        var success = Success ?? primary;
+        var warning = Warning ?? primary;
+        var error = Error ?? primary;
+        var accent = Accent ?? primary;
+        var muted = Muted ?? foreground;
+        var disabled = Disabled ?? muted;
+
+        return new Dictionary<string, AnsiStyle>(StringComparer.Ordinal)
+        {
+            ["primary"] = ForegroundStyle(primary),
+            ["success"] = ForegroundStyle(success),
+            ["warning"] = ForegroundStyle(warning),
+            ["error"] = ForegroundStyle(error),
+            ["accent"] = ForegroundStyle(accent),
+            ["muted"] = ForegroundStyle(muted),
+            ["disabled"] = ForegroundStyle(disabled),
+        };
     }
 
     private static bool DetectLightScheme(ColorScheme scheme)

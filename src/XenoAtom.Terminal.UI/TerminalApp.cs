@@ -49,6 +49,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private readonly AnsiBuilder _updateOutputBuilder = new(initialCapacity: 4096);
     private global::XenoAtom.Terminal.UI.Input.TerminalKeyGesture _exitGesture;
     private bool _inlineRemoveOnEnd;
+    private Dictionary<string, AnsiStyle>? _previousMarkupStyles;
 
     private Visual? _visualBeingDynamicallyInitialized;
 
@@ -448,6 +449,11 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         Dispatcher.BindToCurrentThread(this);
         started?.Set();
 
+        // Ensure semantic markup tokens (e.g. [primary]) are available for Terminal.WriteMarkupLine during this run.
+        // Restore in EndRunCore to avoid leaking theme state to other terminal usages.
+        _previousMarkupStyles = _terminal.MarkupStyles;
+        _terminal.MarkupStyles = Root.GetTheme().GetMarkupStyles();
+
         Root.AttachToApp(this);
         BindingManager.Current.ValueChanged += OnValueChanged;
         _updateContext = new TerminalRunningContext(this, _terminal, _options.HostKind);
@@ -489,6 +495,9 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     {
         try
         {
+            _terminal.MarkupStyles = _previousMarkupStyles;
+            _previousMarkupStyles = null;
+
             _pasteScope.Dispose();
             _mouseScope.Dispose();
             _cursorScope.Dispose();

@@ -585,7 +585,7 @@ public sealed partial class LogControl : Visual
         if (isMarkup)
         {
             var markup = text.ToString();
-            var parsed = _markupParser.Parse(markup, out var runs);
+            var parsed = _markupParser.Parse(markup, out var runs, GetTheme().GetMarkupStyles());
             AppendParsedTextAsLines(parsed, runs);
         }
         else

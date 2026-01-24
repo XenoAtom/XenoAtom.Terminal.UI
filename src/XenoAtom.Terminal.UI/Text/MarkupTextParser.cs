@@ -34,7 +34,8 @@ public readonly record struct StyledRun(int Start, int Length, Style Style);
 public sealed class MarkupTextParser
 {
     private readonly MarkupCaptureWriter _writer;
-    private readonly AnsiMarkup _markup;
+    private AnsiMarkup _markup;
+    private Dictionary<string, AnsiStyle>? _styles;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MarkupTextParser"/> class.
@@ -43,6 +44,7 @@ public sealed class MarkupTextParser
     {
         _writer = new MarkupCaptureWriter();
         _markup = new AnsiMarkup(_writer);
+        _styles = null;
     }
 
     /// <summary>
@@ -53,6 +55,24 @@ public sealed class MarkupTextParser
     /// <returns>The plain text produced by stripping markup from the input.</returns>
     public string Parse(string? markup, out StyledRun[] runs)
     {
+        return Parse(markup, out runs, customStyles: null);
+    }
+
+    /// <summary>
+    /// Parses the specified markup text into plain text and style runs using the provided custom style tokens.
+    /// </summary>
+    /// <param name="markup">The markup input. If <see langword="null"/>, it is treated as an empty string.</param>
+    /// <param name="runs">Receives the style runs describing spans in the returned plain text.</param>
+    /// <param name="customStyles">An optional map of custom style tags (e.g. <c>primary</c>) to ANSI styles.</param>
+    /// <returns>The plain text produced by stripping markup from the input.</returns>
+    public string Parse(string? markup, out StyledRun[] runs, Dictionary<string, AnsiStyle>? customStyles)
+    {
+        if (!ReferenceEquals(_styles, customStyles))
+        {
+            _styles = customStyles;
+            _markup = customStyles is null ? new AnsiMarkup(_writer) : new AnsiMarkup(_writer, customStyles);
+        }
+
         _writer.Reset();
         _markup.Write(markup ?? string.Empty);
         return _writer.GetTextAndRuns(out runs);
