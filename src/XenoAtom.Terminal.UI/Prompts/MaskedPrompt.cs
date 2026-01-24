@@ -48,6 +48,7 @@ public sealed class MaskedPrompt : TerminalPrompt<string>
 
     internal override PromptSession<string> CreateSession()
     {
+        var validator = Validator.Invoke;
         var input = new MaskedInput(Template);
         if (!string.IsNullOrEmpty(DefaultValue))
         {
@@ -55,14 +56,14 @@ public sealed class MaskedPrompt : TerminalPrompt<string>
         }
 
         Visual editor = input;
-        if (Validator is { } validator)
+        if (validator is { } validate)
         {
             editor = new ValidationPresenter()
                 .Content(input)
                 .Message(() =>
                 {
                     var value = UseCompactValue ? input.CompactValue : (input.Value ?? string.Empty);
-                    var message = validator(value);
+                    var message = validate(value);
                     return string.IsNullOrEmpty(message)
                         ? null
                         : new ValidationMessage(ValidationSeverity.Error, message);
@@ -72,7 +73,7 @@ public sealed class MaskedPrompt : TerminalPrompt<string>
         var content = BuildPromptLayout(editor);
         var session = new PromptSession<string>(
             tryGetValue: () => (true, UseCompactValue ? input.CompactValue : (input.Value ?? string.Empty)),
-            validator: Validator,
+            validator: validator,
             keepOnSuccess: KeepOnSuccess);
 
         var host = new PromptHost(content, session.TryConfirm, session.Cancel);

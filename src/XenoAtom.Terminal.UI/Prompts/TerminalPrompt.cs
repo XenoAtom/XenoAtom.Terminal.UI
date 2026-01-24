@@ -76,7 +76,7 @@ public abstract class TerminalPrompt<T> : TerminalPrompt
     /// The validator returns <see langword="null"/> when the value is valid; otherwise it returns an error message.
     /// </remarks>
     [Fluent("Validate")]
-    public Func<T, string?>? Validator { get; set; }
+    public Delegator<Func<T, string?>> Validator { get; set; }
 
     internal abstract PromptSession<T> CreateSession();
 }

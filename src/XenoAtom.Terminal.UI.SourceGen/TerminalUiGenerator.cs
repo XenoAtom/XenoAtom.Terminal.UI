@@ -108,6 +108,45 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             isEnabledByDefault: true);
     }
 
+    private static (bool IsDelegatorProperty, string? DelegatorDelegateTypeFullyQualified) TryGetDelegatorDelegateType(
+        Compilation compilation,
+        ITypeSymbol propertyType,
+        SymbolDisplayFormat format)
+    {
+        var delegatorType = compilation.GetTypeByMetadataName("XenoAtom.Terminal.UI.Delegator`1");
+        if (delegatorType is null)
+        {
+            return (false, null);
+        }
+
+        if (propertyType is not INamedTypeSymbol namedType)
+        {
+            return (false, null);
+        }
+
+        if (!SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, delegatorType))
+        {
+            return (false, null);
+        }
+
+        if (namedType.TypeArguments.Length != 1)
+        {
+            return (false, null);
+        }
+
+        var delegateType = namedType.TypeArguments[0];
+        var delegateTypeFullyQualified = delegateType.ToDisplayString(format);
+
+        // A Delegator<TDelegate> can always be empty, so the fluent API should allow passing null to clear it.
+        if (delegateType.IsReferenceType && delegateType.NullableAnnotation != NullableAnnotation.Annotated &&
+            !delegateTypeFullyQualified.EndsWith("?", StringComparison.Ordinal))
+        {
+            delegateTypeFullyQualified += "?";
+        }
+
+        return (true, delegateTypeFullyQualified);
+    }
+
     private sealed record BindablePropertyInfo(
         INamedTypeSymbol ContainingType,
         string Namespace,
@@ -295,45 +334,6 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             }
 
             return (false, null);
-        }
-
-        private static (bool IsDelegatorProperty, string? DelegatorDelegateTypeFullyQualified) TryGetDelegatorDelegateType(
-            Compilation compilation,
-            ITypeSymbol propertyType,
-            SymbolDisplayFormat format)
-        {
-            var delegatorType = compilation.GetTypeByMetadataName("XenoAtom.Terminal.UI.Delegator`1");
-            if (delegatorType is null)
-            {
-                return (false, null);
-            }
-
-            if (propertyType is not INamedTypeSymbol namedType)
-            {
-                return (false, null);
-            }
-
-            if (!SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, delegatorType))
-            {
-                return (false, null);
-            }
-
-            if (namedType.TypeArguments.Length != 1)
-            {
-                return (false, null);
-            }
-
-            var delegateType = namedType.TypeArguments[0];
-            var delegateTypeFullyQualified = delegateType.ToDisplayString(format);
-
-            // A Delegator<TDelegate> can always be empty, so the fluent API should allow passing null to clear it.
-            if (delegateType.IsReferenceType && delegateType.NullableAnnotation != NullableAnnotation.Annotated &&
-                !delegateTypeFullyQualified.EndsWith("?", StringComparison.Ordinal))
-            {
-                delegateTypeFullyQualified += "?";
-            }
-
-            return (true, delegateTypeFullyQualified);
         }
 
         private static string ComputeAccessorModifier(IPropertySymbol property, IMethodSymbol? accessor)
@@ -954,10 +954,26 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 {
                     sb.Append('_');
                 }
-                sb.Append(containingTypes[i].Name);
+                AppendExtensionTypeName(sb, containingTypes[i]);
             }
             sb.Append("Extensions");
             return sb.ToString();
+        }
+
+        private static void AppendExtensionTypeName(StringBuilder sb, INamedTypeSymbol type)
+        {
+            sb.Append(type.Name);
+            if (type.TypeParameters.Length == 0)
+            {
+                return;
+            }
+
+            sb.Append('_');
+            for (var i = 0; i < type.TypeParameters.Length; i++)
+            {
+                if (i > 0) sb.Append('_');
+                sb.Append(type.TypeParameters[i].Name);
+            }
         }
 
         private static string EscapeIdentifier(string name)
@@ -1401,8 +1417,9 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
         string Namespace,
         string PropertyName,
         string MethodName,
-        string PropertyTypeFullyQualified,
-        bool IsDelegateProperty)
+        string MethodArgumentTypeFullyQualified,
+        bool IsDelegateProperty,
+        bool IsDelegatorProperty)
     {
         public static FluentPropertyResult TryCreate(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
         {
@@ -1446,17 +1463,25 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 }
             }
 
-            var isDelegateProperty = propertySymbol.Type.TypeKind == TypeKind.Delegate;
+            var format = SymbolDisplayFormat.FullyQualifiedFormat.WithMiscellaneousOptions(
+                SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
+
+            var compilation = context.SemanticModel.Compilation;
+            var (isDelegatorProperty, delegatorDelegateTypeFullyQualified) =
+                TryGetDelegatorDelegateType(compilation, propertySymbol.Type, format);
+
+            var isRawDelegateProperty = propertySymbol.Type.TypeKind == TypeKind.Delegate;
+            var isDelegateProperty = isRawDelegateProperty || isDelegatorProperty;
 
             var propertyName = propertySymbol.Name;
             string resolvedMethodName = configuredMethodName ?? string.Empty;
             if (string.IsNullOrWhiteSpace(resolvedMethodName))
             {
-                resolvedMethodName = isDelegateProperty ? $"With{propertyName}" : propertyName;
+                // Raw delegate properties are invocable (obj.Prop(...)), which prevents fluent extension methods
+                // of the same name from being used. For those we prefix with "With" by default.
+                // Delegator<TDelegate> properties are not invocable, so we can keep the property name.
+                resolvedMethodName = isRawDelegateProperty ? $"With{propertyName}" : propertyName;
             }
-
-            var format = SymbolDisplayFormat.FullyQualifiedFormat.WithMiscellaneousOptions(
-                SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
 
             var ns = containingType.ContainingNamespace?.ToDisplayString() ?? string.Empty;
 
@@ -1465,8 +1490,9 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 Namespace: ns,
                 PropertyName: propertyName,
                 MethodName: resolvedMethodName,
-                PropertyTypeFullyQualified: propertySymbol.Type.ToDisplayString(format),
-                IsDelegateProperty: isDelegateProperty);
+                MethodArgumentTypeFullyQualified: isDelegatorProperty ? delegatorDelegateTypeFullyQualified! : propertySymbol.Type.ToDisplayString(format),
+                IsDelegateProperty: isDelegateProperty,
+                IsDelegatorProperty: isDelegatorProperty);
 
             return new FluentPropertyResult(info, diagnostics.ToImmutable());
         }
@@ -1558,7 +1584,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 var propName = p.PropertyName;
                 var methodName = p.MethodName;
                 var argName = ToLowerCamel(methodName);
-                var argType = p.PropertyTypeFullyQualified;
+                var argType = p.MethodArgumentTypeFullyQualified;
 
                 sb.Append(methodIndent).AppendLine("/// <summary>");
                 sb.Append(methodIndent).Append("/// Sets <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> and returns the same instance.");
@@ -1633,12 +1659,29 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
 
         private static string GetExtensionClassName(INamedTypeSymbol type)
         {
-            var containingName = type.Name;
-            if (type.ContainingType is { } containingType)
+            var containingTypes = BindableEmitter.GetContainingTypes(type);
+            var sb = new StringBuilder();
+            for (var i = 0; i < containingTypes.Count; i++)
             {
-                containingName = containingType.Name + "_" + containingName;
+                if (i > 0)
+                {
+                    sb.Append('_');
+                }
+                sb.Append(containingTypes[i].Name);
+                if (containingTypes[i].TypeParameters.Length == 0)
+                {
+                    continue;
+                }
+
+                sb.Append('_');
+                for (var j = 0; j < containingTypes[i].TypeParameters.Length; j++)
+                {
+                    if (j > 0) sb.Append('_');
+                    sb.Append(containingTypes[i].TypeParameters[j].Name);
+                }
             }
-            return containingName + "Extensions";
+            sb.Append("Extensions");
+            return sb.ToString();
         }
 
         private static string EscapeIdentifier(string identifier)
@@ -2096,6 +2139,17 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     sb.Append('_');
                 }
                 sb.Append(containingTypes[i].Name);
+                if (containingTypes[i].TypeParameters.Length == 0)
+                {
+                    continue;
+                }
+
+                sb.Append('_');
+                for (var j = 0; j < containingTypes[i].TypeParameters.Length; j++)
+                {
+                    if (j > 0) sb.Append('_');
+                    sb.Append(containingTypes[i].TypeParameters[j].Name);
+                }
             }
             sb.Append("Extensions");
             return sb.ToString();

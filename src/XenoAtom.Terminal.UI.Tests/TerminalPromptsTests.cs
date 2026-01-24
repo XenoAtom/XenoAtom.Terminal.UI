@@ -57,8 +57,8 @@ public sealed class TerminalPromptsTests
         var prompt = new NumberPrompt<int>("Port:")
         {
             InvalidNumberMessage = "Invalid port",
-            Validator = v => v is >= 1 and <= 65535 ? null : "Port must be in [1..65535]",
         };
+        prompt.Validate((int v) => v is >= 1 and <= 65535 ? null : "Port must be in [1..65535]");
 
         var session = prompt.CreateSession();
 
@@ -75,4 +75,3 @@ public sealed class TerminalPromptsTests
         Assert.AreEqual(42, session.Result);
     }
 }
-

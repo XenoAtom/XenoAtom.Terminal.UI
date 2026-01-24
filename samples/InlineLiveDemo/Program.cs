@@ -3,6 +3,7 @@ using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Figlet;
+using XenoAtom.Terminal.UI.Prompts;
 using XenoAtom.Terminal.UI.Styling;
 
 try
@@ -45,9 +46,9 @@ try
     Terminal.WriteLine();
     var name = Terminal.Ask("What’s your name?", prompt =>
     {
-        prompt.DefaultValue = Environment.UserName ?? "Ada";
-        prompt.Placeholder = prompt.DefaultValue;
-        prompt.Help = "Press Enter to accept the default.";
+        prompt.Default(Environment.UserName ?? "Ada")
+            .Placeholder(prompt.DefaultValue)
+            .Help("Press Enter to accept the default.");
     });
 
     Terminal.WriteLine();
@@ -112,17 +113,17 @@ try
             .Style(TableStyle.RoundedGrid with { ShowRowSeparators = true })
             .Headers("Component", "Status", "Notes")
             .AddRow("🧠 Runtime", new Markup("[primary]✅ Ready[/]"), new Markup("[dim].NET 10 + UTF-8[/]"))
-            .AddRow("🖱️  Input", new Markup("[success]✅ Mouse[/]"), new Markup("[dim]Hover, wheel, drag[/]"))
-            .AddRow("⌨️  Keys", new Markup("[success]✅ Hotkeys[/]"), new Markup("[dim]Ctrl+… gestures[/]"))
+            .AddRow("🖱️ Input", new Markup("[success]✅ Mouse[/]"), new Markup("[dim]Hover, wheel, drag[/]"))
+            .AddRow("⌨️ Keys", new Markup("[success]✅ Hotkeys[/]"), new Markup("[dim]Ctrl+… gestures[/]"))
             .AddRow("🎨 Rendering", new Markup("[warning]⚠️ Diff engine[/]"), new Markup("[dim]More optimizations planned[/]"))
             .AddRow("🧪 Tests", new Markup("[success]✅ Passing[/]"), new Markup("[dim]Unit tests in Release[/]")));
 
     Terminal.WriteLine();
     var port = Terminal.AskNumber<int>("Pick a port number:", prompt =>
     {
-        prompt.DefaultValue = 8080;
-        prompt.Validator = value => value is >= 1 and <= 65535 ? null : "Port must be in [1..65535].";
-        prompt.Help = "Use Up/Down to adjust the value.";
+        prompt.Default(8080)
+            .Validate((int value) => value is >= 1 and <= 65535 ? null : "Port must be in [1..65535].")
+            .Help = "Use Up/Down to adjust the value.";
     });
 
     Terminal.WriteLine();

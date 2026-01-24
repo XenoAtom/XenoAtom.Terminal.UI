@@ -55,6 +55,7 @@ public sealed class SelectionPrompt<T> : TerminalPrompt<T>
             throw new InvalidOperationException("SelectionPrompt requires at least one item.");
         }
 
+        var validator = Validator.Invoke;
         var select = new Select<T>()
             .Items(Items)
             .ItemTemplate(ItemTemplate);
@@ -68,7 +69,7 @@ public sealed class SelectionPrompt<T> : TerminalPrompt<T>
                 var index = Math.Clamp(select.SelectedIndex, 0, Math.Max(0, select.Items.Count - 1));
                 return select.Items.Count == 0 ? (false, default!) : (true, select.Items[index]);
             },
-            validator: Validator,
+            validator: validator,
             keepOnSuccess: KeepOnSuccess);
 
         var host = new PromptHost(content, session.TryConfirm, session.Cancel);

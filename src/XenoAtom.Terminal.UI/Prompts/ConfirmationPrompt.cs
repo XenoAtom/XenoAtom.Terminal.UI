@@ -45,9 +45,10 @@ public sealed class ConfirmationPrompt : TerminalPrompt<bool>
         var toggle = new Switch(Label) { IsOn = DefaultValue };
 
         var content = BuildPromptLayout(toggle);
+        var validator = Validator.Invoke;
         var session = new PromptSession<bool>(
             tryGetValue: () => (true, toggle.IsOn),
-            validator: Validator,
+            validator: validator,
             keepOnSuccess: KeepOnSuccess);
 
         var host = new PromptHost(content, session.TryConfirm, session.Cancel);

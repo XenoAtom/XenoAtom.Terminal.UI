@@ -57,6 +57,7 @@ public sealed class NumberPrompt<T> : TerminalPrompt<T> where T : struct, INumbe
 
     internal override PromptSession<T> CreateSession()
     {
+        var validator = Validator.Invoke;
         var numberBox = new NumberBox<T>(DefaultValue)
         {
             ShowValidationMessage = true,
@@ -69,16 +70,16 @@ public sealed class NumberPrompt<T> : TerminalPrompt<T> where T : struct, INumbe
             numberBox.InvalidNumberMessage = InvalidNumberMessage;
         }
 
-        if (Validator is { } validator)
+        if (validator is { } validate)
         {
-            numberBox.ValueValidator = validator;
+            numberBox.ValueValidator = validate;
         }
 
         var content = BuildPromptLayout(numberBox);
 
         var session = new PromptSession<T>(
             tryGetValue: () => TryParseCurrentText(numberBox),
-            validator: Validator,
+            validator: validator,
             keepOnSuccess: KeepOnSuccess);
 
         var host = new PromptHost(content, session.TryConfirm, session.Cancel);

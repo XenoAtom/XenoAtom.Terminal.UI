@@ -50,6 +50,7 @@ public sealed class MultiSelectionPrompt<T> : TerminalPrompt<IReadOnlyList<T>>
 
     internal override PromptSession<IReadOnlyList<T>> CreateSession()
     {
+        var validator = Validator.Invoke;
         var list = new SelectionList<T>()
             .Items(Items)
             .ItemTemplate(ItemTemplate);
@@ -70,14 +71,14 @@ public sealed class MultiSelectionPrompt<T> : TerminalPrompt<IReadOnlyList<T>>
         }
 
         Visual editor = list;
-        if (Validator is { } validator)
+        if (validator is { } validate)
         {
             editor = new ValidationPresenter()
                 .Content(list)
                 .Message(() =>
                 {
                     var selected = BuildSelectionSnapshot(list);
-                    var message = validator(selected);
+                    var message = validate(selected);
                     return string.IsNullOrEmpty(message)
                         ? null
                         : new ValidationMessage(ValidationSeverity.Error, message);
@@ -87,7 +88,7 @@ public sealed class MultiSelectionPrompt<T> : TerminalPrompt<IReadOnlyList<T>>
         var content = BuildPromptLayout(editor);
         var session = new PromptSession<IReadOnlyList<T>>(
             tryGetValue: () => (true, BuildSelectionSnapshot(list)),
-            validator: Validator,
+            validator: validator,
             keepOnSuccess: KeepOnSuccess);
 
         var host = new PromptHost(content, session.TryConfirm, session.Cancel);
