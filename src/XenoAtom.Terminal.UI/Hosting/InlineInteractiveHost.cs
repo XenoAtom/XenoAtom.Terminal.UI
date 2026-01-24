@@ -55,17 +55,15 @@ public sealed class InlineInteractiveHost : IDisposable
 
     internal void HandleResize()
     {
-        // Some terminals invalidate the saved/restore cursor state on resize. If we keep relying on restore,
-        // subsequent inline renders can end up writing to an incorrect location (appearing as if the region
-        // didn't resize/re-render). Force the next render to fully repaint and re-anchor via absolute cursor moves.
-        _hasSavedCursorPosition = false;
+        // A resize can cause terminal emulators to reflow the previously rendered lines, which means the live region
+        // from the last frame might be wrapped and pushed below the expected area. We keep the saved cursor position
+        // (so we can still navigate relative to the region), but we invalidate all cached diff state so the next frame
+        // will repaint fully.
         _lastScalars = null;
         _lastCells = null;
         _lastHyperlinks = null;
         _lastHyperlinkTable = null;
         _lastTextElementTable = null;
-        _lastWidth = 0;
-        _lastHeight = 0;
     }
 
     internal void PrepareForUserUpdate()
@@ -227,13 +225,7 @@ public sealed class InlineInteractiveHost : IDisposable
 
         var width = buffer.Width;
 
-        // When the viewport width changes, terminals may reflow the content above the live region which can
-        // invalidate both the saved cursor position and our cached notion of the region top row. Even if we
-        // haven't processed the resize event yet, we must not use RestoreCursorPosition in that case.
-        if (_hasSavedCursorPosition && _lastWidth != 0 && _lastWidth != width)
-        {
-            HandleResize();
-        }
+        var viewportWidthChanged = _lastWidth != 0 && _lastWidth != width;
 
         if (_liveRegionTopRow is null)
         {
@@ -355,6 +347,15 @@ public sealed class InlineInteractiveHost : IDisposable
         }
 
         writer.CursorHorizontalAbsolute(1);
+
+        if (existingHeight > 0 && viewportWidthChanged)
+        {
+            // On horizontal resize, many terminals reflow prior output. Clearing from the live-region start downwards
+            // prevents wrapped leftovers from "flooding" below the region on the next repaint.
+            writer.EraseInDisplay(0);
+            writer.CursorHorizontalAbsolute(1);
+            forceFull = true;
+        }
 
         var currentStyle = AnsiStyle.Default;
         ulong currentHyperlink = 0;
