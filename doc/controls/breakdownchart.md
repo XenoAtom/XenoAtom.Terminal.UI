@@ -54,6 +54,7 @@ breakdown.SegmentClicked((_, e) =>
 - `SegmentGap`: number of empty cells between segments.
 - `LegendLayout`: compact (wrap) or expanded (one item per line).
 - `LegendItemSpacing`: spacing between legend items when using the compact layout.
+- `LegendJustify`: how leftover space is distributed along each compact legend line.
 - `BarStyle`: optional base style applied to bar cells.
 - `DefaultSegmentColors`: optional palette used when a segment does not provide an explicit `Color`.
 

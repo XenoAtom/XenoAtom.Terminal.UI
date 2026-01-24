@@ -573,214 +573,141 @@ public sealed partial class BreakdownChart : Visual
     private sealed class BreakdownLegend : Visual
     {
         private readonly BreakdownChart _owner;
-        private readonly List<LegendRow> _rows = new();
         private readonly List<LegendItem> _items = new();
-        private int _segmentsVersion = -1;
-        private int _lastMaxWidth = -1;
+        private readonly WrapHStack _compactLayout;
+        private readonly VStack _expandedLayout;
+        private Visual _layout;
+        private bool _layoutDirty = true;
+        private int _lastSegmentsCount = -1;
         private BreakdownLegendLayout _lastLayout;
         private int _lastLegendItemSpacing = -1;
-        private bool _lastShowValues;
-        private bool _lastShowPercentages;
+        private WrapJustify _lastLegendJustify;
 
         public BreakdownLegend(BreakdownChart owner)
         {
             _owner = owner;
             HorizontalAlignment = Align.Stretch;
+
+            _compactLayout = new WrapHStack
+            {
+                HorizontalAlignment = Align.Stretch,
+                RunSpacing = 0,
+                MeasureMode = WrapMeasureMode.Unconstrained,
+            };
+
+            _expandedLayout = new VStack
+            {
+                HorizontalAlignment = Align.Stretch,
+                Spacing = 0,
+            };
+
+            _layout = _compactLayout;
+            AttachChild(_layout);
         }
 
-        protected override int ChildrenCount => _rows.Count;
+        protected override int ChildrenCount => 1;
 
-        protected override Visual GetChild(int index) => _rows[index];
+        protected override Visual GetChild(int index) => index == 0 ? _layout : throw new ArgumentOutOfRangeException(nameof(index));
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints)
         {
-            EnsureRows(constraints.MaxWidth);
-
-            var width = 0;
-            var height = 0;
-            for (var i = 0; i < _rows.Count; i++)
-            {
-                _rows[i].Measure(constraints);
-                width = Math.Max(width, _rows[i].DesiredSize.Width);
-                height += _rows[i].DesiredSize.Height;
-            }
-
-            var min = new Size(width, height);
-            var natural = min;
-            var max = new Size(LayoutConstants.Infinite, height);
-            return SizeHints.Flex(min, natural, max, growX: 1, growY: 0, shrinkX: 1, shrinkY: 0);
+            EnsureLayout();
+            return _layout.Measure(constraints);
         }
 
         protected override void ArrangeCore(in Rectangle finalRect)
         {
             Bounds = finalRect;
-
-            EnsureRows(finalRect.Width);
-
-            var y = finalRect.Y;
-            for (var i = 0; i < _rows.Count; i++)
-            {
-                var row = _rows[i];
-                var h = Math.Min(row.DesiredSize.Height, Math.Max(0, finalRect.Bottom - y));
-                row.Arrange(new Rectangle(finalRect.X, y, finalRect.Width, h));
-                y += h;
-            }
+            EnsureLayout();
+            _layout.Arrange(finalRect);
         }
 
-        private void EnsureRows(int maxWidth)
+        private void EnsureLayout()
         {
             var segments = _owner.Segments;
-            var version = segments.Version;
+            var segmentsCount = segments.Count;
             var style = GetStyle<BreakdownStyle>();
             var layout = style.LegendLayout;
             var legendItemSpacing = Math.Max(0, style.LegendItemSpacing);
-            var showValues = _owner.ShowValues;
-            var showPercentages = _owner.ShowPercentages;
+            var legendJustify = style.LegendJustify;
 
-            if (version == _segmentsVersion
-                && maxWidth == _lastMaxWidth
+            if (segmentsCount == _lastSegmentsCount
                 && layout == _lastLayout
                 && legendItemSpacing == _lastLegendItemSpacing
-                && showValues == _lastShowValues
-                && showPercentages == _lastShowPercentages)
+                && legendJustify == _lastLegendJustify
+                && !_layoutDirty)
             {
                 return;
             }
 
-            _lastMaxWidth = maxWidth;
             _lastLayout = layout;
             _lastLegendItemSpacing = legendItemSpacing;
-            _lastShowValues = showValues;
-            _lastShowPercentages = showPercentages;
+            _lastLegendJustify = legendJustify;
 
-            EnsureItems(version);
-            ClearRows();
+            if (segmentsCount != _lastSegmentsCount)
+            {
+                UpdateItems(segmentsCount);
+                _lastSegmentsCount = segmentsCount;
+                _layoutDirty = true;
+            }
 
-            if (segments.Count == 0)
+            var targetLayout = layout == BreakdownLegendLayout.Expanded ? (Visual)_expandedLayout : _compactLayout;
+            if (!ReferenceEquals(_layout, targetLayout))
+            {
+                // Move legend items to the requested layout container.
+                _compactLayout.Children.Clear();
+                _expandedLayout.Children.Clear();
+
+                DetachChild(_layout);
+                _layout = targetLayout;
+                AttachChild(_layout);
+                _layoutDirty = true;
+            }
+
+            _compactLayout.Spacing = legendItemSpacing;
+            _compactLayout.Justify = legendJustify;
+
+            if (!_layoutDirty)
             {
                 return;
             }
 
-            if (layout == BreakdownLegendLayout.Expanded || maxWidth <= 0 || maxWidth == LayoutConstants.Infinite)
+            _layoutDirty = false;
+
+            _compactLayout.Children.Clear();
+            _expandedLayout.Children.Clear();
+
+            if (_items.Count == 0)
+            {
+                return;
+            }
+
+            if (layout == BreakdownLegendLayout.Expanded)
             {
                 for (var i = 0; i < _items.Count; i++)
                 {
-                    var row = new LegendRow(_items[i], legendItemSpacing);
-                    _rows.Add(row);
-                    AttachChild(row);
+                    _expandedLayout.Children.Add(_items[i]);
                 }
 
                 return;
             }
 
-            // Compact layout: pack legend items into as few rows as possible.
             for (var i = 0; i < _items.Count; i++)
             {
-                _items[i].Measure(new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1));
-            }
-
-            var rowItems = new List<LegendItem>();
-            var rowWidth = 0;
-
-            for (var i = 0; i < _items.Count; i++)
-            {
-                var item = _items[i];
-                var itemWidth = item.DesiredSize.Width;
-                if (rowItems.Count > 0 && rowWidth + legendItemSpacing + itemWidth > maxWidth)
-                {
-                    var packed = new LegendRow(rowItems.ToArray(), legendItemSpacing);
-                    _rows.Add(packed);
-                    AttachChild(packed);
-                    rowItems.Clear();
-                    rowWidth = 0;
-                }
-
-                if (rowItems.Count > 0)
-                {
-                    rowWidth += legendItemSpacing;
-                }
-
-                rowItems.Add(item);
-                rowWidth += itemWidth;
-            }
-
-            if (rowItems.Count > 0)
-            {
-                var packed = new LegendRow(rowItems.ToArray(), legendItemSpacing);
-                _rows.Add(packed);
-                AttachChild(packed);
+                _compactLayout.Children.Add(_items[i]);
             }
         }
 
-        private void EnsureItems(int version)
+        private void UpdateItems(int segmentsCount)
         {
-            if (version == _segmentsVersion)
+            while (_items.Count > segmentsCount)
             {
-                return;
+                _items.RemoveAt(_items.Count - 1);
             }
 
-            _segmentsVersion = version;
-
-            // When the segment list changes, rebuild the legend item visuals (one per segment).
-            // We keep these visuals stable across width/layout changes so segment label visuals are not re-parented.
-            _items.Clear();
-
-            var segments = _owner.Segments;
-            for (var i = 0; i < segments.Count; i++)
+            while (_items.Count < segmentsCount)
             {
-                _items.Add(new LegendItem(_owner, i));
-            }
-        }
-
-        private void ClearRows()
-        {
-            for (var i = 0; i < _rows.Count; i++)
-            {
-                _rows[i].ClearItems();
-                DetachChild(_rows[i]);
-            }
-
-            _rows.Clear();
-        }
-
-        private sealed class LegendRow : Visual
-        {
-            private readonly HStack _layout;
-
-            public LegendRow(LegendItem item, int legendItemSpacing)
-                : this([item], legendItemSpacing)
-            {
-            }
-
-            public LegendRow(LegendItem[] items, int legendItemSpacing)
-            {
-                ArgumentNullException.ThrowIfNull(items);
-
-                _layout = new HStack(items)
-                {
-                    Spacing = Math.Max(0, legendItemSpacing),
-                    HorizontalAlignment = Align.Start,
-                };
-
-                AttachChild(_layout);
-            }
-
-            public void ClearItems()
-            {
-                // Detach items from this row so they can be re-attached in a different row when the legend reflows.
-                _layout.Children.Clear();
-            }
-
-            protected override int ChildrenCount => 1;
-
-            protected override Visual GetChild(int index) => index == 0 ? _layout : throw new ArgumentOutOfRangeException(nameof(index));
-
-            protected override SizeHints MeasureCore(in LayoutConstraints constraints) => _layout.Measure(constraints);
-
-            protected override void ArrangeCore(in Rectangle finalRect)
-            {
-                Bounds = finalRect;
-                _layout.Arrange(finalRect);
+                _items.Add(new LegendItem(_owner, _items.Count));
             }
         }
 
