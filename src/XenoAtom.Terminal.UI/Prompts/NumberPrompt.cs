@@ -75,7 +75,7 @@ public sealed class NumberPrompt<T> : TerminalPrompt<T> where T : struct, INumbe
             numberBox.ValueValidator = validate;
         }
 
-        var content = BuildPromptLayout(numberBox);
+        var content = BuildPromptVisual(numberBox);
 
         var session = new PromptSession<T>(
             tryGetValue: () => TryParseCurrentText(numberBox),

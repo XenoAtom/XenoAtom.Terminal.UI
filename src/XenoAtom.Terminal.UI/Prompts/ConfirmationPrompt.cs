@@ -44,7 +44,7 @@ public sealed class ConfirmationPrompt : TerminalPrompt<bool>
     {
         var toggle = new Switch(Label) { IsOn = DefaultValue };
 
-        var content = BuildPromptLayout(toggle);
+        var content = BuildPromptVisual(toggle);
         var validator = Validator.Invoke;
         var session = new PromptSession<bool>(
             tryGetValue: () => (true, toggle.IsOn),

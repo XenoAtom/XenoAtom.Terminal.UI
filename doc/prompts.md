@@ -45,3 +45,43 @@ var color = Terminal.Prompt(new SelectionPrompt<string>("Pick a color:")
 ## Cancellation
 
 Prompts can be canceled with `Esc`. The prompt methods throw `OperationCanceledException` when canceled.
+
+## Prompt templates
+
+Each prompt composes a small visual tree from:
+- `Message` (the question)
+- the editor control (TextBox/NumberBox/Select/etc.)
+- optional `Help`
+
+This composition is controlled by `TerminalPrompt.PromptTemplate`.
+
+### Built-in templates
+
+`TerminalPromptTemplates` provides a few built-in options:
+- `TerminalPromptTemplates.Compact` (default): message on the left, editor on the right, help below if present.
+- `TerminalPromptTemplates.CompactRoundedGroup` / `CompactSquareGroup`: compact layout wrapped in a group.
+- `TerminalPromptTemplates.VerboseRoundedGroup` / `VerboseSquareGroup`: a more verbose layout wrapped in a group.
+
+You can switch templates via fluent helpers:
+
+```csharp
+using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Prompts;
+
+var name = Terminal.Ask("Name:", p => p.StyleCompact());
+
+var port = Terminal.AskNumber<int>("Port:", p => p.StyleInGroup().Default(8080));
+```
+
+Or provide a custom template:
+
+```csharp
+using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Prompts;
+
+var answer = Terminal.Ask("Answer:", p =>
+{
+    p.PromptTemplate((prompt, editor) => new VStack(prompt.Message, editor).Spacing(1));
+});
+```

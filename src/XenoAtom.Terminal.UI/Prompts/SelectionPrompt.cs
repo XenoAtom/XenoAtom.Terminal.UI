@@ -62,7 +62,7 @@ public sealed class SelectionPrompt<T> : TerminalPrompt<T>
 
         select.SelectedIndex = Math.Clamp(InitialIndex, 0, Items.Count - 1);
 
-        var content = BuildPromptLayout(select);
+        var content = BuildPromptVisual(select);
         var session = new PromptSession<T>(
             tryGetValue: () =>
             {

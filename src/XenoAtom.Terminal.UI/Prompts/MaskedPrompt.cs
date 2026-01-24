@@ -70,7 +70,7 @@ public sealed class MaskedPrompt : TerminalPrompt<string>
                 });
         }
 
-        var content = BuildPromptLayout(editor);
+        var content = BuildPromptVisual(editor);
         var session = new PromptSession<string>(
             tryGetValue: () => (true, UseCompactValue ? input.CompactValue : (input.Value ?? string.Empty)),
             validator: validator,

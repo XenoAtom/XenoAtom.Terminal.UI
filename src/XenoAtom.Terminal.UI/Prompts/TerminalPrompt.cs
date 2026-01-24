@@ -4,7 +4,6 @@
 
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
-
 namespace XenoAtom.Terminal.UI.Prompts;
 
 /// <summary>
@@ -12,8 +11,26 @@ namespace XenoAtom.Terminal.UI.Prompts;
 /// </summary>
 public abstract class TerminalPrompt
 {
+    /// <summary>
+    /// Defines a function that composes a prompt visual from the prompt instance and the editor control.
+    /// </summary>
+    /// <remarks>
+    /// The template is responsible for arranging <see cref="Message"/>, the editor, and optionally <see cref="Help"/>.
+    /// </remarks>
+    /// <param name="prompt">The prompt instance.</param>
+    /// <param name="editor">The editor control used to capture input.</param>
+    /// <returns>The composed prompt visual.</returns>
+    public delegate Visual TerminalPromptTemplate(TerminalPrompt prompt, Visual editor);
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TerminalPrompt"/> class.
+    /// </summary>
+    /// <remarks>
+    /// The default prompt template is <see cref="TerminalPromptTemplates.Compact"/>.
+    /// </remarks>
     private protected TerminalPrompt()
     {
+        PromptTemplate = TerminalPromptTemplates.Compact;
     }
 
     /// <summary>
@@ -29,6 +46,15 @@ public abstract class TerminalPrompt
     public Visual? Help { get; set; }
 
     /// <summary>
+    /// Gets or sets the template used to compose the prompt visual tree.
+    /// </summary>
+    /// <remarks>
+    /// Prompts are inline/live UI, so templates should remain compact and avoid heavy nesting.
+    /// </remarks>
+    [Fluent]
+    public Delegator<TerminalPromptTemplate> PromptTemplate { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the final visual should remain on screen when the prompt completes successfully.
     /// </summary>
     /// <remarks>
@@ -39,22 +65,16 @@ public abstract class TerminalPrompt
     public bool KeepOnSuccess { get; set; } = true;
 
     /// <summary>
-    /// Builds the default prompt layout using the current <see cref="Message"/> and <see cref="Help"/>.
+    /// Builds the prompt visual using <see cref="PromptTemplate"/>.
     /// </summary>
     /// <param name="editor">The editor visual.</param>
     /// <returns>The composed prompt visual.</returns>
-    protected Visual BuildPromptLayout(Visual editor)
+    protected Visual BuildPromptVisual(Visual editor)
     {
-        var message = Message;
-        var help = Help;
+        ArgumentNullException.ThrowIfNull(editor);
 
-        var stack = help is null
-            ? new VStack(message, editor).Spacing(1)
-            : new VStack(message, editor, help).Spacing(1);
-
-        return new Group()
-            .Padding(1)
-            .Content(stack);
+        var template = PromptTemplate.Invoke ?? TerminalPromptTemplates.Compact;
+        return template(this, editor);
     }
 }
 

@@ -64,7 +64,7 @@ public sealed class TextPrompt : TerminalPrompt<string>
                 });
         }
 
-        var content = BuildPromptLayout(editor);
+        var content = BuildPromptVisual(editor);
         var session = new PromptSession<string>(
             tryGetValue: () => (true, textBox.Text ?? string.Empty),
             validator: validator,

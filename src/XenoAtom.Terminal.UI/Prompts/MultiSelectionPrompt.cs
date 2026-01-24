@@ -85,7 +85,7 @@ public sealed class MultiSelectionPrompt<T> : TerminalPrompt<IReadOnlyList<T>>
                 });
         }
 
-        var content = BuildPromptLayout(editor);
+        var content = BuildPromptVisual(editor);
         var session = new PromptSession<IReadOnlyList<T>>(
             tryGetValue: () => (true, BuildSelectionSnapshot(list)),
             validator: validator,
