@@ -76,9 +76,6 @@ public sealed class InlineInteractiveHost : IDisposable
 
         var visibleHeight = Math.Max(1, _terminal.Size.Rows);
         var regionHeight = Math.Min(_reservedHeight, visibleHeight);
-        var cursorOffset = _lastCursorVisible
-            ? Math.Clamp(_lastRenderedCursorY, 0, Math.Max(0, regionHeight - 1))
-            : regionHeight;
 
         _terminal.WriteAtomic(writer =>
         {
@@ -89,19 +86,29 @@ public sealed class InlineInteractiveHost : IDisposable
                 writer.ShowCursor(false);
             }
 
-            if (cursorOffset > 0)
+            // Clear the live region so the caller can write "flow output" (Console.WriteLine style) above it.
+            // We always use the saved anchor because the current cursor can be inside the region (e.g. focused TextBox).
+            if (_hasSavedCursorPosition)
             {
-                writer.CursorUp(cursorOffset);
+                writer.RestoreCursorPosition();
             }
             writer.CursorHorizontalAbsolute(1);
 
             for (var i = 0; i < regionHeight; i++)
             {
                 writer.EraseLine(2);
-                writer.NextLine();
+                if (i < regionHeight - 1)
+                {
+                    writer.NextLine();
+                }
             }
 
-            writer.CursorUp(regionHeight);
+            // Restore to the top-of-region anchor so subsequent output starts where the region started.
+            // This is what makes the output "flow" and push the next render of the live region down.
+            if (regionHeight > 1)
+            {
+                writer.CursorUp(regionHeight - 1);
+            }
             writer.CursorHorizontalAbsolute(1);
             writer.ResetStyle();
 
@@ -122,9 +129,6 @@ public sealed class InlineInteractiveHost : IDisposable
 
         var visibleHeight = Math.Max(1, _terminal.Size.Rows);
         var regionHeight = Math.Min(_reservedHeight, visibleHeight);
-        var cursorOffset = _lastCursorVisible
-            ? Math.Clamp(_lastRenderedCursorY, 0, Math.Max(0, regionHeight - 1))
-            : regionHeight;
 
         _terminal.WriteAtomic(writer =>
         {
@@ -136,9 +140,16 @@ public sealed class InlineInteractiveHost : IDisposable
                 writer.ShowCursor(false);
             }
 
-            if (_lastCursorVisible)
+            if (_hasSavedCursorPosition)
             {
-                writer.CursorDown(regionHeight - cursorOffset);
+                writer.RestoreCursorPosition();
+            }
+
+            // Move to the line after the region. If the region reaches the bottom of the viewport, this will scroll.
+            if (regionHeight > 0)
+            {
+                writer.CursorDown(regionHeight - 1);
+                writer.Write("\r\n");
             }
             writer.CursorHorizontalAbsolute(1);
             writer.ResetStyle();
@@ -275,7 +286,7 @@ public sealed class InlineInteractiveHost : IDisposable
                     return;
                 }
 
-                if (_hasSavedCursorPosition)
+                if (!viewportChanged && _hasSavedCursorPosition)
                 {
                     var capsLocal = CreateAnsiCapabilities(_terminal.Capabilities);
                     _builder.Clear();
@@ -295,7 +306,10 @@ public sealed class InlineInteractiveHost : IDisposable
                     {
                         var cx = Math.Clamp(cursorX, 0, width - 1);
                         var cy = Math.Clamp(cursorY, 0, height - 1);
-                        writerLocal.CursorUp(height - cy);
+                        if (cy > 0)
+                        {
+                            writerLocal.CursorDown(cy);
+                        }
                         writerLocal.CursorHorizontalAbsolute(cx + 1);
                         writerLocal.ShowCursor(true);
                     }
@@ -324,34 +338,36 @@ public sealed class InlineInteractiveHost : IDisposable
             writer.ShowCursor(false);
         }
 
-        // Move to the top of the previous live region (or stay at the current cursor position on first render).
+        // The saved cursor position is the "top of region" anchor from the previous frame.
+        // This avoids relying on a "line after region" anchor that may not exist when the region reaches the bottom.
         if (_hasSavedCursorPosition)
         {
-            // The saved cursor position is the "bottom of region" anchor from the previous frame.
-            // We redraw by restoring it then moving up.
             writer.RestoreCursorPosition();
-            if (existingHeight > 0)
-            {
-                writer.CursorUp(existingHeight);
-            }
         }
 
         writer.CursorHorizontalAbsolute(1);
-
-        // Save the cursor position at the top of the live region for this frame.
-        // We restore it after drawing (playground pattern) then save the bottom anchor for the next frame.
-        writer.SaveCursorPosition();
 
         if (viewportChanged)
         {
             // When the viewport changes (especially horizontally), many terminals reflow existing content. Clearing from
             // the live-region start downwards prevents wrapped leftovers from "flooding" below the region.
             writer.EraseInDisplay(0);
-            writer.RestoreCursorPosition();
             writer.CursorHorizontalAbsolute(1);
             forceFull = true;
             HandleResize();
         }
+
+        if (forceFull || existingHeight != height || viewportChanged || !_hasSavedCursorPosition)
+        {
+            // Ensure the region fits in the viewport. When it does not, NextLine() will scroll the terminal to reserve
+            // the required number of rows. We then return to the new top-of-region.
+            EnsureLiveRegionCapacity(writer, height);
+            forceFull = true;
+        }
+
+        // Save the cursor position at the (possibly adjusted) top of the live region (anchor for the next frame).
+        writer.SaveCursorPosition();
+        _hasSavedCursorPosition = true;
 
         var currentStyle = AnsiStyle.Default;
         ulong currentHyperlink = 0;
@@ -419,13 +435,15 @@ public sealed class InlineInteractiveHost : IDisposable
                     xPos += Math.Max(1, runeWidth);
                 }
 
-                writer.NextLine();
+                if (y < height - 1)
+                {
+                    writer.NextLine();
+                }
             }
         }
         else
         {
             var currentRow = 0;
-            var anyRowChanged = false;
 
             for (var y = 0; y < height; y++)
             {
@@ -462,8 +480,6 @@ public sealed class InlineInteractiveHost : IDisposable
                 {
                     continue;
                 }
-
-                anyRowChanged = true;
 
                 if (y > currentRow)
                 {
@@ -536,27 +552,24 @@ public sealed class InlineInteractiveHost : IDisposable
                 currentRow = y;
             }
 
-            if (!anyRowChanged)
-            {
-                return;
-            }
-
-            if (currentRow < height)
-            {
-                writer.NextLine(height - currentRow);
-            }
+            // If nothing changed, we still want to keep cursor and saved-position state consistent.
         }
 
         if (existingHeight > height)
         {
+            // Clear rows that were part of the previous reserved region but are no longer used.
+            writer.RestoreCursorPosition();
+            writer.CursorHorizontalAbsolute(1);
+            writer.NextLine(height);
+
             for (var i = height; i < existingHeight; i++)
             {
                 writer.EraseLine(2);
-                writer.NextLine();
+                if (i < existingHeight - 1)
+                {
+                    writer.NextLine();
+                }
             }
-
-            writer.CursorUp(existingHeight - height);
-            writer.CursorHorizontalAbsolute(1);
         }
 
         if (currentStyle != AnsiStyle.Default)
@@ -571,23 +584,15 @@ public sealed class InlineInteractiveHost : IDisposable
             currentHyperlink = 0;
         }
 
-        // Restore the top-of-region cursor position for this frame.
-        writer.RestoreCursorPosition();
-        writer.CursorHorizontalAbsolute(1);
-
-        // Save the bottom-of-region anchor for the next frame (and for output that should appear after the region).
-        if (height > 0)
-        {
-            writer.CursorDown(height);
-        }
-        writer.CursorHorizontalAbsolute(1);
-        writer.SaveCursorPosition();
-
         if (wantsCursor)
         {
             var cx = Math.Clamp(cursorX, 0, width - 1);
             var cy = Math.Clamp(cursorY, 0, height - 1);
-            writer.CursorUp(height - cy);
+            writer.RestoreCursorPosition();
+            if (cy > 0)
+            {
+                writer.CursorDown(cy);
+            }
             writer.CursorHorizontalAbsolute(cx + 1);
             writer.ShowCursor(true);
         }
@@ -603,7 +608,6 @@ public sealed class InlineInteractiveHost : IDisposable
         buffer.CopyHyperlinkTableTo(_lastHyperlinkTable);
         _lastTextElementTable ??= new Dictionary<int, string>();
         buffer.CopyTextElementTableTo(_lastTextElementTable);
-        _hasSavedCursorPosition = true;
         _reservedHeight = height;
         _liveRegionTopRow = Math.Min(_liveRegionTopRow.GetValueOrDefault(), visibleHeight - height);
         _lastWidth = width;
@@ -657,16 +661,22 @@ public sealed class InlineInteractiveHost : IDisposable
             writer.RestoreCursorPosition();
         }
 
-        writer.CursorUp(regionHeight);
         writer.CursorHorizontalAbsolute(1);
 
+        // Clear the region at its previous location so we don't leave stale content behind.
         for (var i = 0; i < regionHeight; i++)
         {
             writer.EraseLine(2);
-            writer.NextLine();
+            if (i < regionHeight - 1)
+            {
+                writer.NextLine();
+            }
         }
 
-        writer.CursorUp(regionHeight);
+        if (regionHeight > 1)
+        {
+            writer.CursorUp(regionHeight - 1);
+        }
         writer.CursorHorizontalAbsolute(1);
 
         foreach (var line in markupLines)
@@ -676,18 +686,25 @@ public sealed class InlineInteractiveHost : IDisposable
             {
                 formatter.Write(line);
             }
-            writer.NextLine();
+            writer.Write("\r\n");
         }
 
-        WriteStoredRegion(writer, width, regionHeight);
-
+        // We are now positioned at the new top of the live region.
+        writer.CursorHorizontalAbsolute(1);
         writer.SaveCursorPosition();
+        _hasSavedCursorPosition = true;
+
+        WriteStoredRegion(writer, width, regionHeight);
 
         if (_lastWantsCursor)
         {
             var cx = Math.Clamp(_lastCursorX, 0, width - 1);
             var cy = Math.Clamp(_lastCursorY, 0, regionHeight - 1);
-            writer.CursorUp(regionHeight - cy);
+            writer.RestoreCursorPosition();
+            if (cy > 0)
+            {
+                writer.CursorDown(cy);
+            }
             writer.CursorHorizontalAbsolute(cx + 1);
             writer.ShowCursor(true);
         }
@@ -699,7 +716,6 @@ public sealed class InlineInteractiveHost : IDisposable
             w.Write(_builder.UnsafeAsSpan());
         });
 
-        _hasSavedCursorPosition = true;
         _reservedHeight = regionHeight;
         if (_liveRegionTopRow is not null)
         {
@@ -723,7 +739,7 @@ public sealed class InlineInteractiveHost : IDisposable
             {
                 formatter.Write(line);
             }
-            writer.NextLine();
+            writer.Write("\r\n");
         }
 
         writer.PrivateMode(2026, enabled: false);
@@ -822,7 +838,10 @@ public sealed class InlineInteractiveHost : IDisposable
                 xPos += Math.Max(1, runeWidth);
             }
 
-            writer.NextLine();
+            if (y < height - 1)
+            {
+                writer.NextLine();
+            }
         }
 
         if (currentHyperlink != 0)
@@ -834,6 +853,31 @@ public sealed class InlineInteractiveHost : IDisposable
         {
             writer.StyleTransition(currentStyle, AnsiStyle.Default);
         }
+    }
+
+    private static void EnsureLiveRegionCapacity(AnsiWriter writer, int height)
+    {
+        if (height <= 0)
+        {
+            return;
+        }
+
+        // Clear and reserve the live region. When the region would go beyond the viewport bottom, NextLine() causes
+        // the terminal to scroll, effectively making room for the whole region. We then return to the new top.
+        for (var i = 0; i < height; i++)
+        {
+            writer.EraseLine(2);
+            if (i < height - 1)
+            {
+                writer.Write("\r\n");
+            }
+        }
+
+        if (height > 1)
+        {
+            writer.CursorUp(height - 1);
+        }
+        writer.CursorHorizontalAbsolute(1);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

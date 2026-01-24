@@ -99,4 +99,32 @@ public sealed class InlineInteractiveHostTests
 
         Assert.IsGreaterThan(len1, len2, "Expected additional output after HandleResize().");
     }
+
+    [TestMethod]
+    public void PrepareForUserUpdate_Allows_Flow_Output_To_Push_Region_Down()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(20, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions(), force: true);
+
+        var host = new InlineInteractiveHost(session.Instance);
+
+        // First render reserves a 3-line region.
+        host.Render(CreateBuffer(20, "R1", "R2", "R3"), wantsCursor: false, cursorX: 0, cursorY: 0);
+
+        // Simulate "flow output" written during the update phase.
+        host.PrepareForUserUpdate();
+        session.Instance.Write("FLOW\n");
+
+        // Re-render the same region.
+        host.Render(CreateBuffer(20, "R1", "R2", "R3"), wantsCursor: false, cursorX: 0, cursorY: 0);
+
+        var screen = new AnsiTestScreen(20, 10);
+        screen.Apply(backend.GetOutText());
+
+        var text = screen.GetText().Split(Environment.NewLine);
+        StringAssert.StartsWith(text[0], "FLOW");
+        StringAssert.StartsWith(text[1], "R1");
+        StringAssert.StartsWith(text[2], "R2");
+        StringAssert.StartsWith(text[3], "R3");
+    }
 }
