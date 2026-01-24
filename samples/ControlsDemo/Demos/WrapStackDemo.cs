@@ -21,22 +21,8 @@ public sealed class WrapStackDemo : ControlsDemoBase
         var spacing = new State<int>(1);
         var runSpacing = new State<int>(1);
 
-        var chips = new Visual[]
-        {
-            Chip("alpha"),
-            Chip("beta"),
-            Chip("gamma"),
-            Chip("delta"),
-            Chip("epsilon"),
-            Chip("zeta"),
-            Chip("eta"),
-            Chip("theta"),
-            Chip("iota"),
-            Chip("kappa"),
-        };
-
         var wrapH = new Border(
-                new WrapHStack(chips)
+                new WrapHStack(CreateChips())
                     .Spacing(spacing)
                     .RunSpacing(runSpacing)
                     .Justify(justify)
@@ -46,7 +32,7 @@ public sealed class WrapStackDemo : ControlsDemoBase
             .Style(BorderStyle.Rounded);
 
         var wrapV = new Border(
-                new WrapVStack(chips)
+                new WrapVStack(CreateChips())
                     .Spacing(spacing)
                     .RunSpacing(runSpacing)
                     .Justify(justify)
@@ -83,4 +69,19 @@ public sealed class WrapStackDemo : ControlsDemoBase
         => new Border(text)
             .Padding(new Thickness(1, 0, 1, 0))
             .Style(BorderStyle.Rounded);
+
+    private static Visual[] CreateChips()
+        =>
+        [
+            Chip("alpha"),
+            Chip("beta"),
+            Chip("gamma"),
+            Chip("delta"),
+            Chip("epsilon"),
+            Chip("zeta"),
+            Chip("eta"),
+            Chip("theta"),
+            Chip("iota"),
+            Chip("kappa"),
+        ];
 }
