@@ -48,7 +48,7 @@ try
     {
         prompt.Default(Environment.UserName ?? "Ada")
             .Placeholder(prompt.DefaultValue)
-            .Help("Press Enter to accept the default.");
+            .HelpMarkup("[dim]Press Enter to accept the default.[/]");
     });
 
     Terminal.WriteLine();
@@ -123,7 +123,7 @@ try
     {
         prompt.Default(8080)
             .Validate((int value) => value is >= 1 and <= 65535 ? null : "Port must be in [1..65535].")
-            .Help = "Use Up/Down to adjust the value.";
+            .HelpMarkup("[dim]Use Up/Down to adjust the value.[/]");
     });
 
     Terminal.WriteLine();

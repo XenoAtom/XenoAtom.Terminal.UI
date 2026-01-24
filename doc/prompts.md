@@ -85,3 +85,16 @@ var answer = Terminal.Ask("Answer:", p =>
     p.PromptTemplate((prompt, editor) => new VStack(prompt.Message, editor).Spacing(1));
 });
 ```
+
+## Markup help
+
+To set help text using ANSI markup, use `HelpMarkup(...)`:
+
+```csharp
+using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Prompts;
+
+var name = Terminal.Ask("Name:", p => p
+    .Placeholder("Type your name...")
+    .HelpMarkup("[dim]Press Enter to accept the default.[/]"));
+```
