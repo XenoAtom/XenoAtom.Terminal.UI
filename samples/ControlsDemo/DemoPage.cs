@@ -14,6 +14,7 @@ internal static class DemoPage
 
         var meta = demo.Metadata;
 
+        var showLog = new State<bool>(false);
         var logControl = new LogControl
         {
             MaxCapacity = 500,
@@ -25,6 +26,8 @@ internal static class DemoPage
             {
                 return;
             }
+
+            showLog.Value = true;
 
             var prefix = $"[dim][{DateTime.Now:HH:mm:ss}] [/]";
             logControl.AppendMarkupLine(prefix + message);
@@ -39,9 +42,12 @@ internal static class DemoPage
         });
 
         var link = BuildSourceLink(meta);
+        var toggleLog = new Button("Logs")
+            .Click(() => showLog.Value = !showLog.Value);
+
         var header = new Header()
             .Left(meta.Name)
-            .Right(link);
+            .Right(new HStack(link, toggleLog).Spacing(1));
 
         // Keep horizontal scrolling disabled for the overall demo page so that text controls can reflow (wrap)
         // as the terminal is resized. Individual demos can still opt into horizontal scrolling by using their own
@@ -49,17 +55,26 @@ internal static class DemoPage
         var demoContent = new ScrollViewer(content)
             .HorizontalScrollEnabled(false);
 
-        var logPanel = BuildLogPanel(logControl);
+        Visual? logPanel = null;
+        var logRegion = new ComputedVisual(() =>
+        {
+            if (!showLog.Value)
+            {
+                return null;
+            }
+
+            logPanel ??= BuildLogPanel(logControl);
+            return logPanel;
+        });
 
         return new DockLayout()
             .Top(new VStack(header, new Rule()).Spacing(0))
             .Content(demoContent)
-            .Bottom(logPanel);
+            .Bottom(logRegion);
     }
 
     private static Visual BuildLogPanel(LogControl logControl)
     {
-        // Always visible, but small: log entries are scrollable, searchable, and selectable.
         return new Group("Logs").Content(logControl).HorizontalAlignment(Align.Stretch).MaxHeight(12);
     }
 
