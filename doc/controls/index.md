@@ -33,6 +33,7 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 
 - `doc/controls/vstack.md`
 - `doc/controls/hstack.md`
+- `doc/controls/wrapstack.md`
 - `doc/controls/grid.md`
 - `doc/controls/docklayout.md`
 - `doc/controls/center.md`
