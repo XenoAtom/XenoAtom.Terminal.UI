@@ -104,6 +104,20 @@ try
         .Segment(3, "🧯 Other", color: Colors.IndianRed));
 
     Terminal.WriteLine();
+    Terminal.WriteMarkupLine("[bold]Static output: table[/]");
+    Terminal.WriteLine();
+
+    Terminal.Write(
+        new Table()
+            .Style(TableStyle.RoundedGrid with { ShowRowSeparators = true })
+            .Headers("Component", "Status", "Notes")
+            .AddRow("🧠 Runtime", new Markup("[primary]✔ Ready[/]"), new Markup("[dim].NET 10 + UTF-8[/]"))
+            .AddRow("🖱️  Input", new Markup("[success]✔ Mouse[/]"), new Markup("[dim]Hover, wheel, drag[/]"))
+            .AddRow("⌨️  Keys", new Markup("[success]✔ Hotkeys[/]"), new Markup("[dim]Ctrl+… gestures[/]"))
+            .AddRow("🎨 Rendering", new Markup("[warning]⚠ Diff engine[/]"), new Markup("[dim]More optimizations planned[/]"))
+            .AddRow("🧪 Tests", new Markup("[success]✔ Passing[/]"), new Markup("[dim]Unit tests in Release[/]")));
+
+    Terminal.WriteLine();
     var port = Terminal.AskNumber<int>("Pick a port number:", prompt =>
     {
         prompt.DefaultValue = 8080;
