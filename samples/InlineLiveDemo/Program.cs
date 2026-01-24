@@ -3,6 +3,7 @@ using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Figlet;
+using XenoAtom.Terminal.UI.Styling;
 
 try
 {
@@ -58,7 +59,20 @@ try
     var verify = new ProgressTask("Verify").Maximum(100);
 
     var tasks = new ProgressTaskGroup()
+        .Columns([
+            ProgressTaskColumns.Spinner(),
+            ProgressTaskColumns.Label(),
+            ProgressTaskColumns.Bar(),
+            ProgressTaskColumns.Percentage(),
+        ])
         .Tasks([download, extract, verify]);
+
+    download.StyleBar(ProgressBarStyle.Shaded with { Filled = Style.None.WithForeground(Colors.DodgerBlue) })
+        .StyleSpinner(SpinnerStyles.Dots);
+    extract.StyleBar(ProgressBarStyle.Shaded with { Filled = Style.None.WithForeground(Colors.LimeGreen) })
+        .StyleSpinner(SpinnerStyles.Dots2);
+    verify.StyleBar(ProgressBarStyle.Shaded with { Filled = Style.None.WithForeground(Colors.Gold) })
+        .StyleSpinner(SpinnerStyles.Star);
 
     var stopwatch = Stopwatch.StartNew();
     Terminal.Live(
@@ -82,13 +96,12 @@ try
 
     Terminal.Write(new BreakdownChart()
         .Title("Disk usage")
-        .Segments([
-            new BreakdownSegment(42, "🗂️ Data"),
-            new BreakdownSegment(18, "📦 Packages"),
-            new BreakdownSegment(9, "🧹 Temp"),
-            new BreakdownSegment(3, "🧯 Other"),
-        ])
-        .ShowValues(true));
+        .ShowValues(true)
+        .ShowPercentages(true)
+        .Segment(42, "🗃️  Data", color: Colors.DodgerBlue)
+        .Segment(18, "📦  Packages", color: Colors.LimeGreen)
+        .Segment(9, "🧹  Temp", color: Colors.Orange)
+        .Segment(3, "🧯  Other", color: Colors.IndianRed));
 
     Terminal.WriteLine();
     var port = Terminal.AskNumber<int>("Pick a port number:", prompt =>
