@@ -27,6 +27,8 @@ public sealed class InlineInteractiveHost : IDisposable
     private Dictionary<int, string>? _lastTextElementTable;
     private int _lastWidth;
     private int _lastHeight;
+    private int _lastViewportWidth;
+    private int _lastViewportHeight;
     private bool _lastCursorVisible;
     private int _lastRenderedCursorX;
     private int _lastRenderedCursorY;
@@ -56,9 +58,8 @@ public sealed class InlineInteractiveHost : IDisposable
     internal void HandleResize()
     {
         // A resize can cause terminal emulators to reflow the previously rendered lines, which means the live region
-        // from the last frame might be wrapped and pushed below the expected area. We keep the saved cursor position
-        // (so we can still navigate relative to the region), but we invalidate all cached diff state so the next frame
-        // will repaint fully.
+        // from the last frame might be wrapped and pushed below the expected area. Invalidate all cached diff state so
+        // the next frame repaints fully.
         _lastScalars = null;
         _lastCells = null;
         _lastHyperlinks = null;
@@ -213,6 +214,7 @@ public sealed class InlineInteractiveHost : IDisposable
         var visibleHeight = Math.Max(1, _terminal.Size.Rows);
         var existingHeight = _reservedHeight <= 0 ? 0 : Math.Min(_reservedHeight, visibleHeight);
         var height = Math.Clamp(Math.Max(1, buffer.Height), 1, visibleHeight);
+        var viewportChanged = _lastViewportWidth != 0 && (_lastViewportWidth != viewportWidth || _lastViewportHeight != visibleHeight);
 
         // It's possible for the terminal size to change between when the caller sized the buffer
         // and when we actually render it (e.g., during resize). Avoid throwing and let the next
@@ -224,8 +226,6 @@ public sealed class InlineInteractiveHost : IDisposable
         }
 
         var width = buffer.Width;
-
-        var viewportWidthChanged = _lastWidth != 0 && _lastWidth != width;
 
         if (_liveRegionTopRow is null)
         {
@@ -324,37 +324,33 @@ public sealed class InlineInteractiveHost : IDisposable
             writer.ShowCursor(false);
         }
 
+        // Move to the top of the previous live region (or stay at the current cursor position on first render).
         if (_hasSavedCursorPosition)
         {
+            // The saved cursor position is the "bottom of region" anchor from the previous frame.
+            // We redraw by restoring it then moving up.
             writer.RestoreCursorPosition();
-        }
-
-        if (_hasSavedCursorPosition && existingHeight > 0)
-        {
-            writer.CursorUp(existingHeight);
-        }
-
-        if (!_hasSavedCursorPosition && existingHeight > 0)
-        {
-            var cursorOffset = _lastCursorVisible
-                ? Math.Clamp(_lastRenderedCursorY, 0, Math.Max(0, existingHeight - 1))
-                : existingHeight;
-
-            if (cursorOffset > 0)
+            if (existingHeight > 0)
             {
-                writer.CursorUp(cursorOffset);
+                writer.CursorUp(existingHeight);
             }
         }
 
         writer.CursorHorizontalAbsolute(1);
 
-        if (existingHeight > 0 && viewportWidthChanged)
+        // Save the cursor position at the top of the live region for this frame.
+        // We restore it after drawing (playground pattern) then save the bottom anchor for the next frame.
+        writer.SaveCursorPosition();
+
+        if (viewportChanged)
         {
-            // On horizontal resize, many terminals reflow prior output. Clearing from the live-region start downwards
-            // prevents wrapped leftovers from "flooding" below the region on the next repaint.
+            // When the viewport changes (especially horizontally), many terminals reflow existing content. Clearing from
+            // the live-region start downwards prevents wrapped leftovers from "flooding" below the region.
             writer.EraseInDisplay(0);
+            writer.RestoreCursorPosition();
             writer.CursorHorizontalAbsolute(1);
             forceFull = true;
+            HandleResize();
         }
 
         var currentStyle = AnsiStyle.Default;
@@ -575,6 +571,16 @@ public sealed class InlineInteractiveHost : IDisposable
             currentHyperlink = 0;
         }
 
+        // Restore the top-of-region cursor position for this frame.
+        writer.RestoreCursorPosition();
+        writer.CursorHorizontalAbsolute(1);
+
+        // Save the bottom-of-region anchor for the next frame (and for output that should appear after the region).
+        if (height > 0)
+        {
+            writer.CursorDown(height);
+        }
+        writer.CursorHorizontalAbsolute(1);
         writer.SaveCursorPosition();
 
         if (wantsCursor)
@@ -602,6 +608,8 @@ public sealed class InlineInteractiveHost : IDisposable
         _liveRegionTopRow = Math.Min(_liveRegionTopRow.GetValueOrDefault(), visibleHeight - height);
         _lastWidth = width;
         _lastHeight = height;
+        _lastViewportWidth = viewportWidth;
+        _lastViewportHeight = visibleHeight;
         _lastCursorVisible = wantsCursor;
         _lastRenderedCursorX = cursorX;
         _lastRenderedCursorY = cursorY;
