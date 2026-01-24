@@ -10,14 +10,12 @@ namespace XenoAtom.Terminal.UI.Prompts;
 /// <summary>
 /// Defines an inline prompt that can be run using <see cref="TerminalPrompts"/>.
 /// </summary>
-/// <typeparam name="T">The result type produced by the prompt.</typeparam>
-/// <remarks>
-/// Prompts are intended for inline/live hosting scenarios (see <see cref="TerminalExtensions.Live(Visual, System.Func{TerminalLoopResult})"/>).
-/// They are composed from existing controls (for example <see cref="TextBox"/>, <see cref="NumberBox{T}"/>, <see cref="Select{T}"/>),
-/// and use the binding system for validation message presentation.
-/// </remarks>
-public abstract class TerminalPrompt<T>
+public abstract class TerminalPrompt
 {
+    private protected TerminalPrompt()
+    {
+    }
+
     /// <summary>
     /// Gets or sets the prompt message displayed above the input.
     /// </summary>
@@ -31,15 +29,6 @@ public abstract class TerminalPrompt<T>
     public Visual? Help { get; set; }
 
     /// <summary>
-    /// Gets or sets an optional validator.
-    /// </summary>
-    /// <remarks>
-    /// The validator returns <see langword="null"/> when the value is valid; otherwise it returns an error message.
-    /// </remarks>
-    [Fluent("Validate")]
-    public Func<T, string?>? Validator { get; set; }
-
-    /// <summary>
     /// Gets or sets a value indicating whether the final visual should remain on screen when the prompt completes successfully.
     /// </summary>
     /// <remarks>
@@ -48,8 +37,6 @@ public abstract class TerminalPrompt<T>
     /// </remarks>
     [Fluent]
     public bool KeepOnSuccess { get; set; } = true;
-
-    internal abstract PromptSession<T> CreateSession();
 
     /// <summary>
     /// Builds the default prompt layout using the current <see cref="Message"/> and <see cref="Help"/>.
@@ -69,4 +56,27 @@ public abstract class TerminalPrompt<T>
             .Padding(1)
             .Content(stack);
     }
+}
+
+/// <summary>
+/// Defines an inline prompt that can be run using <see cref="TerminalPrompts"/>.
+/// </summary>
+/// <typeparam name="T">The result type produced by the prompt.</typeparam>
+/// <remarks>
+/// Prompts are intended for inline/live hosting scenarios (see <see cref="TerminalExtensions.Live(Visual, System.Func{TerminalLoopResult})"/>).
+/// They are composed from existing controls (for example <see cref="TextBox"/>, <see cref="NumberBox{T}"/>, <see cref="Select{T}"/>),
+/// and use the binding system for validation message presentation.
+/// </remarks>
+public abstract class TerminalPrompt<T> : TerminalPrompt
+{
+    /// <summary>
+    /// Gets or sets an optional validator.
+    /// </summary>
+    /// <remarks>
+    /// The validator returns <see langword="null"/> when the value is valid; otherwise it returns an error message.
+    /// </remarks>
+    [Fluent("Validate")]
+    public Func<T, string?>? Validator { get; set; }
+
+    internal abstract PromptSession<T> CreateSession();
 }
