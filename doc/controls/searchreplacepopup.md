@@ -12,8 +12,9 @@ Screenshot placeholder:
 - `Ctrl+H`: open Replace (control-specific; typically TextArea)
 - `Enter` / `F3`: next match
 - `Shift+Enter`: previous match
-- `Alt+Arrow`: move the popup
 - `Esc`: close
+
+The popup can be repositioned by dragging it with the mouse (header area).
 
 ## Integration model
 
@@ -41,4 +42,3 @@ protected override void ArrangeCore(in Rectangle finalRect)
 ```
 
 The popup UI is rendered using `Popup` in the app window layer, while `SearchReplacePopup` acts as a lightweight anchor visual.
-

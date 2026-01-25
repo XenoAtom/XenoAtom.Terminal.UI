@@ -12,7 +12,7 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
   - **Fullscreen** apps via `Terminal.Run(...)` (alternate screen + input loop)
 - **Modern control library**:
   - Buttons, toggles, lists, tables, tabs, menus, dialogs/popups, charts, progress, spinners, tooltips…
-  - Text editing: **TextBox**, **TextArea**, **MaskedInput**, **NumberBox**
+  - Text editing: **TextBox**, **TextArea**, **MaskedInput**, **NumberBox** (undo/redo: `Ctrl+Z` / `Ctrl+R`)
   - Advanced widgets: **LogControl**, **CommandPalette**, **Breakdown**, **ColorPicker**
 - **Binding-first UI**:
   - Bindable properties, `State<T>`, automatic dependency tracking, minimal boilerplate

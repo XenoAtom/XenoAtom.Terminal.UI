@@ -19,6 +19,15 @@ new TextBox().Text(name);
 - selection (keyboard and mouse)
 - clipboard shortcuts (Ctrl+C/X/V) when enabled by the control mode
 
+## Undo / redo
+
+TextBox supports undo/redo:
+
+- `Ctrl+Z`: undo
+- `Ctrl+R`: redo
+
+See `doc/undo-redo.md`.
+
 ## Password mode
 
 `TextBox` can mask its text to behave like a password input:

@@ -21,6 +21,17 @@ new TextArea("Hello\nWorld");
 
 See also `doc/controls/searchreplacepopup.md`.
 
+## Undo / redo
+
+TextArea supports undo/redo:
+
+- `Ctrl+Z`: undo
+- `Ctrl+R`: redo
+
+Replace operations are undoable. `Replace All` is recorded as a single undo step.
+
+See `doc/undo-redo.md`.
+
 ## Scroll integration
 
 TextArea implements `IScrollable`, so it integrates with `ScrollViewer`:

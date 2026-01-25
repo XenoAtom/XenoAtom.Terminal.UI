@@ -77,6 +77,15 @@ new VStack(
 ).Spacing(1);
 ```
 
+## Undo / redo
+
+MaskedInput supports undo/redo:
+
+- `Ctrl+Z`: undo
+- `Ctrl+R`: redo
+
+See `doc/undo-redo.md`.
+
 ## Styling
 
 `MaskedInput` uses `MaskedInputStyle` (derived from `TextBoxStyle`) for padding and background fill. Placeholder and

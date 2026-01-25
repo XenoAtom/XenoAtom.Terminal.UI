@@ -13,6 +13,15 @@ var ui = new NumberBox<int>()
     .Value(age);
 ```
 
+## Undo / redo
+
+NumberBox supports undo/redo:
+
+- `Ctrl+Z`: undo
+- `Ctrl+R`: redo
+
+See `doc/undo-redo.md`.
+
 ## Validation
 
 Validation runs on each text change:

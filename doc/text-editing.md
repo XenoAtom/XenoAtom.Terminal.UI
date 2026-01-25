@@ -13,6 +13,15 @@ The v1 foundation includes:
 
 Text controls use the terminal cursor as the caret (no fake reverse-video caret rendering).
 
+## Undo / redo
+
+Text editors support undo/redo:
+
+- `Ctrl+Z`: undo
+- `Ctrl+R`: redo
+
+See `doc/undo-redo.md`.
+
 ## Wrapping
 
 `TextArea` uses soft wrapping by default.
@@ -30,4 +39,3 @@ new ScrollViewer(new TextArea(text))
 See the living design document:
 
 - `doc/specs/text_editor_specs.md`
-
