@@ -16,6 +16,7 @@ using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Threading;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI;
+using UiTerminalKeyGesture = XenoAtom.Terminal.UI.Input.TerminalKeyGesture;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -51,6 +52,14 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private bool _inlineRemoveOnEnd;
     private Dictionary<string, AnsiStyle>? _previousMarkupStyles;
 
+    private List<UiCommand>? _globalCommands;
+
+    private long _lastTickTimestamp;
+    private readonly UiTerminalKeyGesture[] _pendingSequence = new UiTerminalKeyGesture[4];
+    private int _pendingSequenceCount;
+    private long _pendingSequenceTimestamp;
+    private Visual? _pendingSequenceFocus;
+
     private Visual? _visualBeingDynamicallyInitialized;
 
     private readonly List<IAnimatedVisual> _animatedVisuals = new();
@@ -70,6 +79,87 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private readonly DependencyIndex _measureIndex = new();
     private readonly DependencyIndex _arrangeIndex = new();
     private readonly DependencyIndex _renderIndex = new();
+
+    /// <summary>
+    /// Gets the global commands registered on this application.
+    /// </summary>
+    public IReadOnlyList<UiCommand> GlobalCommands => (IReadOnlyList<UiCommand>?)_globalCommands ?? Array.Empty<UiCommand>();
+
+    /// <summary>
+    /// Adds or replaces a global command.
+    /// </summary>
+    /// <param name="command">The command.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="command"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the command creates an ambiguous prefix conflict.</exception>
+    public void AddGlobalCommand(UiCommand command)
+    {
+        VerifyAccess();
+        ArgumentNullException.ThrowIfNull(command);
+        command.Validate();
+
+        _globalCommands ??= new List<UiCommand>();
+
+        // Avoid ambiguous routing: a sequence prefix must not be used as a standalone gesture in the same scope.
+        if (command.Sequence is { } sequence)
+        {
+            var prefix = sequence[0];
+            for (var i = 0; i < _globalCommands.Count; i++)
+            {
+                var existing = _globalCommands[i];
+                if (existing.Gesture is { } g && g.Equals(prefix))
+                {
+                    throw new InvalidOperationException($"The gesture '{prefix}' is already registered as a standalone global command and cannot be used as a sequence prefix.");
+                }
+            }
+        }
+        else if (command.Gesture is { } gesture)
+        {
+            for (var i = 0; i < _globalCommands.Count; i++)
+            {
+                var existing = _globalCommands[i];
+                if (existing.Sequence is { } existingSequence && existingSequence[0].Equals(gesture))
+                {
+                    throw new InvalidOperationException($"The gesture '{gesture}' is already registered as a global sequence prefix and cannot be used as a standalone command.");
+                }
+            }
+        }
+
+        for (var i = 0; i < _globalCommands.Count; i++)
+        {
+            if (string.Equals(_globalCommands[i].Id, command.Id, StringComparison.Ordinal))
+            {
+                _globalCommands[i] = command;
+                return;
+            }
+        }
+
+        _globalCommands.Add(command);
+    }
+
+    /// <summary>
+    /// Removes a global command by id.
+    /// </summary>
+    /// <param name="id">The command id.</param>
+    /// <returns><see langword="true"/> if a command was removed; otherwise <see langword="false"/>.</returns>
+    public bool RemoveGlobalCommand(string id)
+    {
+        VerifyAccess();
+        if (_globalCommands is null)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < _globalCommands.Count; i++)
+        {
+            if (string.Equals(_globalCommands[i].Id, id, StringComparison.Ordinal))
+            {
+                _globalCommands.RemoveAt(i);
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TerminalApp"/> class.
@@ -328,6 +418,9 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     internal void Tick(long? timestamp = null)
     {
         VerifyAccess();
+
+        _lastTickTimestamp = timestamp ?? Stopwatch.GetTimestamp();
+        CancelPendingSequenceIfTimedOut(_lastTickTimestamp);
 
         while (_pendingActions.TryDequeue(out var action))
         {
@@ -949,23 +1042,400 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private bool DispatchKeyEvent(TerminalKeyEvent keyEvent)
     {
         EnsureFocusInScope();
+
+        var args = new KeyEventArgs { RawEvent = keyEvent };
+
+        if (TryHandleCommandShortcut(args))
+        {
+            return true;
+        }
+
         if (FocusedElement is null || !FocusedElement.IsEnabled || !FocusedElement.IsVisible)
         {
             return false;
         }
 
-        var args = new KeyEventArgs { RawEvent = keyEvent };
+        FocusedElement.RaiseEvent(Visual.KeyDownEvent, args);
+        return args.Handled;
+    }
 
+    private static UiTerminalKeyGesture ToGesture(TerminalKeyEvent keyEvent)
+        => keyEvent.Key != TerminalKey.Unknown
+            ? new UiTerminalKeyGesture(keyEvent.Key, keyEvent.Modifiers)
+            : new UiTerminalKeyGesture(keyEvent.Char ?? '\0', keyEvent.Modifiers);
+
+    private bool TryHandleCommandShortcut(KeyEventArgs args)
+    {
+        var keyEvent = args.RawEvent;
+
+        // If a sequence is active, only consider sequence continuation (or cancellation).
+        if (_pendingSequenceCount > 0)
+        {
+            if (keyEvent.Key == TerminalKey.Escape)
+            {
+                CancelPendingSequence();
+                args.Handled = true;
+                return true;
+            }
+
+            return TryContinueSequence(args);
+        }
+
+        // Single-stroke command routing uses the same focus-walk semantics as key bindings.
+        if (TryExecuteGestureCommand(keyEvent))
+        {
+            args.Handled = true;
+            return true;
+        }
+
+        // No direct match: check for sequence prefixes.
+        var gesture = ToGesture(keyEvent);
+        if (TryStartSequence(gesture))
+        {
+            args.Handled = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryExecuteGestureCommand(TerminalKeyEvent keyEvent)
+    {
         for (var v = FocusedElement; v is not null; v = v.Parent)
         {
-            if (v.TryHandleKeyBinding(args))
+            var commands = v.Commands;
+            for (var i = 0; i < commands.Count; i++)
             {
+                var cmd = commands[i];
+                if (cmd.Gesture is not { } gesture)
+                {
+                    continue;
+                }
+
+                if (!gesture.Matches(keyEvent))
+                {
+                    continue;
+                }
+
+                if (!cmd.IsVisibleFor(v) || !cmd.CanExecuteFor(v))
+                {
+                    return true; // gesture matched but is disabled/hidden in this context; treat as handled.
+                }
+
+                cmd.Execute(v);
                 return true;
             }
         }
 
-        FocusedElement.RaiseEvent(Visual.KeyDownEvent, args);
-        return args.Handled;
+        // Global commands are evaluated last. The target is the focused element when possible.
+        var globalTarget = FocusedElement ?? Root;
+        if (_globalCommands is not null)
+        {
+            for (var i = 0; i < _globalCommands.Count; i++)
+            {
+                var cmd = _globalCommands[i];
+                if (cmd.Gesture is not { } gesture)
+                {
+                    continue;
+                }
+
+                if (!gesture.Matches(keyEvent))
+                {
+                    continue;
+                }
+
+                if (!cmd.IsVisibleFor(globalTarget) || !cmd.CanExecuteFor(globalTarget))
+                {
+                    return true;
+                }
+
+                cmd.Execute(globalTarget);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool TryStartSequence(in UiTerminalKeyGesture firstGesture)
+    {
+        // Prefix detection uses the same ordering as execution: focused chain first, then globals.
+        if (!IsSequencePrefix(firstGesture))
+        {
+            return false;
+        }
+
+        _pendingSequence[0] = firstGesture;
+        _pendingSequenceCount = 1;
+        _pendingSequenceTimestamp = _lastTickTimestamp;
+        _pendingSequenceFocus = FocusedElement;
+        return true;
+    }
+
+    private bool TryContinueSequence(KeyEventArgs args)
+    {
+        if (_pendingSequenceCount >= _pendingSequence.Length)
+        {
+            CancelPendingSequence();
+            return false;
+        }
+
+        var next = ToGesture(args.RawEvent);
+        _pendingSequence[_pendingSequenceCount++] = next;
+        _pendingSequenceTimestamp = _lastTickTimestamp;
+
+        var prefix = _pendingSequence.AsSpan(0, _pendingSequenceCount);
+
+        if (TryExecuteMatchingSequence(prefix, out var handled))
+        {
+            args.Handled = handled;
+            return handled;
+        }
+
+        // If the prefix matches at least one command, keep waiting.
+        if (HasSequenceWithPrefix(prefix))
+        {
+            args.Handled = true;
+            return true;
+        }
+
+        // No match: exit sequence mode and let normal key routing run for this key.
+        CancelPendingSequence();
+        return false;
+    }
+
+    private bool TryExecuteMatchingSequence(ReadOnlySpan<UiTerminalKeyGesture> prefix, out bool handled)
+    {
+        handled = false;
+
+        for (var v = FocusedElement; v is not null; v = v.Parent)
+        {
+            var commands = v.Commands;
+            for (var i = 0; i < commands.Count; i++)
+            {
+                var cmd = commands[i];
+                if (cmd.Sequence is not { } sequence)
+                {
+                    continue;
+                }
+
+                if (sequence.Count != prefix.Length)
+                {
+                    continue;
+                }
+
+                if (!SequenceMatches(sequence, prefix))
+                {
+                    continue;
+                }
+
+                CancelPendingSequence();
+
+                if (!cmd.IsVisibleFor(v) || !cmd.CanExecuteFor(v))
+                {
+                    handled = true;
+                    return true;
+                }
+
+                cmd.Execute(v);
+                handled = true;
+                return true;
+            }
+        }
+
+        var globalTarget = FocusedElement ?? Root;
+        if (_globalCommands is not null)
+        {
+            for (var i = 0; i < _globalCommands.Count; i++)
+            {
+                var cmd = _globalCommands[i];
+                if (cmd.Sequence is not { } sequence)
+                {
+                    continue;
+                }
+
+                if (sequence.Count != prefix.Length)
+                {
+                    continue;
+                }
+
+                if (!SequenceMatches(sequence, prefix))
+                {
+                    continue;
+                }
+
+                CancelPendingSequence();
+
+                if (!cmd.IsVisibleFor(globalTarget) || !cmd.CanExecuteFor(globalTarget))
+                {
+                    handled = true;
+                    return true;
+                }
+
+                cmd.Execute(globalTarget);
+                handled = true;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsSequencePrefix(in UiTerminalKeyGesture gesture)
+    {
+        for (var v = FocusedElement; v is not null; v = v.Parent)
+        {
+            var commands = v.Commands;
+            for (var i = 0; i < commands.Count; i++)
+            {
+                var cmd = commands[i];
+                if (cmd.Sequence is not { } sequence)
+                {
+                    continue;
+                }
+
+                if (sequence.Count > 0 && sequence[0].Matches(gesture) && cmd.IsVisibleFor(v))
+                {
+                    return true;
+                }
+            }
+        }
+
+        var globalTarget = FocusedElement ?? Root;
+        if (_globalCommands is not null)
+        {
+            for (var i = 0; i < _globalCommands.Count; i++)
+            {
+                var cmd = _globalCommands[i];
+                if (cmd.Sequence is not { } sequence)
+                {
+                    continue;
+                }
+
+                if (sequence.Count > 0 && sequence[0].Matches(gesture) && cmd.IsVisibleFor(globalTarget))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private bool HasSequenceWithPrefix(ReadOnlySpan<UiTerminalKeyGesture> prefix)
+    {
+        for (var v = FocusedElement; v is not null; v = v.Parent)
+        {
+            var commands = v.Commands;
+            for (var i = 0; i < commands.Count; i++)
+            {
+                var cmd = commands[i];
+                if (cmd.Sequence is not { } sequence)
+                {
+                    continue;
+                }
+
+                if (sequence.Count < prefix.Length)
+                {
+                    continue;
+                }
+
+                if (SequenceMatchesPrefix(sequence, prefix) && cmd.IsVisibleFor(v))
+                {
+                    return true;
+                }
+            }
+        }
+
+        var globalTarget = FocusedElement ?? Root;
+        if (_globalCommands is not null)
+        {
+            for (var i = 0; i < _globalCommands.Count; i++)
+            {
+                var cmd = _globalCommands[i];
+                if (cmd.Sequence is not { } sequence)
+                {
+                    continue;
+                }
+
+                if (sequence.Count < prefix.Length)
+                {
+                    continue;
+                }
+
+                if (SequenceMatchesPrefix(sequence, prefix) && cmd.IsVisibleFor(globalTarget))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool SequenceMatches(TerminalKeySequence sequence, ReadOnlySpan<UiTerminalKeyGesture> gestures)
+    {
+        if (sequence.Count != gestures.Length)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < gestures.Length; i++)
+        {
+            if (!sequence[i].Matches(gestures[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool SequenceMatchesPrefix(TerminalKeySequence sequence, ReadOnlySpan<UiTerminalKeyGesture> prefix)
+    {
+        for (var i = 0; i < prefix.Length; i++)
+        {
+            if (!sequence[i].Matches(prefix[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void CancelPendingSequence()
+    {
+        _pendingSequenceCount = 0;
+        _pendingSequenceTimestamp = 0;
+        _pendingSequenceFocus = null;
+    }
+
+    private void CancelPendingSequenceIfFocusChanged()
+    {
+        if (_pendingSequenceCount == 0)
+        {
+            return;
+        }
+
+        if (!ReferenceEquals(_pendingSequenceFocus, FocusedElement))
+        {
+            CancelPendingSequence();
+        }
+    }
+
+    private void CancelPendingSequenceIfTimedOut(long now)
+    {
+        if (_pendingSequenceCount == 0)
+        {
+            return;
+        }
+
+        // Default timeout for v1: 1.5 seconds.
+        if (Stopwatch.GetElapsedTime(_pendingSequenceTimestamp, now) > TimeSpan.FromMilliseconds(1500))
+        {
+            CancelPendingSequence();
+        }
     }
 
     private void EnsureInitialFocus()
@@ -1017,6 +1487,13 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
     private void HandleTerminalEvent(TerminalEvent ev)
     {
+        // Cancel multi-stroke sequences when a non-key event happens. This avoids leaving the app in a “prefix pending”
+        // state if the user interacts with the UI using the mouse or the terminal is resized.
+        if (ev is not TerminalKeyEvent)
+        {
+            CancelPendingSequence();
+        }
+
         if (ev is TerminalResizeEvent)
         {
             _fullscreenHost?.Reset();
@@ -1048,6 +1525,8 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
             return;
         }
 
+        CancelPendingSequenceIfFocusChanged();
+
         if (_options.ToggleDebugOverlayGesture.Matches(keyEvent))
         {
             _debugOverlayVisible = !_debugOverlayVisible;
@@ -1069,6 +1548,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
         if (keyEvent.Key == TerminalKey.Tab)
         {
+            CancelPendingSequence();
             // Transient popups should close on Tab before focus moves in the underlying UI.
             if (activeModal is Popup popup && popup.CloseOnTab)
             {

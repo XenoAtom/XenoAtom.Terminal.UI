@@ -131,6 +131,9 @@ Notes:
 - `Execute` and `CanExecute` take a `Visual` parameter to avoid per-instance closures (typical controls can use method groups).
 - Commands are *not* routed events; they are a higher-level “invocation” concept.
 - `Gesture` and `Sequence` are mutually exclusive (one command has a single shortcut representation).
+- For Ctrl-modified shortcuts, prefer using the terminal control-character constants (e.g. `TerminalChar.CtrlA`) for
+  `TerminalKeyGesture(char, TerminalModifiers)` because terminals commonly emit control characters rather than the printable
+  letter (see existing usage throughout the codebase).
 
 #### 4.1.1 `TerminalKeySequence`
 

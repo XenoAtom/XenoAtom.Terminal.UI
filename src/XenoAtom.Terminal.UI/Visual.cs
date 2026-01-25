@@ -28,7 +28,7 @@ namespace XenoAtom.Terminal.UI;
 public abstract partial class Visual : DispatcherObject, IVisualElement
 {
     private Dictionary<object, Delegate?>? _handlers;
-    private List<KeyBinding>? _keyBindings;
+    private List<UiCommand>? _commands;
     internal Dictionary<object, object?>? StyleEnvironment;
     private List<Action<Visual>>? _dynamicUpdates;
     private List<Collections.IDynamicUpdateResettable>? _dynamicUpdateLists;
@@ -158,7 +158,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// Adds a key binding to this visual.
     /// </summary>
     /// <remarks>
-    /// Key bindings are evaluated during key input routing. When the gesture matches, the action is invoked and the event is handled.
+     /// Key bindings are evaluated during key input routing. When the gesture matches, the action is invoked and the event is handled.
     /// </remarks>
     /// <param name="gesture">The key gesture.</param>
     /// <param name="action">The action to invoke when the gesture is triggered.</param>
@@ -166,34 +166,95 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     {
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(action);
-        _keyBindings ??= new List<KeyBinding>();
-        for (var i = 0; i < _keyBindings.Count; i++)
+
+        // Key bindings are represented internally as commands with Presentation.None so they participate in shortcut routing,
+        // while remaining hidden from command UI surfaces.
+        AddCommand(new UiCommand
         {
-            var existing = _keyBindings[i];
-            if (existing.Gesture.Equals(gesture))
+            Id = $"KeyBinding:{gesture}",
+            LabelMarkup = string.Empty,
+            Gesture = gesture,
+            Presentation = UiCommandPresentation.None,
+            Importance = UiCommandImportance.Tertiary,
+            Execute = _ => action(),
+        });
+    }
+
+    /// <summary>
+    /// Gets the commands registered on this visual.
+    /// </summary>
+    public IReadOnlyList<UiCommand> Commands => (IReadOnlyList<UiCommand>?)_commands ?? Array.Empty<UiCommand>();
+
+    /// <summary>
+    /// Adds or replaces a command on this visual.
+    /// </summary>
+    /// <param name="command">The command.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="command"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="command"/> is invalid.</exception>
+    public void AddCommand(UiCommand command)
+    {
+        VerifyAccess();
+        ArgumentNullException.ThrowIfNull(command);
+        command.Validate();
+
+        _commands ??= new List<UiCommand>();
+
+        // Avoid ambiguous routing: a sequence prefix must not be used as a standalone gesture in the same scope.
+        // This keeps single-stroke bindings simple and prevents timeout-based disambiguation.
+        if (command.Sequence is { } sequence)
+        {
+            var prefix = sequence[0];
+            for (var i = 0; i < _commands.Count; i++)
             {
-                _keyBindings[i] = new KeyBinding { Gesture = gesture, Action = action };
+                var existing = _commands[i];
+                if (existing.Gesture is { } g && g.Equals(prefix))
+                {
+                    throw new InvalidOperationException($"The gesture '{prefix}' is already registered as a standalone command in this scope and cannot be used as a sequence prefix.");
+                }
+            }
+        }
+        else if (command.Gesture is { } gesture)
+        {
+            for (var i = 0; i < _commands.Count; i++)
+            {
+                var existing = _commands[i];
+                if (existing.Sequence is { } existingSequence && existingSequence[0].Equals(gesture))
+                {
+                    throw new InvalidOperationException($"The gesture '{gesture}' is already registered as a sequence prefix in this scope and cannot be used as a standalone command.");
+                }
+            }
+        }
+
+        for (var i = 0; i < _commands.Count; i++)
+        {
+            if (string.Equals(_commands[i].Id, command.Id, StringComparison.Ordinal))
+            {
+                _commands[i] = command;
                 return;
             }
         }
 
-        _keyBindings.Add(new KeyBinding { Gesture = gesture, Action = action });
+        _commands.Add(command);
     }
 
-    internal bool TryHandleKeyBinding(KeyEventArgs e)
+    /// <summary>
+    /// Removes a command by id.
+    /// </summary>
+    /// <param name="id">The command id.</param>
+    /// <returns><see langword="true"/> if a command was removed; otherwise <see langword="false"/>.</returns>
+    public bool RemoveCommand(string id)
     {
-        if (_keyBindings is null)
+        VerifyAccess();
+        if (_commands is null)
         {
             return false;
         }
 
-        for (var i = 0; i < _keyBindings.Count; i++)
+        for (var i = 0; i < _commands.Count; i++)
         {
-            var binding = _keyBindings[i];
-            if (binding.Gesture.Matches(e.RawEvent))
+            if (string.Equals(_commands[i].Id, id, StringComparison.Ordinal))
             {
-                binding.Action();
-                e.Handled = true;
+                _commands.RemoveAt(i);
                 return true;
             }
         }
