@@ -17,6 +17,7 @@ using XenoAtom.Terminal.UI.Threading;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Commands;
+using XenoAtom.Terminal.UI.Collections;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -56,7 +57,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private Popup? _contextMenuPopup;
     private Visual? _contextMenuFocusContext;
 
-    private List<Command>? _globalCommands;
+    private BindableList<Command>? _globalCommands;
 
     private long _lastTickTimestamp;
     private readonly KeyGesture[] _pendingSequence = new KeyGesture[4];
@@ -89,7 +90,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     /// <summary>
     /// Gets the global commands registered on this application.
     /// </summary>
-    public IReadOnlyList<Command> GlobalCommands => (IReadOnlyList<Command>?)_globalCommands ?? Array.Empty<Command>();
+    public BindableList<Command> GlobalCommands => _globalCommands ??= new BindableList<Command>(this, "TerminalApp.GlobalCommands");
 
     /// <summary>
     /// Adds or replaces a global command.
@@ -103,15 +104,15 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         ArgumentNullException.ThrowIfNull(command);
         command.Validate();
 
-        _globalCommands ??= new List<Command>();
+        var commands = GlobalCommands;
 
         // Avoid ambiguous routing: a sequence prefix must not be used as a standalone gesture in the same scope.
         if (command.Sequence is { } sequence)
         {
             var prefix = sequence[0];
-            for (var i = 0; i < _globalCommands.Count; i++)
+            for (var i = 0; i < commands.Count; i++)
             {
-                var existing = _globalCommands[i];
+                var existing = commands[i];
                 if (existing.Gesture is { } g && g.Equals(prefix))
                 {
                     throw new InvalidOperationException($"The gesture '{prefix}' is already registered as a standalone global command and cannot be used as a sequence prefix.");
@@ -120,9 +121,9 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
         else if (command.Gesture is { } gesture)
         {
-            for (var i = 0; i < _globalCommands.Count; i++)
+            for (var i = 0; i < commands.Count; i++)
             {
-                var existing = _globalCommands[i];
+                var existing = commands[i];
                 if (existing.Sequence is { } existingSequence && existingSequence[0].Equals(gesture))
                 {
                     throw new InvalidOperationException($"The gesture '{gesture}' is already registered as a global sequence prefix and cannot be used as a standalone command.");
@@ -130,16 +131,16 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             }
         }
 
-        for (var i = 0; i < _globalCommands.Count; i++)
+        for (var i = 0; i < commands.Count; i++)
         {
-            if (string.Equals(_globalCommands[i].Id, command.Id, StringComparison.Ordinal))
+            if (string.Equals(commands[i].Id, command.Id, StringComparison.Ordinal))
             {
-                _globalCommands[i] = command;
+                commands[i] = command;
                 return;
             }
         }
 
-        _globalCommands.Add(command);
+        commands.Add(command);
     }
 
     /// <summary>
@@ -226,6 +227,17 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
 
         _exitGesture = _options.ExitGesture ?? GetDefaultExitGesture(_options.HostKind);
+
+        AddGlobalCommand(new Command
+        {
+            Id = "TerminalApp.Quit",
+            LabelMarkup = "Quit",
+            DescriptionMarkup = "Quit the application.",
+            Gesture = _exitGesture,
+            Importance = CommandImportance.Primary,
+            Presentation = CommandPresentation.CommandBar,
+            Execute = static v => v.App?.Stop(),
+        });
     }
 
     /// <summary>
@@ -1105,13 +1117,13 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
     }
 
-    private bool DispatchKeyEvent(TerminalKeyEvent keyEvent)
+    private bool DispatchKeyEvent(TerminalKeyEvent keyEvent, bool routeCommands = true)
     {
         EnsureFocusInScope();
 
         var args = new KeyEventArgs { RawEvent = keyEvent };
 
-        if (TryHandleCommandShortcut(args))
+        if (routeCommands && TryHandleCommandShortcut(args))
         {
             return true;
         }
@@ -1633,7 +1645,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         if (_exitGesture.Matches(keyEvent))
         {
             // Allow controls to handle the exit gesture (e.g. close transient popups) before exiting the app.
-            if (!DispatchKeyEvent(keyEvent))
+            if (!DispatchKeyEvent(keyEvent, routeCommands: false))
             {
                 _cts.Cancel();
             }
