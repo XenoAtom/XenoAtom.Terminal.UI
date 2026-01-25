@@ -1,0 +1,50 @@
+# CommandBar
+
+`CommandBar` displays a single-row “key hints” strip for the current focus context.
+
+It collects `UiCommand` instances registered on the focused visual (and its parents) plus app-level commands, then renders
+them as a sequence of keycaps and labels.
+
+> Screenshot placeholder: `img/screenshots/commandbar.png`
+
+## Example
+
+```csharp
+using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI;
+using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Input;
+
+var editor = new TextArea("Try Ctrl+Z / Ctrl+R / Ctrl+F");
+
+var root = new DockLayout()
+    .Content(editor)
+    .Bottom(new VStack(
+        new CommandBar(),
+        new Footer().Left("Tab focus | Mouse").Right("Ctrl+Q quit"))
+        .Spacing(0));
+
+Terminal.Run(root);
+```
+
+## Styling
+
+Use `CommandBarStyle` to change bar/keycap colors:
+
+```csharp
+using XenoAtom.Terminal.UI.Styling;
+
+var bar = new CommandBar()
+    .Style(CommandBarStyle.Default with
+    {
+        Background = Colors.Black,
+        KeyForeground = Colors.Primary,
+        Gap = 3,
+    });
+```
+
+## See also
+
+- `doc/commands.md`
+- `doc/specs/command_specs.md`
+

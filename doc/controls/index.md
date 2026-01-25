@@ -54,6 +54,7 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 - `doc/controls/header.md`
 - `doc/controls/footer.md`
 - `doc/controls/statusbar.md`
+- `doc/controls/commandbar.md`
 - `doc/controls/commandpalette.md`
 
 ## Data display

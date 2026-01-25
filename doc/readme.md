@@ -25,6 +25,7 @@ This guide documents the concepts, features, and controls of the library.
 - `doc/culture.md` (culture-aware value formatting)
 - `doc/layout.md` (layout protocol, alignment, margin/padding)
 - `doc/input.md` (keyboard/mouse, focus, routed events, capture)
+- `doc/commands.md` (commands, key sequences, key hints with CommandBar)
 - `doc/styling.md` (Theme, styles, environment)
 - `doc/rendering.md` (cell buffer, diff renderer, performance)
 - `doc/scrolling.md` (ScrollViewer, scroll models, scrollbars)
