@@ -13,6 +13,7 @@ partial record ColorScheme
     /// </summary>
     public static List<ColorScheme> GetPredefinedSchemes()
         => [
+            RetroBlue,
             CherryDark,
             CherryDarkSoft,
             CherryLightSoft,
@@ -63,6 +64,16 @@ partial record ColorScheme
             RaspberryLight,
         ];
 
+
+    /// <summary>
+    /// A <see cref="ColorScheme"/> with <c>Elderberry</c> color and <c>Splash</c> milk in <c>Blue</c> mode.
+    /// </summary>
+    public static ColorScheme RetroBlue => RetroBlueHolder.Instance;
+
+    private static class RetroBlueHolder
+    {
+        public static readonly ColorScheme Instance = ColorScheme.Generate(7, 10, 10, RootLoopsFlavor.Classic, RootLoopsFruit.Elderberry, RootLoopsMilkAmount.Splash, "Retro Blue");
+    }
 
     /// <summary>
     /// A <see cref="ColorScheme"/> with <c>Cherry</c> color and <c>None</c> milk in <c>Dark</c> mode.

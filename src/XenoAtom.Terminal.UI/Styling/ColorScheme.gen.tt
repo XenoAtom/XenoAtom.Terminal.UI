@@ -8,6 +8,22 @@
     var colors = new string[] { "Cherry", "Tomato", "Orange", "Pineapple", "Apple", "Kiwi", "Kale", "Blueberry", "Plum", "Elderberry", "Blackberry", "Raspberry" };
     var milks = new string[] { "None", "Splash", "Glug", "Cup" };
     var modes = new string[] { "Dark", "Dark Soft", "Light Soft", "Light" };
+
+
+    var schemes = new List<(int Sugar, int Colors, int Sogginess, string Flavor, string Fruit, string Milk, string Name, string Display, string Mode)>();
+
+    schemes.Add((7, 10, 10,  "Classic", "Elderberry", "Splash", "RetroBlue", "Retro Blue", "Blue"));
+
+    foreach (var color in colors)
+    {
+        for (int i = 0; i < milks.Length; i++)
+        {
+            var milk = milks[i];
+            var mode = modes[i];
+
+            schemes.Add((6, 8, 4, "Intense", color, milk, $"{color}{mode.Replace(" ", "")}", $"{color} {mode}", mode));
+        }
+    }
 #>
 // Copyright (c) Alexandre Mutel. All rights reserved.
 // Licensed under the BSD-Clause 2 license.
@@ -25,40 +41,30 @@ partial record ColorScheme
     public static List<ColorScheme> GetPredefinedSchemes()
         => [
 <#
-    foreach (var color in colors)
+    foreach (var scheme in schemes)
     {
-        for (int i = 0; i < milks.Length; i++)
-        {
-            var milk = milks[i];
-            var mode = modes[i];
 #>
-            <#= color #><#= mode.Replace(" ","") #>,
-<#
-        }
+            <#= scheme.Name #>,
+<#        
     }
 #>
         ];
 
 <#
-    foreach (var color in colors)
+    foreach (var scheme in schemes)
     {
-        for (int i = 0; i < milks.Length; i++)
-        {
-            var milk = milks[i];
-            var mode = modes[i];
 #>
 
     /// <summary>
-    /// A <see cref="ColorScheme"/> with <c><#= color #></c> color and <c><#= milk #></c> milk in <c><#= mode #></c> mode.
+    /// A <see cref="ColorScheme"/> with <c><#= scheme.Fruit #></c> color and <c><#= scheme.Milk #></c> milk in <c><#= scheme.Mode #></c> mode.
     /// </summary>
-    public static ColorScheme <#= color #><#= mode.Replace(" ","") #> => <#= color #><#= mode.Replace(" ","") #>Holder.Instance;
+    public static ColorScheme <#= scheme.Name #> => <#= scheme.Name #>Holder.Instance;
 
-    private static class <#= color #><#= mode.Replace(" ","") #>Holder
+    private static class <#= scheme.Name #>Holder
     {
-        public static readonly ColorScheme Instance = ColorScheme.Generate(6, 8, 4, RootLoopsFlavor.Intense, RootLoopsFruit.<#= color #>, RootLoopsMilkAmount.<#= milk #>, "<#= color #> <#= mode #>");
+        public static readonly ColorScheme Instance = ColorScheme.Generate(<#= scheme.Sugar #>, <#= scheme.Colors #>, <#= scheme.Sogginess #>, RootLoopsFlavor.<#= scheme.Flavor #>, RootLoopsFruit.<#= scheme.Fruit #>, RootLoopsMilkAmount.<#= scheme.Milk #>, "<#= scheme.Display #>");
     }
-<#
-        }
+<#  
     }
 #>
 }
