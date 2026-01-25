@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Rendering;
@@ -27,6 +28,9 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     private ITextDocument _textDocument;
     private readonly ScrollModel _scroll;
     private readonly TextEditorCore _core;
+    private readonly TextUndoRedoManager _undoRedo;
+    private bool _canUndo;
+    private bool _canRedo;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TextEditorBase"/> class.
@@ -36,9 +40,17 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
         Focusable = true;
         _textDocument = new TextDocument();
         _scroll = new ScrollModel();
-        _core = new TextEditorCore(this, _textDocument, _scroll);
+        _undoRedo = new TextUndoRedoManager();
+        _undoRedo.Attach(_textDocument);
+        _undoRedo.StateChanged += OnUndoRedoStateChanged;
+
+        this.EnableUndo(true);
+        this.MaxUndoEntries(200);
+
+        _core = new TextEditorCore(this, _textDocument, _scroll, _undoRedo);
         _scroll.Changed += OnScrollChanged;
         _textDocument.Changed += OnDocumentChanged;
+        OnUndoRedoStateChanged();
     }
 
     /// <summary>
@@ -54,6 +66,38 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     /// Gets the scroll model for this editor.
     /// </summary>
     public ScrollModel Scroll => _scroll;
+
+    /// <summary>
+    /// Gets a value indicating whether an undo operation is currently available.
+    /// </summary>
+    [Bindable]
+    public bool CanUndo
+    {
+        get => BindingManager.Current.GetValue(this, ref _canUndo, __CanUndo__BindingAccessor.Instance);
+        private set => BindingManager.Current.SetValue(this, ref _canUndo, value, __CanUndo__BindingAccessor.Instance);
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether a redo operation is currently available.
+    /// </summary>
+    [Bindable]
+    public bool CanRedo
+    {
+        get => BindingManager.Current.GetValue(this, ref _canRedo, __CanRedo__BindingAccessor.Instance);
+        private set => BindingManager.Current.SetValue(this, ref _canRedo, value, __CanRedo__BindingAccessor.Instance);
+    }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether undo/redo tracking is enabled.
+    /// </summary>
+    [Bindable]
+    public partial bool EnableUndo { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of undo entries retained by this editor.
+    /// </summary>
+    [Bindable]
+    public partial int MaxUndoEntries { get; set; }
 
     [Bindable]
     public partial string? Placeholder { get; set; }
@@ -75,6 +119,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
 
         _textDocument.Changed -= OnDocumentChanged;
         _textDocument = document;
+        _undoRedo.Attach(_textDocument);
         _textDocument.Changed += OnDocumentChanged;
         _core.SetDocument(_textDocument);
 
@@ -221,10 +266,22 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
 
     private void OnDocumentChanged(object? sender, TextDocumentChangedEventArgs e)
     {
+        _undoRedo.EnsureSynchronized();
         _core.OnDocumentChanged();
         MarkArrangeDirty();
         App?.RequestRender();
     }
+
+    partial void OnEnableUndoChanged(bool value)
+    {
+        _undoRedo.Enabled = value;
+        if (!value)
+        {
+            _undoRedo.Clear();
+        }
+    }
+
+    partial void OnMaxUndoEntriesChanged(int value) => _undoRedo.MaxEntries = Math.Max(0, value);
 
     partial void OnWordWrapChanged(bool value) => MarkArrangeDirty();
 
@@ -260,6 +317,23 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
 
     internal ISearchReplaceTarget CreateSearchReplaceTarget() => new TextEditorSearchTarget(this);
 
+    internal TextUndoRedoManager UndoManager => _undoRedo;
+
+    /// <summary>
+    /// Clears undo and redo history for this editor.
+    /// </summary>
+    public void ClearUndoHistory() => _undoRedo.Clear();
+
+    /// <summary>
+    /// Attempts to undo the last edit.
+    /// </summary>
+    public void Undo() => _core.Undo(BuildEditorOptions());
+
+    /// <summary>
+    /// Attempts to redo the last undone edit.
+    /// </summary>
+    public void Redo() => _core.Redo(BuildEditorOptions());
+
     /// <summary>
     /// Tries to get the desired terminal cursor position for this editor.
     /// </summary>
@@ -268,6 +342,13 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     /// <returns><c>true</c> if a cursor position is available; otherwise <c>false</c>.</returns>
     public bool TryGetCursorCell(out int x, out int y)
         => _core.TryGetCursorCell(BuildEditorOptions(), out x, out y);
+
+    private void OnUndoRedoStateChanged()
+    {
+        CanUndo = _undoRedo.CanUndo;
+        CanRedo = _undoRedo.CanRedo;
+        App?.RequestRender();
+    }
 
     private sealed class TextEditorSearchTarget : ISearchReplaceTarget
     {

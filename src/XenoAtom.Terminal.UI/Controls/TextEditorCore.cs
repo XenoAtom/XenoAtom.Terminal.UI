@@ -48,6 +48,7 @@ internal sealed class TextEditorCore
     private readonly ITextEditorHost _host;
     private ITextDocument _document;
     private readonly ScrollModel _scroll;
+    private readonly TextUndoRedoManager _undoRedo;
 
     private string _cachedText = string.Empty;
     private int _cachedVersion = -1;
@@ -70,11 +71,12 @@ internal sealed class TextEditorCore
     private int _activeSearchMatchIndex = -1;
     private string? _searchError;
 
-    public TextEditorCore(ITextEditorHost host, ITextDocument document, ScrollModel scroll)
+    public TextEditorCore(ITextEditorHost host, ITextDocument document, ScrollModel scroll, TextUndoRedoManager undoRedo)
     {
         _host = host;
         _document = document;
         _scroll = scroll;
+        _undoRedo = undoRedo;
     }
 
     private static int NormalizeIndexToTextElementBoundary(ReadOnlySpan<char> text, int index)
@@ -312,7 +314,7 @@ internal sealed class TextEditorCore
             return;
         }
 
-        InsertText(e.Text, options);
+        InsertText(e.Text, TextUndoRedoManager.TextUndoKind.Typing, allowCoalesce: true, options);
         e.Handled = true;
     }
 
@@ -323,7 +325,7 @@ internal sealed class TextEditorCore
             return;
         }
 
-        InsertText(e.Text, options);
+        InsertText(e.Text, TextUndoRedoManager.TextUndoKind.Paste, allowCoalesce: false, options);
         e.Handled = true;
     }
     public void OnPointerPressed(PointerEventArgs e, in TextEditorOptions options)
@@ -394,6 +396,23 @@ internal sealed class TextEditorCore
         var ctrl = (e.Modifiers & TerminalModifiers.Ctrl) != 0;
         var shift = (e.Modifiers & TerminalModifiers.Shift) != 0;
 
+        if (ctrl)
+        {
+            if (e.Char is TerminalChar.CtrlZ)
+            {
+                Undo(options);
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Char is TerminalChar.CtrlR)
+            {
+                Redo(options);
+                e.Handled = true;
+                return;
+            }
+        }
+
         if (ctrl && !options.SingleLine)
         {
             if (e.Char is TerminalChar.CtrlF)
@@ -436,7 +455,7 @@ internal sealed class TextEditorCore
                 var clip = _host.App?.Terminal.Clipboard.Text;
                 if (!string.IsNullOrEmpty(clip))
                 {
-                    InsertText(clip, options);
+                    InsertText(clip, TextUndoRedoManager.TextUndoKind.Paste, allowCoalesce: false, options);
                 }
                 e.Handled = true;
                 return;
@@ -462,8 +481,7 @@ internal sealed class TextEditorCore
                     {
                         _host.App?.Terminal.Clipboard.TrySetText(span);
                     }
-                    DeleteSelection();
-                    UpdateAfterDocumentChange(options);
+                    DeleteSelection(TextUndoRedoManager.TextUndoKind.Delete, options);
                 }
                 e.Handled = true;
                 return;
@@ -494,7 +512,7 @@ internal sealed class TextEditorCore
             {
                 if (!string.IsNullOrEmpty(_killBuffer))
                 {
-                    InsertText(_killBuffer, options);
+                    InsertText(_killBuffer, TextUndoRedoManager.TextUndoKind.Paste, allowCoalesce: false, options);
                 }
                 e.Handled = true;
                 return;
@@ -550,32 +568,40 @@ internal sealed class TextEditorCore
             case TerminalKey.Backspace:
                 if (HasSelection)
                 {
-                    DeleteSelection();
+                    DeleteSelection(TextUndoRedoManager.TextUndoKind.Delete, options);
                 }
                 else if (_caretIndex > 0)
                 {
                     var prev = (e.Modifiers & TerminalModifiers.Ctrl) != 0
                         ? GetPreviousWordIndex(text, _caretIndex)
                         : TerminalTextUtility.GetPreviousTextElementIndex(text, _caretIndex);
-                    _document.Replace(prev, _caretIndex - prev, ReadOnlySpan<char>.Empty);
-                    _caretIndex = prev;
+                    ApplyReplaceWithUndo(TextUndoRedoManager.TextUndoKind.Delete, prev, _caretIndex - prev, ReadOnlySpan<char>.Empty, allowCoalesce: false, options, () =>
+                    {
+                        _caretIndex = prev;
+                        _preferredColumn = -1;
+                    });
+                    e.Handled = true;
+                    return;
                 }
-                UpdateAfterDocumentChange(options);
                 e.Handled = true;
                 return;
             case TerminalKey.Delete:
                 if (HasSelection)
                 {
-                    DeleteSelection();
+                    DeleteSelection(TextUndoRedoManager.TextUndoKind.Delete, options);
                 }
                 else if (_caretIndex < text.Length)
                 {
                     var next = (e.Modifiers & TerminalModifiers.Ctrl) != 0
                         ? GetNextWordIndex(text, _caretIndex)
                         : TerminalTextUtility.GetNextTextElementIndex(text, _caretIndex);
-                    _document.Replace(_caretIndex, next - _caretIndex, ReadOnlySpan<char>.Empty);
+                    ApplyReplaceWithUndo(TextUndoRedoManager.TextUndoKind.Delete, _caretIndex, next - _caretIndex, ReadOnlySpan<char>.Empty, allowCoalesce: false, options, () =>
+                    {
+                        _preferredColumn = -1;
+                    });
+                    e.Handled = true;
+                    return;
                 }
-                UpdateAfterDocumentChange(options);
                 e.Handled = true;
                 return;
         }
@@ -657,14 +683,14 @@ internal sealed class TextEditorCore
             case TerminalKey.Enter:
                 if (options.AcceptsReturn)
                 {
-                    InsertText("\n", options);
+                    InsertText("\n", TextUndoRedoManager.TextUndoKind.Typing, allowCoalesce: false, options);
                     e.Handled = true;
                 }
                 return;
             case TerminalKey.Tab:
                 if (options.AcceptsTab)
                 {
-                    InsertText("\t", options);
+                    InsertText("\t", TextUndoRedoManager.TextUndoKind.Typing, allowCoalesce: true, options);
                     e.Handled = true;
                 }
                 return;
@@ -1006,7 +1032,79 @@ internal sealed class TextEditorCore
         return totalRows;
     }
 
-    private void InsertText(string text, in TextEditorOptions options)
+    private TextUndoRedoManager.TextEditorStateSnapshot CaptureStateSnapshot()
+        => new(
+            CaretIndex: _caretIndex,
+            SelectionAnchor: _selectionAnchor,
+            SelectionEnd: _selectionEnd,
+            ScrollX: _scroll.OffsetX,
+            ScrollY: _scroll.OffsetY,
+            PreferredColumn: _preferredColumn);
+
+    private void RestoreStateSnapshot(in TextUndoRedoManager.TextEditorStateSnapshot snapshot, in TextEditorOptions options)
+    {
+        var text = GetText().AsSpan();
+        var length = text.Length;
+
+        _caretIndex = NormalizeIndexToTextElementBoundary(text, Math.Clamp(snapshot.CaretIndex, 0, length));
+        _preferredColumn = snapshot.PreferredColumn;
+
+        if (snapshot.SelectionAnchor < 0 || snapshot.SelectionEnd < 0 || snapshot.SelectionAnchor == snapshot.SelectionEnd)
+        {
+            ClearSelection();
+        }
+        else
+        {
+            _selectionAnchor = NormalizeIndexToTextElementBoundary(text, Math.Clamp(snapshot.SelectionAnchor, 0, length));
+            _selectionEnd = NormalizeIndexToTextElementBoundary(text, Math.Clamp(snapshot.SelectionEnd, 0, length));
+        }
+
+        _scroll.SetOffset(Math.Max(0, snapshot.ScrollX), Math.Max(0, snapshot.ScrollY));
+        _ = options;
+    }
+
+    private void ApplyReplaceWithUndo(
+        TextUndoRedoManager.TextUndoKind kind,
+        int position,
+        int length,
+        ReadOnlySpan<char> inserted,
+        bool allowCoalesce,
+        in TextEditorOptions options,
+        Action afterDocumentChange)
+    {
+        _undoRedo.EnsureSynchronized();
+
+        var before = CaptureStateSnapshot();
+
+        string removedText;
+        string insertedText;
+        if (_undoRedo.Enabled)
+        {
+            var text = GetText();
+            removedText = length == 0 ? string.Empty : text.AsSpan(position, length).ToString();
+            insertedText = inserted.IsEmpty ? string.Empty : inserted.ToString();
+        }
+        else
+        {
+            removedText = string.Empty;
+            insertedText = string.Empty;
+        }
+
+        using var _ = _undoRedo.BeginRecording();
+        _document.Replace(position, length, inserted);
+
+        afterDocumentChange();
+
+        var after = CaptureStateSnapshot();
+        if (_undoRedo.Enabled)
+        {
+            _undoRedo.RecordSingle(kind, new(position, removedText, insertedText), before, after, allowCoalesce);
+        }
+
+        UpdateAfterDocumentChange(options);
+    }
+
+    private void InsertText(string text, TextUndoRedoManager.TextUndoKind kind, bool allowCoalesce, in TextEditorOptions options)
     {
         if (string.IsNullOrEmpty(text))
         {
@@ -1020,21 +1118,41 @@ internal sealed class TextEditorCore
 
         if (HasSelection)
         {
-            DeleteSelection();
+            var snapshotText = GetText();
+            var (start, end) = GetOrderedSelection();
+            start = Math.Clamp(start, 0, snapshotText.Length);
+            end = Math.Clamp(end, 0, snapshotText.Length);
+            if (end <= start)
+            {
+                ClearSelection();
+            }
+            else
+            {
+                var insertedLength = text.Length;
+                ApplyReplaceWithUndo(kind, start, end - start, text.AsSpan(), allowCoalesce: false, options, () =>
+                {
+                    _caretIndex = start + insertedLength;
+                    ClearSelection();
+                    _preferredColumn = -1;
+                });
+                return;
+            }
         }
 
-        var insertText = text.AsSpan();
-        _document.Insert(Math.Clamp(_caretIndex, 0, GetText().Length), insertText);
-        _caretIndex += insertText.Length;
-        _preferredColumn = -1;
-        UpdateAfterDocumentChange(options);
+        var insertPos = Math.Clamp(_caretIndex, 0, GetText().Length);
+        var insertedLengthNoSelection = text.Length;
+        ApplyReplaceWithUndo(kind, insertPos, length: 0, text.AsSpan(), allowCoalesce, options, () =>
+        {
+            _caretIndex = insertPos + insertedLengthNoSelection;
+            _preferredColumn = -1;
+        });
     }
 
     private void Backspace(in TextEditorOptions options)
     {
         if (HasSelection)
         {
-            DeleteSelection();
+            DeleteSelection(TextUndoRedoManager.TextUndoKind.Delete, options);
             return;
         }
 
@@ -1045,17 +1163,18 @@ internal sealed class TextEditorCore
         }
 
         var prev = TerminalTextUtility.GetPreviousTextElementIndex(text.AsSpan(), _caretIndex);
-        _document.Remove(prev, _caretIndex - prev);
-        _caretIndex = prev;
-        _preferredColumn = -1;
-        UpdateAfterDocumentChange(options);
+        ApplyReplaceWithUndo(TextUndoRedoManager.TextUndoKind.Delete, prev, _caretIndex - prev, ReadOnlySpan<char>.Empty, allowCoalesce: false, options, () =>
+        {
+            _caretIndex = prev;
+            _preferredColumn = -1;
+        });
     }
 
     private void Delete(in TextEditorOptions options)
     {
         if (HasSelection)
         {
-            DeleteSelection();
+            DeleteSelection(TextUndoRedoManager.TextUndoKind.Delete, options);
             return;
         }
 
@@ -1066,9 +1185,10 @@ internal sealed class TextEditorCore
         }
 
         var next = TerminalTextUtility.GetNextTextElementIndex(text.AsSpan(), _caretIndex);
-        _document.Remove(_caretIndex, next - _caretIndex);
-        _preferredColumn = -1;
-        UpdateAfterDocumentChange(options);
+        ApplyReplaceWithUndo(TextUndoRedoManager.TextUndoKind.Delete, _caretIndex, next - _caretIndex, ReadOnlySpan<char>.Empty, allowCoalesce: false, options, () =>
+        {
+            _preferredColumn = -1;
+        });
     }
 
     private void MoveCaretTo(int index, bool extendSelection, in TextEditorOptions options)
@@ -1243,15 +1363,15 @@ internal sealed class TextEditorCore
         if (HasSelection)
         {
             _killBuffer = GetSelectedTextSpan(text).ToString();
-            DeleteSelection();
+            DeleteSelection(TextUndoRedoManager.TextUndoKind.Kill, options);
+            return;
         }
         else if (_caretIndex < text.Length)
         {
             _killBuffer = text[_caretIndex..].ToString();
-            _document.Remove(_caretIndex, text.Length - _caretIndex);
+            ApplyReplaceWithUndo(TextUndoRedoManager.TextUndoKind.Kill, _caretIndex, text.Length - _caretIndex, ReadOnlySpan<char>.Empty, allowCoalesce: false, options, () => { });
+            return;
         }
-
-        UpdateAfterDocumentChange(options);
     }
 
     private void KillToStart(ReadOnlySpan<char> text, in TextEditorOptions options)
@@ -1259,16 +1379,19 @@ internal sealed class TextEditorCore
         if (HasSelection)
         {
             _killBuffer = GetSelectedTextSpan(text).ToString();
-            DeleteSelection();
+            DeleteSelection(TextUndoRedoManager.TextUndoKind.Kill, options);
+            return;
         }
         else if (_caretIndex > 0)
         {
             _killBuffer = text[.._caretIndex].ToString();
-            _document.Remove(0, _caretIndex);
-            _caretIndex = 0;
+            var start = _caretIndex;
+            ApplyReplaceWithUndo(TextUndoRedoManager.TextUndoKind.Kill, 0, start, ReadOnlySpan<char>.Empty, allowCoalesce: false, options, () =>
+            {
+                _caretIndex = 0;
+            });
+            return;
         }
-
-        UpdateAfterDocumentChange(options);
     }
 
     private void KillPreviousWord(ReadOnlySpan<char> text, in TextEditorOptions options)
@@ -1276,8 +1399,7 @@ internal sealed class TextEditorCore
         if (HasSelection)
         {
             _killBuffer = GetSelectedTextSpan(text).ToString();
-            DeleteSelection();
-            UpdateAfterDocumentChange(options);
+            DeleteSelection(TextUndoRedoManager.TextUndoKind.Kill, options);
             return;
         }
 
@@ -1288,9 +1410,10 @@ internal sealed class TextEditorCore
 
         var prev = GetPreviousWordIndex(text, _caretIndex);
         _killBuffer = text[prev.._caretIndex].ToString();
-        _document.Remove(prev, _caretIndex - prev);
-        _caretIndex = prev;
-        UpdateAfterDocumentChange(options);
+        ApplyReplaceWithUndo(TextUndoRedoManager.TextUndoKind.Kill, prev, _caretIndex - prev, ReadOnlySpan<char>.Empty, allowCoalesce: false, options, () =>
+        {
+            _caretIndex = prev;
+        });
     }
 
     private void ClearSelection()
@@ -1309,7 +1432,7 @@ internal sealed class TextEditorCore
         _selectionEnd = caret;
     }
 
-    private void DeleteSelection()
+    private void DeleteSelection(TextUndoRedoManager.TextUndoKind kind, in TextEditorOptions options)
     {
         if (!HasSelection)
         {
@@ -1326,9 +1449,70 @@ internal sealed class TextEditorCore
             return;
         }
 
-        _document.Remove(start, end - start);
-        _caretIndex = start;
-        ClearSelection();
+        ApplyReplaceWithUndo(kind, start, end - start, ReadOnlySpan<char>.Empty, allowCoalesce: false, options, () =>
+        {
+            _caretIndex = start;
+            ClearSelection();
+            _preferredColumn = -1;
+        });
+    }
+
+    internal void Undo(in TextEditorOptions options)
+    {
+        _undoRedo.EnsureSynchronized();
+        if (!_undoRedo.Enabled || !_undoRedo.CanUndo)
+        {
+            return;
+        }
+
+        var entry = _undoRedo.Undo();
+        using var _ = _undoRedo.BeginApplying();
+        using var __ = _document.BeginUpdate();
+
+        for (var i = entry.Changes.Length - 1; i >= 0; i--)
+        {
+            var change = entry.Changes[i];
+            _document.Replace(change.Position, change.InsertedText.Length, change.RemovedText.AsSpan());
+        }
+
+        RestoreStateSnapshot(entry.Before, options);
+        UpdateAfterDocumentChange(options);
+
+        if (!string.IsNullOrEmpty(_searchQuery.Text))
+        {
+            RebuildSearchMatches();
+        }
+
+        _host.InvalidateEditor();
+    }
+
+    internal void Redo(in TextEditorOptions options)
+    {
+        _undoRedo.EnsureSynchronized();
+        if (!_undoRedo.Enabled || !_undoRedo.CanRedo)
+        {
+            return;
+        }
+
+        var entry = _undoRedo.Redo();
+        using var _ = _undoRedo.BeginApplying();
+        using var __ = _document.BeginUpdate();
+
+        for (var i = 0; i < entry.Changes.Length; i++)
+        {
+            var change = entry.Changes[i];
+            _document.Replace(change.Position, change.RemovedText.Length, change.InsertedText.AsSpan());
+        }
+
+        RestoreStateSnapshot(entry.After, options);
+        UpdateAfterDocumentChange(options);
+
+        if (!string.IsNullOrEmpty(_searchQuery.Text))
+        {
+            RebuildSearchMatches();
+        }
+
+        _host.InvalidateEditor();
     }
 
     private void SelectAll()
@@ -2075,11 +2259,12 @@ internal sealed class TextEditorCore
         }
 
         var match = _searchMatches[_activeSearchMatchIndex];
-        _document.Replace(match.Start, match.Length, replacement.AsSpan());
-        _caretIndex = match.Start + replacement.Length;
-        _preferredColumn = -1;
-
-        UpdateAfterDocumentChange(options);
+        ApplyReplaceWithUndo(TextUndoRedoManager.TextUndoKind.Replace, match.Start, match.Length, replacement.AsSpan(), allowCoalesce: false, options, () =>
+        {
+            _caretIndex = match.Start + replacement.Length;
+            _preferredColumn = -1;
+            ClearSelection();
+        });
         RebuildSearchMatches();
         _host.InvalidateEditor();
         return 1;
@@ -2092,20 +2277,45 @@ internal sealed class TextEditorCore
             return 0;
         }
 
-        var replaced = 0;
-        using var _ = _document.BeginUpdate();
+        _undoRedo.EnsureSynchronized();
 
-        for (var i = _searchMatches.Count - 1; i >= 0; i--)
+        var before = CaptureStateSnapshot();
+        _undoRedo.BeginGroup(TextUndoRedoManager.TextUndoKind.ReplaceAll, before);
+
+        var replaced = 0;
+        var textBefore = GetText();
+
+        try
         {
-            var match = _searchMatches[i];
-            _document.Replace(match.Start, match.Length, replacement.AsSpan());
-            replaced++;
+            using var __ = _undoRedo.BeginRecording();
+            using var _ = _document.BeginUpdate();
+
+            for (var i = _searchMatches.Count - 1; i >= 0; i--)
+            {
+                var match = _searchMatches[i];
+                var removedText = match.Length == 0 ? string.Empty : textBefore.Substring(match.Start, match.Length);
+                _document.Replace(match.Start, match.Length, replacement.AsSpan());
+                _undoRedo.AddGroupChange(new TextUndoRedoManager.TextChange(match.Start, removedText, replacement));
+                replaced++;
+            }
+
+            _preferredColumn = -1;
+            UpdateAfterDocumentChange(options);
+            RebuildSearchMatches();
+            _host.InvalidateEditor();
+
+            var after = CaptureStateSnapshot();
+            _undoRedo.CommitGroup(after);
+        }
+        finally
+        {
+            // Ensure the group is not left open if an exception is thrown while applying changes.
+            if (_undoRedo.HasOpenGroup)
+            {
+                _undoRedo.AbortGroup();
+            }
         }
 
-        _preferredColumn = -1;
-        UpdateAfterDocumentChange(options);
-        RebuildSearchMatches();
-        _host.InvalidateEditor();
         return replaced;
     }
 
