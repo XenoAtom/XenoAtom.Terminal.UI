@@ -162,7 +162,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// </remarks>
     /// <param name="gesture">The key gesture.</param>
     /// <param name="action">The action to invoke when the gesture is triggered.</param>
-    public void AddKeyBinding(Input.TerminalKeyGesture gesture, Action action)
+    public void AddKeyBinding(Input.KeyGesture gesture, Action action)
     {
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(action);

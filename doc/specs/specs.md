@@ -511,7 +511,7 @@ We need a command system that can be used for:
 - Global commands (quit, help, debug overlay)
 - Control-local commands (button activate, list selection, textbox editing)
 
-Key bindings should be based on `TerminalKeyGesture` and support scoping.
+Key bindings should be based on `KeyGesture` and support scoping.
 
 ## Text model (Unicode, width, wrapping)
 

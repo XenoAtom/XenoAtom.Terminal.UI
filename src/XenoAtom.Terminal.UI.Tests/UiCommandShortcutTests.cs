@@ -7,7 +7,6 @@ using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
-using UiTerminalKeyGesture = XenoAtom.Terminal.UI.Input.TerminalKeyGesture;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -84,7 +83,7 @@ public sealed class UiCommandShortcutTests
         {
             Id = "standalone",
             LabelMarkup = "Standalone",
-            Gesture = new UiTerminalKeyGesture(TerminalChar.CtrlK, TerminalModifiers.Ctrl),
+            Gesture = new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlK, TerminalModifiers.Ctrl),
             Execute = _ => { },
         });
 
@@ -95,8 +94,8 @@ public sealed class UiCommandShortcutTests
                 Id = "sequence",
                 LabelMarkup = "Sequence",
                 Sequence = new TerminalKeySequence(
-                    new UiTerminalKeyGesture(TerminalChar.CtrlK, TerminalModifiers.Ctrl),
-                    new UiTerminalKeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl)),
+                    new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlK, TerminalModifiers.Ctrl),
+                    new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl)),
                 Execute = _ => { },
             });
         });
@@ -126,8 +125,8 @@ public sealed class UiCommandShortcutTests
                 Id = "probe",
                 LabelMarkup = "Probe",
                 Sequence = new TerminalKeySequence(
-                    new UiTerminalKeyGesture(TerminalChar.CtrlK, TerminalModifiers.Ctrl),
-                    new UiTerminalKeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl)),
+                    new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlK, TerminalModifiers.Ctrl),
+                    new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl)),
                 Execute = _ => Count++,
             });
         }

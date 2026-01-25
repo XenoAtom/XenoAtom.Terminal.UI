@@ -50,7 +50,7 @@ Existing related types:
   - Commands are resolved **before** raising `Visual.KeyDownEvent` (so shortcuts behave consistently even if controls don’t handle
     `KeyDownEvent`).
 - Convenience key bindings:
-  - `Visual.AddKeyBinding(TerminalKeyGesture, Action)` is still available, but it is implemented as a hidden `UiCommand`
+  - `Visual.AddKeyBinding(KeyGesture, Action)` is still available, but it is implemented as a hidden `UiCommand`
     (`Presentation = None`) to keep all shortcut routing centralized in the command system.
 - Menus / command palette:
   - `MenuBar` and `CommandPalette` exist and represent “actions” in custom ways
@@ -65,7 +65,7 @@ The command system should build on this rather than replace everything immediate
   - keyboard gesture
   - menu / context menu entry
   - command palette entry
-- **Gesture**: `TerminalKeyGesture` (built on XenoAtom.Terminal input model).
+- **Gesture**: `KeyGesture` (built on XenoAtom.Terminal input model).
 - **Sequence**: an ordered list of gestures that form a shortcut (e.g. `Ctrl+K` then `P`).
 - **Prefix**: the first gesture of a sequence (e.g. `Ctrl+K`) while the system waits for subsequent strokes.
 - **Local command**: registered on a `Visual` instance.
@@ -93,7 +93,7 @@ public sealed class UiCommand
     public string? DescriptionMarkup { get; init; }
 
     // Optional gesture to display + execute from keyboard.
-    public TerminalKeyGesture? Gesture { get; init; }
+    public KeyGesture? Gesture { get; init; }
 
     // Optional multi-stroke shortcut (e.g. Ctrl+K then Ctrl+P).
     // When set, Gesture must be null.
@@ -134,7 +134,7 @@ Notes:
 - Commands are *not* routed events; they are a higher-level “invocation” concept.
 - `Gesture` and `Sequence` are mutually exclusive (one command has a single shortcut representation).
 - For Ctrl-modified shortcuts, prefer using the terminal control-character constants (e.g. `TerminalChar.CtrlA`) for
-  `TerminalKeyGesture(char, TerminalModifiers)` because terminals commonly emit control characters rather than the printable
+  `KeyGesture(char, TerminalModifiers)` because terminals commonly emit control characters rather than the printable
   letter (see existing usage throughout the codebase).
 
 #### 4.1.1 `TerminalKeySequence`
@@ -144,9 +144,9 @@ Introduce a small type to represent sequences and to keep formatting/parsing cen
 ```csharp
 public readonly record struct TerminalKeySequence
 {
-    public TerminalKeySequence(params TerminalKeyGesture[] gestures);
+    public TerminalKeySequence(params KeyGesture[] gestures);
 
-    public ReadOnlySpan<TerminalKeyGesture> Gestures { get; }
+    public ReadOnlySpan<KeyGesture> Gestures { get; }
 
     public override string ToString(); // e.g. "Ctrl+K Ctrl+P"
 
@@ -157,7 +157,7 @@ public readonly record struct TerminalKeySequence
 Notes:
 
 - Sequences are expected to be short (usually 2 strokes).
-- Formatting should use existing `TerminalKeyGesture.ToString()` for each stroke.
+- Formatting should use existing `KeyGesture.ToString()` for each stroke.
 
 ### 4.2 Registration and lookup
 

@@ -24,5 +24,5 @@ public readonly record struct TerminalRunOptions
     /// <remarks>
     /// When <see langword="null"/>, the default gesture is used (<c>Ctrl+Q</c>).
     /// </remarks>
-    public global::XenoAtom.Terminal.UI.Input.TerminalKeyGesture? ExitGesture { get; init; }
+    public global::XenoAtom.Terminal.UI.Input.KeyGesture? ExitGesture { get; init; }
 }

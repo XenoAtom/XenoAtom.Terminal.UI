@@ -10,7 +10,6 @@ using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Text;
-using UiTerminalKeyGesture = XenoAtom.Terminal.UI.Input.TerminalKeyGesture;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -43,7 +42,7 @@ public sealed partial class TextArea : TextEditorBase
             Id = "TextEditor.Find",
             LabelMarkup = "Find",
             DescriptionMarkup = "Search within the current document.",
-            Gesture = new UiTerminalKeyGesture(TerminalChar.CtrlF, TerminalModifiers.Ctrl),
+            Gesture = new Input.KeyGesture(TerminalChar.CtrlF, TerminalModifiers.Ctrl),
             Importance = UiCommandImportance.Secondary,
             Presentation = UiCommandPresentation.CommandBar,
             Execute = static v => ((TextArea)v).OpenFind(),
@@ -54,7 +53,7 @@ public sealed partial class TextArea : TextEditorBase
             Id = "TextEditor.Replace",
             LabelMarkup = "Replace",
             DescriptionMarkup = "Search and replace within the current document.",
-            Gesture = new UiTerminalKeyGesture(TerminalChar.CtrlH, TerminalModifiers.Ctrl),
+            Gesture = new Input.KeyGesture(TerminalChar.CtrlH, TerminalModifiers.Ctrl),
             Importance = UiCommandImportance.Secondary,
             Presentation = UiCommandPresentation.CommandBar,
             Execute = static v => ((TextArea)v).OpenReplace(),

@@ -9,14 +9,14 @@ namespace XenoAtom.Terminal.UI.Input;
 /// <summary>
 /// Represents a key gesture defined by a key or character plus modifiers.
 /// </summary>
-public readonly record struct TerminalKeyGesture
+public readonly record struct KeyGesture
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="TerminalKeyGesture"/> struct with a key.
+    /// Initializes a new instance of the <see cref="KeyGesture"/> struct with a key.
     /// </summary>
     /// <param name="key">The terminal key.</param>
     /// <param name="modifiers">The modifier flags.</param>
-    public TerminalKeyGesture(TerminalKey key, TerminalModifiers modifiers = TerminalModifiers.None)
+    public KeyGesture(TerminalKey key, TerminalModifiers modifiers = TerminalModifiers.None)
     {
         Key = key;
         Char = null;
@@ -24,11 +24,11 @@ public readonly record struct TerminalKeyGesture
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="TerminalKeyGesture"/> struct with a character.
+    /// Initializes a new instance of the <see cref="KeyGesture"/> struct with a character.
     /// </summary>
     /// <param name="ch">The character.</param>
     /// <param name="modifiers">The modifier flags.</param>
-    public TerminalKeyGesture(char ch, TerminalModifiers modifiers = TerminalModifiers.None)
+    public KeyGesture(char ch, TerminalModifiers modifiers = TerminalModifiers.None)
     {
         Key = TerminalKey.Unknown;
         Char = ch;
@@ -56,7 +56,7 @@ public readonly record struct TerminalKeyGesture
     /// <param name="text">The input text.</param>
     /// <param name="gesture">The parsed gesture.</param>
     /// <returns><see langword="true"/> if parsing succeeded; otherwise <see langword="false"/>.</returns>
-    public static bool TryParse(ReadOnlySpan<char> text, out TerminalKeyGesture gesture)
+    public static bool TryParse(ReadOnlySpan<char> text, out KeyGesture gesture)
     {
         // This parser is intentionally scoped to what we emit today. It can be expanded if we need end-user parsing.
         text = text.Trim();
@@ -123,7 +123,7 @@ public readonly record struct TerminalKeyGesture
 
         if (key is { } k2)
         {
-            gesture = new TerminalKeyGesture(k2, modifiers);
+            gesture = new KeyGesture(k2, modifiers);
             return true;
         }
 
@@ -139,7 +139,7 @@ public readonly record struct TerminalKeyGesture
             }
         }
 
-        gesture = new TerminalKeyGesture(c, modifiers);
+        gesture = new KeyGesture(c, modifiers);
         return true;
     }
 
@@ -185,7 +185,7 @@ public readonly record struct TerminalKeyGesture
     /// </summary>
     /// <param name="other">The other gesture.</param>
     /// <returns><see langword="true"/> if the gestures match; otherwise <see langword="false"/>.</returns>
-    public bool Matches(in TerminalKeyGesture other)
+    public bool Matches(in KeyGesture other)
     {
         if (other.Modifiers != Modifiers)
         {
@@ -277,3 +277,4 @@ public readonly record struct TerminalKeyGesture
         return builder.ToString();
     }
 }
+

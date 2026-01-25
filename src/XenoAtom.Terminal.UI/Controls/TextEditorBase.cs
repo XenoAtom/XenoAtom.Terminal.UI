@@ -8,7 +8,6 @@ using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Scrolling;
 using XenoAtom.Terminal.UI.Text;
-using UiTerminalKeyGesture = XenoAtom.Terminal.UI.Input.TerminalKeyGesture;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -58,7 +57,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
             Id = "TextEditor.Undo",
             LabelMarkup = "Undo",
             DescriptionMarkup = "Undo the last change.",
-            Gesture = new UiTerminalKeyGesture(TerminalChar.CtrlZ, TerminalModifiers.Ctrl),
+            Gesture = new Input.KeyGesture(TerminalChar.CtrlZ, TerminalModifiers.Ctrl),
             Importance = UiCommandImportance.Primary,
             Presentation = UiCommandPresentation.CommandBar,
             Execute = static v => ((TextEditorBase)v).Undo(),
@@ -70,7 +69,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
             Id = "TextEditor.Redo",
             LabelMarkup = "Redo",
             DescriptionMarkup = "Redo the last undone change.",
-            Gesture = new UiTerminalKeyGesture(TerminalChar.CtrlR, TerminalModifiers.Ctrl),
+            Gesture = new Input.KeyGesture(TerminalChar.CtrlR, TerminalModifiers.Ctrl),
             Importance = UiCommandImportance.Primary,
             Presentation = UiCommandPresentation.CommandBar,
             Execute = static v => ((TextEditorBase)v).Redo(),

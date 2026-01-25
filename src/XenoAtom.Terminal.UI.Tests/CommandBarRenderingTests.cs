@@ -5,7 +5,6 @@
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Input;
-using UiTerminalKeyGesture = XenoAtom.Terminal.UI.Input.TerminalKeyGesture;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -26,7 +25,7 @@ public sealed class CommandBarRenderingTests
         {
             Id = "quit",
             LabelMarkup = "Quit",
-            Gesture = new UiTerminalKeyGesture(TerminalChar.CtrlQ, TerminalModifiers.Ctrl),
+            Gesture = new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlQ, TerminalModifiers.Ctrl),
             Execute = _ => { },
         });
 
@@ -49,8 +48,8 @@ public sealed class CommandBarRenderingTests
                 Id = "probe",
                 LabelMarkup = "Probe",
                 Sequence = new TerminalKeySequence(
-                    new UiTerminalKeyGesture(TerminalChar.CtrlK, TerminalModifiers.Ctrl),
-                    new UiTerminalKeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl)),
+                    new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlK, TerminalModifiers.Ctrl),
+                    new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl)),
                 Execute = _ => { },
             });
         }

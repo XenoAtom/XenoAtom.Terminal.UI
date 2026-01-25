@@ -34,7 +34,7 @@ public sealed class UiCommand
     /// <remarks>
     /// A command can define either <see cref="Gesture"/> or <see cref="Sequence"/> (but not both).
     /// </remarks>
-    public TerminalKeyGesture? Gesture { get; init; }
+    public KeyGesture? Gesture { get; init; }
 
     /// <summary>
     /// Gets the multi-stroke shortcut sequence for this command.

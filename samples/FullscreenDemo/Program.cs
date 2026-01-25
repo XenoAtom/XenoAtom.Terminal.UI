@@ -497,7 +497,7 @@ root.AddCommand(new XenoAtom.Terminal.UI.Input.UiCommand
 {
     Id = "App.CommandPalette",
     LabelMarkup = "Command palette",
-    Gesture = new XenoAtom.Terminal.UI.Input.TerminalKeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl),
+    Gesture = new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl),
     Importance = XenoAtom.Terminal.UI.Input.UiCommandImportance.Secondary,
     Presentation = XenoAtom.Terminal.UI.Input.UiCommandPresentation.CommandBar,
     Execute = _ => commandPalette.Show(),

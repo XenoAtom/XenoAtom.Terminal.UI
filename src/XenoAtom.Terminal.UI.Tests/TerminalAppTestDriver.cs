@@ -31,7 +31,7 @@ internal sealed class TerminalAppTestDriver : IDisposable
             EnableMouse = appOptions?.EnableMouse ?? true,
             MouseMode = appOptions?.MouseMode ?? TerminalMouseMode.Move,
             EnableBracketedPaste = appOptions?.EnableBracketedPaste ?? true,
-            ToggleDebugOverlayGesture = appOptions?.ToggleDebugOverlayGesture ?? new Input.TerminalKeyGesture(TerminalKey.F12),
+            ToggleDebugOverlayGesture = appOptions?.ToggleDebugOverlayGesture ?? new Input.KeyGesture(TerminalKey.F12),
             ExitGesture = appOptions?.ExitGesture,
             Culture = appOptions?.Culture ?? System.Globalization.CultureInfo.InvariantCulture,
         };

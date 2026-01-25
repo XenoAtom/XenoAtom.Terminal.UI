@@ -30,7 +30,7 @@ editor.AddCommand(new UiCommand
 {
     Id = "App.Save",
     LabelMarkup = "[primary]Save[/]",
-    Gesture = new XenoAtom.Terminal.UI.Input.TerminalKeyGesture(TerminalChar.CtrlS, TerminalModifiers.Ctrl),
+    Gesture = new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlS, TerminalModifiers.Ctrl),
     Execute = _ => Terminal.WriteLine("Saved"),
 });
 ```
@@ -50,8 +50,8 @@ var cmd = new UiCommand
     Id = "App.CommandPalette",
     LabelMarkup = "Command palette",
     Sequence = new TerminalKeySequence(
-        new XenoAtom.Terminal.UI.Input.TerminalKeyGesture(TerminalChar.CtrlK, TerminalModifiers.Ctrl),
-        new XenoAtom.Terminal.UI.Input.TerminalKeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl)),
+        new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlK, TerminalModifiers.Ctrl),
+        new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl)),
     Execute = _ => Terminal.WriteLine("Open palette"),
 };
 ```

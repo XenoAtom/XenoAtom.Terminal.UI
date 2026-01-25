@@ -46,7 +46,7 @@ public sealed class TerminalAppOptions
     /// <summary>
     /// Gets the key gesture used to toggle the debug overlay.
     /// </summary>
-    public Input.TerminalKeyGesture ToggleDebugOverlayGesture { get; init; } = new(TerminalKey.F12);
+    public Input.KeyGesture ToggleDebugOverlayGesture { get; init; } = new(TerminalKey.F12);
 
     /// <summary>
     /// Gets the key gesture used to request application exit.
@@ -58,7 +58,7 @@ public sealed class TerminalAppOptions
     /// <item><description>Fullscreen: <c>Ctrl+Q</c></description></item>
     /// </list>
     /// </remarks>
-    public Input.TerminalKeyGesture? ExitGesture { get; init; }
+    public Input.KeyGesture? ExitGesture { get; init; }
 
     /// <summary>
     /// Gets the culture used for formatting values (for example when converting numbers to strings).

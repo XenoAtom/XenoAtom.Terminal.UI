@@ -147,7 +147,7 @@ When the routed event is raised via `RaiseEvent(...)`, the routing system:
 
 ### Ctrl keys and gestures
 - Use `TerminalChar.*` constants for control characters (e.g., `TerminalChar.CtrlC`).
-- Prefer `TerminalKeyGesture` parsing/printing helpers when dealing with configurable shortcuts.
+- Prefer `KeyGesture` parsing/printing helpers when dealing with configurable shortcuts.
 
 ## 6) Hosting: fullscreen vs inline/live are different
 

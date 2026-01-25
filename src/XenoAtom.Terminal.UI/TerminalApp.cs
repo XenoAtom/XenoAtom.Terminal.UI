@@ -16,7 +16,6 @@ using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Threading;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI;
-using UiTerminalKeyGesture = XenoAtom.Terminal.UI.Input.TerminalKeyGesture;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -48,14 +47,14 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private Func<TerminalRunningContext, TerminalLoopResult>? _onUpdate;
     private TerminalRunningContext? _updateContext;
     private readonly AnsiBuilder _updateOutputBuilder = new(initialCapacity: 4096);
-    private global::XenoAtom.Terminal.UI.Input.TerminalKeyGesture _exitGesture;
+    private global::XenoAtom.Terminal.UI.Input.KeyGesture _exitGesture;
     private bool _inlineRemoveOnEnd;
     private Dictionary<string, AnsiStyle>? _previousMarkupStyles;
 
     private List<UiCommand>? _globalCommands;
 
     private long _lastTickTimestamp;
-    private readonly UiTerminalKeyGesture[] _pendingSequence = new UiTerminalKeyGesture[4];
+    private readonly KeyGesture[] _pendingSequence = new KeyGesture[4];
     private int _pendingSequenceCount;
     private long _pendingSequenceTimestamp;
     private Visual? _pendingSequenceFocus;
@@ -278,7 +277,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
     internal int PendingCommandSequenceCount => _pendingSequenceCount;
 
-    internal UiTerminalKeyGesture GetPendingCommandSequenceGesture(int index) => _pendingSequence[index];
+    internal KeyGesture GetPendingCommandSequenceGesture(int index) => _pendingSequence[index];
 
     /// <summary>
     /// Stops the app and releases resources.
@@ -1063,10 +1062,10 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return args.Handled;
     }
 
-    private static UiTerminalKeyGesture ToGesture(TerminalKeyEvent keyEvent)
+    private static KeyGesture ToGesture(TerminalKeyEvent keyEvent)
         => keyEvent.Key != TerminalKey.Unknown
-            ? new UiTerminalKeyGesture(keyEvent.Key, keyEvent.Modifiers)
-            : new UiTerminalKeyGesture(keyEvent.Char ?? '\0', keyEvent.Modifiers);
+            ? new KeyGesture(keyEvent.Key, keyEvent.Modifiers)
+            : new KeyGesture(keyEvent.Char ?? '\0', keyEvent.Modifiers);
 
     private bool TryHandleCommandShortcut(KeyEventArgs args)
     {
@@ -1161,7 +1160,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return false;
     }
 
-    private bool TryStartSequence(in UiTerminalKeyGesture firstGesture)
+    private bool TryStartSequence(in KeyGesture firstGesture)
     {
         // Prefix detection uses the same ordering as execution: focused chain first, then globals.
         if (!IsSequencePrefix(firstGesture))
@@ -1208,7 +1207,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return false;
     }
 
-    private bool TryExecuteMatchingSequence(ReadOnlySpan<UiTerminalKeyGesture> prefix, out bool handled)
+    private bool TryExecuteMatchingSequence(ReadOnlySpan<KeyGesture> prefix, out bool handled)
     {
         handled = false;
 
@@ -1285,7 +1284,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return false;
     }
 
-    private bool IsSequencePrefix(in UiTerminalKeyGesture gesture)
+    private bool IsSequencePrefix(in KeyGesture gesture)
     {
         for (var v = FocusedElement; v is not null; v = v.Parent)
         {
@@ -1326,7 +1325,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return false;
     }
 
-    private bool HasSequenceWithPrefix(ReadOnlySpan<UiTerminalKeyGesture> prefix)
+    private bool HasSequenceWithPrefix(ReadOnlySpan<KeyGesture> prefix)
     {
         for (var v = FocusedElement; v is not null; v = v.Parent)
         {
@@ -1377,7 +1376,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return false;
     }
 
-    private static bool SequenceMatches(TerminalKeySequence sequence, ReadOnlySpan<UiTerminalKeyGesture> gestures)
+    private static bool SequenceMatches(TerminalKeySequence sequence, ReadOnlySpan<KeyGesture> gestures)
     {
         if (sequence.Count != gestures.Length)
         {
@@ -1395,7 +1394,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return true;
     }
 
-    private static bool SequenceMatchesPrefix(TerminalKeySequence sequence, ReadOnlySpan<UiTerminalKeyGesture> prefix)
+    private static bool SequenceMatchesPrefix(TerminalKeySequence sequence, ReadOnlySpan<KeyGesture> prefix)
     {
         for (var i = 0; i < prefix.Length; i++)
         {
@@ -1573,10 +1572,10 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         _ = DispatchKeyEvent(keyEvent);
     }
 
-    private static global::XenoAtom.Terminal.UI.Input.TerminalKeyGesture GetDefaultExitGesture(TerminalHostKind hostKind)
+    private static global::XenoAtom.Terminal.UI.Input.KeyGesture GetDefaultExitGesture(TerminalHostKind hostKind)
         => hostKind == TerminalHostKind.Fullscreen
-            ? new global::XenoAtom.Terminal.UI.Input.TerminalKeyGesture(TerminalChar.CtrlQ, TerminalModifiers.Ctrl)
-            : new global::XenoAtom.Terminal.UI.Input.TerminalKeyGesture(TerminalKey.Escape);
+            ? new global::XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlQ, TerminalModifiers.Ctrl)
+            : new global::XenoAtom.Terminal.UI.Input.KeyGesture(TerminalKey.Escape);
 
     private void DispatchTextInput(string text)
     {

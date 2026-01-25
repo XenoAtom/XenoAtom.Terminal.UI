@@ -10,7 +10,6 @@ using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Text;
-using UiTerminalKeyGesture = XenoAtom.Terminal.UI.Input.TerminalKeyGesture;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -113,7 +112,7 @@ public sealed partial class CommandBar : Visual
         pendingCount = app.PendingCommandSequenceCount;
         if (pendingCount > 0)
         {
-            Span<UiTerminalKeyGesture> buf = stackalloc UiTerminalKeyGesture[pendingCount];
+            Span<Input.KeyGesture> buf = stackalloc Input.KeyGesture[pendingCount];
             for (var i = 0; i < pendingCount; i++)
             {
                 buf[i] = app.GetPendingCommandSequenceGesture(i);
@@ -189,7 +188,7 @@ public sealed partial class CommandBar : Visual
         }
     }
 
-    private static bool SequenceMatchesPrefix(in TerminalKeySequence sequence, ReadOnlySpan<UiTerminalKeyGesture> prefix)
+    private static bool SequenceMatchesPrefix(in TerminalKeySequence sequence, ReadOnlySpan<Input.KeyGesture> prefix)
     {
         var gestures = sequence.Gestures;
         if (prefix.Length > gestures.Length)

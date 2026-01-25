@@ -7,7 +7,6 @@ using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
-using UiTerminalKeyGesture = XenoAtom.Terminal.UI.Input.TerminalKeyGesture;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -37,7 +36,7 @@ public sealed class KeyBindingTests
         public KeyBindingProbe()
         {
             Focusable = true;
-            AddKeyBinding(new UiTerminalKeyGesture(TerminalChar.CtrlK, TerminalModifiers.Ctrl), () => Count++);
+            AddKeyBinding(new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlK, TerminalModifiers.Ctrl), () => Count++);
         }
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints) => SizeHints.Fixed(constraints.Clamp(new Size(10, 1)));
