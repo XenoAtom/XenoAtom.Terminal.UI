@@ -174,4 +174,48 @@ public sealed class CommandPaletteTests
 
         Assert.AreSame(focusedBefore, driver.App.FocusedElement);
     }
+
+    [TestMethod]
+    public void CommandPalette_Ranks_Word_Boundary_Matches_Ahead_Of_Later_Matches()
+    {
+        var root = new VStack();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 12));
+        driver.Tick();
+
+        var palette = new CommandPalette();
+
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.reset",
+            LabelMarkup = "[dim]↺ Reset[/]",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.hardreset",
+            LabelMarkup = "[dim]Hard reset[/]",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        palette.Show();
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "reset" });
+        driver.Tick();
+
+        var outText = driver.Backend.GetOutText();
+        var screen = new AnsiTestScreen(60, 12);
+        screen.Apply(outText);
+        var rendered = screen.GetText();
+
+        var resetIndex = rendered.IndexOf("Reset", StringComparison.Ordinal);
+        var hardResetIndex = rendered.IndexOf("Hard reset", StringComparison.Ordinal);
+
+        Assert.IsGreaterThanOrEqualTo(0, resetIndex, "Expected results to contain Reset.");
+        Assert.IsGreaterThanOrEqualTo(0, hardResetIndex, "Expected results to contain Hard reset.");
+        Assert.IsLessThan(hardResetIndex, resetIndex, "Expected Reset to be ranked above Hard reset.");
+    }
 }

@@ -374,25 +374,35 @@ public sealed partial class CommandPalette : Visual
 
         if (!string.IsNullOrEmpty(command.Name))
         {
-            best = Math.Min(best, GetMatchScoreForText(command.Name, query));
+            Consider(ref best, GetMatchScoreForText(command.Name, query), bias: 0);
         }
 
         if (!string.IsNullOrEmpty(command.LabelMarkup))
         {
-            best = Math.Min(best, GetMatchScoreForText(StripMarkup(command.LabelMarkup), query));
+            Consider(ref best, GetMatchScoreForText(StripMarkup(command.LabelMarkup), query), bias: 10);
         }
 
         if (!string.IsNullOrEmpty(command.SearchText))
         {
-            best = Math.Min(best, GetMatchScoreForText(command.SearchText, query));
+            Consider(ref best, GetMatchScoreForText(command.SearchText, query), bias: 20);
         }
 
         if (!string.IsNullOrEmpty(command.DescriptionMarkup))
         {
-            best = Math.Min(best, GetMatchScoreForText(StripMarkup(command.DescriptionMarkup), query) + 1);
+            Consider(ref best, GetMatchScoreForText(StripMarkup(command.DescriptionMarkup), query), bias: 30);
         }
 
         return best;
+    }
+
+    private static void Consider(ref int best, int score, int bias)
+    {
+        if (score == int.MaxValue)
+        {
+            return;
+        }
+
+        best = Math.Min(best, score + bias);
     }
 
     private static int GetMatchScoreForText(string text, string query)
@@ -404,18 +414,20 @@ public sealed partial class CommandPalette : Visual
 
         if (text.StartsWith(query, StringComparison.OrdinalIgnoreCase))
         {
-            return 1;
+            return 1000;
         }
 
-        if (StartsWithAtWordBoundary(text, query))
+        var boundaryIndex = IndexOfAtWordBoundary(text, query);
+        if (boundaryIndex >= 0)
         {
-            return 2;
+            return 2000 + boundaryIndex;
         }
 
-        return text.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ? 3 : int.MaxValue;
+        var index = text.IndexOf(query, StringComparison.OrdinalIgnoreCase);
+        return index >= 0 ? (3000 + index) : int.MaxValue;
     }
 
-    private static bool StartsWithAtWordBoundary(string text, string query)
+    private static int IndexOfAtWordBoundary(string text, string query)
     {
         for (var i = 0; i < text.Length; i++)
         {
@@ -426,15 +438,15 @@ public sealed partial class CommandPalette : Visual
 
             if (text.AsSpan(i).StartsWith(query, StringComparison.OrdinalIgnoreCase))
             {
-                return true;
+                return i;
             }
         }
 
-        return false;
+        return -1;
     }
 
     private static bool IsWordBoundary(char c)
-        => char.IsWhiteSpace(c) || c is '-' or '_' or '.' or '/' or '\\' or ':';
+        => !char.IsLetterOrDigit(c);
 
     private static string StripMarkup(string markup)
     {
