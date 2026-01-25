@@ -1071,6 +1071,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private bool TryHandleCommandShortcut(KeyEventArgs args)
     {
         var keyEvent = args.RawEvent;
+        var allowGlobalCommands = ShouldConsiderGlobalCommands();
 
         // If a sequence is active, only consider sequence continuation (or cancellation).
         if (_pendingSequenceCount > 0)
@@ -1082,11 +1083,11 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
                 return true;
             }
 
-            return TryContinueSequence(args);
+            return TryContinueSequence(args, allowGlobalCommands);
         }
 
         // Single-stroke command routing uses the same focus-walk semantics as key bindings.
-        if (TryExecuteGestureCommand(keyEvent))
+        if (TryExecuteGestureCommand(keyEvent, allowGlobalCommands))
         {
             args.Handled = true;
             return true;
@@ -1094,7 +1095,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
         // No direct match: check for sequence prefixes.
         var gesture = ToGesture(keyEvent);
-        if (TryStartSequence(gesture))
+        if (TryStartSequence(gesture, allowGlobalCommands))
         {
             args.Handled = true;
             return true;
@@ -1103,7 +1104,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return false;
     }
 
-    private bool TryExecuteGestureCommand(TerminalKeyEvent keyEvent)
+    private bool TryExecuteGestureCommand(TerminalKeyEvent keyEvent, bool allowGlobalCommands)
     {
         for (var v = FocusedElement; v is not null; v = v.Parent)
         {
@@ -1129,6 +1130,11 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
                 cmd.Execute(v);
                 return true;
             }
+        }
+
+        if (!allowGlobalCommands)
+        {
+            return false;
         }
 
         // Global commands are evaluated last. The target is the focused element when possible.
@@ -1161,10 +1167,10 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return false;
     }
 
-    private bool TryStartSequence(in KeyGesture firstGesture)
+    private bool TryStartSequence(in KeyGesture firstGesture, bool allowGlobalCommands)
     {
         // Prefix detection uses the same ordering as execution: focused chain first, then globals.
-        if (!IsSequencePrefix(firstGesture))
+        if (!IsSequencePrefix(firstGesture, allowGlobalCommands))
         {
             return false;
         }
@@ -1176,7 +1182,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return true;
     }
 
-    private bool TryContinueSequence(KeyEventArgs args)
+    private bool TryContinueSequence(KeyEventArgs args, bool allowGlobalCommands)
     {
         if (_pendingSequenceCount >= _pendingSequence.Length)
         {
@@ -1190,14 +1196,14 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
         var prefix = _pendingSequence.AsSpan(0, _pendingSequenceCount);
 
-        if (TryExecuteMatchingSequence(prefix, out var handled))
+        if (TryExecuteMatchingSequence(prefix, allowGlobalCommands, out var handled))
         {
             args.Handled = handled;
             return handled;
         }
 
         // If the prefix matches at least one command, keep waiting.
-        if (HasSequenceWithPrefix(prefix))
+        if (HasSequenceWithPrefix(prefix, allowGlobalCommands))
         {
             args.Handled = true;
             return true;
@@ -1208,7 +1214,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return false;
     }
 
-    private bool TryExecuteMatchingSequence(ReadOnlySpan<KeyGesture> prefix, out bool handled)
+    private bool TryExecuteMatchingSequence(ReadOnlySpan<KeyGesture> prefix, bool allowGlobalCommands, out bool handled)
     {
         handled = false;
 
@@ -1247,6 +1253,11 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
             }
         }
 
+        if (!allowGlobalCommands)
+        {
+            return false;
+        }
+
         var globalTarget = FocusedElement ?? Root;
         if (_globalCommands is not null)
         {
@@ -1285,7 +1296,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return false;
     }
 
-    private bool IsSequencePrefix(in KeyGesture gesture)
+    private bool IsSequencePrefix(in KeyGesture gesture, bool allowGlobalCommands)
     {
         for (var v = FocusedElement; v is not null; v = v.Parent)
         {
@@ -1303,6 +1314,11 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
                     return true;
                 }
             }
+        }
+
+        if (!allowGlobalCommands)
+        {
+            return false;
         }
 
         var globalTarget = FocusedElement ?? Root;
@@ -1326,7 +1342,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return false;
     }
 
-    private bool HasSequenceWithPrefix(ReadOnlySpan<KeyGesture> prefix)
+    private bool HasSequenceWithPrefix(ReadOnlySpan<KeyGesture> prefix, bool allowGlobalCommands)
     {
         for (var v = FocusedElement; v is not null; v = v.Parent)
         {
@@ -1349,6 +1365,11 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
                     return true;
                 }
             }
+        }
+
+        if (!allowGlobalCommands)
+        {
+            return false;
         }
 
         var globalTarget = FocusedElement ?? Root;
@@ -1375,6 +1396,13 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         }
 
         return false;
+    }
+
+    private bool ShouldConsiderGlobalCommands()
+    {
+        // While a modal root (e.g. a popup or dialog) is active, global commands should not execute "behind" it.
+        // Commands can still be surfaced and executed within the modal itself by registering them on that subtree.
+        return ReferenceEquals(GetInputRoot(), Root);
     }
 
     private static bool SequenceMatches(KeySequence sequence, ReadOnlySpan<KeyGesture> gestures)

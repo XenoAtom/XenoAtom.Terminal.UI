@@ -4,6 +4,7 @@
 
 using System.Text;
 using XenoAtom.Terminal.UI.Collections;
+using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
@@ -136,15 +137,17 @@ public sealed partial class MenuBar : Visual
             return;
         }
 
+        var target = ResolveCommandTarget();
+
         switch (e.Key)
         {
             case TerminalKey.Left:
-                _selectedIndex = FindPreviousEnabledIndex(_selectedIndex - 1);
+                _selectedIndex = FindPreviousEnabledIndex(_selectedIndex - 1, target);
                 e.Handled = true;
                 return;
 
             case TerminalKey.Right:
-                _selectedIndex = FindNextEnabledIndex(_selectedIndex + 1);
+                _selectedIndex = FindNextEnabledIndex(_selectedIndex + 1, target);
                 e.Handled = true;
                 return;
 
@@ -164,8 +167,10 @@ public sealed partial class MenuBar : Visual
             return;
         }
 
+        var target = ResolveCommandTarget();
+
         index = Math.Clamp(index, 0, _items.Count - 1);
-        if (!_items[index].IsEnabled)
+        if (!_items[index].IsEnabledFor(target))
         {
             return;
         }
@@ -182,14 +187,15 @@ public sealed partial class MenuBar : Visual
         var menu = _items[index];
         if (menu.Items.Count == 0)
         {
-            menu.Action.Invoke?.Invoke();
+            InvokeMenuItem(menu, target);
             _openIndex = -1;
             return;
         }
 
         _openIndex = index;
 
-        var list = new MenuList(this, menu.Items, parent: null);
+        var visibleItems = FilterVisibleItems(menu.Items, target);
+        var list = new MenuList(this, visibleItems, parent: null, target: target);
         var menuListStyle = GetStyle<MenuListStyle>();
         var popupContent = menuListStyle.PopupTemplateFactory?.Invoke(list) ?? list;
 
@@ -282,11 +288,11 @@ public sealed partial class MenuBar : Visual
         _selectedIndex = Math.Clamp(_selectedIndex, 0, Math.Max(0, count - 1));
     }
 
-    private int FindNextEnabledIndex(int start)
+    internal int FindNextEnabledIndex(int start, Visual target)
     {
         for (var i = Math.Max(0, start); i < _items.Count; i++)
         {
-            if (_items[i].IsEnabled)
+            if (_items[i].IsEnabledFor(target))
             {
                 return i;
             }
@@ -295,17 +301,83 @@ public sealed partial class MenuBar : Visual
         return Math.Max(0, _items.Count - 1);
     }
 
-    private int FindPreviousEnabledIndex(int start)
+    internal int FindPreviousEnabledIndex(int start, Visual target)
     {
         for (var i = Math.Min(start, _items.Count - 1); i >= 0; i--)
         {
-            if (_items[i].IsEnabled)
+            if (_items[i].IsEnabledFor(target))
             {
                 return i;
             }
         }
 
         return 0;
+    }
+
+    private Visual ResolveCommandTarget()
+    {
+        var app = App;
+        if (app is null)
+        {
+            return this;
+        }
+
+        return app.FocusedElement ?? app.Root;
+    }
+
+    private void InvokeMenuItem(MenuItem item, Visual target)
+    {
+        if (!item.IsEnabledFor(target))
+        {
+            return;
+        }
+
+        if (item.Command is { } cmd)
+        {
+            if (!cmd.IsVisibleFor(target) || !cmd.CanExecuteFor(target))
+            {
+                return;
+            }
+
+            cmd.Execute(target);
+            return;
+        }
+
+        item.Action.Invoke?.Invoke();
+    }
+
+    private static IReadOnlyList<MenuItem> FilterVisibleItems(IReadOnlyList<MenuItem> items, Visual target)
+    {
+        var visibleCount = 0;
+        for (var i = 0; i < items.Count; i++)
+        {
+            if (items[i].IsVisibleFor(target))
+            {
+                visibleCount++;
+            }
+        }
+
+        if (visibleCount == items.Count)
+        {
+            return items;
+        }
+
+        if (visibleCount == 0)
+        {
+            return Array.Empty<MenuItem>();
+        }
+
+        var list = new List<MenuItem>(visibleCount);
+        for (var i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            if (item.IsVisibleFor(target))
+            {
+                list.Add(item);
+            }
+        }
+
+        return list;
     }
 
     private sealed class MenuBarItem : ContentVisual
@@ -372,7 +444,8 @@ public sealed partial class MenuBar : Visual
             var bar = Parent as MenuBar;
             var open = bar is not null && bar.OpenIndex == _index;
             var selected = bar is not null && ReferenceEquals(bar.App?.FocusedElement, bar) && bar.SelectedIndex == _index;
-            var resolved = style.ResolveItemStyle(theme, enabled: _item.IsEnabled, open: open, selected: selected, hovered: IsHovered);
+            var enabled = bar is null ? _item.IsEnabled : _item.IsEnabledFor(bar.ResolveCommandTarget());
+            var resolved = style.ResolveItemStyle(theme, enabled: enabled, open: open, selected: selected, hovered: IsHovered);
 
             for (var y = rect.Y; y < rect.Y + rect.Height; y++)
             {
@@ -427,6 +500,7 @@ public sealed partial class MenuBar : Visual
         private readonly IReadOnlyList<MenuItem> _items;
         private readonly VisualList<MenuListRow> _rows;
         private readonly MenuList? _parent;
+        private readonly Visual _target;
 
         private Popup? _submenuPopup;
         private int _selected;
@@ -435,11 +509,12 @@ public sealed partial class MenuBar : Visual
         private Rectangle _innerRect;
         private int _submenuColumnWidth;
 
-        public MenuList(MenuBar owner, IReadOnlyList<MenuItem> items, MenuList? parent)
+        public MenuList(MenuBar owner, IReadOnlyList<MenuItem> items, MenuList? parent, Visual target)
         {
             _owner = owner;
             _items = items;
             _parent = parent;
+            _target = target;
             Focusable = true;
             _rows = new VisualList<MenuListRow>(this, "MenuList.Rows");
 
@@ -469,7 +544,7 @@ public sealed partial class MenuBar : Visual
                 row.Measure(new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1));
                 maxRowWidth = Math.Max(maxRowWidth, row.DesiredSize.Width);
 
-                if (_items[i].Items.Count > 0)
+                if (HasVisibleSubmenu(_items[i]))
                 {
                     submenuWidth = Math.Max(submenuWidth, Math.Max(1, TerminalTextUtility.GetRuneWidth(style.SubmenuGlyph)) + 1);
                 }
@@ -526,7 +601,7 @@ public sealed partial class MenuBar : Visual
                 }
 
                 var item = _items[i];
-                var enabled = item.IsEnabled && !item.IsSeparator;
+                var enabled = item.IsEnabledFor(_target);
                 var selected = i == _selected;
                 var hovered = i == _hovered;
 
@@ -549,7 +624,7 @@ public sealed partial class MenuBar : Visual
                     continue;
                 }
 
-                if (item.Items.Count > 0 && _submenuColumnWidth > 0)
+                if (HasVisibleSubmenu(item) && _submenuColumnWidth > 0)
                 {
                     var arrowX = inner.X + inner.Width - Math.Max(1, TerminalTextUtility.GetRuneWidth(style.SubmenuGlyph));
                     buffer.SetCell(arrowX, y, style.SubmenuGlyph, rowStyle | TextStyle.Dim);
@@ -624,13 +699,13 @@ public sealed partial class MenuBar : Visual
                     return;
 
                 case TerminalKey.Right:
-                    if (IsSelectable(_selected) && _items[_selected].Items.Count > 0)
+                    if (IsSelectable(_selected) && HasVisibleSubmenu(_items[_selected]))
                     {
                         OpenSubmenuForIndex(_selected);
                     }
                     else if (_parent is null)
                     {
-                        _owner.OpenMenu(_owner.FindNextEnabledIndex(_owner._openIndex + 1));
+                        _owner.OpenMenu(_owner.FindNextEnabledIndex(_owner._openIndex + 1, _target));
                     }
                     e.Handled = true;
                     return;
@@ -638,7 +713,7 @@ public sealed partial class MenuBar : Visual
                 case TerminalKey.Left:
                     if (_parent is null)
                     {
-                        _owner.OpenMenu(_owner.FindPreviousEnabledIndex(_owner._openIndex - 1));
+                        _owner.OpenMenu(_owner.FindPreviousEnabledIndex(_owner._openIndex - 1, _target));
                     }
                     else
                     {
@@ -673,7 +748,7 @@ public sealed partial class MenuBar : Visual
             }
 
             var item = _items[index];
-            return !item.IsSeparator && item.IsEnabled;
+            return item.IsEnabledFor(_target);
         }
 
         private int FindNextSelectableIndex(int start)
@@ -710,13 +785,13 @@ public sealed partial class MenuBar : Visual
             }
 
             var item = _items[index];
-            if (item.Items.Count > 0)
+            if (HasVisibleSubmenu(item))
             {
                 OpenSubmenuForIndex(index);
                 return;
             }
 
-            item.Action.Invoke?.Invoke();
+            _owner.InvokeMenuItem(item, _target);
             _owner.CloseAllMenus();
         }
 
@@ -728,13 +803,27 @@ public sealed partial class MenuBar : Visual
                 return;
             }
 
-            if (_items[_selected].Items.Count == 0)
+            if (!HasVisibleSubmenu(_items[_selected]))
             {
                 CloseSubmenu();
                 return;
             }
 
             OpenSubmenuForIndex(_selected);
+        }
+
+        private bool HasVisibleSubmenu(MenuItem item)
+        {
+            var children = item.Items;
+            for (var i = 0; i < children.Count; i++)
+            {
+                if (children[i].IsVisibleFor(_target))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void OpenSubmenuForIndex(int index)
@@ -746,7 +835,7 @@ public sealed partial class MenuBar : Visual
             }
 
             var item = _items[index];
-            if (item.Items.Count == 0)
+            if (!HasVisibleSubmenu(item))
             {
                 CloseSubmenu();
                 return;
@@ -759,7 +848,14 @@ public sealed partial class MenuBar : Visual
 
             CloseSubmenu();
 
-            var list = new MenuList(_owner, item.Items, parent: this);
+            var visibleItems = FilterVisibleItems(item.Items, _target);
+            if (visibleItems.Count == 0)
+            {
+                CloseSubmenu();
+                return;
+            }
+
+            var list = new MenuList(_owner, visibleItems, parent: this, target: _target);
             var menuListStyle = GetStyle<MenuListStyle>();
             var popupContent = menuListStyle.PopupTemplateFactory?.Invoke(list) ?? list;
 
@@ -830,6 +926,7 @@ public sealed partial class MenuBar : Visual
     private sealed class MenuListRow : Visual
     {
         private readonly MenuItem _item;
+        private readonly Visual? _derivedShortcut;
 
         private Rectangle _iconRect;
         private Rectangle _headerRect;
@@ -848,14 +945,45 @@ public sealed partial class MenuBar : Visual
             {
                 AttachChild(item.Icon);
             }
-            if (item.Shortcut is not null)
+
+            _derivedShortcut = CreateDerivedShortcut(item);
+            var shortcut = item.Shortcut ?? _derivedShortcut;
+            if (shortcut is not null)
             {
-                AttachChild(item.Shortcut);
+                AttachChild(shortcut);
             }
         }
 
+        private static Visual? CreateDerivedShortcut(MenuItem item)
+        {
+            if (item.Shortcut is not null)
+            {
+                return null;
+            }
+
+            var cmd = item.Command;
+            if (cmd is null)
+            {
+                return null;
+            }
+
+            if (cmd.Sequence is { } seq)
+            {
+                return new TextBlock(seq.ToString());
+            }
+
+            if (cmd.Gesture is { } g)
+            {
+                return new TextBlock(g.ToString());
+            }
+
+            return null;
+        }
+
+        private Visual? ShortcutVisual => _item.Shortcut ?? _derivedShortcut;
+
         protected override int ChildrenCount
-            => _item.IsSeparator ? 0 : 1 + (_item.Icon is null ? 0 : 1) + (_item.Shortcut is null ? 0 : 1);
+            => _item.IsSeparator ? 0 : 1 + (_item.Icon is null ? 0 : 1) + (ShortcutVisual is null ? 0 : 1);
 
         protected override Visual GetChild(int index)
         {
@@ -874,9 +1002,9 @@ public sealed partial class MenuBar : Visual
             if (i == 0) return _item.Header;
             i--;
 
-            if (_item.Shortcut is not null)
+            if (ShortcutVisual is not null)
             {
-                if (i == 0) return _item.Shortcut;
+                if (i == 0) return ShortcutVisual;
             }
 
             throw new ArgumentOutOfRangeException(nameof(index));
@@ -904,10 +1032,11 @@ public sealed partial class MenuBar : Visual
             var headerW = _item.Header.DesiredSize.Width;
 
             var shortcutW = 0;
-            if (_item.Shortcut is not null)
+            var shortcut = ShortcutVisual;
+            if (shortcut is not null)
             {
-                _item.Shortcut.Measure(new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1));
-                shortcutW = _item.Shortcut.DesiredSize.Width;
+                shortcut.Measure(new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1));
+                shortcutW = shortcut.DesiredSize.Width;
             }
 
             var width = iconW;
@@ -949,9 +1078,10 @@ public sealed partial class MenuBar : Visual
             }
 
             var shortcutW = 0;
-            if (_item.Shortcut is not null)
+            var shortcut = ShortcutVisual;
+            if (shortcut is not null)
             {
-                shortcutW = Math.Min(finalRect.Width, _item.Shortcut.DesiredSize.Width);
+                shortcutW = Math.Min(finalRect.Width, shortcut.DesiredSize.Width);
                 _shortcutRect = new Rectangle(finalRect.Right - shortcutW, finalRect.Y, shortcutW, 1);
             }
 
@@ -960,7 +1090,7 @@ public sealed partial class MenuBar : Visual
 
             _item.Icon?.Arrange(_iconRect);
             _item.Header.Arrange(_headerRect);
-            _item.Shortcut?.Arrange(_shortcutRect);
+            shortcut?.Arrange(_shortcutRect);
         }
 
         public void ReleaseVisuals()
@@ -980,9 +1110,10 @@ public sealed partial class MenuBar : Visual
                 DetachChild(_item.Header);
             }
 
-            if (_item.Shortcut is not null && ReferenceEquals(_item.Shortcut.Parent, this))
+            var shortcut = ShortcutVisual;
+            if (shortcut is not null && ReferenceEquals(shortcut.Parent, this))
             {
-                DetachChild(_item.Shortcut);
+                DetachChild(shortcut);
             }
         }
     }

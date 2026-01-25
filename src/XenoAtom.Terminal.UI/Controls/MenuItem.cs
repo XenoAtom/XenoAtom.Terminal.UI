@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.UI.Collections;
+using XenoAtom.Terminal.UI.Commands;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -22,6 +23,46 @@ public sealed partial class MenuItem
         Action = action;
         Items = new BindableList<MenuItem>(this, "MenuItemList");
         IsEnabled = true;
+        IsVisible = true;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MenuItem"/> class.
+    /// </summary>
+    /// <param name="header">The header text.</param>
+    public MenuItem(string header)
+        : this((Visual)header)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MenuItem"/> class.
+    /// </summary>
+    /// <param name="header">The header content.</param>
+    public MenuItem(Visual header)
+        : this(header, action: null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MenuItem"/> class.
+    /// </summary>
+    /// <param name="header">The header text.</param>
+    /// <param name="command">An optional backing command.</param>
+    public MenuItem(string header, Command? command = null)
+        : this((Visual)header, command)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MenuItem"/> class.
+    /// </summary>
+    /// <param name="header">The header content.</param>
+    /// <param name="command">An optional backing command.</param>
+    public MenuItem(Visual header, Command? command = null)
+        : this(header, action: null)
+    {
+        Command = command;
     }
 
     /// <summary>
@@ -36,6 +77,12 @@ public sealed partial class MenuItem
         };
 
     /// <summary>
+    /// Creates a separator menu item.
+    /// </summary>
+    /// <returns>The separator menu item.</returns>
+    public static MenuItem Separator() => CreateSeparator();
+
+    /// <summary>
     /// Gets the submenu items.
     /// </summary>
     [Bindable]
@@ -47,10 +94,25 @@ public sealed partial class MenuItem
     public Visual Header { get; }
 
     /// <summary>
+    /// Gets or sets an optional command backing this menu item.
+    /// </summary>
+    /// <remarks>
+    /// When set, the menu will derive enabled state and invocation behavior from the command.
+    /// </remarks>
+    [Bindable]
+    public partial Command? Command { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether this item is a separator.
     /// </summary>
     [Bindable]
     public partial bool IsSeparator { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the item is visible.
+    /// </summary>
+    [Bindable]
+    public partial bool IsVisible { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the item is enabled.
@@ -75,4 +137,10 @@ public sealed partial class MenuItem
     /// </summary>
     [Bindable]
     public partial Delegator<Action> Action { get; set; }
+
+    internal bool IsVisibleFor(Visual target)
+        => IsVisible && (Command is null || Command.IsVisibleFor(target));
+
+    internal bool IsEnabledFor(Visual target)
+        => !IsSeparator && IsEnabled && (Command is null || Command.CanExecuteFor(target));
 }

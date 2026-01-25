@@ -4,7 +4,9 @@
 
 using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Hosting;
+using XenoAtom.Terminal.UI.Input;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -87,5 +89,37 @@ public sealed class MenuTests
         screen2.Apply(withoutSubmenu);
         var rendered2 = screen2.GetText();
         Assert.IsFalse(rendered2.Contains("Entry 1", StringComparison.Ordinal), "Closing the submenu should remove its content from the screen.");
+    }
+
+    [TestMethod]
+    public void MenuBar_WhenOpen_GlobalCommandDoesNotExecuteBehindPopup()
+    {
+        var globalInvoked = false;
+
+        var file = new MenuItem("File");
+        file.Items.Add(new MenuItem("Open"));
+
+        var bar = new MenuBar();
+        bar.Items.Add(file);
+
+        var root = new VStack { bar };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 14));
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "Test.Global",
+            LabelMarkup = "Global",
+            Gesture = new KeyGesture(TerminalChar.CtrlG, TerminalModifiers.Ctrl),
+            Execute = _ => globalInvoked = true,
+        });
+
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter }); // open root menu
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlG, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick(2);
+
+        Assert.IsFalse(globalInvoked);
     }
 }
