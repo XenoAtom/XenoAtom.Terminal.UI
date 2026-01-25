@@ -10,19 +10,21 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
 - **Two hosting models**:
   - **Inline** widgets via `Terminal.Write(...)` and `Terminal.Live(...)`
   - **Fullscreen** apps via `Terminal.Run(...)` (alternate screen + input loop)
-- **Modern control library**:
+- **Modern control library** (50+ built-in controls):
   - Buttons, toggles, lists, tables, tabs, menus, dialogs/popups, charts, progress, spinners, tooltips…
   - Text editing: **TextBox**, **TextArea**, **MaskedInput**, **NumberBox** (undo/redo: `Ctrl+Z` / `Ctrl+R`)
-  - Advanced widgets: **LogControl**, **CommandPalette**, **Breakdown**, **ColorPicker**
+  - Advanced widgets: **LogControl**, **CommandPalette**, **BreakdownChart**, **ColorPicker**
 - **Binding-first UI**:
   - Bindable properties, `State<T>`, automatic dependency tracking, minimal boilerplate
 - **Layout system**: consistent measure/arrange protocol (integer cell UI), panels and containers
-- **Styling & themes**:
+- **Styling, themes, and color schemes**:
   - Theme + per-control styles, `ColorScheme` palettes (terminal-native and RGB themes)
+  - RootLoops-powered color scheme generator (https://rootloops.sh) with many built-in schemes
 - **Input**:
   - Keyboard, mouse, resize events; focus navigation; routed events where appropriate
 - **Rendering**:
   - Cell-buffer renderer + diffing, efficient batched output, synchronized output (DEC 2026)
+  - Alpha-aware colors (`RGBA`) with blending support for modern UI effects
 - **Cross-platform + AOT-friendly**: `net10.0` and NativeAOT-oriented design (built on XenoAtom.Terminal)
 
 Screenshot placeholder (to be updated):
@@ -57,7 +59,7 @@ Terminal.Live(
     onUpdate: () =>
     {
         progress.Value = Math.Min(1, progress.Value + 0.01);
-        return progress.Value < 1;
+        return progress.Value < 1 ? TerminalLoopResult.Continue : TerminalLoopResult.StopAndKeepVisual;
     });
 ```
 
@@ -68,12 +70,14 @@ using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 
+var running = new State<bool>(true);
+
 Terminal.Run(
     new VStack(
         new TextBox("Type here…"),
-        new Button("Exit").Click(() => false)
+        new Button("Exit").Click(() => running.Value = false)
     ),
-    onUpdate: () => true);
+    onUpdate: () => running.Value ? TerminalLoopResult.Continue : TerminalLoopResult.Stop);
 ```
 
 ## 🧩 Controls included
@@ -86,7 +90,7 @@ Highlights:
 - Lists: `ListBox`, `OptionList`, `SelectionList`, `Select<T>`, `TreeView`
 - Layout: `VStack`, `HStack`, `Grid`, `DockLayout`, `Splitters`, `Border`, `Group`, `Padder`
 - Overlays: `Popup`, `Dialog`, `TooltipHost`, `Backdrop`
-- Visualization: `BarChart`, `LineChart`, `Sparkline`, `Canvas`, `Breakdown`, `TextFiglet`
+- Visualization: `BarChart`, `LineChart`, `Sparkline`, `Canvas`, `BreakdownChart`, `TextFiglet`
 - Progress: `ProgressBar`, `ProgressTaskGroup`, `Spinner`
 
 
