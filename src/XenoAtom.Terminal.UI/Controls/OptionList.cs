@@ -8,6 +8,7 @@ using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Scrolling;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Templating;
 
@@ -17,16 +18,17 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// Displays a vertical list of options with selection and activation.
 /// </summary>
 /// <typeparam name="T">The item type.</typeparam>
-public sealed partial class OptionList<T> : Visual
+public sealed partial class OptionList<T> : Visual, IScrollable
 {
     private readonly BindableList<Visual> _itemVisuals;
     private readonly List<Visual> _recyclePool = new();
     private readonly List<State<T>> _itemStates = new();
     private readonly List<State<T>> _recycleStatePool = new();
 
-    private int _scrollOffset;
+    private readonly ScrollModel _scroll;
     private int _hoveredIndex = -1;
     private int _itemHeight = 1;
+    private bool _ensureSelectedVisible;
 
     private bool _pressed;
     private int _pressedIndex = -1;
@@ -44,6 +46,7 @@ public sealed partial class OptionList<T> : Visual
     public OptionList()
     {
         Items = new BindableList<T>(this, "OptionList.Items");
+        _scroll = new ScrollModel();
         _itemVisuals = new BindableList<Visual>(
             this,
             "OptionList.ItemVisuals",
@@ -56,6 +59,11 @@ public sealed partial class OptionList<T> : Visual
 
         Focusable = true;
     }
+
+    /// <summary>
+    /// Gets the scroll model for this list.
+    /// </summary>
+    public ScrollModel Scroll => _scroll;
 
     /// <summary>
     /// Gets the items displayed by this list.
@@ -103,6 +111,7 @@ public sealed partial class OptionList<T> : Visual
     {
         if (_oldSelectedForEvent != value)
         {
+            _ensureSelectedVisible = true;
             RaiseEvent(SelectionChangedEvent, new SelectionChangedEventArgs { OldIndex = _oldSelectedForEvent, NewIndex = value });
         }
     }
@@ -151,6 +160,8 @@ public sealed partial class OptionList<T> : Visual
         var rect = finalRect;
         if (rect.Width <= 0 || rect.Height <= 0 || _itemVisuals.Count == 0)
         {
+            _scroll.SetViewport(0, 0);
+            _scroll.SetExtent(0, 0);
             return;
         }
 
@@ -169,18 +180,33 @@ public sealed partial class OptionList<T> : Visual
         var count = Items.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
 
-        if (selected < _scrollOffset)
+        _scroll.SetViewport(innerWidth, innerHeight);
+        _scroll.SetExtent(prefixWidth + itemWidth, Math.Max(0, count * itemHeight));
+
+        if (_ensureSelectedVisible)
         {
-            _scrollOffset = selected;
+            _scroll.ScrollToMakeVisible(0, selected * itemHeight);
+            _ensureSelectedVisible = false;
         }
-        else if (selected >= _scrollOffset + viewportItems)
+
+        var maxOffsetY = Math.Max(0, _scroll.ExtentHeight - _scroll.ViewportHeight);
+        if (_scroll.OffsetY > maxOffsetY)
         {
-            _scrollOffset = Math.Max(0, selected - viewportItems + 1);
+            _scroll.SetOffset(_scroll.OffsetX, maxOffsetY);
         }
+
+        // Keep the scroll position aligned to full item rows.
+        var alignedOffsetY = (_scroll.OffsetY / itemHeight) * itemHeight;
+        if (alignedOffsetY != _scroll.OffsetY)
+        {
+            _scroll.SetOffset(_scroll.OffsetX, alignedOffsetY);
+        }
+
+        var scrollOffset = itemHeight == 0 ? 0 : (_scroll.OffsetY / itemHeight);
 
         for (var i = 0; i < _itemVisuals.Count; i++)
         {
-            var y = innerTop + ((i - _scrollOffset) * itemHeight);
+            var y = innerTop + ((i - scrollOffset) * itemHeight);
             _itemVisuals[i].Arrange(new Rectangle(itemLeft, y, itemWidth, itemHeight));
         }
     }
@@ -221,9 +247,11 @@ public sealed partial class OptionList<T> : Visual
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
         var prefixWidth = Math.Min(innerWidth, markerWidth + gap);
 
+        var scrollOffset = itemHeight == 0 ? 0 : (_scroll.OffsetY / itemHeight);
+
         for (var visibleIndex = 0; visibleIndex < viewportItems; visibleIndex++)
         {
-            var index = _scrollOffset + visibleIndex;
+            var index = scrollOffset + visibleIndex;
             if ((uint)index >= (uint)count)
             {
                 continue;
@@ -575,7 +603,8 @@ public sealed partial class OptionList<T> : Visual
         }
 
         var itemHeight = Math.Max(1, _itemHeight);
-        var index = _scrollOffset + (innerY / itemHeight);
+        var scrollOffset = itemHeight == 0 ? 0 : (_scroll.OffsetY / itemHeight);
+        var index = scrollOffset + (innerY / itemHeight);
         return (uint)index < (uint)Items.Count ? index : -1;
     }
 

@@ -19,6 +19,7 @@ public sealed partial class CommandPalette : Visual
 {
     private readonly TextBox _searchBox;
     private readonly OptionList<ResolvedCommand> _results;
+    private readonly ScrollViewer _resultsHost;
     private readonly VStack _content;
     private readonly List<ResolvedCommand> _collectedCommands;
     private readonly List<(int Score, ResolvedCommand Command)> _matches;
@@ -53,7 +54,12 @@ public sealed partial class CommandPalette : Visual
 
         _results.ItemActivated((_, e) => InvokeIndex(e.Index));
 
-        _content = new VStack(_searchBox, _results)
+        _resultsHost = new ScrollViewer(_results, focusable: false)
+            .HorizontalScrollEnabled(false)
+            .VerticalScrollEnabled(true)
+            .HorizontalAlignment(Align.Stretch);
+
+        _content = new VStack(_searchBox, _resultsHost)
             .Spacing(1)
             .HorizontalAlignment(Align.Stretch);
 
@@ -204,8 +210,8 @@ public sealed partial class CommandPalette : Visual
     private void ApplyStyle(CommandPaletteStyle style)
     {
         var resultsHeight = Math.Max(1, style.ResultsHeight);
-        _results.MinHeight = resultsHeight;
-        _results.MaxHeight = resultsHeight;
+        _resultsHost.MinHeight = resultsHeight;
+        _resultsHost.MaxHeight = resultsHeight;
 
         this.MinWidth(Math.Max(0, style.MinWidth));
         this.MaxWidth(Math.Max(style.MinWidth, style.MaxWidth));

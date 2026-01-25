@@ -218,4 +218,34 @@ public sealed class CommandPaletteTests
         Assert.IsGreaterThanOrEqualTo(0, hardResetIndex, "Expected results to contain Hard reset.");
         Assert.IsLessThan(hardResetIndex, resetIndex, "Expected Reset to be ranked above Hard reset.");
     }
+
+    [TestMethod]
+    public void CommandPalette_Shows_ScrollBar_When_Many_Items()
+    {
+        var root = new VStack();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 12));
+        driver.Tick();
+
+        for (var i = 0; i < 20; i++)
+        {
+            driver.App.AddGlobalCommand(new Command
+            {
+                Id = $"cmd.{i}",
+                LabelMarkup = $"Command {i:00}",
+                Presentation = CommandPresentation.CommandPalette,
+                Execute = _ => { },
+            });
+        }
+
+        var palette = new CommandPalette().Style(CommandPaletteStyle.Default with { ResultsHeight = 3 });
+        palette.Show();
+        driver.Tick();
+
+        var outText = driver.Backend.GetOutText();
+        var screen = new AnsiTestScreen(60, 12);
+        screen.Apply(outText);
+        var rendered = screen.GetText();
+
+        Assert.IsTrue(rendered.Contains('░') || rendered.Contains('█'), "Expected a scroll bar to render for long result lists.");
+    }
 }
