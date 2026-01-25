@@ -77,10 +77,20 @@ The command bar shows commands for the current focus context and clips when the 
 
 ## Where commands appear
 
-Commands have `CommandPresentation` flags (for example `CommandBar`, `CommandPalette`, `Menu`, `ContextMenu`). In v1, the primary consumer is `CommandBar`.
+Commands have `CommandPresentation` flags (for example `CommandBar`, `CommandPalette`, `Menu`, `ContextMenu`).
+
+- `CommandBar` shows context-aware key hints for the focused visual.
+- `CommandPalette` lists commands from the current focus context and global commands.
+- `MenuBar` supports menu items backed by commands.
+- Context menus can be built from commands via `CommandPresentation.ContextMenu`.
+
+While a modal popup/menu is active, global shortcuts are not executed “behind” it.
 
 ## Related docs
 
 - `doc/controls/commandbar.md`
 - `doc/input.md`
+- `doc/controls/commandpalette.md`
+- `doc/controls/menubar.md`
+- `doc/controls/contextmenu.md`
 - `doc/specs/command_specs.md`

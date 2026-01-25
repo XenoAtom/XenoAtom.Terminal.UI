@@ -1,10 +1,52 @@
 # CommandPalette
 
-`CommandPalette` is a searchable command launcher used in ControlsDemo.
+`CommandPalette` is a searchable command launcher built on top of the unified `Command` system.
 
 Screenshot placeholder:
 
 ![CommandPalette](../../img/screenshots/commandpalette.png)
+
+## Fullscreen-only
+
+`CommandPalette` uses the popup/window system and is available only in fullscreen `Terminal.Run(...)` applications.
+
+## What it shows
+
+`CommandPalette` lists commands discovered from the current focus context:
+
+- Commands registered on the focused visual and its ancestors
+- Global commands registered on the running `TerminalApp`
+
+Only commands marked with `CommandPresentation.CommandPalette` are shown.
+
+## Typical usage
+
+Create a palette instance and register a command that opens it:
+
+```csharp
+using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Commands;
+using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Input;
+
+var palette = new CommandPalette();
+
+root.AddCommand(new Command
+{
+    Id = "App.CommandPalette",
+    LabelMarkup = "Command palette",
+    Gesture = new KeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl),
+    Presentation = CommandPresentation.CommandBar | CommandPresentation.CommandPalette,
+    Execute = _ => palette.Show(),
+});
+```
+
+When open:
+
+- Type to search
+- Use Up/Down to select
+- Press Enter to execute
+- Press Esc to close
 
 ## Popup chrome
 
