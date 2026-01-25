@@ -130,6 +130,7 @@ The project is in a pre-release state. Remove this line when the project reaches
 - Keep the first line under 72 characters; add details in the body if needed.
 - Create a commit for each logical change or feature added to facilitate easier code review and tracking of changes.
 - Reference related issues in commit messages when applicable (e.g., "Fix #123").
+- DO NOT remove files that was added/changed locally but is not part of your intended changes.
 
 ## Resources
 
