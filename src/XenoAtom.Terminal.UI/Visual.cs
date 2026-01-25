@@ -11,6 +11,7 @@ using XenoAtom.Terminal.UI.Threading;
 using XenoAtom.Terminal.UI.Animation;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Commands;
+using XenoAtom.Terminal.UI.Collections;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -29,7 +30,7 @@ namespace XenoAtom.Terminal.UI;
 public abstract partial class Visual : DispatcherObject, IVisualElement
 {
     private Dictionary<object, Delegate?>? _handlers;
-    private List<Command>? _commands;
+    private BindableList<Command>? _commands;
     internal Dictionary<object, object?>? StyleEnvironment;
     private List<Action<Visual>>? _dynamicUpdates;
     private List<Collections.IDynamicUpdateResettable>? _dynamicUpdateLists;
@@ -184,7 +185,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// <summary>
     /// Gets the commands registered on this visual.
     /// </summary>
-    public IReadOnlyList<Command> Commands => (IReadOnlyList<Command>?)_commands ?? Array.Empty<Command>();
+    public BindableList<Command> Commands => _commands ??= new BindableList<Command>(this, "Visual.Commands");
 
     /// <summary>
     /// Gets or sets an optional factory used to build a context menu for this visual.
@@ -212,16 +213,16 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         ArgumentNullException.ThrowIfNull(command);
         command.Validate();
 
-        _commands ??= new List<Command>();
+        var commands = Commands;
 
         // Avoid ambiguous routing: a sequence prefix must not be used as a standalone gesture in the same scope.
         // This keeps single-stroke bindings simple and prevents timeout-based disambiguation.
         if (command.Sequence is { } sequence)
         {
             var prefix = sequence[0];
-            for (var i = 0; i < _commands.Count; i++)
+            for (var i = 0; i < commands.Count; i++)
             {
-                var existing = _commands[i];
+                var existing = commands[i];
                 if (existing.Gesture is { } g && g.Equals(prefix))
                 {
                     throw new InvalidOperationException($"The gesture '{prefix}' is already registered as a standalone command in this scope and cannot be used as a sequence prefix.");
@@ -230,9 +231,9 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         }
         else if (command.Gesture is { } gesture)
         {
-            for (var i = 0; i < _commands.Count; i++)
+            for (var i = 0; i < commands.Count; i++)
             {
-                var existing = _commands[i];
+                var existing = commands[i];
                 if (existing.Sequence is { } existingSequence && existingSequence[0].Equals(gesture))
                 {
                     throw new InvalidOperationException($"The gesture '{gesture}' is already registered as a sequence prefix in this scope and cannot be used as a standalone command.");
@@ -240,16 +241,16 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             }
         }
 
-        for (var i = 0; i < _commands.Count; i++)
+        for (var i = 0; i < commands.Count; i++)
         {
-            if (string.Equals(_commands[i].Id, command.Id, StringComparison.Ordinal))
+            if (string.Equals(commands[i].Id, command.Id, StringComparison.Ordinal))
             {
-                _commands[i] = command;
+                commands[i] = command;
                 return;
             }
         }
 
-        _commands.Add(command);
+        commands.Add(command);
     }
 
     /// <summary>

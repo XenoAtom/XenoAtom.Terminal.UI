@@ -33,7 +33,6 @@ public sealed partial class CommandBar : Visual
     /// </summary>
     public CommandBar()
     {
-        HorizontalAlignment = Align.Stretch;
         Presentation = CommandPresentation.CommandBar;
         _markupParser = new MarkupTextParser();
         _localCommands = new List<(Command, Visual, bool)>(16);
@@ -50,9 +49,20 @@ public sealed partial class CommandBar : Visual
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        // The command bar is intended as a single-row footer. It clips when there is not enough width.
-        var natural = constraints.Clamp(new Size(0, 1));
-        return SizeHints.FlexX(min: new Size(0, 1), natural: natural, growX: 1, shrinkX: 1);
+        // The command bar is intended as a single-row footer. It measures to its current content width
+        // (based on the focused context), while allowing clipping when there is not enough width.
+
+        var theme = GetTheme();
+        CollectCommands(theme, out var pendingCount, out var pendingPrefix);
+
+        var commandBarStyle = GetStyle<CommandBarStyle>();
+        var gap = Math.Max(1, commandBarStyle.Gap);
+
+        var width = MeasureContentWidth(commandBarStyle, theme.GetMarkupStyles(), pendingPrefix, pendingCount, gap);
+        var natural = constraints.Clamp(new Size(width, 1));
+
+        // By default the command bar does not request extra space; it simply renders what fits.
+        return SizeHints.Flex(min: new Size(0, 1), natural: natural, max: natural, growX: 0, growY: 0, shrinkX: 1, shrinkY: 0);
     }
 
     /// <inheritdoc />
@@ -138,6 +148,80 @@ public sealed partial class CommandBar : Visual
         // Sort by importance, but preserve registration order within the same importance.
         _localCommands.Sort(static (a, b) => a.Command.Importance.CompareTo(b.Command.Importance));
         _globalCommands.Sort(static (a, b) => a.Command.Importance.CompareTo(b.Command.Importance));
+    }
+
+    private int MeasureContentWidth(
+        CommandBarStyle commandBarStyle,
+        Dictionary<string, AnsiStyle> markupStyles,
+        in KeySequence pendingPrefix,
+        int pendingCount,
+        int gap)
+    {
+        var width = 0;
+
+        if (pendingCount > 0)
+        {
+            // Keycap prefix + " …" indicator.
+            // Render uses " …" and then adds an extra space before commands (only when commands follow).
+            var prefixText = pendingPrefix.ToString().AsSpan();
+            width += 1 + TerminalTextUtility.GetWidth(prefixText) + 1; // keycap open + text + close
+            width += TerminalTextUtility.GetWidth(" …".AsSpan());     // space + ellipsis
+
+            if (_localCommands.Count > 0 || _globalCommands.Count > 0)
+            {
+                width += 1;
+            }
+        }
+
+        width = MeasureCommandListWidth(width, commandBarStyle, markupStyles, _localCommands, gap);
+        width = MeasureCommandListWidth(width, commandBarStyle, markupStyles, _globalCommands, gap);
+
+        return width;
+    }
+
+    private int MeasureCommandListWidth(
+        int width,
+        CommandBarStyle commandBarStyle,
+        Dictionary<string, AnsiStyle> markupStyles,
+        List<(Command Command, Visual Target, bool IsEnabled)> commands,
+        int gap)
+    {
+        var first = width == 0;
+
+        for (var i = 0; i < commands.Count; i++)
+        {
+            var (cmd, _, _) = commands[i];
+
+            ReadOnlySpan<char> keyText;
+            if (cmd.Sequence is { } seq)
+            {
+                keyText = seq.ToString().AsSpan();
+            }
+            else if (cmd.Gesture is { } g)
+            {
+                keyText = g.ToString().AsSpan();
+            }
+            else
+            {
+                continue;
+            }
+
+            if (!first)
+            {
+                width += gap;
+            }
+            first = false;
+
+            // Keycap + space.
+            width += 1 + TerminalTextUtility.GetWidth(keyText) + 1;
+            width += 1;
+
+            // Label markup stripped to plain text.
+            var plain = _markupParser.Parse(cmd.LabelMarkup, out _, markupStyles);
+            width += TerminalTextUtility.GetWidth(plain.AsSpan());
+        }
+
+        return width;
     }
 
     private void AppendCommandsForTarget(

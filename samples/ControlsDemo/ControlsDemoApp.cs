@@ -77,11 +77,10 @@ internal static class ControlsDemoApp
 
         var root = new DockLayout()
             .Content(new HSplitter(sidebar, page).Ratio(0.16))
-            .Bottom(new VStack(
-                new CommandBar(),
+            .Bottom(
                 new Footer().Left("Tab focus | Mouse | Resize")
                     .Center(new HStack("🎨 Select Theme: ", colorSchemes))
-                    .Right("F12 debug | Ctrl+Q quit")));
+                    .Right(new CommandBar()));
 
         root.Update(c =>
         {
