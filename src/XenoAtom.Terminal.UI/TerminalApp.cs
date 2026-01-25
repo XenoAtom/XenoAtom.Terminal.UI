@@ -23,7 +23,7 @@ namespace XenoAtom.Terminal.UI;
 /// <summary>
 /// Hosts a retained-mode visual tree and drives input, layout, rendering, and binding invalidation.
 /// </summary>
-public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable
+public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IVisualElement
 {
     private readonly System.Collections.Concurrent.ConcurrentQueue<Action> _pendingActions = new();
     private readonly TerminalInstance _terminal;
@@ -45,6 +45,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable
     private int _renderFrameIndex;
     private Task? _runTask;
     private CellBuffer? _renderBuffer;
+    private Visual? _focusedElement;
     private Func<TerminalRunningContext, TerminalLoopResult>? _onUpdate;
     private TerminalRunningContext? _updateContext;
     private readonly AnsiBuilder _updateOutputBuilder = new(initialCapacity: 4096);
@@ -82,6 +83,8 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable
     private readonly DependencyIndex _measureIndex = new();
     private readonly DependencyIndex _arrangeIndex = new();
     private readonly DependencyIndex _renderIndex = new();
+
+    TerminalApp? IVisualElement.App => this;
 
     /// <summary>
     /// Gets the global commands registered on this application.
@@ -253,7 +256,23 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable
     /// Gets the currently focused visual, or <see langword="null"/> if no element is focused.
     /// </summary>
     [Bindable]
-    public Visual? FocusedElement { get; private set; }
+    public Visual? FocusedElement
+    {
+        get
+        {
+            BindingManager.Current.RegisterRead(this, __FocusedElement__BindingAccessor.Instance);
+            return _focusedElement;
+        }
+
+        set
+        {
+            if (!ReferenceEquals(_focusedElement, value))
+            {
+                _focusedElement = value;
+                BindingManager.Current.NotifyValueChanged(this, __FocusedElement__BindingAccessor.Instance);
+            }
+        }
+    }
 
     /// <summary>
     /// Posts an action to be executed on the UI thread.
