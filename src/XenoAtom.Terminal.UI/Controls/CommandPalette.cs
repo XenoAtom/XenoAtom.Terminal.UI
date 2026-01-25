@@ -102,7 +102,7 @@ public sealed partial class CommandPalette : Visual
         // Re-wrapping would attempt to attach the palette to a new parent while it is still parented.
         if (IsAttachedToHostPopup())
         {
-            _focusContext = app?.FocusedElement;
+            _focusContext ??= app?.FocusedElement;
             InvalidateResults();
             _hostPopup.Show();
             FocusSearch();
@@ -110,7 +110,7 @@ public sealed partial class CommandPalette : Visual
         }
 
         // Capture the focus context before the popup steals focus (so commands are collected from the "app" focus).
-        _focusContext = app?.FocusedElement;
+        _focusContext ??= app?.FocusedElement;
 
         var style = GetStyle<CommandPaletteStyle>();
         ApplyStyle(style);
@@ -128,7 +128,6 @@ public sealed partial class CommandPalette : Visual
     public void Close()
     {
         _hostPopup?.Close();
-        RestoreFocus();
     }
 
     /// <inheritdoc />
@@ -227,7 +226,8 @@ public sealed partial class CommandPalette : Visual
 
     private void RestoreFocus()
     {
-        var app = App ?? _hostPopup?.App;
+        // Note: the popup is removed from the window layer before raising Closed, so Popup.App can be null here.
+        var app = App ?? _hostPopup?.App ?? Dispatcher.AttachedApp;
         if (app is null)
         {
             return;

@@ -143,4 +143,35 @@ public sealed class CommandPaletteTests
         StringAssert.Contains(rendered, "Open");
         Assert.IsFalse(rendered.Contains("Build", StringComparison.Ordinal), "Filtered results should no longer contain non-matching entries.");
     }
+
+    [TestMethod]
+    public void CommandPalette_Restores_Focus_On_Close()
+    {
+        var focusedBefore = new TextArea("Hello");
+
+        var palette = new CommandPalette();
+        var root = new VStack(focusedBefore);
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(80, 16));
+        driver.Tick();
+
+        driver.App.Focus(focusedBefore);
+        driver.Tick();
+
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.open",
+            LabelMarkup = "Open",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        palette.Show();
+        driver.Tick();
+
+        palette.Close();
+        driver.Tick();
+
+        Assert.AreSame(focusedBefore, driver.App.FocusedElement);
+    }
 }
