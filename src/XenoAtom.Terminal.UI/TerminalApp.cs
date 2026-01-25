@@ -23,7 +23,7 @@ namespace XenoAtom.Terminal.UI;
 /// <summary>
 /// Hosts a retained-mode visual tree and drives input, layout, rendering, and binding invalidation.
 /// </summary>
-public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
+public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable
 {
     private readonly System.Collections.Concurrent.ConcurrentQueue<Action> _pendingActions = new();
     private readonly TerminalInstance _terminal;
@@ -248,20 +248,12 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
     internal bool InlineRemoveOnEnd => _inlineRemoveOnEnd;
 
-    private Visual? _focusedElement;
 
     /// <summary>
     /// Gets the currently focused visual, or <see langword="null"/> if no element is focused.
     /// </summary>
-    public Visual? FocusedElement
-    {
-        get
-        {
-            VerifyAccess();
-            return _focusedElement;
-        }
-        private set => _focusedElement = value;
-    }
+    [Bindable]
+    public Visual? FocusedElement { get; private set; }
 
     /// <summary>
     /// Posts an action to be executed on the UI thread.
@@ -787,7 +779,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     public void Focus(Visual? visual)
     {
         VerifyAccess();
-        _focusedElement = visual;
+        FocusedElement = visual;
         RequestRender();
     }
 
@@ -996,7 +988,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
 
     private bool TryGetDesiredCursor(out int x, out int y)
     {
-        var focused = _focusedElement;
+        var focused = FocusedElement;
         if (focused is Input.ICursorProvider provider && provider.TryGetCursorCell(out x, out y))
         {
             return true;
