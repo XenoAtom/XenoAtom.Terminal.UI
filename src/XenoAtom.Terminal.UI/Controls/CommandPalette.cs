@@ -76,6 +76,12 @@ public sealed partial class CommandPalette : Visual
             throw new InvalidOperationException("CommandPalette.Show cannot be called when the palette is part of a visual tree.");
         }
 
+        var app = App ?? Dispatcher.AttachedApp;
+        if (app is null)
+        {
+            throw new InvalidOperationException("Popup.Show is only supported while a TerminalApp is running.");
+        }
+
         _hostPopup ??= new Popup
         {
             MatchAnchorWidth = false,
@@ -93,14 +99,14 @@ public sealed partial class CommandPalette : Visual
         // Re-wrapping would attempt to attach the palette to a new parent while it is still parented.
         if (IsAttachedToHostPopup())
         {
-            _focusContext ??= App?.FocusedElement;
+            _focusContext ??= app?.FocusedElement;
             _hostPopup.Show();
             FocusSearch();
             return;
         }
 
         // Capture the focus context before the popup steals focus (so commands are collected from the "app" focus).
-        _focusContext = App?.FocusedElement;
+        _focusContext = app?.FocusedElement;
 
         var style = GetStyle<CommandPaletteStyle>();
         ApplyStyle(style);
