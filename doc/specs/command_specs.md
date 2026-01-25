@@ -45,11 +45,13 @@ The goal is to make “what can I do right now?” obvious without sacrificing p
 Existing related types:
 
 - Key input dispatch:
-  - `TerminalApp.DispatchKeyEvent(...)` traverses `FocusedElement → Parent` and calls `Visual.TryHandleKeyBinding(...)`
-  - if not handled, it raises `Visual.KeyDownEvent`
-- Key bindings:
-  - `Visual.AddKeyBinding(TerminalKeyGesture, Action)` stores `List<KeyBinding>? _keyBindings`
-  - `KeyBinding` is currently `{ Gesture, Action }` only
+  - `TerminalApp.DispatchKeyEvent(...)` traverses `FocusedElement → Parent` and resolves matching `UiCommand` instances
+    registered on each visual (`Visual.Commands`), then falls back to app/global commands (`TerminalApp.GlobalCommands`).
+  - Commands are resolved **before** raising `Visual.KeyDownEvent` (so shortcuts behave consistently even if controls don’t handle
+    `KeyDownEvent`).
+- Convenience key bindings:
+  - `Visual.AddKeyBinding(TerminalKeyGesture, Action)` is still available, but it is implemented as a hidden `UiCommand`
+    (`Presentation = None`) to keep all shortcut routing centralized in the command system.
 - Menus / command palette:
   - `MenuBar` and `CommandPalette` exist and represent “actions” in custom ways
 
@@ -207,7 +209,8 @@ Gesture routing should remain consistent with today’s behavior:
    - execute it
    - mark the event handled
 
-This can be implemented by adapting `Visual.TryHandleKeyBinding(...)` and/or by reusing the same focus-walk in `TerminalApp.DispatchKeyEvent(...)`.
+This is implemented by resolving `UiCommand` instances during `TerminalApp.DispatchKeyEvent(...)`, using the same focus-walk
+(`FocusedElement → Parent`) and then falling back to `TerminalApp.GlobalCommands`.
 
 ### 4.4 Key sequences (multi-stroke shortcuts)
 
@@ -258,22 +261,11 @@ While a prefix is active, command discovery UI should adapt:
 
 ### 4.4 Interop with existing `KeyBinding`
 
-`KeyBinding` today is insufficient to power a command UI (it has no label/metadata).
+XenoAtom.Terminal.UI implements **Option B**: `UiCommand` is the single model for shortcuts and discoverability.
 
-Two viable approaches:
-
-**Option A (incremental, preferred for v1):**
-
-- Keep `KeyBinding` for internal key routing.
-- Add a **new** `UiCommand` system for user-facing actions.
-- Provide helper methods in controls to register both consistently.
-
-**Option B (medium refactor):**
-
-- Replace `KeyBinding` with `UiCommand` as the single model.
-- `Visual.AddKeyBinding(...)` becomes `Visual.AddCommand(...)` and `Gesture` becomes optional.
-
-Because the library is not released yet, Option B is acceptable, as the refactoring should be minimal.
+- `Visual.AddKeyBinding(...)` remains for compatibility and ergonomics, but it registers an internal/hidden `UiCommand`
+  (so the command router remains the source of truth).
+- There is no separate `KeyBinding` data structure for routing.
 
 ---
 
