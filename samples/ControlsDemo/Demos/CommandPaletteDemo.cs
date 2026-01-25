@@ -41,16 +41,20 @@ public sealed class CommandPaletteDemo : ControlsDemoBase
             Execute = _ => palette.Show(),
         });
 
-        host.AddCommand(new Command
+        for (int i = 0; i < 10; i++)
         {
-            Id = "Demo.Increment",
-            LabelMarkup = "[primary]Increment[/]",
-            DescriptionMarkup = "[dim]Increase the counter[/]",
-            Gesture = new KeyGesture(TerminalChar.CtrlI, TerminalModifiers.Ctrl),
-            Presentation = CommandPresentation.CommandPalette,
-            CanExecute = _ => enabled.Value,
-            Execute = _ => counter.Value++,
-        });
+            int localI = i; // Capture loop variable
+            host.AddCommand(new Command
+            {
+                Id = $"Demo.Increment{i}",
+                LabelMarkup = $"[primary]Increment {i}[/]",
+                DescriptionMarkup = $"[dim]Increase the counter by {i}[/]",
+                Gesture = new KeyGesture(TerminalChar.CtrlI, TerminalModifiers.Ctrl),
+                Presentation = CommandPresentation.CommandPalette,
+                CanExecute = _ => enabled.Value,
+                Execute = _ => counter.Value += localI,
+            });
+        }
 
         host.AddCommand(new Command
         {
