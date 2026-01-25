@@ -12,6 +12,7 @@ using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Text;
+using UiTerminalKeyGesture = XenoAtom.Terminal.UI.Input.TerminalKeyGesture;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -71,6 +72,17 @@ public sealed partial class LogControl : Visual
 
         AttachChild(_scrollViewer);
         AttachChild(_searchPopup);
+
+        AddCommand(new UiCommand
+        {
+            Id = "Log.Search",
+            LabelMarkup = "Search",
+            DescriptionMarkup = "Search within the log output.",
+            Gesture = new UiTerminalKeyGesture(TerminalChar.CtrlF, TerminalModifiers.Ctrl),
+            Importance = UiCommandImportance.Secondary,
+            Presentation = UiCommandPresentation.CommandBar,
+            Execute = static v => ((LogControl)v).OpenSearch(),
+        });
     }
 
     /// <inheritdoc/>

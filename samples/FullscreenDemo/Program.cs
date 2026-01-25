@@ -491,9 +491,17 @@ var root = new DockLayout()
             .Ratio(0.45)
             .HorizontalAlignment(Align.Stretch)
             .VerticalAlignment(Align.Stretch))
-    .Bottom(footer);
+    .Bottom(new VStack(new CommandBar(), footer).Spacing(0));
 
-root.AddKeyBinding(new XenoAtom.Terminal.UI.Input.TerminalKeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl), commandPalette.Show);
+root.AddCommand(new XenoAtom.Terminal.UI.Input.UiCommand
+{
+    Id = "App.CommandPalette",
+    LabelMarkup = "Command palette",
+    Gesture = new XenoAtom.Terminal.UI.Input.TerminalKeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl),
+    Importance = XenoAtom.Terminal.UI.Input.UiCommandImportance.Secondary,
+    Presentation = XenoAtom.Terminal.UI.Input.UiCommandPresentation.CommandBar,
+    Execute = _ => commandPalette.Show(),
+});
 
 var lastTick = Stopwatch.GetTimestamp();
 var t = 0.0;

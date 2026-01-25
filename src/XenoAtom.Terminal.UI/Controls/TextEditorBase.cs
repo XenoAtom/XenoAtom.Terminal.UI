@@ -8,6 +8,7 @@ using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Scrolling;
 using XenoAtom.Terminal.UI.Text;
+using UiTerminalKeyGesture = XenoAtom.Terminal.UI.Input.TerminalKeyGesture;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -51,6 +52,30 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
         _scroll.Changed += OnScrollChanged;
         _textDocument.Changed += OnDocumentChanged;
         OnUndoRedoStateChanged();
+
+        AddCommand(new UiCommand
+        {
+            Id = "TextEditor.Undo",
+            LabelMarkup = "Undo",
+            DescriptionMarkup = "Undo the last change.",
+            Gesture = new UiTerminalKeyGesture(TerminalChar.CtrlZ, TerminalModifiers.Ctrl),
+            Importance = UiCommandImportance.Primary,
+            Presentation = UiCommandPresentation.CommandBar,
+            Execute = static v => ((TextEditorBase)v).Undo(),
+            CanExecute = static v => ((TextEditorBase)v).CanUndo,
+        });
+
+        AddCommand(new UiCommand
+        {
+            Id = "TextEditor.Redo",
+            LabelMarkup = "Redo",
+            DescriptionMarkup = "Redo the last undone change.",
+            Gesture = new UiTerminalKeyGesture(TerminalChar.CtrlR, TerminalModifiers.Ctrl),
+            Importance = UiCommandImportance.Primary,
+            Presentation = UiCommandPresentation.CommandBar,
+            Execute = static v => ((TextEditorBase)v).Redo(),
+            CanExecute = static v => ((TextEditorBase)v).CanRedo,
+        });
     }
 
     /// <summary>
@@ -333,6 +358,22 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     /// Attempts to redo the last undone edit.
     /// </summary>
     public void Redo() => _core.Redo(BuildEditorOptions());
+
+    /// <summary>
+    /// Attempts to open the integrated find UI for this editor.
+    /// </summary>
+    /// <param name="initialSearchText">An optional initial search text (typically the current selection).</param>
+    /// <returns><see langword="true"/> if a popup was opened; otherwise <see langword="false"/>.</returns>
+    public bool OpenFind(string? initialSearchText = null)
+        => TryOpenSearchReplacePopup(SearchReplaceMode.Find, initialSearchText);
+
+    /// <summary>
+    /// Attempts to open the integrated find/replace UI for this editor.
+    /// </summary>
+    /// <param name="initialSearchText">An optional initial search text (typically the current selection).</param>
+    /// <returns><see langword="true"/> if a popup was opened; otherwise <see langword="false"/>.</returns>
+    public bool OpenReplace(string? initialSearchText = null)
+        => TryOpenSearchReplacePopup(SearchReplaceMode.Replace, initialSearchText);
 
     /// <summary>
     /// Tries to get the desired terminal cursor position for this editor.
