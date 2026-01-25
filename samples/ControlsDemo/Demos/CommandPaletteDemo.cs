@@ -37,7 +37,7 @@ public sealed class CommandPaletteDemo : ControlsDemoBase
             LabelMarkup = "Command palette",
             Gesture = new KeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl),
             Importance = CommandImportance.Secondary,
-            Presentation = CommandPresentation.CommandBar | CommandPresentation.CommandPalette,
+            Presentation = CommandPresentation.CommandBar,
             Execute = _ => palette.Show(),
         });
 
