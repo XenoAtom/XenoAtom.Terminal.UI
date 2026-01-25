@@ -20,9 +20,10 @@ public sealed class CommandPaletteDemo : ControlsDemoBase
         var enabled = new State<bool>(true);
 
         var host = new VStack(
-                DemoUi.Title("Command palette"),
+            DemoUi.Title("Command palette"),
                 new TextBlock("Press Ctrl+P to open the command palette. Type to search, use arrows to select, and Enter to run.")
-                    .Wrap(true),
+                .Wrap(true),
+                new TextBox().Placeholder("Enter some text here to enable CTRL+P to be accessible"),
                 new HStack(
                         new Button("Increment").Click(() => counter.Value++),
                         new CheckBox("Enabled").IsChecked(enabled))
