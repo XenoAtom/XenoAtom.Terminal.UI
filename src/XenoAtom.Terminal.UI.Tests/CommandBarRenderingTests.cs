@@ -47,7 +47,7 @@ public sealed class CommandBarRenderingTests
             {
                 Id = "probe",
                 LabelMarkup = "Probe",
-                Sequence = new TerminalKeySequence(
+                Sequence = new KeySequence(
                     new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlK, TerminalModifiers.Ctrl),
                     new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl)),
                 Execute = _ => { },

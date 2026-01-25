@@ -1376,7 +1376,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return false;
     }
 
-    private static bool SequenceMatches(TerminalKeySequence sequence, ReadOnlySpan<KeyGesture> gestures)
+    private static bool SequenceMatches(KeySequence sequence, ReadOnlySpan<KeyGesture> gestures)
     {
         if (sequence.Count != gestures.Length)
         {
@@ -1394,7 +1394,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         return true;
     }
 
-    private static bool SequenceMatchesPrefix(TerminalKeySequence sequence, ReadOnlySpan<KeyGesture> prefix)
+    private static bool SequenceMatchesPrefix(KeySequence sequence, ReadOnlySpan<KeyGesture> prefix)
     {
         for (var i = 0; i < prefix.Length; i++)
         {

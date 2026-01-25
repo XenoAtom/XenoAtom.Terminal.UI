@@ -93,7 +93,7 @@ public sealed class UiCommandShortcutTests
             {
                 Id = "sequence",
                 LabelMarkup = "Sequence",
-                Sequence = new TerminalKeySequence(
+                Sequence = new KeySequence(
                     new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlK, TerminalModifiers.Ctrl),
                     new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl)),
                 Execute = _ => { },
@@ -124,7 +124,7 @@ public sealed class UiCommandShortcutTests
             {
                 Id = "probe",
                 LabelMarkup = "Probe",
-                Sequence = new TerminalKeySequence(
+                Sequence = new KeySequence(
                     new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlK, TerminalModifiers.Ctrl),
                     new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl)),
                 Execute = _ => Count++,

@@ -94,7 +94,7 @@ public sealed partial class CommandBar : Visual
         xCursor = WriteCommandList(buffer, rect, xCursor, styles, commandBarStyle, theme.GetMarkupStyles(), _globalCommands, gap);
     }
 
-    private void CollectCommands(Theme theme, out int pendingCount, out TerminalKeySequence pendingPrefix)
+    private void CollectCommands(Theme theme, out int pendingCount, out KeySequence pendingPrefix)
     {
         pendingCount = 0;
         pendingPrefix = default;
@@ -118,7 +118,7 @@ public sealed partial class CommandBar : Visual
                 buf[i] = app.GetPendingCommandSequenceGesture(i);
             }
 
-            pendingPrefix = new TerminalKeySequence(buf.ToArray());
+            pendingPrefix = new KeySequence(buf.ToArray());
         }
 
         var focus = app.FocusedElement;
@@ -143,7 +143,7 @@ public sealed partial class CommandBar : Visual
         List<(UiCommand Command, Visual Target, bool IsEnabled)> destination,
         Visual target,
         IReadOnlyList<UiCommand> commands,
-        TerminalKeySequence pendingPrefix)
+        KeySequence pendingPrefix)
     {
         for (var i = 0; i < commands.Count; i++)
         {
@@ -188,7 +188,7 @@ public sealed partial class CommandBar : Visual
         }
     }
 
-    private static bool SequenceMatchesPrefix(in TerminalKeySequence sequence, ReadOnlySpan<Input.KeyGesture> prefix)
+    private static bool SequenceMatchesPrefix(in KeySequence sequence, ReadOnlySpan<Input.KeyGesture> prefix)
     {
         var gestures = sequence.Gestures;
         if (prefix.Length > gestures.Length)

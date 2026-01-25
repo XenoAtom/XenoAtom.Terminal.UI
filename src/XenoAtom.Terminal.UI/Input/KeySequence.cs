@@ -13,17 +13,17 @@ namespace XenoAtom.Terminal.UI.Input;
 /// Sequences are typically short (for example, <c>Ctrl+K</c> then <c>Ctrl+P</c>), and are primarily intended to support
 /// Emacs-style “prefix” shortcuts without complicating single-stroke bindings.
 /// </remarks>
-public readonly record struct TerminalKeySequence
+public readonly record struct KeySequence
 {
     private readonly KeyGesture[] _gestures;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="TerminalKeySequence"/> struct.
+    /// Initializes a new instance of the <see cref="KeySequence"/> struct.
     /// </summary>
     /// <param name="gestures">The gestures making up the sequence.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="gestures"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="gestures"/> is empty.</exception>
-    public TerminalKeySequence(params KeyGesture[] gestures)
+    public KeySequence(params KeyGesture[] gestures)
     {
         ArgumentNullException.ThrowIfNull(gestures);
         if (gestures.Length == 0)
@@ -80,7 +80,7 @@ public readonly record struct TerminalKeySequence
     /// <param name="text">The input text.</param>
     /// <param name="sequence">The parsed sequence.</param>
     /// <returns><see langword="true"/> if parsing succeeded; otherwise <see langword="false"/>.</returns>
-    public static bool TryParse(ReadOnlySpan<char> text, out TerminalKeySequence sequence)
+    public static bool TryParse(ReadOnlySpan<char> text, out KeySequence sequence)
     {
         // This parser is intentionally conservative: it targets sequences formatted by KeyGesture.ToString().
         // It can be expanded later if we want richer parsing for user input.
@@ -122,7 +122,7 @@ public readonly record struct TerminalKeySequence
             array[i] = gestures[i];
         }
 
-        sequence = new TerminalKeySequence(array);
+        sequence = new KeySequence(array);
         return true;
     }
 }

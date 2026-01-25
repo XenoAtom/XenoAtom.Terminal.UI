@@ -97,7 +97,7 @@ public sealed class UiCommand
 
     // Optional multi-stroke shortcut (e.g. Ctrl+K then Ctrl+P).
     // When set, Gesture must be null.
-    public TerminalKeySequence? Sequence { get; init; }
+    public KeySequence? Sequence { get; init; }
 
     public UiCommandImportance Importance { get; init; } = UiCommandImportance.Secondary;
 
@@ -137,20 +137,20 @@ Notes:
   `KeyGesture(char, TerminalModifiers)` because terminals commonly emit control characters rather than the printable
   letter (see existing usage throughout the codebase).
 
-#### 4.1.1 `TerminalKeySequence`
+#### 4.1.1 `KeySequence`
 
 Introduce a small type to represent sequences and to keep formatting/parsing centralized:
 
 ```csharp
-public readonly record struct TerminalKeySequence
+public readonly record struct KeySequence
 {
-    public TerminalKeySequence(params KeyGesture[] gestures);
+    public KeySequence(params KeyGesture[] gestures);
 
     public ReadOnlySpan<KeyGesture> Gestures { get; }
 
     public override string ToString(); // e.g. "Ctrl+K Ctrl+P"
 
-    public static bool TryParse(ReadOnlySpan<char> text, out TerminalKeySequence sequence);
+    public static bool TryParse(ReadOnlySpan<char> text, out KeySequence sequence);
 }
 ```
 

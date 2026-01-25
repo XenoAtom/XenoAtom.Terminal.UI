@@ -42,14 +42,14 @@ Notes:
 
 ## Multi-stroke shortcuts (key sequences)
 
-Use `TerminalKeySequence` to define sequences:
+Use `KeySequence` to define sequences:
 
 ```csharp
 var cmd = new UiCommand
 {
     Id = "App.CommandPalette",
     LabelMarkup = "Command palette",
-    Sequence = new TerminalKeySequence(
+    Sequence = new KeySequence(
         new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlK, TerminalModifiers.Ctrl),
         new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl)),
     Execute = _ => Terminal.WriteLine("Open palette"),

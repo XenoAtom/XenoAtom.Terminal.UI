@@ -42,7 +42,7 @@ public sealed class UiCommand
     /// <remarks>
     /// A command can define either <see cref="Gesture"/> or <see cref="Sequence"/> (but not both).
     /// </remarks>
-    public TerminalKeySequence? Sequence { get; init; }
+    public KeySequence? Sequence { get; init; }
 
     /// <summary>
     /// Gets the importance of the command for display ordering.
