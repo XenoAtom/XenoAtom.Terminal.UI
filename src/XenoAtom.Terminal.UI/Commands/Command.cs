@@ -2,13 +2,15 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-namespace XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Input;
+
+namespace XenoAtom.Terminal.UI.Commands;
 
 /// <summary>
 /// Represents a user-facing command that can be invoked by a keyboard shortcut and/or exposed in UI surfaces
 /// such as a command bar, menu, or command palette.
 /// </summary>
-public sealed class UiCommand
+public sealed class Command
 {
     /// <summary>
     /// Gets the unique identifier of the command.
@@ -47,12 +49,12 @@ public sealed class UiCommand
     /// <summary>
     /// Gets the importance of the command for display ordering.
     /// </summary>
-    public UiCommandImportance Importance { get; init; } = UiCommandImportance.Secondary;
+    public CommandImportance Importance { get; init; } = CommandImportance.Secondary;
 
     /// <summary>
     /// Gets the presentation surfaces where the command should be surfaced.
     /// </summary>
-    public UiCommandPresentation Presentation { get; init; } = UiCommandPresentation.CommandBar;
+    public CommandPresentation Presentation { get; init; } = CommandPresentation.CommandBar;
 
     /// <summary>
     /// Gets the action executed by this command.
@@ -100,57 +102,4 @@ public sealed class UiCommand
             throw new ArgumentException("A command sequence cannot be empty.");
         }
     }
-}
-
-/// <summary>
-/// Defines importance buckets for ordering commands in UI surfaces.
-/// </summary>
-public enum UiCommandImportance
-{
-    /// <summary>
-    /// A primary command users are expected to discover quickly.
-    /// </summary>
-    Primary,
-
-    /// <summary>
-    /// A common command that should be discoverable without dominating the UI.
-    /// </summary>
-    Secondary,
-
-    /// <summary>
-    /// A command that is rarely needed or mostly contextual.
-    /// </summary>
-    Tertiary,
-}
-
-/// <summary>
-/// Flags describing where a command should be presented.
-/// </summary>
-[Flags]
-public enum UiCommandPresentation
-{
-    /// <summary>
-    /// The command should not be automatically presented.
-    /// </summary>
-    None = 0,
-
-    /// <summary>
-    /// Present the command in a command bar UI surface.
-    /// </summary>
-    CommandBar = 1,
-
-    /// <summary>
-    /// Present the command in a command palette.
-    /// </summary>
-    CommandPalette = 2,
-
-    /// <summary>
-    /// Present the command in menus.
-    /// </summary>
-    Menu = 4,
-
-    /// <summary>
-    /// Present the command in context menus.
-    /// </summary>
-    ContextMenu = 8,
 }

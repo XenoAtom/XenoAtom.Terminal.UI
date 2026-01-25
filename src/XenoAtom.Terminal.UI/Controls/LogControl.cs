@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using XenoAtom.Ansi;
 using XenoAtom.Terminal.UI.Collections;
+using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
@@ -72,14 +73,14 @@ public sealed partial class LogControl : Visual
         AttachChild(_scrollViewer);
         AttachChild(_searchPopup);
 
-        AddCommand(new UiCommand
+        AddCommand(new Command
         {
             Id = "Log.Search",
             LabelMarkup = "Search",
             DescriptionMarkup = "Search within the log output.",
             Gesture = new Input.KeyGesture(TerminalChar.CtrlF, TerminalModifiers.Ctrl),
-            Importance = UiCommandImportance.Secondary,
-            Presentation = UiCommandPresentation.CommandBar,
+            Importance = CommandImportance.Secondary,
+            Presentation = CommandPresentation.CommandBar,
             Execute = static v => ((LogControl)v).OpenSearch(),
         });
     }

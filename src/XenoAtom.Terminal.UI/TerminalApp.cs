@@ -16,6 +16,7 @@ using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Threading;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI;
+using XenoAtom.Terminal.UI.Commands;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -51,7 +52,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private bool _inlineRemoveOnEnd;
     private Dictionary<string, AnsiStyle>? _previousMarkupStyles;
 
-    private List<UiCommand>? _globalCommands;
+    private List<Command>? _globalCommands;
 
     private long _lastTickTimestamp;
     private readonly KeyGesture[] _pendingSequence = new KeyGesture[4];
@@ -82,7 +83,7 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     /// <summary>
     /// Gets the global commands registered on this application.
     /// </summary>
-    public IReadOnlyList<UiCommand> GlobalCommands => (IReadOnlyList<UiCommand>?)_globalCommands ?? Array.Empty<UiCommand>();
+    public IReadOnlyList<Command> GlobalCommands => (IReadOnlyList<Command>?)_globalCommands ?? Array.Empty<Command>();
 
     /// <summary>
     /// Adds or replaces a global command.
@@ -90,13 +91,13 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     /// <param name="command">The command.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="command"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">Thrown when the command creates an ambiguous prefix conflict.</exception>
-    public void AddGlobalCommand(UiCommand command)
+    public void AddGlobalCommand(Command command)
     {
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(command);
         command.Validate();
 
-        _globalCommands ??= new List<UiCommand>();
+        _globalCommands ??= new List<Command>();
 
         // Avoid ambiguous routing: a sequence prefix must not be used as a standalone gesture in the same scope.
         if (command.Sequence is { } sequence)

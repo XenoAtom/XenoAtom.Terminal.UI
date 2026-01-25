@@ -1,5 +1,6 @@
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
+using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Styling;
@@ -493,13 +494,13 @@ var root = new DockLayout()
             .VerticalAlignment(Align.Stretch))
     .Bottom(new VStack(new CommandBar(), footer).Spacing(0));
 
-root.AddCommand(new XenoAtom.Terminal.UI.Input.UiCommand
+root.AddCommand(new Command
 {
     Id = "App.CommandPalette",
     LabelMarkup = "Command palette",
     Gesture = new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl),
-    Importance = XenoAtom.Terminal.UI.Input.UiCommandImportance.Secondary,
-    Presentation = XenoAtom.Terminal.UI.Input.UiCommandPresentation.CommandBar,
+    Importance = CommandImportance.Secondary,
+    Presentation = CommandPresentation.CommandBar,
     Execute = _ => commandPalette.Show(),
 });
 

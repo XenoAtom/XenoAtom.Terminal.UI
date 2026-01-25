@@ -2,7 +2,7 @@
 
 `CommandBar` displays a single-row “key hints” strip for the current focus context.
 
-It collects `UiCommand` instances registered on the focused visual (and its parents) plus app-level commands, then renders
+It collects `Command` instances registered on the focused visual (and its parents) plus app-level commands, then renders
 them as a sequence of keycaps and labels.
 
 > Screenshot placeholder: `img/screenshots/commandbar.png`

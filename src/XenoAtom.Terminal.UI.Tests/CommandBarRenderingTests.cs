@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Input;
@@ -21,7 +22,7 @@ public sealed class CommandBarRenderingTests
         using var driver = new TerminalAppTestDriver(layout, TerminalHostKind.Fullscreen, new TerminalSize(60, 6));
         driver.App.Focus(probe);
 
-        driver.App.AddGlobalCommand(new UiCommand
+        driver.App.AddGlobalCommand(new Command
         {
             Id = "quit",
             LabelMarkup = "Quit",
@@ -43,7 +44,7 @@ public sealed class CommandBarRenderingTests
         public CommandProbe()
         {
             Focusable = true;
-            AddCommand(new UiCommand
+            AddCommand(new Command
             {
                 Id = "probe",
                 LabelMarkup = "Probe",

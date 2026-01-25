@@ -4,8 +4,8 @@
 
 using System.Text;
 using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Geometry;
-using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
@@ -37,25 +37,25 @@ public sealed partial class TextArea : TextEditorBase
         _searchPopup = new SearchReplacePopup(CreateSearchReplaceTarget());
         AttachChild(_searchPopup);
 
-        AddCommand(new UiCommand
+        AddCommand(new Command
         {
             Id = "TextEditor.Find",
             LabelMarkup = "Find",
             DescriptionMarkup = "Search within the current document.",
             Gesture = new Input.KeyGesture(TerminalChar.CtrlF, TerminalModifiers.Ctrl),
-            Importance = UiCommandImportance.Secondary,
-            Presentation = UiCommandPresentation.CommandBar,
+            Importance = CommandImportance.Secondary,
+            Presentation = CommandPresentation.CommandBar,
             Execute = static v => ((TextArea)v).OpenFind(),
         });
 
-        AddCommand(new UiCommand
+        AddCommand(new Command
         {
             Id = "TextEditor.Replace",
             LabelMarkup = "Replace",
             DescriptionMarkup = "Search and replace within the current document.",
             Gesture = new Input.KeyGesture(TerminalChar.CtrlH, TerminalModifiers.Ctrl),
-            Importance = UiCommandImportance.Secondary,
-            Presentation = UiCommandPresentation.CommandBar,
+            Importance = CommandImportance.Secondary,
+            Presentation = CommandPresentation.CommandBar,
             Execute = static v => ((TextArea)v).OpenReplace(),
         });
     }

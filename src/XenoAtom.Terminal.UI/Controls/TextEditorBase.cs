@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.UI;
+using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Rendering;
@@ -52,26 +53,26 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
         _textDocument.Changed += OnDocumentChanged;
         OnUndoRedoStateChanged();
 
-        AddCommand(new UiCommand
+        AddCommand(new Command
         {
             Id = "TextEditor.Undo",
             LabelMarkup = "Undo",
             DescriptionMarkup = "Undo the last change.",
             Gesture = new Input.KeyGesture(TerminalChar.CtrlZ, TerminalModifiers.Ctrl),
-            Importance = UiCommandImportance.Primary,
-            Presentation = UiCommandPresentation.CommandBar,
+            Importance = CommandImportance.Primary,
+            Presentation = CommandPresentation.CommandBar,
             Execute = static v => ((TextEditorBase)v).Undo(),
             CanExecute = static v => ((TextEditorBase)v).CanUndo,
         });
 
-        AddCommand(new UiCommand
+        AddCommand(new Command
         {
             Id = "TextEditor.Redo",
             LabelMarkup = "Redo",
             DescriptionMarkup = "Redo the last undone change.",
             Gesture = new Input.KeyGesture(TerminalChar.CtrlR, TerminalModifiers.Ctrl),
-            Importance = UiCommandImportance.Primary,
-            Presentation = UiCommandPresentation.CommandBar,
+            Importance = CommandImportance.Primary,
+            Presentation = CommandPresentation.CommandBar,
             Execute = static v => ((TextEditorBase)v).Redo(),
             CanExecute = static v => ((TextEditorBase)v).CanRedo,
         });

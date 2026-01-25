@@ -10,6 +10,7 @@ using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Threading;
 using XenoAtom.Terminal.UI.Animation;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Commands;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -28,7 +29,7 @@ namespace XenoAtom.Terminal.UI;
 public abstract partial class Visual : DispatcherObject, IVisualElement
 {
     private Dictionary<object, Delegate?>? _handlers;
-    private List<UiCommand>? _commands;
+    private List<Command>? _commands;
     internal Dictionary<object, object?>? StyleEnvironment;
     private List<Action<Visual>>? _dynamicUpdates;
     private List<Collections.IDynamicUpdateResettable>? _dynamicUpdateLists;
@@ -169,13 +170,13 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
         // Key bindings are represented internally as commands with Presentation.None so they participate in shortcut routing,
         // while remaining hidden from command UI surfaces.
-        AddCommand(new UiCommand
+        AddCommand(new Command
         {
             Id = $"KeyBinding:{gesture}",
             LabelMarkup = string.Empty,
             Gesture = gesture,
-            Presentation = UiCommandPresentation.None,
-            Importance = UiCommandImportance.Tertiary,
+            Presentation = CommandPresentation.None,
+            Importance = CommandImportance.Tertiary,
             Execute = _ => action(),
         });
     }
@@ -183,7 +184,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// <summary>
     /// Gets the commands registered on this visual.
     /// </summary>
-    public IReadOnlyList<UiCommand> Commands => (IReadOnlyList<UiCommand>?)_commands ?? Array.Empty<UiCommand>();
+    public IReadOnlyList<Command> Commands => (IReadOnlyList<Command>?)_commands ?? Array.Empty<Command>();
 
     /// <summary>
     /// Adds or replaces a command on this visual.
@@ -191,13 +192,13 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// <param name="command">The command.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="command"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="command"/> is invalid.</exception>
-    public void AddCommand(UiCommand command)
+    public void AddCommand(Command command)
     {
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(command);
         command.Validate();
 
-        _commands ??= new List<UiCommand>();
+        _commands ??= new List<Command>();
 
         // Avoid ambiguous routing: a sequence prefix must not be used as a standalone gesture in the same scope.
         // This keeps single-stroke bindings simple and prevents timeout-based disambiguation.

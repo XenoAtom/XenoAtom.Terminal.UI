@@ -8,7 +8,7 @@ Commands are **retained-mode**, registered on visuals (local) or on the `Termina
 
 ## What is a command?
 
-A `UiCommand` is an action with:
+A `Command` is an action with:
 
 - A stable `Id`
 - A user-facing `LabelMarkup` (ANSI markup supported, including theme tokens like `[primary]`)
@@ -26,7 +26,7 @@ using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Input;
 
 var editor = new TextArea("Hello");
-editor.AddCommand(new UiCommand
+editor.AddCommand(new Command
 {
     Id = "App.Save",
     LabelMarkup = "[primary]Save[/]",
@@ -45,7 +45,7 @@ Notes:
 Use `KeySequence` to define sequences:
 
 ```csharp
-var cmd = new UiCommand
+var cmd = new Command
 {
     Id = "App.CommandPalette",
     LabelMarkup = "Command palette",
@@ -77,7 +77,7 @@ The command bar shows commands for the current focus context and clips when the 
 
 ## Where commands appear
 
-Commands have `UiCommandPresentation` flags (for example `CommandBar`, `CommandPalette`, `Menu`, `ContextMenu`). In v1, the primary consumer is `CommandBar`.
+Commands have `CommandPresentation` flags (for example `CommandBar`, `CommandPalette`, `Menu`, `ContextMenu`). In v1, the primary consumer is `CommandBar`.
 
 ## Related docs
 

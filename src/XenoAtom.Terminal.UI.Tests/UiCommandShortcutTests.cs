@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Input;
@@ -11,7 +12,7 @@ using XenoAtom.Terminal.UI.Rendering;
 namespace XenoAtom.Terminal.UI.Tests;
 
 [TestClass]
-public sealed class UiCommandShortcutTests
+public sealed class CommandShortcutTests
 {
     [TestMethod]
     public void CommandSequence_Executes_On_MultiStroke_Shortcut()
@@ -79,7 +80,7 @@ public sealed class UiCommandShortcutTests
     {
         var probe = new EmptyProbe();
 
-        probe.AddCommand(new UiCommand
+        probe.AddCommand(new Command
         {
             Id = "standalone",
             LabelMarkup = "Standalone",
@@ -89,7 +90,7 @@ public sealed class UiCommandShortcutTests
 
         Assert.Throws<InvalidOperationException>(() =>
         {
-            probe.AddCommand(new UiCommand
+            probe.AddCommand(new Command
             {
                 Id = "sequence",
                 LabelMarkup = "Sequence",
@@ -120,7 +121,7 @@ public sealed class UiCommandShortcutTests
         {
             Focusable = true;
 
-            AddCommand(new UiCommand
+            AddCommand(new Command
             {
                 Id = "probe",
                 LabelMarkup = "Probe",

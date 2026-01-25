@@ -45,12 +45,12 @@ The goal is to make “what can I do right now?” obvious without sacrificing p
 Existing related types:
 
 - Key input dispatch:
-  - `TerminalApp.DispatchKeyEvent(...)` traverses `FocusedElement → Parent` and resolves matching `UiCommand` instances
+  - `TerminalApp.DispatchKeyEvent(...)` traverses `FocusedElement → Parent` and resolves matching `Command` instances
     registered on each visual (`Visual.Commands`), then falls back to app/global commands (`TerminalApp.GlobalCommands`).
   - Commands are resolved **before** raising `Visual.KeyDownEvent` (so shortcuts behave consistently even if controls don’t handle
     `KeyDownEvent`).
 - Convenience key bindings:
-  - `Visual.AddKeyBinding(KeyGesture, Action)` is still available, but it is implemented as a hidden `UiCommand`
+  - `Visual.AddKeyBinding(KeyGesture, Action)` is still available, but it is implemented as a hidden `Command`
     (`Presentation = None`) to keep all shortcut routing centralized in the command system.
 - Menus / command palette:
   - `MenuBar` and `CommandPalette` exist and represent “actions” in custom ways
@@ -79,10 +79,10 @@ The command system should build on this rather than replace everything immediate
 
 ### 4.1 Command model
 
-Introduce a new type (name can vary, examples below use `UiCommand`):
+Introduce a new type (name can vary, examples below use `Command`):
 
 ```csharp
-public sealed class UiCommand
+public sealed class Command
 {
     public required string Id { get; init; }
 
@@ -99,9 +99,9 @@ public sealed class UiCommand
     // When set, Gesture must be null.
     public KeySequence? Sequence { get; init; }
 
-    public UiCommandImportance Importance { get; init; } = UiCommandImportance.Secondary;
+    public CommandImportance Importance { get; init; } = CommandImportance.Secondary;
 
-    public UiCommandPresentation Presentation { get; init; } = UiCommandPresentation.CommandBar;
+    public CommandPresentation Presentation { get; init; } = CommandPresentation.CommandBar;
 
     // Execute/can-execute are target-aware so a single static command definition can be reused.
     public required Action<Visual> Execute { get; init; }
@@ -109,7 +109,7 @@ public sealed class UiCommand
     public Func<Visual, bool>? IsVisible { get; init; }
 }
 
-public enum UiCommandImportance
+public enum CommandImportance
 {
     Primary,
     Secondary,
@@ -117,7 +117,7 @@ public enum UiCommandImportance
 }
 
 [Flags]
-public enum UiCommandPresentation
+public enum CommandPresentation
 {
     None = 0,
     CommandBar = 1,
@@ -168,9 +168,9 @@ Proposed `Visual` API:
 ```csharp
 public abstract partial class Visual
 {
-    public IReadOnlyList<UiCommand> Commands { get; }
+    public IReadOnlyList<Command> Commands { get; }
 
-    public void AddCommand(UiCommand command);
+    public void AddCommand(Command command);
     public bool RemoveCommand(string id);
 }
 ```
@@ -180,9 +180,9 @@ Proposed `TerminalApp` API:
 ```csharp
 public sealed partial class TerminalApp
 {
-    public IReadOnlyList<UiCommand> GlobalCommands { get; }
+    public IReadOnlyList<Command> GlobalCommands { get; }
 
-    public void AddGlobalCommand(UiCommand command);
+    public void AddGlobalCommand(Command command);
     public bool RemoveGlobalCommand(string id);
 }
 ```
@@ -209,7 +209,7 @@ Gesture routing should remain consistent with today’s behavior:
    - execute it
    - mark the event handled
 
-This is implemented by resolving `UiCommand` instances during `TerminalApp.DispatchKeyEvent(...)`, using the same focus-walk
+This is implemented by resolving `Command` instances during `TerminalApp.DispatchKeyEvent(...)`, using the same focus-walk
 (`FocusedElement → Parent`) and then falling back to `TerminalApp.GlobalCommands`.
 
 ### 4.4 Key sequences (multi-stroke shortcuts)
@@ -261,9 +261,9 @@ While a prefix is active, command discovery UI should adapt:
 
 ### 4.4 Interop with existing `KeyBinding`
 
-XenoAtom.Terminal.UI implements **Option B**: `UiCommand` is the single model for shortcuts and discoverability.
+XenoAtom.Terminal.UI implements **Option B**: `Command` is the single model for shortcuts and discoverability.
 
-- `Visual.AddKeyBinding(...)` remains for compatibility and ergonomics, but it registers an internal/hidden `UiCommand`
+- `Visual.AddKeyBinding(...)` remains for compatibility and ergonomics, but it registers an internal/hidden `Command`
   (so the command router remains the source of truth).
 - There is no separate `KeyBinding` data structure for routing.
 
@@ -285,7 +285,7 @@ Ctrl+F Find | Ctrl+H Replace | Ctrl+Z Undo | Ctrl+R Redo | Ctrl+Q Quit
 ```csharp
 public sealed class CommandBar : Visual
 {
-    [Bindable] public partial UiCommandImportance MinImportance { get; set; } = UiCommandImportance.Secondary;
+    [Bindable] public partial CommandImportance MinImportance { get; set; } = CommandImportance.Secondary;
     [Bindable] public partial bool ShowDisabled { get; set; }
     [Bindable] public partial bool IncludeGlobalCommands { get; set; } = true;
     [Bindable] public partial int MaxItems { get; set; } = 6;
@@ -322,16 +322,16 @@ Markup usage:
 
 ### 6.1 Command palette integration
 
-CommandPalette should be able to show all commands that have `UiCommandPresentation.CommandPalette`.
+CommandPalette should be able to show all commands that have `CommandPresentation.CommandPalette`.
 
 Longer term:
 
-- unify `CommandPaletteItem` with `UiCommand` (palette entries can be commands)
+- unify `CommandPaletteItem` with `Command` (palette entries can be commands)
 - allow palette to include “dynamic” commands (e.g. per selected node)
 
 ### 6.2 MenuBar and context menus
 
-Menu items and context menu entries should be able to reference a `UiCommand`:
+Menu items and context menu entries should be able to reference a `Command`:
 
 - label: `LabelMarkup`
 - enabled: `CanExecute`
@@ -340,7 +340,7 @@ Menu items and context menu entries should be able to reference a `UiCommand`:
 
 Context menus:
 
-- Right-click should open a context menu built from commands with `UiCommandPresentation.ContextMenu`.
+- Right-click should open a context menu built from commands with `CommandPresentation.ContextMenu`.
 - The target should typically be the hovered visual (or focused visual if hover is not applicable).
 
 This creates a cohesive path:
@@ -384,7 +384,7 @@ Register at `TerminalApp`:
   - When `CommandBar` renders/evaluates these, dependency tracking should naturally trigger re-render when these values change.
 - Avoid per-frame allocations:
   - cache collected command lists between focus changes
-  - reuse internal buffers/lists (e.g. `UnsafeList<UiCommand>` or pooled lists)
+  - reuse internal buffers/lists (e.g. `UnsafeList<Command>` or pooled lists)
 - Do not parse markup repeatedly when not needed:
   - `CommandBar` can cache parsed `Markup` visuals per command instance if necessary, or parse lazily.
 
@@ -408,7 +408,7 @@ Register at `TerminalApp`:
 
 ## 10. Implementation steps (recommended)
 
-1. Introduce `UiCommand` + per-visual registration (`Visual.AddCommand`) and app/global registration.
+1. Introduce `Command` + per-visual registration (`Visual.AddCommand`) and app/global registration.
 2. Route gestures to commands (reuse existing focus-walk logic).
 3. Implement `CommandBar` with styling + demo integration (ControlsDemo footer).
 4. Update key controls (TextEditorBase, LogControl, SearchReplacePopup integration, etc.).

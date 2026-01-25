@@ -4,6 +4,7 @@
 
 using System.Text;
 using XenoAtom.Ansi;
+using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
@@ -23,8 +24,8 @@ namespace XenoAtom.Terminal.UI.Controls;
 public sealed partial class CommandBar : Visual
 {
     private readonly MarkupTextParser _markupParser;
-    private readonly List<(UiCommand Command, Visual Target, bool IsEnabled)> _localCommands;
-    private readonly List<(UiCommand Command, Visual Target, bool IsEnabled)> _globalCommands;
+    private readonly List<(Command Command, Visual Target, bool IsEnabled)> _localCommands;
+    private readonly List<(Command Command, Visual Target, bool IsEnabled)> _globalCommands;
     private readonly HashSet<string> _dedup;
 
     /// <summary>
@@ -33,10 +34,10 @@ public sealed partial class CommandBar : Visual
     public CommandBar()
     {
         HorizontalAlignment = Align.Stretch;
-        Presentation = UiCommandPresentation.CommandBar;
+        Presentation = CommandPresentation.CommandBar;
         _markupParser = new MarkupTextParser();
-        _localCommands = new List<(UiCommand, Visual, bool)>(16);
-        _globalCommands = new List<(UiCommand, Visual, bool)>(8);
+        _localCommands = new List<(Command, Visual, bool)>(16);
+        _globalCommands = new List<(Command, Visual, bool)>(8);
         _dedup = new HashSet<string>(StringComparer.Ordinal);
     }
 
@@ -44,7 +45,7 @@ public sealed partial class CommandBar : Visual
     /// Gets or sets the presentation flags used when collecting commands.
     /// </summary>
     [Bindable]
-    public partial UiCommandPresentation Presentation { get; set; }
+    public partial CommandPresentation Presentation { get; set; }
 
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
@@ -140,9 +141,9 @@ public sealed partial class CommandBar : Visual
     }
 
     private void AppendCommandsForTarget(
-        List<(UiCommand Command, Visual Target, bool IsEnabled)> destination,
+        List<(Command Command, Visual Target, bool IsEnabled)> destination,
         Visual target,
-        IReadOnlyList<UiCommand> commands,
+        IReadOnlyList<Command> commands,
         KeySequence pendingPrefix)
     {
         for (var i = 0; i < commands.Count; i++)
@@ -214,7 +215,7 @@ public sealed partial class CommandBar : Visual
         CommandBarResolvedStyle styles,
         CommandBarStyle commandBarStyle,
         Dictionary<string, AnsiStyle> markupStyles,
-        List<(UiCommand Command, Visual Target, bool IsEnabled)> commands,
+        List<(Command Command, Visual Target, bool IsEnabled)> commands,
         int gap)
     {
         if (x >= rect.X + rect.Width)
