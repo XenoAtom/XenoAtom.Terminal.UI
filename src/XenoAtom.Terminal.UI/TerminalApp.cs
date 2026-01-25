@@ -276,6 +276,10 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     /// </summary>
     public void Stop() => _cts.Cancel();
 
+    internal int PendingCommandSequenceCount => _pendingSequenceCount;
+
+    internal UiTerminalKeyGesture GetPendingCommandSequenceGesture(int index) => _pendingSequence[index];
+
     /// <summary>
     /// Stops the app and releases resources.
     /// </summary>
