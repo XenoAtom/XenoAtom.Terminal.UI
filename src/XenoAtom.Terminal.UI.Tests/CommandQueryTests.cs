@@ -62,7 +62,7 @@ public sealed class CommandQueryTests
             Execute = _ => { },
         });
 
-        var list = new List<CommandQuery.Entry>();
+        var list = new List<ResolvedCommand>();
         CommandQuery.Collect(driver.App, leaf, CommandPresentation.CommandPalette, list);
 
         // Local commands come first; within local commands, Primary should be ordered before Tertiary.
@@ -112,11 +112,10 @@ public sealed class CommandQueryTests
         using var driver = new TerminalAppTestDriver(root);
         driver.App.Focus(leaf);
 
-        var list = new List<CommandQuery.Entry>();
+        var list = new List<ResolvedCommand>();
         CommandQuery.Collect(driver.App, leaf, CommandPresentation.CommandPalette, list);
 
         Assert.HasCount(1, list);
         Assert.AreEqual("cmd.palette.only", list[0].Command.Id);
     }
 }
-

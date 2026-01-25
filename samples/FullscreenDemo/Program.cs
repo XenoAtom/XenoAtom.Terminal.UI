@@ -3,6 +3,7 @@ using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Styling;
 using Stopwatch = System.Diagnostics.Stopwatch;
 
@@ -89,12 +90,6 @@ var showDialog = new Button("Show modal")
 
 var menuBar = new MenuBar();
 var commandPalette = new CommandPalette();
-commandPalette.Items.AddRange(
-    new CommandPaletteItem("Open", () => statusState.Value = "open") { ShortcutFactory = () => "Ctrl+O", DescriptionFactory = () => "Open a file" },
-    new CommandPaletteItem("Search", () => statusState.Value = "search") { ShortcutFactory = () => "Ctrl+F", DescriptionFactory = () => "Search in the current view" },
-    new CommandPaletteItem("Build", () => statusState.Value = "build") { ShortcutFactory = () => "Ctrl+B", DescriptionFactory = () => "Build the project" },
-    new CommandPaletteItem("Run", () => statusState.Value = "run") { ShortcutFactory = () => "F5", DescriptionFactory = () => "Run the app" },
-    new CommandPaletteItem("Toggle modal", ShowModalDialog) { ShortcutFactory = () => "Ctrl+M", DescriptionFactory = () => "Show a modal dialog" });
 
 var menuFile = new MenuItem("File");
 menuFile.Items.Add(new MenuItem("New", () => statusState.Value = "new file") { Shortcut = "Ctrl+N" });
@@ -498,10 +493,65 @@ root.AddCommand(new Command
 {
     Id = "App.CommandPalette",
     LabelMarkup = "Command palette",
-    Gesture = new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl),
+    Gesture = new KeyGesture(TerminalChar.CtrlP, TerminalModifiers.Ctrl),
     Importance = CommandImportance.Secondary,
-    Presentation = CommandPresentation.CommandBar,
+    Presentation = CommandPresentation.CommandBar | CommandPresentation.CommandPalette,
     Execute = _ => commandPalette.Show(),
+});
+
+root.AddCommand(new Command
+{
+    Id = "Demo.Open",
+    LabelMarkup = "[primary]Open[/]",
+    DescriptionMarkup = "[dim]Open a file[/]",
+    Gesture = new KeyGesture(TerminalChar.CtrlO, TerminalModifiers.Ctrl),
+    Importance = CommandImportance.Primary,
+    Presentation = CommandPresentation.CommandPalette,
+    Execute = _ => statusState.Value = "open",
+});
+
+root.AddCommand(new Command
+{
+    Id = "Demo.Search",
+    LabelMarkup = "[primary]Search[/]",
+    DescriptionMarkup = "[dim]Search in the current view[/]",
+    Gesture = new KeyGesture(TerminalChar.CtrlF, TerminalModifiers.Ctrl),
+    Importance = CommandImportance.Primary,
+    Presentation = CommandPresentation.CommandPalette,
+    Execute = _ => statusState.Value = "search",
+});
+
+root.AddCommand(new Command
+{
+    Id = "Demo.Build",
+    LabelMarkup = "[primary]Build[/]",
+    DescriptionMarkup = "[dim]Build the project[/]",
+    Gesture = new KeyGesture(TerminalChar.CtrlB, TerminalModifiers.Ctrl),
+    Importance = CommandImportance.Primary,
+    Presentation = CommandPresentation.CommandPalette,
+    Execute = _ => statusState.Value = "build",
+});
+
+root.AddCommand(new Command
+{
+    Id = "Demo.Run",
+    LabelMarkup = "[primary]Run[/]",
+    DescriptionMarkup = "[dim]Run the app[/]",
+    Gesture = new KeyGesture(TerminalKey.F5),
+    Importance = CommandImportance.Primary,
+    Presentation = CommandPresentation.CommandPalette,
+    Execute = _ => statusState.Value = "run",
+});
+
+root.AddCommand(new Command
+{
+    Id = "Demo.ToggleModal",
+    LabelMarkup = "Toggle modal",
+    DescriptionMarkup = "[dim]Show a modal dialog[/]",
+    Gesture = new KeyGesture(TerminalChar.CtrlM, TerminalModifiers.Ctrl),
+    Importance = CommandImportance.Secondary,
+    Presentation = CommandPresentation.CommandPalette,
+    Execute = _ => ShowModalDialog(),
 });
 
 var lastTick = Stopwatch.GetTimestamp();

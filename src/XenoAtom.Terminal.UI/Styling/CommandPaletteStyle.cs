@@ -3,7 +3,9 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Templating;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
@@ -12,11 +14,16 @@ namespace XenoAtom.Terminal.UI.Styling;
 /// </summary>
 public sealed record CommandPaletteStyle : IStyle<CommandPaletteStyle>
 {
+    private static readonly DataTemplate<ResolvedCommand> DefaultItemTemplate = CreateDefaultItemTemplateCore(showDescription: true);
+
     /// <summary>
     /// Gets the default command palette style.
     /// </summary>
     public static CommandPaletteStyle Default { get; } = new()
     {
+        MinWidth = 50,
+        MaxWidth = 72,
+        ResultsHeight = 8,
         PopupTemplateFactory = visual => new Group
         {
             TopLeftText = "Command palette",
@@ -24,6 +31,7 @@ public sealed record CommandPaletteStyle : IStyle<CommandPaletteStyle>
             Content = visual,
             HorizontalAlignment = Align.Stretch,
         },
+        ItemTemplate = DefaultItemTemplate,
     };
 
     /// <summary>
@@ -38,5 +46,61 @@ public sealed record CommandPaletteStyle : IStyle<CommandPaletteStyle>
     /// This allows customizing the chrome (e.g. border and padding) around the command palette without modifying the palette content.
     /// </remarks>
     public Func<Visual, Visual?>? PopupTemplateFactory { get; init; }
-}
 
+    /// <summary>
+    /// Gets the number of visible result rows in the palette.
+    /// </summary>
+    public int ResultsHeight { get; init; } = 8;
+
+    /// <summary>
+    /// Gets the minimum width, in cells, of the palette.
+    /// </summary>
+    public int MinWidth { get; init; } = 50;
+
+    /// <summary>
+    /// Gets the maximum width, in cells, of the palette.
+    /// </summary>
+    public int MaxWidth { get; init; } = 72;
+
+    /// <summary>
+    /// Gets the item template used by the palette results list.
+    /// </summary>
+    /// <remarks>
+    /// The default template shows the label on the left and the shortcut on the right, with an optional second line for
+    /// the command description.
+    /// </remarks>
+    public DataTemplate<ResolvedCommand>? ItemTemplate { get; init; }
+
+    internal static DataTemplate<ResolvedCommand> CreateDefaultItemTemplate() => DefaultItemTemplate;
+
+    private static DataTemplate<ResolvedCommand> CreateDefaultItemTemplateCore(bool showDescription)
+        => new((Binding<ResolvedCommand> binding, in DataTemplateContext _) =>
+        {
+            var entry = binding.GetValue();
+            var cmd = entry.Command;
+
+            Visual label = new Markup(cmd.LabelMarkup);
+
+            Visual? shortcut = null;
+            if (cmd.Sequence is { } seq)
+            {
+                shortcut = new TextBlock(seq.ToString());
+            }
+            else if (cmd.Gesture is { } g)
+            {
+                shortcut = new TextBlock(g.ToString());
+            }
+
+            var item = new OptionListItem(label, shortcut)
+            {
+                SearchText = cmd.Name ?? cmd.SearchText,
+            };
+
+            if (showDescription && !string.IsNullOrEmpty(cmd.DescriptionMarkup))
+            {
+                item.Description = new Markup(cmd.DescriptionMarkup);
+            }
+
+            return item;
+        });
+}

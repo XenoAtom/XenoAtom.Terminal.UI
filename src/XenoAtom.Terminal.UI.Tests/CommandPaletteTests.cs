@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.Backends;
+using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Hosting;
 
@@ -15,11 +16,25 @@ public sealed class CommandPaletteTests
     public void CommandPalette_Filters_Items_Based_On_Query()
     {
         var palette = new CommandPalette();
-        palette.Items.AddRange(
-            new CommandPaletteItem("Open"),
-            new CommandPaletteItem("Build"));
 
         var root = new VStack { palette };
+
+        root.AddCommand(new Command
+        {
+            Id = "cmd.open",
+            LabelMarkup = "Open",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        root.AddCommand(new Command
+        {
+            Id = "cmd.build",
+            LabelMarkup = "Build",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 12));
         driver.Tick();
 
@@ -41,11 +56,25 @@ public sealed class CommandPaletteTests
         var invoked = false;
 
         var palette = new CommandPalette();
-        palette.Items.AddRange(
-            new CommandPaletteItem("Open", () => invoked = true),
-            new CommandPaletteItem("Build"));
 
         var root = new VStack { palette };
+
+        root.AddCommand(new Command
+        {
+            Id = "cmd.open",
+            LabelMarkup = "Open",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => invoked = true,
+        });
+
+        root.AddCommand(new Command
+        {
+            Id = "cmd.build",
+            LabelMarkup = "Build",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 12));
         driver.Tick();
 
@@ -63,7 +92,13 @@ public sealed class CommandPaletteTests
         driver.Tick();
 
         var palette = new CommandPalette();
-        palette.Items.Add(new CommandPaletteItem("Open"));
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.open",
+            LabelMarkup = "Open",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
 
         palette.Show();
         palette.Show(); // should not throw even though the palette is wrapped by the popup template.

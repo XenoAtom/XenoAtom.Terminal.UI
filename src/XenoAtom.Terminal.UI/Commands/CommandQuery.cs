@@ -10,23 +10,13 @@ namespace XenoAtom.Terminal.UI.Commands;
 internal static class CommandQuery
 {
     /// <summary>
-    /// Represents a resolved command together with the visual target it should execute against.
-    /// </summary>
-    /// <param name="Command">The command.</param>
-    /// <param name="Target">The target visual used for visibility/can-execute checks and execution.</param>
-    /// <param name="IsEnabled">Whether the command is enabled for <paramref name="Target"/>.</param>
-    /// <param name="IsGlobal">Whether the command was sourced from the global command list.</param>
-    /// <param name="Order">The insertion order used for deterministic sorting.</param>
-    internal readonly record struct Entry(Command Command, Visual Target, bool IsEnabled, bool IsGlobal, int Order);
-
-    /// <summary>
     /// Collects commands visible in the current focus context for a given presentation surface.
     /// </summary>
     /// <param name="app">The application hosting the visual tree.</param>
     /// <param name="focus">The focused visual used as a starting point for command discovery. When <see langword="null"/>, uses <see cref="TerminalApp.FocusedElement"/>.</param>
     /// <param name="presentation">The presentation surface to filter commands by.</param>
     /// <param name="output">The destination list. It is cleared before being populated.</param>
-    public static void Collect(TerminalApp app, Visual? focus, CommandPresentation presentation, List<Entry> output)
+    public static void Collect(TerminalApp app, Visual? focus, CommandPresentation presentation, List<ResolvedCommand> output)
     {
         ArgumentNullException.ThrowIfNull(app);
         ArgumentNullException.ThrowIfNull(output);
@@ -69,7 +59,7 @@ internal static class CommandQuery
     }
 
     private static void AppendCommands(
-        List<Entry> output,
+        List<ResolvedCommand> output,
         IReadOnlyList<Command> commands,
         Visual target,
         CommandPresentation presentation,
@@ -105,7 +95,7 @@ internal static class CommandQuery
                 continue;
             }
 
-            output.Add(new Entry(cmd, target, cmd.CanExecuteFor(target), isGlobal, order));
+            output.Add(new ResolvedCommand(cmd, target, cmd.CanExecuteFor(target), isGlobal) { Order = order });
             order++;
         }
     }
