@@ -39,7 +39,7 @@ var bar = new CommandBar()
     {
         Background = Colors.Black,
         KeyForeground = Colors.Primary,
-        Gap = 3,
+        Separator = " · ",
     });
 ```
 
@@ -47,4 +47,3 @@ var bar = new CommandBar()
 
 - `doc/commands.md`
 - `doc/specs/command_specs.md`
-

@@ -42,9 +42,13 @@ public sealed record CommandBarStyle : IStyle<CommandBarStyle>
     public Color? KeyBackground { get; init; }
 
     /// <summary>
-    /// Gets the number of spaces inserted between command entries.
+    /// Gets the separator text rendered between command entries.
     /// </summary>
-    public int Gap { get; init; } = 2;
+    /// <remarks>
+    /// This value is rendered verbatim (for example: <c>" | "</c>, <c>" · "</c>, or an empty string).
+    /// When the separator does not fit, it is clipped.
+    /// </remarks>
+    public string Separator { get; init; } = " | ";
 
     /// <summary>
     /// Gets the character used to open a keycap.

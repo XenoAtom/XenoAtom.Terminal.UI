@@ -56,9 +56,10 @@ public sealed partial class CommandBar : Visual
         CollectCommands(theme, out var pendingCount, out var pendingPrefix);
 
         var commandBarStyle = GetStyle<CommandBarStyle>();
-        var gap = Math.Max(1, commandBarStyle.Gap);
+        var separator = commandBarStyle.Separator ?? string.Empty;
+        var separatorWidth = TerminalTextUtility.GetWidth(separator.AsSpan());
 
-        var width = MeasureContentWidth(commandBarStyle, theme.GetMarkupStyles(), pendingPrefix, pendingCount, gap);
+        var width = MeasureContentWidth(commandBarStyle, theme.GetMarkupStyles(), pendingPrefix, pendingCount, separatorWidth);
         var natural = constraints.Clamp(new Size(width, 1));
 
         // By default the command bar does not request extra space; it simply renders what fits.
@@ -90,6 +91,7 @@ public sealed partial class CommandBar : Visual
         CollectCommands(theme, out var pendingCount, out var pendingPrefix);
 
         var xCursor = rect.X;
+        var hasEntry = false;
 
         if (pendingCount > 0)
         {
@@ -99,10 +101,10 @@ public sealed partial class CommandBar : Visual
             xCursor += 1;
         }
 
-        var gap = Math.Max(1, commandBarStyle.Gap);
+        var separator = commandBarStyle.Separator ?? string.Empty;
 
-        xCursor = WriteCommandList(buffer, rect, xCursor, styles, commandBarStyle, theme.GetMarkupStyles(), _localCommands, gap);
-        xCursor = WriteCommandList(buffer, rect, xCursor, styles, commandBarStyle, theme.GetMarkupStyles(), _globalCommands, gap);
+        xCursor = WriteCommandList(buffer, rect, xCursor, styles, commandBarStyle, theme.GetMarkupStyles(), _localCommands, separator.AsSpan(), ref hasEntry);
+        xCursor = WriteCommandList(buffer, rect, xCursor, styles, commandBarStyle, theme.GetMarkupStyles(), _globalCommands, separator.AsSpan(), ref hasEntry);
     }
 
     private void CollectCommands(Theme theme, out int pendingCount, out KeySequence pendingPrefix)
@@ -155,9 +157,10 @@ public sealed partial class CommandBar : Visual
         Dictionary<string, AnsiStyle> markupStyles,
         in KeySequence pendingPrefix,
         int pendingCount,
-        int gap)
+        int separatorWidth)
     {
         var width = 0;
+        var hasEntry = false;
 
         if (pendingCount > 0)
         {
@@ -173,8 +176,8 @@ public sealed partial class CommandBar : Visual
             }
         }
 
-        width = MeasureCommandListWidth(width, commandBarStyle, markupStyles, _localCommands, gap);
-        width = MeasureCommandListWidth(width, commandBarStyle, markupStyles, _globalCommands, gap);
+        width = MeasureCommandListWidth(width, commandBarStyle, markupStyles, _localCommands, separatorWidth, ref hasEntry);
+        width = MeasureCommandListWidth(width, commandBarStyle, markupStyles, _globalCommands, separatorWidth, ref hasEntry);
 
         return width;
     }
@@ -184,10 +187,9 @@ public sealed partial class CommandBar : Visual
         CommandBarStyle commandBarStyle,
         Dictionary<string, AnsiStyle> markupStyles,
         List<(Command Command, Visual Target, bool IsEnabled)> commands,
-        int gap)
+        int separatorWidth,
+        ref bool hasEntry)
     {
-        var first = width == 0;
-
         for (var i = 0; i < commands.Count; i++)
         {
             var (cmd, _, _) = commands[i];
@@ -206,11 +208,11 @@ public sealed partial class CommandBar : Visual
                 continue;
             }
 
-            if (!first)
+            if (hasEntry)
             {
-                width += gap;
+                width += separatorWidth;
             }
-            first = false;
+            hasEntry = true;
 
             // Keycap + space.
             width += 1 + TerminalTextUtility.GetWidth(keyText) + 1;
@@ -300,7 +302,8 @@ public sealed partial class CommandBar : Visual
         CommandBarStyle commandBarStyle,
         Dictionary<string, AnsiStyle> markupStyles,
         List<(Command Command, Visual Target, bool IsEnabled)> commands,
-        int gap)
+        ReadOnlySpan<char> separator,
+        ref bool hasEntry)
     {
         if (x >= rect.X + rect.Width)
         {
@@ -329,13 +332,22 @@ public sealed partial class CommandBar : Visual
                 continue;
             }
 
+            if (hasEntry && !separator.IsEmpty)
+            {
+                x = WritePlain(buffer, rect, x, separator, styles.LabelStyle);
+                if (x >= rect.X + rect.Width)
+                {
+                    break;
+                }
+            }
+
             x = WriteKeycap(buffer, rect, x, keyText, styles, commandBarStyle);
             x = WritePlain(buffer, rect, x, " ".AsSpan(), styles.LabelStyle);
 
             var labelStyle = enabled ? styles.LabelStyle : styles.DisabledLabelStyle;
             x = WriteMarkup(buffer, rect, x, cmd.LabelMarkup, labelStyle, markupStyles);
 
-            x += gap;
+            hasEntry = true;
             if (x >= rect.X + rect.Width)
             {
                 break;
