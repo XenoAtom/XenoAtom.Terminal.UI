@@ -23,6 +23,10 @@ public sealed partial class CommandPalette : Visual
     private readonly List<ResolvedCommand> _collectedCommands;
     private readonly List<(int Score, ResolvedCommand Command)> _matches;
 
+    private string _lastQuery = string.Empty;
+    private int _lastCommandStamp = int.MinValue;
+    private Visual? _lastFocusContext;
+
     private Popup? _hostPopup;
     private Visual? _focusContext;
     private bool _hostPopupEventsAttached;
@@ -61,7 +65,6 @@ public sealed partial class CommandPalette : Visual
         _results.KeyDown((_, e) => OnPaletteKeyDown(e, fromSearch: false));
 
         ApplyStyle(GetStyle<CommandPaletteStyle>());
-        _results.Update(_ => RebuildResults());
     }
 
     /// <summary>
@@ -99,7 +102,8 @@ public sealed partial class CommandPalette : Visual
         // Re-wrapping would attempt to attach the palette to a new parent while it is still parented.
         if (IsAttachedToHostPopup())
         {
-            _focusContext ??= app?.FocusedElement;
+            _focusContext = app?.FocusedElement;
+            InvalidateResults();
             _hostPopup.Show();
             FocusSearch();
             return;
@@ -112,6 +116,7 @@ public sealed partial class CommandPalette : Visual
         ApplyStyle(style);
         var content = style.PopupTemplateFactory?.Invoke(this) ?? this;
         _hostPopup.Content = content;
+        InvalidateResults();
 
         _hostPopup.Show();
         FocusSearch();
@@ -135,6 +140,7 @@ public sealed partial class CommandPalette : Visual
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        EnsureResultsUpToDate();
         return _content.Measure(constraints);
     }
 
@@ -142,6 +148,58 @@ public sealed partial class CommandPalette : Visual
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         _content.Arrange(finalRect);
+    }
+
+    private void InvalidateResults()
+    {
+        _lastCommandStamp = int.MinValue;
+        _lastQuery = string.Empty;
+        _lastFocusContext = null;
+        MarkMeasureDirty();
+    }
+
+    private void EnsureResultsUpToDate()
+    {
+        var app = App ?? _hostPopup?.App;
+        if (app is null)
+        {
+            return;
+        }
+
+        var focus = _focusContext;
+        if (focus is not null && !ReferenceEquals(focus.App, app))
+        {
+            focus = null;
+        }
+
+        var query = (_searchBox.Text ?? string.Empty).Trim();
+        var stamp = ComputeCommandStamp(app, focus);
+
+        if (stamp == _lastCommandStamp
+            && string.Equals(query, _lastQuery, StringComparison.Ordinal)
+            && ReferenceEquals(focus, _lastFocusContext))
+        {
+            return;
+        }
+
+        _lastCommandStamp = stamp;
+        _lastQuery = query;
+        _lastFocusContext = focus;
+        RebuildResults(app, focus, query);
+    }
+
+    private static int ComputeCommandStamp(TerminalApp app, Visual? focus)
+    {
+        focus ??= app.FocusedElement;
+
+        var stamp = 17;
+        for (var v = focus; v is not null; v = v.Parent)
+        {
+            stamp = unchecked((stamp * 31) + v.Commands.Version);
+        }
+
+        stamp = unchecked((stamp * 31) + app.GlobalCommands.Version);
+        return stamp;
     }
 
     private void ApplyStyle(CommandPaletteStyle style)
@@ -201,23 +259,12 @@ public sealed partial class CommandPalette : Visual
         return false;
     }
 
-    private void RebuildResults()
+    private void RebuildResults(TerminalApp app, Visual? focusContext, string query)
     {
-        var query = (_searchBox.Text ?? string.Empty).Trim();
         var hasQuery = query.Length > 0;
 
         _collectedCommands.Clear();
-        var app = App ?? _hostPopup?.App;
-        if (app is not null)
-        {
-            var focus = _focusContext;
-            if (focus is not null && !ReferenceEquals(focus.App, app))
-            {
-                focus = null;
-            }
-
-            CommandQuery.Collect(app, focus, CommandPresentation.CommandPalette, _collectedCommands);
-        }
+        CommandQuery.Collect(app, focusContext, CommandPresentation.CommandPalette, _collectedCommands);
 
         _results.Items.Clear();
         _matches.Clear();
@@ -303,7 +350,7 @@ public sealed partial class CommandPalette : Visual
             (App ?? _hostPopup?.App)?.Focus(_results);
             e.Handled = true;
             return;
-        }
+        } 
 
         if (e.Key != TerminalKey.Tab)
         {

@@ -105,4 +105,42 @@ public sealed class CommandPaletteTests
         palette.Close();
         driver.Tick();
     }
+
+    [TestMethod]
+    public void CommandPalette_Show_Filters_Items_Based_On_Query()
+    {
+        var root = new VStack();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 12));
+        driver.Tick();
+
+        var palette = new CommandPalette();
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.open",
+            LabelMarkup = "Open",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.build",
+            LabelMarkup = "Build",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        palette.Show();
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "op" });
+        driver.Tick();
+
+        var outText = driver.Backend.GetOutText();
+        var screen = new AnsiTestScreen(60, 12);
+        screen.Apply(outText);
+        var rendered = screen.GetText();
+
+        StringAssert.Contains(rendered, "Open");
+        Assert.IsFalse(rendered.Contains("Build", StringComparison.Ordinal), "Filtered results should no longer contain non-matching entries.");
+    }
 }
