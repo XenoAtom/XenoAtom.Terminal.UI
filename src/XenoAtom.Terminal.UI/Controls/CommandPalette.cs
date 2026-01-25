@@ -110,6 +110,7 @@ public sealed partial class CommandPalette : Visual
         {
             _focusContext ??= app?.FocusedElement;
             InvalidateResults();
+            ApplyPopupChrome(GetStyle<CommandPaletteStyle>());
             _hostPopup.Show();
             FocusSearch();
             return;
@@ -120,6 +121,7 @@ public sealed partial class CommandPalette : Visual
 
         var style = GetStyle<CommandPaletteStyle>();
         ApplyStyle(style);
+        ApplyPopupChrome(style);
         var content = style.PopupTemplateFactory?.Invoke(this) ?? this;
         _hostPopup.Content = content;
         InvalidateResults();
@@ -217,6 +219,21 @@ public sealed partial class CommandPalette : Visual
         this.MaxWidth(Math.Max(style.MinWidth, style.MaxWidth));
 
         _results.ItemTemplate = style.ItemTemplate ?? CommandPaletteStyle.CreateDefaultItemTemplate();
+    }
+
+    private void ApplyPopupChrome(CommandPaletteStyle style)
+    {
+        if (_hostPopup is null)
+        {
+            return;
+        }
+
+        _hostPopup.HorizontalPopupAlignment = style.PopupHorizontalAlignment;
+        _hostPopup.VerticalPopupAlignment = style.PopupVerticalAlignment;
+        _hostPopup.OffsetX = style.PopupOffsetX;
+        _hostPopup.OffsetY = style.PopupOffsetY;
+        _hostPopup.IsDraggable = style.PopupIsDraggable;
+        _hostPopup.DragHandleHeight = Math.Max(1, style.PopupDragHandleHeight);
     }
 
     private void FocusSearch()

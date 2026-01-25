@@ -5,6 +5,7 @@
 using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Hosting;
+using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -203,6 +204,67 @@ public sealed class PopupTests
         var rendered = screen.GetText();
 
         Assert.IsFalse(rendered.Contains("PopupContent", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void Popup_Uses_Custom_Alignment_When_No_Anchor()
+    {
+        var root = new VStack();
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(20, 10));
+        driver.Tick();
+
+        var popup = new Popup
+        {
+            Content = new TextBlock("P"),
+            MatchAnchorWidth = false,
+            HorizontalPopupAlignment = Align.Start,
+            VerticalPopupAlignment = Align.Start,
+        };
+
+        driver.App.Post(popup.Show);
+        driver.Tick();
+
+        Assert.AreEqual(0, popup.Content!.Bounds.X);
+        Assert.AreEqual(0, popup.Content!.Bounds.Y);
+
+        popup.HorizontalPopupAlignment = Align.End;
+        popup.VerticalPopupAlignment = Align.End;
+        driver.Tick();
+
+        Assert.AreEqual(19, popup.Content!.Bounds.X);
+        Assert.AreEqual(9, popup.Content!.Bounds.Y);
+    }
+
+    [TestMethod]
+    public void Popup_Can_Be_Repositioned_By_Dragging()
+    {
+        var root = new VStack();
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        var popup = new Popup
+        {
+            Content = new TextBlock("PopupContent"),
+            MatchAnchorWidth = false,
+            HorizontalPopupAlignment = Align.Start,
+            VerticalPopupAlignment = Align.Start,
+            IsDraggable = true,
+            DragHandleHeight = 1,
+        };
+
+        driver.App.Post(popup.Show);
+        driver.Tick();
+
+        // Drag from the top row of the popup (drag handle).
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 0, Y = 0 });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Drag, Button = TerminalMouseButton.Left, X = 5, Y = 2 });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 5, Y = 2 });
+        driver.Tick();
+
+        Assert.AreEqual(5, popup.Content!.Bounds.X);
+        Assert.AreEqual(2, popup.Content!.Bounds.Y);
     }
 
     private static char GetChar(string rendered, int x, int y)

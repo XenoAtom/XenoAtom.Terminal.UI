@@ -45,6 +45,11 @@ public sealed partial class Popup : ContentVisual, IModalVisual
     private Rectangle _layoutSlot;
     private Rectangle _popupRect;
     private bool _isOpen;
+    private bool _dragging;
+    private int _dragStartUiX;
+    private int _dragStartUiY;
+    private int _dragStartOffsetX;
+    private int _dragStartOffsetY;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Popup"/> class.
@@ -56,6 +61,8 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         this.MatchAnchorWidth(true);
         this.Placement(PopupPlacement.Below);
         this.CloseOnTab(true);
+        this.HorizontalPopupAlignment(Align.Center);
+        this.VerticalPopupAlignment(Align.Center);
     }
 
     /// <summary>
@@ -114,6 +121,58 @@ public sealed partial class Popup : ContentVisual, IModalVisual
     /// </remarks>
     [Bindable]
     public partial bool CloseOnTab { get; set; }
+
+    /// <summary>
+    /// Gets or sets the horizontal alignment used when the popup is not anchored.
+    /// </summary>
+    /// <remarks>
+    /// When <see cref="Anchor"/> and <see cref="AnchorRect"/> are <see langword="null"/>, the popup is positioned
+    /// within the available slot based on this alignment.
+    /// </remarks>
+    [Bindable]
+    public partial Align HorizontalPopupAlignment { get; set; }
+
+    /// <summary>
+    /// Gets or sets the vertical alignment used when the popup is not anchored.
+    /// </summary>
+    /// <remarks>
+    /// When <see cref="Anchor"/> and <see cref="AnchorRect"/> are <see langword="null"/>, the popup is positioned
+    /// within the available slot based on this alignment.
+    /// </remarks>
+    [Bindable]
+    public partial Align VerticalPopupAlignment { get; set; }
+
+    /// <summary>
+    /// Gets or sets a horizontal offset applied to the computed popup position.
+    /// </summary>
+    [Bindable]
+    public partial int OffsetX { get; set; }
+
+    /// <summary>
+    /// Gets or sets a vertical offset applied to the computed popup position.
+    /// </summary>
+    [Bindable]
+    public partial int OffsetY { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the popup can be repositioned by dragging.
+    /// </summary>
+    [Bindable]
+    public partial bool IsDraggable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the height (in rows) of the draggable area at the top of the popup.
+    /// </summary>
+    /// <remarks>
+    /// When <see cref="IsDraggable"/> is enabled, pressing the left mouse button within the draggable area allows
+    /// the popup to be moved by dragging.
+    /// </remarks>
+    [Bindable]
+    public partial int DragHandleHeight { get; set; }
+
+    partial void OnOffsetXChanged(int value) => MarkArrangeDirty();
+
+    partial void OnOffsetYChanged(int value) => MarkArrangeDirty();
 
     /// <summary>
     /// Opens the popup by adding it to the active <see cref="TerminalApp"/> window layer.
@@ -296,9 +355,47 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         }
         else
         {
-            x = slot.X + Math.Max(0, (slot.Width - width) / 2);
-            y = slot.Y + Math.Max(0, (slot.Height - desiredHeight) / 2);
+            if (HorizontalPopupAlignment == Align.Stretch)
+            {
+                width = slot.Width;
+                RemeasureContentForPopupWidth(width);
+                desiredHeight = Math.Clamp(Math.Max(1, padding.Vertical + contentDesired.Height), 1, slot.Height);
+                x = slot.X;
+            }
+            else if (HorizontalPopupAlignment == Align.End)
+            {
+                x = slot.Right - width;
+            }
+            else if (HorizontalPopupAlignment == Align.Center)
+            {
+                x = slot.X + Math.Max(0, (slot.Width - width) / 2);
+            }
+            else
+            {
+                x = slot.X;
+            }
+
+            if (VerticalPopupAlignment == Align.Stretch)
+            {
+                desiredHeight = slot.Height;
+                y = slot.Y;
+            }
+            else if (VerticalPopupAlignment == Align.End)
+            {
+                y = slot.Bottom - desiredHeight;
+            }
+            else if (VerticalPopupAlignment == Align.Center)
+            {
+                y = slot.Y + Math.Max(0, (slot.Height - desiredHeight) / 2);
+            }
+            else
+            {
+                y = slot.Y;
+            }
         }
+
+        x += OffsetX;
+        y += OffsetY;
 
         x = Math.Clamp(x, slot.X, Math.Max(slot.X, slot.Right - width));
         y = Math.Clamp(y, slot.Y, Math.Max(slot.Y, slot.Bottom - desiredHeight));
@@ -350,12 +447,52 @@ public sealed partial class Popup : ContentVisual, IModalVisual
             return;
         }
 
+        if (IsDraggable && _popupRect.Contains(e.UiX, e.UiY))
+        {
+            var handleHeight = Math.Max(1, DragHandleHeight);
+            if (e.UiY >= _popupRect.Y && e.UiY < _popupRect.Y + handleHeight)
+            {
+                _dragging = true;
+                _dragStartUiX = e.UiX;
+                _dragStartUiY = e.UiY;
+                _dragStartOffsetX = OffsetX;
+                _dragStartOffsetY = OffsetY;
+                e.Handled = true;
+                return;
+            }
+        }
+
         // Close on clicks outside the popup content area.
         if (!_popupRect.Contains(e.UiX, e.UiY))
         {
             Close();
             e.Handled = true;
         }
+    }
+
+    /// <inheritdoc/>
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        if (!_dragging || e.Kind != TerminalMouseKind.Drag)
+        {
+            return;
+        }
+
+        OffsetX = _dragStartOffsetX + (e.UiX - _dragStartUiX);
+        OffsetY = _dragStartOffsetY + (e.UiY - _dragStartUiY);
+        e.Handled = true;
+    }
+
+    /// <inheritdoc/>
+    protected override void OnPointerReleased(PointerEventArgs e)
+    {
+        if (!_dragging || e.Button != TerminalMouseButton.Left)
+        {
+            return;
+        }
+
+        _dragging = false;
+        e.Handled = true;
     }
 
     /// <inheritdoc/>

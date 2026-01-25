@@ -24,6 +24,10 @@ public sealed record CommandPaletteStyle : IStyle<CommandPaletteStyle>
         MinWidth = 50,
         MaxWidth = 72,
         ResultsHeight = 8,
+        PopupHorizontalAlignment = Align.Center,
+        PopupVerticalAlignment = Align.Center,
+        PopupIsDraggable = true,
+        PopupDragHandleHeight = 1,
         PopupTemplateFactory = visual => new Group
         {
             TopLeftText = "Command palette",
@@ -46,6 +50,36 @@ public sealed record CommandPaletteStyle : IStyle<CommandPaletteStyle>
     /// This allows customizing the chrome (e.g. border and padding) around the command palette without modifying the palette content.
     /// </remarks>
     public Func<Visual, Visual?>? PopupTemplateFactory { get; init; }
+
+    /// <summary>
+    /// Gets the horizontal alignment used when the palette popup is not anchored.
+    /// </summary>
+    public Align PopupHorizontalAlignment { get; init; } = Align.Center;
+
+    /// <summary>
+    /// Gets the vertical alignment used when the palette popup is not anchored.
+    /// </summary>
+    public Align PopupVerticalAlignment { get; init; } = Align.Center;
+
+    /// <summary>
+    /// Gets the horizontal offset applied to the palette popup position.
+    /// </summary>
+    public int PopupOffsetX { get; init; }
+
+    /// <summary>
+    /// Gets the vertical offset applied to the palette popup position.
+    /// </summary>
+    public int PopupOffsetY { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the palette popup can be repositioned by dragging.
+    /// </summary>
+    public bool PopupIsDraggable { get; init; } = true;
+
+    /// <summary>
+    /// Gets the height (in rows) of the draggable area at the top of the palette popup.
+    /// </summary>
+    public int PopupDragHandleHeight { get; init; } = 1;
 
     /// <summary>
     /// Gets the number of visible result rows in the palette.
