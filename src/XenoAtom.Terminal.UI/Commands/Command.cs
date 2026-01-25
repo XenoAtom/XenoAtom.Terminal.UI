@@ -26,9 +26,26 @@ public sealed class Command
     public required string LabelMarkup { get; init; }
 
     /// <summary>
+    /// Gets an optional stable textual name for this command (without markup).
+    /// </summary>
+    /// <remarks>
+    /// This value can be used by command surfaces that support “typed commands” (for example, a command palette or a future
+    /// command prompt). When set, it should be stable, lowercased, and identifier-like (e.g. <c>open</c>, <c>theme.set</c>).
+    /// </remarks>
+    public string? Name { get; init; }
+
+    /// <summary>
     /// Gets the optional description/help text of the command as markup.
     /// </summary>
     public string? DescriptionMarkup { get; init; }
+
+    /// <summary>
+    /// Gets optional additional search terms for command discovery surfaces.
+    /// </summary>
+    /// <remarks>
+    /// This can include synonyms, tags, or aliases (for example, <c>"find search replace"</c>).
+    /// </remarks>
+    public string? SearchText { get; init; }
 
     /// <summary>
     /// Gets the single-stroke gesture for this command.
