@@ -64,6 +64,20 @@ public sealed partial class Popup : ContentVisual, IModalVisual
     public Visual? Anchor { get; set; }
 
     /// <summary>
+    /// Gets or sets an explicit anchor rectangle (in UI coordinates) used for positioning the popup.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// When set, this value takes precedence over <see cref="Anchor"/> and allows positioning a popup relative to a point
+    /// (for example, context menus opened by a right-click).
+    /// </para>
+    /// <para>
+    /// The rectangle is interpreted in the same coordinate space as <see cref="Visual.Bounds"/>.
+    /// </para>
+    /// </remarks>
+    public Rectangle? AnchorRect { get; set; }
+
+    /// <summary>
     /// Gets a value indicating whether the popup is modal.
     /// </summary>
     public bool IsModal => true;
@@ -197,10 +211,11 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         var desiredHeight = Math.Max(1, padding.Vertical + contentDesired.Height);
 
         var anchor = Anchor;
+        var anchorRect = AnchorRect ?? anchor?.Bounds;
         var width = desiredWidth;
-        if (MatchAnchorWidth && anchor is not null)
+        if (MatchAnchorWidth && anchorRect is not null)
         {
-            width = Math.Max(width, anchor.Bounds.Width);
+            width = Math.Max(width, anchorRect.Value.Width);
         }
         width += Math.Max(0, AdditionalWidth);
 
@@ -210,17 +225,18 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         var x = slot.X;
         var y = slot.Y;
 
-        if (anchor is not null)
+        if (anchorRect is not null)
         {
-            var belowY = anchor.Bounds.Y + anchor.Bounds.Height;
-            var aboveY = anchor.Bounds.Y - desiredHeight;
-            var rightX = anchor.Bounds.X + anchor.Bounds.Width;
-            var leftX = anchor.Bounds.X - width;
+            var anchorBounds = anchorRect.Value;
+            var belowY = anchorBounds.Y + anchorBounds.Height;
+            var aboveY = anchorBounds.Y - desiredHeight;
+            var rightX = anchorBounds.X + anchorBounds.Width;
+            var leftX = anchorBounds.X - width;
 
             switch (Placement)
             {
                 case PopupPlacement.Above:
-                    x = anchor.Bounds.X;
+                    x = anchorBounds.X;
                     y = aboveY;
                     if (y < slot.Y && belowY + desiredHeight <= slot.Bottom)
                     {
@@ -241,8 +257,8 @@ public sealed partial class Popup : ContentVisual, IModalVisual
                     }
 
                     x = rightX;
-                    y = anchor.Bounds.Y;
-                    leftX = anchor.Bounds.X - width;
+                    y = anchorBounds.Y;
+                    leftX = anchorBounds.X - width;
                     if (x + width > slot.Right && leftX >= slot.X)
                     {
                         x = leftX;
@@ -250,7 +266,7 @@ public sealed partial class Popup : ContentVisual, IModalVisual
                     break;
 
                 case PopupPlacement.Left:
-                    var maxLeftWidth = Math.Max(0, anchor.Bounds.X - slot.X);
+                    var maxLeftWidth = Math.Max(0, anchorBounds.X - slot.X);
                     if (width > Math.Max(1, maxLeftWidth))
                     {
                         width = Math.Max(1, Math.Min(width, maxLeftWidth));
@@ -259,8 +275,8 @@ public sealed partial class Popup : ContentVisual, IModalVisual
                     }
 
                     x = leftX;
-                    y = anchor.Bounds.Y;
-                    x = anchor.Bounds.X - width;
+                    y = anchorBounds.Y;
+                    x = anchorBounds.X - width;
                     if (x < slot.X && rightX + width <= slot.Right)
                     {
                         x = rightX;
@@ -269,7 +285,7 @@ public sealed partial class Popup : ContentVisual, IModalVisual
 
                 case PopupPlacement.Below:
                 default:
-                    x = anchor.Bounds.X;
+                    x = anchorBounds.X;
                     y = belowY;
                     if (y + desiredHeight > slot.Bottom && aboveY >= slot.Y)
                     {

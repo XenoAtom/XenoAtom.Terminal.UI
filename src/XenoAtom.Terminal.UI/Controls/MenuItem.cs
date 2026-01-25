@@ -103,6 +103,21 @@ public sealed partial class MenuItem
     public partial Command? Command { get; set; }
 
     /// <summary>
+    /// Gets or sets an optional target visual used when evaluating and executing <see cref="Command"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// When <see cref="CommandTarget"/> is set, menu execution and visibility/enabled evaluation uses this target instead of the
+    /// menu host's default target.
+    /// </para>
+    /// <para>
+    /// This is primarily used for context menus built from discovered commands where each command is associated with the visual
+    /// that registered it.
+    /// </para>
+    /// </remarks>
+    public Visual? CommandTarget { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether this item is a separator.
     /// </summary>
     [Bindable]
@@ -139,8 +154,14 @@ public sealed partial class MenuItem
     public partial Delegator<Action> Action { get; set; }
 
     internal bool IsVisibleFor(Visual target)
-        => IsVisible && (Command is null || Command.IsVisibleFor(target));
+    {
+        var effectiveTarget = CommandTarget ?? target;
+        return IsVisible && (Command is null || Command.IsVisibleFor(effectiveTarget));
+    }
 
     internal bool IsEnabledFor(Visual target)
-        => !IsSeparator && IsEnabled && (Command is null || Command.CanExecuteFor(target));
+    {
+        var effectiveTarget = CommandTarget ?? target;
+        return !IsSeparator && IsEnabled && (Command is null || Command.CanExecuteFor(effectiveTarget));
+    }
 }

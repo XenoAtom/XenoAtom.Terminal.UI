@@ -4,505 +4,77 @@
 
 using System.Text;
 using XenoAtom.Terminal.UI.Collections;
-using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Threading;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
 /// <summary>
-/// Represents a menu bar hosting top-level menu items.
+/// Provides helpers for showing context menus in fullscreen apps.
 /// </summary>
-public sealed partial class MenuBar : Visual
+/// <remarks>
+/// Context menus are hosted as <see cref="Popup"/> windows (fullscreen only) and are typically opened via a right-click.
+/// </remarks>
+public static class ContextMenuService
 {
-    private readonly BindableList<MenuItem> _items;
-    private readonly VisualList<MenuBarItem> _presenters;
-
-    private MenuItem[]? _presenterItems;
-    private readonly List<Popup> _openPopups = new();
-
-    private int _openIndex = -1;
-    private int _selectedIndex;
-
     /// <summary>
-    /// Initializes a new instance of the <see cref="MenuBar"/> class.
+    /// Shows a context menu for the specified <paramref name="target"/> at the given UI coordinate.
     /// </summary>
-    public MenuBar()
+    /// <param name="target">The visual associated with the context menu request.</param>
+    /// <param name="items">The menu items to display.</param>
+    /// <param name="uiX">The UI X coordinate where the menu should open.</param>
+    /// <param name="uiY">The UI Y coordinate where the menu should open.</param>
+    /// <returns>The popup hosting the context menu.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when called while no fullscreen <see cref="TerminalApp"/> is running.</exception>
+    public static Popup Show(Visual target, IEnumerable<MenuItem> items, int uiX, int uiY)
     {
-        Focusable = true;
-        this.HorizontalAlignment(Align.Stretch);
-        _items = new BindableList<MenuItem>(this, "MenuBar.Items");
-        _presenters = new VisualList<MenuBarItem>(this, "MenuBar.Presenters");
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(items);
+
+        var app = target.App ?? Dispatcher.Current.AttachedApp;
+        if (app is null)
+        {
+            throw new InvalidOperationException("Context menus are only supported while a TerminalApp is running.");
+        }
+
+        return app.ShowContextMenu(target, items, uiX, uiY);
     }
 
-    /// <summary>
-    /// Gets the menu items collection.
-    /// </summary>
-    [Bindable]
-    public BindableList<MenuItem> Items => _items;
-
-    internal int OpenIndex => _openIndex;
-
-    internal int SelectedIndex => _selectedIndex;
-
-    /// <inheritdoc />
-    protected override int ChildrenCount => _presenters.Count;
-
-    /// <inheritdoc />
-    protected override Visual GetChild(int index) => _presenters[index];
-
-    /// <inheritdoc />
-    protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+    internal static Popup CreatePopup(Visual target, IReadOnlyList<MenuItem> items, int uiX, int uiY)
     {
-        EnsurePresenters();
-
-        var style = GetStyle<MenuBarStyle>();
-        var padding = style.Padding;
-        var spacing = Math.Max(0, style.ItemSpacing);
-
-        var width = 0;
-        var height = 1;
-        var maxH = constraints.MaxHeight;
-
-        for (var i = 0; i < _presenters.Count; i++)
-        {
-            var item = _presenters[i];
-            item.Measure(new LayoutConstraints(0, LayoutConstants.Infinite, 0, maxH));
-            width += item.DesiredSize.Width;
-            height = Math.Max(height, item.DesiredSize.Height);
-
-            if (i + 1 < _presenters.Count)
-            {
-                width += spacing;
-            }
-        }
-
-        height = Math.Max(1, height + padding.Vertical);
-        width = Math.Max(1, padding.Horizontal + width);
-        return SizeHints.Fixed(constraints.Clamp(new Size(width, height)));
-    }
-
-    /// <inheritdoc />
-    protected override void ArrangeCore(in Rectangle finalRect)
-    {
-        EnsurePresenters();
-
-        var style = GetStyle<MenuBarStyle>();
-        var padding = style.Padding;
-        var spacing = Math.Max(0, style.ItemSpacing);
-
-        var x = finalRect.X + padding.Left;
-        var y = finalRect.Y + padding.Top;
-        var innerHeight = Math.Max(0, finalRect.Height - padding.Vertical);
-
-        for (var i = 0; i < _presenters.Count; i++)
-        {
-            var item = _presenters[i];
-            var w = Math.Min(item.DesiredSize.Width, Math.Max(0, finalRect.Right - x));
-            item.Arrange(new Rectangle(x, y, w, innerHeight));
-            x += w + spacing;
-        }
-    }
-
-    /// <inheritdoc />
-    protected override void RenderOverride(CellBuffer buffer)
-    {
-        var rect = Bounds;
-        if (rect.Width <= 0 || rect.Height <= 0)
-        {
-            return;
-        }
-
-        var theme = GetTheme();
-        var style = GetStyle<MenuBarStyle>();
-        var barStyle = style.ResolveBarStyle(theme);
-
-        for (var y = rect.Y; y < rect.Y + rect.Height; y++)
-        {
-            for (var x = rect.X; x < rect.X + rect.Width; x++)
-            {
-                buffer.SetCell(x, y, new Rune(' '), barStyle);
-            }
-        }
-    }
-
-    /// <inheritdoc />
-    protected override void OnKeyDown(KeyEventArgs e)
-    {
-        if (_items.Count == 0)
-        {
-            return;
-        }
-
-        var target = ResolveCommandTarget();
-
-        switch (e.Key)
-        {
-            case TerminalKey.Left:
-                _selectedIndex = FindPreviousEnabledIndex(_selectedIndex - 1, target);
-                e.Handled = true;
-                return;
-
-            case TerminalKey.Right:
-                _selectedIndex = FindNextEnabledIndex(_selectedIndex + 1, target);
-                e.Handled = true;
-                return;
-
-            case TerminalKey.Enter:
-            case TerminalKey.Space:
-            case TerminalKey.Down:
-                OpenMenu(_selectedIndex);
-                e.Handled = true;
-                return;
-        }
-    }
-
-    internal void OpenMenu(int index)
-    {
-        if (_items.Count == 0)
-        {
-            return;
-        }
-
-        var target = ResolveCommandTarget();
-
-        index = Math.Clamp(index, 0, _items.Count - 1);
-        if (!_items[index].IsEnabledFor(target))
-        {
-            return;
-        }
-
-        _selectedIndex = index;
-
-        if (_openIndex == index && _openPopups.Count > 0)
-        {
-            return;
-        }
-
-        CloseAllMenus();
-
-        var menu = _items[index];
-        if (menu.Items.Count == 0)
-        {
-            InvokeMenuItem(menu, target);
-            _openIndex = -1;
-            return;
-        }
-
-        _openIndex = index;
-
-        var visibleItems = FilterVisibleItems(menu.Items, target);
-        var list = new MenuList(this, visibleItems, parent: null, target: target);
-        var menuListStyle = GetStyle<MenuListStyle>();
-        var popupContent = menuListStyle.PopupTemplateFactory?.Invoke(list) ?? list;
+        var listStyle = target.GetStyle<MenuListStyle>();
 
         var popup = new Popup
         {
-            Anchor = _presenters[index],
-            Content = popupContent,
+            AnchorRect = new Rectangle(uiX, uiY, 1, 1),
             MatchAnchorWidth = false,
             Placement = PopupPlacement.Below,
+            CloseOnTab = true,
         }.Style(PopupStyle.Default with { Padding = Thickness.Zero });
 
-        RegisterPopup(popup);
+        var list = new ContextMenuList(popup, items, target);
+        var content = listStyle.PopupTemplateFactory?.Invoke(list) ?? list;
+        popup.Content = content;
 
-        popup.Closed((_, _) =>
-        {
-            list.ReleaseVisuals();
-            UnregisterPopup(popup);
-            _openIndex = -1;
-            App?.Focus(this);
-        });
-
-        popup.Show();
+        popup.Closed((_, _) => list.OnHostClosed());
+        return popup;
     }
 
-    internal void CloseAllMenus()
+    private sealed class ContextMenuList : Visual
     {
-        if (_openPopups.Count == 0)
-        {
-            _openIndex = -1;
-            return;
-        }
-
-        var copy = _openPopups.ToArray();
-        for (var i = copy.Length - 1; i >= 0; i--)
-        {
-            copy[i].Close();
-        }
-
-        _openIndex = -1;
-    }
-
-    internal void RegisterPopup(Popup popup)
-    {
-        _openPopups.Add(popup);
-    }
-
-    internal void UnregisterPopup(Popup popup)
-    {
-        _openPopups.Remove(popup);
-    }
-
-    private void EnsurePresenters()
-    {
-        var items = _items;
-        var count = items.Count;
-
-        if (_presenterItems is not null && _presenterItems.Length == count)
-        {
-            var same = true;
-            for (var i = 0; i < count; i++)
-            {
-                if (!ReferenceEquals(_presenterItems[i], items[i]))
-                {
-                    same = false;
-                    break;
-                }
-            }
-
-            if (same)
-            {
-                return;
-            }
-        }
-
-        for (var i = 0; i < _presenters.Count; i++)
-        {
-            _presenters[i].ReleaseVisuals();
-        }
-
-        _presenters.Clear();
-        _presenterItems = count == 0 ? Array.Empty<MenuItem>() : new MenuItem[count];
-
-        for (var i = 0; i < count; i++)
-        {
-            var item = items[i];
-            _presenterItems[i] = item;
-            _presenters.Add(new MenuBarItem(i, item));
-        }
-
-        _selectedIndex = Math.Clamp(_selectedIndex, 0, Math.Max(0, count - 1));
-    }
-
-    internal int FindNextEnabledIndex(int start, Visual target)
-    {
-        for (var i = Math.Max(0, start); i < _items.Count; i++)
-        {
-            if (_items[i].IsEnabledFor(target))
-            {
-                return i;
-            }
-        }
-
-        return Math.Max(0, _items.Count - 1);
-    }
-
-    internal int FindPreviousEnabledIndex(int start, Visual target)
-    {
-        for (var i = Math.Min(start, _items.Count - 1); i >= 0; i--)
-        {
-            if (_items[i].IsEnabledFor(target))
-            {
-                return i;
-            }
-        }
-
-        return 0;
-    }
-
-    private Visual ResolveCommandTarget()
-    {
-        var app = App;
-        if (app is null)
-        {
-            return this;
-        }
-
-        return app.FocusedElement ?? app.Root;
-    }
-
-    private void InvokeMenuItem(MenuItem item, Visual target)
-    {
-        var effectiveTarget = item.CommandTarget ?? target;
-
-        if (!item.IsEnabledFor(effectiveTarget))
-        {
-            return;
-        }
-
-        if (item.Command is { } cmd)
-        {
-            if (!cmd.IsVisibleFor(effectiveTarget) || !cmd.CanExecuteFor(effectiveTarget))
-            {
-                return;
-            }
-
-            cmd.Execute(effectiveTarget);
-            return;
-        }
-
-        item.Action.Invoke?.Invoke();
-    }
-
-    private static IReadOnlyList<MenuItem> FilterVisibleItems(IReadOnlyList<MenuItem> items, Visual target)
-    {
-        var visibleCount = 0;
-        for (var i = 0; i < items.Count; i++)
-        {
-            if (items[i].IsVisibleFor(target))
-            {
-                visibleCount++;
-            }
-        }
-
-        if (visibleCount == items.Count)
-        {
-            return items;
-        }
-
-        if (visibleCount == 0)
-        {
-            return Array.Empty<MenuItem>();
-        }
-
-        var list = new List<MenuItem>(visibleCount);
-        for (var i = 0; i < items.Count; i++)
-        {
-            var item = items[i];
-            if (item.IsVisibleFor(target))
-            {
-                list.Add(item);
-            }
-        }
-
-        return list;
-    }
-
-    private sealed class MenuBarItem : ContentVisual
-    {
-        private readonly MenuItem _item;
-        private readonly int _index;
-
-        public MenuBarItem(int index, MenuItem item)
-        {
-            _index = index;
-            _item = item;
-            Focusable = false;
-            Content = item.Header;
-        }
-
-        public void ReleaseVisuals()
-        {
-            Content = null;
-        }
-
-        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
-        {
-            var style = GetStyle<MenuBarStyle>();
-            var padding = style.ItemPadding;
-
-            var content = Content;
-            if (content is not null)
-            {
-                content.Measure(new LayoutConstraints(0, LayoutConstants.Infinite, 0, Math.Max(1, constraints.MaxHeight)));
-            }
-
-            var w = padding.Horizontal + (content?.DesiredSize.Width ?? 0);
-            var h = Math.Max(1, padding.Vertical + (content?.DesiredSize.Height ?? 1));
-            return SizeHints.Fixed(constraints.Clamp(new Size(w, h)));
-        }
-
-        protected override void ArrangeCore(in Rectangle finalRect)
-        {
-            var style = GetStyle<MenuBarStyle>();
-            var padding = style.ItemPadding;
-
-            var content = Content;
-            if (content is not null)
-            {
-                content.Arrange(new Rectangle(
-                    finalRect.X + padding.Left,
-                    finalRect.Y + padding.Top,
-                    Math.Max(0, finalRect.Width - padding.Horizontal),
-                    Math.Max(0, finalRect.Height - padding.Vertical)));
-            }
-        }
-
-        protected override void RenderOverride(CellBuffer buffer)
-        {
-            var rect = Bounds;
-            if (rect.Width <= 0 || rect.Height <= 0)
-            {
-                return;
-            }
-
-            var theme = GetTheme();
-            var style = GetStyle<MenuBarStyle>();
-
-            var bar = Parent as MenuBar;
-            var open = bar is not null && bar.OpenIndex == _index;
-            var selected = bar is not null && ReferenceEquals(bar.App?.FocusedElement, bar) && bar.SelectedIndex == _index;
-            var enabled = bar is null ? _item.IsEnabled : _item.IsEnabledFor(bar.ResolveCommandTarget());
-            var resolved = style.ResolveItemStyle(theme, enabled: enabled, open: open, selected: selected, hovered: IsHovered);
-
-            for (var y = rect.Y; y < rect.Y + rect.Height; y++)
-            {
-                for (var x = rect.X; x < rect.X + rect.Width; x++)
-                {
-                    buffer.SetCell(x, y, new Rune(' '), resolved);
-                }
-            }
-        }
-
-        protected override void OnPointerMoved(PointerEventArgs e)
-        {
-            if (Parent is not MenuBar bar || bar._openIndex < 0)
-            {
-                return;
-            }
-
-            if (bar._openIndex != _index)
-            {
-                bar.OpenMenu(_index);
-            }
-        }
-
-        protected override void OnPointerPressed(PointerEventArgs e)
-        {
-            if (e.Button != TerminalMouseButton.Left)
-            {
-                return;
-            }
-
-            if (Parent is not MenuBar bar)
-            {
-                return;
-            }
-
-            if (bar._openIndex == _index)
-            {
-                bar.CloseAllMenus();
-            }
-            else
-            {
-                bar.OpenMenu(_index);
-            }
-
-            e.Handled = true;
-        }
-    }
-
-    private sealed class MenuList : Visual
-    {
-        private readonly MenuBar _owner;
+        private readonly Popup _rootPopup;
+        private readonly ContextMenuList _root;
+        private readonly ContextMenuList? _parent;
         private readonly IReadOnlyList<MenuItem> _items;
-        private readonly VisualList<MenuListRow> _rows;
-        private readonly MenuList? _parent;
         private readonly Visual _target;
+
+        private readonly VisualList<MenuListRow> _rows;
+        private readonly List<Popup> _openPopups;
 
         private Popup? _submenuPopup;
         private int _selected;
@@ -511,14 +83,22 @@ public sealed partial class MenuBar : Visual
         private Rectangle _innerRect;
         private int _submenuColumnWidth;
 
-        public MenuList(MenuBar owner, IReadOnlyList<MenuItem> items, MenuList? parent, Visual target)
+        public ContextMenuList(Popup rootPopup, IReadOnlyList<MenuItem> items, Visual target)
+            : this(rootPopup, items, target, parent: null, root: null)
         {
-            _owner = owner;
+        }
+
+        private ContextMenuList(Popup rootPopup, IReadOnlyList<MenuItem> items, Visual target, ContextMenuList? parent, ContextMenuList? root)
+        {
+            _rootPopup = rootPopup;
             _items = items;
-            _parent = parent;
             _target = target;
+            _parent = parent;
+            _root = root ?? this;
+            _openPopups = ReferenceEquals(_root, this) ? new List<Popup>() : _root._openPopups;
+
             Focusable = true;
-            _rows = new VisualList<MenuListRow>(this, "MenuList.Rows");
+            _rows = new VisualList<MenuListRow>(this, "ContextMenuList.Rows");
 
             for (var i = 0; i < items.Count; i++)
             {
@@ -669,17 +249,12 @@ public sealed partial class MenuBar : Visual
             }
 
             _selected = index;
-            InvokeOrOpen(_selected);
+            InvokeOrOpen(index);
             e.Handled = true;
         }
 
         protected override void OnKeyDown(KeyEventArgs e)
         {
-            if (_items.Count == 0)
-            {
-                return;
-            }
-
             switch (e.Key)
             {
                 case TerminalKey.Up:
@@ -704,18 +279,14 @@ public sealed partial class MenuBar : Visual
                     if (IsSelectable(_selected) && HasVisibleSubmenu(_items[_selected]))
                     {
                         OpenSubmenuForIndex(_selected);
+                        e.Handled = true;
                     }
-                    else if (_parent is null)
-                    {
-                        _owner.OpenMenu(_owner.FindNextEnabledIndex(_owner._openIndex + 1, _target));
-                    }
-                    e.Handled = true;
                     return;
 
                 case TerminalKey.Left:
                     if (_parent is null)
                     {
-                        _owner.OpenMenu(_owner.FindPreviousEnabledIndex(_owner._openIndex - 1, _target));
+                        _rootPopup.Close();
                     }
                     else
                     {
@@ -725,7 +296,7 @@ public sealed partial class MenuBar : Visual
                     return;
 
                 case TerminalKey.Escape:
-                    _owner.CloseAllMenus();
+                    _rootPopup.Close();
                     e.Handled = true;
                     return;
             }
@@ -793,8 +364,30 @@ public sealed partial class MenuBar : Visual
                 return;
             }
 
-            _owner.InvokeMenuItem(item, _target);
-            _owner.CloseAllMenus();
+            InvokeItem(item);
+            _rootPopup.Close();
+        }
+
+        private void InvokeItem(MenuItem item)
+        {
+            if (!item.IsEnabledFor(_target))
+            {
+                return;
+            }
+
+            if (item.Command is { } cmd)
+            {
+                var effectiveTarget = item.CommandTarget ?? _target;
+                if (!cmd.IsVisibleFor(effectiveTarget) || !cmd.CanExecuteFor(effectiveTarget))
+                {
+                    return;
+                }
+
+                cmd.Execute(effectiveTarget);
+                return;
+            }
+
+            item.Action.Invoke?.Invoke();
         }
 
         private void EnsureSubmenuForSelection()
@@ -828,6 +421,40 @@ public sealed partial class MenuBar : Visual
             return false;
         }
 
+        private static IReadOnlyList<MenuItem> FilterVisibleItems(IReadOnlyList<MenuItem> items, Visual target)
+        {
+            var visibleCount = 0;
+            for (var i = 0; i < items.Count; i++)
+            {
+                if (items[i].IsVisibleFor(target))
+                {
+                    visibleCount++;
+                }
+            }
+
+            if (visibleCount == items.Count)
+            {
+                return items;
+            }
+
+            if (visibleCount == 0)
+            {
+                return Array.Empty<MenuItem>();
+            }
+
+            var list = new List<MenuItem>(visibleCount);
+            for (var i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+                if (item.IsVisibleFor(target))
+                {
+                    list.Add(item);
+                }
+            }
+
+            return list;
+        }
+
         private void OpenSubmenuForIndex(int index)
         {
             if (!IsSelectable(index))
@@ -857,9 +484,9 @@ public sealed partial class MenuBar : Visual
                 return;
             }
 
-            var list = new MenuList(_owner, visibleItems, parent: this, target: _target);
-            var menuListStyle = GetStyle<MenuListStyle>();
-            var popupContent = menuListStyle.PopupTemplateFactory?.Invoke(list) ?? list;
+            var listStyle = GetStyle<MenuListStyle>();
+            var list = new ContextMenuList(_rootPopup, items: visibleItems, target: _target, parent: this, root: _root);
+            var popupContent = listStyle.PopupTemplateFactory?.Invoke(list) ?? list;
 
             var popup = new Popup
             {
@@ -869,17 +496,39 @@ public sealed partial class MenuBar : Visual
                 Placement = PopupPlacement.Right,
             }.Style(PopupStyle.Default with { Padding = Thickness.Zero });
 
-            _owner.RegisterPopup(popup);
+            _root.RegisterPopup(popup);
 
             popup.Closed((_, _) =>
             {
                 list.ReleaseVisuals();
                 _submenuPopup = null;
-                _owner.UnregisterPopup(popup);
+                _root.UnregisterPopup(popup);
             });
 
             _submenuPopup = popup;
             popup.Show();
+        }
+
+        private void RegisterPopup(Popup popup)
+        {
+            if (!ReferenceEquals(_root, this))
+            {
+                _root.RegisterPopup(popup);
+                return;
+            }
+
+            _openPopups.Add(popup);
+        }
+
+        private void UnregisterPopup(Popup popup)
+        {
+            if (!ReferenceEquals(_root, this))
+            {
+                _root.UnregisterPopup(popup);
+                return;
+            }
+
+            _openPopups.Remove(popup);
         }
 
         private void CloseSubmenu()
@@ -899,7 +548,7 @@ public sealed partial class MenuBar : Visual
             if (popup is not null)
             {
                 popup.Close();
-                _owner.App?.Focus(_parent);
+                _rootPopup.App?.Focus(_parent);
             }
         }
 
@@ -914,6 +563,24 @@ public sealed partial class MenuBar : Visual
             }
 
             return null;
+        }
+
+        public void OnHostClosed()
+        {
+            if (!ReferenceEquals(_root, this))
+            {
+                return;
+            }
+
+            // Ensure submenus do not remain visible after closing the root popup.
+            var copy = _openPopups.ToArray();
+            for (var i = copy.Length - 1; i >= 0; i--)
+            {
+                copy[i].Close();
+            }
+
+            _openPopups.Clear();
+            ReleaseVisuals();
         }
 
         public void ReleaseVisuals()

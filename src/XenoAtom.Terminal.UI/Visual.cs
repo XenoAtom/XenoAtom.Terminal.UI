@@ -187,6 +187,20 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     public IReadOnlyList<Command> Commands => (IReadOnlyList<Command>?)_commands ?? Array.Empty<Command>();
 
     /// <summary>
+    /// Gets or sets an optional factory used to build a context menu for this visual.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// When a context menu is requested (for example via right-click in a fullscreen app), the framework looks for the nearest
+    /// visual in the hovered chain that provides a <see cref="ContextMenuFactory"/>.
+    /// </para>
+    /// <para>
+    /// If no factory is provided, the framework falls back to command discovery using <see cref="CommandPresentation.ContextMenu"/>.
+    /// </para>
+    /// </remarks>
+    public Func<Visual, IEnumerable<MenuItem>>? ContextMenuFactory { get; set; }
+
+    /// <summary>
     /// Adds or replaces a command on this visual.
     /// </summary>
     /// <param name="command">The command.</param>

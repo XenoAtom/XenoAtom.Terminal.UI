@@ -52,6 +52,9 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
     private bool _inlineRemoveOnEnd;
     private Dictionary<string, AnsiStyle>? _previousMarkupStyles;
 
+    private Popup? _contextMenuPopup;
+    private Visual? _contextMenuFocusContext;
+
     private List<Command>? _globalCommands;
 
     private long _lastTickTimestamp;
@@ -727,6 +730,54 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
         }
 
         return _windowLayer.RemoveWindow(window);
+    }
+
+    internal Popup ShowContextMenu(Visual target, IEnumerable<MenuItem> items, int uiX, int uiY)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(items);
+        VerifyAccess();
+
+        if (_windowLayer is null)
+        {
+            throw new InvalidOperationException("Showing context menus is only supported in fullscreen apps.");
+        }
+
+        if (_contextMenuPopup is not null)
+        {
+            _contextMenuPopup.Close();
+            _contextMenuPopup = null;
+        }
+
+        var menuItems = items as IReadOnlyList<MenuItem> ?? items.ToArray();
+        if (menuItems.Count == 0)
+        {
+            throw new InvalidOperationException("Cannot show an empty context menu.");
+        }
+
+        var focusContext = FocusedElement;
+        _contextMenuFocusContext = focusContext;
+
+        var popup = ContextMenuService.CreatePopup(target, menuItems, uiX, uiY);
+        _contextMenuPopup = popup;
+
+        popup.Closed((_, _) =>
+        {
+            if (ReferenceEquals(_contextMenuPopup, popup))
+            {
+                _contextMenuPopup = null;
+            }
+
+            var toRestore = _contextMenuFocusContext;
+            _contextMenuFocusContext = null;
+            if (toRestore is not null && ReferenceEquals(toRestore.App, this))
+            {
+                Focus(toRestore);
+            }
+        });
+
+        popup.Show();
+        return popup;
     }
 
     /// <summary>
@@ -1755,6 +1806,13 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
                     _pointerCapture = target;
                 }
                 target.RaiseEvent(Visual.PointerPressedEvent, args);
+
+                if (mouseEvent.Kind == TerminalMouseKind.Down
+                    && mouseEvent.Button == TerminalMouseButton.Right
+                    && !args.Handled)
+                {
+                    TryShowContextMenu(target, args.UiX, args.UiY);
+                }
                 break;
             case TerminalMouseKind.Up:
                 target.RaiseEvent(Visual.PointerReleasedEvent, args);
@@ -1769,6 +1827,83 @@ public sealed class TerminalApp : DispatcherObject, IAsyncDisposable
                 target.RaiseEvent(Visual.PointerWheelEvent, args);
                 break;
         }
+    }
+
+    private void TryShowContextMenu(Visual hitTarget, int uiX, int uiY)
+    {
+        VerifyAccess();
+
+        if (_windowLayer is null)
+        {
+            return;
+        }
+
+        var activeModal = FindActiveModalRoot(Root);
+        if (activeModal is not null && !ReferenceEquals(activeModal, Root))
+        {
+            // When a context menu is already open, a right-click closes it instead of opening a nested menu.
+            if (_contextMenuPopup is not null && ReferenceEquals(activeModal, _contextMenuPopup))
+            {
+                _contextMenuPopup.Close();
+            }
+
+            return;
+        }
+
+        IReadOnlyList<MenuItem>? menuItems = null;
+
+        // First, try an explicit factory in the hovered chain (nearest wins).
+        for (var v = hitTarget; v is not null; v = v.Parent)
+        {
+            if (v.ContextMenuFactory is not { } factory)
+            {
+                continue;
+            }
+
+            var produced = factory(v);
+            if (produced is null)
+            {
+                return;
+            }
+
+            menuItems = produced as IReadOnlyList<MenuItem> ?? produced.ToArray();
+            break;
+        }
+
+        if (menuItems is null)
+        {
+            // Fallback: discover commands for the context menu surface.
+            var commands = new List<ResolvedCommand>();
+            CommandQuery.Collect(this, hitTarget, CommandPresentation.ContextMenu, commands);
+            if (commands.Count == 0)
+            {
+                return;
+            }
+
+            var list = new List<MenuItem>(commands.Count);
+            for (var i = 0; i < commands.Count; i++)
+            {
+                var resolved = commands[i];
+                var cmd = resolved.Command;
+
+                var item = new MenuItem(new Markup(cmd.LabelMarkup), cmd)
+                {
+                    CommandTarget = resolved.Target,
+                    IsEnabled = resolved.IsEnabled,
+                };
+
+                list.Add(item);
+            }
+
+            menuItems = list;
+        }
+
+        if (menuItems.Count == 0)
+        {
+            return;
+        }
+
+        ShowContextMenu(hitTarget, menuItems, uiX, uiY);
     }
 
     private void UpdateHover(Visual? hitTarget)
