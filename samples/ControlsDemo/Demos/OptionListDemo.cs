@@ -26,10 +26,18 @@ public sealed class OptionListDemo : ControlsDemoBase
         list.SelectionChanged((_, e) => context.Log($"SelectionChanged: {e.OldIndex} -> {e.NewIndex}"));
         list.ItemActivated((_, e) => context.Log($"ItemActivated: {e.Index}"));
 
+        var longList = new OptionList<OptionListItem>().ActivateOnClick(true);
+        for (var i = 0; i < 30; i++)
+        {
+            longList.Items.Add(new OptionListItem($"Item {i:00}", "Enter"));
+        }
+
         return new VStack(
                 DemoUi.Hint("OptionList supports a selected index, disabled items, and activation."),
                 list,
-                new TextBlock(() => $"SelectedIndex: {selected.Value}"))
+                new TextBlock(() => $"SelectedIndex: {selected.Value}"),
+                DemoUi.Hint("With many items, wrap OptionList in a ScrollViewer."),
+                new ScrollViewer(longList).MinHeight(8).MaxHeight(8))
             .Spacing(1);
     }
 }

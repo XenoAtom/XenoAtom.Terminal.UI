@@ -8,6 +8,7 @@ using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Scrolling;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Templating;
 
@@ -17,9 +18,11 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// Represents a list box that displays a vertical list of items with a single selection.
 /// </summary>
 /// <typeparam name="T">The item type.</typeparam>
-public sealed partial class ListBox<T> : Visual
+public sealed partial class ListBox<T> : Visual, IScrollable
 {
-    private int _scrollOffset;
+    private readonly ScrollModel _scroll;
+    private bool _ensureSelectedVisible;
+    private bool _updatingScrollModel;
     private readonly BindableList<Visual> _itemVisuals;
     private readonly List<Visual> _recyclePool = new();
     private readonly List<State<T>> _itemStates = new();
@@ -39,6 +42,8 @@ public sealed partial class ListBox<T> : Visual
     public ListBox()
     {
         Items = new BindableList<T>(this, "ListBox.Items");
+        _scroll = new ScrollModel();
+        _scroll.Changed += OnScrollModelChanged;
         _itemVisuals = new BindableList<Visual>(
             this,
             "ListBox.ItemVisuals",
@@ -54,10 +59,45 @@ public sealed partial class ListBox<T> : Visual
     }
 
     /// <summary>
+    /// Gets the scroll model for this list.
+    /// </summary>
+    public ScrollModel Scroll => _scroll;
+
+    /// <summary>
     /// Gets or sets the selected item index.
     /// </summary>
     [Bindable]
     public partial int SelectedIndex { get; set; }
+
+    partial void OnSelectedIndexChanging(ref int value)
+    {
+        var count = Items.Count;
+        value = count == 0 ? -1 : Math.Clamp(value, 0, count - 1);
+    }
+
+    partial void OnSelectedIndexChanged(int value)
+    {
+        _ensureSelectedVisible = true;
+
+        // If we already have a viewport (i.e. the control was arranged at least once), update the scroll model
+        // immediately so parents like ScrollViewer can update scroll bars during the same frame.
+        if (_scroll.ViewportHeight > 0)
+        {
+            _updatingScrollModel = true;
+            try
+            {
+                EnsureSelectedVisible(value);
+            }
+            finally
+            {
+                _updatingScrollModel = false;
+            }
+
+            _ensureSelectedVisible = false;
+        }
+
+        MarkArrangeDirty();
+    }
 
     /// <inheritdoc />
     protected override int ChildrenCount => _itemVisuals.Count;
@@ -102,10 +142,19 @@ public sealed partial class ListBox<T> : Visual
         var items = _itemVisuals;
         if (rect.Width <= 0 || rect.Height <= 0 || items.Count == 0)
         {
+            _updatingScrollModel = true;
+            try
+            {
+                _scroll.SetViewport(0, 0);
+                _scroll.SetExtent(0, 0);
+            }
+            finally
+            {
+                _updatingScrollModel = false;
+            }
             return;
         }
 
-        var listBoxStyle = GetStyle<ListBoxStyle>();
         var innerLeft = rect.X;
         var innerTop = rect.Y;
         var innerWidth = Math.Max(0, rect.Width);
@@ -114,20 +163,52 @@ public sealed partial class ListBox<T> : Visual
         var count = items.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
 
-        if (selected < _scrollOffset)
+        _updatingScrollModel = true;
+        try
         {
-            _scrollOffset = selected;
+            _scroll.SetViewport(innerWidth, innerHeight);
+            _scroll.SetExtent(innerWidth, count);
         }
-        else if (selected >= _scrollOffset + Math.Max(1, innerHeight))
+        finally
         {
-            _scrollOffset = Math.Max(0, selected - Math.Max(1, innerHeight) + 1);
+            _updatingScrollModel = false;
+        }
+
+        if (_ensureSelectedVisible)
+        {
+            _updatingScrollModel = true;
+            try
+            {
+                EnsureSelectedVisible(selected);
+            }
+            finally
+            {
+                _updatingScrollModel = false;
+            }
+
+            _ensureSelectedVisible = false;
+        }
+
+        var maxOffsetY = Math.Max(0, _scroll.ExtentHeight - _scroll.ViewportHeight);
+        if (_scroll.OffsetY > maxOffsetY)
+        {
+            _updatingScrollModel = true;
+            try
+            {
+                _scroll.SetOffset(_scroll.OffsetX, maxOffsetY);
+            }
+            finally
+            {
+                _updatingScrollModel = false;
+            }
         }
 
         var itemLeft = innerLeft + 2;
         var itemWidth = Math.Max(0, innerWidth - 2);
+        var scrollOffset = _scroll.OffsetY;
         for (var i = 0; i < count; i++)
         {
-            var y = innerTop + (i - _scrollOffset);
+            var y = innerTop + (i - scrollOffset);
             items[i].Arrange(new Rectangle(itemLeft, y, itemWidth, 1));
         }
     }
@@ -166,7 +247,7 @@ public sealed partial class ListBox<T> : Visual
 
         for (var row = 0; row < innerHeight; row++)
         {
-            var itemIndex = _scrollOffset + row;
+            var itemIndex = _scroll.OffsetY + row;
             var y = innerTop + row;
 
             if ((uint)itemIndex >= (uint)count)
@@ -257,7 +338,7 @@ public sealed partial class ListBox<T> : Visual
             return;
         }
 
-        var index = _scrollOffset + innerY;
+        var index = _scroll.OffsetY + innerY;
         if ((uint)index < (uint)count)
         {
             SelectedIndex = index;
@@ -277,6 +358,38 @@ public sealed partial class ListBox<T> : Visual
         var selected = Math.Clamp(SelectedIndex, 0, count - 1);
         SelectedIndex = e.WheelDelta > 0 ? Math.Max(0, selected - 1) : Math.Min(count - 1, selected + 1);
         e.Handled = true;
+    }
+
+    private void EnsureSelectedVisible(int selectedIndex)
+    {
+        var count = Items.Count;
+        if (count == 0 || selectedIndex < 0)
+        {
+            return;
+        }
+
+        var viewportHeight = Math.Max(1, _scroll.ViewportHeight);
+        var offsetY = _scroll.OffsetY;
+
+        if (selectedIndex < offsetY)
+        {
+            _scroll.SetOffset(_scroll.OffsetX, selectedIndex);
+        }
+        else if (selectedIndex >= offsetY + viewportHeight)
+        {
+            _scroll.SetOffset(_scroll.OffsetX, selectedIndex - viewportHeight + 1);
+        }
+    }
+
+    private void OnScrollModelChanged()
+    {
+        if (_updatingScrollModel)
+        {
+            return;
+        }
+
+        // Parents like ScrollViewer cache Arrange; bubbling an arrange-dirty invalidation ensures the viewport updates.
+        MarkArrangeDirty();
     }
 
     private void EnsureItemVisuals()

@@ -17,10 +17,20 @@ public sealed class ListBoxDemo : ControlsDemoBase
         var list = new ListBox<string>().SelectedIndex(selected);
         list.Items.AddRange("First", "Second", "Third", "Fourth", "Fifth", "Sixth");
 
+        var longSelected = new State<int>(0);
+        var longList = new ListBox<string>().SelectedIndex(longSelected);
+        for (var i = 0; i < 40; i++)
+        {
+            longList.Items.Add($"Item {i:00}");
+        }
+
         return new VStack(
                 DemoUi.Hint("ListBox supports keyboard navigation and a selected index."),
                 list,
                 new TextBlock(() => $"SelectedIndex: {selected.Value}"),
+                DemoUi.Hint("With many items, wrap ListBox in a ScrollViewer."),
+                new ScrollViewer(longList).MinHeight(8).MaxHeight(8),
+                new TextBlock(() => $"Long list SelectedIndex: {longSelected.Value}"),
                 new Button("Log selection").Click(() => context.Log($"SelectedIndex: {selected.Value}")))
             .Spacing(1);
     }

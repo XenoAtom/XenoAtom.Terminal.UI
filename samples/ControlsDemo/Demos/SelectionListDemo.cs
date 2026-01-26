@@ -20,6 +20,12 @@ public sealed class SelectionListDemo : ControlsDemoBase
             .AddItem("Delta")
             .AddItem("Epsilon");
 
+        var longList = new SelectionList<string>();
+        for (var i = 0; i < 40; i++)
+        {
+            longList.AddItem($"Item {i:00}");
+        }
+
         var checkedCount = new TextBlock(() =>
         {
             var count = list.Checked.Count(i => i);
@@ -30,6 +36,8 @@ public sealed class SelectionListDemo : ControlsDemoBase
                 DemoUi.Hint("Use Space/Enter to toggle an item. Use arrows to move."),
                 list,
                 checkedCount,
+                DemoUi.Hint("With many items, wrap SelectionList in a ScrollViewer."),
+                new ScrollViewer(longList).MinHeight(8).MaxHeight(8),
                 new Button("Log").Click(() => context.Log($"Checked: {list.Checked.Count(i => i)}")))
             .Spacing(1);
     }

@@ -124,4 +124,31 @@ public sealed class TreeViewTests
         Assert.DoesNotContain("├", rendered);
         Assert.DoesNotContain("└", rendered);
     }
+
+    [TestMethod]
+    public void TreeView_Scrolls_Rendered_Viewport_When_Selection_Moves_Inside_ScrollViewer()
+    {
+        var tree = new TreeView { MinHeight = 3, MaxHeight = 3 };
+        for (var i = 0; i < 7; i++)
+        {
+            tree.Roots.Add(new TreeNode($"Node {i:00}") { Icon = TreeNodeIcons.FileGlyph });
+        }
+
+        var scrollViewer = new ScrollViewer(tree) { MinHeight = 3, MaxHeight = 3 };
+        var root = new VStack(scrollViewer).Spacing(0);
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(40, 10);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText();
+
+        Assert.IsFalse(rendered.Contains("Node 00", StringComparison.Ordinal), "Expected the viewport to scroll past the first node.");
+        StringAssert.Contains(rendered, "Node 03", "Expected the selected node to be visible after scrolling.");
+    }
 }

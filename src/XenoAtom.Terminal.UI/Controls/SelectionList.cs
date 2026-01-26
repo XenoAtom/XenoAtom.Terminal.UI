@@ -9,6 +9,7 @@ using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Scrolling;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Templating;
 
@@ -18,13 +19,15 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// Represents a list control that supports multi-selection via checkboxes.
 /// </summary>
 /// <typeparam name="T">The item type.</typeparam>
-public sealed partial class SelectionList<T> : Visual
+public sealed partial class SelectionList<T> : Visual, IScrollable
 {
     private readonly BindableList<Visual> _itemVisuals;
     private readonly List<Visual> _recyclePool = new();
     private readonly List<State<T>> _itemStates = new();
     private readonly List<State<T>> _recycleStatePool = new();
-    private int _scrollOffset;
+    private readonly ScrollModel _scroll;
+    private bool _ensureSelectedVisible;
+    private bool _updatingScrollModel;
     private int _lastItemsVersion = -1;
     private DataTemplate<T> _lastResolvedTemplate;
 
@@ -35,6 +38,8 @@ public sealed partial class SelectionList<T> : Visual
     {
         Items = new BindableList<T>(this, "SelectionList.Items");
         Checked = new BindableList<bool>(this, "SelectionList.Checked");
+        _scroll = new ScrollModel();
+        _scroll.Changed += OnScrollModelChanged;
         _itemVisuals = new BindableList<Visual>(
             this,
             "SelectionList.ItemVisuals",
@@ -47,6 +52,11 @@ public sealed partial class SelectionList<T> : Visual
 
         Focusable = true;
     }
+
+    /// <summary>
+    /// Gets the scroll model for this list.
+    /// </summary>
+    public ScrollModel Scroll => _scroll;
 
     /// <summary>
     /// Gets the collection of selectable items.
@@ -68,6 +78,34 @@ public sealed partial class SelectionList<T> : Visual
     /// </summary>
     [Bindable]
     public partial int SelectedIndex { get; set; }
+
+    partial void OnSelectedIndexChanging(ref int value)
+    {
+        var count = Items.Count;
+        value = count == 0 ? -1 : Math.Clamp(value, 0, count - 1);
+    }
+
+    partial void OnSelectedIndexChanged(int value)
+    {
+        _ensureSelectedVisible = true;
+
+        if (_scroll.ViewportHeight > 0)
+        {
+            _updatingScrollModel = true;
+            try
+            {
+                EnsureSelectedVisible(value);
+            }
+            finally
+            {
+                _updatingScrollModel = false;
+            }
+
+            _ensureSelectedVisible = false;
+        }
+
+        MarkArrangeDirty();
+    }
 
     /// <summary>
     /// Gets or sets the template used to create visuals for items.
@@ -132,6 +170,16 @@ public sealed partial class SelectionList<T> : Visual
         var rect = finalRect;
         if (rect.Width <= 0 || rect.Height <= 0 || _itemVisuals.Count == 0)
         {
+            _updatingScrollModel = true;
+            try
+            {
+                _scroll.SetViewport(0, 0);
+                _scroll.SetExtent(0, 0);
+            }
+            finally
+            {
+                _updatingScrollModel = false;
+            }
             return;
         }
 
@@ -147,21 +195,53 @@ public sealed partial class SelectionList<T> : Visual
         var count = Items.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
 
-        if (selected < _scrollOffset)
+        _updatingScrollModel = true;
+        try
         {
-            _scrollOffset = selected;
+            _scroll.SetViewport(innerWidth, innerHeight);
+            _scroll.SetExtent(innerWidth, count);
         }
-        else if (selected >= _scrollOffset + Math.Max(1, innerHeight))
+        finally
         {
-            _scrollOffset = Math.Max(0, selected - Math.Max(1, innerHeight) + 1);
+            _updatingScrollModel = false;
+        }
+
+        if (_ensureSelectedVisible)
+        {
+            _updatingScrollModel = true;
+            try
+            {
+                EnsureSelectedVisible(selected);
+            }
+            finally
+            {
+                _updatingScrollModel = false;
+            }
+
+            _ensureSelectedVisible = false;
+        }
+
+        var maxOffsetY = Math.Max(0, _scroll.ExtentHeight - _scroll.ViewportHeight);
+        if (_scroll.OffsetY > maxOffsetY)
+        {
+            _updatingScrollModel = true;
+            try
+            {
+                _scroll.SetOffset(_scroll.OffsetX, maxOffsetY);
+            }
+            finally
+            {
+                _updatingScrollModel = false;
+            }
         }
 
         var prefixWidth = Math.Min(innerWidth, markerWidth + checkWidth + gap);
         var itemLeft = innerLeft + prefixWidth;
         var itemWidth = Math.Max(0, innerWidth - prefixWidth);
+        var scrollOffset = _scroll.OffsetY;
         for (var i = 0; i < _itemVisuals.Count; i++)
         {
-            var y = innerTop + (i - _scrollOffset);
+            var y = innerTop + (i - scrollOffset);
             _itemVisuals[i].Arrange(new Rectangle(itemLeft, y, itemWidth, 1));
         }
     }
@@ -201,7 +281,7 @@ public sealed partial class SelectionList<T> : Visual
 
         for (var row = 0; row < innerHeight; row++)
         {
-            var itemIndex = _scrollOffset + row;
+            var itemIndex = _scroll.OffsetY + row;
             var y = innerTop + row;
 
             if ((uint)itemIndex >= (uint)count)
@@ -332,7 +412,7 @@ public sealed partial class SelectionList<T> : Visual
             return;
         }
 
-        var index = _scrollOffset + innerY;
+        var index = _scroll.OffsetY + innerY;
         if ((uint)index < (uint)count)
         {
             EnsureCheckedCount();
@@ -354,6 +434,37 @@ public sealed partial class SelectionList<T> : Visual
         var selected = Math.Clamp(SelectedIndex, 0, count - 1);
         SelectedIndex = e.WheelDelta > 0 ? Math.Max(0, selected - 1) : Math.Min(count - 1, selected + 1);
         e.Handled = true;
+    }
+
+    private void EnsureSelectedVisible(int selectedIndex)
+    {
+        var count = Items.Count;
+        if (count == 0 || selectedIndex < 0)
+        {
+            return;
+        }
+
+        var viewportHeight = Math.Max(1, _scroll.ViewportHeight);
+        var offsetY = _scroll.OffsetY;
+
+        if (selectedIndex < offsetY)
+        {
+            _scroll.SetOffset(_scroll.OffsetX, selectedIndex);
+        }
+        else if (selectedIndex >= offsetY + viewportHeight)
+        {
+            _scroll.SetOffset(_scroll.OffsetX, selectedIndex - viewportHeight + 1);
+        }
+    }
+
+    private void OnScrollModelChanged()
+    {
+        if (_updatingScrollModel)
+        {
+            return;
+        }
+
+        MarkArrangeDirty();
     }
 
     private void EnsureCheckedCount()

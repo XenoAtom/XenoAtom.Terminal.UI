@@ -8,6 +8,7 @@ using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Scrolling;
 using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
@@ -15,12 +16,14 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// <summary>
 /// Represents a hierarchical tree view with expandable nodes.
 /// </summary>
-public sealed partial class TreeView : Visual
+public sealed partial class TreeView : Visual, IScrollable
 {
     private readonly BindableList<TreeNode> _roots;
     private readonly VisualList<Visual> _headers;
 
-    private int _scrollOffset;
+    private readonly ScrollModel _scroll;
+    private bool _ensureSelectedVisible;
+    private bool _updatingScrollModel;
     private readonly List<VisibleRow> _visible = new(64);
     private bool _visibleDirty = true;
 
@@ -36,6 +39,8 @@ public sealed partial class TreeView : Visual
         VerticalAlignment = Align.Stretch;
 
         _headers = new VisualList<Visual>(this, "TreeView.Headers");
+        _scroll = new ScrollModel();
+        _scroll.Changed += OnScrollModelChanged;
         _roots = new BindableList<TreeNode>(
             owner: this,
             name: "TreeView.Roots",
@@ -54,6 +59,40 @@ public sealed partial class TreeView : Visual
     /// </summary>
     [Bindable]
     public partial int SelectedIndex { get; set; }
+
+    /// <summary>
+    /// Gets the scroll model for this tree view.
+    /// </summary>
+    public ScrollModel Scroll => _scroll;
+
+    partial void OnSelectedIndexChanging(ref int value)
+    {
+        EnsureVisibleList();
+        var count = _visible.Count;
+        value = count == 0 ? -1 : Math.Clamp(value, 0, count - 1);
+    }
+
+    partial void OnSelectedIndexChanged(int value)
+    {
+        _ensureSelectedVisible = true;
+
+        if (_scroll.ViewportHeight > 0)
+        {
+            _updatingScrollModel = true;
+            try
+            {
+                EnsureSelectedVisible(value);
+            }
+            finally
+            {
+                _updatingScrollModel = false;
+            }
+
+            _ensureSelectedVisible = false;
+        }
+
+        MarkArrangeDirty();
+    }
 
     /// <inheritdoc />
     protected override int ChildrenCount => _headers.Count;
@@ -206,17 +245,65 @@ public sealed partial class TreeView : Visual
         var innerHeight = Math.Max(0, finalRect.Height);
 
         var count = _visible.Count;
+
+        if (innerWidth <= 0 || innerHeight <= 0 || count == 0)
+        {
+            _updatingScrollModel = true;
+            try
+            {
+                _scroll.SetViewport(0, 0);
+                _scroll.SetExtent(0, 0);
+            }
+            finally
+            {
+                _updatingScrollModel = false;
+            }
+            return;
+        }
+
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
 
-        if (selected < _scrollOffset)
+        _updatingScrollModel = true;
+        try
         {
-            _scrollOffset = selected;
+            _scroll.SetViewport(innerWidth, innerHeight);
+            _scroll.SetExtent(innerWidth, count);
         }
-        else if (selected >= _scrollOffset + Math.Max(1, innerHeight))
+        finally
         {
-            _scrollOffset = Math.Max(0, selected - Math.Max(1, innerHeight) + 1);
+            _updatingScrollModel = false;
         }
 
+        if (_ensureSelectedVisible)
+        {
+            _updatingScrollModel = true;
+            try
+            {
+                EnsureSelectedVisible(selected);
+            }
+            finally
+            {
+                _updatingScrollModel = false;
+            }
+
+            _ensureSelectedVisible = false;
+        }
+
+        var maxOffsetY = Math.Max(0, _scroll.ExtentHeight - _scroll.ViewportHeight);
+        if (_scroll.OffsetY > maxOffsetY)
+        {
+            _updatingScrollModel = true;
+            try
+            {
+                _scroll.SetOffset(_scroll.OffsetX, maxOffsetY);
+            }
+            finally
+            {
+                _updatingScrollModel = false;
+            }
+        }
+
+        var scrollOffset = _scroll.OffsetY;
         for (var i = 0; i < count; i++)
         {
             var (node, depth, _, _) = _visible[i];
@@ -227,7 +314,7 @@ public sealed partial class TreeView : Visual
             var iconWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(icon));
 
             var prefix = visualDepth * indentSize + markerWidth + expanderWidth + 1 + iconWidth + gapAfterIcon;
-            var y = innerTop + (i - _scrollOffset);
+            var y = innerTop + (i - scrollOffset);
             node.Header.Arrange(new Rectangle(innerLeft + prefix, y, Math.Max(0, innerWidth - prefix), 1));
         }
     }
@@ -268,7 +355,7 @@ public sealed partial class TreeView : Visual
 
         for (var row = 0; row < innerHeight; row++)
         {
-            var index = _scrollOffset + row;
+            var index = _scroll.OffsetY + row;
             if ((uint)index >= (uint)count)
             {
                 continue;
@@ -433,7 +520,7 @@ public sealed partial class TreeView : Visual
             return;
         }
 
-        var index = _scrollOffset + innerY;
+        var index = _scroll.OffsetY + innerY;
         if ((uint)index >= (uint)_visible.Count)
         {
             return;
@@ -468,6 +555,38 @@ public sealed partial class TreeView : Visual
         var selected = Math.Clamp(SelectedIndex, 0, _visible.Count - 1);
         SelectedIndex = e.WheelDelta > 0 ? Math.Max(0, selected - 1) : Math.Min(_visible.Count - 1, selected + 1);
         e.Handled = true;
+    }
+
+    private void EnsureSelectedVisible(int selectedIndex)
+    {
+        EnsureVisibleList();
+        var count = _visible.Count;
+        if (count == 0 || selectedIndex < 0)
+        {
+            return;
+        }
+
+        var viewportHeight = Math.Max(1, _scroll.ViewportHeight);
+        var offsetY = _scroll.OffsetY;
+
+        if (selectedIndex < offsetY)
+        {
+            _scroll.SetOffset(_scroll.OffsetX, selectedIndex);
+        }
+        else if (selectedIndex >= offsetY + viewportHeight)
+        {
+            _scroll.SetOffset(_scroll.OffsetX, selectedIndex - viewportHeight + 1);
+        }
+    }
+
+    private void OnScrollModelChanged()
+    {
+        if (_updatingScrollModel)
+        {
+            return;
+        }
+
+        MarkArrangeDirty();
     }
 
     /// <summary>

@@ -27,14 +27,22 @@ public sealed class RadioButtonDemo : ControlsDemoBase
             return "<none>";
         }
 
+        var longGroup = new object();
+        var longStack = new VStack().Spacing(0);
+        for (var i = 0; i < 30; i++)
+        {
+            longStack.Children.Add(new RadioButton($"Option {i:00}").GroupBy(longGroup));
+        }
+
         return new VStack(
                 DemoUi.Hint("Only one item can be selected per group."),
                 a,
                 b,
                 c,
                 new TextBlock(() => $"Selected: {Selected()}"),
+                DemoUi.Hint("With many options, wrap a stack of radio buttons in a ScrollViewer."),
+                new ScrollViewer(longStack).MinHeight(8).MaxHeight(8),
                 new Button("Log selection").Click(() => context.Log($"Selected: {Selected()}")))
             .Spacing(1);
     }
 }
-

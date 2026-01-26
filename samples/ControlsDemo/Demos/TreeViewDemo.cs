@@ -31,9 +31,31 @@ public sealed class TreeViewDemo : ControlsDemoBase
             return tree;
         }
 
+        static TreeView CreateLongTree()
+        {
+            var tree = new TreeView();
+            for (var i = 0; i < 30; i++)
+            {
+                var node = new TreeNode($"Node {i:00}") { Icon = TreeNodeIcons.FolderGlyph };
+                if (i % 6 == 0)
+                {
+                    node.IsExpanded = true;
+                    for (var j = 0; j < 4; j++)
+                    {
+                        node.Children.Add(new TreeNode($"Child {i:00}.{j}") { Icon = TreeNodeIcons.FileGlyph });
+                    }
+                }
+
+                tree.Roots.Add(node);
+            }
+
+            return tree;
+        }
+
         var defaultTree = CreateTree();
         var noLinesTree = CreateTree().Style(TreeViewStyle.NoLines);
         var heavyLinesTree = CreateTree().Style(TreeViewStyle.HeavyLines);
+        var longTree = CreateLongTree();
 
         return new VStack(
                 DemoUi.Hint("Use arrows to navigate. Use Left/Right to collapse/expand."),
@@ -43,6 +65,8 @@ public sealed class TreeViewDemo : ControlsDemoBase
                         new Group().TopLeftText("Heavy").Content(heavyLinesTree)
                     )
                     .Spacing(2),
+                DemoUi.Hint("Large trees can be hosted in a ScrollViewer."),
+                new ScrollViewer(longTree).MinHeight(12).MaxHeight(12),
                 new TextBlock(() => $"SelectedIndex: {defaultTree.SelectedIndex}")
             )
             .Spacing(1);
