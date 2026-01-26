@@ -112,7 +112,26 @@ public sealed partial class OptionList<T> : Visual, IScrollable
         if (_oldSelectedForEvent != value)
         {
             _ensureSelectedVisible = true;
+
+            // If we already have a viewport (i.e. the control was arranged at least once), update the scroll model
+            // immediately so parents like ScrollViewer can update scroll bars during the same frame.
+            if (_scroll.ViewportHeight > 0)
+            {
+                var itemHeight = Math.Max(1, _itemHeight);
+                _scroll.ScrollToMakeVisible(0, value * itemHeight);
+
+                // Keep the offset aligned to full item rows.
+                var alignedOffsetY = (_scroll.OffsetY / itemHeight) * itemHeight;
+                if (alignedOffsetY != _scroll.OffsetY)
+                {
+                    _scroll.SetOffset(_scroll.OffsetX, alignedOffsetY);
+                }
+
+                _ensureSelectedVisible = false;
+            }
+
             RaiseEvent(SelectionChangedEvent, new SelectionChangedEventArgs { OldIndex = _oldSelectedForEvent, NewIndex = value });
+            MarkArrangeDirty();
         }
     }
 

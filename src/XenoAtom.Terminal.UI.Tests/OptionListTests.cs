@@ -108,4 +108,29 @@ public sealed class OptionListTests
         driver.Tick();
         Assert.AreEqual(1, list.SelectedIndex);
     }
+
+    [TestMethod]
+    public void OptionList_Scrolls_Selected_Item_Into_View()
+    {
+        var list = new OptionList<OptionListItem> { MinHeight = 3, MaxHeight = 3 };
+        for (var i = 0; i < 20; i++)
+        {
+            list.Items.Add(new OptionListItem($"Item {i:00}"));
+        }
+
+        var scrollViewer = new ScrollViewer(list) { MinHeight = 3, MaxHeight = 3 };
+        var root = new VStack { scrollViewer };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        Assert.IsGreaterThan(0, scrollViewer.Bounds.Height);
+        Assert.IsGreaterThan(0, list.Bounds.Height);
+        Assert.IsGreaterThan(0, list.Scroll.ViewportHeight);
+        Assert.IsGreaterThan(0, list.Scroll.ExtentHeight);
+
+        list.SelectedIndex = 15;
+        driver.Tick();
+
+        Assert.IsGreaterThan(0, list.Scroll.OffsetY);
+    }
 }
