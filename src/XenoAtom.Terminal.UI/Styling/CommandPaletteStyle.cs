@@ -25,7 +25,7 @@ public sealed record CommandPaletteStyle : IStyle<CommandPaletteStyle>
         MaxWidth = 72,
         ResultsHeight = 8,
         PopupHorizontalAlignment = Align.Center,
-        PopupVerticalAlignment = Align.Center,
+        PopupVerticalAlignment = Align.Start,
         PopupIsDraggable = true,
         PopupDragHandleHeight = 1,
         PopupTemplateFactory = visual => new Group
@@ -59,7 +59,7 @@ public sealed record CommandPaletteStyle : IStyle<CommandPaletteStyle>
     /// <summary>
     /// Gets the vertical alignment used when the palette popup is not anchored.
     /// </summary>
-    public Align PopupVerticalAlignment { get; init; } = Align.Center;
+    public Align PopupVerticalAlignment { get; init; } = Align.Start;
 
     /// <summary>
     /// Gets the horizontal offset applied to the palette popup position.
