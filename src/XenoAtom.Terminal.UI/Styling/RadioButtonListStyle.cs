@@ -1,0 +1,109 @@
+// Copyright (c) Alexandre Mutel. All rights reserved.
+// Licensed under the BSD-Clause 2 license.
+// See license.txt file in the project root for full license information.
+
+using System.Text;
+
+namespace XenoAtom.Terminal.UI.Styling;
+
+/// <summary>
+/// Defines styling for <see cref="Controls.RadioButtonList{T}"/>.
+/// </summary>
+public sealed record RadioButtonListStyle : IStyle<RadioButtonListStyle>
+{
+    /// <summary>
+    /// Gets the default radio button list style.
+    /// </summary>
+    public static RadioButtonListStyle Default { get; } = new();
+
+    /// <summary>
+    /// Gets the style key for radio button lists.
+    /// </summary>
+    public static StyleKey<RadioButtonListStyle> Key { get; } = new("RadioButtonListStyle", Default);
+
+    /// <summary>
+    /// Gets the glyph used for the selected (checked) item.
+    /// </summary>
+    public Rune CheckedGlyph { get; init; } = RadioButtonStyle.Default.CheckedGlyph;
+
+    /// <summary>
+    /// Gets the glyph used for unselected (unchecked) items.
+    /// </summary>
+    public Rune UncheckedGlyph { get; init; } = RadioButtonStyle.Default.UncheckedGlyph;
+
+    /// <summary>
+    /// Gets the number of spaces between the glyph and the item content.
+    /// </summary>
+    public int SpaceBetweenGlyphAndText { get; init; } = 2;
+
+    /// <summary>
+    /// Gets the normal item style.
+    /// </summary>
+    public Style? Item { get; init; }
+
+    /// <summary>
+    /// Gets the selected item style when focused.
+    /// </summary>
+    public Style? SelectedFocused { get; init; }
+
+    /// <summary>
+    /// Gets the selected item style when unfocused.
+    /// </summary>
+    public Style? SelectedUnfocused { get; init; }
+
+    /// <summary>
+    /// Gets the disabled item style.
+    /// </summary>
+    public Style? Disabled { get; init; }
+
+    /// <summary>
+    /// Resolves the item style for the given state.
+    /// </summary>
+    /// <param name="theme">The current theme.</param>
+    /// <param name="enabled">Whether the control is enabled.</param>
+    /// <param name="selected">Whether the item is selected.</param>
+    /// <param name="focused">Whether the control is focused.</param>
+    /// <returns>The resolved style.</returns>
+    public Style ResolveItemStyle(Theme theme, bool enabled, bool selected, bool focused)
+    {
+        var baseStyle = theme.ForegroundTextStyle();
+
+        if (!enabled)
+        {
+            if (Disabled is { } d)
+            {
+                return d;
+            }
+
+            var disabled = baseStyle | TextStyle.Dim;
+            if (theme.Disabled is { } c)
+            {
+                disabled = disabled.WithForeground(c);
+            }
+            return disabled;
+        }
+
+        if (!selected)
+        {
+            return Item ?? baseStyle;
+        }
+
+        if (focused)
+        {
+            if (SelectedFocused is { } selectedFocused)
+            {
+                return selectedFocused;
+            }
+
+            var selectedStyle = baseStyle | TextStyle.Bold;
+            if (theme.FocusBorder is { } c)
+            {
+                selectedStyle = selectedStyle.WithForeground(c);
+            }
+            return selectedStyle;
+        }
+
+        return SelectedUnfocused ?? (Style.None | TextStyle.Bold | theme.BorderStyle(focused: false));
+    }
+}
+

@@ -12,37 +12,26 @@ public sealed class RadioButtonDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
-        // Radio buttons are grouped by an arbitrary key object.
-        var group = new object();
+        // For list-like scenarios, RadioButtonList provides arrow-key navigation and ScrollViewer integration.
+        var selected = new State<int>(0);
+        var list = new RadioButtonList<string>().SelectedIndex(selected);
+        list.Items.AddRange("Choice A", "Choice B", "Choice C");
 
-        var a = new RadioButton("Choice A").GroupBy(group).IsChecked(true);
-        var b = new RadioButton("Choice B").GroupBy(group);
-        var c = new RadioButton("Choice C").GroupBy(group);
-
-        string Selected()
+        var longSelected = new State<int>(0);
+        var longList = new RadioButtonList<string>().SelectedIndex(longSelected);
+        for (var i = 0; i < 40; i++)
         {
-            if (a.IsChecked) return "A";
-            if (b.IsChecked) return "B";
-            if (c.IsChecked) return "C";
-            return "<none>";
-        }
-
-        var longGroup = new object();
-        var longStack = new VStack().Spacing(0);
-        for (var i = 0; i < 30; i++)
-        {
-            longStack.Children.Add(new RadioButton($"Option {i:00}").GroupBy(longGroup));
+            longList.Items.Add($"Option {i:00}");
         }
 
         return new VStack(
-                DemoUi.Hint("Only one item can be selected per group."),
-                a,
-                b,
-                c,
-                new TextBlock(() => $"Selected: {Selected()}"),
-                DemoUi.Hint("With many options, wrap a stack of radio buttons in a ScrollViewer."),
-                new ScrollViewer(longStack).MinHeight(8).MaxHeight(8),
-                new Button("Log selection").Click(() => context.Log($"Selected: {Selected()}")))
+                DemoUi.Hint("RadioButtonList supports keyboard navigation and a selected index."),
+                list,
+                new TextBlock(() => $"SelectedIndex: {selected.Value}"),
+                DemoUi.Hint("With many options, wrap RadioButtonList in a ScrollViewer."),
+                new ScrollViewer(longList).MinHeight(8).MaxHeight(8),
+                new TextBlock(() => $"Long list SelectedIndex: {longSelected.Value}"),
+                new Button("Log selection").Click(() => context.Log($"SelectedIndex: {selected.Value}")))
             .Spacing(1);
     }
 }
