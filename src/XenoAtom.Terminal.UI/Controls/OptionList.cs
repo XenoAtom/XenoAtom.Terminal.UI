@@ -29,6 +29,7 @@ public sealed partial class OptionList<T> : Visual, IScrollable
     private int _hoveredIndex = -1;
     private int _itemHeight = 1;
     private bool _ensureSelectedVisible;
+    private bool _updatingScrollModel;
 
     private bool _pressed;
     private int _pressedIndex = -1;
@@ -47,6 +48,7 @@ public sealed partial class OptionList<T> : Visual, IScrollable
     {
         Items = new BindableList<T>(this, "OptionList.Items");
         _scroll = new ScrollModel();
+        _scroll.Changed += OnScrollModelChanged;
         _itemVisuals = new BindableList<Visual>(
             this,
             "OptionList.ItemVisuals",
@@ -117,16 +119,15 @@ public sealed partial class OptionList<T> : Visual, IScrollable
             // immediately so parents like ScrollViewer can update scroll bars during the same frame.
             if (_scroll.ViewportHeight > 0)
             {
-                var itemHeight = Math.Max(1, _itemHeight);
-                _scroll.ScrollToMakeVisible(0, value * itemHeight);
-
-                // Keep the offset aligned to full item rows.
-                var alignedOffsetY = (_scroll.OffsetY / itemHeight) * itemHeight;
-                if (alignedOffsetY != _scroll.OffsetY)
+                _updatingScrollModel = true;
+                try
                 {
-                    _scroll.SetOffset(_scroll.OffsetX, alignedOffsetY);
+                    EnsureSelectedVisible(value);
                 }
-
+                finally
+                {
+                    _updatingScrollModel = false;
+                }
                 _ensureSelectedVisible = false;
             }
 
@@ -179,8 +180,16 @@ public sealed partial class OptionList<T> : Visual, IScrollable
         var rect = finalRect;
         if (rect.Width <= 0 || rect.Height <= 0 || _itemVisuals.Count == 0)
         {
-            _scroll.SetViewport(0, 0);
-            _scroll.SetExtent(0, 0);
+            _updatingScrollModel = true;
+            try
+            {
+                _scroll.SetViewport(0, 0);
+                _scroll.SetExtent(0, 0);
+            }
+            finally
+            {
+                _updatingScrollModel = false;
+            }
             return;
         }
 
@@ -191,6 +200,7 @@ public sealed partial class OptionList<T> : Visual, IScrollable
         var innerHeight = Math.Max(0, rect.Height);
         var itemHeight = Math.Max(1, _itemHeight);
         var viewportItems = Math.Max(1, innerHeight / itemHeight);
+        var viewportHeight = viewportItems * itemHeight;
 
         var prefixWidth = Math.Min(innerWidth, Math.Max(1, TerminalTextUtility.GetRuneWidth(style.MarkerGlyph)) + Math.Max(0, style.SpaceBetweenGlyphAndText));
         var itemLeft = innerLeft + prefixWidth;
@@ -199,26 +209,58 @@ public sealed partial class OptionList<T> : Visual, IScrollable
         var count = Items.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
 
-        _scroll.SetViewport(innerWidth, innerHeight);
-        _scroll.SetExtent(prefixWidth + itemWidth, Math.Max(0, count * itemHeight));
+        _updatingScrollModel = true;
+        try
+        {
+            _scroll.SetViewport(innerWidth, viewportHeight);
+            _scroll.SetExtent(prefixWidth + itemWidth, Math.Max(0, count * itemHeight));
+        }
+        finally
+        {
+            _updatingScrollModel = false;
+        }
 
         if (_ensureSelectedVisible)
         {
-            _scroll.ScrollToMakeVisible(0, selected * itemHeight);
+            _updatingScrollModel = true;
+            try
+            {
+                EnsureSelectedVisible(selected);
+            }
+            finally
+            {
+                _updatingScrollModel = false;
+            }
             _ensureSelectedVisible = false;
         }
 
         var maxOffsetY = Math.Max(0, _scroll.ExtentHeight - _scroll.ViewportHeight);
         if (_scroll.OffsetY > maxOffsetY)
         {
-            _scroll.SetOffset(_scroll.OffsetX, maxOffsetY);
+            _updatingScrollModel = true;
+            try
+            {
+                _scroll.SetOffset(_scroll.OffsetX, maxOffsetY);
+            }
+            finally
+            {
+                _updatingScrollModel = false;
+            }
         }
 
         // Keep the scroll position aligned to full item rows.
         var alignedOffsetY = (_scroll.OffsetY / itemHeight) * itemHeight;
         if (alignedOffsetY != _scroll.OffsetY)
         {
-            _scroll.SetOffset(_scroll.OffsetX, alignedOffsetY);
+            _updatingScrollModel = true;
+            try
+            {
+                _scroll.SetOffset(_scroll.OffsetX, alignedOffsetY);
+            }
+            finally
+            {
+                _updatingScrollModel = false;
+            }
         }
 
         var scrollOffset = itemHeight == 0 ? 0 : (_scroll.OffsetY / itemHeight);
@@ -385,7 +427,8 @@ public sealed partial class OptionList<T> : Visual, IScrollable
             return;
         }
 
-        var viewportHeight = Math.Max(1, Bounds.Height);
+        var itemHeight = Math.Max(1, _itemHeight);
+        var viewportItems = Math.Max(1, Bounds.Height / itemHeight);
         var selected = Math.Clamp(SelectedIndex, 0, count - 1);
 
         switch (e.Key)
@@ -407,11 +450,11 @@ public sealed partial class OptionList<T> : Visual, IScrollable
                 e.Handled = true;
                 return;
             case TerminalKey.PageUp:
-                SelectedIndex = selected - viewportHeight;
+                SelectedIndex = selected - viewportItems;
                 e.Handled = true;
                 return;
             case TerminalKey.PageDown:
-                SelectedIndex = selected + viewportHeight;
+                SelectedIndex = selected + viewportItems;
                 e.Handled = true;
                 return;
             case TerminalKey.Enter:
@@ -501,6 +544,52 @@ public sealed partial class OptionList<T> : Visual, IScrollable
         }
 
         return true;
+    }
+
+    private void OnScrollModelChanged()
+    {
+        if (_updatingScrollModel)
+        {
+            return;
+        }
+
+        // Offsets can be changed by the owning ScrollViewer via the scroll bars. Since the scroll model
+        // is not a bindable property, we must propagate Arrange dirtiness up to the root so that the next frame
+        // actually calls Arrange() down the tree (a local dirty flag alone is not sufficient when parents cache Arrange).
+        MarkArrangeDirty();
+    }
+
+    private void EnsureSelectedVisible(int selectedIndex)
+    {
+        var count = Items.Count;
+        if ((uint)selectedIndex >= (uint)count)
+        {
+            return;
+        }
+
+        var itemHeight = Math.Max(1, _itemHeight);
+        var viewportItems = Math.Max(1, _scroll.ViewportHeight / itemHeight);
+
+        var offsetItems = itemHeight == 0 ? 0 : (_scroll.OffsetY / itemHeight);
+        var targetOffsetItems = offsetItems;
+
+        if (selectedIndex < offsetItems)
+        {
+            targetOffsetItems = selectedIndex;
+        }
+        else if (selectedIndex >= offsetItems + viewportItems)
+        {
+            targetOffsetItems = selectedIndex - viewportItems + 1;
+        }
+
+        var maxOffsetItems = Math.Max(0, count - viewportItems);
+        targetOffsetItems = Math.Clamp(targetOffsetItems, 0, maxOffsetItems);
+
+        var newOffsetY = targetOffsetItems * itemHeight;
+        if (newOffsetY != _scroll.OffsetY)
+        {
+            _scroll.SetOffset(_scroll.OffsetX, newOffsetY);
+        }
     }
 
     private void EnsureItemVisuals()
