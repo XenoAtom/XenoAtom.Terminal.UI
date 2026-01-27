@@ -1319,6 +1319,14 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     private void InvokeHandlers<TArgs>(RoutedEvent<TArgs> routedEvent, TArgs args)
         where TArgs : EventArgs
     {
+        // Disabled visuals do not participate in input routing. We still allow routing to proceed through
+        // the visual tree so that enabled ancestors (e.g. a ScrollViewer) can react to input even when
+        // the pointer is over a disabled child.
+        if (!IsEnabled)
+        {
+            return;
+        }
+
         if (args is RoutedEventArgs routedArgs)
         {
             routedArgs.Source = this;

@@ -67,5 +67,24 @@ public sealed class ButtonInteractionTests
 
         Assert.IsFalse(clicked);
     }
-}
 
+    [TestMethod]
+    public void Button_Does_Not_Click_When_Disabled()
+    {
+        var button = new Button("OK") { IsEnabled = false };
+        var clicked = false;
+        button.Click((_, _) => clicked = true);
+
+        var root = new VStack { button };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(20, 6));
+        driver.Tick();
+
+        var x = button.Bounds.X + 1;
+        var y = button.Bounds.Y;
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = x, Y = y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = x, Y = y });
+        driver.Tick();
+
+        Assert.IsFalse(clicked);
+    }
+}

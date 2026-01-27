@@ -1808,7 +1808,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         if (mouseEvent.Kind is TerminalMouseKind.Down or TerminalMouseKind.DoubleClick)
         {
             var focusTarget = target;
-            while (focusTarget is not null && !focusTarget.Focusable)
+            while (focusTarget is not null && (!focusTarget.Focusable || !focusTarget.IsEnabled || !focusTarget.IsVisible))
             {
                 focusTarget = focusTarget.Parent;
             }
