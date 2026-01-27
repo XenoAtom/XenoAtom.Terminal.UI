@@ -41,7 +41,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     {
         Focusable = true;
         _document = new TextDocument();
-        _scroll = new ScrollModel();
+        _scroll = new ScrollModel(this);
         _undoRedo = new TextUndoRedoManager();
         _undoRedo.Attach(_document);
         _undoRedo.StateChanged += OnUndoRedoStateChanged;

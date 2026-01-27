@@ -41,7 +41,7 @@ public sealed partial class ListBox<T> : Visual, IScrollable
     public ListBox()
     {
         Items = new BindableList<T>(this, "ListBox.Items");
-        _scroll = new ScrollModel();
+        _scroll = new ScrollModel(this);
         _itemVisuals = new BindableList<Visual>(
             this,
             "ListBox.ItemVisuals",

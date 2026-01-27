@@ -36,7 +36,7 @@ public sealed partial class RadioButtonList<T> : Visual, IScrollable
     public RadioButtonList()
     {
         Items = new BindableList<T>(this, "RadioButtonList.Items");
-        _scroll = new ScrollModel();
+        _scroll = new ScrollModel(this);
 
         _itemVisuals = new BindableList<Visual>(
             this,

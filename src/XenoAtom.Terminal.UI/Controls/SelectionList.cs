@@ -37,7 +37,7 @@ public sealed partial class SelectionList<T> : Visual, IScrollable
     {
         Items = new BindableList<T>(this, "SelectionList.Items");
         Checked = new BindableList<bool>(this, "SelectionList.Checked");
-        _scroll = new ScrollModel();
+        _scroll = new ScrollModel(this);
         _itemVisuals = new BindableList<Visual>(
             this,
             "SelectionList.ItemVisuals",

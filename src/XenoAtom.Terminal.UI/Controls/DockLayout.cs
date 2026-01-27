@@ -116,20 +116,16 @@ public sealed partial class DockLayout : Visual
             remainingHeight -= h;
         }
 
-        var bottomHeight = 0;
         var bottom = Bottom;
         if (bottom is not null)
         {
-            bottomHeight = Math.Min(remainingHeight, bottom.DesiredSize.Height);
+            var bottomHeight = Math.Min(remainingHeight, bottom.DesiredSize.Height);
             bottom.Arrange(new Rectangle(finalRect.X, finalRect.Y + finalRect.Height - bottomHeight, finalRect.Width, bottomHeight));
             remainingHeight -= bottomHeight;
         }
 
         var content = Content;
-        if (content is not null)
-        {
-            content.Arrange(new Rectangle(finalRect.X, y, finalRect.Width, Math.Max(0, remainingHeight)));
-        }
+        content?.Arrange(new Rectangle(finalRect.X, y, finalRect.Width, Math.Max(0, remainingHeight)));
     }
 
     /// <inheritdoc />

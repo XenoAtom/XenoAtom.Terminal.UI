@@ -36,7 +36,7 @@ public sealed partial class TreeView : Visual, IScrollable
         VerticalAlignment = Align.Stretch;
 
         _headers = new VisualList<Visual>(this, "TreeView.Headers");
-        _scroll = new ScrollModel();
+        _scroll = new ScrollModel(this);
         _roots = new BindableList<TreeNode>(
             owner: this,
             name: "TreeView.Roots",

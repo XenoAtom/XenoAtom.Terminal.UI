@@ -10,7 +10,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// <summary>
 /// Represents a menu item with optional submenu items.
 /// </summary>
-public sealed partial class MenuItem
+public sealed partial class MenuItem : IVisualElement
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="MenuItem"/> class.
@@ -92,6 +92,8 @@ public sealed partial class MenuItem
     /// Gets the header content.
     /// </summary>
     public Visual Header { get; }
+    
+    TerminalApp? IVisualElement.App => Header.App;
 
     /// <summary>
     /// Gets or sets an optional command backing this menu item.

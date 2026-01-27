@@ -140,12 +140,13 @@ public sealed class ScrollViewerLayoutTests
 
     private sealed class ScrollableVisual : Visual, IScrollable
     {
-        public ScrollModel Scroll { get; } = new();
+        public ScrollModel Scroll { get; }
 
         public ScrollableVisual()
         {
             HorizontalAlignment = Align.Stretch;
             VerticalAlignment = Align.Stretch;
+            Scroll = new(this);
         }
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints)

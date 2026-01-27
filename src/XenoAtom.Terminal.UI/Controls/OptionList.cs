@@ -45,7 +45,7 @@ public sealed partial class OptionList<T> : Visual, IScrollable
     public OptionList()
     {
         Items = new BindableList<T>(this, "OptionList.Items");
-        _scroll = new ScrollModel();
+        _scroll = new ScrollModel(this);
         _itemVisuals = new BindableList<Visual>(
             this,
             "OptionList.ItemVisuals",

@@ -13,8 +13,25 @@ namespace XenoAtom.Terminal.UI.Scrolling;
 /// This type is used by <see cref="XenoAtom.Terminal.UI.Controls.ScrollViewer"/> and by scrollable controls
 /// (e.g. <c>TextArea</c>) that expose their own scroll model via <see cref="IScrollable"/>.
 /// </remarks>
-public sealed partial class ScrollModel
+public sealed partial class ScrollModel : IVisualElement
 {
+    /// <summary>
+    /// Initializes a new instance of the ScrollModel class with the specified visual owner.
+    /// </summary>
+    /// <param name="owner">The Visual instance that owns this ScrollModel. Cannot be null.</param>
+    public ScrollModel(Visual owner)
+    {
+        ArgumentNullException.ThrowIfNull(owner);
+        Owner = owner;
+    }
+    
+    /// <summary>
+    /// Gets the owner of this scroll model.
+    /// </summary>
+    public Visual Owner { get; }
+    
+    TerminalApp? IVisualElement.App => Owner.App;
+
     /// <summary>
     /// Gets the horizontal scroll offset (in cells).
     /// </summary>

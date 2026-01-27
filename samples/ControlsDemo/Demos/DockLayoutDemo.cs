@@ -14,14 +14,14 @@ public sealed class DockLayoutDemo : ControlsDemoBase
     {
         _ = context;
 
-        var layout = new DockLayout()
-            .Top(new Border("Top").Padding(1))
-            .Bottom(new Border("Bottom").Padding(1))
-            .Content(new Border("Content").Padding(1));
+        var layout = new Border(new DockLayout()
+            .Top(new Border("Top").HorizontalAlignment(Align.Stretch).Padding(1))
+            .Bottom(new Border("Bottom").HorizontalAlignment(Align.Stretch).Padding(1))
+            .Content(new Border("Content").HorizontalAlignment(Align.Stretch).Padding(1))).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
 
         return new VStack(
                 DemoUi.Hint("DockLayout reserves space for Top and Bottom, and gives remaining space to Content."),
-                layout.MinHeight(8).MaxHeight(8))
+                layout)
             .Spacing(1);
     }
 }
