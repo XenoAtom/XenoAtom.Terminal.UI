@@ -284,7 +284,18 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             var noVisualAttach = GetNoVisualAttach(context.SemanticModel.Compilation, propertySymbol);
             var isVisualChildProperty = !noVisualAttach && ComputeIsVisualChildProperty(context.SemanticModel.Compilation, containingType, propertySymbol.Type);
             var isVisual = InheritsFromVisual(context.SemanticModel.Compilation, containingType);
-            var canGenerateFluentExtensions = IsPubliclyVisible(containingType) && propertySymbol.DeclaredAccessibility == Accessibility.Public;
+
+            // Fluent extension methods live in a separate static class and can only assign bindable properties that have
+            // a public, non-init setter. Read-only BindableList/VisualList properties are a special case handled via
+            // list-specific fluent APIs.
+            var hasPublicAssignableSetter =
+                isBindableListFluentOnlyProperty ||
+                (propertySymbol.SetMethod is { DeclaredAccessibility: Accessibility.Public, IsInitOnly: false });
+
+            var canGenerateFluentExtensions =
+                IsPubliclyVisible(containingType) &&
+                propertySymbol.DeclaredAccessibility == Accessibility.Public &&
+                hasPublicAssignableSetter;
 
             var propertyName = propertySymbol.Name;
             var backingFieldName = "_" + ToLowerCamel(propertyName);

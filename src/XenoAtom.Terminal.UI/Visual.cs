@@ -61,17 +61,20 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// <summary>
     /// Gets the arranged bounds of this visual, in cell coordinates, relative to its parent.
     /// </summary>
-    public Rectangle Bounds { get; protected set; }
+    [Bindable]
+    public partial Rectangle Bounds { get; protected set; }
 
     /// <summary>
     /// Gets the desired size computed during the last measure pass.
     /// </summary>
-    public Size DesiredSize { get; private set; }
+    [Bindable]
+    public partial Size DesiredSize { get; private set; }
 
     /// <summary>
     /// Gets the last measure hints computed during <see cref="Measure(in LayoutConstraints)"/>.
     /// </summary>
-    public SizeHints MeasureHints { get; private set; }
+    [Bindable]
+    public partial SizeHints MeasureHints { get; private set; }
 
     /// <summary>
     /// Gets the owning <see cref="TerminalApp"/> when this visual is attached to an application.
@@ -81,7 +84,8 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// <summary>
     /// Gets a value indicating whether this visual can receive focus.
     /// </summary>
-    public bool Focusable { get; protected init; }
+    [Bindable]
+    public partial bool Focusable { get; protected set; }
 
     /// <summary>
     /// Invalidates this visual so that it will be re-measured/arranged/rendered as needed.
