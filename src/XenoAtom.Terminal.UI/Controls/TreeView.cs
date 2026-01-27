@@ -23,6 +23,8 @@ public sealed partial class TreeView : Visual, IScrollable
 
     private readonly ScrollModel _scroll;
     private readonly List<VisibleRow> _visible = new(64);
+    private bool _ensureSelectedVisible;
+    private int _measuredContentWidth;
 
     private readonly record struct VisibleRow(TreeNode Node, int Depth, ulong ContinuationMask, bool IsLastSibling);
 
@@ -55,6 +57,25 @@ public sealed partial class TreeView : Visual, IScrollable
     /// </summary>
     [Bindable]
     public partial int SelectedIndex { get; set; }
+
+    partial void OnSelectedIndexChanging(ref int value)
+    {
+        var count = _visible.Count;
+        value = count == 0 ? -1 : Math.Clamp(value, 0, count - 1);
+    }
+
+    partial void OnSelectedIndexChanged(int value)
+    {
+        _ensureSelectedVisible = true;
+
+        // If we already have a viewport (i.e. the control was arranged at least once), update the scroll model
+        // immediately so parents like ScrollViewer can update scroll bars during the same frame.
+        if (_scroll.ViewportHeight > 0)
+        {
+            EnsureSelectedVisible(value);
+            _ensureSelectedVisible = false;
+        }
+    }
 
     /// <summary>
     /// Gets the scroll model for this tree view.
@@ -172,6 +193,7 @@ public sealed partial class TreeView : Visual, IScrollable
         }
 
         var width = Math.Max(1, maxWidth);
+        _measuredContentWidth = width;
         var desiredHeight = Math.Max(1, _visible.Count);
 
         var min = new Size(1, 1);
@@ -204,10 +226,16 @@ public sealed partial class TreeView : Visual, IScrollable
         }
 
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
+        var extentWidth = Math.Max(innerWidth, Math.Max(0, _measuredContentWidth));
 
         _scroll.SetViewport(innerWidth, innerHeight);
-        _scroll.SetExtent(innerWidth, count);
-        EnsureSelectedVisible(selected);
+        _scroll.SetExtent(extentWidth, count);
+
+        if (_ensureSelectedVisible)
+        {
+            EnsureSelectedVisible(selected);
+            _ensureSelectedVisible = false;
+        }
 
         var maxOffsetY = Math.Max(0, _scroll.ExtentHeight - _scroll.ViewportHeight);
         if (_scroll.OffsetY > maxOffsetY)
@@ -216,6 +244,7 @@ public sealed partial class TreeView : Visual, IScrollable
         }
 
         var scrollOffset = _scroll.OffsetY;
+        var offsetX = _scroll.OffsetX;
         for (var i = 0; i < count; i++)
         {
             var (node, depth, _, _) = _visible[i];
@@ -227,7 +256,7 @@ public sealed partial class TreeView : Visual, IScrollable
 
             var prefix = visualDepth * indentSize + markerWidth + expanderWidth + 1 + iconWidth + gapAfterIcon;
             var y = innerTop + (i - scrollOffset);
-            node.Header.Arrange(new Rectangle(innerLeft + prefix, y, Math.Max(0, innerWidth - prefix), 1));
+            node.Header.Arrange(new Rectangle(innerLeft + prefix - offsetX, y, Math.Max(0, extentWidth - prefix), 1));
         }
     }
 
@@ -281,7 +310,7 @@ public sealed partial class TreeView : Visual, IScrollable
                 buffer.SetCell(innerLeft + x, y, new Rune(' '), rowStyle);
             }
 
-            var xCursor = innerLeft;
+            var xCursor = innerLeft - _scroll.OffsetX;
 
             var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
             buffer.SetCell(xCursor, y, isSelected ? style.FocusMarkerGlyph : new Rune(' '), rowStyle);
@@ -441,7 +470,8 @@ public sealed partial class TreeView : Visual, IScrollable
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
         var visualDepth = style.HierarchyLines is null ? depth : depth + 1;
         var expanderX = markerWidth + visualDepth * indentSize; // marker + indent
-        if (e.LocalX == expanderX)
+        var contentX = e.LocalX + _scroll.OffsetX;
+        if (contentX == expanderX)
         {
             ToggleExpand(index, expand: null);
         }
@@ -457,8 +487,8 @@ public sealed partial class TreeView : Visual, IScrollable
             return;
         }
 
-        var selected = Math.Clamp(SelectedIndex, 0, _visible.Count - 1);
-        SelectedIndex = e.WheelDelta > 0 ? Math.Max(0, selected - 1) : Math.Min(_visible.Count - 1, selected + 1);
+        // Scroll the viewport without changing selection.
+        _scroll.ScrollBy(0, e.WheelDelta > 0 ? -1 : 1);
         e.Handled = true;
     }
 
