@@ -243,6 +243,6 @@ internal static class ControlsDemoApp
         };
 
         // Category headers are rendered as disabled items, so they inherit the disabled row style.
-        return new Markup($"[cyan]{label}[/]");
+        return new Markup($"[underline cyan]{label}[/]");
     }
 }

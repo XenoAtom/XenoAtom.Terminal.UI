@@ -123,7 +123,7 @@ try
     {
         prompt.Default(8080)
             .Validate((int value) => value is >= 1 and <= 65535 ? null : "Port must be in [1..65535].")
-            .HelpMarkup("[dim]Use Up/Down to adjust the value.[/]");
+            .HelpMarkup("[dim]Enter a letter to see the validation error.[/]");
     });
 
     Terminal.WriteLine();
