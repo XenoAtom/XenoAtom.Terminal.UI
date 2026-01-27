@@ -19,9 +19,29 @@ Design goals:
 
 ## 1. Prerequisites (already in the codebase)
 
-### 1.1 WindowLayer
+### 1.1 Fullscreen overlay layering (`WindowLayer`)
 
-`WindowLayer` already provides overlay management for dialogs and popups. Toast host SHOULD integrate with this system, appearing above normal content but potentially below modal dialogs.
+In fullscreen mode, `TerminalApp` wraps the user root into a `WindowLayer` (unless the root already is a `WindowLayer`).
+That gives the framework a place to host:
+
+- dialogs,
+- popups / context menus,
+- tooltips.
+
+Toasts should be layered as:
+
+1) **Above the app content**
+2) **Below any windows** (dialogs, popups, context menus)
+
+The most idiomatic way to achieve this in the current architecture is to place the toast overlay **inside**
+`WindowLayer.Content` (i.e. within the normal visual tree), rather than adding each toast as a window. That ensures:
+
+- dialog/popup windows always appear above toasts,
+- toasts participate in normal theme/style resolution,
+- toasts don’t require special-case window focus rules.
+
+In practice, this is implemented by a `ToastHost` that wraps the app content and overlays a toast layer above it
+(typically via a `ZStack` internally).
 
 ### 1.2 Animation infrastructure
 
@@ -129,10 +149,23 @@ public void ResumeTimer();
 ### 2.4 ToastHost control
 
 ```csharp
-public sealed partial class ToastHost : Visual
+public sealed partial class ToastHost : ContentVisual, IAnimatedVisual
 ```
 
-The `ToastHost` is a container that manages the lifecycle and positioning of multiple toasts. A typical app has one `ToastHost` at the root level (often inside `WindowLayer`).
+The `ToastHost` is a container that manages the lifecycle and positioning of multiple toasts.
+
+It wraps a normal visual tree via `Content` (inherited from `ContentVisual`) and overlays a toast layer above it.
+A typical app has a single `ToastHost` at the root level:
+
+```csharp
+var root = new ToastHost(
+    new DockLayout()
+        .Top(new Header().Title("My App"))
+        .Content(mainContent)
+        .Bottom(new Footer()));
+
+Terminal.Run(root);
+```
 
 #### Bindable properties
 
@@ -141,7 +174,7 @@ The `ToastHost` is a container that manages the lifecycle and positioning of mul
 | `Position` | `ToastPosition` | `TopRight` | Where toasts appear |
 | `MaxVisible` | `int` | `5` | Maximum simultaneous toasts |
 | `Spacing` | `int` | `1` | Gap between stacked toasts |
-| `Margin` | `Thickness` | `(1,1,1,1)` | Margin from screen edges |
+| `Inset` | `Thickness` | `(1,1,1,1)` | Inset from viewport edges (applies to the toast overlay) |
 | `DefaultDuration` | `TimeSpan` | `3 seconds` | Default duration for toasts |
 | `PauseOnHover` | `bool` | `true` | Pause timer when mouse hovers |
 
@@ -152,7 +185,7 @@ The `ToastHost` is a container that manages the lifecycle and positioning of mul
 public Toast Show(Visual content, ToastSeverity severity = ToastSeverity.Info);
 
 /// <summary>Shows a toast with full configuration.</summary>
-public Toast Show(Action<ToastBuilder> configure);
+public Toast Show(Func<Toast> build);
 
 /// <summary>Dismisses all visible toasts.</summary>
 public void DismissAll();
@@ -161,26 +194,15 @@ public void DismissAll();
 public void Dismiss(Func<Toast, bool> predicate);
 ```
 
-### 2.5 ToastBuilder (fluent configuration)
+### 2.5 Fluent configuration (no builder)
 
-```csharp
-public sealed class ToastBuilder
-{
-    public ToastBuilder Title(Visual title);
-    public ToastBuilder Title(string title);
-    public ToastBuilder Content(Visual content);
-    public ToastBuilder Content(string message);
-    public ToastBuilder Severity(ToastSeverity severity);
-    public ToastBuilder Duration(TimeSpan duration);
-    public ToastBuilder Persistent();  // Duration = null
-    public ToastBuilder ShowIcon(bool show = true);
-    public ToastBuilder ShowCloseButton(bool show = true);
-    public ToastBuilder ShowProgress(bool show = true);
-    public ToastBuilder Action(string label, Action callback);
-    public ToastBuilder Action(Visual content, Action callback);
-    public ToastBuilder OnDismissed(Action<ToastDismissedEventArgs> handler);
-}
-```
+This framework already provides fluent APIs via `[Bindable]` properties and source generation, so a dedicated
+`ToastBuilder` type is not required.
+
+Prefer:
+
+- `toastHost.Show(() => new Toast()... )`
+- `ToastService.Show(() => new Toast()... )`
 
 ### 2.6 ToastService (static/ambient API)
 
@@ -193,7 +215,7 @@ public static class ToastService
     public static Toast? Show(string message, ToastSeverity severity = ToastSeverity.Info);
     
     /// <summary>Shows a toast with configuration.</summary>
-    public static Toast? Show(Action<ToastBuilder> configure);
+    public static Toast? Show(Func<Toast> build);
     
     /// <summary>Convenience methods for common severities.</summary>
     public static Toast? Info(string message);
@@ -204,8 +226,9 @@ public static class ToastService
 ```
 
 The service resolves `ToastHost` via:
-1. `Dispatcher.AttachedApp?.FindToastHost()` (searches visual tree)
-2. Returns `null` if no host is found (no-op in inline mode or if host not configured)
+- `Dispatcher.Current.AttachedApp` (fullscreen or inline host)
+- A visual-tree search for a `ToastHost` (typically there is exactly one at the root)
+- Returns `null` if no host is found (no-op in inline mode or if host not configured)
 
 ---
 
@@ -232,34 +255,71 @@ Layout SHOULD use existing controls internally:
 
 ### 3.2 ToastHost layout
 
+`ToastHost` is a **content wrapper**. Internally it contains two children:
+
+1) The wrapped `Content` (normal app UI)
+2) A toast overlay layer (a private/internal visual)
+
+The internal structure is typically:
+
+```
+ToastHost
+  └─ ZStack
+      ├─ Content
+      └─ ToastLayer (sized to visible toasts, aligned to corner)
+```
+
+#### Hit-testing note (important)
+
+The current hit testing model is:
+
+- `Visual.HitTest` returns `this` when the point is within bounds and no child hit succeeds.
+- `IsHitTestVisible = false` disables hit testing for both a visual and its children.
+
+That means a fullscreen “overlay” visual that is arranged to the entire viewport will *steal* pointer input even if
+it renders nothing in most of that area.
+
+To keep toasts non-intrusive, the toast overlay layer MUST be arranged only to the bounding rectangle of its visible
+toasts (plus `Inset`). It should not cover the full viewport unless the framework adds a “hit-test pass-through”
+feature in the future.
+
 The `ToastHost` MUST:
 
-1. **Not participate in normal content layout** — it overlays without affecting sibling arrangement
-2. **Position toasts relative to viewport edges** based on `Position`
-3. **Stack toasts** in the appropriate direction:
+1. Arrange the wrapped `Content` normally.
+2. Overlay toasts **without affecting the layout** of the wrapped content.
+3. Position toasts relative to the viewport using `Position` + `Inset`.
+4. Stack toasts in the appropriate direction:
    - `TopRight/TopLeft/TopCenter`: stack downward (newest on top or bottom, configurable)
    - `BottomRight/BottomLeft/BottomCenter`: stack upward
 
 #### Measure
 
-`ToastHost` measures each visible toast with:
-- WrapHStack: bounded width (viewport width minus margins), unbounded height
-- Returns `SizeHints.Fixed(Size.Zero)` — host doesn't consume layout space
+`ToastHost` MUST ensure the toast overlay is measured so it can compute the toast stack size, but the host should
+return size hints compatible with the wrapped `Content` (the toast overlay must not make the app “bigger”).
+
+In practice:
+
+- measure `Content` with the provided constraints (normal behavior),
+- measure the toast overlay with bounded width and unbounded height,
+- return `SizeHints` derived from `Content`.
 
 #### Arrange
 
-`ToastHost` arranges itself to fill the available space but positions children absolutely:
+`ToastHost` arranges `Content` to the full available rectangle, then arranges the toast overlay.
+
+The toast overlay should:
+
+- compute its own `DesiredSize` from visible toasts,
+- be arranged via normal alignment (Start/Center/End) to reach the chosen corner,
+- apply `Inset` by shrinking the alignment slot before placing the overlay.
+
+Avoid positioning toasts using raw terminal coordinates unless strictly needed; prefer the normal layout protocol so
+the behavior stays consistent across fullscreen and inline hosts.
 
 ```csharp
-// Pseudocode for TopRight positioning
-int x = finalRect.Right - margin.Right - toastWidth;
-int y = finalRect.Top + margin.Top;
-
-foreach (var toast in visibleToasts)
-{
-    toast.Arrange(new Rectangle(x, y, toastWidth, toastHeight));
-    y += toastHeight + Spacing;
-}
+// Pseudocode sketch (ToastLayer.ArrangeCore)
+// - ToastLayer has an arranged rect that is already aligned to the chosen corner.
+// - Then it stacks children inside that rect.
 ```
 
 ### 3.3 Toast sizing
@@ -323,8 +383,8 @@ Default SHOULD be Option A for best UX.
 Toasts MUST NOT steal focus from the current control. They are informational overlays.
 
 - `Toast.Focusable = false` (default)
-- Close button and action button ARE focusable if user tabs to them
-- Tab navigation SHOULD skip toast host unless explicitly focused
+- For v1, close/action visuals SHOULD be pointer-driven and not participate in normal tab traversal by default.
+  Advanced scenarios can opt into focus by providing focusable action content explicitly.
 
 ### 5.2 Mouse interaction
 
@@ -362,9 +422,9 @@ public sealed record ToastStyle : IStyle<ToastStyle>
     public Thickness Padding { get; init; } = new(1);
     public int IconSpacing { get; init; } = 1;
     
-    // Border
-    public LineGlyphs Border { get; init; } = LineGlyphs.Rounded;
-    public bool ShowBorder { get; init; } = true;
+    // Container appearance
+    // Prefer reusing Border/Group styles rather than duplicating border rendering.
+    public BorderStyle BorderStyle { get; init; } = BorderStyle.Rounded;
     
     // Icons per severity
     public Rune InfoIcon { get; init; } = new('ℹ');
@@ -403,21 +463,15 @@ The exact colors come from `Theme` semantic tokens.
 ### 7.1 Basic setup (fullscreen app)
 
 ```csharp
-var toastHost = new ToastHost()
+var root = new ToastHost(
+        new DockLayout()
+            .Top(new Header().Title("My App"))
+            .Content(mainContent)
+            .Bottom(new Footer()))
     .Position(ToastPosition.TopRight)
     .MaxVisible(3);
 
-var root = new WindowLayer
-{
-    Content = new DockLayout()
-        .Top(new Header { Title = "My App" })
-        .Content(mainContent)
-        .Bottom(new Footer()),
-    
-    // ToastHost is a window layer child (overlay)
-}.Add(toastHost);
-
-Terminal.Run(root, onUpdate: () => TerminalLoopResult.Continue);
+Terminal.Run(root);
 ```
 
 ### 7.2 Showing toasts
@@ -428,14 +482,13 @@ ToastService.Success("File saved successfully!");
 ToastService.Error("Connection failed. Retrying...");
 
 // Full configuration
-ToastService.Show(builder => builder
+ToastService.Show(() => new Toast()
     .Title("Update Available")
     .Content("Version 2.0 is ready to install.")
     .Severity(ToastSeverity.Info)
     .Duration(TimeSpan.FromSeconds(10))
     .ShowProgress(true)
-    .Action("Install Now", () => StartUpdate())
-    .OnDismissed(e => Log($"Toast dismissed: {e.Reason}")));
+    .Action(new Button("Install Now").Click(StartUpdate)));
 
 // Direct host access
 var toast = toastHost.Show("Processing...", ToastSeverity.Info);
@@ -447,9 +500,9 @@ toast.Dismiss();
 
 ```csharp
 // For ongoing operations
-var toast = ToastService.Show(b => b
+var toast = ToastService.Show(() => new Toast()
     .Content(new HStack(new Spinner(), "Uploading...").Spacing(1))
-    .Persistent()
+    .Duration(null)
     .ShowCloseButton(false));
 
 // When complete
