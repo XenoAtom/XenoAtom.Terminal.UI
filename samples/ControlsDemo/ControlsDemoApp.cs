@@ -40,8 +40,46 @@ internal static class ControlsDemoApp
 
         var searchBox = new TextBox().Placeholder("Search controls…");
 
-        var sidebarList = new ComputedVisual(() =>
-            BuildSidebarList(demos, selectedDemoId, query: searchBox.Text ?? string.Empty));
+        var sidebarDemoIdForIndex = new List<string?>(demos.Count);
+
+        var sidebarList = new OptionList<OptionListItem>()
+            .ActivateOnClick(true)
+            .VerticalAlignment(Align.Stretch);
+
+        // Make category headers stand out by giving disabled rows a stronger style.
+        // (Category headers are represented as disabled items so they cannot be selected.)
+        var theme = DemoThemes.Dark;
+        var headerStyle = Style.None;
+        if (theme.Foreground is { } headerFg)
+        {
+            headerStyle = headerStyle.WithForeground(headerFg);
+        }
+        if ((theme.SurfaceAlt ?? theme.ControlFill ?? theme.Surface ?? theme.Background) is { } headerBg)
+        {
+            headerStyle = headerStyle.WithBackground(headerBg);
+        }
+        headerStyle |= TextStyle.Bold;
+
+        sidebarList.Style(OptionListStyle.Default with { Disabled = headerStyle });
+
+        void SelectSidebarIndex(int index)
+        {
+            if ((uint)index >= (uint)sidebarDemoIdForIndex.Count)
+            {
+                return;
+            }
+
+            if (sidebarDemoIdForIndex[index] is { } id)
+            {
+                selectedDemoId.Value = id;
+            }
+        }
+
+        sidebarList.SelectionChanged((_, e) => SelectSidebarIndex(e.NewIndex));
+        sidebarList.ItemActivated((_, e) => SelectSidebarIndex(e.Index));
+
+        // Keep the sidebar list stable (no ComputedVisual) and rebuild its items via dynamic update so focus isn't reset.
+        sidebarList.Update(_ => RebuildSidebarList(sidebarList, sidebarDemoIdForIndex, demos, selectedDemoId, query: searchBox.Text ?? string.Empty));
 
         var sidebar = new VStack(
                 "Browse",
@@ -91,32 +129,13 @@ internal static class ControlsDemoApp
         return root;
     }
 
-    private static Visual BuildSidebarList(IReadOnlyList<IControlsDemo> demos, State<string> selectedDemoId, string query)
+    private static void RebuildSidebarList(OptionList<OptionListItem> list, List<string?> demoIdForIndex, IReadOnlyList<IControlsDemo> demos, State<string> selectedDemoId, string query)
     {
         var normalizedQuery = query.Trim();
         var hasQuery = normalizedQuery.Length > 0;
 
-        var list = new OptionList<OptionListItem>()
-            .ActivateOnClick(true)
-            .VerticalAlignment(Align.Stretch);
-
-        // Make category headers stand out by giving disabled rows a stronger style.
-        // (Category headers are represented as disabled items so they cannot be selected.)
-        var theme = DemoThemes.Dark;
-        var headerStyle = Style.None;
-        if (theme.Foreground is { } headerFg)
-        {
-            headerStyle = headerStyle.WithForeground(headerFg);
-        }
-        if ((theme.SurfaceAlt ?? theme.ControlFill ?? theme.Surface ?? theme.Background) is { } headerBg)
-        {
-            headerStyle = headerStyle.WithBackground(headerBg);
-        }
-        headerStyle |= TextStyle.Bold;
-
-        list.Style(OptionListStyle.Default with { Disabled = headerStyle });
-
-        var demoIdForIndex = new List<string?>(demos.Count);
+        list.Items.Clear();
+        demoIdForIndex.Clear();
 
         // Add welcome page as the first item (outside categories).
         var welcomeId = typeof(WelcomeDemo).FullName ?? string.Empty;
@@ -205,25 +224,7 @@ internal static class ControlsDemoApp
                 break;
             }
         }
-
-        void SelectByIndex(int index)
-        {
-            if ((uint)index >= (uint)demoIdForIndex.Count)
-            {
-                return;
-            }
-
-            if (demoIdForIndex[index] is { } id)
-            {
-                selectedDemoId.Value = id;
-            }
-        }
-
-        list.SelectionChanged((_, e) => SelectByIndex(e.NewIndex));
-        list.ItemActivated((_, e) => SelectByIndex(e.Index));
         list.SelectedIndex(selectedIndex);
-
-        return list;
     }
 
     private static Visual CreateCategoryHeader(string category)
