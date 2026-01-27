@@ -19,7 +19,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// <remarks>
 /// Context menus are hosted as <see cref="Popup"/> windows (fullscreen only) and are typically opened via a right-click.
 /// </remarks>
-public static class ContextMenuService
+public static partial class ContextMenuService
 {
     /// <summary>
     /// Shows a context menu for the specified <paramref name="target"/> at the given UI coordinate.
@@ -65,7 +65,7 @@ public static class ContextMenuService
         return popup;
     }
 
-    private sealed class ContextMenuList : Visual
+    private sealed partial class ContextMenuList : Visual
     {
         private readonly Popup _rootPopup;
         private readonly ContextMenuList _root;
@@ -77,8 +77,12 @@ public static class ContextMenuService
         private readonly List<Popup> _openPopups;
 
         private Popup? _submenuPopup;
-        private int _selected;
-        private int _hovered = -1;
+
+        [Bindable]
+        private partial int SelectedIndex { get; set; }
+
+        [Bindable]
+        private partial int HoveredIndex { get; set; }
 
         private Rectangle _innerRect;
         private int _submenuColumnWidth;
@@ -105,7 +109,8 @@ public static class ContextMenuService
                 _rows.Add(new MenuListRow(items[i]));
             }
 
-            _selected = FindNextSelectableIndex(0);
+            SelectedIndex = FindNextSelectableIndex(0);
+            HoveredIndex = -1;
         }
 
         protected override int ChildrenCount => _rows.Count;
@@ -184,8 +189,8 @@ public static class ContextMenuService
 
                 var item = _items[i];
                 var enabled = item.IsEnabledFor(_target);
-                var selected = i == _selected;
-                var hovered = i == _hovered;
+                var selected = i == SelectedIndex;
+                var hovered = i == HoveredIndex;
 
                 var rowStyle = item.IsSeparator
                     ? style.ResolveSeparatorStyle(theme)
@@ -217,15 +222,14 @@ public static class ContextMenuService
         protected override void OnPointerMoved(PointerEventArgs e)
         {
             var index = TryGetIndexAtPoint(e.UiX, e.UiY);
-            if (_hovered != index)
+            if (HoveredIndex != index)
             {
-                _hovered = index;
+                HoveredIndex = index;
                 if (index >= 0)
                 {
-                    _selected = index;
+                    SelectedIndex = index;
                     EnsureSubmenuForSelection();
                 }
-                Invalidate();
             }
         }
 
@@ -248,7 +252,7 @@ public static class ContextMenuService
                 return;
             }
 
-            _selected = index;
+            SelectedIndex = index;
             InvokeOrOpen(index);
             e.Handled = true;
         }
@@ -258,27 +262,27 @@ public static class ContextMenuService
             switch (e.Key)
             {
                 case TerminalKey.Up:
-                    _selected = FindPreviousSelectableIndex(_selected - 1);
+                    SelectedIndex = FindPreviousSelectableIndex(SelectedIndex - 1);
                     CloseSubmenu();
                     e.Handled = true;
                     return;
 
                 case TerminalKey.Down:
-                    _selected = FindNextSelectableIndex(_selected + 1);
+                    SelectedIndex = FindNextSelectableIndex(SelectedIndex + 1);
                     CloseSubmenu();
                     e.Handled = true;
                     return;
 
                 case TerminalKey.Enter:
                 case TerminalKey.Space:
-                    InvokeOrOpen(_selected);
+                    InvokeOrOpen(SelectedIndex);
                     e.Handled = true;
                     return;
 
                 case TerminalKey.Right:
-                    if (IsSelectable(_selected) && HasVisibleSubmenu(_items[_selected]))
+                    if (IsSelectable(SelectedIndex) && HasVisibleSubmenu(_items[SelectedIndex]))
                     {
-                        OpenSubmenuForIndex(_selected);
+                        OpenSubmenuForIndex(SelectedIndex);
                         e.Handled = true;
                     }
                     return;
@@ -392,19 +396,19 @@ public static class ContextMenuService
 
         private void EnsureSubmenuForSelection()
         {
-            if (!IsSelectable(_selected))
+            if (!IsSelectable(SelectedIndex))
             {
                 CloseSubmenu();
                 return;
             }
 
-            if (!HasVisibleSubmenu(_items[_selected]))
+            if (!HasVisibleSubmenu(_items[SelectedIndex]))
             {
                 CloseSubmenu();
                 return;
             }
 
-            OpenSubmenuForIndex(_selected);
+            OpenSubmenuForIndex(SelectedIndex);
         }
 
         private bool HasVisibleSubmenu(MenuItem item)

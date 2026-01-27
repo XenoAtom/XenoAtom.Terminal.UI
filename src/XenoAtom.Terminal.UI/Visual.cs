@@ -38,10 +38,12 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     private Size _lastDesiredSizeWithoutMargin;
 
     private bool _dynamicUpdatesDirty;
+    private bool _prepareChildrenDirty = true;
     private bool _measureDirty = true;
     private bool _arrangeDirty = true;
     private bool _isHitTestVisible = true;
     private HashSet<Binding>? _dynamicUpdateDeps;
+    private HashSet<Binding>? _prepareChildrenDeps;
     private HashSet<Binding>? _measureDeps;
     private HashSet<Binding>? _arrangeDeps;
     private HashSet<Binding>? _renderDeps;
@@ -84,11 +86,8 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// <summary>
     /// Invalidates this visual so that it will be re-measured/arranged/rendered as needed.
     /// </summary>
-    protected void Invalidate()
-    {
-        VerifyAccess();
-        MarkMeasureDirty();
-    }
+    [Obsolete("Manual invalidation is not supported. Make state changes via bindable properties so the app can invalidate automatically.", error: true)]
+    protected void Invalidate() => throw new NotSupportedException();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Visual"/> class.
@@ -311,6 +310,9 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         {
             child.AttachToApp(App);
         }
+
+        // The visual tree changed; parent layout caches are no longer valid.
+        MarkMeasureDirty();
     }
 
     /// <summary>
@@ -332,6 +334,9 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         }
 
         child.Parent = null;
+
+        // The visual tree changed; parent layout caches are no longer valid.
+        MarkMeasureDirty();
     }
 
     internal void AttachCollectionChild(Visual child) => AttachChild(child);
@@ -442,10 +447,12 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         // and keep stale bounds (e.g. a Popup re-used with a different placement).
         _measureDirty = true;
         _arrangeDirty = true;
+        _prepareChildrenDirty = true;
         _hasLastMeasure = false;
         _hasLastArrange = false;
         _measureDeps = null;
         _arrangeDeps = null;
+        _prepareChildrenDeps = null;
         _renderDeps = null;
 
         OnAttachedToApp(app);
@@ -483,6 +490,17 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             }
         }
 
+        // Reset cached state so a detached subtree is always considered out-of-date if it is re-attached later.
+        _prepareChildrenDirty = true;
+        _measureDirty = true;
+        _arrangeDirty = true;
+        _hasLastMeasure = false;
+        _hasLastArrange = false;
+        _prepareChildrenDeps = null;
+        _measureDeps = null;
+        _arrangeDeps = null;
+        _renderDeps = null;
+
         if (this is IAnimatedVisual animated)
         {
             app.UnregisterAnimatedVisual(animated);
@@ -505,6 +523,42 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// </summary>
     /// <param name="app">The owning application.</param>
     protected virtual void OnDetachedFromApp(TerminalApp app) { }
+
+    /// <summary>
+    /// Synchronizes internal children from bindable properties.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Controls that forward user-facing properties into internal visuals should do the forwarding here rather than
+    /// from bindable property callbacks. Property reads performed during this method are tracked so that future
+    /// changes automatically trigger a refresh before layout/rendering.
+    /// </para>
+    /// <para>
+    /// Implementations should be idempotent and only apply changes when the target child differs (for example, via
+    /// <see cref="object.ReferenceEquals(object?, object?)"/> checks).
+    /// </para>
+    /// </remarks>
+    protected virtual void PrepareChildren()
+    {
+    }
+
+    private void EnsureChildrenPrepared()
+    {
+        if (!_prepareChildrenDirty)
+        {
+            return;
+        }
+
+        using var session = BindingManager.Current.StartTracking();
+        PrepareChildren();
+
+        if (UnionDependencies(ref _prepareChildrenDeps, session.Dependencies) && App is not null)
+        {
+            App.UpdateDependencies(this, TerminalApp.DependencyKind.PrepareChildren, _prepareChildrenDeps!);
+        }
+
+        _prepareChildrenDirty = false;
+    }
 
     /// <summary>
     /// Measures this visual using the provided available size.
@@ -530,6 +584,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     {
         VerifyAccess();
         EnsureDynamicUpdatesApplied();
+        EnsureChildrenPrepared();
 
         if (!_measureDirty && _hasLastMeasure && constraints.Equals(_lastMeasureConstraints))
         {
@@ -578,6 +633,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     {
         VerifyAccess();
         EnsureDynamicUpdatesApplied();
+        EnsureChildrenPrepared();
 
         if (!_arrangeDirty && _hasLastArrange && finalRect.Equals(_lastArrangeRect))
         {
@@ -859,6 +915,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     {
         VerifyAccess();
         EnsureDynamicUpdatesApplied();
+        EnsureChildrenPrepared();
 
         bool visible;
         using (var session = BindingManager.Current.StartTracking())
@@ -1045,23 +1102,35 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         MarkMeasureDirty();
     }
 
-    internal void MarkMeasureDirtyUpAndDown()
+    internal void MarkPrepareChildrenDirty()
     {
+        _prepareChildrenDirty = true;
+        _prepareChildrenDeps = null;
+
+        // PrepareChildren can attach/detach children or bridge user-facing properties to internal visuals,
+        // which affects subsequent layout. Invalidate layout caching so the refresh is observed immediately.
         MarkMeasureDirty();
-        MarkDirtyDown();
     }
 
-    internal void MarkDirtyDown()
-    {
-        MarkMeasureDirtyLocal();
-        for (var i = 0; i < ChildrenCount; i++)
-        {
-            var child = GetChild(i);
-            child.MarkDirtyDown();
-        }
-    }
+    // NOT USED FOR NOW
+    //private void MarkMeasureDirtyUpAndDown()
+    //{
+    //    MarkMeasureDirty();
+    //    MarkDirtyDown();
+    //}
 
-    internal void MarkMeasureDirtyLocal()
+    // NOT USED FOR NOW
+    //private void MarkDirtyDown()
+    //{
+    //    MarkMeasureDirtyLocal();
+    //    for (var i = 0; i < ChildrenCount; i++)
+    //    {
+    //        var child = GetChild(i);
+    //        child.MarkDirtyDown();
+    //    }
+    //}
+
+    private void MarkMeasureDirtyLocal()
     {
         _measureDirty = true;
         _hasLastMeasure = false;
@@ -1071,10 +1140,13 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
     internal void MarkMeasureDirty()
     {
-        if (_measureDirty && !_hasLastMeasure && _measureDeps is null && _arrangeDirty && !_hasLastArrange && _arrangeDeps is null)
-        {
-            return;
-        }
+        // This is disabled for now, as it seems that we can get into a situation where a parent is not marked as dirty but a local child is.
+        // In that case, it would stop propagating the dirty state up, leading to incorrect layout.
+
+        //if (_measureDirty && !_hasLastMeasure && _measureDeps is null && _arrangeDirty && !_hasLastArrange && _arrangeDeps is null)
+        //{
+        //    return;
+        //}
 
         MarkMeasureDirtyLocal();
         Parent?.MarkMeasureDirty();
@@ -1089,11 +1161,6 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     
     internal void MarkArrangeDirty()
     {
-        if (_arrangeDirty && !_hasLastArrange && _arrangeDeps is null)
-        {
-            return;
-        }
-
         MarkArrangeDirtyLocal();
         Parent?.MarkArrangeDirty();
     }

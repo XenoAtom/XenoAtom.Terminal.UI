@@ -13,6 +13,7 @@ public sealed class PopupDemo : ControlsDemoBase
     public override Visual Build(DemoContext context)
     {
         Popup? popup = null;
+        Popup? longPopup = null;
 
         var placement = new Select<PopupPlacement>()
             .Items([PopupPlacement.Below, PopupPlacement.Above, PopupPlacement.Right, PopupPlacement.Left]);
@@ -37,6 +38,15 @@ public sealed class PopupDemo : ControlsDemoBase
             popup.Show();
         });
 
+        var longAnchor = new Button("Show long popup");
+        longAnchor.Click(() =>
+        {
+            longPopup ??= CreateLongPopup();
+            longPopup.Anchor = longAnchor;
+            longPopup.Placement = GetPlacement();
+            longPopup.Show();
+        });
+
         Popup CreatePopup()
         {
             var p = new Popup();
@@ -50,13 +60,32 @@ public sealed class PopupDemo : ControlsDemoBase
             return p;
         }
 
+        Popup CreateLongPopup()
+        {
+            var list = new VStack();
+            for (var i = 0; i < 50; i++)
+            {
+                list.Add($"Item {i:00}");
+            }
+
+            var p = new Popup();
+            p.Content(new Border(new VStack(
+                    DemoUi.Title("Scrollable popup"),
+                    DemoUi.Hint("This popup hosts large content; use mouse wheel/scrollbars."),
+                    list)
+                .Spacing(1)));
+
+            p.Closed((_, _) => context.Log("Long popup closed"));
+            return p;
+        }
+
         return new VStack(
                 DemoUi.Hint("Popups are useful for dropdowns and context menus."),
                 "This is a line of text to give space",
                 "This is another line",
                 "And another line",
                 "Now you can try it:",
-                new HStack(anchor, "Placement:", placement).Spacing(1))
+                new HStack(anchor, longAnchor, "Placement:", placement).Spacing(1))
             .Spacing(1);
     }
 }

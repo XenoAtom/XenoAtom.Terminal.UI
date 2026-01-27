@@ -267,6 +267,146 @@ public sealed class PopupTests
         Assert.AreEqual(2, popup.Content!.Bounds.Y);
     }
 
+    [TestMethod]
+    public void Popup_With_Large_Content_Scrolls_Vertically()
+    {
+        var root = new VStack();
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 8));
+        driver.Tick();
+
+        var items = new VStack();
+        for (var i = 0; i < 20; i++)
+        {
+            items.Add($"Line {i:00}");
+        }
+
+        var popup = new Popup
+        {
+            Content = items,
+            MatchAnchorWidth = false,
+            HorizontalPopupAlignment = Align.Stretch,
+            VerticalPopupAlignment = Align.Start,
+        };
+
+        driver.App.Post(popup.Show);
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(30, 8);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText();
+
+        StringAssert.Contains(rendered, "Line 00");
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Wheel,
+            Button = TerminalMouseButton.Wheel,
+            WheelDelta = -1,
+            X = popup.Content!.Bounds.X + 1,
+            Y = popup.Content!.Bounds.Y,
+        });
+        driver.Tick();
+
+        screen = new AnsiTestScreen(30, 8);
+        screen.Apply(driver.Backend.GetOutText());
+        rendered = screen.GetText();
+
+        Assert.IsFalse(rendered.Contains("Line 00", StringComparison.Ordinal), "Expected the popup content to scroll after a wheel event.");
+        StringAssert.Contains(rendered, "Line 01");
+    }
+
+    [TestMethod]
+    public void Popup_With_Wide_Content_Scrolls_Horizontally_When_Shift_Wheel_Is_Used()
+    {
+        var root = new VStack();
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(20, 6));
+        driver.Tick();
+
+        var wide = new FixedSizeVisual(width: 200, height: 1);
+        var popup = new Popup
+        {
+            Content = wide,
+            MatchAnchorWidth = false,
+            HorizontalPopupAlignment = Align.Start,
+            VerticalPopupAlignment = Align.Start,
+        };
+
+        driver.App.Post(popup.Show);
+        driver.Tick();
+
+        var scrollViewer = popup.ScrollHost;
+        Assert.AreEqual(0, scrollViewer.HorizontalOffset);
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Wheel,
+            Button = TerminalMouseButton.Wheel,
+            WheelDelta = -1,
+            Modifiers = TerminalModifiers.Shift,
+            X = popup.Content!.Bounds.X + 1,
+            Y = popup.Content!.Bounds.Y,
+        });
+        driver.Tick();
+
+        Assert.AreEqual(1, scrollViewer.HorizontalOffset);
+    }
+
+    [TestMethod]
+    public void Popup_Content_Extension_Sets_Content()
+    {
+        var root = new VStack();
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 10));
+        driver.Tick();
+
+        var popupContent = new VStack("Line A", "Line B").Spacing(0);
+
+        var popup = new Popup
+        {
+            MatchAnchorWidth = false,
+            HorizontalPopupAlignment = Align.Start,
+            VerticalPopupAlignment = Align.Start,
+        }.Content(popupContent);
+
+        driver.App.Post(popup.Show);
+        driver.Tick();
+
+        Assert.AreSame(popupContent, popup.Content);
+        Assert.AreSame(popupContent, popup.ScrollHost.Content);
+
+        var screen = new AnsiTestScreen(30, 10);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText();
+
+        StringAssert.Contains(rendered, "Line A");
+        StringAssert.Contains(rendered, "Line B");
+    }
+
+    private sealed class FixedSizeVisual : Visual
+    {
+        private readonly int _width;
+        private readonly int _height;
+
+        public FixedSizeVisual(int width, int height)
+        {
+            _width = width;
+            _height = height;
+        }
+
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+        {
+            var size = new Size(Math.Max(0, _width), Math.Max(0, _height));
+            return SizeHints.Fixed(size);
+        }
+
+        protected override void ArrangeCore(in Rectangle finalRect)
+        {
+            Bounds = finalRect;
+        }
+    }
+
     private static char GetChar(string rendered, int x, int y)
     {
         var lines = rendered.Split('\n');

@@ -32,9 +32,15 @@ public enum ExpandDirection
 /// </summary>
 public sealed partial class Collapsible : Visual
 {
-    private bool _pressedHeader;
-    private bool _headerHovered;
-    private bool _oldExpandedForEvent;
+    private bool _hasExpandedStateForEvent;
+    private bool _lastExpandedForEvent;
+    private Visual? _attachedContent;
+
+    [Bindable]
+    internal partial bool IsHeaderHovered { get; set; }
+
+    [Bindable]
+    internal partial bool IsHeaderPressed { get; set; }
 
     private Rectangle _headerRect;
     private Rectangle _contentRect;
@@ -68,7 +74,7 @@ public sealed partial class Collapsible : Visual
     /// <summary>
     /// Gets or sets the content visual.
     /// </summary>
-    [Bindable]
+    [Bindable(NoVisualAttach = true)]
     public partial Visual? Content { get; set; }
 
     /// <summary>
@@ -85,16 +91,16 @@ public sealed partial class Collapsible : Visual
 
     /// <inheritdoc/>
     protected override int ChildrenCount
-        => (_header is null ? 0 : 1) + (_isExpanded && _content is not null ? 1 : 0);
+        => (_header is null ? 0 : 1) + (_attachedContent is null ? 0 : 1);
 
     /// <inheritdoc/>
     protected override Visual GetChild(int index)
     {
         if (_header is null)
         {
-            if (_isExpanded && _content is not null && index == 0)
+            if (_attachedContent is not null && index == 0)
             {
-                return _content;
+                return _attachedContent;
             }
 
             throw new ArgumentOutOfRangeException(nameof(index));
@@ -105,9 +111,9 @@ public sealed partial class Collapsible : Visual
             return _header;
         }
 
-        if (_isExpanded && _content is not null && index == 1)
+        if (_attachedContent is not null && index == 1)
         {
-            return _content;
+            return _attachedContent;
         }
 
         throw new ArgumentOutOfRangeException(nameof(index));
@@ -276,7 +282,7 @@ public sealed partial class Collapsible : Visual
         var theme = GetTheme();
         var style = GetStyle<CollapsibleStyle>();
         var isFocused = IsFocusWithin();
-        var headerStyle = style.ResolveHeader(theme, IsEnabled, isFocused, _headerHovered, _pressedHeader);
+        var headerStyle = style.ResolveHeader(theme, IsEnabled, isFocused, IsHeaderHovered, IsHeaderPressed);
 
         // Header surface.
         for (var y = _headerRect.Y; y < _headerRect.Y + _headerRect.Height; y++)
@@ -314,10 +320,9 @@ public sealed partial class Collapsible : Visual
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         var hover = _headerRect.Contains(e.UiX, e.UiY);
-        if (_headerHovered != hover)
+        if (IsHeaderHovered != hover)
         {
-            _headerHovered = hover;
-            Invalidate();
+            IsHeaderHovered = hover;
         }
     }
 
@@ -331,9 +336,8 @@ public sealed partial class Collapsible : Visual
 
         if (_headerRect.Contains(e.UiX, e.UiY))
         {
-            _pressedHeader = true;
+            IsHeaderPressed = true;
             e.Handled = true;
-            Invalidate();
         }
     }
 
@@ -345,8 +349,8 @@ public sealed partial class Collapsible : Visual
             return;
         }
 
-        var wasPressed = _pressedHeader;
-        _pressedHeader = false;
+        var wasPressed = IsHeaderPressed;
+        IsHeaderPressed = false;
 
         if (wasPressed && IsEnabled && _headerRect.Contains(e.UiX, e.UiY))
         {
@@ -359,38 +363,66 @@ public sealed partial class Collapsible : Visual
         }
     }
 
-    partial void OnIsExpandedChanging(ref bool value)
+    /// <inheritdoc/>
+    protected override void PrepareChildren()
     {
-        _oldExpandedForEvent = _isExpanded;
-    }
-
-    partial void OnIsExpandedChanged(bool value)
-    {
-        if (_oldExpandedForEvent != value)
-        {
-            RaiseEvent(ExpandedChangedEvent, new ExpandedChangedEventArgs { OldValue = _oldExpandedForEvent, NewValue = value });
-        }
-
-        var app = App;
+        var isExpanded = IsExpanded;
         var content = Content;
-        if (app is null || content is null)
-        {
-            return;
-        }
 
-        if (value && content.App is null)
+        if (isExpanded && content is not null)
         {
-            content.AttachToApp(app);
+            if (_attachedContent is not null && !ReferenceEquals(_attachedContent, content))
+            {
+                DetachChild(_attachedContent);
+                _attachedContent = null;
+            }
+
+            if (_attachedContent is null)
+            {
+                AttachChild(content);
+                _attachedContent = content;
+            }
         }
-        else if (!value && content.App is not null)
+        else if (_attachedContent is not null)
         {
-            if (app.FocusedElement is { } focused && IsDescendantOf(focused, content))
+            var app = App;
+            if (app is not null && app.FocusedElement is { } focused && IsDescendantOf(focused, _attachedContent))
             {
                 app.Focus(this);
             }
 
-            content.DetachFromApp();
+            DetachChild(_attachedContent);
+            _attachedContent = null;
         }
+    }
+
+    partial void OnIsExpandedChanging(ref bool value)
+    {
+        if (!_hasExpandedStateForEvent)
+        {
+            _hasExpandedStateForEvent = true;
+            _lastExpandedForEvent = _isExpanded;
+            return;
+        }
+
+        _lastExpandedForEvent = _isExpanded;
+    }
+
+    partial void OnIsExpandedChanged(bool value)
+    {
+        if (!_hasExpandedStateForEvent)
+        {
+            _hasExpandedStateForEvent = true;
+            _lastExpandedForEvent = value;
+            return;
+        }
+
+        if (_lastExpandedForEvent != value)
+        {
+            RaiseEvent(ExpandedChangedEvent, new ExpandedChangedEventArgs { OldValue = _lastExpandedForEvent, NewValue = value });
+        }
+
+        _lastExpandedForEvent = value;
     }
 
     private bool IsFocusWithin()

@@ -132,6 +132,8 @@ public sealed class CommandPaletteTests
         palette.Show();
         driver.Tick();
 
+        Assert.IsInstanceOfType(driver.App.FocusedElement, typeof(TextBox), "Expected the command palette search box to be focused when shown.");
+
         driver.Backend.PushEvent(new TerminalTextEvent { Text = "op" });
         driver.Tick();
 
@@ -140,6 +142,7 @@ public sealed class CommandPaletteTests
         screen.Apply(outText);
         var rendered = screen.GetText();
 
+        StringAssert.Contains(rendered, "op");
         StringAssert.Contains(rendered, "Open");
         Assert.IsFalse(rendered.Contains("Build", StringComparison.Ordinal), "Filtered results should no longer contain non-matching entries.");
     }

@@ -26,12 +26,13 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// </remarks>
 public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrollable, ITextEditorHost
 {
-    private ITextDocument _textDocument;
+    private ITextDocument _document;
     private readonly ScrollModel _scroll;
     private readonly TextEditorCore _core;
     private readonly TextUndoRedoManager _undoRedo;
     private bool _canUndo;
     private bool _canRedo;
+    private int _requestedCaretIndex;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TextEditorBase"/> class.
@@ -39,19 +40,22 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     protected TextEditorBase()
     {
         Focusable = true;
-        _textDocument = new TextDocument();
+        _document = new TextDocument();
         _scroll = new ScrollModel();
         _undoRedo = new TextUndoRedoManager();
-        _undoRedo.Attach(_textDocument);
+        _undoRedo.Attach(_document);
         _undoRedo.StateChanged += OnUndoRedoStateChanged;
 
         this.EnableUndo(true);
         this.MaxUndoEntries(200);
 
-        _core = new TextEditorCore(this, _textDocument, _scroll, _undoRedo);
-        _scroll.Changed += OnScrollChanged;
-        _textDocument.Changed += OnDocumentChanged;
+        _core = new TextEditorCore(this, _document, _scroll, _undoRedo);
+        _document.Changed += OnDocumentChanged;
         OnUndoRedoStateChanged();
+
+        // Expose the document through a bindable property so controls/templates can bind to it.
+        // Any later replacement is bridged to the editor core from PrepareChildren().
+        this.TextDocument(_document);
 
         AddCommand(new Command
         {
@@ -81,10 +85,31 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     /// <summary>
     /// Gets or sets the text document backing this editor.
     /// </summary>
-    public ITextDocument TextDocument
+    [Bindable]
+    public partial ITextDocument TextDocument { get; set; }
+
+    /// <inheritdoc/>
+    protected override void PrepareChildren()
     {
-        get => _textDocument;
-        set => SetTextDocument(value);
+        var desired = TextDocument;
+        if (ReferenceEquals(_document, desired))
+        {
+            return;
+        }
+
+        _document.Changed -= OnDocumentChanged;
+        _document = desired;
+
+        _undoRedo.Attach(_document);
+        _document.Changed += OnDocumentChanged;
+        _core.SetDocument(_document);
+
+        OnUndoRedoStateChanged();
+
+        // Re-apply the last requested caret position after swapping documents. This makes object initializers work
+        // (e.g. new TextBox("...") { CaretIndex = 6 }) and keeps the caret stable when a bound document changes.
+        _core.SetCaretIndex(_requestedCaretIndex, BuildEditorOptions());
+        _requestedCaretIndex = _core.CaretIndex;
     }
 
     /// <summary>
@@ -133,24 +158,13 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     [Bindable]
     public partial bool WordWrap { get; set; }
 
-    private void SetTextDocument(ITextDocument document)
-    {
-        ArgumentNullException.ThrowIfNull(document);
+    /// <summary>
+    /// Gets a bindable version number used to invalidate layout/render when the underlying document or editor view changes.
+    /// </summary>
+    [Bindable]
+    internal partial int EditorVersion { get; set; }
 
-        if (ReferenceEquals(_textDocument, document))
-        {
-            return;
-        }
-
-        _textDocument.Changed -= OnDocumentChanged;
-        _textDocument = document;
-        _undoRedo.Attach(_textDocument);
-        _textDocument.Changed += OnDocumentChanged;
-        _core.SetDocument(_textDocument);
-
-        MarkArrangeDirty();
-        Invalidate();
-    }
+    // NOTE: Text document replacement is handled by PrepareChildren() to avoid ad-hoc invalidation.
 
     /// <summary>
     /// Gets or sets the caret index in the document.
@@ -158,7 +172,11 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     public int CaretIndex
     {
         get => _core.CaretIndex;
-        set => _core.SetCaretIndex(value, BuildEditorOptions());
+        set
+        {
+            _requestedCaretIndex = value;
+            _core.SetCaretIndex(value, BuildEditorOptions());
+        }
     }
 
     /// <summary>
@@ -221,6 +239,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     /// </summary>
     protected void RenderEditor(CellBuffer buffer, Rectangle contentRect, Style textStyle, Style selectionStyle, Style placeholderStyle)
     {
+        _ = EditorVersion;
         var options = BuildEditorOptions();
         var context = BuildRenderContext(buffer, contentRect, textStyle, selectionStyle, placeholderStyle);
         _core.Render(context, options);
@@ -231,6 +250,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     /// </summary>
     protected void UpdateEditorLayout(Rectangle contentRect)
     {
+        _ = EditorVersion;
         _core.UpdateLayout(contentRect, BuildEditorOptions());
     }
 
@@ -238,36 +258,42 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     protected override void OnKeyDown(KeyEventArgs e)
     {
         _core.OnKeyDown(e, BuildEditorOptions());
+        _requestedCaretIndex = _core.CaretIndex;
     }
 
     /// <inheritdoc />
     protected override void OnTextInput(TextInputEventArgs e)
     {
         _core.OnTextInput(e, BuildEditorOptions());
+        _requestedCaretIndex = _core.CaretIndex;
     }
 
     /// <inheritdoc />
     protected override void OnPaste(PasteEventArgs e)
     {
         _core.OnPaste(e, BuildEditorOptions());
+        _requestedCaretIndex = _core.CaretIndex;
     }
 
     /// <inheritdoc />
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         _core.OnPointerPressed(e, BuildEditorOptions());
+        _requestedCaretIndex = _core.CaretIndex;
     }
 
     /// <inheritdoc />
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         _core.OnPointerMoved(e, BuildEditorOptions());
+        _requestedCaretIndex = _core.CaretIndex;
     }
 
     /// <inheritdoc />
     protected override void OnPointerReleased(PointerEventArgs e)
     {
         _core.OnPointerReleased(e);
+        _requestedCaretIndex = _core.CaretIndex;
     }
 
     /// <inheritdoc />
@@ -283,18 +309,11 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
         e.Handled = true;
     }
 
-    private void OnScrollChanged()
-    {
-        MarkArrangeDirty();
-        App?.RequestRender();
-    }
-
     private void OnDocumentChanged(object? sender, TextDocumentChangedEventArgs e)
     {
         _undoRedo.EnsureSynchronized();
         _core.OnDocumentChanged();
-        MarkArrangeDirty();
-        App?.RequestRender();
+        EditorVersion++;
     }
 
     partial void OnEnableUndoChanged(bool value)
@@ -308,16 +327,13 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
 
     partial void OnMaxUndoEntriesChanged(int value) => _undoRedo.MaxEntries = Math.Max(0, value);
 
-    partial void OnWordWrapChanged(bool value) => MarkArrangeDirty();
-
     bool ITextEditorHost.IsFocused => ReferenceEquals(App?.FocusedElement, this);
 
-    void ITextEditorHost.InvalidateEditor() => App?.RequestRender();
+    void ITextEditorHost.InvalidateEditor() => EditorVersion++;
 
     void ITextEditorHost.MarkEditorArrangeDirty()
     {
-        MarkArrangeDirty();
-        App?.RequestRender();
+        EditorVersion++;
     }
 
     bool ITextEditorHost.TryOpenSearchReplacePopup(SearchReplaceMode mode, string? initialSearchText)

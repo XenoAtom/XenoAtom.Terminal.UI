@@ -209,9 +209,6 @@ public sealed partial class LogControl : Visual
 
         // Try to apply immediately when we have a known viewport; otherwise, the pending flag will be applied on the next Arrange.
         ApplyFollowTailIfNeeded();
-
-        // Ensure the ScrollViewer re-arranges in case the offset was changed after its last Arrange call.
-        _scrollViewer.MarkArrangeDirty();
     }
 
     /// <summary>

@@ -187,7 +187,6 @@ public sealed partial class Switch : ContentVisual
 
         IsPressed = true;
         e.Handled = true;
-        Invalidate();
     }
 
     /// <inheritdoc />
@@ -207,7 +206,6 @@ public sealed partial class Switch : ContentVisual
         }
 
         e.Handled = true;
-        Invalidate();
     }
 
     partial void OnIsOnChanging(ref bool value) => _oldValueForEvent = _isOn;

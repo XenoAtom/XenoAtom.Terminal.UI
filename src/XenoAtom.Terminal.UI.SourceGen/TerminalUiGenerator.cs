@@ -147,6 +147,19 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
         return (true, delegateTypeFullyQualified);
     }
 
+    private static bool IsPubliclyVisible(INamedTypeSymbol typeSymbol)
+    {
+        for (INamedTypeSymbol? current = typeSymbol; current is not null; current = current.ContainingType)
+        {
+            if (current.DeclaredAccessibility != Accessibility.Public)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private sealed record BindablePropertyInfo(
         INamedTypeSymbol ContainingType,
         string Namespace,
@@ -157,9 +170,11 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
         bool IsDelegatorProperty,
         string? DelegatorDelegateTypeFullyQualified,
         bool IsBindableListFluentOnlyProperty,
+        bool CanGenerateFluentExtensions,
         string? BindableListElementTypeFullyQualified,
         bool IncludeInBindings,
         bool IsParentVisual,
+        bool NoVisualAttach,
         bool IsVisualChildProperty,
         bool GenerateImplementation,
         string PropertyModifiers,
@@ -266,8 +281,10 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             }
 
             var containingTypeDisplayName = containingType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
-            var isVisualChildProperty = ComputeIsVisualChildProperty(context.SemanticModel.Compilation, containingType, propertySymbol.Type);
+            var noVisualAttach = GetNoVisualAttach(context.SemanticModel.Compilation, propertySymbol);
+            var isVisualChildProperty = !noVisualAttach && ComputeIsVisualChildProperty(context.SemanticModel.Compilation, containingType, propertySymbol.Type);
             var isVisual = InheritsFromVisual(context.SemanticModel.Compilation, containingType);
+            var canGenerateFluentExtensions = IsPubliclyVisible(containingType) && propertySymbol.DeclaredAccessibility == Accessibility.Public;
 
             var propertyName = propertySymbol.Name;
             var backingFieldName = "_" + ToLowerCamel(propertyName);
@@ -289,9 +306,11 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 IsDelegatorProperty: isDelegatorProperty,
                 DelegatorDelegateTypeFullyQualified: delegatorDelegateTypeFullyQualified,
                 IsBindableListFluentOnlyProperty: isBindableListFluentOnlyProperty,
+                CanGenerateFluentExtensions: canGenerateFluentExtensions,
                 BindableListElementTypeFullyQualified: bindableListElementTypeFullyQualified,
                 IncludeInBindings: includeInBindings,
                 IsParentVisual: isVisual,
+                NoVisualAttach: noVisualAttach,
                 IsVisualChildProperty: isVisualChildProperty,
                 GenerateImplementation: generateImplementation,
                 PropertyModifiers: modifiers,
@@ -373,6 +392,37 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             }
 
             return IsOrInheritsFrom(containingType, visualType) && IsOrInheritsFrom(propertyType, visualType);
+        }
+
+        private static bool GetNoVisualAttach(Compilation compilation, IPropertySymbol propertySymbol)
+        {
+            var bindableAttribute = compilation.GetTypeByMetadataName("XenoAtom.Terminal.UI.BindableAttribute");
+            if (bindableAttribute is null)
+            {
+                return false;
+            }
+
+            foreach (var attribute in propertySymbol.GetAttributes())
+            {
+                if (!SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, bindableAttribute))
+                {
+                    continue;
+                }
+
+                foreach (var named in attribute.NamedArguments)
+                {
+                    if (!string.Equals(named.Key, "NoVisualAttach", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    return named.Value.Value is bool b && b;
+                }
+
+                return false;
+            }
+
+            return false;
         }
 
 
@@ -527,9 +577,13 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     context.AddSource(hintName, SourceText.From(source, Encoding.UTF8));
                 }
 
-                var fluentHintName = $"{SanitizeFileName(containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))}.Fluent.g.cs";
-                var fluentSource = GenerateFluentExtensionsSource(containingType, ordered);
-                context.AddSource(fluentHintName, SourceText.From(fluentSource, Encoding.UTF8));
+                // Only public types surface fluent extensions. Non-public bindable properties still get their binding implementation.
+                if (IsPubliclyVisible(containingType))
+                {
+                    var fluentHintName = $"{SanitizeFileName(containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))}.Fluent.g.cs";
+                    var fluentSource = GenerateFluentExtensionsSource(containingType, ordered);
+                    context.AddSource(fluentHintName, SourceText.From(fluentSource, Encoding.UTF8));
+                }
             }
         }
 
@@ -598,6 +652,11 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
 
             foreach (var p in properties)
             {
+                if (!p.CanGenerateFluentExtensions)
+                {
+                    continue;
+                }
+
                 var propName = p.PropertyName;
                 var argName = ToLowerCamel(propName);
                 var argType = p.PropertyTypeFullyQualified;
@@ -1419,7 +1478,8 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
         string MethodName,
         string MethodArgumentTypeFullyQualified,
         bool IsDelegateProperty,
-        bool IsDelegatorProperty)
+        bool IsDelegatorProperty,
+        bool CanGenerateFluentExtensions)
     {
         public static FluentPropertyResult TryCreate(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
         {
@@ -1492,7 +1552,8 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 MethodName: resolvedMethodName,
                 MethodArgumentTypeFullyQualified: isDelegatorProperty ? delegatorDelegateTypeFullyQualified! : propertySymbol.Type.ToDisplayString(format),
                 IsDelegateProperty: isDelegateProperty,
-                IsDelegatorProperty: isDelegatorProperty);
+                IsDelegatorProperty: isDelegatorProperty,
+                CanGenerateFluentExtensions: IsPubliclyVisible(containingType) && propertySymbol.DeclaredAccessibility == Accessibility.Public);
 
             return new FluentPropertyResult(info, diagnostics.ToImmutable());
         }
@@ -1519,6 +1580,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 .Select(static item => item.Info)
                 .Where(static info => info is not null)
                 .Select(static info => info!)
+                .Where(static info => info.CanGenerateFluentExtensions)
                 .ToList();
 
             var grouped = infos

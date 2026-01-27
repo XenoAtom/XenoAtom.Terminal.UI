@@ -27,7 +27,6 @@ public sealed partial class SelectionList<T> : Visual, IScrollable
     private readonly List<State<T>> _recycleStatePool = new();
     private readonly ScrollModel _scroll;
     private bool _ensureSelectedVisible;
-    private bool _updatingScrollModel;
     private int _lastItemsVersion = -1;
     private DataTemplate<T> _lastResolvedTemplate;
 
@@ -39,7 +38,6 @@ public sealed partial class SelectionList<T> : Visual, IScrollable
         Items = new BindableList<T>(this, "SelectionList.Items");
         Checked = new BindableList<bool>(this, "SelectionList.Checked");
         _scroll = new ScrollModel();
-        _scroll.Changed += OnScrollModelChanged;
         _itemVisuals = new BindableList<Visual>(
             this,
             "SelectionList.ItemVisuals",
@@ -91,20 +89,10 @@ public sealed partial class SelectionList<T> : Visual, IScrollable
 
         if (_scroll.ViewportHeight > 0)
         {
-            _updatingScrollModel = true;
-            try
-            {
-                EnsureSelectedVisible(value);
-            }
-            finally
-            {
-                _updatingScrollModel = false;
-            }
-
+            EnsureSelectedVisible(value);
             _ensureSelectedVisible = false;
         }
 
-        MarkArrangeDirty();
     }
 
     /// <summary>
@@ -170,16 +158,8 @@ public sealed partial class SelectionList<T> : Visual, IScrollable
         var rect = finalRect;
         if (rect.Width <= 0 || rect.Height <= 0 || _itemVisuals.Count == 0)
         {
-            _updatingScrollModel = true;
-            try
-            {
-                _scroll.SetViewport(0, 0);
-                _scroll.SetExtent(0, 0);
-            }
-            finally
-            {
-                _updatingScrollModel = false;
-            }
+            _scroll.SetViewport(0, 0);
+            _scroll.SetExtent(0, 0);
             return;
         }
 
@@ -195,44 +175,19 @@ public sealed partial class SelectionList<T> : Visual, IScrollable
         var count = Items.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
 
-        _updatingScrollModel = true;
-        try
-        {
-            _scroll.SetViewport(innerWidth, innerHeight);
-            _scroll.SetExtent(innerWidth, count);
-        }
-        finally
-        {
-            _updatingScrollModel = false;
-        }
+        _scroll.SetViewport(innerWidth, innerHeight);
+        _scroll.SetExtent(innerWidth, count);
 
         if (_ensureSelectedVisible)
         {
-            _updatingScrollModel = true;
-            try
-            {
-                EnsureSelectedVisible(selected);
-            }
-            finally
-            {
-                _updatingScrollModel = false;
-            }
-
+            EnsureSelectedVisible(selected);
             _ensureSelectedVisible = false;
         }
 
         var maxOffsetY = Math.Max(0, _scroll.ExtentHeight - _scroll.ViewportHeight);
         if (_scroll.OffsetY > maxOffsetY)
         {
-            _updatingScrollModel = true;
-            try
-            {
-                _scroll.SetOffset(_scroll.OffsetX, maxOffsetY);
-            }
-            finally
-            {
-                _updatingScrollModel = false;
-            }
+            _scroll.SetOffset(_scroll.OffsetX, maxOffsetY);
         }
 
         var prefixWidth = Math.Min(innerWidth, markerWidth + checkWidth + gap);
@@ -455,16 +410,6 @@ public sealed partial class SelectionList<T> : Visual, IScrollable
         {
             _scroll.SetOffset(_scroll.OffsetX, selectedIndex - viewportHeight + 1);
         }
-    }
-
-    private void OnScrollModelChanged()
-    {
-        if (_updatingScrollModel)
-        {
-            return;
-        }
-
-        MarkArrangeDirty();
     }
 
     private void EnsureCheckedCount()

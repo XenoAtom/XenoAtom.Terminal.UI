@@ -17,50 +17,93 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// </summary>
 public sealed partial class ComputedVisual : Visual
 {
+    private Visual? _currentChild;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ComputedVisual"/> class.
     /// </summary>
     /// <param name="build">The function that builds the child visual.</param>
     public ComputedVisual(Func<Visual?> build)
     {
-        this.Child(build);
+        DynamicVisual = build;
     }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ComputedVisual"/> class.
     /// </summary>
-    /// <param name="state">The function that builds the child visual.</param>
+    /// <param name="state">The state that provides the child visual.</param>
     public ComputedVisual(State<Visual?> state)
     {
-        this.Child(state);
+        ArgumentNullException.ThrowIfNull(state);
+        DynamicVisual = (Func<Visual?>)(() => state.Value);
     }
 
     /// <summary>
-    /// Gets or sets the computed child visual.
+    /// Gets or sets the dynamic builder used to produce the child visual.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This property is evaluated during <see cref="Visual.PrepareChildren"/>. Property reads performed while building
+    /// the visual are tracked, so changes automatically rebuild the computed content.
+    /// </para>
+    /// <para>
+    /// Use <see cref="Child"/> to provide a static fallback when no dynamic builder is configured.
+    /// </para>
+    /// </remarks>
     [Bindable]
+    public partial Delegator<Func<Visual?>> DynamicVisual { get; set; }
+
+    /// <summary>
+    /// Gets or sets the (optional) static child visual.
+    /// </summary>
+    /// <remarks>
+    /// When <see cref="DynamicVisual"/> is set, it takes precedence over this value.
+    /// </remarks>
+    [Bindable(NoVisualAttach = true)]
     public partial Visual? Child { get; set; }
 
-    partial void OnChildChanged(Visual? value)
+    /// <inheritdoc />
+    protected override void PrepareChildren()
     {
-        if (value is null) return;
+        var builder = DynamicVisual.Invoke;
+        var desired = builder is not null ? builder() : Child;
 
-        // We make sure that all visual properties are bound to the child.
-        this.BindHorizontalAlignment(value.Bind.HorizontalAlignment);
-        this.BindVerticalAlignment(value.Bind.VerticalAlignment);
-        this.BindMinWidth(value.Bind.MinWidth);
-        this.BindMinHeight(value.Bind.MinHeight);
-        this.BindMaxWidth(value.Bind.MaxWidth);
-        this.BindMaxHeight(value.Bind.MaxHeight);
-        this.BindMargin(value.Bind.Margin);
-        this.BindIsVisible(value.Bind.IsVisible);
-        this.BindIsEnabled(value.Bind.IsEnabled);
+        if (ReferenceEquals(_currentChild, desired))
+        {
+            return;
+        }
+
+        if (_currentChild is not null)
+        {
+            DetachChild(_currentChild);
+            _currentChild = null;
+        }
+
+        if (desired is null)
+        {
+            return;
+        }
+
+        _currentChild = desired;
+        AttachChild(desired);
+
+        // Bind wrapper layout/visibility properties to the computed child so the computed visual behaves like the child
+        // in its container (alignment, min/max, margin, etc.).
+        this.BindHorizontalAlignment(desired.Bind.HorizontalAlignment);
+        this.BindVerticalAlignment(desired.Bind.VerticalAlignment);
+        this.BindMinWidth(desired.Bind.MinWidth);
+        this.BindMinHeight(desired.Bind.MinHeight);
+        this.BindMaxWidth(desired.Bind.MaxWidth);
+        this.BindMaxHeight(desired.Bind.MaxHeight);
+        this.BindMargin(desired.Bind.Margin);
+        this.BindIsVisible(desired.Bind.IsVisible);
+        this.BindIsEnabled(desired.Bind.IsEnabled);
     }
 
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var child = Child;
+        var child = _currentChild;
         if (child is null)
         {
             return SizeHints.Fixed(default);
@@ -72,7 +115,7 @@ public sealed partial class ComputedVisual : Visual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        var child = Child;
+        var child = _currentChild;
         if (child is null)
         {
             // When there is no child, don't participate in hit-testing or rendering.
@@ -84,14 +127,14 @@ public sealed partial class ComputedVisual : Visual
     }
 
     /// <inheritdoc />
-    protected override int ChildrenCount => _child is null ? 0 : 1;
+    protected override int ChildrenCount => _currentChild is null ? 0 : 1;
 
     /// <inheritdoc />
     protected override Visual GetChild(int index)
     {
-        if (index == 0 && _child is not null)
+        if (index == 0 && _currentChild is not null)
         {
-            return _child;
+            return _currentChild;
         }
 
         throw new ArgumentOutOfRangeException(nameof(index));

@@ -40,8 +40,8 @@ public sealed class TabControlRenderingTests
 
         // Pressing the first tab should use the theme selection background.
         var selection = theme.Selection ?? throw new AssertFailedException("Theme is expected to provide a selection background.");
-        typeof(TabControl).GetField("_pressedIndex", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(tabControl, 0);
-        typeof(TabControl).GetField("_pressedInside", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(tabControl, true);
+        typeof(TabControl).GetProperty("PressedIndex", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(tabControl, 0);
+        typeof(TabControl).GetProperty("IsPressedInside", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(tabControl, true);
 
         buffer.Clear(theme.BaseTextStyle());
         typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!

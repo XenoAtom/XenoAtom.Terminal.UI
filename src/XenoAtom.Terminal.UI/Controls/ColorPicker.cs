@@ -163,8 +163,6 @@ public sealed partial class ColorPicker : Visual
     partial void OnPaletteChanged(IReadOnlyList<Color?>? value)
     {
         _ = value;
-        _paletteHost.MarkDynamicUpdateDirty();
-        MarkMeasureDirty();
     }
 
     /// <inheritdoc />

@@ -2,6 +2,8 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Terminal.UI;
+
 namespace XenoAtom.Terminal.UI.Scrolling;
 
 /// <summary>
@@ -11,37 +13,43 @@ namespace XenoAtom.Terminal.UI.Scrolling;
 /// This type is used by <see cref="XenoAtom.Terminal.UI.Controls.ScrollViewer"/> and by scrollable controls
 /// (e.g. <c>TextArea</c>) that expose their own scroll model via <see cref="IScrollable"/>.
 /// </remarks>
-public sealed class ScrollModel
+public sealed partial class ScrollModel
 {
     /// <summary>
     /// Gets the horizontal scroll offset (in cells).
     /// </summary>
-    public int OffsetX { get; private set; }
+    [Bindable]
+    public partial int OffsetX { get; private set; }
 
     /// <summary>
     /// Gets the vertical scroll offset (in rows).
     /// </summary>
-    public int OffsetY { get; private set; }
+    [Bindable]
+    public partial int OffsetY { get; private set; }
 
     /// <summary>
     /// Gets the viewport width (in cells).
     /// </summary>
-    public int ViewportWidth { get; private set; }
+    [Bindable]
+    public partial int ViewportWidth { get; private set; }
 
     /// <summary>
     /// Gets the viewport height (in rows).
     /// </summary>
-    public int ViewportHeight { get; private set; }
+    [Bindable]
+    public partial int ViewportHeight { get; private set; }
 
     /// <summary>
     /// Gets the content extent width (in cells).
     /// </summary>
-    public int ExtentWidth { get; private set; }
+    [Bindable]
+    public partial int ExtentWidth { get; private set; }
 
     /// <summary>
     /// Gets the content extent height (in rows).
     /// </summary>
-    public int ExtentHeight { get; private set; }
+    [Bindable]
+    public partial int ExtentHeight { get; private set; }
 
     /// <summary>
     /// Occurs when the scroll model state changes (viewport, extent, or offset).

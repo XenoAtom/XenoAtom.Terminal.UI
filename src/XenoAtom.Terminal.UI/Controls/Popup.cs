@@ -40,8 +40,9 @@ public enum PopupPlacement
 /// <summary>
 /// Displays transient content in an overlay layer positioned relative to an optional anchor.
 /// </summary>
-public sealed partial class Popup : ContentVisual, IModalVisual
+public sealed partial class Popup : Visual, IModalVisual
 {
+    private readonly ScrollViewer _scrollViewer;
     private Rectangle _layoutSlot;
     private Rectangle _popupRect;
     private bool _isOpen;
@@ -56,6 +57,9 @@ public sealed partial class Popup : ContentVisual, IModalVisual
     /// </summary>
     public Popup()
     {
+        _scrollViewer = new ScrollViewer(focusable: false);
+        AttachChild(_scrollViewer);
+
         this.HorizontalAlignment(Align.Stretch);
         this.VerticalAlignment(Align.Stretch);
         this.MatchAnchorWidth(true);
@@ -63,6 +67,37 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         this.CloseOnTab(true);
         this.HorizontalPopupAlignment(Align.Center);
         this.VerticalPopupAlignment(Align.Center);
+    }
+
+    /// <summary>
+    /// Gets or sets the popup content.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Popups are automatically protected by an internal <see cref="ScrollViewer"/>, so large content can be scrolled
+    /// without requiring callers to wrap it explicitly.
+    /// </para>
+    /// <para>
+    /// The internal scroll viewer is not focusable, ensuring the popup content continues to receive focus and key input
+    /// (for example, for lists or text editors hosted inside the popup).
+    /// </para>
+    /// </remarks>
+    [Bindable(NoVisualAttach = true)]
+    public partial Visual? Content { get; set; }
+
+    internal ScrollViewer ScrollHost => _scrollViewer;
+
+    /// <inheritdoc />
+    protected override int ChildrenCount => 1;
+
+    /// <inheritdoc />
+    protected override Visual GetChild(int index)
+        => index == 0 ? _scrollViewer : throw new ArgumentOutOfRangeException(nameof(index));
+
+    /// <inheritdoc />
+    protected override void PrepareChildren()
+    {
+        _scrollViewer.Content = Content;
     }
 
     /// <summary>
@@ -170,10 +205,6 @@ public sealed partial class Popup : ContentVisual, IModalVisual
     [Bindable]
     public partial int DragHandleHeight { get; set; }
 
-    partial void OnOffsetXChanged(int value) => MarkArrangeDirty();
-
-    partial void OnOffsetYChanged(int value) => MarkArrangeDirty();
-
     /// <summary>
     /// Opens the popup by adding it to the active <see cref="TerminalApp"/> window layer.
     /// </summary>
@@ -186,6 +217,11 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         {
             return;
         }
+
+        // Ensure the internal scroll host is synchronized before the popup is shown.
+        // This allows callers to immediately focus elements inside the popup (e.g. command palette search box)
+        // without waiting for the first layout pass.
+        _scrollViewer.Content = Content;
 
         var app = App ?? Dispatcher.AttachedApp;
         if (app is null)
@@ -224,11 +260,13 @@ public sealed partial class Popup : ContentVisual, IModalVisual
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         // Fill the available space so the popup can detect outside clicks.
-        var content = Content;
+        var content = _content;
         if (content is not null)
         {
             content.Measure(new LayoutConstraints(0, constraints.MaxWidth, 0, constraints.MaxHeight));
         }
+
+        _scrollViewer.Measure(new LayoutConstraints(0, constraints.MaxWidth, 0, constraints.MaxHeight));
 
         return SizeHints.Flex(
             min: Size.Zero,
@@ -251,7 +289,7 @@ public sealed partial class Popup : ContentVisual, IModalVisual
         var style = GetStyle<PopupStyle>();
         var padding = style.Padding;
 
-        var content = Content;
+        var content = _content;
         var contentDesired = content?.DesiredSize ?? default;
 
         void RemeasureContentForPopupWidth(int popupWidth)
@@ -410,7 +448,7 @@ public sealed partial class Popup : ContentVisual, IModalVisual
                 Math.Max(0, _popupRect.Width - padding.Horizontal),
                 Math.Max(0, _popupRect.Height - padding.Vertical));
 
-            content.Arrange(inner);
+            _scrollViewer.Arrange(inner);
         }
     }
 

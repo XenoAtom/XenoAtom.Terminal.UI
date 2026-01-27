@@ -22,10 +22,7 @@ public sealed partial class TreeView : Visual, IScrollable
     private readonly VisualList<Visual> _headers;
 
     private readonly ScrollModel _scroll;
-    private bool _ensureSelectedVisible;
-    private bool _updatingScrollModel;
     private readonly List<VisibleRow> _visible = new(64);
-    private bool _visibleDirty = true;
 
     private readonly record struct VisibleRow(TreeNode Node, int Depth, ulong ContinuationMask, bool IsLastSibling);
 
@@ -40,7 +37,6 @@ public sealed partial class TreeView : Visual, IScrollable
 
         _headers = new VisualList<Visual>(this, "TreeView.Headers");
         _scroll = new ScrollModel();
-        _scroll.Changed += OnScrollModelChanged;
         _roots = new BindableList<TreeNode>(
             owner: this,
             name: "TreeView.Roots",
@@ -65,40 +61,33 @@ public sealed partial class TreeView : Visual, IScrollable
     /// </summary>
     public ScrollModel Scroll => _scroll;
 
-    partial void OnSelectedIndexChanging(ref int value)
-    {
-        EnsureVisibleList();
-        var count = _visible.Count;
-        value = count == 0 ? -1 : Math.Clamp(value, 0, count - 1);
-    }
-
-    partial void OnSelectedIndexChanged(int value)
-    {
-        _ensureSelectedVisible = true;
-
-        if (_scroll.ViewportHeight > 0)
-        {
-            _updatingScrollModel = true;
-            try
-            {
-                EnsureSelectedVisible(value);
-            }
-            finally
-            {
-                _updatingScrollModel = false;
-            }
-
-            _ensureSelectedVisible = false;
-        }
-
-        MarkArrangeDirty();
-    }
-
     /// <inheritdoc />
     protected override int ChildrenCount => _headers.Count;
 
     /// <inheritdoc />
     protected override Visual GetChild(int index) => _headers[index];
+
+    /// <inheritdoc />
+    protected override void PrepareChildren()
+    {
+        _visible.Clear();
+        for (var i = 0; i < _roots.Count; i++)
+        {
+            AddVisible(_roots[i], depth: 0, continuationMask: 0, isLastSibling: i == _roots.Count - 1);
+        }
+
+        // Toggle header visibility based on the current visible list.
+        // This avoids allocating temporary sets and keeps tree nodes attached for fast reuse.
+        for (var i = 0; i < _headers.Count; i++)
+        {
+            _headers[i].IsVisible = false;
+        }
+
+        for (var i = 0; i < _visible.Count; i++)
+        {
+            _visible[i].Node.Header.IsVisible = true;
+        }
+    }
 
     /// <summary>
     /// Attaches a node and its header to the visual tree.
@@ -114,8 +103,6 @@ public sealed partial class TreeView : Visual, IScrollable
 
         _headers.Add(node.Header);
         node.Attach(this);
-        _visibleDirty = true;
-        Invalidate();
     }
 
     /// <summary>
@@ -127,40 +114,6 @@ public sealed partial class TreeView : Visual, IScrollable
 
         node.Detach(this);
         _headers.Remove(node.Header);
-        _visibleDirty = true;
-        Invalidate();
-    }
-
-    /// <summary>
-    /// Builds the visible list of nodes based on the expansion state.
-    /// </summary>
-    private void EnsureVisibleList()
-    {
-        if (!_visibleDirty)
-        {
-            return;
-        }
-
-        _visible.Clear();
-        for (var i = 0; i < _roots.Count; i++)
-        {
-            AddVisible(_roots[i], depth: 0, continuationMask: 0, isLastSibling: i == _roots.Count - 1);
-        }
-
-        _visibleDirty = false;
-
-        // Toggle header visibility based on current visible list.
-        var visibleSet = new HashSet<Visual>(ReferenceEqualityComparer.Instance);
-        for (var i = 0; i < _visible.Count; i++)
-        {
-            visibleSet.Add(_visible[i].Node.Header);
-        }
-
-        for (var i = 0; i < _headers.Count; i++)
-        {
-            var h = _headers[i];
-            h.IsVisible = visibleSet.Contains(h);
-        }
     }
 
     /// <summary>
@@ -197,8 +150,6 @@ public sealed partial class TreeView : Visual, IScrollable
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        EnsureVisibleList();
-
         var style = GetStyle<TreeViewStyle>();
         var indentSize = style.HierarchyLines is null ? style.IndentSize : Math.Max(2, style.IndentSize);
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
@@ -233,7 +184,6 @@ public sealed partial class TreeView : Visual, IScrollable
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         Bounds = finalRect;
-        EnsureVisibleList();
 
         var style = GetStyle<TreeViewStyle>();
         var indentSize = style.HierarchyLines is null ? style.IndentSize : Math.Max(2, style.IndentSize);
@@ -248,59 +198,21 @@ public sealed partial class TreeView : Visual, IScrollable
 
         if (innerWidth <= 0 || innerHeight <= 0 || count == 0)
         {
-            _updatingScrollModel = true;
-            try
-            {
-                _scroll.SetViewport(0, 0);
-                _scroll.SetExtent(0, 0);
-            }
-            finally
-            {
-                _updatingScrollModel = false;
-            }
+            _scroll.SetViewport(0, 0);
+            _scroll.SetExtent(0, 0);
             return;
         }
 
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
 
-        _updatingScrollModel = true;
-        try
-        {
-            _scroll.SetViewport(innerWidth, innerHeight);
-            _scroll.SetExtent(innerWidth, count);
-        }
-        finally
-        {
-            _updatingScrollModel = false;
-        }
-
-        if (_ensureSelectedVisible)
-        {
-            _updatingScrollModel = true;
-            try
-            {
-                EnsureSelectedVisible(selected);
-            }
-            finally
-            {
-                _updatingScrollModel = false;
-            }
-
-            _ensureSelectedVisible = false;
-        }
+        _scroll.SetViewport(innerWidth, innerHeight);
+        _scroll.SetExtent(innerWidth, count);
+        EnsureSelectedVisible(selected);
 
         var maxOffsetY = Math.Max(0, _scroll.ExtentHeight - _scroll.ViewportHeight);
         if (_scroll.OffsetY > maxOffsetY)
         {
-            _updatingScrollModel = true;
-            try
-            {
-                _scroll.SetOffset(_scroll.OffsetX, maxOffsetY);
-            }
-            finally
-            {
-                _updatingScrollModel = false;
-            }
+            _scroll.SetOffset(_scroll.OffsetX, maxOffsetY);
         }
 
         var scrollOffset = _scroll.OffsetY;
@@ -327,8 +239,6 @@ public sealed partial class TreeView : Visual, IScrollable
         {
             return;
         }
-
-        EnsureVisibleList();
 
         var style = GetStyle<TreeViewStyle>();
         var indentSize = style.HierarchyLines is null ? style.IndentSize : Math.Max(2, style.IndentSize);
@@ -447,7 +357,6 @@ public sealed partial class TreeView : Visual, IScrollable
     /// <inheritdoc />
     protected override void OnKeyDown(KeyEventArgs e)
     {
-        EnsureVisibleList();
         if (_visible.Count == 0)
         {
             return;
@@ -509,8 +418,6 @@ public sealed partial class TreeView : Visual, IScrollable
             return;
         }
 
-        EnsureVisibleList();
-
         var style = GetStyle<TreeViewStyle>();
 
         var innerY = e.UiY - Bounds.Y;
@@ -545,8 +452,6 @@ public sealed partial class TreeView : Visual, IScrollable
     /// <inheritdoc />
     protected override void OnPointerWheel(PointerEventArgs e)
     {
-        EnsureVisibleList();
-
         if (_visible.Count == 0 || e.WheelDelta == 0)
         {
             return;
@@ -559,7 +464,6 @@ public sealed partial class TreeView : Visual, IScrollable
 
     private void EnsureSelectedVisible(int selectedIndex)
     {
-        EnsureVisibleList();
         var count = _visible.Count;
         if (count == 0 || selectedIndex < 0)
         {
@@ -579,22 +483,11 @@ public sealed partial class TreeView : Visual, IScrollable
         }
     }
 
-    private void OnScrollModelChanged()
-    {
-        if (_updatingScrollModel)
-        {
-            return;
-        }
-
-        MarkArrangeDirty();
-    }
-
     /// <summary>
     /// Toggles expansion for a visible node index.
     /// </summary>
     private void ToggleExpand(int visibleIndex, bool? expand)
     {
-        EnsureVisibleList();
         if ((uint)visibleIndex >= (uint)_visible.Count)
         {
             return;
@@ -613,7 +506,5 @@ public sealed partial class TreeView : Visual, IScrollable
         }
 
         node.IsExpanded = newValue;
-        _visibleDirty = true;
-        Invalidate();
     }
 }

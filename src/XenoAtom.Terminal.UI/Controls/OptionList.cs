@@ -26,10 +26,8 @@ public sealed partial class OptionList<T> : Visual, IScrollable
     private readonly List<State<T>> _recycleStatePool = new();
 
     private readonly ScrollModel _scroll;
-    private int _hoveredIndex = -1;
     private int _itemHeight = 1;
     private bool _ensureSelectedVisible;
-    private bool _updatingScrollModel;
 
     private bool _pressed;
     private int _pressedIndex = -1;
@@ -48,7 +46,6 @@ public sealed partial class OptionList<T> : Visual, IScrollable
     {
         Items = new BindableList<T>(this, "OptionList.Items");
         _scroll = new ScrollModel();
-        _scroll.Changed += OnScrollModelChanged;
         _itemVisuals = new BindableList<Visual>(
             this,
             "OptionList.ItemVisuals",
@@ -60,7 +57,11 @@ public sealed partial class OptionList<T> : Visual, IScrollable
             });
 
         Focusable = true;
+        HoveredIndex = -1;
     }
+
+    [Bindable]
+    internal partial int HoveredIndex { get; set; }
 
     /// <summary>
     /// Gets the scroll model for this list.
@@ -119,20 +120,11 @@ public sealed partial class OptionList<T> : Visual, IScrollable
             // immediately so parents like ScrollViewer can update scroll bars during the same frame.
             if (_scroll.ViewportHeight > 0)
             {
-                _updatingScrollModel = true;
-                try
-                {
-                    EnsureSelectedVisible(value);
-                }
-                finally
-                {
-                    _updatingScrollModel = false;
-                }
+                EnsureSelectedVisible(value);
                 _ensureSelectedVisible = false;
             }
 
             RaiseEvent(SelectionChangedEvent, new SelectionChangedEventArgs { OldIndex = _oldSelectedForEvent, NewIndex = value });
-            MarkArrangeDirty();
         }
     }
 
@@ -180,16 +172,8 @@ public sealed partial class OptionList<T> : Visual, IScrollable
         var rect = finalRect;
         if (rect.Width <= 0 || rect.Height <= 0 || _itemVisuals.Count == 0)
         {
-            _updatingScrollModel = true;
-            try
-            {
-                _scroll.SetViewport(0, 0);
-                _scroll.SetExtent(0, 0);
-            }
-            finally
-            {
-                _updatingScrollModel = false;
-            }
+            _scroll.SetViewport(0, 0);
+            _scroll.SetExtent(0, 0);
             return;
         }
 
@@ -209,58 +193,26 @@ public sealed partial class OptionList<T> : Visual, IScrollable
         var count = Items.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
 
-        _updatingScrollModel = true;
-        try
-        {
-            _scroll.SetViewport(innerWidth, viewportHeight);
-            _scroll.SetExtent(prefixWidth + itemWidth, Math.Max(0, count * itemHeight));
-        }
-        finally
-        {
-            _updatingScrollModel = false;
-        }
+        _scroll.SetViewport(innerWidth, viewportHeight);
+        _scroll.SetExtent(prefixWidth + itemWidth, Math.Max(0, count * itemHeight));
 
         if (_ensureSelectedVisible)
         {
-            _updatingScrollModel = true;
-            try
-            {
-                EnsureSelectedVisible(selected);
-            }
-            finally
-            {
-                _updatingScrollModel = false;
-            }
+            EnsureSelectedVisible(selected);
             _ensureSelectedVisible = false;
         }
 
         var maxOffsetY = Math.Max(0, _scroll.ExtentHeight - _scroll.ViewportHeight);
         if (_scroll.OffsetY > maxOffsetY)
         {
-            _updatingScrollModel = true;
-            try
-            {
-                _scroll.SetOffset(_scroll.OffsetX, maxOffsetY);
-            }
-            finally
-            {
-                _updatingScrollModel = false;
-            }
+            _scroll.SetOffset(_scroll.OffsetX, maxOffsetY);
         }
 
         // Keep the scroll position aligned to full item rows.
         var alignedOffsetY = (_scroll.OffsetY / itemHeight) * itemHeight;
         if (alignedOffsetY != _scroll.OffsetY)
         {
-            _updatingScrollModel = true;
-            try
-            {
-                _scroll.SetOffset(_scroll.OffsetX, alignedOffsetY);
-            }
-            finally
-            {
-                _updatingScrollModel = false;
-            }
+            _scroll.SetOffset(_scroll.OffsetX, alignedOffsetY);
         }
 
         var scrollOffset = itemHeight == 0 ? 0 : (_scroll.OffsetY / itemHeight);
@@ -319,7 +271,7 @@ public sealed partial class OptionList<T> : Visual, IScrollable
             }
 
             var isSelected = index == selected;
-            var isHovered = index == _hoveredIndex;
+            var isHovered = index == HoveredIndex;
             var itemEnabled = IsItemEnabled(index);
             var rowStyle = style.ResolveItemStyle(theme, IsEnabled && itemEnabled, isSelected, isFocused, isHovered);
 
@@ -355,10 +307,9 @@ public sealed partial class OptionList<T> : Visual, IScrollable
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         var index = TryGetIndexAtPoint(e.UiX, e.UiY);
-        if (_hoveredIndex != index)
+        if (HoveredIndex != index)
         {
-            _hoveredIndex = index;
-            Invalidate();
+            HoveredIndex = index;
         }
     }
 
@@ -378,7 +329,6 @@ public sealed partial class OptionList<T> : Visual, IScrollable
         }
 
         e.Handled = true;
-        Invalidate();
     }
 
     /// <inheritdoc/>
@@ -400,7 +350,6 @@ public sealed partial class OptionList<T> : Visual, IScrollable
         }
 
         e.Handled = true;
-        Invalidate();
     }
 
     /// <inheritdoc/>
@@ -544,19 +493,6 @@ public sealed partial class OptionList<T> : Visual, IScrollable
         }
 
         return true;
-    }
-
-    private void OnScrollModelChanged()
-    {
-        if (_updatingScrollModel)
-        {
-            return;
-        }
-
-        // Offsets can be changed by the owning ScrollViewer via the scroll bars. Since the scroll model
-        // is not a bindable property, we must propagate Arrange dirtiness up to the root so that the next frame
-        // actually calls Arrange() down the tree (a local dirty flag alone is not sufficient when parents cache Arrange).
-        MarkArrangeDirty();
     }
 
     private void EnsureSelectedVisible(int selectedIndex)

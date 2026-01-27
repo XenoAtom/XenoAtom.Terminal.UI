@@ -59,7 +59,6 @@ public sealed partial class MaskedInput : TextEditorBase
     private bool _hasTemplatePlaceholderChar;
     private char _templatePlaceholderChar;
 
-    private bool _updatingValueFromDocument;
     private bool _updatingDocumentFromValue;
 
     private Rectangle _contentRect;
@@ -93,6 +92,17 @@ public sealed partial class MaskedInput : TextEditorBase
     public MaskedInput(string template) : this()
     {
         this.Template(template);
+    }
+
+    /// <inheritdoc />
+    protected override void PrepareChildren()
+    {
+        base.PrepareChildren();
+
+        // Keep the internal masked document synchronized with the Template/Value bindable properties.
+        // This must happen in PrepareChildren so dependency tracking can invalidate measure/arrange/render automatically.
+        EnsureTemplateParsed();
+        SyncDocumentFromValue();
     }
 
     /// <summary>
@@ -400,36 +410,7 @@ public sealed partial class MaskedInput : TextEditorBase
             return;
         }
 
-        _updatingValueFromDocument = true;
-        try
-        {
-            Value = newValue;
-        }
-        finally
-        {
-            _updatingValueFromDocument = false;
-        }
-    }
-
-    partial void OnTemplateChanged(string? value)
-    {
-        _ = value;
-        EnsureTemplateParsed(force: true);
-        SyncDocumentFromValue();
-        MarkArrangeDirty();
-    }
-
-    partial void OnValueChanged(string? value)
-    {
-        _ = value;
-
-        if (_updatingValueFromDocument)
-        {
-            return;
-        }
-
-        EnsureTemplateParsed();
-        SyncDocumentFromValue();
+        Value = newValue;
     }
 
     private void EnsureTemplateParsed(bool force = false)

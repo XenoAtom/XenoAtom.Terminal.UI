@@ -18,9 +18,16 @@ public sealed partial class TabControl : Visual
 {
     private readonly List<TabPage> _tabs = new();
     private readonly List<TabHitRange> _hitRanges = new();
-    private int _hoveredIndex = -1;
-    private int _pressedIndex = -1;
-    private bool _pressedInside;
+
+    [Bindable]
+    internal partial int HoveredIndex { get; set; }
+
+    [Bindable]
+    internal partial int PressedIndex { get; set; }
+
+    [Bindable]
+    internal partial bool IsPressedInside { get; set; }
+
     private int _headerHeight = 1;
     private readonly TabContentHost _contentHost = new();
     private ContentVisual? _contentTemplate;
@@ -38,6 +45,8 @@ public sealed partial class TabControl : Visual
 
         _contentHost.HorizontalAlignment = Align.Stretch;
         _contentHost.VerticalAlignment = Align.Stretch;
+        HoveredIndex = -1;
+        PressedIndex = -1;
     }
 
     /// <summary>
@@ -59,16 +68,20 @@ public sealed partial class TabControl : Visual
     [Bindable]
     public partial int SelectedIndex { get; set; }
 
-    partial void OnSelectedIndexChanging(ref int value)
+    /// <inheritdoc/>
+    protected override void PrepareChildren()
     {
-        value = _tabs.Count == 0 ? 0 : Math.Clamp(value, 0, _tabs.Count - 1);
-    }
+        var style = GetStyle<TabControlStyle>();
+        EnsureContentTemplate(style);
 
-    partial void OnSelectedIndexChanged(int value)
-    {
-        _ = value;
-        UpdateSelectedContent();
-        Invalidate();
+        if (_tabs.Count == 0)
+        {
+            _contentHost.Content = null;
+            return;
+        }
+
+        var selected = Math.Clamp(SelectedIndex, 0, _tabs.Count - 1);
+        _contentHost.Content = _tabs[selected].Content;
     }
 
     /// <summary>
@@ -101,11 +114,6 @@ public sealed partial class TabControl : Visual
         _tabs.Add(page);
 
         AttachChild(header);
-
-        if (index == 0)
-        {
-            UpdateSelectedContent();
-        }
     }
 
     /// <summary>
@@ -146,8 +154,6 @@ public sealed partial class TabControl : Visual
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = GetStyle<TabControlStyle>();
-        EnsureContentTemplate(style);
-        UpdateSelectedContent();
         var pad = style.TabPadding;
 
         var headerHeight = 1;
@@ -201,8 +207,6 @@ public sealed partial class TabControl : Visual
         Bounds = finalRect;
 
         var style = GetStyle<TabControlStyle>();
-        EnsureContentTemplate(style);
-        UpdateSelectedContent();
         var pad = style.TabPadding;
 
         var headerHeight = 1;
@@ -282,8 +286,8 @@ public sealed partial class TabControl : Visual
 
             var tab = _tabs[range.Index];
             var selected = range.Index == SelectedIndex;
-            var hovered = range.Index == _hoveredIndex;
-            var pressed = range.Index == _pressedIndex && _pressedInside;
+            var hovered = range.Index == HoveredIndex;
+            var pressed = range.Index == PressedIndex && IsPressedInside;
             var tabStyle = style.ResolveTabStyle(theme, tab.Content.IsEnabled, focused, selected, hovered, pressed);
 
             var xStart = rect.X + range.Start;
@@ -335,7 +339,7 @@ public sealed partial class TabControl : Visual
 
         var index = HitTestTabIndex(localX);
         UpdateHoveredIndex(index);
-        UpdatePressedInside(index >= 0 && index == _pressedIndex);
+        UpdatePressedInside(index >= 0 && index == PressedIndex);
     }
 
     /// <inheritdoc/>
@@ -356,10 +360,9 @@ public sealed partial class TabControl : Visual
         var index = HitTestTabIndex(localX);
         if (index >= 0)
         {
-            _pressedIndex = index;
-            _pressedInside = true;
+            PressedIndex = index;
+            IsPressedInside = true;
             UpdateHoveredIndex(index);
-            Invalidate();
             e.Handled = true;
         }
     }
@@ -372,7 +375,7 @@ public sealed partial class TabControl : Visual
             return;
         }
 
-        if (_pressedIndex < 0)
+        if (PressedIndex < 0)
         {
             return;
         }
@@ -382,12 +385,11 @@ public sealed partial class TabControl : Visual
 
         var overHeader = localY >= 0 && localY < _headerHeight;
         var index = overHeader ? HitTestTabIndex(localX) : -1;
-        var activate = _pressedInside && index == _pressedIndex;
+        var activate = IsPressedInside && index == PressedIndex;
 
-        _pressedIndex = -1;
-        _pressedInside = false;
+        PressedIndex = -1;
+        IsPressedInside = false;
         UpdateHoveredIndex(index);
-        Invalidate();
 
         if (activate)
         {
@@ -412,36 +414,22 @@ public sealed partial class TabControl : Visual
 
     private void UpdateHoveredIndex(int index)
     {
-        if (_hoveredIndex == index)
+        if (HoveredIndex == index)
         {
             return;
         }
 
-        _hoveredIndex = index;
-        Invalidate();
+        HoveredIndex = index;
     }
 
     private void UpdatePressedInside(bool value)
     {
-        if (_pressedInside == value)
+        if (IsPressedInside == value)
         {
             return;
         }
 
-        _pressedInside = value;
-        Invalidate();
-    }
-
-    private void UpdateSelectedContent()
-    {
-        if (_tabs.Count == 0)
-        {
-            _contentHost.Content = null;
-            return;
-        }
-
-        var selected = Math.Clamp(_selectedIndex, 0, _tabs.Count - 1);
-        _contentHost.Content = _tabs[selected].Content;
+        IsPressedInside = value;
     }
 
     private readonly record struct TabHitRange(int Index, int Start, int End);

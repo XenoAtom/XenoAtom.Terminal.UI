@@ -24,6 +24,7 @@ public sealed partial class ScrollViewer : Visual
     private Visual? _content;
     private IScrollable? _contentScrollable;
     private ScrollModel? _contentScrollModel;
+    private readonly Action _contentScrollModelChanged;
 
     private int _contentWidth;
     private int _contentHeight;
@@ -75,6 +76,7 @@ public sealed partial class ScrollViewer : Visual
         _verticalBar = new VScrollBar(focusable: false).HorizontalAlignment(Align.Stretch);
         _horizontalBar = new HScrollBar(focusable: false).VerticalAlignment(Align.Stretch);
         _corner = new ScrollCornerVisual(this);
+        _contentScrollModelChanged = OnContentScrollModelChanged;
 
         _verticalBar.ValueChanged(OnVerticalBarValueChanged);
         _horizontalBar.ValueChanged(OnHorizontalBarValueChanged);
@@ -208,8 +210,6 @@ public sealed partial class ScrollViewer : Visual
         {
             HorizontalOffset = 0;
         }
-
-        MarkArrangeDirty();
     }
 
     partial void OnVerticalScrollEnabledChanged(bool value)
@@ -218,8 +218,6 @@ public sealed partial class ScrollViewer : Visual
         {
             VerticalOffset = 0;
         }
-
-        MarkArrangeDirty();
     }
 
     partial void OnVerticalOffsetChanged(int value)
@@ -242,8 +240,6 @@ public sealed partial class ScrollViewer : Visual
         {
             _contentScrollModel.SetOffset(_contentScrollModel.OffsetX, value);
         }
-
-        MarkArrangeDirty();
     }
 
     partial void OnHorizontalOffsetChanged(int value)
@@ -266,8 +262,6 @@ public sealed partial class ScrollViewer : Visual
         {
             _contentScrollModel.SetOffset(value, _contentScrollModel.OffsetY);
         }
-
-        MarkArrangeDirty();
     }
 
     /// <inheritdoc/>
@@ -657,7 +651,7 @@ public sealed partial class ScrollViewer : Visual
     {
         if (_contentScrollModel is not null)
         {
-            _contentScrollModel.Changed -= OnContentScrollChanged;
+            _contentScrollModel.Changed -= _contentScrollModelChanged;
         }
 
         _contentScrollable = scrollable;
@@ -665,19 +659,16 @@ public sealed partial class ScrollViewer : Visual
 
         if (_contentScrollModel is not null)
         {
-            _contentScrollModel.Changed += OnContentScrollChanged;
+            _contentScrollModel.Changed += _contentScrollModelChanged;
+            SyncOffsetsFromContent();
         }
     }
 
-    private void OnContentScrollChanged()
+    private void OnContentScrollModelChanged()
     {
-        if (_contentScrollModel is null)
-        {
-            return;
-        }
-
+        // Keep ScrollViewer offsets in sync with content-owned scroll models (e.g. TextArea).
+        // This is required even without an attached TerminalApp (unit tests can call SetOffset directly).
         SyncOffsetsFromContent();
-        MarkArrangeDirty();
     }
 
     private void SyncOffsetsFromContent()
@@ -765,7 +756,6 @@ public sealed partial class ScrollViewer : Visual
             {
                 AttachChild(child);
             }
-            MarkMeasureDirty();
         }
 
         protected override int ChildrenCount => _child is null ? 0 : 1;
@@ -788,7 +778,13 @@ public sealed partial class ScrollViewer : Visual
             _horizontalOffset = horizontalOffset;
             _verticalOffset = verticalOffset;
 
-            MarkArrangeDirtyLocal();
+            // This host is typically arranged into the same viewport rect each frame, but its child layout depends on
+            // content size and offsets. When only offsets change, Visual.Arrange would early-exit for an unchanged
+            // final rect. Update the child arrangement eagerly using the last known Bounds.
+            if (_child is not null && Bounds.Width > 0 && Bounds.Height > 0)
+            {
+                _child.Arrange(new Rectangle(Bounds.X - _horizontalOffset, Bounds.Y - _verticalOffset, _contentWidth, _contentHeight));
+            }
         }
 
         protected override void ArrangeCore(in Rectangle finalRect)

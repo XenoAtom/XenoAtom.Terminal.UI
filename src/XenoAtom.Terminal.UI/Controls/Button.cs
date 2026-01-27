@@ -16,8 +16,6 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// </summary>
 public partial class Button : ContentVisual
 {
-    private bool _pressedInside;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="Button"/> class.
     /// </summary>
@@ -47,6 +45,9 @@ public partial class Button : ContentVisual
     /// </summary>
     [Bindable]
     public partial bool IsPressed { get; set; }
+
+    [Bindable]
+    internal partial bool IsPressedInside { get; set; }
 
     /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
@@ -153,8 +154,8 @@ public partial class Button : ContentVisual
         var isFocused = ReferenceEquals(App?.FocusedElement, this);
         var theme = GetTheme();
         var buttonStyle = GetStyle<ButtonStyle>();
-        var pressed = IsPressed && _pressedInside;
-        var hovered = IsPressed ? _pressedInside : IsHovered;
+        var pressed = IsPressed && IsPressedInside;
+        var hovered = IsPressed ? IsPressedInside : IsHovered;
         var style = buttonStyle.Resolve(theme, IsEnabled, isFocused, hovered: hovered, pressed: pressed, Tone);
 
         var rect = Bounds;
@@ -228,7 +229,7 @@ public partial class Button : ContentVisual
             return;
         }
 
-        _pressedInside = Bounds.Contains(e.UiX, e.UiY);
+        IsPressedInside = Bounds.Contains(e.UiX, e.UiY);
         IsPressed = true;
         e.Handled = true;
     }
@@ -242,10 +243,9 @@ public partial class Button : ContentVisual
         }
 
         var inside = Bounds.Contains(e.UiX, e.UiY);
-        if (_pressedInside != inside)
+        if (IsPressedInside != inside)
         {
-            _pressedInside = inside;
-            Invalidate();
+            IsPressedInside = inside;
         }
     }
 
@@ -259,9 +259,9 @@ public partial class Button : ContentVisual
 
         if (IsPressed)
         {
-            _pressedInside = Bounds.Contains(e.UiX, e.UiY);
+            IsPressedInside = Bounds.Contains(e.UiX, e.UiY);
             IsPressed = false;
-            if (_pressedInside)
+            if (IsPressedInside)
             {
                 RaiseEvent(Button.ClickEvent, new ClickEventArgs());
             }

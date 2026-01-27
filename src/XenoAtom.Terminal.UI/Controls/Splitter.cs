@@ -16,8 +16,13 @@ namespace XenoAtom.Terminal.UI.Controls;
 public abstract partial class Splitter : Visual
 {
     private Rectangle _barRect;
-    private bool _dragging;
-    private bool _barHovered;
+
+    [Bindable]
+    internal partial bool IsDragging { get; set; }
+
+    [Bindable]
+    internal partial bool IsBarHovered { get; set; }
+
     private int _dragStartUiX;
     private int _dragStartUiY;
     private int _dragStartFirstSize;
@@ -30,8 +35,8 @@ public abstract partial class Splitter : Visual
         Focusable = true;
         this.HorizontalAlignment(Align.Stretch);
         this.VerticalAlignment(Align.Stretch);
-        _ratio = 0.5;
-        _barSize = 1;
+        this.Ratio(0.5);
+        this.BarSize(1);
     }
 
     /// <summary>
@@ -74,48 +79,6 @@ public abstract partial class Splitter : Visual
     /// </summary>
     [Bindable]
     public partial int MinSecond { get; set; }
-
-    partial void OnMinFirstChanged(int value)
-    {
-        _ = value;
-        MarkArrangeDirty();
-    }
-
-    partial void OnMinSecondChanged(int value)
-    {
-        _ = value;
-        MarkArrangeDirty();
-    }
-
-    partial void OnRatioChanging(ref double value)
-    {
-        if (double.IsNaN(value) || double.IsInfinity(value))
-        {
-            value = 0.5;
-        }
-
-        value = Math.Clamp(value, 0.0, 1.0);
-    }
-
-    partial void OnRatioChanged(double value)
-    {
-        _ = value;
-        MarkArrangeDirty();
-    }
-
-    partial void OnBarSizeChanging(ref int value)
-    {
-        if (value < 1)
-        {
-            value = 1;
-        }
-    }
-
-    partial void OnBarSizeChanged(int value)
-    {
-        _ = value;
-        MarkMeasureDirty();
-    }
 
     /// <inheritdoc/>
     protected override int ChildrenCount => (_first is null ? 0 : 1) + (_second is null ? 0 : 1);
@@ -241,6 +204,12 @@ public abstract partial class Splitter : Visual
         }
 
         var bar = Math.Max(1, BarSize);
+        var ratio = Ratio;
+        if (!double.IsFinite(ratio))
+        {
+            ratio = 0.5;
+        }
+        ratio = Math.Clamp(ratio, 0.0, 1.0);
 
         if (SplitOrientation == Orientation.Horizontal)
         {
@@ -248,7 +217,7 @@ public abstract partial class Splitter : Visual
             var minFirst = Math.Clamp(MinFirst, 0, available);
             var minSecond = Math.Clamp(MinSecond, 0, available);
 
-            var firstSize = (int)Math.Round(available * Ratio);
+            var firstSize = (int)Math.Round(available * ratio);
             firstSize = Math.Clamp(firstSize, minFirst, Math.Max(minFirst, available - minSecond));
             var secondSize = Math.Max(0, available - firstSize);
 
@@ -260,9 +229,6 @@ public abstract partial class Splitter : Visual
             x += bar;
 
             second?.Arrange(new Rectangle(x, finalRect.Y, secondSize, finalRect.Height));
-
-            var denom = Math.Max(1, available);
-            _ratio = Math.Clamp(firstSize / (double)denom, 0.0, 1.0);
             return;
         }
 
@@ -271,7 +237,7 @@ public abstract partial class Splitter : Visual
             var minFirst = Math.Clamp(MinFirst, 0, available);
             var minSecond = Math.Clamp(MinSecond, 0, available);
 
-            var firstSize = (int)Math.Round(available * Ratio);
+            var firstSize = (int)Math.Round(available * ratio);
             firstSize = Math.Clamp(firstSize, minFirst, Math.Max(minFirst, available - minSecond));
             var secondSize = Math.Max(0, available - firstSize);
 
@@ -283,9 +249,6 @@ public abstract partial class Splitter : Visual
             y += bar;
 
             second?.Arrange(new Rectangle(finalRect.X, y, finalRect.Width, secondSize));
-
-            var denom = Math.Max(1, available);
-            _ratio = Math.Clamp(firstSize / (double)denom, 0.0, 1.0);
         }
     }
 
@@ -301,7 +264,7 @@ public abstract partial class Splitter : Visual
         var style = GetStyle<SplitterStyle>();
         var focused = ReferenceEquals(App?.FocusedElement, this);
 
-        var barStyle = style.Resolve(theme, IsEnabled, focused, _barHovered, _dragging);
+        var barStyle = style.Resolve(theme, IsEnabled, focused, IsBarHovered, IsDragging);
         var glyph = SplitOrientation == Orientation.Horizontal ? style.VerticalGlyph : style.HorizontalGlyph;
 
         for (var y = _barRect.Y; y < _barRect.Y + _barRect.Height; y++)
@@ -320,13 +283,12 @@ public abstract partial class Splitter : Visual
         var localY = e.UiY - Bounds.Y;
         var isOverBar = _barRect.Contains(Bounds.X + localX, Bounds.Y + localY);
 
-        if (!_dragging && _barHovered != isOverBar)
+        if (!IsDragging && IsBarHovered != isOverBar)
         {
-            _barHovered = isOverBar;
-            Invalidate();
+            IsBarHovered = isOverBar;
         }
 
-        if (!_dragging)
+        if (!IsDragging)
         {
             return;
         }
@@ -348,7 +310,7 @@ public abstract partial class Splitter : Visual
             return;
         }
 
-        _dragging = true;
+        IsDragging = true;
         _dragStartUiX = e.UiX;
         _dragStartUiY = e.UiY;
         _dragStartFirstSize = GetCurrentFirstSize();
@@ -363,10 +325,9 @@ public abstract partial class Splitter : Visual
             return;
         }
 
-        if (_dragging)
+        if (IsDragging)
         {
-            _dragging = false;
-            Invalidate();
+            IsDragging = false;
             e.Handled = true;
         }
     }

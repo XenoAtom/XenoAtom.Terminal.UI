@@ -75,12 +75,14 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     internal enum DependencyKind
     {
         DynamicUpdate = 0,
-        Measure = 1,
-        Arrange = 2,
-        Render = 3,
+        PrepareChildren = 1,
+        Measure = 2,
+        Arrange = 3,
+        Render = 4,
     }
 
     private readonly DependencyIndex _dynamicUpdateIndex = new();
+    private readonly DependencyIndex _prepareChildrenIndex = new();
     private readonly DependencyIndex _measureIndex = new();
     private readonly DependencyIndex _arrangeIndex = new();
     private readonly DependencyIndex _renderIndex = new();
@@ -898,6 +900,9 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             case DependencyKind.DynamicUpdate:
                 _dynamicUpdateIndex.Update(visual, dependencies);
                 break;
+            case DependencyKind.PrepareChildren:
+                _prepareChildrenIndex.Update(visual, dependencies);
+                break;
             case DependencyKind.Measure:
                 _measureIndex.Update(visual, dependencies);
                 break;
@@ -916,6 +921,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     {
         ArgumentNullException.ThrowIfNull(visual);
         _dynamicUpdateIndex.Remove(visual);
+        _prepareChildrenIndex.Remove(visual);
         _measureIndex.Remove(visual);
         _arrangeIndex.Remove(visual);
         _renderIndex.Remove(visual);
@@ -935,6 +941,14 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 foreach (var v in initVisuals)
                 {
                     v.MarkDynamicUpdateDirty();
+                }
+            }
+
+            if (_prepareChildrenIndex.TryGetVisuals(binding, out var prepareVisuals))
+            {
+                foreach (var v in prepareVisuals)
+                {
+                    v.MarkPrepareChildrenDirty();
                 }
             }
 
@@ -1552,7 +1566,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private void FocusNext()
     {
         var scope = GetFocusScopeRoot();
-        var focusables = scope.EnumerateVisualsDepthFirst().Where(v => v.Focusable && v.IsVisible && v.IsEnabled).ToList();
+        var focusables = EnumerateFocusables(scope).ToList();
         if (focusables.Count == 0)
         {
             return;
@@ -1573,7 +1587,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private void FocusPrevious()
     {
         var scope = GetFocusScopeRoot();
-        var focusables = scope.EnumerateVisualsDepthFirst().Where(v => v.Focusable && v.IsVisible && v.IsEnabled).ToList();
+        var focusables = EnumerateFocusables(scope).ToList();
         if (focusables.Count == 0)
         {
             return;
@@ -2004,11 +2018,31 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
         if (FocusedElement is null)
         {
-            FocusedElement = scopeRoot.EnumerateVisualsDepthFirst().FirstOrDefault(v => v.Focusable && v.IsVisible && v.IsEnabled);
+            FocusedElement = EnumerateFocusables(scopeRoot).FirstOrDefault();
             if (FocusedElement is not null)
             {
                 RequestRender();
             }
+        }
+    }
+
+    private static IEnumerable<Visual> EnumerateFocusables(Visual root)
+    {
+        // Prefer focusing leaf controls over container controls (e.g. focus a TreeView inside a ScrollViewer rather
+        // than the ScrollViewer itself). Containers remain reachable via Tab because we still yield them after their
+        // descendants.
+        for (var i = 0; i < root.GetChildrenCount(); i++)
+        {
+            var child = root.GetChildUnsafe(i);
+            foreach (var nested in EnumerateFocusables(child))
+            {
+                yield return nested;
+            }
+        }
+
+        if (root.Focusable && root.IsVisible && root.IsEnabled)
+        {
+            yield return root;
         }
     }
 

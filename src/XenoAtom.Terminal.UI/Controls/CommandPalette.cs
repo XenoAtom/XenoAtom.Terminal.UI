@@ -9,6 +9,7 @@ using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -27,10 +28,18 @@ public sealed partial class CommandPalette : Visual
     private string _lastQuery = string.Empty;
     private int _lastCommandStamp = int.MinValue;
     private Visual? _lastFocusContext;
+    private int _lastQuerySnapshotVersion = -1;
+    private string _lastQuerySnapshotText = string.Empty;
 
     private Popup? _hostPopup;
     private Visual? _focusContext;
     private bool _hostPopupEventsAttached;
+
+    // Used to force measure/arrange updates when the search box document changes.
+    // The search text is stored in a TextDocument (not a bindable property), so we expose a bindable stamp
+    // that participates in dependency tracking.
+    [Bindable]
+    internal partial int ResultsVersion { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CommandPalette"/> class.
@@ -44,6 +53,10 @@ public sealed partial class CommandPalette : Visual
         _searchBox = new TextBox()
             .Placeholder("Type to search…")
             .HorizontalAlignment(Align.Stretch);
+
+        // The palette query is stored in the search box document. Listen to document changes instead of relying on
+        // routed TextInput events, because text editors typically mark those events handled.
+        _searchBox.TextDocument.Changed += OnSearchDocumentChanged;
 
         _results = new OptionList<ResolvedCommand>()
             .ActivateOnClick(true)
@@ -73,6 +86,17 @@ public sealed partial class CommandPalette : Visual
         ApplyStyle(GetStyle<CommandPaletteStyle>());
     }
 
+    private void OnSearchDocumentChanged(object? sender, TextDocumentChangedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        InvalidateResults();
+
+        // Filtering must update immediately as users type. Rendering can happen without a full measure pass
+        // (e.g. text editor redraws), so keep the item list in sync here instead of relying solely on MeasureCore.
+        EnsureResultsUpToDate();
+    }
+
     /// <summary>
     /// Shows the command palette in a popup.
     /// </summary>
@@ -85,11 +109,8 @@ public sealed partial class CommandPalette : Visual
             throw new InvalidOperationException("CommandPalette.Show cannot be called when the palette is part of a visual tree.");
         }
 
-        var app = App ?? Dispatcher.AttachedApp;
-        if (app is null)
-        {
-            throw new InvalidOperationException("Popup.Show is only supported while a TerminalApp is running.");
-        }
+        var app = App ?? Dispatcher.AttachedApp
+            ?? throw new InvalidOperationException("Popup.Show is only supported while a TerminalApp is running.");
 
         _hostPopup ??= new Popup
         {
@@ -98,9 +119,11 @@ public sealed partial class CommandPalette : Visual
             CloseOnTab = false,
         }.Style(PopupStyle.Default with { Padding = Thickness.Zero });
 
+        var hostPopup = _hostPopup!;
+
         if (!_hostPopupEventsAttached)
         {
-            _hostPopup.Closed(RestoreFocus);
+            hostPopup.Closed(RestoreFocus);
             _hostPopupEventsAttached = true;
         }
 
@@ -108,26 +131,26 @@ public sealed partial class CommandPalette : Visual
         // Re-wrapping would attempt to attach the palette to a new parent while it is still parented.
         if (IsAttachedToHostPopup())
         {
-            _focusContext ??= app?.FocusedElement;
+            _focusContext ??= app.FocusedElement;
             InvalidateResults();
             ApplyPopupChrome(GetStyle<CommandPaletteStyle>());
-            _hostPopup.Show();
-            FocusSearch();
+            hostPopup.Show();
+            app.Post(FocusSearch);
             return;
         }
 
         // Capture the focus context before the popup steals focus (so commands are collected from the "app" focus).
-        _focusContext ??= app?.FocusedElement;
+        _focusContext ??= app.FocusedElement;
 
         var style = GetStyle<CommandPaletteStyle>();
         ApplyStyle(style);
         ApplyPopupChrome(style);
         var content = style.PopupTemplateFactory?.Invoke(this) ?? this;
-        _hostPopup.Content = content;
+        hostPopup.Content = content;
         InvalidateResults();
 
-        _hostPopup.Show();
-        FocusSearch();
+        hostPopup.Show();
+        app.Post(FocusSearch);
     }
 
     /// <summary>
@@ -162,11 +185,13 @@ public sealed partial class CommandPalette : Visual
         _lastCommandStamp = int.MinValue;
         _lastQuery = string.Empty;
         _lastFocusContext = null;
-        MarkMeasureDirty();
+        ResultsVersion++;
     }
 
     private void EnsureResultsUpToDate()
     {
+        _ = ResultsVersion;
+
         var app = App ?? _hostPopup?.App;
         if (app is null)
         {
@@ -179,7 +204,7 @@ public sealed partial class CommandPalette : Visual
             focus = null;
         }
 
-        var query = (_searchBox.Text ?? string.Empty).Trim();
+        var query = GetQueryText().Trim();
         var stamp = ComputeCommandStamp(app, focus);
 
         if (stamp == _lastCommandStamp
@@ -193,6 +218,30 @@ public sealed partial class CommandPalette : Visual
         _lastQuery = query;
         _lastFocusContext = focus;
         RebuildResults(app, focus, query);
+    }
+
+    private string GetQueryText()
+    {
+        // Command palette filtering must reflect what is currently displayed in the editor.
+        // Using the document snapshot avoids relying on TextBox.Text being synchronized.
+        var snapshot = _searchBox.TextDocument.CurrentSnapshot;
+        if (snapshot.Version == _lastQuerySnapshotVersion)
+        {
+            return _lastQuerySnapshotText;
+        }
+
+        _lastQuerySnapshotVersion = snapshot.Version;
+        if (snapshot.Length == 0)
+        {
+            _lastQuerySnapshotText = string.Empty;
+            return _lastQuerySnapshotText;
+        }
+
+        var length = snapshot.Length;
+        Span<char> buffer = length <= 256 ? stackalloc char[length] : new char[length];
+        snapshot.CopyTo(0, buffer);
+        _lastQuerySnapshotText = new string(buffer);
+        return _lastQuerySnapshotText;
     }
 
     private static int ComputeCommandStamp(TerminalApp app, Visual? focus)
@@ -271,9 +320,22 @@ public sealed partial class CommandPalette : Visual
             return false;
         }
 
+        // When the palette is wrapped by the popup template, the popup content may not be fully attached yet
+        // (e.g. before the first layout pass). Treat the palette as hosted if it is under the content root.
+        var contentRoot = _hostPopup.Content;
+        if (ReferenceEquals(contentRoot, this))
+        {
+            return true;
+        }
+
         for (var parent = Parent; parent is not null; parent = parent.Parent)
         {
             if (ReferenceEquals(parent, _hostPopup))
+            {
+                return true;
+            }
+
+            if (ReferenceEquals(parent, contentRoot))
             {
                 return true;
             }

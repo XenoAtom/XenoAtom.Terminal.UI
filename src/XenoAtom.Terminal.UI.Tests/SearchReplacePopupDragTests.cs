@@ -11,32 +11,10 @@ namespace XenoAtom.Terminal.UI.Tests;
 [TestClass]
 public sealed class SearchReplacePopupDragTests
 {
-    [TestMethod]
-    public void SearchReplacePopup_CanBeRepositioned_By_Dragging()
-    {
-        var target = new DummyTarget();
-        var popup = new SearchReplacePopup(target);
-        var host = new AnchorHost(popup);
-
-        using var driver = new TerminalAppTestDriver(host, TerminalHostKind.Fullscreen, new TerminalSize(50, 20));
-        driver.Tick();
-
-        // Default anchor: right edge, top row.
-        Assert.AreEqual(50, popup.Bounds.X);
-        Assert.AreEqual(0, popup.Bounds.Y);
-
-        popup.BeginDrag(uiX: 50, uiY: 0);
-        popup.UpdateDrag(uiX: 45, uiY: 2);
-        popup.EndDrag();
-
-        driver.Tick();
-
-        Assert.AreEqual(45, popup.Bounds.X);
-        Assert.AreEqual(2, popup.Bounds.Y);
-    }
+    private readonly record struct TextPosition(int X, int Y);
 
     [TestMethod]
-    public void SearchReplacePopup_Repositions_Immediately_While_Open()
+    public void SearchReplacePopup_Repositions_Immediately_While_Dragging()
     {
         var target = new DummyTarget { SupportsReplace = false, Title = "DragMe" };
         var popup = new SearchReplacePopup(target);
@@ -48,20 +26,35 @@ public sealed class SearchReplacePopupDragTests
         driver.App.Post(() => popup.OpenFind());
         driver.Tick();
 
-        var initialCol = FindTextColumn(driver.Backend.GetOutText(), 50, 12, "DragMe");
-        Assert.AreNotEqual(-1, initialCol);
+        var initialPos = FindTextPosition(driver.Backend.GetOutText(), 50, 12, "DragMe");
+        Assert.IsNotNull(initialPos);
 
-        driver.App.Post(() =>
+        driver.Backend.PushEvent(new TerminalMouseEvent
         {
-            popup.BeginDrag(uiX: 50, uiY: 0);
-            popup.UpdateDrag(uiX: 45, uiY: 0);
-            popup.EndDrag();
+            Kind = TerminalMouseKind.Down,
+            Button = TerminalMouseButton.Left,
+            X = initialPos.Value.X,
+            Y = initialPos.Value.Y,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Drag,
+            Button = TerminalMouseButton.Left,
+            X = Math.Max(0, initialPos.Value.X - 5),
+            Y = Math.Min(11, initialPos.Value.Y + 2),
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Up,
+            Button = TerminalMouseButton.Left,
+            X = Math.Max(0, initialPos.Value.X - 5),
+            Y = Math.Min(11, initialPos.Value.Y + 2),
         });
         driver.Tick();
 
-        var movedCol = FindTextColumn(driver.Backend.GetOutText(), 50, 12, "DragMe");
-        Assert.AreNotEqual(-1, movedCol);
-        Assert.IsLessThan(initialCol, movedCol);
+        var movedPos = FindTextPosition(driver.Backend.GetOutText(), 50, 12, "DragMe");
+        Assert.IsNotNull(movedPos);
+        Assert.AreNotEqual(initialPos.Value, movedPos.Value);
     }
 
     private sealed class AnchorHost : Visual
@@ -116,7 +109,7 @@ public sealed class SearchReplacePopupDragTests
         public string? GetErrorText() => null;
     }
 
-    private static int FindTextColumn(string outText, int width, int height, string token)
+    private static TextPosition? FindTextPosition(string outText, int width, int height, string token)
     {
         var screen = new AnsiTestScreen(width, height);
         screen.Apply(outText);
@@ -134,11 +127,11 @@ public sealed class SearchReplacePopupDragTests
             var index = line.IndexOf(token, StringComparison.Ordinal);
             if (index >= 0)
             {
-                return index;
+                return new TextPosition(index, y);
             }
         }
 
-        return -1;
+        return null;
     }
 
 }

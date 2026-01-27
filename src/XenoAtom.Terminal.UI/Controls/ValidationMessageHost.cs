@@ -18,11 +18,14 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// This is an internal building block used by <see cref="ValidationPresenter"/> and controls that surface
 /// validation messages as part of their own layout (e.g. <see cref="NumberBox{T}"/>).
 /// </remarks>
-internal sealed class ValidationMessageHost : Visual
+internal sealed partial class ValidationMessageHost : Visual
 {
-    private ValidationMessage? _message;
     private Visual? _content;
     private TextBlockStyle? _resolvedTextBlockStyle;
+    private ValidationMessage? _lastMessage;
+
+    [Bindable]
+    public partial ValidationMessage? Message { get; set; }
 
     public ValidationMessageHost()
     {
@@ -34,11 +37,28 @@ internal sealed class ValidationMessageHost : Visual
     protected override Visual GetChild(int index)
         => index == 0 && _content is not null ? _content : throw new ArgumentOutOfRangeException(nameof(index));
 
-    public bool HasMessage => _message is not null;
+    public bool HasMessage => Message is not null;
 
     public void SetMessage(ValidationMessage? message)
     {
         VerifyAccess();
+        Message = message;
+    }
+
+    protected override void PrepareChildren()
+    {
+        var message = Message;
+        var sameMessage =
+            _lastMessage is { } last &&
+            message is { } current &&
+            last.Severity == current.Severity &&
+            ReferenceEquals(last.Content, current.Content);
+
+        if (!sameMessage)
+        {
+            _resolvedTextBlockStyle = null;
+            _lastMessage = message;
+        }
 
         if (message is null)
         {
@@ -48,9 +68,6 @@ internal sealed class ValidationMessageHost : Visual
                 _content = null;
             }
 
-            _message = null;
-            _resolvedTextBlockStyle = null;
-            Invalidate();
             return;
         }
 
@@ -67,21 +84,19 @@ internal sealed class ValidationMessageHost : Visual
             AttachChild(_content);
             EnsureWrappedText(_content);
         }
-
-        _message = message;
-        Invalidate();
     }
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        if (_message is null || _content is null)
+        var message = Message;
+        if (message is null || _content is null)
         {
             return SizeHints.Fixed(Size.Zero);
         }
 
         var style = GetStyle<ValidationStyle>();
         var padding = style.Padding;
-        var prefix = style.BuildPrefix(_message.Value.Severity);
+        var prefix = style.BuildPrefix(message.Value.Severity);
 
         var prefixWidth = TerminalTextUtility.GetWidth(prefix.AsSpan());
         var inner = new LayoutConstraints(
@@ -115,14 +130,15 @@ internal sealed class ValidationMessageHost : Visual
     {
         Bounds = finalRect;
 
-        if (_message is null || _content is null || finalRect.Width <= 0 || finalRect.Height <= 0)
+        var message = Message;
+        if (message is null || _content is null || finalRect.Width <= 0 || finalRect.Height <= 0)
         {
             return;
         }
 
         var style = GetStyle<ValidationStyle>();
         var padding = style.Padding;
-        var prefix = style.BuildPrefix(_message.Value.Severity);
+        var prefix = style.BuildPrefix(message.Value.Severity);
 
         var prefixWidth = TerminalTextUtility.GetWidth(prefix.AsSpan());
         var inner = new Rectangle(
@@ -136,7 +152,8 @@ internal sealed class ValidationMessageHost : Visual
 
     protected override void RenderOverride(CellBuffer buffer)
     {
-        if (_message is null || _content is null)
+        var message = Message;
+        if (message is null || _content is null)
         {
             return;
         }
@@ -149,12 +166,12 @@ internal sealed class ValidationMessageHost : Visual
 
         var theme = GetTheme();
         var style = GetStyle<ValidationStyle>();
-        var lineStyle = style.ResolveLineStyle(theme, _message.Value.Severity);
+        var lineStyle = style.ResolveLineStyle(theme, message.Value.Severity);
         var padding = style.Padding;
-        var prefix = style.BuildPrefix(_message.Value.Severity);
+        var prefix = style.BuildPrefix(message.Value.Severity);
 
         // Ensure TextBlock children inherit a severity-appropriate foreground by default.
-        var textBlockStyle = style.ResolveTextBlockStyle(theme, _message.Value.Severity);
+        var textBlockStyle = style.ResolveTextBlockStyle(theme, message.Value.Severity);
         if (_resolvedTextBlockStyle != textBlockStyle)
         {
             StyleEnvironment ??= new Dictionary<object, object?>();
@@ -191,4 +208,3 @@ internal sealed class ValidationMessageHost : Visual
         }
     }
 }
-

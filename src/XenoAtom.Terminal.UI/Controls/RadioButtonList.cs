@@ -22,7 +22,6 @@ public sealed partial class RadioButtonList<T> : Visual, IScrollable
 {
     private readonly ScrollModel _scroll;
     private bool _ensureSelectedVisible;
-    private bool _updatingScrollModel;
 
     private readonly BindableList<Visual> _itemVisuals;
     private readonly List<Visual> _recyclePool = new();
@@ -38,7 +37,6 @@ public sealed partial class RadioButtonList<T> : Visual, IScrollable
     {
         Items = new BindableList<T>(this, "RadioButtonList.Items");
         _scroll = new ScrollModel();
-        _scroll.Changed += OnScrollModelChanged;
 
         _itemVisuals = new BindableList<Visual>(
             this,
@@ -90,20 +88,10 @@ public sealed partial class RadioButtonList<T> : Visual, IScrollable
 
         if (_scroll.ViewportHeight > 0)
         {
-            _updatingScrollModel = true;
-            try
-            {
-                EnsureSelectedVisible(value);
-            }
-            finally
-            {
-                _updatingScrollModel = false;
-            }
-
+            EnsureSelectedVisible(value);
             _ensureSelectedVisible = false;
         }
 
-        MarkArrangeDirty();
     }
 
     /// <inheritdoc />
@@ -152,16 +140,8 @@ public sealed partial class RadioButtonList<T> : Visual, IScrollable
         var rect = finalRect;
         if (rect.Width <= 0 || rect.Height <= 0 || _itemVisuals.Count == 0)
         {
-            _updatingScrollModel = true;
-            try
-            {
-                _scroll.SetViewport(0, 0);
-                _scroll.SetExtent(0, 0);
-            }
-            finally
-            {
-                _updatingScrollModel = false;
-            }
+            _scroll.SetViewport(0, 0);
+            _scroll.SetExtent(0, 0);
             return;
         }
 
@@ -178,44 +158,19 @@ public sealed partial class RadioButtonList<T> : Visual, IScrollable
         var count = _itemVisuals.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
 
-        _updatingScrollModel = true;
-        try
-        {
-            _scroll.SetViewport(innerWidth, innerHeight);
-            _scroll.SetExtent(innerWidth, count);
-        }
-        finally
-        {
-            _updatingScrollModel = false;
-        }
+        _scroll.SetViewport(innerWidth, innerHeight);
+        _scroll.SetExtent(innerWidth, count);
 
         if (_ensureSelectedVisible)
         {
-            _updatingScrollModel = true;
-            try
-            {
-                EnsureSelectedVisible(selected);
-            }
-            finally
-            {
-                _updatingScrollModel = false;
-            }
-
+            EnsureSelectedVisible(selected);
             _ensureSelectedVisible = false;
         }
 
         var maxOffsetY = Math.Max(0, _scroll.ExtentHeight - _scroll.ViewportHeight);
         if (_scroll.OffsetY > maxOffsetY)
         {
-            _updatingScrollModel = true;
-            try
-            {
-                _scroll.SetOffset(_scroll.OffsetX, maxOffsetY);
-            }
-            finally
-            {
-                _updatingScrollModel = false;
-            }
+            _scroll.SetOffset(_scroll.OffsetX, maxOffsetY);
         }
 
         var itemLeft = innerLeft + prefixWidth;
@@ -397,16 +352,6 @@ public sealed partial class RadioButtonList<T> : Visual, IScrollable
         }
     }
 
-    private void OnScrollModelChanged()
-    {
-        if (_updatingScrollModel)
-        {
-            return;
-        }
-
-        MarkArrangeDirty();
-    }
-
     private void EnsureItemVisuals()
     {
         var items = Items;
@@ -511,4 +456,3 @@ public sealed partial class RadioButtonList<T> : Visual, IScrollable
         return default;
     }
 }
-

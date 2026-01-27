@@ -164,7 +164,6 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
     {
         _ = value;
         UpdateValidationHost();
-        MarkMeasureDirty();
     }
 
     partial void OnParseStylesChanged(NumberStyles value)
@@ -490,7 +489,6 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
 
         _validationMessage = message;
         UpdateValidationHost();
-        MarkMeasureDirty();
     }
 
     private void UpdateTextFromValue()

@@ -496,7 +496,7 @@ public sealed partial class MenuBar : Visual
         }
     }
 
-    private sealed class MenuList : Visual
+    private sealed partial class MenuList : Visual
     {
         private readonly MenuBar _owner;
         private readonly IReadOnlyList<MenuItem> _items;
@@ -505,8 +505,12 @@ public sealed partial class MenuBar : Visual
         private readonly Visual _target;
 
         private Popup? _submenuPopup;
-        private int _selected;
-        private int _hovered = -1;
+
+        [Bindable]
+        private partial int SelectedIndex { get; set; }
+
+        [Bindable]
+        private partial int HoveredIndex { get; set; }
 
         private Rectangle _innerRect;
         private int _submenuColumnWidth;
@@ -525,7 +529,8 @@ public sealed partial class MenuBar : Visual
                 _rows.Add(new MenuListRow(items[i]));
             }
 
-            _selected = FindNextSelectableIndex(0);
+            SelectedIndex = FindNextSelectableIndex(0);
+            HoveredIndex = -1;
         }
 
         protected override int ChildrenCount => _rows.Count;
@@ -604,8 +609,8 @@ public sealed partial class MenuBar : Visual
 
                 var item = _items[i];
                 var enabled = item.IsEnabledFor(_target);
-                var selected = i == _selected;
-                var hovered = i == _hovered;
+                var selected = i == SelectedIndex;
+                var hovered = i == HoveredIndex;
 
                 var rowStyle = item.IsSeparator
                     ? style.ResolveSeparatorStyle(theme)
@@ -637,15 +642,14 @@ public sealed partial class MenuBar : Visual
         protected override void OnPointerMoved(PointerEventArgs e)
         {
             var index = TryGetIndexAtPoint(e.UiX, e.UiY);
-            if (_hovered != index)
+            if (HoveredIndex != index)
             {
-                _hovered = index;
+                HoveredIndex = index;
                 if (index >= 0)
                 {
-                    _selected = index;
+                    SelectedIndex = index;
                     EnsureSubmenuForSelection();
                 }
-                Invalidate();
             }
         }
 
@@ -668,8 +672,8 @@ public sealed partial class MenuBar : Visual
                 return;
             }
 
-            _selected = index;
-            InvokeOrOpen(_selected);
+            SelectedIndex = index;
+            InvokeOrOpen(SelectedIndex);
             e.Handled = true;
         }
 
@@ -683,27 +687,27 @@ public sealed partial class MenuBar : Visual
             switch (e.Key)
             {
                 case TerminalKey.Up:
-                    _selected = FindPreviousSelectableIndex(_selected - 1);
+                    SelectedIndex = FindPreviousSelectableIndex(SelectedIndex - 1);
                     CloseSubmenu();
                     e.Handled = true;
                     return;
 
                 case TerminalKey.Down:
-                    _selected = FindNextSelectableIndex(_selected + 1);
+                    SelectedIndex = FindNextSelectableIndex(SelectedIndex + 1);
                     CloseSubmenu();
                     e.Handled = true;
                     return;
 
                 case TerminalKey.Enter:
                 case TerminalKey.Space:
-                    InvokeOrOpen(_selected);
+                    InvokeOrOpen(SelectedIndex);
                     e.Handled = true;
                     return;
 
                 case TerminalKey.Right:
-                    if (IsSelectable(_selected) && HasVisibleSubmenu(_items[_selected]))
+                    if (IsSelectable(SelectedIndex) && HasVisibleSubmenu(_items[SelectedIndex]))
                     {
-                        OpenSubmenuForIndex(_selected);
+                        OpenSubmenuForIndex(SelectedIndex);
                     }
                     else if (_parent is null)
                     {
@@ -799,19 +803,19 @@ public sealed partial class MenuBar : Visual
 
         private void EnsureSubmenuForSelection()
         {
-            if (!IsSelectable(_selected))
+            if (!IsSelectable(SelectedIndex))
             {
                 CloseSubmenu();
                 return;
             }
 
-            if (!HasVisibleSubmenu(_items[_selected]))
+            if (!HasVisibleSubmenu(_items[SelectedIndex]))
             {
                 CloseSubmenu();
                 return;
             }
 
-            OpenSubmenuForIndex(_selected);
+            OpenSubmenuForIndex(SelectedIndex);
         }
 
         private bool HasVisibleSubmenu(MenuItem item)
