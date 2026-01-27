@@ -88,6 +88,17 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     public partial bool Focusable { get; protected set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether this visual should be preferred as the initial focus target.
+    /// </summary>
+    /// <remarks>
+    /// When <see cref="TerminalAppOptions.InitialFocusMode"/> is <see cref="InitialFocusMode.FirstFocusable"/>,
+    /// <see cref="TerminalApp"/> selects the first visible, enabled visual with <see cref="AutoFocus"/> set.
+    /// If none are found, the first focusable element in the focus scope is used.
+    /// </remarks>
+    [Bindable]
+    public partial bool AutoFocus { get; set; }
+
+    /// <summary>
     /// Invalidates this visual so that it will be re-measured/arranged/rendered as needed.
     /// </summary>
     [Obsolete("Manual invalidation is not supported. Make state changes via bindable properties so the app can invalidate automatically.", error: true)]

@@ -45,6 +45,7 @@ internal static class ControlsDemoApp
         var sidebarList = new OptionList<OptionListItem>()
             .ActivateOnClick(true)
             .VerticalAlignment(Align.Stretch);
+        sidebarList.AutoFocus(true);
 
         // Make category headers stand out by giving disabled rows a stronger style.
         // (Category headers are represented as disabled items so they cannot be selected.)

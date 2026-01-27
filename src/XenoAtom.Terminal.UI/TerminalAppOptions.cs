@@ -14,6 +14,15 @@ namespace XenoAtom.Terminal.UI;
 public sealed class TerminalAppOptions
 {
     /// <summary>
+    /// Gets the initial focus behavior for fullscreen applications.
+    /// </summary>
+    /// <remarks>
+    /// This controls whether <see cref="TerminalApp"/> assigns an initial focused element when the app starts.
+    /// Users can still focus controls using the mouse or tab navigation.
+    /// </remarks>
+    public InitialFocusMode InitialFocusMode { get; init; } = InitialFocusMode.FirstFocusable;
+
+    /// <summary>
     /// Gets the host kind used to run the application.
     /// </summary>
     public TerminalHostKind HostKind { get; init; } = TerminalHostKind.Inline;
@@ -68,4 +77,24 @@ public sealed class TerminalAppOptions
     /// by setting <see cref="Styling.CultureStyle.Key"/>.
     /// </remarks>
     public CultureInfo Culture { get; init; } = CultureInfo.InvariantCulture;
+}
+
+/// <summary>
+/// Specifies how <see cref="TerminalApp"/> initializes focus when starting a run.
+/// </summary>
+public enum InitialFocusMode
+{
+    /// <summary>
+    /// Do not assign focus automatically. Focus will remain <see langword="null"/> until the user
+    /// clicks a focusable control or uses tab navigation.
+    /// </summary>
+    None,
+
+    /// <summary>
+    /// Focus the first focusable element in the current focus scope.
+    /// </summary>
+    /// <remarks>
+    /// If a visual has <see cref="Visual.AutoFocus"/> set, that visual is preferred.
+    /// </remarks>
+    FirstFocusable,
 }

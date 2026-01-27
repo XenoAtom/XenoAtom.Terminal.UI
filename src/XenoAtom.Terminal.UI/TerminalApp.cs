@@ -2018,7 +2018,15 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
         if (FocusedElement is null)
         {
-            FocusedElement = EnumerateFocusables(scopeRoot).FirstOrDefault();
+            if (_options.InitialFocusMode == InitialFocusMode.None)
+            {
+                return;
+            }
+
+            // Prefer a visual explicitly marked for initial focus. This allows apps to define their
+            // focus target declaratively (e.g. focus a sidebar list instead of a search box).
+            FocusedElement = EnumerateFocusables(scopeRoot).FirstOrDefault(v => v.AutoFocus)
+                ?? EnumerateFocusables(scopeRoot).FirstOrDefault();
             if (FocusedElement is not null)
             {
                 RequestRender();

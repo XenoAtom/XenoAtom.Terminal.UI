@@ -33,6 +33,7 @@ internal sealed class TerminalAppTestDriver : IDisposable
             EnableBracketedPaste = appOptions?.EnableBracketedPaste ?? true,
             ToggleDebugOverlayGesture = appOptions?.ToggleDebugOverlayGesture ?? new Input.KeyGesture(TerminalKey.F12),
             ExitGesture = appOptions?.ExitGesture,
+            InitialFocusMode = appOptions?.InitialFocusMode ?? InitialFocusMode.FirstFocusable,
             Culture = appOptions?.Culture ?? System.Globalization.CultureInfo.InvariantCulture,
         };
         _app = new TerminalApp(root, _session.Instance, effectiveOptions);
