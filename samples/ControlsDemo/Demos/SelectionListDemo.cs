@@ -37,7 +37,7 @@ public sealed class SelectionListDemo : ControlsDemoBase
                 list,
                 checkedCount,
                 DemoUi.Hint("With many items, wrap SelectionList in a ScrollViewer."),
-                new ScrollViewer(longList).MinHeight(8).MaxHeight(8),
+                new Border(new ScrollViewer(longList)).MinHeight(8).MaxHeight(8),
                 new Button("Log").Click(() => context.Log($"Checked: {list.Checked.Count(i => i)}")))
             .Spacing(1);
     }

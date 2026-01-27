@@ -29,7 +29,7 @@ public sealed class RadioButtonDemo : ControlsDemoBase
                 list,
                 new TextBlock(() => $"SelectedIndex: {selected.Value}"),
                 DemoUi.Hint("With many options, wrap RadioButtonList in a ScrollViewer."),
-                new ScrollViewer(longList).MinHeight(8).MaxHeight(8),
+                new Border(new ScrollViewer(longList)).MinHeight(8).MaxHeight(8),
                 new TextBlock(() => $"Long list SelectedIndex: {longSelected.Value}"),
                 new Button("Log selection").Click(() => context.Log($"SelectedIndex: {selected.Value}")))
             .Spacing(1);

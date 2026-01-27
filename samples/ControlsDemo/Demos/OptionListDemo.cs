@@ -37,7 +37,7 @@ public sealed class OptionListDemo : ControlsDemoBase
                 list,
                 new TextBlock(() => $"SelectedIndex: {selected.Value}"),
                 DemoUi.Hint("With many items, wrap OptionList in a ScrollViewer."),
-                new ScrollViewer(longList).MinHeight(8).MaxHeight(8))
+                new Border(new ScrollViewer(longList)).MinHeight(8).MaxHeight(8))
             .Spacing(1);
     }
 }

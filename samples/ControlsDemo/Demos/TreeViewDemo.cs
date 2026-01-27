@@ -66,7 +66,7 @@ public sealed class TreeViewDemo : ControlsDemoBase
                     )
                     .Spacing(2),
                 DemoUi.Hint("Large trees can be hosted in a ScrollViewer."),
-                new ScrollViewer(longTree).MinHeight(12).MaxHeight(12),
+                new Border(new ScrollViewer(longTree)).MinHeight(12).MaxHeight(12),
                 new TextBlock(() => $"SelectedIndex: {defaultTree.SelectedIndex}")
             )
             .Spacing(1);
