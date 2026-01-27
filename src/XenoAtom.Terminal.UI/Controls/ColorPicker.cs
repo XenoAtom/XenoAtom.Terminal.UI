@@ -89,7 +89,7 @@ public sealed partial class ColorPicker : Visual
                 _swatch,
                 new VStack(
                         channels,
-                        new VStack("Hex", _hexValidation).Spacing(1)
+                        new HStack("Hex:", _hexValidation).Spacing(1)
                     )
                     .Spacing(1)
                     .HorizontalAlignment(Align.Stretch)
@@ -360,10 +360,8 @@ public sealed partial class ColorPicker : Visual
 
         return new Color?[]
         {
-            scheme.Background,
-            scheme.Foreground,
-            scheme.Black, scheme.Red, scheme.Green, scheme.Yellow, scheme.Blue, scheme.Purple, scheme.Cyan, scheme.White,
-            scheme.BrightBlack, scheme.BrightRed, scheme.BrightGreen, scheme.BrightYellow, scheme.BrightBlue, scheme.BrightPurple, scheme.BrightCyan, scheme.BrightWhite,
+            scheme.Background, scheme.Black, scheme.Red, scheme.Green, scheme.Yellow, scheme.Blue, scheme.Purple, scheme.Cyan, scheme.White,
+            scheme.Foreground, scheme.BrightBlack, scheme.BrightRed, scheme.BrightGreen, scheme.BrightYellow, scheme.BrightBlue, scheme.BrightPurple, scheme.BrightCyan, scheme.BrightWhite,
         };
     }
 

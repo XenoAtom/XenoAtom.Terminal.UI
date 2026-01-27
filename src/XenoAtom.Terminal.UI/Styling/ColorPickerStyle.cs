@@ -59,7 +59,7 @@ public sealed record ColorPickerStyle : IStyle<ColorPickerStyle>
     /// <summary>
     /// Gets the number of palette columns.
     /// </summary>
-    public int PaletteColumns { get; init; } = 8;
+    public int PaletteColumns { get; init; } = 9;
 
     /// <summary>
     /// Gets the palette swatch width in cells.
