@@ -66,6 +66,8 @@ public sealed class CellBuffer
     /// </summary>
     public int Height { get; }
 
+    internal Rectangle CurrentClipRect => _clipRect;
+
     internal ReadOnlySpan<int> UnsafeScalars => _scalars;
 
     internal ReadOnlySpan<Style> UnsafeCells => _cells;
@@ -95,6 +97,71 @@ public sealed class CellBuffer
         Array.Fill(_hyperlinks, 0ul);
         _hyperlinkTable?.Clear();
         _textElementTable?.Clear();
+    }
+
+    /// <summary>
+    /// Clears the current clipping rectangle using a blank glyph and the specified <paramref name="style"/>.
+    /// </summary>
+    /// <remarks>
+    /// This method does not clear hyperlink or text element tables because other parts of the buffer may still reference them.
+    /// </remarks>
+    /// <param name="style">The style applied to cleared cells.</param>
+    public void ClearCurrentClip(Style style)
+    {
+        // Note: we intentionally clear a 1-cell halo around any continuation cells to avoid leaving dangling
+        // continuation markers when partially clearing an area (e.g., dirty rect boundaries).
+        var clip = _clipRect;
+        if (clip.Width <= 0 || clip.Height <= 0)
+        {
+            return;
+        }
+
+        var left = Math.Max(0, clip.X);
+        var top = Math.Max(0, clip.Y);
+        var right = Math.Min(Width, clip.Right);
+        var bottom = Math.Min(Height, clip.Bottom);
+
+        for (var y = top; y < bottom; y++)
+        {
+            var rowBase = y * Width;
+            for (var x = left; x < right; x++)
+            {
+                var index = rowBase + x;
+                var existing = _cells[index];
+                _scalars[index] = ' ';
+                _cells[index] = style;
+                _hyperlinks[index] = 0ul;
+
+                if (existing.IsContinuation && x > 0)
+                {
+                    var prev = index - 1;
+                    _scalars[prev] = ' ';
+                    _cells[prev] = style;
+                    _hyperlinks[prev] = 0ul;
+                }
+
+                if (x + 1 < Width)
+                {
+                    var next = index + 1;
+                    if (_cells[next].IsContinuation)
+                    {
+                        _scalars[next] = ' ';
+                        _cells[next] = style;
+                        _hyperlinks[next] = 0ul;
+                    }
+                }
+            }
+        }
+    }
+
+    internal bool ClipIntersects(Rectangle rect)
+    {
+        var a = _clipRect;
+        var x0 = Math.Max(a.X, rect.X);
+        var y0 = Math.Max(a.Y, rect.Y);
+        var x1 = Math.Min(a.Right, rect.Right);
+        var y1 = Math.Min(a.Bottom, rect.Bottom);
+        return x0 < x1 && y0 < y1;
     }
 
     /// <summary>

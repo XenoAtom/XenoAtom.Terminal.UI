@@ -70,7 +70,14 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private readonly List<IAnimatedVisual> _animatedVisuals = new();
     private long _nextAnimationTick = long.MaxValue;
 
-    private readonly HashSet<Binding> _pendingBindings = new(BindingReferenceComparer.Instance);
+    private readonly HashSet<Binding> _pendingBindingWrites = new(BindingReferenceComparer.Instance);
+
+    private bool _pendingRenderHasLayoutImpact;
+    private bool _pendingRenderDirtyRectValid;
+    private Rectangle _pendingRenderDirtyRect;
+
+    private int _lastRenderWidth;
+    private int _lastRenderHeight;
 
     internal enum DependencyKind
     {
@@ -81,11 +88,11 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         Render = 4,
     }
 
-    private readonly DependencyIndex _dynamicUpdateIndex = new();
-    private readonly DependencyIndex _prepareChildrenIndex = new();
-    private readonly DependencyIndex _measureIndex = new();
-    private readonly DependencyIndex _arrangeIndex = new();
-    private readonly DependencyIndex _renderIndex = new();
+    private readonly BindingDependencyIndex _dynamicUpdateIndex = new();
+    private readonly BindingDependencyIndex _prepareChildrenIndex = new();
+    private readonly BindingDependencyIndex _measureIndex = new();
+    private readonly BindingDependencyIndex _arrangeIndex = new();
+    private readonly BindingDependencyIndex _renderIndex = new();
 
     TerminalApp? IVisualElement.App => this;
 
@@ -490,13 +497,13 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                     _inlineRemoveOnEnd = result == TerminalLoopResult.Stop;
                 }
 
-                ProcessPendingBindings();
+                ProcessBindingWrites();
                 _renderRequested = true;
                 _cts.Cancel();
             }
         }
 
-        ProcessPendingBindings();
+        ProcessBindingWrites();
 
         if (_renderRequested)
         {
@@ -887,30 +894,30 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             }
         }
 
-        _pendingBindings.Add(binding);
+        _pendingBindingWrites.Add(binding);
     }
 
-    internal void UpdateDependencies(Visual visual, DependencyKind kind, IReadOnlyCollection<Binding> dependencies)
+    internal void UpdateBindingReadsForVisual(Visual visual, DependencyKind kind, IReadOnlyCollection<Binding> reads)
     {
         ArgumentNullException.ThrowIfNull(visual);
-        ArgumentNullException.ThrowIfNull(dependencies);
+        ArgumentNullException.ThrowIfNull(reads);
 
         switch (kind)
         {
             case DependencyKind.DynamicUpdate:
-                _dynamicUpdateIndex.Update(visual, dependencies);
+                _dynamicUpdateIndex.UpdateBindingReadsForVisual(visual, reads);
                 break;
             case DependencyKind.PrepareChildren:
-                _prepareChildrenIndex.Update(visual, dependencies);
+                _prepareChildrenIndex.UpdateBindingReadsForVisual(visual, reads);
                 break;
             case DependencyKind.Measure:
-                _measureIndex.Update(visual, dependencies);
+                _measureIndex.UpdateBindingReadsForVisual(visual, reads);
                 break;
             case DependencyKind.Arrange:
-                _arrangeIndex.Update(visual, dependencies);
+                _arrangeIndex.UpdateBindingReadsForVisual(visual, reads);
                 break;
             case DependencyKind.Render:
-                _renderIndex.Update(visual, dependencies);
+                _renderIndex.UpdateBindingReadsForVisual(visual, reads);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(kind));
@@ -927,20 +934,21 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         _renderIndex.Remove(visual);
     }
 
-    private void ProcessPendingBindings()
+    private void ProcessBindingWrites()
     {
-        if (_pendingBindings.Count == 0)
+        if (_pendingBindingWrites.Count == 0)
         {
             return;
         }
 
-        foreach (var binding in _pendingBindings)
+        foreach (var binding in _pendingBindingWrites)
         {
             if (_dynamicUpdateIndex.TryGetVisuals(binding, out var initVisuals))
             {
                 foreach (var v in initVisuals)
                 {
                     v.MarkDynamicUpdateDirty();
+                    _pendingRenderHasLayoutImpact = true;
                 }
             }
 
@@ -949,6 +957,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 foreach (var v in prepareVisuals)
                 {
                     v.MarkPrepareChildrenDirty();
+                    _pendingRenderHasLayoutImpact = true;
                 }
             }
 
@@ -957,6 +966,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 foreach (var v in measureVisuals)
                 {
                     v.MarkMeasureDirty();
+                    _pendingRenderHasLayoutImpact = true;
                 }
             }
 
@@ -965,6 +975,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 foreach (var v in arrangeVisuals)
                 {
                     v.MarkArrangeDirty();
+                    _pendingRenderHasLayoutImpact = true;
                 }
             }
 
@@ -972,13 +983,41 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             {
                 foreach (var v in renderVisuals)
                 {
-                    v.MarkRenderDirty();
+                    var bounds = v.Bounds;
+                    if (bounds.Width <= 0 || bounds.Height <= 0)
+                    {
+                        continue;
+                    }
+
+                    // Expand by 1 cell horizontally to reduce artifacts with wide glyphs clipped at region boundaries.
+                    var x = Math.Max(0, bounds.X - 1);
+                    var right = Math.Min(LayoutConstants.MaxFinite, bounds.Right + 1);
+                    var expanded = new Rectangle(x, bounds.Y, Math.Max(0, right - x), bounds.Height);
+
+                    if (!_pendingRenderDirtyRectValid)
+                    {
+                        _pendingRenderDirtyRect = expanded;
+                        _pendingRenderDirtyRectValid = true;
+                    }
+                    else
+                    {
+                        _pendingRenderDirtyRect = Union(_pendingRenderDirtyRect, expanded);
+                    }
                 }
             }
         }
 
-        _pendingBindings.Clear();
+        _pendingBindingWrites.Clear();
         _renderRequested = true;
+    }
+
+    private static Rectangle Union(Rectangle a, Rectangle b)
+    {
+        var x0 = Math.Min(a.X, b.X);
+        var y0 = Math.Min(a.Y, b.Y);
+        var x1 = Math.Max(a.Right, b.Right);
+        var y1 = Math.Max(a.Bottom, b.Bottom);
+        return new Rectangle(x0, y0, Math.Max(0, x1 - x0), Math.Max(0, y1 - y0));
     }
 
     private void Render()
@@ -996,17 +1035,49 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             Root.Measure(new LayoutConstraints(0, width, 0, height));
             Root.Arrange(new Rectangle(0, 0, width, height));
 
+            var layoutProducedWrites = _pendingBindingWrites.Count > 0;
+
+            // Ensure any bindings updated during layout are processed before rendering (e.g. Bounds from Arrange)
+            ProcessBindingWrites();
+
             var wantsCursor = TryGetDesiredCursor(out var cursorX, out var cursorY);
 
             var buffer = EnsureRenderBuffer(width, height);
-            buffer.Clear(Root.GetTheme().BaseTextStyle());
-            Root.RenderTree(buffer);
+            var baseStyle = Root.GetTheme().BaseTextStyle();
+
+            var fullRepaint =
+                _debugOverlayVisible ||
+                width != _lastRenderWidth ||
+                height != _lastRenderHeight ||
+                layoutProducedWrites ||
+                _pendingRenderHasLayoutImpact ||
+                !_pendingRenderDirtyRectValid;
+
+            _lastRenderWidth = width;
+            _lastRenderHeight = height;
+
+            if (fullRepaint)
+            {
+                buffer.Clear(baseStyle);
+                Root.RenderTree(buffer);
+            }
+            else
+            {
+                var rect = ClampToViewport(_pendingRenderDirtyRect, width, height);
+                buffer.PushClip(rect);
+                buffer.ClearCurrentClip(baseStyle);
+                Root.RenderTree(buffer);
+                buffer.PopClip();
+            }
+
             if (_debugOverlayVisible)
             {
                 RenderDebugOverlay(buffer);
             }
 
             _fullscreenHost!.Render(buffer, wantsCursor, cursorX, cursorY);
+            _pendingRenderHasLayoutImpact = false;
+            _pendingRenderDirtyRectValid = false;
             return;
         }
 
@@ -1016,11 +1087,40 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             Root.Measure(new LayoutConstraints(0, width, 0, LayoutConstants.Infinite));
             Root.Arrange(new Rectangle(0, 0, width, Root.DesiredSize.Height));
 
+            var layoutProducedWrites = _pendingBindingWrites.Count > 0;
+
+            // Ensure any bindings updated during layout are processed before rendering (e.g. Bounds from Arrange)
+            ProcessBindingWrites();
+
             var wantsCursor = TryGetDesiredCursor(out var cursorX, out var cursorY);
 
             var buffer = EnsureRenderBuffer(width, Math.Max(1, Root.DesiredSize.Height));
-            buffer.Clear(Root.GetTheme().BaseTextStyle());
-            Root.RenderTree(buffer);
+            var baseStyle = Root.GetTheme().BaseTextStyle();
+
+            var fullRepaint =
+                _debugOverlayVisible ||
+                width != _lastRenderWidth ||
+                layoutProducedWrites ||
+                _pendingRenderHasLayoutImpact ||
+                !_pendingRenderDirtyRectValid;
+
+            _lastRenderWidth = width;
+            _lastRenderHeight = Math.Max(1, _terminal.Size.Rows);
+
+            if (fullRepaint)
+            {
+                buffer.Clear(baseStyle);
+                Root.RenderTree(buffer);
+            }
+            else
+            {
+                var rect = ClampToViewport(_pendingRenderDirtyRect, width, buffer.Height);
+                buffer.PushClip(rect);
+                buffer.ClearCurrentClip(baseStyle);
+                Root.RenderTree(buffer);
+                buffer.PopClip();
+            }
+
             if (_debugOverlayVisible)
             {
                 RenderDebugOverlay(buffer);
@@ -1028,7 +1128,19 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
             _inlineHost!.Render(buffer, wantsCursor, cursorX, cursorY);
             _inlineLiveRegionTopRow = _inlineHost.LiveRegionTopRow;
+
+            _pendingRenderHasLayoutImpact = false;
+            _pendingRenderDirtyRectValid = false;
         }
+    }
+
+    private static Rectangle ClampToViewport(Rectangle rect, int width, int height)
+    {
+        var x0 = Math.Clamp(rect.X, 0, width);
+        var y0 = Math.Clamp(rect.Y, 0, height);
+        var x1 = Math.Clamp(rect.Right, 0, width);
+        var y1 = Math.Clamp(rect.Bottom, 0, height);
+        return new Rectangle(x0, y0, Math.Max(0, x1 - x0), Math.Max(0, y1 - y0));
     }
 
     private bool TryGetDesiredCursor(out int x, out int y)
@@ -2138,22 +2250,22 @@ internal sealed class AsyncAutoResetEvent
     }
 }
 
-internal sealed class DependencyIndex
+internal sealed class BindingDependencyIndex
 {
     private readonly Dictionary<Binding, HashSet<Visual>> _bindingToVisuals = new(BindingReferenceComparer.Instance);
     private readonly Dictionary<Visual, HashSet<Binding>> _visualToBindings = new();
 
-    public void Update(Visual visual, IReadOnlyCollection<Binding> dependencies)
+    public void UpdateBindingReadsForVisual(Visual visual, IReadOnlyCollection<Binding> reads)
     {
         ArgumentNullException.ThrowIfNull(visual);
-        ArgumentNullException.ThrowIfNull(dependencies);
+        ArgumentNullException.ThrowIfNull(reads);
 
         if (!_visualToBindings.TryGetValue(visual, out var old))
         {
             old = new HashSet<Binding>(BindingReferenceComparer.Instance);
             _visualToBindings.Add(visual, old);
         }
-        else if (old.SetEquals(dependencies))
+        else if (old.SetEquals(reads))
         {
             return;
         }
@@ -2161,7 +2273,7 @@ internal sealed class DependencyIndex
         // Remove old bindings no longer present.
         foreach (var binding in old)
         {
-            if (Contains(dependencies, binding))
+            if (Contains(reads, binding))
             {
                 continue;
             }
@@ -2177,7 +2289,7 @@ internal sealed class DependencyIndex
         }
 
         // Add new bindings.
-        foreach (var binding in dependencies)
+        foreach (var binding in reads)
         {
             if (old.Contains(binding))
             {
@@ -2194,7 +2306,7 @@ internal sealed class DependencyIndex
         }
 
         old.Clear();
-        foreach (var binding in dependencies)
+        foreach (var binding in reads)
         {
             old.Add(binding);
         }

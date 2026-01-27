@@ -581,7 +581,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
         if (UnionDependencies(ref _prepareChildrenDeps, session.Dependencies) && App is not null)
         {
-            App.UpdateDependencies(this, TerminalApp.DependencyKind.PrepareChildren, _prepareChildrenDeps!);
+            App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.PrepareChildren, _prepareChildrenDeps!);
         }
 
         _prepareChildrenDirty = false;
@@ -643,7 +643,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
         if (UnionDependencies(ref _measureDeps, session.Dependencies) && App is not null)
         {
-            App.UpdateDependencies(this, TerminalApp.DependencyKind.Measure, _measureDeps!);
+            App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.Measure, _measureDeps!);
         }
         _measureDirty = false;
         _hasLastMeasure = true;
@@ -675,7 +675,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         ArrangeCore(arrangedRect);
         if (UnionDependencies(ref _arrangeDeps, session.Dependencies) && App is not null)
         {
-            App.UpdateDependencies(this, TerminalApp.DependencyKind.Arrange, _arrangeDeps!);
+            App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.Arrange, _arrangeDeps!);
         }
         _arrangeDirty = false;
         _hasLastArrange = true;
@@ -941,6 +941,11 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     internal void RenderTree(CellBuffer buffer)
     {
         VerifyAccess();
+        if (!buffer.ClipIntersects(Bounds))
+        {
+            return;
+        }
+
         EnsureDynamicUpdatesApplied();
         EnsureChildrenPrepared();
 
@@ -957,7 +962,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
             if (ReplaceDependencies(ref _renderDeps, session.Dependencies) && App is not null)
             {
-                App.UpdateDependencies(this, TerminalApp.DependencyKind.Render, _renderDeps!);
+                App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.Render, _renderDeps!);
             }
         }
 
@@ -1074,7 +1079,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
         if (ReplaceDependencies(ref _dynamicUpdateDeps, session.Dependencies) && App is not null)
         {
-            App.UpdateDependencies(this, TerminalApp.DependencyKind.DynamicUpdate, _dynamicUpdateDeps!);
+            App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.DynamicUpdate, _dynamicUpdateDeps!);
         }
     }
 
