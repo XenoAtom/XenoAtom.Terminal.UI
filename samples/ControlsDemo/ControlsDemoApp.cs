@@ -92,6 +92,7 @@ internal static class ControlsDemoApp
         var colorSchemes = new Select<ColorScheme>().Items(ColorScheme.GetPredefinedSchemes());
         colorSchemes.SelectedIndex = colorSchemes.Items.IndexOf(ColorScheme.ElderberryDarkSoft);
 
+        ToastHost? toastHost = null;
         var page = new ComputedVisual(() =>
         {
             var id = selectedDemoId.Value;
@@ -110,24 +111,33 @@ internal static class ControlsDemoApp
 
             return demo is null
                 ? new Center().Content("No demos found.")
-                : DemoPage.Build(demo, new DemoContext { NavigateToDemoId = NavigateToId, Log = _ => { }, Runtime = runtime, Theme = theme });
+                : DemoPage.Build(demo, new DemoContext
+                {
+                    NavigateToDemoId = NavigateToId,
+                    Log = _ => { },
+                    Runtime = runtime,
+                    Theme = theme,
+                    ToastHost = toastHost,
+                });
         }).Pad(1).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
 
 
-        var root = new DockLayout()
+        var layout = new DockLayout()
             .Content(new HSplitter(sidebar, page).Ratio(0.16))
             .Bottom(
                 new Footer().Left("Tab focus | Mouse | Resize")
                     .Center(new HStack("🎨 Select Theme: ", colorSchemes))
                     .Right(new CommandBar()));
 
-        root.Update(c =>
+        toastHost = new ToastHost(layout);
+
+        toastHost.Update(c =>
         {
             var colorScheme = colorSchemes.Items[colorSchemes.SelectedIndex];
             c.Style(Theme.FromScheme(colorScheme));
         });
 
-        return root;
+        return toastHost;
     }
 
     private static void RebuildSidebarList(OptionList<OptionListItem> list, List<string?> demoIdForIndex, IReadOnlyList<IControlsDemo> demos, State<string> selectedDemoId, string query)

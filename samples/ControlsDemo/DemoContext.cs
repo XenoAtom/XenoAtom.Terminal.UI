@@ -1,3 +1,4 @@
+using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo;
@@ -11,4 +12,6 @@ public sealed class DemoContext
     public required DemoRuntime Runtime { get; init; }
 
     public required Theme Theme { get; init; }
+
+    public ToastHost? ToastHost { get; init; }
 }

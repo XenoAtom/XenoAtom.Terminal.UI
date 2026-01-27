@@ -11,7 +11,7 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
   - **Inline** widgets via `Terminal.Write(...)` and `Terminal.Live(...)`
   - **Fullscreen** apps via `Terminal.Run(...)` (alternate screen + input loop)
 - **Modern control library** (50+ built-in controls):
-  - Buttons, toggles, lists, tables, tabs, menus, dialogs/popups, charts, progress, spinners, tooltips…
+  - Buttons, toggles, lists, tables, tabs, menus, dialogs/popups, **toasts**, charts, progress, spinners, tooltips…
   - Text editing: **TextBox**, **TextArea**, **MaskedInput**, **NumberBox** (undo/redo: `Ctrl+Z` / `Ctrl+R`)
   - Advanced widgets: **LogControl**, **CommandPalette**, **BreakdownChart**, **ColorPicker**
 - **Binding-first UI**:
@@ -93,6 +93,7 @@ Highlights:
 - Lists: `ListBox`, `OptionList`, `SelectionList`, `Select<T>`, `TreeView`
 - Layout: `VStack`, `HStack`, `Grid`, `DockLayout`, `Splitters`, `Border`, `Group`, `Padder`
 - Overlays: `Popup`, `Dialog`, `TooltipHost`, `Backdrop`
+- Toasts: `Toast`, `ToastHost` (overlay notifications)
 - Visualization: `BarChart`, `LineChart`, `Sparkline`, `Canvas`, `BreakdownChart`, `TextFiglet`
 - Progress: `ProgressBar`, `ProgressTaskGroup`, `Spinner`
 

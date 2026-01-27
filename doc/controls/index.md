@@ -82,3 +82,4 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 - `doc/controls/dialog.md`
 - `doc/controls/tooltip.md`
 - `doc/controls/backdrop.md`
+- `doc/controls/toast.md`

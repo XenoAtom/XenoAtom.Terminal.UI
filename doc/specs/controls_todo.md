@@ -35,7 +35,7 @@ Following this list, you will find compact specs for high and medium priority co
 | [x] | **Medium** | **LogControl (scrolling log viewer)**                 | Status/diagnostics         | Live logs with search + copy         | Common need for apps, progress, and debugging     |
 | [x] | **Medium** | **Links (clickable/open URL)**                        | Interaction/content        | Hyperlinks in terminal               | Terminal support varies                           |
 | [x] | **Medium** | **ContentSwitcher (view routing)**                  | Layout/state               | Swap views without rebuild           | Great for navigation/wizards                      |
-| [ ] | **Low**   | **Toast / Notification**                               | UX feedback                | Non-blocking feedback                | Modern UX; avoids modal spam                      |
+| [x] | **Low**   | **Toast / Notification**                               | UX feedback                | Non-blocking feedback                | Modern UX; avoids modal spam                      |
 | [ ] | **Low**    | **Digits / KPI big-number**                           | Visualization              | Dashboard counters                   | Mostly polish                                     |
 | [ ] | **Low**    | **Placeholder / empty-state widget**                  | UX                         | No-results/loading states            | Polish; easy to fake                              |
 | [x] | **Low**    | **Figlet / big text**                                 | Visual                     | Banners/headers                      | Fun, rarely essential                             |

@@ -826,7 +826,10 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     internal void RegisterAnimatedVisual(IAnimatedVisual visual)
     {
         ArgumentNullException.ThrowIfNull(visual);
-        _animatedVisuals.Add(visual);
+        if (!_animatedVisuals.Contains(visual))
+        {
+            _animatedVisuals.Add(visual);
+        }
         _nextAnimationTick = 0;
     }
 
