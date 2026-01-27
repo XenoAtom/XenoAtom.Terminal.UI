@@ -287,9 +287,21 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// </summary>
     protected virtual Visual GetChild(int index) => throw new ArgumentOutOfRangeException(nameof(index));
 
-    internal int GetChildrenCount() => ChildrenCount;
+    internal int GetChildrenCount()
+    {
+        VerifyAccess();
+        EnsureDynamicUpdatesApplied();
+        EnsureChildrenPrepared();
+        return ChildrenCount;
+    }
 
-    internal Visual GetChildUnsafe(int index) => GetChild(index);
+    internal Visual GetChildUnsafe(int index)
+    {
+        VerifyAccess();
+        EnsureDynamicUpdatesApplied();
+        EnsureChildrenPrepared();
+        return GetChild(index);
+    }
 
     /// <summary>
     /// Attaches a child visual to this instance and connects it to the application if already attached.
@@ -967,6 +979,8 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     public IEnumerable<Visual> EnumerateVisualsDepthFirst()
     {
         VerifyAccess();
+        EnsureDynamicUpdatesApplied();
+        EnsureChildrenPrepared();
         yield return this;
 
         for (var i = 0; i < ChildrenCount; i++)
@@ -988,6 +1002,8 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     public Visual? HitTest(int x, int y)
     {
         VerifyAccess();
+        EnsureDynamicUpdatesApplied();
+        EnsureChildrenPrepared();
         if (!IsVisible || !_isHitTestVisible || !Bounds.Contains(x, y))
         {
             return null;

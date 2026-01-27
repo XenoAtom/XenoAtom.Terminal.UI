@@ -21,7 +21,7 @@ public sealed partial class ScrollViewer : Visual
     private readonly ScrollBar _verticalBar;
     private readonly ScrollBar _horizontalBar;
     private readonly ScrollCornerVisual _corner;
-    private Visual? _content;
+    private Visual? _appliedContent;
     private IScrollable? _contentScrollable;
     private ScrollModel? _contentScrollModel;
     private readonly Action _contentScrollModelChanged;
@@ -142,28 +142,20 @@ public sealed partial class ScrollViewer : Visual
     /// <summary>
     /// Gets or sets the content visual.
     /// </summary>
-    [Bindable]
-    public Visual? Content
+    [Bindable(NoVisualAttach = true)]
+    public partial Visual? Content { get; set; }
+
+    /// <inheritdoc />
+    protected override void PrepareChildren()
     {
-        get
+        // The scroll viewer hosts its content through an internal ContentViewportHost. The Content property is a
+        // template-like input and must not auto-attach to this visual.
+        var content = Content;
+        if (!ReferenceEquals(_appliedContent, content))
         {
-            VerifyAccess();
-            BindingManager.Current.RegisterRead(this, __Content__BindingAccessor.Instance);
-            return _content;
-        }
-        set
-        {
-            VerifyAccess();
-            if (ReferenceEquals(_content, value))
-            {
-                return;
-            }
-
-            _content = value;
-            _contentHost.SetContent(value);
-            UpdateContentScrollable(value as IScrollable);
-
-            BindingManager.Current.NotifyValueChanged(this, __Content__BindingAccessor.Instance);
+            _appliedContent = content;
+            _contentHost.SetContent(content);
+            UpdateContentScrollable(content as IScrollable);
         }
     }
 
