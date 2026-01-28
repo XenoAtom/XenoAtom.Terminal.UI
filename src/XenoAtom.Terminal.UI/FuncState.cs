@@ -79,7 +79,7 @@ public sealed partial class FuncState<T>
             _dependencies.Clear();
         }
 
-        foreach (var dep in session.Dependencies)
+        foreach (var dep in session.Reads)
         {
             _dependencies.Add(dep);
         }

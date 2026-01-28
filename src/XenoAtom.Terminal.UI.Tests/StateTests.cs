@@ -16,7 +16,7 @@ public sealed class StateTests
         _ = state.Value;
 
         var dep = (Binding)state;
-        Assert.Contains(dep, session.Dependencies, "Expected State.Value read to be tracked as a Binding dependency.");
+        Assert.Contains(dep, session.Reads, "Expected State.Value read to be tracked as a Binding dependency.");
     }
 
     [TestMethod]

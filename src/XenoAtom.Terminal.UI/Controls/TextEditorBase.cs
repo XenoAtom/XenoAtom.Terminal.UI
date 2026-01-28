@@ -329,11 +329,14 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
 
     bool ITextEditorHost.IsFocused => ReferenceEquals(App?.FocusedElement, this);
 
-    void ITextEditorHost.InvalidateEditor() => EditorVersion++;
+    void ITextEditorHost.InvalidateEditor()
+    {
+        EditorVersion = _editorVersion + 1;
+    }
 
     void ITextEditorHost.MarkEditorArrangeDirty()
     {
-        EditorVersion++;
+        EditorVersion = _editorVersion + 1;
     }
 
     bool ITextEditorHost.TryOpenSearchReplacePopup(SearchReplaceMode mode, string? initialSearchText)

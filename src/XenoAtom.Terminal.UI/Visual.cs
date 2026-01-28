@@ -579,7 +579,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         using var session = BindingManager.Current.StartTracking();
         PrepareChildren();
 
-        if (UnionDependencies(ref _prepareChildrenDeps, session.Dependencies) && App is not null)
+        if (UnionDependencies(ref _prepareChildrenDeps, session.Reads) && App is not null)
         {
             App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.PrepareChildren, _prepareChildrenDeps!);
         }
@@ -641,7 +641,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             MarkArrangeDirtyLocal();
         }
 
-        if (UnionDependencies(ref _measureDeps, session.Dependencies) && App is not null)
+        if (UnionDependencies(ref _measureDeps, session.Reads) && App is not null)
         {
             App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.Measure, _measureDeps!);
         }
@@ -673,7 +673,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         var arrangedRect = ApplyArrangeConstraints(innerSlot);
         Bounds = arrangedRect;
         ArrangeCore(arrangedRect);
-        if (UnionDependencies(ref _arrangeDeps, session.Dependencies) && App is not null)
+        if (UnionDependencies(ref _arrangeDeps, session.Reads) && App is not null)
         {
             App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.Arrange, _arrangeDeps!);
         }
@@ -960,7 +960,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
                 buffer.PopClip();
             }
 
-            if (ReplaceDependencies(ref _renderDeps, session.Dependencies) && App is not null)
+            if (ReplaceDependencies(ref _renderDeps, session.Reads) && App is not null)
             {
                 App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.Render, _renderDeps!);
             }
@@ -1077,7 +1077,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             app?.SetVisualBeingDynamicallyInitialized(null);
         }
 
-        if (ReplaceDependencies(ref _dynamicUpdateDeps, session.Dependencies) && App is not null)
+        if (ReplaceDependencies(ref _dynamicUpdateDeps, session.Reads) && App is not null)
         {
             App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.DynamicUpdate, _dynamicUpdateDeps!);
         }

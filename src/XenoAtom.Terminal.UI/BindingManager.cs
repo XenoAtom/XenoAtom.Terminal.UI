@@ -69,9 +69,19 @@ public sealed class BindingManager
         }
 
         backingField = value;
+
+        // Ensure the visual element is loaded to avoid tracking writes on unloaded elements
+        if (owner is IVisualElement { App: null })
+        {
+            return true;
+        }
+        
         if (_suppressNotifications == 0)
         {
-            ValueChanged?.Invoke(new Binding(owner, accessor));
+            if (_tracking is null || _tracking.RegisterWrite(owner, accessor))
+            {
+                ValueChanged?.Invoke(new Binding(owner, accessor));
+            }
         }
         return true;
     }
@@ -89,7 +99,7 @@ public sealed class BindingManager
         var previous = _tracking;
         var current = new TrackingContext();
         _tracking = current;
-        return new TrackingSession(previous, current.Dependencies);
+        return new TrackingSession(previous, current.Reads, current.Writes);
     }
 
     /// <summary>
@@ -100,7 +110,7 @@ public sealed class BindingManager
     {
         var previous = _tracking;
         _tracking = null;
-        return new TrackingSession(previous, ReadOnlySet<Binding>.Empty);
+        return new TrackingSession(previous, ReadOnlySet<Binding>.Empty, ReadOnlySet<Binding>.Empty);
     }
 
     internal DynamicUpdateSession BeginDynamicUpdate(object owner)
@@ -184,16 +194,22 @@ public sealed class BindingManager
     {
         private readonly TrackingContext? _previous;
 
-        internal TrackingSession(object? previous, IReadOnlySet<Binding> dependencies)
+        internal TrackingSession(object? previous, IReadOnlySet<Binding> reads, IReadOnlySet<Binding> writes)
         {
             _previous = (TrackingContext?)previous;
-            Dependencies = dependencies;
+            Reads = reads;
+            Writes = writes;
         }
 
         /// <summary>
         /// Gets the dependencies that were read during the tracking session.
         /// </summary>
-        public IReadOnlySet<Binding> Dependencies { get; }
+        public IReadOnlySet<Binding> Reads { get; }
+
+        /// <summary>
+        /// Gets the set of bindings that are written by this operation.
+        /// </summary>
+        public IReadOnlySet<Binding> Writes { get; }
 
         /// <summary>
         /// Restores the previous tracking context.
@@ -206,13 +222,33 @@ public sealed class BindingManager
 
     private sealed class TrackingContext
     {
-        private readonly HashSet<Binding> _dependencies = new(BindingReferenceComparer.Instance);
+        private readonly HashSet<Binding> _reads = new(BindingReferenceComparer.Instance);
+        private readonly HashSet<Binding> _writes = new(BindingReferenceComparer.Instance);
 
-        public IReadOnlySet<Binding> Dependencies => _dependencies;
+        public IReadOnlySet<Binding> Reads => _reads;
+
+        public IReadOnlySet<Binding> Writes => _writes;
 
         public void RegisterRead(object owner, BindingAccessor accessor)
         {
-            _dependencies.Add(new Binding(owner, accessor));
+            var binding = new Binding(owner, accessor);
+            // If we are writing the same binding, we don't track the read to avoid cycles
+            if (!_writes.Contains(binding))
+            {
+                _reads.Add(binding);
+            }
+        }
+
+        public bool RegisterWrite(object owner, BindingAccessor accessor)
+        {
+            var binding = new Binding(owner, accessor);
+            // If we are both reading and then writing the same binding, we won't track the writes to avoid cycles
+            if (_reads.Contains(binding))
+            {
+                return false;
+            }
+            _writes.Add(binding);
+            return true;
         }
     }
 }

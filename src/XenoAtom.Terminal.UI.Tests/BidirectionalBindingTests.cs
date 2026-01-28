@@ -18,7 +18,7 @@ public sealed class BidirectionalBindingTests
         using var session = BindingManager.Current.StartTracking();
         _ = binding.GetValue();
 
-        Assert.Contains((Binding)state, session.Dependencies);
+        Assert.Contains((Binding)state, session.Reads);
     }
 
     [TestMethod]

@@ -81,7 +81,7 @@ public sealed partial class ScrollModel : IVisualElement
         width = Math.Max(0, width);
         height = Math.Max(0, height);
 
-        if (ViewportWidth == width && ViewportHeight == height)
+        if (_viewportWidth == width && _viewportHeight == height)
         {
             return;
         }
@@ -100,7 +100,7 @@ public sealed partial class ScrollModel : IVisualElement
         width = Math.Max(0, width);
         height = Math.Max(0, height);
 
-        if (ExtentWidth == width && ExtentHeight == height)
+        if (_extentWidth == width && _extentHeight == height)
         {
             return;
         }
@@ -116,12 +116,12 @@ public sealed partial class ScrollModel : IVisualElement
     /// </summary>
     public void SetOffset(int x, int y)
     {
-        var maxX = Math.Max(0, ExtentWidth - ViewportWidth);
-        var maxY = Math.Max(0, ExtentHeight - ViewportHeight);
+        var maxX = Math.Max(0, _extentWidth - _viewportWidth);
+        var maxY = Math.Max(0, _extentHeight - _viewportHeight);
         var clampedX = Math.Clamp(x, 0, maxX);
         var clampedY = Math.Clamp(y, 0, maxY);
 
-        if (OffsetX == clampedX && OffsetY == clampedY)
+        if (_offsetX == clampedX && _offsetY == clampedY)
         {
             return;
         }
@@ -136,7 +136,7 @@ public sealed partial class ScrollModel : IVisualElement
     /// </summary>
     public void ScrollBy(int dx, int dy)
     {
-        SetOffset(OffsetX + dx, OffsetY + dy);
+        SetOffset(_offsetX + dx, _offsetY + dy);
     }
 
     /// <summary>
@@ -144,25 +144,25 @@ public sealed partial class ScrollModel : IVisualElement
     /// </summary>
     public void ScrollToMakeVisible(int xCell, int yRow)
     {
-        var targetX = OffsetX;
-        var targetY = OffsetY;
+        var targetX = _offsetX;
+        var targetY = _offsetY;
 
-        if (xCell < OffsetX)
+        if (xCell < _offsetX)
         {
             targetX = xCell;
         }
-        else if (xCell >= OffsetX + ViewportWidth)
+        else if (xCell >= _offsetX + _viewportWidth)
         {
-            targetX = xCell - Math.Max(0, ViewportWidth - 1);
+            targetX = xCell - Math.Max(0, _viewportWidth - 1);
         }
 
-        if (yRow < OffsetY)
+        if (yRow < _offsetY)
         {
             targetY = yRow;
         }
-        else if (yRow >= OffsetY + ViewportHeight)
+        else if (yRow >= _offsetY + _viewportHeight)
         {
-            targetY = yRow - Math.Max(0, ViewportHeight - 1);
+            targetY = yRow - Math.Max(0, _viewportHeight - 1);
         }
 
         SetOffset(targetX, targetY);
@@ -170,9 +170,9 @@ public sealed partial class ScrollModel : IVisualElement
 
     private void ClampOffsets()
     {
-        var maxX = Math.Max(0, ExtentWidth - ViewportWidth);
-        var maxY = Math.Max(0, ExtentHeight - ViewportHeight);
-        OffsetX = Math.Clamp(OffsetX, 0, maxX);
-        OffsetY = Math.Clamp(OffsetY, 0, maxY);
+        var maxX = Math.Max(0, _extentWidth - _viewportWidth);
+        var maxY = Math.Max(0, _extentHeight - _viewportHeight);
+        OffsetX = Math.Clamp(_offsetX, 0, maxX);
+        OffsetY = Math.Clamp(_offsetY, 0, maxY);
     }
 }

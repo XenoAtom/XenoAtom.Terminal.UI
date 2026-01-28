@@ -316,7 +316,7 @@ public partial class Toast : Visual
             _ => style.InfoIcon,
         };
 
-        _iconBlock.Text(iconRune.ToString());
+        _iconBlock.Text = iconRune.ToString();
         _iconPad.Padding = new Thickness(0, 0, Math.Max(0, style.IconSpacing), 0);
 
         var iconStyle = CreateTextBlockStyle(style.ResolveIconStyle(theme, severity));
