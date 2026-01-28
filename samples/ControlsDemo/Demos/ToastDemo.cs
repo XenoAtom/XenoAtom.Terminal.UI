@@ -20,14 +20,14 @@ public sealed class ToastDemo : ControlsDemoBase
                 .Spacing(1);
         }
 
-        var positionState = new State<ToastPosition>(ToastPosition.TopRight);
+        var positionState = new State<ToastPosition>(ToastPosition.BottomRight);
         var maxVisibleState = new State<int>(4);
         var durationSecondsState = new State<int>(4);
         var pauseOnHoverState = new State<bool>(true);
         var showProgressState = new State<bool>(true);
 
         var positionSelect = new EnumSelect<ToastPosition>();
-        var initialIndex = Enum.GetValues<ToastPosition>().IndexOf(ToastPosition.TopRight);
+        var initialIndex = Enum.GetValues<ToastPosition>().IndexOf(ToastPosition.BottomRight);
         positionSelect.SelectedIndex = initialIndex >= 0 ? initialIndex : 0;
 
         positionSelect.SelectionChanged((_, e) =>
@@ -62,7 +62,11 @@ public sealed class ToastDemo : ControlsDemoBase
         var pauseOnHoverToggle = new CheckBox("Pause on hover", true).IsChecked(pauseOnHoverState);
         var showProgressToggle = new CheckBox("Show countdown", true).IsChecked(showProgressState);
 
-        ConfigureHost(context.ToastHost, positionState, maxVisibleState, durationSecondsState, pauseOnHoverState);
+        // Configure the host
+        context.ToastHost.Position(positionState)
+        .MaxVisible(maxVisibleState)
+        .PauseOnHover(pauseOnHoverState)
+        .DefaultDuration(() => TimeSpan.FromSeconds(Math.Max(1, durationSecondsState.Value)));
 
         void ShowToast(ToastSeverity severity)
         {
@@ -131,13 +135,5 @@ public sealed class ToastDemo : ControlsDemoBase
                         actions)
                     .Spacing(1).MinWidth(60)))
             .Spacing(1);
-    }
-
-    private static void ConfigureHost(ToastHost host, State<ToastPosition> position, State<int> maxVisible, State<int> durationSeconds, State<bool> pauseOnHover)
-    {
-        host.Position(position);
-        host.MaxVisible(maxVisible);
-        host.PauseOnHover(pauseOnHover);
-        host.DefaultDuration(() => TimeSpan.FromSeconds(Math.Max(1, durationSeconds.Value)));
     }
 }

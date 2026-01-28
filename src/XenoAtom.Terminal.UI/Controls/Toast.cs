@@ -52,13 +52,9 @@ public partial class Toast : Visual
 {
     private readonly Border _border;
     private readonly VStack _stack;
-    private readonly Grid _header;
-    private readonly Padder _iconPad;
+    private readonly HStack _header;
     private readonly TextBlock _iconBlock;
     private readonly Padder _titleHost;
-    private readonly GridCell _iconCell;
-    private readonly GridCell _titleCell;
-    private readonly GridCell _closeCell;
     private readonly Button _closeButton;
     private readonly HStack _actionRow;
     private readonly ProgressBar _progressBar;
@@ -83,26 +79,18 @@ public partial class Toast : Visual
         ShowCloseButton = true;
 
         _iconBlock = new TextBlock();
-        _iconPad = new Padder(_iconBlock);
 
-        _titleHost = new Padder();
+        _titleHost = new Padder().HorizontalAlignment(Align.Stretch);
 
-        _closeButton = new ToastButton();
+        _closeButton = new ToastButton().HorizontalAlignment(Align.End);
         _actionRow = new HStack().Spacing(1);
         _progressBar = new ProgressBar().HorizontalAlignment(Align.Stretch);
+        _progressBar.BindValue(this.Bind.CountdownProgress);
 
-        _header = new Grid();
-        _header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        _header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Star(1) });
-        _header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        _header.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-
-        _iconCell = new GridCell { Row = 0, Column = 0 };
-        _titleCell = new GridCell { Row = 0, Column = 1 };
-        _closeCell = new GridCell { Row = 0, Column = 2 };
-        _header.Cells.Add(_iconCell);
-        _header.Cells.Add(_titleCell);
-        _header.Cells.Add(_closeCell);
+        _header = new HStack().HorizontalAlignment(Align.Stretch).Spacing(1);
+        _header.Children.Add(_iconBlock);
+        _header.Children.Add(_titleHost);
+        _header.Children.Add(_closeButton);
 
         _stack = new VStack().Spacing(1).HorizontalAlignment(Align.Stretch);
 
@@ -271,7 +259,6 @@ public partial class Toast : Visual
         var showClose = ShowCloseButton;
         var showProgress = ShowProgress;
         var severity = Severity;
-        var progress = CountdownProgress;
 
         var theme = GetTheme();
         var style = GetStyle<ToastStyle>();
@@ -306,7 +293,6 @@ public partial class Toast : Visual
         _border.Style(borderStyle);
 
         _progressBar.Style(style.ProgressStyle);
-        _progressBar.Value(progress);
 
         var iconRune = severity switch
         {
@@ -316,8 +302,7 @@ public partial class Toast : Visual
             _ => style.InfoIcon,
         };
 
-        _iconBlock.Text = iconRune.ToString();
-        _iconPad.Padding = new Thickness(0, 0, Math.Max(0, style.IconSpacing), 0);
+        _iconBlock.Text = iconRune;
 
         var iconStyle = CreateTextBlockStyle(style.ResolveIconStyle(theme, severity));
         if (_iconTextStyle != iconStyle)
@@ -334,7 +319,7 @@ public partial class Toast : Visual
             _titleTextStyle = titleStyle;
         }
 
-        _closeButton.Content = style.CloseIcon.ToString();
+        _closeButton.Content = style.CloseIcon;
         _closeButton.Style(ButtonStyle.Default with
         {
             Padding = Thickness.Zero,
@@ -352,25 +337,35 @@ public partial class Toast : Visual
             _actionRow.Children.Add(actionVisual);
         }
 
-        _iconCell.Content = showIcon ? _iconPad : null;
+        bool hasHeader = false;
+        _header.Children.Clear();
+        if (showIcon)
+        {
+            _header.Children.Add(_iconBlock);
+            hasHeader = true;
+        }
 
-        _titleHost.Content = title;
-        _titleCell.Content = title is null ? null : _titleHost;
-
+        if (title is not null)
+        {
+            _titleHost.Content = title;
+            _header.Children.Add(_titleHost);
+            hasHeader = true;
+        }
+        
         if (showClose)
         {
             EnsureCloseHandler();
-            _closeCell.Content = _closeButton;
+            _header.Children.Add(_closeButton);
+            hasHeader = true;
         }
         else
         {
             RemoveCloseHandler();
-            _closeCell.Content = null;
         }
 
         _stack.Children.Clear();
 
-        if (_iconCell.Content is not null || _titleCell.Content is not null || _closeCell.Content is not null)
+        if (hasHeader)
         {
             _stack.Children.Add(_header);
         }
@@ -382,6 +377,7 @@ public partial class Toast : Visual
 
         if (actionVisual is not null)
         {
+
             _stack.Children.Add(_actionRow);
         }
 

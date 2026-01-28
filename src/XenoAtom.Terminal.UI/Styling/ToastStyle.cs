@@ -51,27 +51,27 @@ public sealed record ToastStyle : IStyle<ToastStyle>
     /// <summary>
     /// Gets the icon for informational toasts.
     /// </summary>
-    public Rune InfoIcon { get; init; } = new('ℹ');
+    public string InfoIcon { get; init; } = "ℹ️";
 
     /// <summary>
     /// Gets the icon for success toasts.
     /// </summary>
-    public Rune SuccessIcon { get; init; } = new('✅');
+    public string SuccessIcon { get; init; } = "✅";
 
     /// <summary>
     /// Gets the icon for warning toasts.
     /// </summary>
-    public Rune WarningIcon { get; init; } = new('⚠');
+    public string WarningIcon { get; init; } = "⚠️";
 
     /// <summary>
     /// Gets the icon for error toasts.
     /// </summary>
-    public Rune ErrorIcon { get; init; } = new('❌');
+    public string ErrorIcon { get; init; } = "❌";
 
     /// <summary>
     /// Gets the icon used for the close button.
     /// </summary>
-    public Rune CloseIcon { get; init; } = new('X');
+    public string CloseIcon { get; init; } = "X";
 
     /// <summary>
     /// Gets the progress bar style used for countdowns.
