@@ -1,0 +1,627 @@
+# DataGrid (High-Performance Data Table) Control Specs
+
+This document specifies a new **high-performance tabular data control** for **XenoAtom.Terminal.UI**.
+
+The existing `Table` control is intentionally simple and geared toward *static display*. A separate control is needed for
+large datasets and advanced interactions (scrolling, frozen rows/columns, selection, sorting, filtering, and bulk edit).
+
+This control is named **`DataGrid`** (and related types) to avoid collision/confusion with `System.Data.DataTable`.
+The design is inspired by modern terminal UI patterns and spreadsheet/datagrid ecosystems (e.g. Textual’s DataTable).
+
+---
+
+## 1. Goals
+
+- **High performance** with large datasets (10k+ rows) through virtualization and allocation-conscious rendering.
+- **Scrollable** in both directions, with optional **frozen** header/rows/columns.
+- **Versatile data model**:
+  - bind to arbitrary row models (POCO/view-model objects),
+  - adapt to `System.Data.DataTable`,
+  - support custom “database-like” sources (paged/remote) without loading all rows.
+- **Proper mutation API** (document-like) similar in spirit to `ITextDocument`:
+  - explicit edit operations,
+  - versioning,
+  - change notifications,
+  - batching.
+- **Templating** for display and editing via `DataTemplate<T>` (see `doc/specs/data_template_specs.md`).
+- **Bulk editing UX**: cell navigation + inline editor, with efficient commit/cancel and validation hooks.
+
+## 2. Non-goals (V1)
+
+- A full spreadsheet formula engine.
+- Per-cell arbitrary nested interactive UI as the default rendering path (allowed, but not the fast path).
+- Automatic column type inference that guesses wrong; favor explicit columns or adapters.
+- Pixel-perfect parity with GUI DataGrids; this is a terminal-first control.
+
+---
+
+## 3. Terminology
+
+- **Document**: the mutable underlying data structure (rows, columns, values) with change notifications.
+- **Snapshot**: an immutable view of a document at a specific version (read-only; safe for rendering).
+- **View**: a projection of the document (filtering/sorting/row mapping).
+- **Cell**: intersection of a row and a column.
+- **Viewport**: the visible rectangle of the control (terminal cells).
+- **Frozen**: always visible region (header row, optional top rows / left columns).
+
+---
+
+## 4. Architecture overview
+
+`DataGrid` is split into three layers:
+
+1) **`IDataGridDocument`** — owns data and mutations (similar to `ITextDocument`).
+2) **`IDataGridView`** — provides a sorted/filtered projection over a document (optional but recommended).
+3) **`DataGrid`** — the visual control; handles input, rendering, selection, and editing.
+
+The control MUST be able to operate with:
+
+- a direct document (`Document != null`, `View == null`), or
+- an explicit view (`View != null`) that internally references a document.
+
+---
+
+## 5. Data model contracts
+
+### 5.1 `IDataGridDocument` (mutation + versioning)
+
+The document API SHOULD follow the same design principles as `ITextDocument`:
+
+- a **version number** that increments on mutations,
+- a **snapshot** for stable reads,
+- a **batch update scope** (`BeginUpdate()`),
+- a **single change event** carrying enough info to invalidate derived state efficiently.
+
+```csharp
+namespace XenoAtom.Terminal.UI.DataGrid;
+
+/// <summary>
+/// Represents a mutable tabular document that provides snapshots and change notifications.
+/// </summary>
+public interface IDataGridDocument
+{
+    /// <summary>Gets the current snapshot of the document.</summary>
+    IDataGridSnapshot CurrentSnapshot { get; }
+
+    /// <summary>Gets the current version number for the document.</summary>
+    int Version { get; }
+
+    /// <summary>Begins a batch update scope.</summary>
+    IDisposable BeginUpdate();
+
+    /// <summary>Sets the raw cell value at (row, column).</summary>
+    void SetValue(int rowIndex, int columnIndex, object? value);
+
+    /// <summary>Occurs when the document content or schema changes.</summary>
+    event EventHandler<DataGridDocumentChangedEventArgs> Changed;
+}
+```
+
+### 5.2 `IDataGridSnapshot` (stable reads for rendering)
+
+Snapshots MUST be:
+
+- immutable (from the consumer point of view),
+- cheap to obtain (`CurrentSnapshot`),
+- safe to use without locks from UI rendering code.
+
+```csharp
+namespace XenoAtom.Terminal.UI.DataGrid;
+
+public interface IDataGridSnapshot
+{
+    int Version { get; }
+
+    int RowCount { get; }
+    int ColumnCount { get; }
+
+    DataGridColumnInfo GetColumn(int columnIndex);
+
+    /// <summary>Gets the raw cell value at (row, column).</summary>
+    object? GetValue(int rowIndex, int columnIndex);
+}
+
+public readonly record struct DataGridColumnInfo(
+    string Key,
+    string HeaderText,
+    Type? ValueType = null,
+    bool ReadOnly = false);
+```
+
+Notes:
+
+- `Key` MUST be stable across versions for a “logical column” (even if the column order changes).
+- `HeaderText` is a convenience; `DataGrid` can also accept a header template/visual.
+- `ReadOnly` indicates that the underlying data source does not support edits for this column (e.g. no setter, computed
+  value, read-only `DataColumn`).
+
+### 5.3 Change event args
+
+Changes should be communicated as *coarse ranges* and *kinds* to keep invalidation fast.
+
+```csharp
+namespace XenoAtom.Terminal.UI.DataGrid;
+
+[Flags]
+public enum DataGridChangeKind
+{
+    None        = 0,
+    Values      = 1 << 0, // cell values changed
+    Rows        = 1 << 1, // rows inserted/removed/moved
+    Columns     = 1 << 2, // columns inserted/removed/moved
+    Schema      = 1 << 3, // column metadata changed
+    Reset       = 1 << 4, // large change; drop caches
+}
+
+public sealed class DataGridDocumentChangedEventArgs : EventArgs
+{
+    public required int OldVersion { get; init; }
+    public required int NewVersion { get; init; }
+
+    public required DataGridChangeKind Kind { get; init; }
+
+    /// <summary>Row range affected, if applicable.</summary>
+    public int RowIndex { get; init; } = -1;
+    public int RowCount { get; init; }
+
+    /// <summary>Column range affected, if applicable.</summary>
+    public int ColumnIndex { get; init; } = -1;
+    public int ColumnCount { get; init; }
+}
+```
+
+Normative guidance:
+
+- Implementations SHOULD use `Reset` when precise ranges are expensive to compute.
+- `BeginUpdate()` SHOULD coalesce multiple edits into a single `Changed` event where possible.
+
+---
+
+## 6. View model for sorting/filtering (optional but recommended)
+
+To avoid forcing `DataGrid` to materialize or reorder large datasets itself, sorting/filtering should be delegated to
+an `IDataGridView` abstraction.
+
+```csharp
+namespace XenoAtom.Terminal.UI.DataGrid;
+
+public interface IDataGridView
+{
+    IDataGridDocument Document { get; }
+
+    /// <summary>Gets the current snapshot for the view projection.</summary>
+    IDataGridViewSnapshot CurrentSnapshot { get; }
+
+    event EventHandler<DataGridViewChangedEventArgs> Changed;
+}
+
+public interface IDataGridViewSnapshot
+{
+    int Version { get; }
+    int RowCount { get; }
+    int ColumnCount { get; }
+
+    DataGridColumnInfo GetColumn(int columnIndex);
+
+    /// <summary>Maps a view row index to a document row index.</summary>
+    int MapRowToDocument(int viewRowIndex);
+
+    object? GetValue(int viewRowIndex, int columnIndex);
+    void SetValue(int viewRowIndex, int columnIndex, object? value);
+}
+
+public sealed class DataGridViewChangedEventArgs : EventArgs
+{
+    public required int OldVersion { get; init; }
+    public required int NewVersion { get; init; }
+    public required DataGridChangeKind Kind { get; init; }
+}
+```
+
+Sorting and filtering API shape (V1):
+
+- `IDataGridView` implementations MAY expose additional capabilities (interfaces) such as:
+  - `ISortableDataGridView` (sort descriptions, multi-sort),
+  - `IFilterableDataGridView` (column filters / predicate),
+  - `IPagedDataGridView` (incremental loading).
+
+`DataGrid` MUST work even when the view is not sortable/filterable; in that case UI affordances are disabled.
+
+---
+
+## 7. `DataGrid` control public API
+
+### 7.1 Control type
+
+```csharp
+using XenoAtom.Terminal.UI.Scrolling;
+
+namespace XenoAtom.Terminal.UI.Controls;
+
+public sealed partial class DataGrid : Visual, IScrollable
+{
+    public DataGrid();
+}
+```
+
+### 7.2 Bindable properties
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `Document` | `IDataGridDocument?` | `null` | Direct document binding (optional if `View` is set) |
+| `View` | `IDataGridView?` | `null` | Sorted/filtered projection binding |
+| `Columns` | `BindableList<DataGridColumn>` | empty | Column definitions (optional; see section 8) |
+| `ShowHeader` | `bool` | `true` | Whether to display the header row |
+| `FrozenRows` | `int` | `0` | Number of *data* rows frozen at top (in addition to header) |
+| `FrozenColumns` | `int` | `0` | Number of columns frozen at left |
+| `SelectionMode` | `DataGridSelectionMode` | `Cell` | Cell/row/column selection |
+| `ReadOnly` | `bool` | `false` | Disables editing (still allows selection/sort) |
+| `CurrentCell` | `DataGridCell` | `(-1,-1)` | Focused cell for navigation and editing |
+| `EditMode` | `DataGridEditMode` | `OnEnter` | When editing starts |
+
+The control MUST expose a `ScrollModel` for interoperability with `ScrollViewer`:
+
+```csharp
+public ScrollModel Scroll { get; }
+```
+
+### 7.3 Selection types
+
+```csharp
+namespace XenoAtom.Terminal.UI.Controls;
+
+public enum DataGridSelectionMode
+{
+    Cell,
+    Row,
+    Column,
+}
+
+public readonly record struct DataGridCell(int Row, int Column)
+{
+    public static DataGridCell None => new(-1, -1);
+}
+
+public enum DataGridEditMode
+{
+    /// <summary>Editing starts when the user presses Enter/F2 on the current cell.</summary>
+    OnEnter,
+
+    /// <summary>Editing starts as soon as the current cell changes.</summary>
+    OnCellChange,
+
+    /// <summary>Editing starts when the user types (spreadsheet-style).</summary>
+    OnTyping,
+}
+```
+
+Selection model rules:
+
+- `CurrentCell` MUST always be within bounds when `RowCount/ColumnCount > 0`; otherwise it MUST be `None`.
+- In `Row` mode, `CurrentCell.Column` represents the “current column” for horizontal navigation, but selection is row-based.
+- In `Column` mode, `CurrentCell.Row` represents the “current row” for vertical navigation, but selection is column-based.
+
+### 7.4 Routed events (suggested)
+
+`DataGrid` SHOULD expose routed events for:
+
+- `SelectionChanged`
+- `CurrentCellChanged`
+- `SortingChanged`
+- `EditBeginning` / `EditCommitted` / `EditCanceled`
+
+Event args should include (at minimum):
+
+- previous/new selection (or deltas),
+- current cell,
+- sort descriptions,
+- whether an edit was canceled by validation.
+
+---
+
+## 8. Columns and templating
+
+### 8.1 `DataGridColumn`
+
+The column object is responsible for:
+
+- header content (text/visual),
+- width settings,
+- formatting/display,
+- editing behavior for that column.
+
+```csharp
+using XenoAtom.Terminal.UI.Templating;
+
+namespace XenoAtom.Terminal.UI.Controls;
+
+public sealed partial class DataGridColumn : IVisualElement
+{
+    [Bindable] public string Key { get; set; } = string.Empty;
+    [Bindable] public Visual? Header { get; set; }
+    [Bindable] public GridLength Width { get; set; } = GridLength.Star(1);
+    [Bindable] public int MinWidth { get; set; }
+    [Bindable] public int MaxWidth { get; set; } = int.MaxValue;
+    [Bindable] public bool Visible { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether cells in this column are read-only (not editable).
+    /// </summary>
+    /// <remarks>
+    /// This is a UI-level affordance that SHOULD be combined with schema/data-source read-only information
+    /// (e.g. <see cref="DataGridColumnInfo.ReadOnly"/>) to compute an effective read-only state.
+    /// </remarks>
+    [Bindable] public bool ReadOnly { get; set; }
+
+    /// <summary>
+     /// Gets or sets the display template used for cells in this column.
+     /// When empty (<see cref="DataTemplate{T}.IsEmpty"/>), templates are resolved from <see cref="DataTemplates"/>
+     /// in the environment; if none is found, a default text renderer is used.
+     /// </summary>
+    [Bindable] public DataTemplate<object?> CellTemplate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the display template used for read-only cells in this column.
+    /// </summary>
+    /// <remarks>
+    /// When empty, the column falls back to <see cref="CellTemplate"/>.
+    /// This template is intended to render values differently when the underlying data is not editable (e.g. dim text,
+    /// lock glyph, computed value styling) without requiring the control to enter edit mode.
+    /// </remarks>
+    [Bindable] public DataTemplate<object?> ReadOnlyCellTemplate { get; set; }
+
+    /// <summary>
+     /// Gets or sets the editor template used when a cell enters edit mode.
+     /// When empty (<see cref="DataTemplate{T}.IsEmpty"/>), templates are resolved from <see cref="DataTemplates"/>
+     /// in the environment; if none is found, DataGrid uses built-in editors for common types.
+     /// </summary>
+    [Bindable] public DataTemplate<object?> CellEditorTemplate { get; set; }
+}
+```
+
+Notes:
+
+- `Key` MUST match a column key coming from the snapshot when binding to schema-driven sources (e.g. `DataTable`).
+- For POCO/view-model sources, `Key` MAY be arbitrary and the adapter maps it to getters/setters.
+- Read-only behavior:
+  - A cell is read-only when any of the following is true:
+    - `DataGrid.ReadOnly` is `true`
+    - `DataGridColumn.ReadOnly` is `true`
+    - the underlying schema marks the column as read-only (`DataGridColumnInfo.ReadOnly == true`)
+  - `CellEditorTemplate` MUST NOT be used for read-only cells.
+  - For read-only cells, `DataGrid` MUST use `ReadOnlyCellTemplate` when it is not empty; otherwise it MUST use
+    `CellTemplate` (and then environment/default fallbacks as usual).
+
+### 8.2 Data template context for cells
+
+To reuse the existing `DataTemplate<T>` contract (see `doc/specs/data_template_specs.md`), `DataGrid` SHOULD use
+`DataTemplateContext` as follows when invoking `CellTemplate` / `CellEditorTemplate`:
+
+- `Owner` = the `DataGrid` instance
+- `Role` = `Display` or `Editor`
+- `Index` = the **row index** (in view coordinates when `View` is set)
+- `State` includes `Selected/Focused/Hovered/Disabled` as appropriate
+
+The column identity is known by the `DataGridColumn` that owns the template, so templates can be column-specific without
+needing a `(row, column)` pair in the context.
+
+---
+
+## 9. Scrolling + frozen panes
+
+### 9.1 Scrolling model
+
+`DataGrid` MUST be vertically and horizontally scrollable and MUST express its scroll state through its `ScrollModel`:
+
+- `Scroll.OffsetY` = first visible data row index in the scrollable region
+- `Scroll.OffsetX` = horizontal cell offset in columns *in cell units* (not column indices)
+
+Extent computation:
+
+- `ExtentHeight` MUST be `HeaderHeight + FrozenRows + RowCount` (in terminal rows), plus optional separators.
+- `ExtentWidth` MUST be the sum of resolved column widths plus optional separators/borders.
+
+### 9.2 Frozen regions
+
+`DataGrid` MUST support:
+
+- header row frozen when `ShowHeader = true`,
+- `FrozenRows` data rows frozen below the header,
+- `FrozenColumns` columns frozen at the left.
+
+Frozen regions MUST remain visible while scrolling the remaining region.
+
+Implementation guidance:
+
+- Treat the view as up to 4 regions (top-left, top, left, body) and render them with independent offsets.
+- Borders/grid lines MUST align across regions.
+
+---
+
+## 10. Virtualization and recycling (performance-critical)
+
+### 10.1 Row/column virtualization
+
+The control MUST NOT allocate or measure visuals for off-screen rows/cells by default.
+
+Minimum requirement:
+
+- Only the **currently visible** rows (plus a small overscan, e.g. 1–2) may have realized cell visuals.
+
+Stronger requirement (recommended):
+
+- Virtualize both dimensions: only visible rows AND visible columns may have realized cell visuals.
+
+### 10.2 Fast rendering path
+
+To keep performance predictable for large datasets, the default display path SHOULD be “render text directly”:
+
+- For common scalar values (`string`, numbers, dates, enums, bool), render via formatter into `CellBuffer`.
+- Avoid allocating a `Visual` per cell when a column uses default formatting.
+
+Cell templating (Visual-based) SHOULD still be supported, but it is not the universal fast path.
+
+### 10.3 Recycling pools
+
+For templated cells/headers/editors, `DataGrid` SHOULD maintain recycle pools keyed by:
+
+- template identity,
+- role (Display vs Editor),
+- and (optionally) column key.
+
+This mirrors the `DataTemplate<T>.TryUpdate(...)` pattern from `doc/specs/data_template_specs.md`.
+
+---
+
+## 11. Selection and navigation
+
+### 11.1 Keyboard navigation (default bindings)
+
+Suggested bindings (exact gestures may evolve):
+
+- Arrow keys: move `CurrentCell`
+- `PageUp`/`PageDown`: move by viewport height
+- `Home`/`End`: move within row (left/right) or within column (top/bottom)
+- `Ctrl+Home`/`Ctrl+End`: first/last cell
+- `Shift+Arrow` / `Shift+Page*`: extend selection (range)
+
+`DataGrid` MUST keep the current cell visible by calling `Scroll.ScrollToMakeVisible(...)` as navigation occurs.
+
+### 11.2 Selection ranges
+
+Selection SHOULD be representable without materializing all selected indices (important for large ranges).
+
+Recommended representation:
+
+- a primary range (anchor + active),
+- optional additional ranges (multi-select),
+- support for row/column ranges.
+
+### 11.3 Mouse support (when available)
+
+- Click selects cell/row/column based on `SelectionMode`
+- Drag selects a range (optional V1)
+- Wheel scrolls vertically; `Shift+Wheel` scrolls horizontally (optional V1)
+
+---
+
+## 12. Sorting and filtering
+
+### 12.1 Sorting
+
+Sorting MUST be expressed through the view layer when possible:
+
+- If `View` implements sortable capabilities, `DataGrid` toggles sort on header interaction.
+- Otherwise, sorting UI is disabled (or a user-provided command is invoked).
+
+Suggested UX:
+
+- click header toggles `None → Asc → Desc → None`
+- `Shift+click` adds/removes secondary sort (multi-sort)
+
+### 12.2 Filtering
+
+Filtering is similarly delegated to the view layer.
+
+`DataGrid` MUST provide:
+
+- APIs/events to request filter changes (e.g. open a filter editor UI),
+- rendering hints (filter icon/marker in header),
+- but MAY keep filter UI out of scope for V1 (external filter editors can be hosted elsewhere).
+
+---
+
+## 13. Editing model (bulk edit)
+
+### 13.1 Edit lifecycle
+
+`DataGrid` MUST support a single active editor at a time (spreadsheet-style) for performance:
+
+- Enter edit mode on `Enter` / `F2` / typing (based on `EditMode`)
+- Host an editor visual over the cell (or within the cell region)
+- Commit on `Enter` (optionally `Tab` to next cell)
+- Cancel on `Escape`
+
+Read-only rule:
+
+- `DataGrid` MUST NOT enter edit mode for a read-only cell (see section 8.1).
+
+### 13.2 Validation hooks
+
+Validation SHOULD be supported via:
+
+- column-provided validation delegates, and/or
+- integration with existing validation presenters if available.
+
+On validation failure:
+
+- the edit MUST remain active,
+- the control SHOULD show an inline validation hint (style-driven).
+
+### 13.3 Typed editing
+
+For common types, the control SHOULD provide default editors:
+
+- `string` → `TextBox`
+- numeric → `NumberBox`
+- `bool` → `CheckBox` (toggle)
+- enums → `Select<T>` / `EnumSelect`
+
+For custom types, `CellEditorTemplate` is used.
+
+---
+
+## 14. Adapters and integrations
+
+### 14.1 `System.Data.DataTable`
+
+Provide an adapter (name illustrative):
+
+- `DataGridDataTableDocument : IDataGridDocument`
+
+Requirements:
+
+- columns map to `DataColumn` (key = `ColumnName` or stable identifier),
+- rows map to `DataRow`,
+- edits write back to the underlying `DataTable`,
+- changes raised by `DataTable` MUST be translated to `Changed` events (coalesced when possible).
+
+### 14.2 Items source / view-model lists
+
+Provide an adapter for `IReadOnlyList<T>` / `BindableList<T>` (name illustrative):
+
+- `DataGridListDocument<T> : IDataGridDocument`
+
+Columns may be described by:
+
+- `DataGridPropertyColumn<T>` mapping to a getter/setter (and optional formatter/editor).
+
+This supports “bulk edit a list of view models with bindable properties”.
+
+---
+
+## 15. Styling
+
+Introduce a style record similar to `TableStyle`, `ListBoxStyle`, etc.:
+
+- `DataGridStyle : IStyle<DataGridStyle>`
+
+Suggested fields:
+
+- grid lines on/off (outer border, vertical lines, row separators),
+- header style,
+- cell style,
+- selection styles (focused/unfocused),
+- frozen region separator style,
+- optional glyph set (`LineGlyphs`).
+
+The default should be visually consistent with `TableStyle.Grid` but optimized for density/readability.
+
+---
+
+## 16. Relationship to existing `Table`
+
+- `Table` remains the lightweight “static display” control.
+- `DataGrid` is the “interactive, virtualized, data-bound” control.
+- A convenience helper MAY exist to render an `IDataGridSnapshot` into a `Table` for scenarios that do not need
+  selection/editing (e.g. export/print).
