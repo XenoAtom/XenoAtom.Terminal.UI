@@ -353,38 +353,15 @@ public sealed partial class LogControl : Visual
 
     partial void OnMaxCapacityChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
 
-    partial void OnWrapTextChanged(bool value)
+    /// <inheritdoc/>
+    protected override void PrepareChildren()
     {
-        _scrollViewer.HorizontalScrollEnabled = !value;
+        _scrollViewer.HorizontalScrollEnabled = !WrapText;
+
+        if (_bulkUpdatingSearchFlags) return;
+
         // Reflow changes line wrapping and match positions; rebuild match table.
-        RebuildMatches();
-    }
-
-    partial void OnSearchTextChanged(string? value)
-    {
-        _ = value;
-        RebuildMatches();
-    }
-
-    partial void OnSearchCaseSensitiveChanged(bool value)
-    {
-        _ = value;
-        if (_bulkUpdatingSearchFlags) return;
-        RebuildMatches();
-    }
-
-    partial void OnSearchWholeWordChanged(bool value)
-    {
-        _ = value;
-        if (_bulkUpdatingSearchFlags) return;
-        RebuildMatches();
-    }
-
-    partial void OnSearchRegexChanged(bool value)
-    {
-        _ = value;
-        if (_bulkUpdatingSearchFlags) return;
-        RebuildMatches();
+        //RebuildMatches();
     }
 
     /// <inheritdoc/>
@@ -419,8 +396,6 @@ public sealed partial class LogControl : Visual
     /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var style = GetStyle<LogControlStyle>();
         var padding = style.Padding;
 
@@ -457,7 +432,7 @@ public sealed partial class LogControl : Visual
         // Selection and match highlights live in the content visual, but the main control fills the background.
         var style = GetStyle<LogControlStyle>();
         var theme = GetTheme();
-        var focused = ReferenceEquals(App?.FocusedElement, this);
+        var focused = HasFocus;
         var background = style.BackgroundStyle(theme, focused);
         var padding = style.Padding;
 
@@ -782,28 +757,25 @@ public sealed partial class LogControl : Visual
         _activeMatchIndex = -1;
 
         var query = SearchText ?? string.Empty;
-        if (string.IsNullOrEmpty(query) || _entries.Count == 0)
+        if (!string.IsNullOrEmpty(query) && _entries.Count != 0)
         {
-            InteractionVersion++;
-            return;
-        }
+            try
+            {
+                BuildMatches(query);
+            }
+            catch (ArgumentException ex) when (SearchRegex)
+            {
+                // Invalid regex; expose an error without throwing.
+                _searchError = ex.Message;
+                _matches.Clear();
+                _matchesByEntry = null;
+                _activeMatchIndex = -1;
+            }
 
-        try
-        {
-            BuildMatches(query);
-        }
-        catch (ArgumentException ex) when (SearchRegex)
-        {
-            // Invalid regex; expose an error without throwing.
-            _searchError = ex.Message;
-            _matches.Clear();
-            _matchesByEntry = null;
-            _activeMatchIndex = -1;
-        }
-
-        if (_matches.Count > 0)
-        {
-            _activeMatchIndex = 0;
+            if (_matches.Count > 0)
+            {
+                _activeMatchIndex = 0;
+            }
         }
 
         InteractionVersion++;
@@ -1200,11 +1172,6 @@ public sealed partial class LogControl : Visual
                 shrinkY: 1);
         }
 
-        protected override void ArrangeCore(in Rectangle finalRect)
-        {
-            Bounds = finalRect;
-        }
-
         protected override void RenderOverride(CellBuffer buffer)
         {
             var rect = Bounds;
@@ -1226,7 +1193,7 @@ public sealed partial class LogControl : Visual
             var theme = GetTheme();
             var logStyle = GetStyle<LogControlStyle>();
             var searchStyle = GetStyle<LogControlSearchStyle>();
-            var focused = ReferenceEquals(App?.FocusedElement, _owner);
+            var focused = _owner.HasFocus;
             var baseStyle = logStyle.BackgroundStyle(theme, focused);
             var selectionStyle = logStyle.SelectionStyle(theme);
             var matchStyle = searchStyle.ResolveMatchStyle(theme);

@@ -115,15 +115,7 @@ public sealed partial class ComputedVisual : Visual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        var child = _currentChild;
-        if (child is null)
-        {
-            // When there is no child, don't participate in hit-testing or rendering.
-            Bounds = default;
-            return;
-        }
-
-        child.Arrange(finalRect);
+        _currentChild?.Arrange(finalRect);
     }
 
     /// <inheritdoc />

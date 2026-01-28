@@ -122,7 +122,7 @@ public sealed record TreeViewStyle : IStyle<TreeViewStyle>
     /// Gets the optional style used for disabled items.
     /// </summary>
     public Style? Disabled { get; init; }
-    
+
     /// <summary>
     /// Resolves the icon to display for a node.
     /// </summary>

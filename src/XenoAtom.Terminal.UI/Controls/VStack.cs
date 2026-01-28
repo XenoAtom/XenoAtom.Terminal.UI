@@ -110,8 +110,6 @@ public sealed partial class VStack : Panel
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var spacing = Math.Max(0, Spacing);
         var childCount = Children.Count;
         if (childCount == 0)

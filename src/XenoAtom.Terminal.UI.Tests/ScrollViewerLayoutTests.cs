@@ -134,8 +134,6 @@ public sealed class ScrollViewerLayoutTests
                 shrinkX: 1,
                 shrinkY: 0);
         }
-
-        protected override void ArrangeCore(in Rectangle finalRect) => Bounds = finalRect;
     }
 
     private sealed class ScrollableVisual : Visual, IScrollable
@@ -154,7 +152,6 @@ public sealed class ScrollViewerLayoutTests
 
         protected override void ArrangeCore(in Rectangle finalRect)
         {
-            Bounds = finalRect;
             Scroll.SetViewport(finalRect.Width, finalRect.Height);
             Scroll.SetExtent(30, 20);
         }

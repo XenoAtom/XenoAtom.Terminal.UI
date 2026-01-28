@@ -161,8 +161,6 @@ public abstract partial class WrapStackBase : Panel
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var spacing = Math.Max(0, Spacing);
         var runSpacing = Math.Max(0, RunSpacing);
 

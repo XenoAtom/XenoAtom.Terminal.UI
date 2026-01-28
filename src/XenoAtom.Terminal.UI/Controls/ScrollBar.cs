@@ -139,9 +139,6 @@ public abstract partial class ScrollBar : Visual
     }
 
     /// <inheritdoc/>
-    protected override void ArrangeCore(in Rectangle finalRect) => Bounds = finalRect;
-
-    /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
@@ -154,7 +151,7 @@ public abstract partial class ScrollBar : Visual
         var style = GetStyle<ScrollBarStyle>();
         var glyphs = theme.ScrollBars;
 
-        var highlighted = IsHovered || _dragging || ReferenceEquals(App?.FocusedElement, this);
+        var highlighted = IsHovered || _dragging || HasFocus;
         var trackStyle = style.ResolveTrackStyle(theme);
         var thumbStyle = style.ResolveThumbStyle(theme, highlighted);
 

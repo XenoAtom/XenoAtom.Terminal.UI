@@ -30,7 +30,7 @@ public sealed partial class Group : Visual
     {
         TopLeftText = topLeftText;
     }
-    
+
     /// <summary>
     /// Gets or sets the content padding inside the group border.
     /// </summary>
@@ -199,8 +199,6 @@ public sealed partial class Group : Visual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         ArrangeLabels(finalRect);
 
         var content = Content;
@@ -287,16 +285,7 @@ public sealed partial class Group : Visual
             return;
         }
 
-        var focused = false;
-        for (var v = App?.FocusedElement; v is not null; v = v.Parent)
-        {
-            if (ReferenceEquals(v, this))
-            {
-                focused = true;
-                break;
-            }
-        }
-
+        var focused = HasFocusWithin;
         var theme = GetTheme();
         var groupStyle = GetStyle<GroupStyle>();
         var glyphs = groupStyle.Glyphs ?? theme.Lines;

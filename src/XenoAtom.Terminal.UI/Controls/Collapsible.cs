@@ -223,8 +223,6 @@ public sealed partial class Collapsible : Visual
     /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var style = GetStyle<CollapsibleStyle>();
         var glyph = IsExpanded ? style.ExpandedGlyph : style.CollapsedGlyph;
         var glyphWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(glyph));
@@ -281,7 +279,7 @@ public sealed partial class Collapsible : Visual
 
         var theme = GetTheme();
         var style = GetStyle<CollapsibleStyle>();
-        var isFocused = IsFocusWithin();
+        var isFocused = HasFocusWithin;
         var headerStyle = style.ResolveHeader(theme, IsEnabled, isFocused, IsHeaderHovered, IsHeaderPressed);
 
         // Header surface.
@@ -386,7 +384,7 @@ public sealed partial class Collapsible : Visual
         else if (_attachedContent is not null)
         {
             var app = App;
-            if (app is not null && app.FocusedElement is { } focused && IsDescendantOf(focused, _attachedContent))
+            if (app is not null && HasFocusWithin)
             {
                 app.Focus(this);
             }
@@ -423,20 +421,6 @@ public sealed partial class Collapsible : Visual
         }
 
         _lastExpandedForEvent = value;
-    }
-
-    private bool IsFocusWithin()
-    {
-        var focused = App?.FocusedElement;
-        for (var v = focused; v is not null; v = v.Parent)
-        {
-            if (ReferenceEquals(v, this))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static bool IsDescendantOf(Visual visual, Visual ancestor)

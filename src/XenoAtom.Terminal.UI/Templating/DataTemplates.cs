@@ -315,22 +315,18 @@ public sealed record DataTemplates : IStyle<DataTemplates>
             SyncFromBinding(force: true);
         }
 
-        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+        protected override void PrepareChildren()
         {
+            base.PrepareChildren();
             SyncFromBinding(force: false);
-            return base.MeasureCore(constraints);
-        }
-
-        protected override void ArrangeCore(in Rectangle finalRect)
-        {
-            SyncFromBinding(force: false);
-            base.ArrangeCore(finalRect);
         }
 
         private void SyncFromBinding(bool force)
         {
+            if (_updatingFromBinding) return;
+
             // Avoid overwriting user edits while the editor is focused.
-            if (!force && ReferenceEquals(App?.FocusedElement, this))
+            if (!force && HasFocus)
             {
                 return;
             }
@@ -338,11 +334,6 @@ public sealed record DataTemplates : IStyle<DataTemplates>
             var culture = GetCulture();
             var value = _binding.GetValue();
             var formatted = _format(value, culture);
-
-            if (string.Equals(Text, formatted, StringComparison.Ordinal))
-            {
-                return;
-            }
 
             _updatingFromBinding = true;
             try
@@ -388,31 +379,24 @@ public sealed record DataTemplates : IStyle<DataTemplates>
             SyncFromBinding(force: true);
         }
 
-        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+        protected override void PrepareChildren()
         {
-            SyncFromBinding(force: false);
-            return base.MeasureCore(constraints);
-        }
+            base.PrepareChildren();
 
-        protected override void ArrangeCore(in Rectangle finalRect)
-        {
             SyncFromBinding(force: false);
-            base.ArrangeCore(finalRect);
         }
 
         private void SyncFromBinding(bool force)
         {
-            if (!force && ReferenceEquals(App?.FocusedElement, this))
+            if (_updatingFromBinding) return;
+
+            if (!force && HasFocus)
             {
                 return;
             }
 
             var value = _binding.GetValue();
             var formatted = value?.ToString() ?? string.Empty;
-            if (string.Equals(Text, formatted, StringComparison.Ordinal))
-            {
-                return;
-            }
 
             _updatingFromBinding = true;
             try

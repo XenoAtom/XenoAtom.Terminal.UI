@@ -77,8 +77,6 @@ public sealed partial class CheckBox : Visual
     /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var textVisual = Text;
         if (textVisual is null)
         {
@@ -99,7 +97,7 @@ public sealed partial class CheckBox : Visual
     /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
-        var isFocused = ReferenceEquals(App?.FocusedElement, this);
+        var isFocused = HasFocus;
         var theme = GetTheme();
         var checkBoxStyle = GetStyle<CheckBoxStyle>();
         var style = checkBoxStyle.Resolve(theme, IsEnabled, isFocused, IsHovered);

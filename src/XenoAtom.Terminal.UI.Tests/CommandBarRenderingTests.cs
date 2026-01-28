@@ -57,8 +57,6 @@ public sealed class CommandBarRenderingTests
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints) => SizeHints.Fixed(constraints.Clamp(new Geometry.Size(10, 1)));
 
-        protected override void ArrangeCore(in Geometry.Rectangle finalRect) => Bounds = finalRect;
-
         protected override void RenderOverride(Rendering.CellBuffer buffer)
         {
         }

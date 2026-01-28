@@ -173,8 +173,6 @@ public sealed partial class ValidationPresenter : ContentVisual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var validationStyle = GetStyle<ValidationStyle>();
         var gap = Math.Max(0, validationStyle.Gap);
 

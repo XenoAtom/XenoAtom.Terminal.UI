@@ -103,8 +103,6 @@ public sealed partial class TextArea : TextEditorBase
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var style = GetStyle<TextAreaStyle>();
         var padding = style.Padding;
 
@@ -132,7 +130,7 @@ public sealed partial class TextArea : TextEditorBase
             return;
         }
 
-        var isFocused = ReferenceEquals(App?.FocusedElement, this);
+        var isFocused = HasFocus;
         var theme = GetTheme();
         var style = GetStyle<TextAreaStyle>();
         var selectionStyle = style.SelectionStyle(theme);

@@ -91,7 +91,7 @@ public sealed partial class Slider<T> : Visual where T: struct, INumber<T>
 
     partial void OnMinimumChanging(ref T value)
     {
-        
+
         if (!T.IsFinite(value))
         {
             value = T.Zero;
@@ -203,9 +203,6 @@ public sealed partial class Slider<T> : Visual where T: struct, INumber<T>
     }
 
     /// <inheritdoc />
-    protected override void ArrangeCore(in Rectangle finalRect) => Bounds = finalRect;
-
-    /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
@@ -216,7 +213,7 @@ public sealed partial class Slider<T> : Visual where T: struct, INumber<T>
 
         var theme = GetTheme();
         var style = GetStyle<SliderStyle>();
-        var focused = ReferenceEquals(App?.FocusedElement, this);
+        var focused = HasFocus;
         var hovered = IsHovered;
         var pressed = _dragging;
         var thumbStyle = style.ResolveThumbStyle(theme, IsEnabled, focused, hovered, pressed);

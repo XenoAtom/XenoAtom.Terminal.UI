@@ -90,7 +90,6 @@ public sealed class RoutedEventArgsTests
 
         protected override void ArrangeCore(in Rectangle finalRect)
         {
-            Bounds = finalRect;
             _content?.Arrange(finalRect);
         }
     }

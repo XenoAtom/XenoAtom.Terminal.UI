@@ -204,8 +204,6 @@ public sealed partial class TabControl : Visual
     /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var style = GetStyle<TabControlStyle>();
         var pad = style.TabPadding;
 
@@ -262,7 +260,7 @@ public sealed partial class TabControl : Visual
 
         var theme = GetTheme();
         var style = GetStyle<TabControlStyle>();
-        var focused = ReferenceEquals(App?.FocusedElement, this);
+        var focused = HasFocus;
 
         var headerHeight = Math.Min(Math.Max(1, _headerHeight), rect.Height);
         var stripStyle = style.ResolveStripStyle(theme);

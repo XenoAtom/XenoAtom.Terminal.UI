@@ -134,7 +134,6 @@ public sealed partial class RadioButtonList<T> : Visual, IScrollable
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
         EnsureItemVisuals();
 
         var rect = finalRect;
@@ -203,7 +202,7 @@ public sealed partial class RadioButtonList<T> : Visual, IScrollable
         var count = _itemVisuals.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
 
-        var isFocused = ReferenceEquals(App?.FocusedElement, this);
+        var isFocused = HasFocus;
         var theme = GetTheme();
 
         // Fill background.

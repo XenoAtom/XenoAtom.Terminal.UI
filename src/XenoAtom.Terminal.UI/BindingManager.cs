@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Collections.ObjectModel;
+using System.Runtime.CompilerServices;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -16,13 +17,26 @@ public sealed class BindingManager
     /// </summary>
     public static BindingManager Current { get; } = new();
 
+    private BindingManager()
+    {
+        EnableDependencyLoopCheck = true; // On by default for now
+    }
+
     /// <summary>
     /// Raised when a bindable value has changed and UI invalidation needs to be performed.
     /// </summary>
     public event Action<Binding>? ValueChanged;
 
-    [ThreadStatic]
-    private static TrackingContext? _tracking;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether dependency loop checks are enabled during dependency tracking.
+    /// </summary>
+    public bool EnableDependencyLoopCheck { get; set; }
+
+    private TrackingContext? _tracking;
+    private TrackingContext? _freeList;
+
+    private bool _disableReadTracking;
 
     [ThreadStatic]
     private static object? _dynamicUpdateOwner;
@@ -75,7 +89,7 @@ public sealed class BindingManager
         {
             return true;
         }
-        
+
         if (_suppressNotifications == 0)
         {
             if (_tracking is null || _tracking.RegisterWrite(owner, accessor))
@@ -94,23 +108,48 @@ public sealed class BindingManager
     /// during dynamic updates, layout and rendering.
     /// </remarks>
     /// <returns>A disposable session that restores the previous tracking context on dispose.</returns>
-    public TrackingSession StartTracking()
+    public TrackingSession StartTracking([CallerMemberName] string? name = null)
     {
         var previous = _tracking;
-        var current = new TrackingContext();
+        var current = NewTrackingContext();
+        current.Name = name;
+        current.Next = previous;
         _tracking = current;
-        return new TrackingSession(previous, current.Reads, current.Writes);
+        return new TrackingSession(current);
+    }
+
+    private TrackingContext NewTrackingContext()
+    {
+        if (_freeList is null)
+        {
+            return new TrackingContext();
+        }
+        var context = _freeList;
+        _freeList = _freeList.Next;
+        context.Next = null;
+        return context;
+    }
+
+    private void ReleaseTrackingContext(TrackingContext? context)
+    {
+        if (context is null)
+        {
+            return;
+        }
+        var previous = context.Next;
+        context.Reset();
+        context.Next = _freeList;
+        _freeList = context;
+        _tracking = previous;
     }
 
     /// <summary>
     /// Disables dependency read tracking for the duration of the returned session.
     /// </summary>
     /// <returns>A disposable session that restores the previous tracking context on dispose.</returns>
-    public TrackingSession DisableReadTracking()
+    public void SetReadTracking(bool readTracking)
     {
-        var previous = _tracking;
-        _tracking = null;
-        return new TrackingSession(previous, ReadOnlySet<Binding>.Empty, ReadOnlySet<Binding>.Empty);
+        _disableReadTracking = !readTracking;
     }
 
     internal DynamicUpdateSession BeginDynamicUpdate(object owner)
@@ -159,12 +198,14 @@ public sealed class BindingManager
             dispatcherObject.VerifyAccess();
         }
 
+        if (_disableReadTracking) return;
+
         // Ensure the visual element is loaded to avoid tracking reads on unloaded elements
         if (owner is IVisualElement { App: null })
         {
             return;
         }
-        
+
         _tracking?.RegisterRead(owner, accessor);
     }
 
@@ -192,31 +233,29 @@ public sealed class BindingManager
     /// </summary>
     public readonly struct TrackingSession : IDisposable
     {
-        private readonly TrackingContext? _previous;
+        private readonly TrackingContext? _context;
 
-        internal TrackingSession(object? previous, IReadOnlySet<Binding> reads, IReadOnlySet<Binding> writes)
+        internal TrackingSession(object? context)
         {
-            _previous = (TrackingContext?)previous;
-            Reads = reads;
-            Writes = writes;
+            _context = (TrackingContext?)context;
         }
 
         /// <summary>
         /// Gets the dependencies that were read during the tracking session.
         /// </summary>
-        public IReadOnlySet<Binding> Reads { get; }
+        public IReadOnlySet<Binding> Reads => _context is null ? ReadOnlySet<Binding>.Empty : _context.Reads;
 
         /// <summary>
         /// Gets the set of bindings that are written by this operation.
         /// </summary>
-        public IReadOnlySet<Binding> Writes { get; }
+        public IReadOnlySet<Binding> Writes => _context is null ? ReadOnlySet<Binding>.Empty : _context.Writes;
 
         /// <summary>
         /// Restores the previous tracking context.
         /// </summary>
         public void Dispose()
         {
-            _tracking = _previous;
+            Current.ReleaseTrackingContext(_context);
         }
     }
 
@@ -225,9 +264,25 @@ public sealed class BindingManager
         private readonly HashSet<Binding> _reads = new(BindingReferenceComparer.Instance);
         private readonly HashSet<Binding> _writes = new(BindingReferenceComparer.Instance);
 
+        public TrackingContext()
+        {
+        }
+
+        public TrackingContext? Next { get; set; }
+
+        public string? Name { get; set; }
+
         public IReadOnlySet<Binding> Reads => _reads;
 
         public IReadOnlySet<Binding> Writes => _writes;
+
+        public void Reset()
+        {
+            Name = null;
+            Next = null;
+            _reads.Clear();
+            _writes.Clear();
+        }
 
         public void RegisterRead(object owner, BindingAccessor accessor)
         {
@@ -245,8 +300,22 @@ public sealed class BindingManager
             // If we are both reading and then writing the same binding, we won't track the writes to avoid cycles
             if (_reads.Contains(binding))
             {
-                return false;
+                throw new InvalidOperationException($"Cannot read and then write `{owner.GetType().Name}.{accessor.Name}` within a same tracking context");
             }
+
+            if (Current.EnableDependencyLoopCheck)
+            {
+                var next = Next;
+                while (next is not null)
+                {
+                    if (next._reads.Contains(binding))
+                    {
+                        throw new InvalidOperationException($"Dependency loop detected when writing `{owner.GetType().Name}.{accessor.Name}` which was already read in an upper tracking context `{next.Name ?? "unnamed"}`");
+                    }
+                    next = next.Next;
+                }
+            }
+
             _writes.Add(binding);
             return true;
         }

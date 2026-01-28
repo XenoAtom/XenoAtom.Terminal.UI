@@ -147,8 +147,6 @@ public sealed partial class BarChart : Visual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         ApplyStyleToGrid();
         EnsureRows();
 
@@ -392,8 +390,6 @@ public sealed partial class BarChart : Visual
 
         protected override void ArrangeCore(in Rectangle finalRect)
         {
-            Bounds = finalRect;
-
             var custom = _item.ValueLabel;
             if (custom is null)
             {

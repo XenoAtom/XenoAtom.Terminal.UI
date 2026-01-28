@@ -289,9 +289,37 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         {
             if (!ReferenceEquals(_focusedElement, value))
             {
+                var previous = _focusedElement;
+                previous?.HasFocus = false;
                 _focusedElement = value;
+                value?.HasFocus = true;
                 BindingManager.Current.NotifyValueChanged(this, __FocusedElement__BindingAccessor.Instance);
             }
+        }
+    }
+
+    private void DetachFocus(Visual? element)
+    {
+        if (element is null) return;
+
+        element.HasFocus = false;
+        var next = element.Parent;
+        while (next is not null)
+        {
+            next.HasFocusWithin = false;
+            next = next.Parent;
+        }
+    }
+
+    private void AttachFocus(Visual? element)
+    {
+        if (element is null) return;
+        element.HasFocus = true;
+        var next = element.Parent;
+        while (next is not null)
+        {
+            next.HasFocusWithin = true;
+            next = next.Parent;
         }
     }
 

@@ -119,8 +119,6 @@ public partial class Button : ContentVisual
     /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var content = Content;
         if (content is null)
         {
@@ -151,7 +149,7 @@ public partial class Button : ContentVisual
     /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
-        var isFocused = ReferenceEquals(App?.FocusedElement, this);
+        var isFocused = HasFocus;
         var theme = GetTheme();
         var buttonStyle = GetStyle<ButtonStyle>();
         var pressed = IsPressed && IsPressedInside;

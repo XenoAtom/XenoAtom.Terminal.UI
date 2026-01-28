@@ -243,6 +243,8 @@ internal sealed class TextEditorCore
             return;
         }
 
+        UpdateFocus();
+
         if (options.SingleLine)
         {
             RenderSingleLine(context, options);
@@ -252,6 +254,16 @@ internal sealed class TextEditorCore
             RenderMultiLine(context, options);
         }
     }
+
+    private void UpdateFocus()
+    {
+        // If the editor lost focus, clear selection
+        if (!_host.IsFocused && HasSelection)
+        {
+            ClearSelection();
+        }
+    }
+
 
     public bool TryGetCursorCell(in TextEditorOptions options, out int x, out int y)
     {

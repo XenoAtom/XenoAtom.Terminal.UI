@@ -96,7 +96,7 @@ public sealed partial class RadioButton : Visual
     /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
-        var isFocused = ReferenceEquals(App?.FocusedElement, this);
+        var isFocused = HasFocus;
         var theme = GetTheme();
         var radioStyle = GetStyle<RadioButtonStyle>();
         var style = radioStyle.Resolve(theme, IsEnabled, isFocused, IsHovered);

@@ -435,7 +435,7 @@ public sealed partial class CommandPalette : Visual
             (App ?? _hostPopup?.App)?.Focus(_results);
             e.Handled = true;
             return;
-        } 
+        }
 
         if (e.Key != TerminalKey.Tab)
         {

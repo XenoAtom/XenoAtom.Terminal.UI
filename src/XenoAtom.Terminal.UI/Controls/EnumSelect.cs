@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Templating;
 
 namespace XenoAtom.Terminal.UI.Controls;
@@ -49,14 +50,12 @@ public sealed partial class EnumSelect<[DynamicallyAccessedMembers(DynamicallyAc
     /// <inheritdoc />
     protected override Layout.SizeHints MeasureCore(in Layout.LayoutConstraints constraints)
     {
-        SyncFromValue();
         return base.MeasureCore(constraints);
     }
 
     /// <inheritdoc />
     protected override void ArrangeCore(in Geometry.Rectangle finalRect)
     {
-        SyncFromValue();
         base.ArrangeCore(finalRect);
     }
 
@@ -87,21 +86,7 @@ public sealed partial class EnumSelect<[DynamicallyAccessedMembers(DynamicallyAc
 
     partial void OnValueChanged(TEnum value)
     {
-        var index = FindIndex(value);
-        if (index < 0 || SelectedIndex == index)
-        {
-            return;
-        }
-
-        _syncingFromValue = true;
-        try
-        {
-            SelectedIndex = index;
-        }
-        finally
-        {
-            _syncingFromValue = false;
-        }
+        SyncFromValue();
     }
 
     /// <inheritdoc />
@@ -123,8 +108,16 @@ public sealed partial class EnumSelect<[DynamicallyAccessedMembers(DynamicallyAc
         Value = _values[index];
     }
 
+    /// <inheritdoc />
+    protected override void PrepareChildren()
+    {
+        SyncFromValue();
+    }
+
     private void SyncFromValue()
     {
+        if (_syncingFromValue) return;
+
         if (_values.Length == 0)
         {
             return;
@@ -135,11 +128,6 @@ public sealed partial class EnumSelect<[DynamicallyAccessedMembers(DynamicallyAc
         if (index < 0)
         {
             index = 0;
-        }
-
-        if (SelectedIndex == index)
-        {
-            return;
         }
 
         _syncingFromValue = true;

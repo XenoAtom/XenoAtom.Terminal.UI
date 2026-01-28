@@ -128,8 +128,6 @@ internal sealed partial class ValidationMessageHost : Visual
 
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var message = Message;
         if (message is null || _content is null || finalRect.Width <= 0 || finalRect.Height <= 0)
         {

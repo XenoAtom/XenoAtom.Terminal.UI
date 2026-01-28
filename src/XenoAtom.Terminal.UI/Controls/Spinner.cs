@@ -133,8 +133,6 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var label = Label;
         if (label is null)
         {

@@ -55,22 +55,22 @@ public sealed record MenuListStyle : IStyle<MenuListStyle>
     /// Gets the optional style used for normal items.
     /// </summary>
     public Style? ItemStyle { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style used for selected items.
     /// </summary>
     public Style? SelectedStyle { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style used for hovered items.
     /// </summary>
     public Style? HoveredStyle { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style used for disabled items.
     /// </summary>
     public Style? DisabledStyle { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style used for separators.
     /// </summary>

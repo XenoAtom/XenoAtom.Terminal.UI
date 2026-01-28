@@ -169,10 +169,9 @@ public sealed partial class Dialog : Visual, IModalVisual
     }
 
     /// <inheritdoc/>
-    protected override void ArrangeCore(in Rectangle finalRect)
+    protected override Rectangle PrepareArrangeBounds(in Rectangle finalRect)
     {
         _layoutSlot = finalRect;
-
         var width = Math.Max(3, Math.Min(finalRect.Width, Width ?? DesiredSize.Width));
         var height = Math.Max(3, Math.Min(finalRect.Height, Height ?? DesiredSize.Height));
 
@@ -182,14 +181,18 @@ public sealed partial class Dialog : Visual, IModalVisual
         var left = Left is null ? maxLeft / 2 : Math.Clamp(Left.Value, 0, maxLeft);
         var top = Top is null ? maxTop / 2 : Math.Clamp(Top.Value, 0, maxTop);
 
-        Bounds = new Rectangle(finalRect.X + left, finalRect.Y + top, width, height);
+        return new Rectangle(finalRect.X + left, finalRect.Y + top, width, height);
+    }
 
+    /// <inheritdoc/>
+    protected override void ArrangeCore(in Rectangle finalRect)
+    {
         var title = Title;
-        if (title is not null && Bounds.Width >= 4)
+        if (title is not null && finalRect.Width >= 4)
         {
-            var titleMaxWidth = Math.Max(0, Bounds.Width - 4);
+            var titleMaxWidth = Math.Max(0, finalRect.Width - 4);
             var titleWidth = Math.Min(titleMaxWidth, title.DesiredSize.Width);
-            title.Arrange(new Rectangle(Bounds.X + 2, Bounds.Y, titleWidth, 1));
+            title.Arrange(new Rectangle(finalRect.X + 2, finalRect.Y, titleWidth, 1));
         }
 
         var content = Content;
@@ -197,10 +200,10 @@ public sealed partial class Dialog : Visual, IModalVisual
         {
             var padding = Padding;
             var inner = new Rectangle(
-                Bounds.X + 1 + padding.Left,
-                Bounds.Y + 1 + padding.Top,
-                Math.Max(0, Bounds.Width - 2 - padding.Horizontal),
-                Math.Max(0, Bounds.Height - 2 - padding.Vertical));
+                finalRect.X + 1 + padding.Left,
+                finalRect.Y + 1 + padding.Top,
+                Math.Max(0, finalRect.Width - 2 - padding.Horizontal),
+                Math.Max(0, finalRect.Height - 2 - padding.Vertical));
 
             content.Arrange(inner);
         }
@@ -215,16 +218,7 @@ public sealed partial class Dialog : Visual, IModalVisual
             return;
         }
 
-        var focused = false;
-        var focusedElement = App?.FocusedElement;
-        for (var v = focusedElement; v is not null; v = v.Parent)
-        {
-            if (ReferenceEquals(v, this))
-            {
-                focused = true;
-                break;
-            }
-        }
+        var focused = HasFocusWithin;
 
         var theme = GetTheme();
         var glyphs = theme.Lines;

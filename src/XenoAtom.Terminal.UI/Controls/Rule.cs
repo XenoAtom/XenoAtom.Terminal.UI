@@ -97,8 +97,6 @@ public sealed partial class Rule : Visual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         if (finalRect.Width <= 0 || finalRect.Height <= 0)
         {
             return;

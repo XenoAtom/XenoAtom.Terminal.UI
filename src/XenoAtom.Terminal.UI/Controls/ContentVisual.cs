@@ -35,7 +35,6 @@ public abstract partial class ContentVisual : Visual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
         Content?.Arrange(finalRect);
     }
 }

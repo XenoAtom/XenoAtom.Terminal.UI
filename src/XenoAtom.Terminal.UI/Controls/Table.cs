@@ -210,7 +210,7 @@ public sealed partial class Table : Visual
 
         var theme = GetTheme();
         var glyphs = tableStyle.Glyphs ?? theme.Lines;
-        var focused = IsFocusedInScope();
+        var focused = HasFocusWithin;
 
         var borderStyle = tableStyle.ResolveBorderStyle(theme, focused);
         var cellStyle = tableStyle.ResolveCellStyle(theme);
@@ -552,19 +552,6 @@ public sealed partial class Table : Visual
         var showHeaderSeparator = ShowHeaderSeparator && tableStyle.ShowHeaderSeparator;
         var padding = tableStyle.CellPadding;
         return (showOuterBorder, showVerticalLines, showRowSeparators, showHeaderSeparator, padding);
-    }
-
-    private bool IsFocusedInScope()
-    {
-        for (var v = App?.FocusedElement; v is not null; v = v.Parent)
-        {
-            if (ReferenceEquals(v, this))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private void ValidateRowOwner(VisualList<Visual> row)

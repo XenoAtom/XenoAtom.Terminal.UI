@@ -36,9 +36,6 @@ public sealed partial class Backdrop : Visual
             shrinkY: 0);
 
     /// <inheritdoc/>
-    protected override void ArrangeCore(in Rectangle finalRect) => Bounds = finalRect;
-
-    /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;

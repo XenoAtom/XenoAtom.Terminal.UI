@@ -205,8 +205,6 @@ public sealed partial class TreeView : Visual, IScrollable
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var style = GetStyle<TreeViewStyle>();
         var indentSize = style.HierarchyLines is null ? style.IndentSize : Math.Max(2, style.IndentSize);
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
@@ -279,7 +277,7 @@ public sealed partial class TreeView : Visual, IScrollable
         var count = _visible.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
 
-        var isFocused = ReferenceEquals(App?.FocusedElement, this);
+        var isFocused = HasFocus;
         var theme = GetTheme();
 
         // Fill background.

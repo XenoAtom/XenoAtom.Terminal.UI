@@ -233,10 +233,6 @@ public sealed partial class SearchReplacePopup : Visual
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
         => SizeHints.Fixed(constraints.Clamp(Size.Zero));
 
-    /// <inheritdoc/>
-    protected override void ArrangeCore(in Rectangle finalRect)
-        => Bounds = finalRect;
-
     partial void OnSearchTextChanged(string? value) => ApplyQuery();
     partial void OnCaseSensitiveChanged(bool value) => ApplyQuery();
     partial void OnWholeWordChanged(bool value) => ApplyQuery();

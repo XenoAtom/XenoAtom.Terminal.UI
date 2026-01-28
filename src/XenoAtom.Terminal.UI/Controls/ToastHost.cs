@@ -275,8 +275,6 @@ public sealed partial class ToastHost : ContentVisual, IAnimatedVisual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         Content?.Arrange(finalRect);
 
         var layerSize = _layer.DesiredSize;
@@ -509,8 +507,6 @@ public sealed partial class ToastHost : ContentVisual, IAnimatedVisual
 
         protected override void ArrangeCore(in Rectangle finalRect)
         {
-            Bounds = finalRect;
-
             var spacing = Math.Max(0, Spacing);
             if (_toasts.Count == 0 || finalRect.Width <= 0 || finalRect.Height <= 0)
             {

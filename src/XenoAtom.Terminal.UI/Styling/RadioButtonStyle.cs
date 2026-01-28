@@ -35,17 +35,17 @@ public sealed record RadioButtonStyle : IStyle<RadioButtonStyle>
     /// Gets the optional style used for the normal state.
     /// </summary>
     public Style? Normal { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style used for the hovered state.
     /// </summary>
     public Style? Hovered { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style used for the focused state.
     /// </summary>
     public Style? Focused { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style used for the disabled state.
     /// </summary>

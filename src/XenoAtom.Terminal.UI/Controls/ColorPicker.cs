@@ -142,27 +142,11 @@ public sealed partial class ColorPicker : Visual
     [Bindable]
     public partial IReadOnlyList<Color?>? Palette { get; set; }
 
-    partial void OnAllowAlphaChanged(bool value)
+    /// <inheritdoc />
+    protected override void PrepareChildren()
     {
-        _sliderA.IsVisible = value;
-        UpdateHexPlaceholder();
-        UpdateHexTextFromValueIfAllowed();
-    }
-
-    partial void OnShowPaletteChanged(bool value)
-    {
-        _paletteHost.IsVisible = value;
-    }
-
-    partial void OnValueChanged(Color value)
-    {
-        _ = value;
+        _sliderA.IsVisible = AllowAlpha;
         UpdateControlsFromValue();
-    }
-
-    partial void OnPaletteChanged(IReadOnlyList<Color?>? value)
-    {
-        _ = value;
     }
 
     /// <inheritdoc />
@@ -179,7 +163,6 @@ public sealed partial class ColorPicker : Visual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
         _root.Arrange(finalRect);
     }
 
@@ -237,10 +220,7 @@ public sealed partial class ColorPicker : Visual
 
         var style = GetStyle<ColorPickerStyle>();
         var formatted = FormatHex(Value, includeAlpha: AllowAlpha, uppercase: style.UppercaseHex);
-        if (!string.Equals(_hexBox.Text, formatted, StringComparison.Ordinal))
-        {
-            _hexBox.Text = formatted;
-        }
+        _hexBox.Text = formatted;
     }
 
     private void UpdateValueFromHex()
@@ -449,24 +429,7 @@ public sealed partial class ColorPicker : Visual
         return sb.ToString();
     }
 
-    private bool IsHexFocused()
-    {
-        var app = App;
-        if (app is null)
-        {
-            return false;
-        }
-
-        for (var v = app.FocusedElement; v is not null; v = v.Parent)
-        {
-            if (ReferenceEquals(v, _hexBox))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
+    private bool IsHexFocused() => _hexBox.HasFocus;
 
     internal sealed class PaletteSwatch : Visual
     {
@@ -489,8 +452,6 @@ public sealed partial class ColorPicker : Visual
             var height = Math.Min(constraints.MaxHeight, Math.Max(0, style.PaletteSwatchHeight));
             return SizeHints.Fixed(new Size(width, height));
         }
-
-        protected override void ArrangeCore(in Rectangle finalRect) => Bounds = finalRect;
 
         protected override void RenderOverride(CellBuffer buffer)
         {
@@ -558,8 +519,6 @@ public sealed partial class ColorPicker : Visual
             var height = Math.Min(constraints.MaxHeight, Math.Max(0, style.SwatchHeight));
             return SizeHints.Fixed(new Size(width, height));
         }
-
-        protected override void ArrangeCore(in Rectangle finalRect) => Bounds = finalRect;
 
         protected override void RenderOverride(CellBuffer buffer)
         {

@@ -41,8 +41,6 @@ public sealed class KeyBindingTests
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints) => SizeHints.Fixed(constraints.Clamp(new Size(10, 1)));
 
-        protected override void ArrangeCore(in Rectangle finalRect) => Bounds = finalRect;
-
         protected override void RenderOverride(CellBuffer buffer)
         {
             buffer.WriteText(Bounds.X, Bounds.Y, $"Count:{Count}".AsSpan(), Style.None);

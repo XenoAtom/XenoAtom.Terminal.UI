@@ -47,11 +47,9 @@ public sealed class FocusTraversalTests
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints) => SizeHints.Fixed(constraints.Clamp(new Size(10, 1)));
 
-        protected override void ArrangeCore(in Rectangle finalRect) => Bounds = finalRect;
-
         protected override void RenderOverride(CellBuffer buffer)
         {
-            buffer.WriteText(Bounds.X, Bounds.Y, Text.AsSpan(), ReferenceEquals(App?.FocusedElement, this) ? (Style.None | TextStyle.Invert) : Style.None);
+            buffer.WriteText(Bounds.X, Bounds.Y, Text.AsSpan(), HasFocus ? (Style.None | TextStyle.Invert) : Style.None);
         }
     }
 }

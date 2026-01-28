@@ -102,8 +102,6 @@ public sealed partial class DockLayout : Visual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var y = finalRect.Y;
         var remainingHeight = finalRect.Height;
 

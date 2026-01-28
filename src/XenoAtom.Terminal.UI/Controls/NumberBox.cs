@@ -257,8 +257,6 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var rect = finalRect;
         if (rect.Width <= 0 || rect.Height <= 0)
         {
@@ -506,11 +504,6 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
         else
         {
             text = Value.ToString() ?? string.Empty;
-        }
-
-        if (string.Equals(Text, text, StringComparison.Ordinal))
-        {
-            return;
         }
 
         _updatingTextFromValue = true;

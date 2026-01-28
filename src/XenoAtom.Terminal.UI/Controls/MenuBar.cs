@@ -445,7 +445,7 @@ public sealed partial class MenuBar : Visual
 
             var bar = Parent as MenuBar;
             var open = bar is not null && bar.OpenIndex == _index;
-            var selected = bar is not null && ReferenceEquals(bar.App?.FocusedElement, bar) && bar.SelectedIndex == _index;
+            var selected = bar is not null && bar.HasFocus && bar.SelectedIndex == _index;
             var enabled = bar is null ? _item.IsEnabled : _item.IsEnabledFor(bar.ResolveCommandTarget());
             var resolved = style.ResolveItemStyle(theme, enabled: enabled, open: open, selected: selected, hovered: IsHovered);
 

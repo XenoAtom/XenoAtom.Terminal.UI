@@ -145,9 +145,15 @@ public sealed partial class ScrollViewer : Visual
     [Bindable(NoVisualAttach = true)]
     public partial Visual? Content { get; set; }
 
+    private int _cachedVerticalOffsetFromPrepare;
+    private int _cachedHorizontalOffsetFromPrepare;
+
     /// <inheritdoc />
     protected override void PrepareChildren()
     {
+        _cachedVerticalOffsetFromPrepare = VerticalOffset;
+        _cachedHorizontalOffsetFromPrepare = HorizontalOffset;
+
         // The scroll viewer hosts its content through an internal ContentViewportHost. The Content property is a
         // template-like input and must not auto-attach to this visual.
         var content = Content;
@@ -223,7 +229,7 @@ public sealed partial class ScrollViewer : Visual
         {
             if (value != 0)
             {
-                VerticalOffset = 0;
+                _verticalOffset = 0;
             }
             return;
         }
@@ -245,7 +251,7 @@ public sealed partial class ScrollViewer : Visual
         {
             if (value != 0)
             {
-                HorizontalOffset = 0;
+                _horizontalOffset = 0;
             }
             return;
         }
@@ -311,8 +317,6 @@ public sealed partial class ScrollViewer : Visual
     /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         if (Content is null)
         {
             return;
@@ -472,10 +476,10 @@ public sealed partial class ScrollViewer : Visual
             var maxVerticalOffset = Math.Max(0, extentHeight - contentViewportHeight);
             var maxHorizontalOffset = Math.Max(0, extentWidth - contentViewportWidth);
 
-            v = verticalScrollEnabled ? Math.Clamp(VerticalOffset, 0, maxVerticalOffset) : 0;
-            hOffset = horizontalScrollEnabled ? Math.Clamp(HorizontalOffset, 0, maxHorizontalOffset) : 0;
-            if (v != VerticalOffset) VerticalOffset = v;
-            if (hOffset != HorizontalOffset) HorizontalOffset = hOffset;
+            v = verticalScrollEnabled ? Math.Clamp(_cachedVerticalOffsetFromPrepare, 0, maxVerticalOffset) : 0;
+            hOffset = horizontalScrollEnabled ? Math.Clamp(_cachedHorizontalOffsetFromPrepare, 0, maxHorizontalOffset) : 0;
+            VerticalOffset = v;
+            HorizontalOffset = hOffset;
 
             _verticalBar.Minimum = 0;
             _verticalBar.Maximum = maxVerticalOffset;
@@ -715,15 +719,19 @@ public sealed partial class ScrollViewer : Visual
         }
     }
 
-    private sealed class ContentViewportHost : Visual
+    private sealed partial class ContentViewportHost : Visual
     {
         private readonly ScrollViewer _owner;
         private Visual? _child;
 
-        private int _contentWidth;
-        private int _contentHeight;
-        private int _horizontalOffset;
-        private int _verticalOffset;
+        [Bindable]
+        private partial int ContentWidth {get; set;}
+        [Bindable]
+        private partial int ContentHeight {get; set;}
+        [Bindable]
+        private partial int HorizontalOffset {get; set;}
+        [Bindable]
+        private partial int VerticalOffset { get; set; }
 
         public ContentViewportHost(ScrollViewer owner)
         {
@@ -752,38 +760,20 @@ public sealed partial class ScrollViewer : Visual
 
         public void UpdateLayout(int contentWidth, int contentHeight, int horizontalOffset, int verticalOffset)
         {
-            if (_contentWidth == contentWidth
-                && _contentHeight == contentHeight
-                && _horizontalOffset == horizontalOffset
-                && _verticalOffset == verticalOffset)
-            {
-                return;
-            }
-
-            _contentWidth = contentWidth;
-            _contentHeight = contentHeight;
-            _horizontalOffset = horizontalOffset;
-            _verticalOffset = verticalOffset;
-
-            // This host is typically arranged into the same viewport rect each frame, but its child layout depends on
-            // content size and offsets. When only offsets change, Visual.Arrange would early-exit for an unchanged
-            // final rect. Update the child arrangement eagerly using the last known Bounds.
-            if (_child is not null && Bounds.Width > 0 && Bounds.Height > 0)
-            {
-                _child.Arrange(new Rectangle(Bounds.X - _horizontalOffset, Bounds.Y - _verticalOffset, _contentWidth, _contentHeight));
-            }
+            ContentWidth = contentWidth;
+            ContentHeight = contentHeight;
+            HorizontalOffset = horizontalOffset;
+            VerticalOffset = verticalOffset;
         }
 
         protected override void ArrangeCore(in Rectangle finalRect)
         {
-            Bounds = finalRect;
-
             if (_child is null)
             {
                 return;
             }
 
-            _child.Arrange(new Rectangle(finalRect.X - _horizontalOffset, finalRect.Y - _verticalOffset, _contentWidth, _contentHeight));
+            _child.Arrange(new Rectangle(finalRect.X - HorizontalOffset, finalRect.Y - VerticalOffset, ContentWidth, ContentHeight));
         }
     }
 

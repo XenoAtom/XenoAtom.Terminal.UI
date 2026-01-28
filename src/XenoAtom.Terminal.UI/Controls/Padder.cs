@@ -118,8 +118,6 @@ public partial class Padder : ContentVisual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var padding = GetEffectivePadding();
         var padH = padding.Horizontal;
         var padV = padding.Vertical;

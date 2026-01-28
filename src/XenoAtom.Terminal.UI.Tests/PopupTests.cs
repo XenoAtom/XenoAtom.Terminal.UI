@@ -137,6 +137,7 @@ public sealed class PopupTests
         };
 
         driver.App.Post(popup.Show);
+
         driver.Tick();
 
         var expectedRight = anchor.Bounds.X;
@@ -399,11 +400,6 @@ public sealed class PopupTests
         {
             var size = new Size(Math.Max(0, _width), Math.Max(0, _height));
             return SizeHints.Fixed(size);
-        }
-
-        protected override void ArrangeCore(in Rectangle finalRect)
-        {
-            Bounds = finalRect;
         }
     }
 

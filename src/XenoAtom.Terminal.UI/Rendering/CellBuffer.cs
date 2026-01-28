@@ -813,7 +813,7 @@ public sealed class CellBuffer
         var outR = (srcR * sa) + (dstR * invSa);
         var outG = (srcG * sa) + (dstG * invSa);
         var outB = (srcB * sa) + (dstB * invSa);
-        
+
         ref var linearToSrgb = ref MemoryMarshal.GetArrayDataReference(LinearToSrgb);
         var r = Unsafe.Add(ref linearToSrgb, ClampLinearToIndex(outR));
         var g = Unsafe.Add(ref linearToSrgb, ClampLinearToIndex(outG));

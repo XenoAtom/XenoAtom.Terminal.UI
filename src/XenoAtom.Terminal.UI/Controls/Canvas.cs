@@ -57,9 +57,6 @@ public sealed partial class Canvas : Visual
             shrinkY: 1);
 
     /// <inheritdoc/>
-    protected override void ArrangeCore(in Rectangle finalRect) => Bounds = finalRect;
-
-    /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
@@ -173,7 +170,7 @@ public readonly struct CanvasContext
             SetPixel(x + i, y, rune, style);
         }
     }
-    
+
     /// <summary>
     /// Draws a horizontal line.
     /// </summary>
@@ -242,7 +239,7 @@ public readonly struct CanvasContext
             }
         }
     }
-    
+
     /// <summary>
     /// Draws a line between two points using an integer Bresenham algorithm.
     /// </summary>
@@ -406,7 +403,7 @@ public readonly struct CanvasContext
             }
         }
     }
-    
+
     /// <summary>
     /// Draws a circle outline using the midpoint circle algorithm.
     /// </summary>

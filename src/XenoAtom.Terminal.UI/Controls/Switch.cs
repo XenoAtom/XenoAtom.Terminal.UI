@@ -93,7 +93,7 @@ public sealed partial class Switch : ContentVisual
 
         var style = GetStyle<SwitchStyle>();
         var theme = GetTheme();
-        var focused = ReferenceEquals(App?.FocusedElement, this);
+        var focused = HasFocus;
 
         var thumbStyle = style.ResolveThumb(theme, IsEnabled, focused, IsHovered, IsPressed, IsOn);
 

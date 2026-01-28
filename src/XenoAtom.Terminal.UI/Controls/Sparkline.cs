@@ -22,7 +22,7 @@ public sealed partial class Sparkline : Visual
     {
         Values = new BindableList<double>(this, nameof(Values));
     }
-    
+
     /// <summary>
     /// Gets the values to render.
     /// </summary>

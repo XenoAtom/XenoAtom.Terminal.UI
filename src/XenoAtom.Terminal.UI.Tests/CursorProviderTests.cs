@@ -48,8 +48,6 @@ public sealed class CursorProviderTests
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints)
             => SizeHints.Fixed(constraints.Clamp(new Size(1, 1)));
-
-        protected override void ArrangeCore(in Rectangle finalRect) => Bounds = finalRect;
     }
 }
 

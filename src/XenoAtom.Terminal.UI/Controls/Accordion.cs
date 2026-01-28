@@ -118,8 +118,6 @@ public sealed partial class Accordion : Panel
     /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var y = finalRect.Y;
         var spacing = Math.Max(0, Spacing);
         var childCount = Children.Count;

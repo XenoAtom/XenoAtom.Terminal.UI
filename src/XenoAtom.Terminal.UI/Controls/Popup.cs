@@ -129,7 +129,7 @@ public sealed partial class Popup : Visual, IModalVisual
     /// </summary>
     [Bindable]
     public partial bool MatchAnchorWidth { get; set; }
-    
+
     /// <summary>
     /// Gets or sets additional width to add to the computed popup width.
     /// </summary>
@@ -284,7 +284,6 @@ public sealed partial class Popup : Visual, IModalVisual
         var slot = finalRect;
 
         _layoutSlot = slot;
-        Bounds = slot;
 
         var style = GetStyle<PopupStyle>();
         var padding = style.Padding;

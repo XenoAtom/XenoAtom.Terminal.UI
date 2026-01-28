@@ -77,7 +77,6 @@ public sealed class SearchReplacePopupDragTests
 
         protected override void ArrangeCore(in Rectangle finalRect)
         {
-            Bounds = finalRect;
             _popup.ArrangeWithin(finalRect);
         }
     }

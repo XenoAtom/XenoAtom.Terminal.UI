@@ -182,8 +182,6 @@ public partial class TextBox : TextEditorBase
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var style = GetTextBoxStyle();
         var padding = style.Padding;
 
@@ -210,7 +208,7 @@ public partial class TextBox : TextEditorBase
             return;
         }
 
-        var isFocused = ReferenceEquals(App?.FocusedElement, this);
+        var isFocused = HasFocus;
         var theme = GetTheme();
         var textBoxStyle = GetTextBoxStyle();
         var selectionStyle = textBoxStyle.SelectionStyle(theme);
@@ -272,7 +270,7 @@ public partial class TextBox : TextEditorBase
     {
         var mode = PasswordRevealMode;
         return mode == PasswordRevealMode.Always
-               || (mode == PasswordRevealMode.WhileFocused && ReferenceEquals(App?.FocusedElement, this));
+               || (mode == PasswordRevealMode.WhileFocused && HasFocus);
     }
 
     private void UpdateEditorLayoutForOverflowIndicators(Rectangle baseRect, TextBoxStyle style)

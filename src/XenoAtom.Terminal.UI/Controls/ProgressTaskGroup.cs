@@ -64,7 +64,6 @@ public sealed partial class ProgressTaskGroup : Visual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
         _content.Arrange(finalRect);
     }
 

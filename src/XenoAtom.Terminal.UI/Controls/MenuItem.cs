@@ -92,7 +92,7 @@ public sealed partial class MenuItem : IVisualElement
     /// Gets the header content.
     /// </summary>
     public Visual Header { get; }
-    
+
     TerminalApp? IVisualElement.App => Header.App;
 
     /// <summary>

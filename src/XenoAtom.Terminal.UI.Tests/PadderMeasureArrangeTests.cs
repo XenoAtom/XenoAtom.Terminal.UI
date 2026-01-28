@@ -59,10 +59,5 @@ public sealed class PadderMeasureArrangeTests
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints)
             => SizeHints.Fixed(constraints.Clamp(_size));
-
-        protected override void ArrangeCore(in Rectangle finalRect)
-        {
-            Bounds = finalRect;
-        }
     }
 }

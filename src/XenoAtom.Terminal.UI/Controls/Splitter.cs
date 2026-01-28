@@ -262,7 +262,7 @@ public abstract partial class Splitter : Visual
 
         var theme = GetTheme();
         var style = GetStyle<SplitterStyle>();
-        var focused = ReferenceEquals(App?.FocusedElement, this);
+        var focused = HasFocus;
 
         var barStyle = style.Resolve(theme, IsEnabled, focused, IsBarHovered, IsDragging);
         var glyph = SplitOrientation == Orientation.Horizontal ? style.VerticalGlyph : style.HorizontalGlyph;

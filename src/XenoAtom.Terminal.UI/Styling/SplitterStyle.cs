@@ -36,22 +36,22 @@ public sealed record SplitterStyle : IStyle<SplitterStyle>
     /// Gets the optional base bar style.
     /// </summary>
     public Style? BarStyle { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style used when hovered.
     /// </summary>
     public Style? HoverStyle { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style used when focused.
     /// </summary>
     public Style? FocusStyle { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style used while dragging.
     /// </summary>
     public Style? DragStyle { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style used when disabled.
     /// </summary>

@@ -45,17 +45,17 @@ public sealed record SelectionListStyle : IStyle<SelectionListStyle>
     /// Gets the optional style for a normal item.
     /// </summary>
     public Style? Item { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style for a selected item when focused.
     /// </summary>
     public Style? SelectedFocused { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style for a selected item when unfocused.
     /// </summary>
     public Style? SelectedUnfocused { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style for disabled items.
     /// </summary>

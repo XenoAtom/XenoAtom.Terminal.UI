@@ -144,8 +144,6 @@ public partial class Select<T> : ContentVisual
     /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var style = GetStyle<SelectStyle>();
         var padding = style.Padding;
         var arrowWidth = TerminalTextUtility.GetWidth(style.ArrowGlyph.ToString().AsSpan());
@@ -180,7 +178,7 @@ public partial class Select<T> : ContentVisual
 
         var theme = GetTheme();
         var style = GetStyle<SelectStyle>();
-        var isFocused = ReferenceEquals(App?.FocusedElement, this);
+        var isFocused = HasFocus;
         var resolved = style.ResolveStyle(theme, IsEnabled, isFocused, IsHovered);
 
         // Clear background.

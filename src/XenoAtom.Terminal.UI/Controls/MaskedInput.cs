@@ -239,8 +239,6 @@ public sealed partial class MaskedInput : TextEditorBase
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var style = GetStyle<MaskedInputStyle>();
         var padding = style.Padding;
 
@@ -266,7 +264,7 @@ public sealed partial class MaskedInput : TextEditorBase
         _ = Template;
         _ = Value;
 
-        var isFocused = ReferenceEquals(App?.FocusedElement, this);
+        var isFocused = HasFocus;
         var theme = GetTheme();
         var style = GetStyle<MaskedInputStyle>();
 
@@ -313,7 +311,7 @@ public sealed partial class MaskedInput : TextEditorBase
         }
 
         var theme = GetTheme();
-        var focused = ReferenceEquals(App?.FocusedElement, this);
+        var focused = HasFocus;
         var maskedStyle = GetStyle<MaskedInputStyle>();
 
         var cellX = x;

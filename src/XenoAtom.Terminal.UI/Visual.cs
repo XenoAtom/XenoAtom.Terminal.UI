@@ -62,19 +62,17 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// Gets the arranged bounds of this visual, in cell coordinates, relative to its parent.
     /// </summary>
     [Bindable]
-    public partial Rectangle Bounds { get; protected set; }
+    public partial Rectangle Bounds { get; private set; }
 
     /// <summary>
     /// Gets the desired size computed during the last measure pass.
     /// </summary>
-    [Bindable]
-    public partial Size DesiredSize { get; private set; }
+    public Size DesiredSize { get; private set; }
 
     /// <summary>
     /// Gets the last measure hints computed during <see cref="Measure(in LayoutConstraints)"/>.
     /// </summary>
-    [Bindable]
-    public partial SizeHints MeasureHints { get; private set; }
+    public SizeHints MeasureHints { get; private set; }
 
     /// <summary>
     /// Gets the owning <see cref="TerminalApp"/> when this visual is attached to an application.
@@ -141,6 +139,12 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
     [Bindable]
     public partial bool IsEnabled { get; set; }
+
+    [Bindable]
+    public partial bool HasFocus { get; internal set; }
+
+    [Bindable]
+    public partial bool HasFocusWithin { get; internal set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether this visual participates in hit testing.
@@ -466,77 +470,97 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
     internal void AttachToApp(TerminalApp app)
     {
-        using var _ = BindingManager.Current.DisableReadTracking();
-        App = app;
-
-        // A visual may be detached and later re-attached (e.g. popups, dialogs, or moved subtrees).
-        // Cached layout/render state must not survive across attachments, otherwise we can skip Arrange/Measure
-        // and keep stale bounds (e.g. a Popup re-used with a different placement).
-        _measureDirty = true;
-        _arrangeDirty = true;
-        _prepareChildrenDirty = true;
-        _hasLastMeasure = false;
-        _hasLastArrange = false;
-        _measureDeps = null;
-        _arrangeDeps = null;
-        _prepareChildrenDeps = null;
-        _renderDeps = null;
-
-        OnAttachedToApp(app);
-
-        if (this is IAnimatedVisual animated)
+        BindingManager.Current.SetReadTracking(false);
+        try
         {
-            app.RegisterAnimatedVisual(animated);
-        }
+            App = app;
 
-        for (var i = 0; i < ChildrenCount; i++)
-        {
-            var child = GetChild(i);
-            if (child.App is null)
+            // A visual may be detached and later re-attached (e.g. popups, dialogs, or moved subtrees).
+            // Cached layout/render state must not survive across attachments, otherwise we can skip Arrange/Measure
+            // and keep stale bounds (e.g. a Popup re-used with a different placement).
+            _measureDirty = true;
+            _arrangeDirty = true;
+            _prepareChildrenDirty = true;
+            _hasLastMeasure = false;
+            _hasLastArrange = false;
+            _measureDeps = null;
+            _arrangeDeps = null;
+            _prepareChildrenDeps = null;
+            _renderDeps = null;
+
+            OnAttachedToApp(app);
+
+            if (this is IAnimatedVisual animated)
             {
-                child.AttachToApp(app);
+                app.RegisterAnimatedVisual(animated);
             }
+
+            for (var i = 0; i < ChildrenCount; i++)
+            {
+                var child = GetChild(i);
+                if (child.App is null)
+                {
+                    child.AttachToApp(app);
+                }
+            }
+        }
+        finally
+        {
+            BindingManager.Current.SetReadTracking(true);
         }
     }
 
     internal void DetachFromApp()
     {
-        using var _ = BindingManager.Current.DisableReadTracking();
-        var app = App;
-        if (app is null)
+        BindingManager.Current.SetReadTracking(false);
+        try
         {
-            return;
-        }
-
-        for (var i = 0; i < ChildrenCount; i++)
-        {
-            var child = GetChild(i);
-            if (child.App is not null)
+            var app = App;
+            if (app is null)
             {
-                child.DetachFromApp();
+                return;
             }
+
+            // Remove the focus from an element that has been detached
+            if (HasFocus)
+            {
+                app.FocusedElement = null;
+            }
+            
+            for (var i = 0; i < ChildrenCount; i++)
+            {
+                var child = GetChild(i);
+                if (child.App is not null)
+                {
+                    child.DetachFromApp();
+                }
+            }
+
+            // Reset cached state so a detached subtree is always considered out-of-date if it is re-attached later.
+            _prepareChildrenDirty = true;
+            _measureDirty = true;
+            _arrangeDirty = true;
+            _hasLastMeasure = false;
+            _hasLastArrange = false;
+            _prepareChildrenDeps = null;
+            _measureDeps = null;
+            _arrangeDeps = null;
+            _renderDeps = null;
+
+            if (this is IAnimatedVisual animated)
+            {
+                app.UnregisterAnimatedVisual(animated);
+            }
+
+            app.UnregisterDependencies(this);
+
+            App = null;
+            OnDetachedFromApp(app);
         }
-
-        // Reset cached state so a detached subtree is always considered out-of-date if it is re-attached later.
-        _prepareChildrenDirty = true;
-        _measureDirty = true;
-        _arrangeDirty = true;
-        _hasLastMeasure = false;
-        _hasLastArrange = false;
-        _prepareChildrenDeps = null;
-        _measureDeps = null;
-        _arrangeDeps = null;
-        _renderDeps = null;
-
-        if (this is IAnimatedVisual animated)
+        finally
         {
-            app.UnregisterAnimatedVisual(animated);
+            BindingManager.Current.SetReadTracking(true);
         }
-
-        app.UnregisterDependencies(this);
-
-        App = null;
-        OnDetachedFromApp(app);
     }
 
     /// <summary>
@@ -576,15 +600,17 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             return;
         }
 
-        using var session = BindingManager.Current.StartTracking();
-        PrepareChildren();
-
-        if (UnionDependencies(ref _prepareChildrenDeps, session.Reads) && App is not null)
+        using (var session = BindingManager.Current.StartTracking())
         {
-            App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.PrepareChildren, _prepareChildrenDeps!);
-        }
+            PrepareChildren();
 
-        _prepareChildrenDirty = false;
+            if (UnionDependencies(ref _prepareChildrenDeps, session.Reads) && App is not null)
+            {
+                App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.PrepareChildren, _prepareChildrenDeps!);
+            }
+
+            _prepareChildrenDirty = false;
+        }
     }
 
     /// <summary>
@@ -620,36 +646,41 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
         var previousDesiredWithoutMargin = _lastDesiredSizeWithoutMargin;
 
-        using var session = BindingManager.Current.StartTracking();
-        var margin = Margin;
-        var innerConstraints = ApplyMeasureConstraints(Deflate(constraints, margin));
-
-        var hints = MeasureCore(innerConstraints).Normalize();
-        hints = ClampHintsToConstraints(hints, innerConstraints);
-
-        _lastDesiredSizeWithoutMargin = hints.Natural;
-
-        // Inflate hints by margin for the parent's perspective.
-        var inflatedHints = Inflate(hints, margin).Normalize();
-        inflatedHints = ClampHintsToConstraints(inflatedHints, constraints);
-
-        MeasureHints = inflatedHints;
-        DesiredSize = inflatedHints.Natural;
-
-        if (!previousDesiredWithoutMargin.Equals(_lastDesiredSizeWithoutMargin))
+        SizeHints measureHints;
+        using (var session = BindingManager.Current.StartTracking())
         {
-            MarkArrangeDirtyLocal();
-        }
+            var margin = Margin;
+            var innerConstraints = ApplyMeasureConstraints(Deflate(constraints, margin));
 
-        if (UnionDependencies(ref _measureDeps, session.Reads) && App is not null)
-        {
-            App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.Measure, _measureDeps!);
-        }
-        _measureDirty = false;
-        _hasLastMeasure = true;
-        _lastMeasureConstraints = constraints;
+            var hints = MeasureCore(innerConstraints).Normalize();
+            hints = ClampHintsToConstraints(hints, innerConstraints);
 
-        return MeasureHints;
+            _lastDesiredSizeWithoutMargin = hints.Natural;
+
+            // Inflate hints by margin for the parent's perspective.
+            var inflatedHints = Inflate(hints, margin).Normalize();
+            inflatedHints = ClampHintsToConstraints(inflatedHints, constraints);
+
+            measureHints = inflatedHints;
+            MeasureHints = measureHints;
+            DesiredSize = inflatedHints.Natural;
+
+            if (!previousDesiredWithoutMargin.Equals(_lastDesiredSizeWithoutMargin))
+            {
+                MarkArrangeDirtyLocal();
+            }
+
+            if (UnionDependencies(ref _measureDeps, session.Reads) && App is not null)
+            {
+                App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.Measure, _measureDeps!);
+            }
+
+            _measureDirty = false;
+            _hasLastMeasure = true;
+            _lastMeasureConstraints = constraints;
+        }
+        
+        return measureHints;
     }
 
     /// <summary>
@@ -667,20 +698,36 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             return;
         }
 
-        using var session = BindingManager.Current.StartTracking();
-        var margin = Margin;
-        var innerSlot = Deflate(finalRect, margin);
-        var arrangedRect = ApplyArrangeConstraints(innerSlot);
-        Bounds = arrangedRect;
-        ArrangeCore(arrangedRect);
-        if (UnionDependencies(ref _arrangeDeps, session.Reads) && App is not null)
+        using (var session = BindingManager.Current.StartTracking())
         {
-            App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.Arrange, _arrangeDeps!);
+            var margin = Margin;
+            var innerSlot = Deflate(finalRect, margin);
+            var arrangedRect = ApplyArrangeConstraints(innerSlot);
+            arrangedRect = PrepareArrangeBounds(arrangedRect);
+            Bounds = arrangedRect;
+            ArrangeCore(arrangedRect);
+            if (UnionDependencies(ref _arrangeDeps, session.Reads) && App is not null)
+            {
+                App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.Arrange, _arrangeDeps!);
+            }
+
+            _arrangeDirty = false;
+            _hasLastArrange = true;
+            _lastArrangeRect = finalRect;
         }
-        _arrangeDirty = false;
-        _hasLastArrange = true;
-        _lastArrangeRect = finalRect;
     }
+
+    /// <summary>
+    /// Prepares the final layout rectangle for arranging the element's content. Derived classes can override this
+    /// method to modify the arrangement rectangle before layout is performed.
+    /// </summary>
+    /// <remarks>Override this method in a derived class to customize how the arrangement rectangle is
+    /// prepared prior to layout. This can be used to adjust margins, alignment, or other layout considerations before
+    /// the element is arranged.</remarks>
+    /// <param name="finalRect">The rectangle that defines the final area within which the element should be arranged.</param>
+    /// <returns>A rectangle representing the area to be used for arranging the element's content. By default, returns the input
+    /// rectangle unchanged.</returns>
+    protected virtual Rectangle PrepareArrangeBounds(in Rectangle finalRect) => finalRect;
 
     /// <summary>
     /// Performs the core measure logic for this visual.
@@ -1058,28 +1105,30 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
         _dynamicUpdatesDirty = false;
 
-        using var initScope = BindingManager.Current.BeginDynamicUpdate(this);
-        using var session = BindingManager.Current.StartTracking();
-        var app = App;
-
-        app?.SetVisualBeingDynamicallyInitialized(this);
-        try
+        using (var initScope = BindingManager.Current.BeginDynamicUpdate(this))
+        using (var session = BindingManager.Current.StartTracking())
         {
-            for (var i = 0; i < _dynamicUpdates.Count; i++)
+            var app = App;
+
+            app?.SetVisualBeingDynamicallyInitialized(this);
+            try
             {
-                _dynamicUpdates[i](this);
+                for (var i = 0; i < _dynamicUpdates.Count; i++)
+                {
+                    _dynamicUpdates[i](this);
+                }
+
+                OnDynamicUpdated();
+            }
+            finally
+            {
+                app?.SetVisualBeingDynamicallyInitialized(null);
             }
 
-            OnDynamicUpdated();
-        }
-        finally
-        {
-            app?.SetVisualBeingDynamicallyInitialized(null);
-        }
-
-        if (ReplaceDependencies(ref _dynamicUpdateDeps, session.Reads) && App is not null)
-        {
-            App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.DynamicUpdate, _dynamicUpdateDeps!);
+            if (ReplaceDependencies(ref _dynamicUpdateDeps, session.Reads) && App is not null)
+            {
+                App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.DynamicUpdate, _dynamicUpdateDeps!);
+            }
         }
     }
 

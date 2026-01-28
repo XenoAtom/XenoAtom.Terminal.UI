@@ -40,27 +40,27 @@ public sealed record MenuBarStyle : IStyle<MenuBarStyle>
     /// Gets the optional style used for the bar background.
     /// </summary>
     public Style? BarStyle { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style used for normal items.
     /// </summary>
     public Style? ItemStyle { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style used for hovered items.
     /// </summary>
     public Style? ItemHoverStyle { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style used for open items.
     /// </summary>
     public Style? ItemOpenStyle { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style used for selected items.
     /// </summary>
     public Style? ItemSelectedStyle { get; init; }
-    
+
     /// <summary>
     /// Gets the optional style used for disabled items.
     /// </summary>

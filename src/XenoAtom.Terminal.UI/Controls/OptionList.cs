@@ -166,7 +166,6 @@ public sealed partial class OptionList<T> : Visual, IScrollable
     /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
         EnsureItemVisuals();
 
         var rect = finalRect;
@@ -245,7 +244,7 @@ public sealed partial class OptionList<T> : Visual, IScrollable
 
         var count = Items.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
-        var isFocused = ReferenceEquals(App?.FocusedElement, this);
+        var isFocused = HasFocus;
 
         // Fill background (inherit terminal theme).
         for (var y = rect.Y; y < rect.Y + rect.Height; y++)

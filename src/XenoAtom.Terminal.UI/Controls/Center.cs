@@ -32,8 +32,6 @@ public sealed partial class Center : ContentVisual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var content = Content;
         if (content is null)
         {

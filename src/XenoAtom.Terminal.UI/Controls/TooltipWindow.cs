@@ -68,8 +68,6 @@ internal sealed class TooltipWindow : ContentVisual
 
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var style = GetStyle<TooltipStyle>();
         var padding = style.Padding;
 

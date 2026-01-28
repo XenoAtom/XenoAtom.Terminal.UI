@@ -182,7 +182,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     /// <summary>
     /// Gets a value indicating whether this editor is the focused element in the application.
     /// </summary>
-    protected bool IsFocused => ReferenceEquals(App?.FocusedElement, this);
+    protected bool IsFocused => HasFocus;
 
     /// <summary>
     /// Gets a value indicating whether this editor is single-line.
@@ -327,7 +327,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
 
     partial void OnMaxUndoEntriesChanged(int value) => _undoRedo.MaxEntries = Math.Max(0, value);
 
-    bool ITextEditorHost.IsFocused => ReferenceEquals(App?.FocusedElement, this);
+    bool ITextEditorHost.IsFocused => HasFocus;
 
     void ITextEditorHost.InvalidateEditor()
     {

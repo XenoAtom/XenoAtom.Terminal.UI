@@ -59,14 +59,7 @@ public sealed partial class Border : Padder
         var focusedWithin = false;
         if (borderStyle.HighlightOnFocusWithin)
         {
-            for (var v = App?.FocusedElement; v is not null; v = v.Parent)
-            {
-                if (ReferenceEquals(v, this))
-                {
-                    focusedWithin = true;
-                    break;
-                }
-            }
+            focusedWithin = HasFocusWithin;
         }
 
         var style = borderStyle.ResolveBorderStyle(theme, focusedWithin);

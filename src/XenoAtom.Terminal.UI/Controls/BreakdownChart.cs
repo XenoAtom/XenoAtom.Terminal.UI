@@ -153,8 +153,6 @@ public sealed partial class BreakdownChart : Visual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var x = finalRect.X;
         var y = finalRect.Y;
         var width = finalRect.Width;
@@ -251,11 +249,6 @@ public sealed partial class BreakdownChart : Visual
             var natural = min;
             var max = new Size(LayoutConstants.Infinite, 1);
             return SizeHints.Flex(min, natural, max, growX: 1, growY: 0, shrinkX: 1, shrinkY: 0);
-        }
-
-        protected override void ArrangeCore(in Rectangle finalRect)
-        {
-            Bounds = finalRect;
         }
 
         protected override void OnPointerMoved(PointerEventArgs e)
@@ -617,7 +610,6 @@ public sealed partial class BreakdownChart : Visual
 
         protected override void ArrangeCore(in Rectangle finalRect)
         {
-            Bounds = finalRect;
             EnsureLayout();
             _layout.Arrange(finalRect);
         }
@@ -754,7 +746,6 @@ public sealed partial class BreakdownChart : Visual
 
             protected override void ArrangeCore(in Rectangle finalRect)
             {
-                Bounds = finalRect;
                 ApplyStyle();
                 _layout.Arrange(finalRect);
             }
@@ -866,11 +857,6 @@ public sealed partial class BreakdownChart : Visual
                 {
                     _ = constraints;
                     return SizeHints.Fixed(new Size(1, 1));
-                }
-
-                protected override void ArrangeCore(in Rectangle finalRect)
-                {
-                    Bounds = finalRect;
                 }
 
                 protected override void RenderOverride(CellBuffer buffer)

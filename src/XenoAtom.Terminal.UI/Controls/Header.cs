@@ -93,8 +93,6 @@ public sealed partial class Header : Visual
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        Bounds = finalRect;
-
         var left = _left;
         var center = _center;
         var right = _right;
