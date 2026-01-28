@@ -26,12 +26,9 @@ public sealed class ToastDemo : ControlsDemoBase
         var pauseOnHoverState = new State<bool>(true);
         var showProgressState = new State<bool>(true);
 
-        var positionSelect = new Select<ToastPosition>()
-            .Items([ToastPosition.TopRight, ToastPosition.TopLeft, ToastPosition.TopCenter, ToastPosition.BottomRight, ToastPosition.BottomLeft, ToastPosition.BottomCenter]);
-
-        var initialIndex = positionSelect.Items.IndexOf(positionState.Value);
+        var positionSelect = new EnumSelect<ToastPosition>();
+        var initialIndex = Enum.GetValues<ToastPosition>().IndexOf(ToastPosition.TopRight);
         positionSelect.SelectedIndex = initialIndex >= 0 ? initialIndex : 0;
-        positionState.Value = positionSelect.Items[Math.Clamp(positionSelect.SelectedIndex, 0, positionSelect.Items.Count - 1)];
 
         positionSelect.SelectionChanged((_, e) =>
         {
@@ -126,13 +123,13 @@ public sealed class ToastDemo : ControlsDemoBase
                         new HStack("Max visible:", maxVisibleSlider).Spacing(1),
                         new HStack("Default duration:", durationSlider).Spacing(1),
                         pauseOnHoverToggle,
-                        showProgressToggle)
+                        showProgressToggle).MinWidth(60)
                     .Spacing(1)),
                 new Group().Padding(1).Content(new VStack(
                         DemoUi.Title("Show toasts"),
                         buttons,
                         actions)
-                    .Spacing(1)))
+                    .Spacing(1).MinWidth(60)))
             .Spacing(1);
     }
 

@@ -38,7 +38,8 @@ internal static class DemoPage
             Log = AppendLog,
             NavigateToDemoId = context.NavigateToDemoId,
             Runtime = context.Runtime,
-            Theme = context.Theme
+            Theme = context.Theme,
+            ToastHost = context.ToastHost
         });
 
         var link = BuildSourceLink(meta);

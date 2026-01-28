@@ -92,7 +92,8 @@ internal static class ControlsDemoApp
         var colorSchemes = new Select<ColorScheme>().Items(ColorScheme.GetPredefinedSchemes());
         colorSchemes.SelectedIndex = colorSchemes.Items.IndexOf(ColorScheme.ElderberryDarkSoft);
 
-        ToastHost? toastHost = null;
+        var layout = new DockLayout();
+        ToastHost toastHost = new ToastHost(layout);
         var page = new ComputedVisual(() =>
         {
             var id = selectedDemoId.Value;
@@ -122,14 +123,11 @@ internal static class ControlsDemoApp
         }).Pad(1).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
 
 
-        var layout = new DockLayout()
-            .Content(new HSplitter(sidebar, page).Ratio(0.16))
+        layout.Content(new HSplitter(sidebar, page).Ratio(0.16))
             .Bottom(
                 new Footer().Left("Tab focus | Mouse | Resize")
                     .Center(new HStack("🎨 Select Theme: ", colorSchemes))
                     .Right(new CommandBar()));
-
-        toastHost = new ToastHost(layout);
 
         toastHost.Update(c =>
         {
