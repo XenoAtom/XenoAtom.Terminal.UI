@@ -472,9 +472,9 @@ public sealed partial class ScrollViewer : Visual
             var maxVerticalOffset = Math.Max(0, extentHeight - contentViewportHeight);
             var maxHorizontalOffset = Math.Max(0, extentWidth - contentViewportWidth);
 
-            v = verticalScrollEnabled ? Math.Clamp(_verticalOffset, 0, maxVerticalOffset) : 0;
+            v = verticalScrollEnabled ? Math.Clamp(VerticalOffset, 0, maxVerticalOffset) : 0;
             hOffset = horizontalScrollEnabled ? Math.Clamp(HorizontalOffset, 0, maxHorizontalOffset) : 0;
-            if (v != _verticalOffset) VerticalOffset = v;
+            if (v != VerticalOffset) VerticalOffset = v;
             if (hOffset != HorizontalOffset) HorizontalOffset = hOffset;
 
             _verticalBar.Minimum = 0;
