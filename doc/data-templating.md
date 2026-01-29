@@ -25,8 +25,11 @@ The active template registry is stored in the visual environment and resolved wi
 using XenoAtom.Terminal.UI.Templating;
 
 var templates = DataTemplates.Default.Derive(builder => builder
-    .Register<string>(DataTemplateRole.Display, new(
-        (string value, in DataTemplateContext _) => new TextBlock($"> {value}"))));
+    .Register<string>(
+        DataTemplateRole.Display,
+        new DataTemplate<string>(
+            Display: static (DataTemplateValue<string> value, in DataTemplateContext _) => new TextBlock(() => $"> {value.GetValue()}"),
+            Editor: null)));
 
 var ui = new VStack(
         new ListBox<string>().Items(["One", "Two", "Three"]),
@@ -113,8 +116,9 @@ using XenoAtom.Terminal.UI.Templating;
 new Select<string>()
     .Items(["First", "Second", "Third"])
     .ItemTemplate(new DataTemplate<string>(
-        (Binding<string> binding, in DataTemplateContext _) =>
-            new HStack(Symbols.ArrowRight, new TextBlock(() => binding.GetValue())).Spacing(1)));
+        Display: static (DataTemplateValue<string> value, in DataTemplateContext _) =>
+            new HStack(Symbols.ArrowRight, new TextBlock(() => value.GetValue())).Spacing(1),
+        Editor: null));
 ```
 
 ## Notes on performance and recycling

@@ -122,7 +122,11 @@ public sealed class DataTemplatesDemo : ControlsDemoBase
             .Spacing(1);
 
         var calloutTemplates = DataTemplates.Default.Derive(builder => builder
-            .Register<string>(DataTemplateRole.Display, new((Binding<string> binding, in DataTemplateContext _) => new TextBlock(() => $"> {binding.GetValue()}")))
+            .Register<string>(
+                DataTemplateRole.Display,
+                new DataTemplate<string>(
+                    Display: static (DataTemplateValue<string> value, in DataTemplateContext _) => new TextBlock(() => $"> {value.GetValue()}"),
+                    Editor: null))
         );
 
         var listDefaults = new VStack(

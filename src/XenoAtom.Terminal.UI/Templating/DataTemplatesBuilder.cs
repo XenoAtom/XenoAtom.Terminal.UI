@@ -38,6 +38,16 @@ public sealed class DataTemplatesBuilder
             throw new ArgumentException("Template must not be empty.", nameof(template));
         }
 
+        if (role == DataTemplateRole.Editor && !template.HasEditor)
+        {
+            throw new ArgumentException("Template must provide an editor factory for editor registrations.", nameof(template));
+        }
+
+        if (role == DataTemplateRole.Display && !template.HasDisplay)
+        {
+            throw new ArgumentException("Template must provide a display factory for display registrations.", nameof(template));
+        }
+
         var type = typeof(T);
         if (role == DataTemplateRole.Editor)
         {
@@ -75,11 +85,13 @@ public sealed class DataTemplatesBuilder
     {
         if (displayTemplate.IsEmpty)
         {
-            displayTemplate = new DataTemplate<TEnum>(static (Binding<TEnum> binding, in DataTemplateContext context) =>
-            {
-                var owner = context.Owner;
-                return new TextBlock(() => owner.ToStringObject(binding.GetValue()));
-            });
+            displayTemplate = new DataTemplate<TEnum>(
+                Display: static (DataTemplateValue<TEnum> value, in DataTemplateContext context) =>
+                {
+                    var owner = context.Owner;
+                    return new TextBlock(() => owner.ToStringObject(value.GetValue()));
+                },
+                Editor: null);
         }
 
         if (itemTemplate.IsEmpty)
@@ -89,7 +101,7 @@ public sealed class DataTemplatesBuilder
 
         if (editorTemplate.IsEmpty)
         {
-            editorTemplate = new DataTemplate<TEnum>(new EnumEditorFactory<TEnum>(itemTemplate).Create);
+            editorTemplate = new DataTemplate<TEnum>(Display: null, Editor: new EnumEditorFactory<TEnum>(itemTemplate).Create);
         }
 
         Register(DataTemplateRole.Display, displayTemplate);

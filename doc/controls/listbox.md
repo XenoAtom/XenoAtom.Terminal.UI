@@ -24,7 +24,9 @@ using XenoAtom.Terminal.UI.Templating;
 new ListBox<string>()
     .Items(["First", "Second"])
     .ItemTemplate(new DataTemplate<string>(
-        (Binding<string> binding, in DataTemplateContext _) => new HStack(Symbols.ArrowRight, new TextBlock(() => binding.GetValue())).Spacing(1)));
+        Display: static (DataTemplateValue<string> value, in DataTemplateContext _) =>
+            new HStack(Symbols.ArrowRight, new TextBlock(() => value.GetValue())).Spacing(1),
+        Editor: null));
 ```
 
 ## Styling

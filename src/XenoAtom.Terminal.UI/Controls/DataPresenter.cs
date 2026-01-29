@@ -129,13 +129,18 @@ public sealed partial class DataPresenter<T> : Visual
             _content = null;
         }
 
-        if (template.IsEmpty || template.Create is null)
+        if (role == DataTemplateRole.Editor)
         {
-            _content = new TextBlock(() => owner.ToStringObject(binding.GetValue()));
+            _content = template.IsEmpty || template.Editor is null
+                ? new TextBlock(() => owner.ToStringObject(binding.GetValue()))
+                : template.Editor(binding, ctx);
         }
         else
         {
-            _content = template.Create(binding, ctx);
+            var displayValue = new DataTemplateValue<T>(binding);
+            _content = template.IsEmpty || template.Display is null
+                ? new TextBlock(() => owner.ToStringObject(displayValue.GetValue()))
+                : template.Display(displayValue, ctx);
         }
 
         AttachChild(_content);

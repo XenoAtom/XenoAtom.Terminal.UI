@@ -25,7 +25,6 @@ public partial class Select<T> : ContentVisual
     private int _contentIndex = -1;
     private int _selectionChangedIndex = -1;
     private DataTemplate<T> _lastResolvedTemplate;
-    private readonly State<T> _selectedState;
 
     /// <summary>
     /// Called when <see cref="SelectedIndex"/> changes.
@@ -42,7 +41,6 @@ public partial class Select<T> : ContentVisual
         Focusable = true;
         Items = new BindableList<T>(this, "Select.Items");
         this.SelectedIndex(0);
-        _selectedState = new State<T>(default!);
     }
 
     /// <summary>
@@ -235,13 +233,13 @@ public partial class Select<T> : ContentVisual
         {
             if (Content is not null)
             {
-            Content = null;
-        }
+                Content = null;
+            }
 
-        _contentIndex = -1;
-        _lastResolvedTemplate = default;
-        return;
-    }
+            _contentIndex = -1;
+            _lastResolvedTemplate = default;
+            return;
+        }
 
         var index = Math.Clamp(SelectedIndex, 0, items.Count - 1);
         if (index != SelectedIndex)
@@ -262,19 +260,21 @@ public partial class Select<T> : ContentVisual
             return;
         }
 
-        _selectedState.Value = value;
+        var ctx = new DataTemplateContext(this, DataTemplateRole.Display, index, DataTemplateItemState.None);
+        var templateValue = new DataTemplateValue<T>(value);
 
         if (!forceRebuild && _lastResolvedTemplate.Equals(template) && Content is not null)
         {
-            return;
+            if (template.TryUpdate is { } updater && updater(Content, templateValue, ctx))
+            {
+                return;
+            }
         }
 
         _lastResolvedTemplate = template;
-        var binding = (Binding<T>)_selectedState;
-        var ctx = new DataTemplateContext(this, DataTemplateRole.Display, index, DataTemplateItemState.None);
-        Content = template.IsEmpty || template.Create is null
-            ? new TextBlock(() => ToStringObject(binding.GetValue()))
-            : template.Create(binding, ctx);
+        Content = template.IsEmpty || template.Display is null
+            ? new TextBlock(() => ToStringObject(value))
+            : template.Display(templateValue, ctx);
     }
 
     private void OpenPopup()

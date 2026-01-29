@@ -108,9 +108,9 @@ public sealed record CommandPaletteStyle : IStyle<CommandPaletteStyle>
     internal static DataTemplate<ResolvedCommand> CreateDefaultItemTemplate() => DefaultItemTemplate;
 
     private static DataTemplate<ResolvedCommand> CreateDefaultItemTemplateCore(bool showDescription)
-        => new((Binding<ResolvedCommand> binding, in DataTemplateContext _) =>
+        => new(Display: (DataTemplateValue<ResolvedCommand> entryValue, in DataTemplateContext _) =>
         {
-            var entry = binding.GetValue();
+            var entry = entryValue.GetValue();
             var cmd = entry.Command;
 
             Visual label = new Markup(cmd.LabelMarkup);
@@ -136,5 +136,5 @@ public sealed record CommandPaletteStyle : IStyle<CommandPaletteStyle>
             }
 
             return item;
-        });
+        }, Editor: null);
 }

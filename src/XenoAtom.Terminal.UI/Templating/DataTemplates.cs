@@ -81,6 +81,16 @@ public sealed record DataTemplates : IStyle<DataTemplates>
             throw new ArgumentException("Template must not be empty.", nameof(template));
         }
 
+        if (role == DataTemplateRole.Editor && !template.HasEditor)
+        {
+            throw new ArgumentException("Template must provide an editor factory for editor registrations.", nameof(template));
+        }
+
+        if (role == DataTemplateRole.Display && !template.HasDisplay)
+        {
+            throw new ArgumentException("Template must provide a display factory for display registrations.", nameof(template));
+        }
+
         var type = typeof(T);
         if (role == DataTemplateRole.Editor)
         {
@@ -127,7 +137,9 @@ public sealed record DataTemplates : IStyle<DataTemplates>
 
         if (role == DataTemplateRole.Editor && typeof(T).IsEnum)
         {
-            template = new DataTemplate<T>(static (Binding<T> binding, in DataTemplateContext context) => new EnumEditorTextBox<T>(binding, context.Owner));
+            template = new DataTemplate<T>(
+                Display: null,
+                Editor: static (Binding<T> binding, in DataTemplateContext context) => new EnumEditorTextBox<T>(binding, context.Owner));
             return true;
         }
 
@@ -144,11 +156,15 @@ public sealed record DataTemplates : IStyle<DataTemplates>
 
         static void RegisterEditor<T>(Dictionary<Type, object> table, DataTemplate<T> template) => table[typeof(T)] = template;
 
-        static Visual DisplayNullableString(Binding<string?> binding, in DataTemplateContext _)
-            => new TextBlock(() => binding.GetValue() ?? string.Empty);
+        static DataTemplate<T> DisplayOnly<T>(DataTemplateDisplayFactory<T> factory) => new(factory, null);
 
-        static Visual DisplayString(Binding<string> binding, in DataTemplateContext _)
-            => new TextBlock(() => binding.GetValue());
+        static DataTemplate<T> EditorOnly<T>(DataTemplateEditorFactory<T> factory) => new(null, factory);
+
+        static Visual DisplayNullableString(DataTemplateValue<string?> value, in DataTemplateContext _)
+            => new TextBlock(() => value.GetValue() ?? string.Empty);
+
+        static Visual DisplayString(DataTemplateValue<string> value, in DataTemplateContext _)
+            => new TextBlock(() => value.GetValue());
 
         static Visual EditBindingNullableString(Binding<string?> binding, in DataTemplateContext _)
             => new TextBox().Text(binding);
@@ -160,16 +176,16 @@ public sealed record DataTemplates : IStyle<DataTemplates>
             // The binding points to a string instance at runtime. We surface it as nullable to match TextBox.Text.
             => new(binding.Owner, (BindingAccessor<string?>)(object)binding.Accessor);
 
-        static Visual DisplayBool(Binding<bool> binding, in DataTemplateContext _)
-            => new TextBlock(() => binding.GetValue() ? "true" : "false");
+        static Visual DisplayBool(DataTemplateValue<bool> value, in DataTemplateContext _)
+            => new TextBlock(() => value.GetValue() ? "true" : "false");
 
         static Visual EditBindingBool(Binding<bool> binding, in DataTemplateContext _)
             => new Switch().IsOn(binding);
 
-        static Visual DisplayFormattable<T>(Binding<T> binding, in DataTemplateContext context)
+        static Visual DisplayFormattable<T>(DataTemplateValue<T> value, in DataTemplateContext context)
         {
             var owner = context.Owner;
-            return new TextBlock(() => owner.ToStringValue(binding.GetValue()));
+            return new TextBlock(() => owner.ToStringValue(value.GetValue()));
         }
 
         static Visual EditBindingNumber<T>(Binding<T> binding, in DataTemplateContext _) where T : struct, INumber<T>
@@ -230,68 +246,68 @@ public sealed record DataTemplates : IStyle<DataTemplates>
                     => DateTimeOffset.TryParseExact(text, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out value)
                        || DateTimeOffset.TryParse(text, culture, DateTimeStyles.RoundtripKind, out value));
 
-        RegisterDisplay(display, new DataTemplate<string?>(DisplayNullableString));
-        RegisterEditor(editor, new DataTemplate<string?>(EditBindingNullableString));
+        RegisterDisplay(display, DisplayOnly<string?>(DisplayNullableString));
+        RegisterEditor(editor, EditorOnly<string?>(EditBindingNullableString));
 
-        RegisterDisplay(display, new DataTemplate<string>(DisplayString));
-        RegisterEditor(editor, new DataTemplate<string>(EditBindingString));
+        RegisterDisplay(display, DisplayOnly<string>(DisplayString));
+        RegisterEditor(editor, EditorOnly<string>(EditBindingString));
 
-        RegisterDisplay(display, new DataTemplate<bool>(DisplayBool));
-        RegisterEditor(editor, new DataTemplate<bool>(EditBindingBool));
+        RegisterDisplay(display, DisplayOnly<bool>(DisplayBool));
+        RegisterEditor(editor, EditorOnly<bool>(EditBindingBool));
 
-        RegisterDisplay(display, new DataTemplate<char>(DisplayFormattable<char>));
-        RegisterEditor(editor, new DataTemplate<char>(EditBindingChar));
+        RegisterDisplay(display, DisplayOnly<char>(DisplayFormattable<char>));
+        RegisterEditor(editor, EditorOnly<char>(EditBindingChar));
 
-        RegisterDisplay(display, new DataTemplate<Guid>(DisplayFormattable<Guid>));
-        RegisterEditor(editor, new DataTemplate<Guid>(EditBindingGuid));
+        RegisterDisplay(display, DisplayOnly<Guid>(DisplayFormattable<Guid>));
+        RegisterEditor(editor, EditorOnly<Guid>(EditBindingGuid));
 
-        RegisterDisplay(display, new DataTemplate<sbyte>(DisplayFormattable<sbyte>));
-        RegisterEditor(editor, new DataTemplate<sbyte>(EditBindingNumber<sbyte>));
+        RegisterDisplay(display, DisplayOnly<sbyte>(DisplayFormattable<sbyte>));
+        RegisterEditor(editor, EditorOnly<sbyte>(EditBindingNumber<sbyte>));
 
-        RegisterDisplay(display, new DataTemplate<byte>(DisplayFormattable<byte>));
-        RegisterEditor(editor, new DataTemplate<byte>(EditBindingNumber<byte>));
+        RegisterDisplay(display, DisplayOnly<byte>(DisplayFormattable<byte>));
+        RegisterEditor(editor, EditorOnly<byte>(EditBindingNumber<byte>));
 
-        RegisterDisplay(display, new DataTemplate<short>(DisplayFormattable<short>));
-        RegisterEditor(editor, new DataTemplate<short>(EditBindingNumber<short>));
+        RegisterDisplay(display, DisplayOnly<short>(DisplayFormattable<short>));
+        RegisterEditor(editor, EditorOnly<short>(EditBindingNumber<short>));
 
-        RegisterDisplay(display, new DataTemplate<ushort>(DisplayFormattable<ushort>));
-        RegisterEditor(editor, new DataTemplate<ushort>(EditBindingNumber<ushort>));
+        RegisterDisplay(display, DisplayOnly<ushort>(DisplayFormattable<ushort>));
+        RegisterEditor(editor, EditorOnly<ushort>(EditBindingNumber<ushort>));
 
-        RegisterDisplay(display, new DataTemplate<int>(DisplayFormattable<int>));
-        RegisterEditor(editor, new DataTemplate<int>(EditBindingNumber<int>));
+        RegisterDisplay(display, DisplayOnly<int>(DisplayFormattable<int>));
+        RegisterEditor(editor, EditorOnly<int>(EditBindingNumber<int>));
 
-        RegisterDisplay(display, new DataTemplate<uint>(DisplayFormattable<uint>));
-        RegisterEditor(editor, new DataTemplate<uint>(EditBindingNumber<uint>));
+        RegisterDisplay(display, DisplayOnly<uint>(DisplayFormattable<uint>));
+        RegisterEditor(editor, EditorOnly<uint>(EditBindingNumber<uint>));
 
-        RegisterDisplay(display, new DataTemplate<long>(DisplayFormattable<long>));
-        RegisterEditor(editor, new DataTemplate<long>(EditBindingNumber<long>));
+        RegisterDisplay(display, DisplayOnly<long>(DisplayFormattable<long>));
+        RegisterEditor(editor, EditorOnly<long>(EditBindingNumber<long>));
 
-        RegisterDisplay(display, new DataTemplate<ulong>(DisplayFormattable<ulong>));
-        RegisterEditor(editor, new DataTemplate<ulong>(EditBindingNumber<ulong>));
+        RegisterDisplay(display, DisplayOnly<ulong>(DisplayFormattable<ulong>));
+        RegisterEditor(editor, EditorOnly<ulong>(EditBindingNumber<ulong>));
 
-        RegisterDisplay(display, new DataTemplate<float>(DisplayFormattable<float>));
-        RegisterEditor(editor, new DataTemplate<float>(EditBindingNumber<float>));
+        RegisterDisplay(display, DisplayOnly<float>(DisplayFormattable<float>));
+        RegisterEditor(editor, EditorOnly<float>(EditBindingNumber<float>));
 
-        RegisterDisplay(display, new DataTemplate<double>(DisplayFormattable<double>));
-        RegisterEditor(editor, new DataTemplate<double>(EditBindingNumber<double>));
+        RegisterDisplay(display, DisplayOnly<double>(DisplayFormattable<double>));
+        RegisterEditor(editor, EditorOnly<double>(EditBindingNumber<double>));
 
-        RegisterDisplay(display, new DataTemplate<decimal>(DisplayFormattable<decimal>));
-        RegisterEditor(editor, new DataTemplate<decimal>(EditBindingNumber<decimal>));
+        RegisterDisplay(display, DisplayOnly<decimal>(DisplayFormattable<decimal>));
+        RegisterEditor(editor, EditorOnly<decimal>(EditBindingNumber<decimal>));
 
-        RegisterDisplay(display, new DataTemplate<DateOnly>(DisplayFormattable<DateOnly>));
-        RegisterEditor(editor, new DataTemplate<DateOnly>(EditBindingDateOnly));
+        RegisterDisplay(display, DisplayOnly<DateOnly>(DisplayFormattable<DateOnly>));
+        RegisterEditor(editor, EditorOnly<DateOnly>(EditBindingDateOnly));
 
-        RegisterDisplay(display, new DataTemplate<TimeOnly>(DisplayFormattable<TimeOnly>));
-        RegisterEditor(editor, new DataTemplate<TimeOnly>(EditBindingTimeOnly));
+        RegisterDisplay(display, DisplayOnly<TimeOnly>(DisplayFormattable<TimeOnly>));
+        RegisterEditor(editor, EditorOnly<TimeOnly>(EditBindingTimeOnly));
 
-        RegisterDisplay(display, new DataTemplate<TimeSpan>(DisplayFormattable<TimeSpan>));
-        RegisterEditor(editor, new DataTemplate<TimeSpan>(EditBindingTimeSpan));
+        RegisterDisplay(display, DisplayOnly<TimeSpan>(DisplayFormattable<TimeSpan>));
+        RegisterEditor(editor, EditorOnly<TimeSpan>(EditBindingTimeSpan));
 
-        RegisterDisplay(display, new DataTemplate<DateTime>(DisplayFormattable<DateTime>));
-        RegisterEditor(editor, new DataTemplate<DateTime>(EditBindingDateTime));
+        RegisterDisplay(display, DisplayOnly<DateTime>(DisplayFormattable<DateTime>));
+        RegisterEditor(editor, EditorOnly<DateTime>(EditBindingDateTime));
 
-        RegisterDisplay(display, new DataTemplate<DateTimeOffset>(DisplayFormattable<DateTimeOffset>));
-        RegisterEditor(editor, new DataTemplate<DateTimeOffset>(EditBindingDateTimeOffset));
+        RegisterDisplay(display, DisplayOnly<DateTimeOffset>(DisplayFormattable<DateTimeOffset>));
+        RegisterEditor(editor, EditorOnly<DateTimeOffset>(EditBindingDateTimeOffset));
 
         return new DataTemplates(display, editor, null);
     }

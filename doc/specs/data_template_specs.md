@@ -110,32 +110,41 @@ The core template representation is a **struct** so template slots are not thems
 and keeps bindable properties simple). Internally it can still wrap delegates.
 
 ```csharp
-public delegate Visual DataTemplateFactory<T>(Binding<T> binding, in DataTemplateContext context);
+public readonly record struct DataTemplateValue<T>
+{
+    public T GetValue();
+}
 
-public delegate bool DataTemplateUpdater<T>(Visual visual, Binding<T> binding, in DataTemplateContext context);
+public delegate Visual DataTemplateDisplayFactory<T>(DataTemplateValue<T> value, in DataTemplateContext context);
+
+public delegate Visual DataTemplateEditorFactory<T>(Binding<T> binding, in DataTemplateContext context);
+
+public delegate bool DataTemplateUpdater<T>(Visual visual, DataTemplateValue<T> value, in DataTemplateContext context);
 
 public delegate void DataTemplateReleaser(Visual visual);
 
 public readonly record struct DataTemplate<T>(
-    DataTemplateFactory<T>? Create,
+    DataTemplateDisplayFactory<T>? Display,
+    DataTemplateEditorFactory<T>? Editor,
     DataTemplateUpdater<T>? TryUpdate = null,
     DataTemplateReleaser? Release = null)
 {
-    public bool IsEmpty => Create is null;
+    public bool IsEmpty => Display is null && Editor is null;
 }
 ```
 
 Semantics:
 
-- `Create` builds a new `Visual` for a binding.
-- `TryUpdate` enables recycling: update an existing visual instance to represent a different binding.
+- `Display` builds a new `Visual` for display from a *read-only* value reference (`DataTemplateValue<T>`).
+- `Editor` builds a new `Visual` for editing from a *read/write* binding (`Binding<T>`).
+- `TryUpdate` enables recycling: update an existing visual instance to represent a different value.
   - Returns `true` if the visual was updated successfully.
-  - Returns `false` if the visual cannot be reused for that value (caller should fall back to `Create`).
+  - Returns `false` if the visual cannot be reused for that value (caller should fall back to `Display`).
 - `Release` is called when a visual is removed from a recycling pool permanently (optional hook to dispose resources).
 
 Normative rules:
 
-- `Create` MUST return a non-null `Visual` (otherwise throw at call site).
+- `Display` and `Editor` (when provided) MUST return a non-null `Visual` (otherwise throw at call site).
 - `TryUpdate` MUST NOT attach/detach visuals directly; it should only update bindable properties/state on the provided visual subtree.
   (The owning control manages parenting.)
 
@@ -191,8 +200,16 @@ Example:
 
 ```csharp
 var templates = DataTemplates.Default.Derive(builder => builder
-    .Register<string>(DataTemplateRole.Display, new((Binding<string> b, in DataTemplateContext _) => new TextBlock(() => b.GetValue())))
-    .Register<DateTime>(DataTemplateRole.Display, new((Binding<DateTime> b, in DataTemplateContext _) => new TextBlock(() => b.GetValue().ToString("u"))))
+    .Register<string>(
+        DataTemplateRole.Display,
+        new DataTemplate<string>(
+            Display: static (DataTemplateValue<string> v, in DataTemplateContext _) => new TextBlock(() => v.GetValue()),
+            Editor: null))
+    .Register<DateTime>(
+        DataTemplateRole.Display,
+        new DataTemplate<DateTime>(
+            Display: static (DataTemplateValue<DateTime> v, in DataTemplateContext _) => new TextBlock(() => v.GetValue().ToString("u")),
+            Editor: null))
 );
 
 root.Set(templates);
@@ -322,7 +339,7 @@ This section defines how templating supports large data sets with minimal alloca
 
 Virtualizing controls SHOULD:
 
-1. Create visuals via `template.Create`.
+1. Create visuals via `template.Display`.
 2. Reuse visuals by keeping a pool of detached visuals (removed from the visual tree).
 3. When reusing a pooled visual:
    - If `template.TryUpdate` exists and returns `true`, reuse the visual.
@@ -394,7 +411,7 @@ Recommended defaults for `DataTemplateRole.Display`:
 
 Recommended guidance:
 
-- Prefer building visuals that read `binding.GetValue()` inside a lambda so changes are tracked automatically.
+- Prefer building visuals that read `value.GetValue()` (for display) or `binding.GetValue()` (for editors) inside a lambda so changes are tracked automatically.
 
 ### 7.3 Editor defaults (reactive + bidirectional)
 
@@ -416,21 +433,26 @@ This enables a future property grid/forms experience without adding a new framew
 new Select<MyModel>()
     .Items(models)
     .ItemTemplate(new DataTemplate<MyModel>(
-        (Binding<MyModel> binding, in DataTemplateContext _) =>
+        Display: (DataTemplateValue<MyModel> value, in DataTemplateContext _) =>
         {
-            var m = binding.GetValue();
+            var m = value.GetValue();
             return new HStack(
                     new TextBlock(m.Name),
                     new TextBlock(() => $"#{m.Id}").Style(TextBlockStyle.Muted))
                 .Spacing(2);
-        }));
+        },
+        Editor: null));
 ```
 
 ### 8.2 Subtree-scoped defaults (overlay chaining)
 
 ```csharp
 var templates = new DataTemplates { Parent = DataTemplates.Default }
-    .Register<string>(DataTemplateRole.Display, new((Binding<string> b, in DataTemplateContext _) => new TextBlock(() => $"> {b.GetValue()}")));
+    .Register<string>(
+        DataTemplateRole.Display,
+        new DataTemplate<string>(
+            Display: static (DataTemplateValue<string> value, in DataTemplateContext _) => new TextBlock(() => $"> {value.GetValue()}"),
+            Editor: null));
 
 new VStack(
     new Select<string>().Items(["One", "Two", "Three"]),

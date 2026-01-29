@@ -27,5 +27,7 @@ using XenoAtom.Terminal.UI.Templating;
 var placements = new Select<PopupPlacement>()
     .Items([PopupPlacement.Below, PopupPlacement.Above, PopupPlacement.Right, PopupPlacement.Left])
     .ItemTemplate(new DataTemplate<PopupPlacement>(
-        (Binding<PopupPlacement> binding, in DataTemplateContext _) => new HStack(Symbols.ArrowRight, new TextBlock(() => binding.GetValue().ToString())).Spacing(1)));
+        Display: static (DataTemplateValue<PopupPlacement> value, in DataTemplateContext _) =>
+            new HStack(Symbols.ArrowRight, new TextBlock(() => value.GetValue().ToString())).Spacing(1),
+        Editor: null));
 ```

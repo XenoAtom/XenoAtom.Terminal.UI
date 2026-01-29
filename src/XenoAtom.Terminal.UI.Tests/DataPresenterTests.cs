@@ -188,7 +188,11 @@ public sealed class DataPresenterTests
         var name = new State<string>("Alex");
 
         var templates = DataTemplates.Default.Derive(builder => builder
-            .Register<string>(DataTemplateRole.Display, new((Binding<string> binding, in DataTemplateContext _) => new TextBlock(() => $"> {binding.GetValue()}")))
+            .Register<string>(
+                DataTemplateRole.Display,
+                new DataTemplate<string>(
+                    Display: static (DataTemplateValue<string> value, in DataTemplateContext _) => new TextBlock(() => $"> {value.GetValue()}"),
+                    Editor: null))
         );
 
         var presenter = name.PresentAs(DataTemplateRole.Display);
