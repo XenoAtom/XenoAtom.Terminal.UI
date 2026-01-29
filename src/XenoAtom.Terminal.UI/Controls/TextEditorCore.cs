@@ -38,12 +38,10 @@ internal interface ITextEditorHost
 {
     TerminalApp? App { get; }
     bool IsFocused { get; }
-    void InvalidateEditor();
-    void MarkEditorArrangeDirty();
     bool TryOpenSearchReplacePopup(SearchReplaceMode mode, string? initialSearchText);
 }
 
-internal sealed class TextEditorCore
+internal sealed partial class TextEditorCore
 {
     private readonly ITextEditorHost _host;
     private ITextDocument _document;
@@ -78,6 +76,9 @@ internal sealed class TextEditorCore
         _scroll = scroll;
         _undoRedo = undoRedo;
     }
+
+    [Bindable]
+    public partial int Version { get; private set; }
 
     private static int NormalizeIndexToTextElementBoundary(ReadOnlySpan<char> text, int index)
     {
@@ -120,7 +121,7 @@ internal sealed class TextEditorCore
         ClearSelection();
         _preferredColumn = -1;
         EnsureCaretVisible(options);
-        _host.InvalidateEditor();
+        Version++;
     }
 
     private string GetText()
@@ -220,7 +221,7 @@ internal sealed class TextEditorCore
     {
         UpdateExtent(options);
         EnsureCaretVisible(options);
-        _host.InvalidateEditor();
+        Version++;
     }
 
     public void OnDocumentChanged()
@@ -234,6 +235,8 @@ internal sealed class TextEditorCore
 
         if (_selectionAnchor > textLength) _selectionAnchor = textLength;
         if (_selectionEnd > textLength) _selectionEnd = textLength;
+
+        Version = _version + 1;
     }
 
     public void Render(in TextEditorRenderContext context, in TextEditorOptions options)
@@ -242,8 +245,6 @@ internal sealed class TextEditorCore
         {
             return;
         }
-
-        UpdateFocus();
 
         if (options.SingleLine)
         {
@@ -254,16 +255,6 @@ internal sealed class TextEditorCore
             RenderMultiLine(context, options);
         }
     }
-
-    private void UpdateFocus()
-    {
-        // If the editor lost focus, clear selection
-        if (!_host.IsFocused && HasSelection)
-        {
-            ClearSelection();
-        }
-    }
-
 
     public bool TryGetCursorCell(in TextEditorOptions options, out int x, out int y)
     {
@@ -366,7 +357,7 @@ internal sealed class TextEditorCore
         _caretIndex = index;
         _preferredColumn = -1;
         EnsureCaretVisible(options);
-        _host.InvalidateEditor();
+        Version++;
         e.Handled = true;
     }
 
@@ -382,7 +373,7 @@ internal sealed class TextEditorCore
         _caretIndex = index;
         _preferredColumn = -1;
         EnsureCaretVisible(options);
-        _host.InvalidateEditor();
+        Version++;
         e.Handled = true;
     }
 
@@ -1218,7 +1209,7 @@ internal sealed class TextEditorCore
         _caretIndex = index;
         _preferredColumn = -1;
         EnsureCaretVisible(options);
-        _host.InvalidateEditor();
+        Version++;
     }
 
     private void MoveCaretHorizontal(int delta, bool extendSelection, in TextEditorOptions options)
@@ -1495,7 +1486,7 @@ internal sealed class TextEditorCore
             RebuildSearchMatches();
         }
 
-        _host.InvalidateEditor();
+        Version++;
     }
 
     internal void Redo(in TextEditorOptions options)
@@ -1524,7 +1515,7 @@ internal sealed class TextEditorCore
             RebuildSearchMatches();
         }
 
-        _host.InvalidateEditor();
+        Version++;
     }
 
     private void SelectAll()
@@ -1538,7 +1529,7 @@ internal sealed class TextEditorCore
         _selectionAnchor = 0;
         _selectionEnd = text.Length;
         _caretIndex = text.Length;
-        _host.InvalidateEditor();
+        Version++;
     }
 
     private void UpdateSelectionAfterCaretMove(bool shift, int oldCaretIndex)
@@ -1546,7 +1537,7 @@ internal sealed class TextEditorCore
         if (!shift)
         {
             ClearSelection();
-            _host.InvalidateEditor();
+            Version++;
             return;
         }
 
@@ -1556,7 +1547,7 @@ internal sealed class TextEditorCore
         }
 
         _selectionEnd = _caretIndex;
-        _host.InvalidateEditor();
+        Version++;
     }
 
     private (int Start, int End) GetOrderedSelection()
@@ -2208,7 +2199,7 @@ internal sealed class TextEditorCore
         if (_searchMatches.Count == 0)
         {
             _activeSearchMatchIndex = -1;
-            _host.InvalidateEditor();
+            Version++;
             return;
         }
 
@@ -2226,7 +2217,7 @@ internal sealed class TextEditorCore
 
         _activeSearchMatchIndex = active;
         SelectActiveSearchMatch(options);
-        _host.InvalidateEditor();
+        Version++;
     }
 
     internal void GoToNextSearchMatch(in TextEditorOptions options)
@@ -2243,7 +2234,7 @@ internal sealed class TextEditorCore
         }
 
         SelectActiveSearchMatch(options);
-        _host.InvalidateEditor();
+        Version++;
     }
 
     internal void GoToPreviousSearchMatch(in TextEditorOptions options)
@@ -2260,7 +2251,7 @@ internal sealed class TextEditorCore
         }
 
         SelectActiveSearchMatch(options);
-        _host.InvalidateEditor();
+        Version++;
     }
 
     internal int ReplaceCurrentSearchMatch(string replacement, in TextEditorOptions options)
@@ -2278,7 +2269,7 @@ internal sealed class TextEditorCore
             ClearSelection();
         });
         RebuildSearchMatches();
-        _host.InvalidateEditor();
+        Version++;
         return 1;
     }
 
@@ -2314,7 +2305,7 @@ internal sealed class TextEditorCore
             _preferredColumn = -1;
             UpdateAfterDocumentChange(options);
             RebuildSearchMatches();
-            _host.InvalidateEditor();
+            Version++;
 
             var after = CaptureStateSnapshot();
             _undoRedo.CommitGroup(after);
@@ -2333,6 +2324,7 @@ internal sealed class TextEditorCore
 
     internal string GetSearchStatusText()
     {
+        _ = Version;
         if (string.IsNullOrEmpty(_searchQuery.Text))
         {
             return "No search";
@@ -2347,7 +2339,11 @@ internal sealed class TextEditorCore
         return $"{active}/{_searchMatches.Count}";
     }
 
-    internal string? GetSearchErrorText() => _searchError;
+    internal string? GetSearchErrorText()
+    {
+        _ = Version;
+        return _searchError;
+    }
 
     private void SelectActiveSearchMatch(in TextEditorOptions options)
     {

@@ -158,12 +158,6 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     [Bindable]
     public partial bool WordWrap { get; set; }
 
-    /// <summary>
-    /// Gets a bindable version number used to invalidate layout/render when the underlying document or editor view changes.
-    /// </summary>
-    [Bindable]
-    internal partial int EditorVersion { get; set; }
-
     // NOTE: Text document replacement is handled by PrepareChildren() to avoid ad-hoc invalidation.
 
     /// <summary>
@@ -239,7 +233,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     /// </summary>
     protected void RenderEditor(CellBuffer buffer, Rectangle contentRect, Style textStyle, Style selectionStyle, Style placeholderStyle)
     {
-        _ = EditorVersion;
+        _ = _core.Version;
         var options = BuildEditorOptions();
         var context = BuildRenderContext(buffer, contentRect, textStyle, selectionStyle, placeholderStyle);
         _core.Render(context, options);
@@ -250,7 +244,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     /// </summary>
     protected void UpdateEditorLayout(Rectangle contentRect)
     {
-        _ = EditorVersion;
+        _ = _core.Version;
         _core.UpdateLayout(contentRect, BuildEditorOptions());
     }
 
@@ -313,7 +307,6 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     {
         _undoRedo.EnsureSynchronized();
         _core.OnDocumentChanged();
-        EditorVersion++;
     }
 
     partial void OnEnableUndoChanged(bool value)
@@ -328,16 +321,6 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     partial void OnMaxUndoEntriesChanged(int value) => _undoRedo.MaxEntries = Math.Max(0, value);
 
     bool ITextEditorHost.IsFocused => HasFocus;
-
-    void ITextEditorHost.InvalidateEditor()
-    {
-        EditorVersion = _editorVersion + 1;
-    }
-
-    void ITextEditorHost.MarkEditorArrangeDirty()
-    {
-        EditorVersion = _editorVersion + 1;
-    }
 
     bool ITextEditorHost.TryOpenSearchReplacePopup(SearchReplaceMode mode, string? initialSearchText)
         => TryOpenSearchReplacePopup(mode, initialSearchText);
