@@ -33,7 +33,6 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     private BindableList<Command>? _commands;
     internal Dictionary<object, object?>? StyleEnvironment;
     private List<Action<Visual>>? _dynamicUpdates;
-    private List<Collections.IDynamicUpdateResettable>? _dynamicUpdateLists;
 
     private Size _lastDesiredSizeWithoutMargin;
 
@@ -457,15 +456,6 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         _dynamicUpdates ??= new List<Action<Visual>>();
         _dynamicUpdates.Add(configure);
         _dynamicUpdatesDirty = true;
-    }
-
-    internal void RegisterDynamicUpdateList(Collections.IDynamicUpdateResettable list)
-    {
-        _dynamicUpdateLists ??= new List<Collections.IDynamicUpdateResettable>();
-        if (!_dynamicUpdateLists.Contains(list))
-        {
-            _dynamicUpdateLists.Add(list);
-        }
     }
 
     internal void AttachToApp(TerminalApp app)
@@ -1095,17 +1085,8 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             return;
         }
 
-        if (_dynamicUpdateLists is not null)
-        {
-            for (var i = 0; i < _dynamicUpdateLists.Count; i++)
-            {
-                _dynamicUpdateLists[i].ResetForDynamicUpdate();
-            }
-        }
-
         _dynamicUpdatesDirty = false;
 
-        using (var initScope = BindingManager.Current.BeginDynamicUpdate(this))
         using (var session = BindingManager.Current.StartTracking())
         {
             var app = App;

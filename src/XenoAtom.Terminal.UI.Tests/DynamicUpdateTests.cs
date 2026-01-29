@@ -18,6 +18,7 @@ public sealed class DynamicUpdateTests
         var stack = new VStack()
             .Update(v =>
             {
+                v.Children.Clear();
                 var count = countState.Value;
                 for (var i = 0; i < count; i++)
                 {
@@ -26,23 +27,15 @@ public sealed class DynamicUpdateTests
             });
 
         using var driver = new TerminalAppTestDriver(stack, TerminalHostKind.Fullscreen, new TerminalSize(80, 25));
-        driver.TickUntil(() => stack.Children.Count == 1);
+        driver.Tick();
+        Assert.HasCount(1, stack.Children);
 
         countState.Value = 3;
-        driver.TickUntil(() => stack.Children.Count == 3);
+        driver.Tick();
+        Assert.HasCount(3, stack.Children);
 
         countState.Value = 2;
-        driver.TickUntil(() => stack.Children.Count == 2);
-    }
-
-    [TestMethod]
-    public void DynamicUpdates_Cannot_Mutate_StaticallyInitialized_List()
-    {
-        var stack = new VStack();
-        stack.Add("Static");
-
-        stack.Update(v => v.Add("Dynamic"));
-
-        Assert.Throws<InvalidOperationException>(() => stack.Measure(new Size(80, 25)));
+        driver.Tick();
+        Assert.HasCount(2, stack.Children);
     }
 }

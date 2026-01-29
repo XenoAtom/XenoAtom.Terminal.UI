@@ -104,6 +104,9 @@ public sealed partial class OptionList<T> : Visual, IScrollable
     [Bindable]
     public partial Delegator<Func<T, string?>> ItemSearchText { get; set; }
 
+    [Bindable]
+    private partial int ScrollVersion { get; set; }
+
     partial void OnSelectedIndexChanging(ref int value)
     {
         _oldSelectedForEvent = _selectedIndex;
@@ -133,6 +136,12 @@ public sealed partial class OptionList<T> : Visual, IScrollable
 
     /// <inheritdoc/>
     protected override Visual GetChild(int index) => _itemVisuals[index];
+
+    /// <inheritdoc/>
+    protected override void PrepareChildren()
+    {
+        ScrollVersion = _scroll.Version;
+    }
 
     /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
@@ -166,6 +175,7 @@ public sealed partial class OptionList<T> : Visual, IScrollable
     /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
+        _ = ScrollVersion;
         EnsureItemVisuals();
 
         var rect = finalRect;
@@ -226,6 +236,7 @@ public sealed partial class OptionList<T> : Visual, IScrollable
     /// <inheritdoc/>
     protected override void RenderOverride(CellBuffer buffer)
     {
+        _ = ScrollVersion;
         var rect = Bounds;
         if (rect.Width <= 0 || rect.Height <= 0)
         {

@@ -76,6 +76,9 @@ public sealed partial class RadioButtonList<T> : Visual, IScrollable
     [Bindable]
     public partial DataTemplate<T> ItemTemplate { get; set; }
 
+    [Bindable]
+    private partial int ScrollVersion { get; set; }
+
     partial void OnSelectedIndexChanging(ref int value)
     {
         var count = Items.Count;
@@ -99,6 +102,12 @@ public sealed partial class RadioButtonList<T> : Visual, IScrollable
 
     /// <inheritdoc />
     protected override Visual GetChild(int index) => _itemVisuals[index];
+
+    /// <inheritdoc />
+    protected override void PrepareChildren()
+    {
+        ScrollVersion = _scroll.Version;
+    }
 
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
@@ -135,6 +144,8 @@ public sealed partial class RadioButtonList<T> : Visual, IScrollable
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         EnsureItemVisuals();
+
+        _ = ScrollVersion;
 
         var rect = finalRect;
         if (rect.Width <= 0 || rect.Height <= 0 || _itemVisuals.Count == 0)
@@ -186,6 +197,9 @@ public sealed partial class RadioButtonList<T> : Visual, IScrollable
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
+
+        _ = ScrollVersion;
+
         if (rect.Width <= 0 || rect.Height <= 0)
         {
             return;

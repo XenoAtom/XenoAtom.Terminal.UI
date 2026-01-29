@@ -21,8 +21,6 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
     private readonly Action<T>? _onRemoving;
     private int _version;
     private bool _touchedDuringInitialization;
-    private bool _hasStaticMutations;
-    private bool _hasDynamicMutations;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BindableList{T}"/> class.
@@ -306,43 +304,6 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
         {
             _version++;
         }
-
-        var isDynamicContext = ReferenceEquals(BindingManager.Current.DynamicUpdateOwner, _owner);
-
-        if (isDynamicContext)
-        {
-            if (_hasStaticMutations)
-            {
-                throw new InvalidOperationException("Cannot mix static list initialization with dynamic updates. Use a dedicated container for dynamic content.");
-            }
-
-            _hasDynamicMutations = true;
-
-            // When a dynamic update starts mutating a list, it must start from an empty list.
-            // The owning visual will clear this list before re-running dynamic updates.
-            if (!_touchedDuringInitialization)
-            {
-                if (_items.Count != 0)
-                {
-                    throw new InvalidOperationException("Dynamic list updates require the list to be empty. Static children/items must be moved to a separate container.");
-                }
-
-                _touchedDuringInitialization = true;
-                if (_owner is Visual v)
-                {
-                    v.RegisterDynamicUpdateList(this);
-                }
-            }
-
-            return;
-        }
-
-        if (_hasDynamicMutations)
-        {
-            throw new InvalidOperationException("Cannot modify a dynamically-updated list outside of a dynamic update. Use Update(...) to mutate this list.");
-        }
-
-        _hasStaticMutations = true;
     }
 
     /// <summary>

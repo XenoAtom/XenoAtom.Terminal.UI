@@ -77,6 +77,9 @@ public sealed partial class SelectionList<T> : Visual, IScrollable
     [Bindable]
     public partial int SelectedIndex { get; set; }
 
+    [Bindable]
+    private partial int ScrollVersion { get; set; }
+    
     partial void OnSelectedIndexChanging(ref int value)
     {
         var count = Items.Count;
@@ -119,7 +122,13 @@ public sealed partial class SelectionList<T> : Visual, IScrollable
 
     /// <inheritdoc />
     protected override Visual GetChild(int index) => _itemVisuals[index];
-
+    
+    /// <inheritdoc />
+    protected override void PrepareChildren()
+    {
+        ScrollVersion = _scroll.Version;
+    }
+    
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
@@ -153,6 +162,8 @@ public sealed partial class SelectionList<T> : Visual, IScrollable
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         EnsureItemVisuals();
+
+        _ = ScrollVersion;
 
         var rect = finalRect;
         if (rect.Width <= 0 || rect.Height <= 0 || _itemVisuals.Count == 0)
@@ -193,6 +204,7 @@ public sealed partial class SelectionList<T> : Visual, IScrollable
         var itemLeft = innerLeft + prefixWidth;
         var itemWidth = Math.Max(0, innerWidth - prefixWidth);
         var scrollOffset = _scroll.OffsetY;
+
         for (var i = 0; i < _itemVisuals.Count; i++)
         {
             var y = innerTop + (i - scrollOffset);
@@ -203,6 +215,8 @@ public sealed partial class SelectionList<T> : Visual, IScrollable
     /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
+        _ = ScrollVersion;
+
         var rect = Bounds;
         if (rect.Width <= 0 || rect.Height <= 0)
         {

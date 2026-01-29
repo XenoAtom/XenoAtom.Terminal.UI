@@ -164,6 +164,31 @@ public sealed class OptionListTests
     }
 
     [TestMethod]
+    public void OptionList_ScrollViewer_Offset_Updates_Rendered_Viewport()
+    {
+        var list = new OptionList<OptionListItem> { MinHeight = 3, MaxHeight = 3 };
+        for (var i = 0; i < 20; i++)
+        {
+            list.Items.Add(new OptionListItem($"Item {i:00}"));
+        }
+
+        var scrollViewer = new ScrollViewer(list) { MinHeight = 3, MaxHeight = 3 };
+        var root = new VStack(scrollViewer).Spacing(0);
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 8));
+        driver.Tick();
+
+        scrollViewer.VerticalOffset = 5;
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(30, 8);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText();
+
+        Assert.IsFalse(rendered.Contains("Item 00", StringComparison.Ordinal), "Expected the viewport to scroll past the first item.");
+        StringAssert.Contains(rendered, "Item 05", "Expected the scrolled item to be visible.");
+    }
+
+    [TestMethod]
     public void OptionList_Scrolls_Tall_Items_Without_Hiding_Last_Row()
     {
         var list = new OptionList<OptionListItem> { MinHeight = 6, MaxHeight = 6 };

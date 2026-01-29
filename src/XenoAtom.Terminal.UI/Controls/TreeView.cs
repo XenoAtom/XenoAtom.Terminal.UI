@@ -82,6 +82,9 @@ public sealed partial class TreeView : Visual, IScrollable
     /// </summary>
     public ScrollModel Scroll => _scroll;
 
+    [Bindable]
+    private partial int ScrollVersion { get; set; }
+
     /// <inheritdoc />
     protected override int ChildrenCount => _headers.Count;
 
@@ -91,6 +94,8 @@ public sealed partial class TreeView : Visual, IScrollable
     /// <inheritdoc />
     protected override void PrepareChildren()
     {
+        ScrollVersion = _scroll.Version;
+
         _visible.Clear();
         for (var i = 0; i < _roots.Count; i++)
         {
@@ -205,6 +210,8 @@ public sealed partial class TreeView : Visual, IScrollable
     /// <inheritdoc />
     protected override void ArrangeCore(in Rectangle finalRect)
     {
+        _ = ScrollVersion;
+
         var style = GetStyle<TreeViewStyle>();
         var indentSize = style.HierarchyLines is null ? style.IndentSize : Math.Max(2, style.IndentSize);
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
@@ -262,6 +269,9 @@ public sealed partial class TreeView : Visual, IScrollable
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
+
+        _ = ScrollVersion;
+
         if (rect.Width <= 0 || rect.Height <= 0)
         {
             return;

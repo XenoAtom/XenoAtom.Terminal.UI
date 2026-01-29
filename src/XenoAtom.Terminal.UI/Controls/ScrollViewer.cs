@@ -145,15 +145,9 @@ public sealed partial class ScrollViewer : Visual
     [Bindable(NoVisualAttach = true)]
     public partial Visual? Content { get; set; }
 
-    private int _cachedVerticalOffsetFromPrepare;
-    private int _cachedHorizontalOffsetFromPrepare;
-
     /// <inheritdoc />
     protected override void PrepareChildren()
     {
-        _cachedVerticalOffsetFromPrepare = VerticalOffset;
-        _cachedHorizontalOffsetFromPrepare = HorizontalOffset;
-
         // The scroll viewer hosts its content through an internal ContentViewportHost. The Content property is a
         // template-like input and must not auto-attach to this visual.
         var content = Content;
@@ -163,6 +157,9 @@ public sealed partial class ScrollViewer : Visual
             _contentHost.SetContent(content);
             UpdateContentScrollable(content as IScrollable);
         }
+
+        VerticalOffsetFromPrepare = VerticalOffset;
+        HorizontalOffsetFromPrepare = HorizontalOffset;
     }
 
     /// <summary>
@@ -201,6 +198,12 @@ public sealed partial class ScrollViewer : Visual
     /// </summary>
     [Bindable]
     public partial int HorizontalOffset { get; set; }
+
+    [Bindable]
+    private partial int VerticalOffsetFromPrepare { get; set; }
+
+    [Bindable]
+    private partial int HorizontalOffsetFromPrepare { get; set; }
 
     partial void OnHorizontalScrollEnabledChanged(bool value)
     {
@@ -351,6 +354,9 @@ public sealed partial class ScrollViewer : Visual
         var v = 0;
         var hOffset = 0;
 
+        var verticalOffset = VerticalOffsetFromPrepare;
+        var horizontalOffset = HorizontalOffsetFromPrepare;
+
         if (useContentScroll)
         {
             var scrollModel = _contentScrollModel;
@@ -400,7 +406,7 @@ public sealed partial class ScrollViewer : Visual
                 scrollModel.SetOffset(hOffset, v);
             }
 
-            SyncOffsetsFromContent();
+            SyncOffsetsFromScrollModel();
 
             _verticalBar.Minimum = 0;
             _verticalBar.Maximum = maxVerticalOffset;
@@ -476,8 +482,8 @@ public sealed partial class ScrollViewer : Visual
             var maxVerticalOffset = Math.Max(0, extentHeight - contentViewportHeight);
             var maxHorizontalOffset = Math.Max(0, extentWidth - contentViewportWidth);
 
-            v = verticalScrollEnabled ? Math.Clamp(_cachedVerticalOffsetFromPrepare, 0, maxVerticalOffset) : 0;
-            hOffset = horizontalScrollEnabled ? Math.Clamp(_cachedHorizontalOffsetFromPrepare, 0, maxHorizontalOffset) : 0;
+            v = verticalScrollEnabled ? Math.Clamp(verticalOffset, 0, maxVerticalOffset) : 0;
+            hOffset = horizontalScrollEnabled ? Math.Clamp(horizontalOffset, 0, maxHorizontalOffset) : 0;
             VerticalOffset = v;
             HorizontalOffset = hOffset;
 
@@ -656,7 +662,7 @@ public sealed partial class ScrollViewer : Visual
         if (_contentScrollModel is not null)
         {
             _contentScrollModel.Changed += _contentScrollModelChanged;
-            SyncOffsetsFromContent();
+            SyncOffsetsFromScrollModel();
         }
     }
 
@@ -664,10 +670,10 @@ public sealed partial class ScrollViewer : Visual
     {
         // Keep ScrollViewer offsets in sync with content-owned scroll models (e.g. TextArea).
         // This is required even without an attached TerminalApp (unit tests can call SetOffset directly).
-        SyncOffsetsFromContent();
+        SyncOffsetsFromScrollModel();
     }
 
-    private void SyncOffsetsFromContent()
+    private void SyncOffsetsFromScrollModel()
     {
         if (_contentScrollModel is null)
         {

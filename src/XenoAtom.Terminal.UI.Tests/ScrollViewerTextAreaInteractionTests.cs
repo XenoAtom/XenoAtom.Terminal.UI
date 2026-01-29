@@ -49,6 +49,16 @@ public sealed class ScrollViewerTextAreaInteractionTests
         });
 
         driver.TickUntil(() => textArea.Scroll.OffsetY > 0);
+
+        var offset = textArea.Scroll.OffsetY;
+        var expected = $"Line {offset:00}";
+
+        var screen = new AnsiTestScreen(40, 12);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText();
+
+        Assert.IsFalse(rendered.Contains("Line 00", StringComparison.Ordinal), "Expected the viewport to scroll past the first line.");
+        StringAssert.Contains(rendered, expected, "Expected the scrolled line to be visible.");
     }
 
     [TestMethod]

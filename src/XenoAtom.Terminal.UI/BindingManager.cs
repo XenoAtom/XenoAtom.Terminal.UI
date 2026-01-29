@@ -39,11 +39,6 @@ public sealed class BindingManager
     private bool _disableReadTracking;
 
     [ThreadStatic]
-    private static object? _dynamicUpdateOwner;
-
-    internal object? DynamicUpdateOwner => _dynamicUpdateOwner;
-
-    [ThreadStatic]
     private static int _suppressNotifications;
 
     /// <summary>
@@ -152,13 +147,6 @@ public sealed class BindingManager
         _disableReadTracking = !readTracking;
     }
 
-    internal DynamicUpdateSession BeginDynamicUpdate(object owner)
-    {
-        var previous = _dynamicUpdateOwner;
-        _dynamicUpdateOwner = owner;
-        return new DynamicUpdateSession(previous);
-    }
-
     internal NotificationSuppressionSession SuppressNotifications()
     {
         _suppressNotifications++;
@@ -174,15 +162,6 @@ public sealed class BindingManager
                 _suppressNotifications--;
             }
         }
-    }
-
-    internal readonly struct DynamicUpdateSession : IDisposable
-    {
-        private readonly object? _previous;
-
-        public DynamicUpdateSession(object? previous) => _previous = previous;
-
-        public void Dispose() => _dynamicUpdateOwner = _previous;
     }
 
     /// <summary>

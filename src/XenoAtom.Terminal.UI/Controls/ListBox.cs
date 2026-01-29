@@ -67,6 +67,10 @@ public sealed partial class ListBox<T> : Visual, IScrollable
     [Bindable]
     public partial int SelectedIndex { get; set; }
 
+
+    [Bindable]
+    private partial int ScrollVersion { get; set; }
+
     partial void OnSelectedIndexChanging(ref int value)
     {
         var count = Items.Count;
@@ -93,6 +97,12 @@ public sealed partial class ListBox<T> : Visual, IScrollable
 
     /// <inheritdoc />
     protected override Visual GetChild(int index) => _itemVisuals[index];
+
+    /// <inheritdoc />
+    protected override void PrepareChildren()
+    {
+        ScrollVersion = _scroll.Version;
+    }
 
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
@@ -126,6 +136,9 @@ public sealed partial class ListBox<T> : Visual, IScrollable
     {
         var rect = finalRect;
         EnsureItemVisuals();
+
+        _ = ScrollVersion;
+
         var items = _itemVisuals;
         if (rect.Width <= 0 || rect.Height <= 0 || items.Count == 0)
         {
@@ -172,6 +185,9 @@ public sealed partial class ListBox<T> : Visual, IScrollable
     protected override void RenderOverride(CellBuffer buffer)
     {
         var rect = Bounds;
+
+        _ = ScrollVersion;
+
         var items = _itemVisuals;
         if (rect.Width <= 0 || rect.Height <= 0)
         {

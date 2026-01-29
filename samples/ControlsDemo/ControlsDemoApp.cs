@@ -79,8 +79,22 @@ internal static class ControlsDemoApp
         sidebarList.SelectionChanged((_, e) => SelectSidebarIndex(e.NewIndex));
         sidebarList.ItemActivated((_, e) => SelectSidebarIndex(e.Index));
 
+        var searchQuery = string.Empty;
+        bool isSideBarInitialized = false;
+
         // Keep the sidebar list stable (no ComputedVisual) and rebuild its items via dynamic update so focus isn't reset.
-        sidebarList.Update(_ => RebuildSidebarList(sidebarList, sidebarDemoIdForIndex, demos, selectedDemoId, query: searchBox.Text ?? string.Empty));
+        sidebarList.Update(_ =>
+        {
+            var newQuery = searchBox.Text ?? string.Empty;
+            if (isSideBarInitialized && string.Equals(newQuery, searchQuery, StringComparison.Ordinal))
+            {
+                return;
+            }
+            searchQuery = newQuery;
+
+            RebuildSidebarList(sidebarList, sidebarDemoIdForIndex, demos, selectedDemoId, query: searchBox.Text ?? string.Empty);
+            isSideBarInitialized = true;
+        });
 
         var sidebar = new VStack(
                 "Browse",

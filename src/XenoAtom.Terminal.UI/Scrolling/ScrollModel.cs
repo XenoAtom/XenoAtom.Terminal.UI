@@ -68,6 +68,12 @@ public sealed partial class ScrollModel : IVisualElement
     public event Action? Changed;
 
     /// <summary>
+    /// Gets the current version number of the object.
+    /// </summary>
+    [Bindable]
+    public partial int Version { get; private set; }
+
+    /// <summary>
     /// Updates the viewport size and clamps offsets if needed.
     /// </summary>
     public void SetViewport(int width, int height)
@@ -83,7 +89,7 @@ public sealed partial class ScrollModel : IVisualElement
         ViewportWidth = width;
         ViewportHeight = height;
         ClampOffsets();
-        Changed?.Invoke();
+        OnChanged();
     }
 
     /// <summary>
@@ -102,7 +108,7 @@ public sealed partial class ScrollModel : IVisualElement
         ExtentWidth = width;
         ExtentHeight = height;
         ClampOffsets();
-        Changed?.Invoke();
+        OnChanged();
     }
 
     /// <summary>
@@ -122,7 +128,7 @@ public sealed partial class ScrollModel : IVisualElement
 
         OffsetX = clampedX;
         OffsetY = clampedY;
-        Changed?.Invoke();
+        OnChanged();
     }
 
     /// <summary>
@@ -162,11 +168,30 @@ public sealed partial class ScrollModel : IVisualElement
         SetOffset(targetX, targetY);
     }
 
+    private void OnChanged()
+    {
+        UpdateVersion();
+        Changed?.Invoke();
+    }
+
     private void ClampOffsets()
     {
         var maxX = Math.Max(0, ExtentWidth - ViewportWidth);
         var maxY = Math.Max(0, ExtentHeight - ViewportHeight);
         OffsetX = Math.Clamp(OffsetX, 0, maxX);
         OffsetY = Math.Clamp(OffsetY, 0, maxY);
+    }
+    private void UpdateVersion()
+    {
+        var hash = new HashCode();
+        // ReSharper disable NonReadonlyMemberInGetHashCode
+        hash.Add(OffsetX);
+        hash.Add(OffsetY);
+        hash.Add(ViewportWidth);
+        hash.Add(ViewportHeight);
+        hash.Add(ExtentWidth);
+        hash.Add(ExtentHeight);
+        // ReSharper restore NonReadonlyMemberInGetHashCode
+        Version = hash.ToHashCode();
     }
 }
