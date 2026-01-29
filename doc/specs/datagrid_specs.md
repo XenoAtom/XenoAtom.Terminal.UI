@@ -111,7 +111,9 @@ public interface IDataGridDocument
     /// <param name="count">The number of rows to remove.</param>
     void RemoveRows(int rowIndex, int count);
 
-    /// <summary>Occurs when the document content or schema changes.</summary>
+    /// <summary>
+    /// Occurs when the document structure or schema changes (rows/columns/schema/reset).
+    /// </summary>
     event EventHandler<DataGridDocumentChangedEventArgs> Changed;
 }
 ```
@@ -173,11 +175,11 @@ namespace XenoAtom.Terminal.UI.DataGrid;
 public enum DataGridChangeKind
 {
     None        = 0,
-    Values      = 1 << 0, // cell values changed
-    Rows        = 1 << 1, // rows inserted/removed/moved
-    Columns     = 1 << 2, // columns inserted/removed/moved
-    Schema      = 1 << 3, // column metadata changed
-    Reset       = 1 << 4, // large change; drop caches
+    Rows        = 1 << 0, // rows inserted/removed/replaced
+    Columns     = 1 << 1, // columns inserted/removed/moved
+    Schema      = 1 << 2, // column metadata changed (header, read-only, accessor, formatting hints)
+    Projection  = 1 << 3, // sorting/filtering/search changed
+    Reset       = 1 << 4, // large change; drop caches and re-measure
 }
 
 public sealed class DataGridDocumentChangedEventArgs : EventArgs
@@ -201,13 +203,15 @@ Normative guidance:
 
 - Implementations SHOULD use `Reset` when precise ranges are expensive to compute.
 - `BeginUpdate()` SHOULD coalesce multiple edits into a single `Changed` event where possible.
+- Row model property changes are NOT required to raise `Changed` events. `DataGrid` is expected to read cell values via
+  bindings so regular bindable invalidation covers the rendering path.
 
 ---
 
-## 6. View model for sorting/filtering (optional but recommended)
+## 6. View model for sorting/filtering/search (V1)
 
-To avoid forcing `DataGrid` to materialize or reorder large datasets itself, sorting/filtering should be delegated to
-an `IDataGridView` abstraction.
+To avoid forcing `DataGrid` to materialize or reorder large datasets itself, projection concerns (sorting, filtering,
+searching) SHOULD be delegated to an `IDataGridView` abstraction.
 
 ```csharp
 namespace XenoAtom.Terminal.UI.DataGrid;
@@ -245,14 +249,16 @@ public sealed class DataGridViewChangedEventArgs : EventArgs
 }
 ```
 
-Sorting and filtering API shape (V1):
+Sorting, filtering, and search API shape (V1):
 
 - `IDataGridView` implementations MAY expose additional capabilities (interfaces) such as:
   - `ISortableDataGridView` (sort descriptions, multi-sort),
   - `IFilterableDataGridView` (column filters / predicate),
+  - `ISearchableDataGridView` (find/next/previous, match counts),
   - `IPagedDataGridView` (incremental loading).
 
-`DataGrid` MUST work even when the view is not sortable/filterable; in that case UI affordances are disabled.
+`DataGrid` MUST work even when the view does not implement these capabilities; in that case UI affordances are disabled
+(or delegated to user-provided commands).
 
 ---
 
@@ -362,7 +368,7 @@ using XenoAtom.Terminal.UI.Templating;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class DataGridColumn : IVisualElement
+public abstract partial class DataGridColumn : IVisualElement
 {
     [Bindable] public string Key { get; set; } = string.Empty;
     [Bindable] public Visual? Header { get; set; }
@@ -370,6 +376,20 @@ public sealed partial class DataGridColumn : IVisualElement
     [Bindable] public int MinWidth { get; set; }
     [Bindable] public int MaxWidth { get; set; } = int.MaxValue;
     [Bindable] public bool Visible { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the text alignment used when the header is rendered as text.
+    /// </summary>
+    [Bindable] public TextAlignment HeaderAlignment { get; set; } = TextAlignment.Left;
+
+    /// <summary>
+    /// Gets or sets the default text alignment for cells in this column.
+    /// </summary>
+    /// <remarks>
+    /// This is used by the fast rendering path and as a default when templates render plain text.
+    /// Typical defaults: strings = <see cref="TextAlignment.Left"/>, numbers = <see cref="TextAlignment.Right"/>.
+    /// </remarks>
+    [Bindable] public TextAlignment CellAlignment { get; set; } = TextAlignment.Left;
 
     /// <summary>
     /// Gets or sets a value indicating whether cells in this column are read-only (not editable).
@@ -381,11 +401,39 @@ public sealed partial class DataGridColumn : IVisualElement
     [Bindable] public bool ReadOnly { get; set; }
 
     /// <summary>
-     /// Gets or sets the display template used for cells in this column.
-     /// When empty (<see cref="DataTemplate{T}.IsEmpty"/>), templates are resolved from <see cref="DataTemplates"/>
-     /// in the environment; if none is found, a default text renderer is used.
-     /// </summary>
-    [Bindable] public DataTemplate<object?> CellTemplate { get; set; }
+    /// Gets the CLR type of the cell values in this column.
+    /// </summary>
+    public abstract Type ValueType { get; }
+
+    /// <summary>
+    /// Gets the accessor used to create bindings against a row model for this column.
+    /// </summary>
+    public abstract BindingAccessor Accessor { get; }
+}
+
+/// <summary>
+/// A typed column that carries typed templates and a typed accessor to avoid boxing for value types.
+/// </summary>
+/// <typeparam name="T">The cell value type.</typeparam>
+public sealed partial class DataGridColumn<T> : DataGridColumn
+{
+    /// <summary>
+    /// Gets or sets the accessor used to create <see cref="Binding{T}"/> instances for this column.
+    /// </summary>
+    [Bindable] public BindingAccessor<T> TypedAccessor { get; set; } = null!;
+
+    /// <inheritdoc />
+    public override Type ValueType => typeof(T);
+
+    /// <inheritdoc />
+    public override BindingAccessor Accessor => TypedAccessor;
+
+    /// <summary>
+    /// Gets or sets the display template used for cells in this column.
+    /// When empty (<see cref="DataTemplate{T}.IsEmpty"/>), templates are resolved from <see cref="DataTemplates"/>
+    /// in the environment; if none is found, a default text renderer is used.
+    /// </summary>
+    [Bindable] public DataTemplate<T> CellTemplate { get; set; }
 
     /// <summary>
     /// Gets or sets the display template used for read-only cells in this column.
@@ -395,14 +443,14 @@ public sealed partial class DataGridColumn : IVisualElement
     /// This template is intended to render values differently when the underlying data is not editable (e.g. dim text,
     /// lock glyph, computed value styling) without requiring the control to enter edit mode.
     /// </remarks>
-    [Bindable] public DataTemplate<object?> ReadOnlyCellTemplate { get; set; }
+    [Bindable] public DataTemplate<T> ReadOnlyCellTemplate { get; set; }
 
     /// <summary>
-     /// Gets or sets the editor template used when a cell enters edit mode.
-     /// When empty (<see cref="DataTemplate{T}.IsEmpty"/>), templates are resolved from <see cref="DataTemplates"/>
-     /// in the environment; if none is found, DataGrid uses built-in editors for common types.
-     /// </summary>
-    [Bindable] public DataTemplate<object?> CellEditorTemplate { get; set; }
+    /// Gets or sets the editor template used when a cell enters edit mode.
+    /// When empty (<see cref="DataTemplate{T}.IsEmpty"/>), templates are resolved from <see cref="DataTemplates"/>
+    /// in the environment; if none is found, DataGrid uses built-in editors for common types.
+    /// </summary>
+    [Bindable] public DataTemplate<T> CellEditorTemplate { get; set; }
 }
 ```
 
@@ -410,8 +458,12 @@ Notes:
 
 - `Key` MUST match a column key coming from the snapshot when binding to schema-driven sources (e.g. `DataTable`).
 - For POCO/view-model sources, `Key` MAY be arbitrary and the adapter maps it to getters/setters.
-- `DataGrid` SHOULD create cell bindings using the row model from the snapshot and the column accessor (from
-  <see cref="DataGridColumnInfo.Accessor"/> when provided), then pass that binding into cell templates.
+- Columns SHOULD be typed (`DataGridColumn<T>`) whenever possible to avoid boxing (especially for value types).
+  `DataGridColumn<object?>` is the escape hatch for unknown types.
+- `DataGrid` SHOULD create cell bindings using the row model from the snapshot and the column accessor (typically
+  `DataGridColumn<T>.TypedAccessor` or <see cref="DataGridColumnInfo.Accessor"/> when auto-generating columns), then pass:
+  - a `DataTemplateValue<T>` to display templates, and
+  - a `Binding<T>` to editor templates.
 - Read-only behavior:
   - A cell is read-only when any of the following is true:
     - `DataGrid.ReadOnly` is `true`
@@ -444,6 +496,19 @@ needing a `(row, column)` pair in the context.
 
 - `Scroll.OffsetY` = first visible data row index in the scrollable region
 - `Scroll.OffsetX` = horizontal cell offset in columns *in cell units* (not column indices)
+
+Implementation guidance (binding-driven invalidation):
+
+- `DataGrid` MUST NOT rely on manual invalidation APIs.
+- Because `ScrollModel` can be changed externally (e.g. `ScrollViewer` dragging scroll bars), `DataGrid` SHOULD bind its
+  layout/rendering to `ScrollModel.Version` using the established `ScrollVersion` pattern used by other `IScrollable`
+  controls (e.g. `TreeView`):
+
+  - store a private bindable `ScrollVersion` on the control,
+  - update it during `PrepareChildren()` (`ScrollVersion = Scroll.Version;`),
+  - read it in `ArrangeCore` and `RenderOverride` (`_ = ScrollVersion;`).
+
+This ensures arrange/render reruns when offsets/extents change, without reintroducing dependency loops.
 
 Extent computation:
 
@@ -487,6 +552,9 @@ To keep performance predictable for large datasets, the default display path SHO
 
 - For common scalar values (`string`, numbers, dates, enums, bool), render via formatter into `CellBuffer`.
 - Avoid allocating a `Visual` per cell when a column uses default formatting.
+- Apply column alignment (`DataGridColumn.CellAlignment`) when writing formatted values.
+- Even in this fast path, value reads SHOULD go through bindings (created from the row model + accessor) so updates to
+  row model properties automatically invalidate render without requiring explicit “cell changed” events.
 
 Cell templating (Visual-based) SHOULD still be supported, but it is not the universal fast path.
 
@@ -534,7 +602,50 @@ Recommended representation:
 
 ---
 
-## 12. Sorting and filtering
+## 12. Sorting, filtering, and search
+
+Sorting, filtering, and searching are part of V1.
+
+The projection state SHOULD live in the view layer so large datasets can be handled without `DataGrid` materializing or
+reordering row models.
+
+Suggested capability interfaces (exact API may evolve):
+
+```csharp
+using XenoAtom.Terminal.UI.Controls;
+
+namespace XenoAtom.Terminal.UI.DataGrid;
+
+public enum DataGridSortDirection
+{
+    Ascending,
+    Descending,
+}
+
+public readonly record struct DataGridSortDescription(string ColumnKey, DataGridSortDirection Direction);
+
+public interface ISortableDataGridView : IDataGridView
+{
+    IReadOnlyList<DataGridSortDescription> SortDescriptions { get; }
+    void SetSortDescriptions(IReadOnlyList<DataGridSortDescription> sortDescriptions);
+}
+
+public readonly record struct DataGridFilterDescription(string ColumnKey, string? Text);
+
+public interface IFilterableDataGridView : IDataGridView
+{
+    IReadOnlyList<DataGridFilterDescription> Filters { get; }
+    void SetFilters(IReadOnlyList<DataGridFilterDescription> filters);
+}
+
+public interface ISearchableDataGridView : IDataGridView
+{
+    SearchQuery SearchQuery { get; }
+    void SetSearchQuery(in SearchQuery query);
+}
+```
+
+Views MUST raise `Changed` with `Kind = DataGridChangeKind.Projection` when these settings change.
 
 ### 12.1 Sorting
 
@@ -554,9 +665,34 @@ Filtering is similarly delegated to the view layer.
 
 `DataGrid` MUST provide:
 
-- APIs/events to request filter changes (e.g. open a filter editor UI),
+- a built-in filter editing UI (at minimum: per-column text filters),
 - rendering hints (filter icon/marker in header),
-- but MAY keep filter UI out of scope for V1 (external filter editors can be hosted elsewhere).
+- keyboard shortcuts to open/close the filter UI.
+
+Suggested UX (V1):
+
+- `Ctrl+Shift+F`: toggle filter row (one `TextBox` per visible column)
+- typing in a filter box updates filters immediately (no explicit Apply button)
+- `Escape`: clears the current filter box (or closes the filter row if empty)
+
+Filtering semantics (default view implementation):
+
+- a filter matches when the formatted cell text contains the filter text (case-insensitive),
+- per-column filters are AND-ed together,
+- a global “quick filter” MAY be supported (matches any visible column).
+
+### 12.3 Searching (find)
+
+Searching is distinct from filtering: it navigates to matching cells without changing the row set.
+
+`DataGrid` SHOULD integrate with the existing `SearchReplacePopup` infrastructure:
+
+- `Ctrl+F` opens a `SearchReplacePopup` in `Find` mode (replace disabled)
+- `F3` / `Shift+F3` navigate next/previous match
+- navigating to a match MUST update `CurrentCell` and call `Scroll.ScrollToMakeVisible(...)`
+- matches MAY be highlighted in the viewport (style-driven)
+
+For large datasets, `DataGrid` MAY delegate match discovery to a view implementing `ISearchableDataGridView`.
 
 ---
 
@@ -613,7 +749,9 @@ Requirements:
 - columns map to `DataColumn` (key = `ColumnName` or stable identifier),
 - rows map to `DataRow`,
 - edits write back to the underlying `DataTable`,
-- changes raised by `DataTable` MUST be translated to `Changed` events (coalesced when possible).
+- schema/row changes raised by `DataTable` MUST be translated to `Changed` events (coalesced when possible).
+  Value changes SHOULD be reflected through the row model binding surface (preferred) or by raising `Reset` when
+  fine-grained invalidation is not practical.
 
 ### 14.2 Items source / view-model lists
 
@@ -623,7 +761,7 @@ Provide an adapter for `IReadOnlyList<T>` / `BindableList<T>` (name illustrative
 
 Columns may be described by:
 
-- `DataGridPropertyColumn<T>` mapping to a getter/setter (and optional formatter/editor).
+- `DataGridColumn<TValue>` mapping to a `BindingAccessor<TValue>` on the row model (and optional templates/editors).
 
 This supports “bulk edit a list of view models with bindable properties”.
 
@@ -637,14 +775,22 @@ Introduce a style record similar to `TableStyle`, `ListBoxStyle`, etc.:
 
 Suggested fields:
 
-- grid lines on/off (outer border, vertical lines, row separators),
-- header style,
+- grid lines on/off (vertical column separators, optional header separator),
+- header background/foreground style,
 - cell style,
 - selection styles (focused/unfocused),
-- frozen region separator style,
-- optional glyph set (`LineGlyphs`).
+- match highlight style (for search),
+- optional frozen region separator style,
+- optional glyph set (`LineGlyphs`) when grid lines are enabled.
 
-The default should be visually consistent with `TableStyle.Grid` but optimized for density/readability.
+Default appearance (V1):
+
+- **compact/dense** (no outer border)
+- **no grid lines** (no vertical separators, no header underline)
+- header is visually separated by **background color** and/or bold text, not by borders
+- selection uses a strong background highlight and remains readable in both focused/unfocused states
+
+This is closer to Textual’s DataTable than `TableStyle.Grid`.
 
 ---
 
