@@ -69,6 +69,9 @@ public sealed partial class ListBox<T> : Visual, IScrollable
     [Bindable]
     private partial int ScrollVersion { get; set; }
 
+    [Bindable]
+    private partial int MeasuredContentWidth { get; set; }
+
     partial void OnSelectedIndexChanging(ref int value)
     {
         var count = Items.Count;
@@ -121,10 +124,15 @@ public sealed partial class ListBox<T> : Visual, IScrollable
 
         // Marker + space.
         var width = itemWidth + 2;
+        MeasuredContentWidth = Math.Max(0, width);
         var desiredHeight = Math.Max(1, items.Count);
 
+        var scrollBarThickness = Math.Max(1, GetStyle<ScrollViewerStyle>().ScrollBarThickness);
+        var reserveVerticalBar = constraints.IsHeightBounded && desiredHeight > constraints.MaxHeight;
+        var reservedWidth = width + (reserveVerticalBar ? scrollBarThickness : 0);
+
         var min = new Size(2, 1);
-        var natural = new Size(Math.Max(min.Width, width), Math.Max(min.Height, desiredHeight));
+        var natural = new Size(Math.Max(min.Width, reservedWidth), Math.Max(min.Height, desiredHeight));
         var max = new Size(LayoutConstants.Infinite, LayoutConstants.Infinite);
         return SizeHints.Flex(min, natural, max, growX: 1, growY: 1, shrinkX: 1, shrinkY: 1);
     }
@@ -152,9 +160,10 @@ public sealed partial class ListBox<T> : Visual, IScrollable
 
         var count = items.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
+        var extentWidth = Math.Max(innerWidth, Math.Max(0, MeasuredContentWidth));
 
         _scroll.SetViewport(innerWidth, innerHeight);
-        _scroll.SetExtent(innerWidth, count);
+        _scroll.SetExtent(extentWidth, count);
 
         if (_ensureSelectedVisible)
         {
@@ -169,8 +178,9 @@ public sealed partial class ListBox<T> : Visual, IScrollable
             _scroll.SetOffset(_scroll.OffsetX, maxOffsetY);
         }
 
-        var itemLeft = innerLeft + 2;
-        var itemWidth = Math.Max(0, innerWidth - 2);
+        var offsetX = _scroll.OffsetX;
+        var itemLeft = innerLeft + 2 - offsetX;
+        var itemWidth = Math.Max(0, extentWidth - 2);
         var scrollOffset = _scroll.OffsetY;
         for (var i = 0; i < count; i++)
         {
@@ -240,8 +250,9 @@ public sealed partial class ListBox<T> : Visual, IScrollable
 
             if (innerWidth >= 2)
             {
-                buffer.SetCell(innerLeft, y, isSelected ? listBoxStyle.MarkerGlyph : new Rune(' '), style);
-                buffer.SetCell(innerLeft + 1, y, new Rune(' '), style);
+                var xCursor = innerLeft - _scroll.OffsetX;
+                buffer.SetCell(xCursor, y, isSelected ? listBoxStyle.MarkerGlyph : new Rune(' '), style);
+                buffer.SetCell(xCursor + 1, y, new Rune(' '), style);
             }
         }
     }

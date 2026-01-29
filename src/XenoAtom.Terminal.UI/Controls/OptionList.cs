@@ -24,7 +24,6 @@ public sealed partial class OptionList<T> : Visual, IScrollable
     private readonly List<Visual> _recyclePool = new();
 
     private readonly ScrollModel _scroll;
-    private int _itemHeight = 1;
     private bool _ensureSelectedVisible;
 
     private bool _pressed;
@@ -105,6 +104,12 @@ public sealed partial class OptionList<T> : Visual, IScrollable
     [Bindable]
     private partial int ScrollVersion { get; set; }
 
+    [Bindable]
+    private partial int MeasuredContentWidth { get; set; }
+
+    [Bindable]
+    private partial int MeasuredItemHeight { get; set; }
+
     partial void OnSelectedIndexChanging(ref int value)
     {
         _oldSelectedForEvent = _selectedIndex;
@@ -159,13 +164,18 @@ public sealed partial class OptionList<T> : Visual, IScrollable
             itemHeight = Math.Max(itemHeight, Math.Max(1, item.DesiredSize.Height));
         }
 
-        _itemHeight = itemHeight;
+        MeasuredItemHeight = itemHeight;
 
         var width = prefixWidth + itemWidth;
+        MeasuredContentWidth = Math.Max(0, width);
         var desiredHeight = Math.Max(1, _itemVisuals.Count * itemHeight);
 
+        var scrollBarThickness = Math.Max(1, GetStyle<ScrollViewerStyle>().ScrollBarThickness);
+        var reserveVerticalBar = constraints.IsHeightBounded && desiredHeight > constraints.MaxHeight;
+        var reservedWidth = width + (reserveVerticalBar ? scrollBarThickness : 0);
+
         var min = new Size(1, 1);
-        var natural = new Size(Math.Max(min.Width, width), Math.Max(min.Height, desiredHeight));
+        var natural = new Size(Math.Max(min.Width, reservedWidth), Math.Max(min.Height, desiredHeight));
         var max = new Size(LayoutConstants.Infinite, LayoutConstants.Infinite);
         return SizeHints.Flex(min, natural, max, growX: 1, growY: 1, shrinkX: 1, shrinkY: 1);
     }
@@ -189,19 +199,20 @@ public sealed partial class OptionList<T> : Visual, IScrollable
         var innerTop = rect.Y;
         var innerWidth = Math.Max(0, rect.Width);
         var innerHeight = Math.Max(0, rect.Height);
-        var itemHeight = Math.Max(1, _itemHeight);
+        var itemHeight = Math.Max(1, MeasuredItemHeight);
         var viewportItems = Math.Max(1, innerHeight / itemHeight);
         var viewportHeight = viewportItems * itemHeight;
 
-        var prefixWidth = Math.Min(innerWidth, Math.Max(1, TerminalTextUtility.GetRuneWidth(style.MarkerGlyph)) + Math.Max(0, style.SpaceBetweenGlyphAndText));
-        var itemLeft = innerLeft + prefixWidth;
-        var itemWidth = Math.Max(0, innerWidth - prefixWidth);
+        var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.MarkerGlyph));
+        var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
+        var prefixWidth = markerWidth + gap;
 
         var count = Items.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
+        var extentWidth = Math.Max(innerWidth, Math.Max(0, MeasuredContentWidth));
 
         _scroll.SetViewport(innerWidth, viewportHeight);
-        _scroll.SetExtent(prefixWidth + itemWidth, Math.Max(0, count * itemHeight));
+        _scroll.SetExtent(extentWidth, Math.Max(0, count * itemHeight));
 
         if (_ensureSelectedVisible)
         {
@@ -223,6 +234,9 @@ public sealed partial class OptionList<T> : Visual, IScrollable
         }
 
         var scrollOffset = itemHeight == 0 ? 0 : (_scroll.OffsetY / itemHeight);
+        var offsetX = _scroll.OffsetX;
+        var itemLeft = innerLeft + prefixWidth - offsetX;
+        var itemWidth = Math.Max(0, extentWidth - prefixWidth);
 
         for (var i = 0; i < _itemVisuals.Count; i++)
         {
@@ -248,7 +262,7 @@ public sealed partial class OptionList<T> : Visual, IScrollable
         var innerTop = rect.Y;
         var innerWidth = Math.Max(0, rect.Width);
         var innerHeight = Math.Max(0, rect.Height);
-        var itemHeight = Math.Max(1, _itemHeight);
+        var itemHeight = Math.Max(1, MeasuredItemHeight);
         var viewportItems = Math.Max(1, innerHeight / itemHeight);
 
         var count = Items.Count;
@@ -266,7 +280,7 @@ public sealed partial class OptionList<T> : Visual, IScrollable
 
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.MarkerGlyph));
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
-        var prefixWidth = Math.Min(innerWidth, markerWidth + gap);
+        var prefixLeft = innerLeft - _scroll.OffsetX;
 
         var scrollOffset = itemHeight == 0 ? 0 : (_scroll.OffsetY / itemHeight);
 
@@ -300,12 +314,12 @@ public sealed partial class OptionList<T> : Visual, IScrollable
                 if (line == 0 && innerWidth > 0)
                 {
                     var marker = isSelected ? style.MarkerGlyph : new Rune(' ');
-                    buffer.SetCell(innerLeft, y, marker, rowStyle);
+                    buffer.SetCell(prefixLeft, y, marker, rowStyle);
                 }
 
-                for (var i = 0; i < gap && markerWidth + i < prefixWidth; i++)
+                for (var i = 0; i < gap; i++)
                 {
-                    buffer.SetCell(innerLeft + markerWidth + i, y, new Rune(' '), rowStyle);
+                    buffer.SetCell(prefixLeft + markerWidth + i, y, new Rune(' '), rowStyle);
                 }
             }
         }
@@ -384,7 +398,7 @@ public sealed partial class OptionList<T> : Visual, IScrollable
             return;
         }
 
-        var itemHeight = Math.Max(1, _itemHeight);
+        var itemHeight = Math.Max(1, MeasuredItemHeight);
         var viewportItems = Math.Max(1, Bounds.Height / itemHeight);
         var selected = Math.Clamp(SelectedIndex, 0, count - 1);
 
@@ -511,7 +525,7 @@ public sealed partial class OptionList<T> : Visual, IScrollable
             return;
         }
 
-        var itemHeight = Math.Max(1, _itemHeight);
+        var itemHeight = Math.Max(1, MeasuredItemHeight);
         var viewportItems = Math.Max(1, _scroll.ViewportHeight / itemHeight);
 
         var offsetItems = itemHeight == 0 ? 0 : (_scroll.OffsetY / itemHeight);
@@ -632,7 +646,7 @@ public sealed partial class OptionList<T> : Visual, IScrollable
             return -1;
         }
 
-        var itemHeight = Math.Max(1, _itemHeight);
+        var itemHeight = Math.Max(1, MeasuredItemHeight);
         var scrollOffset = itemHeight == 0 ? 0 : (_scroll.OffsetY / itemHeight);
         var index = scrollOffset + (innerY / itemHeight);
         return (uint)index < (uint)Items.Count ? index : -1;

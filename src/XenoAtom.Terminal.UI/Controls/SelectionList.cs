@@ -77,6 +77,9 @@ public sealed partial class SelectionList<T> : Visual, IScrollable
 
     [Bindable]
     private partial int ScrollVersion { get; set; }
+
+    [Bindable]
+    private partial int MeasuredContentWidth { get; set; }
     
     partial void OnSelectedIndexChanging(ref int value)
     {
@@ -148,10 +151,15 @@ public sealed partial class SelectionList<T> : Visual, IScrollable
         }
 
         var width = itemWidth + prefixWidth;
+        MeasuredContentWidth = Math.Max(0, width);
         var desiredHeight = Math.Max(1, Items.Count);
 
+        var scrollBarThickness = Math.Max(1, GetStyle<ScrollViewerStyle>().ScrollBarThickness);
+        var reserveVerticalBar = constraints.IsHeightBounded && desiredHeight > constraints.MaxHeight;
+        var reservedWidth = width + (reserveVerticalBar ? scrollBarThickness : 0);
+
         var min = new Size(1, 1);
-        var natural = new Size(Math.Max(min.Width, width), Math.Max(min.Height, desiredHeight));
+        var natural = new Size(Math.Max(min.Width, reservedWidth), Math.Max(min.Height, desiredHeight));
         var max = new Size(LayoutConstants.Infinite, LayoutConstants.Infinite);
         return SizeHints.Flex(min, natural, max, growX: 1, growY: 1, shrinkX: 1, shrinkY: 1);
     }
@@ -182,9 +190,11 @@ public sealed partial class SelectionList<T> : Visual, IScrollable
 
         var count = Items.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
+        var prefixWidth = markerWidth + checkWidth + gap;
+        var extentWidth = Math.Max(innerWidth, Math.Max(0, MeasuredContentWidth));
 
         _scroll.SetViewport(innerWidth, innerHeight);
-        _scroll.SetExtent(innerWidth, count);
+        _scroll.SetExtent(extentWidth, count);
 
         if (_ensureSelectedVisible)
         {
@@ -198,9 +208,9 @@ public sealed partial class SelectionList<T> : Visual, IScrollable
             _scroll.SetOffset(_scroll.OffsetX, maxOffsetY);
         }
 
-        var prefixWidth = Math.Min(innerWidth, markerWidth + checkWidth + gap);
-        var itemLeft = innerLeft + prefixWidth;
-        var itemWidth = Math.Max(0, innerWidth - prefixWidth);
+        var offsetX = _scroll.OffsetX;
+        var itemLeft = innerLeft + prefixWidth - offsetX;
+        var itemWidth = Math.Max(0, extentWidth - prefixWidth);
         var scrollOffset = _scroll.OffsetY;
 
         for (var i = 0; i < _itemVisuals.Count; i++)
@@ -263,7 +273,7 @@ public sealed partial class SelectionList<T> : Visual, IScrollable
                 buffer.SetCell(innerLeft + x, y, new Rune(' '), rowStyle);
             }
 
-            var xCursor = innerLeft;
+            var xCursor = innerLeft - _scroll.OffsetX;
             if (innerWidth > 0)
             {
                 var marker = isSelected ? style.FocusMarkerGlyph : new Rune(' ');

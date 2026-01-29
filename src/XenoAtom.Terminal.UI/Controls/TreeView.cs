@@ -24,7 +24,6 @@ public sealed partial class TreeView : Visual, IScrollable
     private readonly ScrollModel _scroll;
     private readonly List<VisibleRow> _visible = new(64);
     private bool _ensureSelectedVisible;
-    private int _measuredContentWidth;
 
     private readonly record struct VisibleRow(TreeNode Node, int Depth, ulong ContinuationMask, bool IsLastSibling);
 
@@ -84,6 +83,9 @@ public sealed partial class TreeView : Visual, IScrollable
 
     [Bindable]
     private partial int ScrollVersion { get; set; }
+
+    [Bindable]
+    private partial int MeasuredContentWidth { get; set; }
 
     /// <inheritdoc />
     protected override int ChildrenCount => _headers.Count;
@@ -198,11 +200,15 @@ public sealed partial class TreeView : Visual, IScrollable
         }
 
         var width = Math.Max(1, maxWidth);
-        _measuredContentWidth = width;
+        MeasuredContentWidth = width;
         var desiredHeight = Math.Max(1, _visible.Count);
 
+        var scrollBarThickness = Math.Max(1, GetStyle<ScrollViewerStyle>().ScrollBarThickness);
+        var reserveVerticalBar = constraints.IsHeightBounded && desiredHeight > constraints.MaxHeight;
+        var reservedWidth = width + (reserveVerticalBar ? scrollBarThickness : 0);
+
         var min = new Size(1, 1);
-        var natural = new Size(Math.Max(min.Width, width), Math.Max(min.Height, desiredHeight));
+        var natural = new Size(Math.Max(min.Width, reservedWidth), Math.Max(min.Height, desiredHeight));
         var max = new Size(LayoutConstants.Infinite, LayoutConstants.Infinite);
         return SizeHints.Flex(min, natural, max, growX: 1, growY: 1, shrinkX: 1, shrinkY: 1);
     }
@@ -231,7 +237,7 @@ public sealed partial class TreeView : Visual, IScrollable
         }
 
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
-        var extentWidth = Math.Max(innerWidth, Math.Max(0, _measuredContentWidth));
+        var extentWidth = Math.Max(innerWidth, Math.Max(0, MeasuredContentWidth));
 
         _scroll.SetViewport(innerWidth, innerHeight);
         _scroll.SetExtent(extentWidth, count);
