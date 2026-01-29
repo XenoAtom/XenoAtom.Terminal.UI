@@ -432,11 +432,11 @@ var rightColumn = new VStack(
                                         new BarChartItem("F", 0))
                                     .Update(chart =>
                                     {
-                                        _ = chartTickState.Value;
-                                        for (var i = 0; i < chart.Items.Count && i < chartValues.Length; i++)
+                                        for (var i = 0; i < 6 && i < chartValues.Length; i++)
                                         {
                                             chart.Items[i].Value = chartValues[i];
                                         }
+                                        _ = chartTickState.Value;
                                     })
                                     .MinHeight(6)
                                     .MaxHeight(6)
