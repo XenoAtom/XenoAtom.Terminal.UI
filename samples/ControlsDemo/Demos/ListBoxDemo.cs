@@ -26,10 +26,10 @@ public sealed class ListBoxDemo : ControlsDemoBase
 
         return new VStack(
                 DemoUi.Hint("ListBox supports keyboard navigation and a selected index."),
-                list,
+                new Group("Simple List").Content(list),
                 new TextBlock(() => $"SelectedIndex: {selected.Value}"),
                 DemoUi.Hint("With many items, wrap ListBox in a ScrollViewer."),
-                new ScrollViewer(longList).MinHeight(8).MaxHeight(8),
+                new Border(new ScrollViewer(longList).MinHeight(8).MaxHeight(8)),
                 new TextBlock(() => $"Long list SelectedIndex: {longSelected.Value}"),
                 new Button("Log selection").Click(() => context.Log($"SelectedIndex: {selected.Value}")))
             .Spacing(1);
