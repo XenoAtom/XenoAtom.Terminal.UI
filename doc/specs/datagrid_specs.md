@@ -41,6 +41,7 @@ The design is inspired by modern terminal UI patterns and spreadsheet/datagrid e
 - **Snapshot**: an immutable view of a document at a specific version (read-only; safe for rendering).
 - **View**: a projection of the document (filtering/sorting/row mapping).
 - **Cell**: intersection of a row and a column.
+- **Row model**: the object instance backing a row; used as the binding owner.
 - **Viewport**: the visible rectangle of the control (terminal cells).
 - **Frozen**: always visible region (header row, optional top rows / left columns).
 
@@ -89,8 +90,26 @@ public interface IDataGridDocument
     /// <summary>Begins a batch update scope.</summary>
     IDisposable BeginUpdate();
 
-    /// <summary>Sets the raw cell value at (row, column).</summary>
-    void SetValue(int rowIndex, int columnIndex, object? value);
+    /// <summary>
+    /// Inserts a row model at the specified index.
+    /// </summary>
+    /// <param name="rowIndex">The index at which to insert the row model.</param>
+    /// <param name="rowModel">The row model to insert.</param>
+    void InsertRow(int rowIndex, object rowModel);
+
+    /// <summary>
+    /// Replaces the row model at the specified index.
+    /// </summary>
+    /// <param name="rowIndex">The index of the row model to replace.</param>
+    /// <param name="rowModel">The new row model instance.</param>
+    void ReplaceRow(int rowIndex, object rowModel);
+
+    /// <summary>
+    /// Removes a range of rows starting at the specified index.
+    /// </summary>
+    /// <param name="rowIndex">The starting row index.</param>
+    /// <param name="count">The number of rows to remove.</param>
+    void RemoveRows(int rowIndex, int count);
 
     /// <summary>Occurs when the document content or schema changes.</summary>
     event EventHandler<DataGridDocumentChangedEventArgs> Changed;
@@ -117,15 +136,16 @@ public interface IDataGridSnapshot
 
     DataGridColumnInfo GetColumn(int columnIndex);
 
-    /// <summary>Gets the raw cell value at (row, column).</summary>
-    object? GetValue(int rowIndex, int columnIndex);
+    /// <summary>Gets the row model object for a row index.</summary>
+    object GetRowModel(int rowIndex);
 }
 
 public readonly record struct DataGridColumnInfo(
     string Key,
     string HeaderText,
     Type? ValueType = null,
-    bool ReadOnly = false);
+    bool ReadOnly = false,
+    BindingAccessor Accessor);
 ```
 
 Notes:
@@ -134,6 +154,13 @@ Notes:
 - `HeaderText` is a convenience; `DataGrid` can also accept a header template/visual.
 - `ReadOnly` indicates that the underlying data source does not support edits for this column (e.g. no setter, computed
   value, read-only `DataColumn`).
+- `Accessor` MUST be provided and is used by `DataGrid` to create cell bindings against the row model.
+
+Row model edits:
+
+- Cell edits SHOULD flow through bindings created from the row model and the column accessor.
+- Structural edits (row insertion/removal/replacement) are performed through `IDataGridDocument` methods and MUST raise
+  `Changed` events with `Rows` (or `Reset`) so views can invalidate caches.
 
 ### 5.3 Change event args
 
@@ -206,8 +233,8 @@ public interface IDataGridViewSnapshot
     /// <summary>Maps a view row index to a document row index.</summary>
     int MapRowToDocument(int viewRowIndex);
 
-    object? GetValue(int viewRowIndex, int columnIndex);
-    void SetValue(int viewRowIndex, int columnIndex, object? value);
+    /// <summary>Gets the row model object for a view row index.</summary>
+    object GetRowModel(int viewRowIndex);
 }
 
 public sealed class DataGridViewChangedEventArgs : EventArgs
@@ -383,6 +410,8 @@ Notes:
 
 - `Key` MUST match a column key coming from the snapshot when binding to schema-driven sources (e.g. `DataTable`).
 - For POCO/view-model sources, `Key` MAY be arbitrary and the adapter maps it to getters/setters.
+- `DataGrid` SHOULD create cell bindings using the row model from the snapshot and the column accessor (from
+  <see cref="DataGridColumnInfo.Accessor"/> when provided), then pass that binding into cell templates.
 - Read-only behavior:
   - A cell is read-only when any of the following is true:
     - `DataGrid.ReadOnly` is `true`
