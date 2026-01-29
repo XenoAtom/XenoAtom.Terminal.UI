@@ -15,6 +15,17 @@ namespace XenoAtom.Terminal.UI;
 public static partial class VisualExtensions
 {
     /// <summary>
+    /// Wraps the specified visual element in a new ScrollViewer to provide scrollable content.
+    /// </summary>
+    /// <param name="visual">The visual element to be wrapped in a ScrollViewer. Cannot be null.</param>
+    /// <returns>A new ScrollViewer instance that contains the specified visual element as its content.</returns>
+    public static ScrollViewer Scrollable(this Visual visual)
+    {
+        ArgumentNullException.ThrowIfNull(visual);
+        return new ScrollViewer(visual);
+    }
+    
+    /// <summary>
     /// Registers a dynamic update callback for the visual and returns the same instance.
     /// </summary>
     /// <remarks>

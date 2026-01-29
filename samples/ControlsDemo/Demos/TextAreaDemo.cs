@@ -20,12 +20,12 @@ public sealed class TextAreaDemo : ControlsDemoBase
                     .Text(text)
                     .Placeholder("Type multiple lines.")
                     .MinHeight(6)
-                    .MaxHeight(6),
+                    .MaxHeight(6).Scrollable(),
                 new Rule(),
                 DemoUi.Title("With Border"),
                 new Border(new TextArea("TextArea inside a Border")
                     .MinHeight(4)
-                    .MaxHeight(4)),
+                    .MaxHeight(4).Scrollable()),
                 new Button("Log lines").Click(() => context.Log($"Lines: {(text.Value ?? string.Empty).Split('\n').Length}")))
             .Spacing(1);
     }
