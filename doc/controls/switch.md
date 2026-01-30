@@ -2,10 +2,6 @@
 
 `Switch` is a compact on/off toggle with a thumb and label.
 
-Screenshot placeholder:
-
-![Switch](../../img/screenshots/switch.png)
-
 ## Basic usage
 
 ```csharp
@@ -21,3 +17,12 @@ new Switch("Enabled").IsOn(enabled);
 - thumb glyph
 - background/foreground for normal/hover/pressed/disabled
 
+## Interaction
+
+- `Space` / `Enter`: toggle when focused.
+- Mouse click: toggle.
+
+## Related
+
+- `../binding.md`
+- `../styling.md`
