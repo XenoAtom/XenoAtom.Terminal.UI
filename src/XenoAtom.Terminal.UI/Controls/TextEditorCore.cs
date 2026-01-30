@@ -344,6 +344,18 @@ internal sealed partial class TextEditorCore
         }
 
         var index = GetIndexFromPointer(e.UiX, e.UiY, options);
+
+        if (e.ClickCount >= 2)
+        {
+            SelectWordAt(index);
+            _caretIndex = _selectionEnd >= 0 ? _selectionEnd : index;
+            _preferredColumn = -1;
+            EnsureCaretVisible(options);
+            Version++;
+            e.Handled = true;
+            return;
+        }
+
         _draggingSelection = true;
         if ((e.Modifiers & TerminalModifiers.Shift) != 0)
         {
@@ -1423,6 +1435,24 @@ internal sealed partial class TextEditorCore
     {
         _selectionAnchor = -1;
         _selectionEnd = -1;
+    }
+
+    private void SelectWordAt(int index)
+    {
+        var text = GetText().AsSpan();
+        index = Math.Clamp(index, 0, text.Length);
+
+        var start = TerminalTextUtility.GetWordStart(text, index);
+        var end = TerminalTextUtility.GetWordEnd(text, index);
+
+        if (start == end)
+        {
+            ClearSelection();
+            return;
+        }
+
+        _selectionAnchor = NormalizeIndexToTextElementBoundary(text, start);
+        _selectionEnd = NormalizeIndexToTextElementBoundary(text, end);
     }
 
     private void ExtendSelection(int caret)
