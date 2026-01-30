@@ -1814,7 +1814,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
                 }
 
                 var cellRect = new Rectangle(x, y, w, 1);
-                if (!Intersects(rect, cellRect))
+                if (!rect.Intersects(cellRect))
                 {
                     continue;
                 }
@@ -2727,9 +2727,6 @@ public sealed partial class DataGridControl : Visual, IScrollable
         }
         return -1;
     }
-
-    private static bool Intersects(in Rectangle a, in Rectangle b)
-        => a.X < b.Right && a.Right > b.X && a.Y < b.Bottom && a.Bottom > b.Y;
 
     private static void FillRect(CellBuffer buffer, Rectangle rect, Style style)
     {

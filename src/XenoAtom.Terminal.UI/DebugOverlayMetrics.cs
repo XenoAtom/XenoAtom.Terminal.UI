@@ -167,7 +167,7 @@ internal sealed class DebugOverlayMetrics : ICellBufferDiffMetricsSink
             return;
         }
 
-        _dirtyRect = Union(_dirtyRect, rect);
+        _dirtyRect = Rectangle.Union(_dirtyRect, rect);
     }
 
     public void RecordDynamicUpdate(long elapsedTicks)
@@ -214,13 +214,4 @@ internal sealed class DebugOverlayMetrics : ICellBufferDiffMetricsSink
     }
 
     private long _tickStartTimestamp;
-
-    private static Rectangle Union(in Rectangle a, in Rectangle b)
-    {
-        var x0 = Math.Min(a.X, b.X);
-        var y0 = Math.Min(a.Y, b.Y);
-        var x1 = Math.Max(a.Right, b.Right);
-        var y1 = Math.Max(a.Bottom, b.Bottom);
-        return new Rectangle(x0, y0, Math.Max(0, x1 - x0), Math.Max(0, y1 - y0));
-    }
 }

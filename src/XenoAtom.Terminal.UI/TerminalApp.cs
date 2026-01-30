@@ -1035,7 +1035,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                     }
                     else
                     {
-                        _pendingRenderDirtyRect = Union(_pendingRenderDirtyRect, expanded);
+                        _pendingRenderDirtyRect = Rectangle.Union(_pendingRenderDirtyRect, expanded);
                     }
                 }
             }
@@ -1043,15 +1043,6 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
         _pendingBindingWrites.Clear();
         _renderRequested = true;
-    }
-
-    private static Rectangle Union(Rectangle a, Rectangle b)
-    {
-        var x0 = Math.Min(a.X, b.X);
-        var y0 = Math.Min(a.Y, b.Y);
-        var x1 = Math.Max(a.Right, b.Right);
-        var y1 = Math.Max(a.Bottom, b.Bottom);
-        return new Rectangle(x0, y0, Math.Max(0, x1 - x0), Math.Max(0, y1 - y0));
     }
 
     private void Render()
