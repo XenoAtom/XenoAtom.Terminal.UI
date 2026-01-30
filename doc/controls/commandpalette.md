@@ -2,10 +2,6 @@
 
 `CommandPalette` is a searchable command launcher built on top of the unified `Command` system.
 
-Screenshot placeholder:
-
-![CommandPalette](../../img/screenshots/commandpalette.png)
-
 ## Fullscreen-only
 
 `CommandPalette` uses the popup/window system and is available only in fullscreen `Terminal.Run(...)` applications.
@@ -62,3 +58,10 @@ palette.Style(CommandPaletteStyle.Default with
     PopupTemplateFactory = visual => new Border(visual),
 });
 ```
+
+## Related
+
+- `../commands.md`
+- `../input.md`
+- `./commandbar.md`
+- `./popup.md`
