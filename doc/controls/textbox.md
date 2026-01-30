@@ -2,10 +2,6 @@
 
 `TextBox` is a single-line text editor.
 
-Screenshot placeholder:
-
-![TextBox](../../img/screenshots/textbox.png)
-
 ## Basic usage
 
 ```csharp
@@ -13,11 +9,18 @@ var name = new State<string>("Alex");
 new TextBox().Text(name);
 ```
 
+You can also pass initial text:
+
+```csharp
+new TextBox("Hello");
+```
+
 ## Editing features
 
 - cursor navigation
 - selection (keyboard and mouse)
-- clipboard shortcuts (Ctrl+C/X/V) when enabled by the control mode
+- clipboard shortcuts (Ctrl+C/X/V) when enabled by the control mode / clipboard settings
+- overflow indicators when content is wider than the viewport
 
 ## Undo / redo
 
@@ -26,7 +29,7 @@ TextBox supports undo/redo:
 - `Ctrl+Z`: undo
 - `Ctrl+R`: redo
 
-See `doc/undo-redo.md`.
+See `../undo-redo.md`.
 
 ## Password mode
 
@@ -45,10 +48,23 @@ Masking uses the glyph configured by `TextBoxStyle.PasswordMaskGlyph`.
 
 When content is wider than the viewport, the TextBox can show start/end indicators configured by `TextBoxStyle` (arrows/ellipsis variants).
 
+## Key properties
+
+- `Text`: the current text (bindable, supports `State<string>` two-way binding via fluent API).
+- `TextAlignment`: left/center/right alignment inside the editor.
+- `IsPassword`: enables masking.
+- `PasswordRevealMode`: controls when the real text is revealed.
+- `ClipboardMode`: enables/disables copy/cut/paste behaviors (useful for secrets).
+
+> [!NOTE]
+> In password mode, copy/cut is typically disabled so the masked value doesn’t leak via clipboard.
+
 ## Styling
 
 TextBox uses background on the text region while keeping borders visually compatible with the terminal background.
 
 See also:
 
-- `doc/text-editing.md`
+- `../text-editing.md`
+- `../binding.md`
+- `../styling.md`
