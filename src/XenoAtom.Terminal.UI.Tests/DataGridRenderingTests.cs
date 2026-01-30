@@ -33,8 +33,8 @@ public sealed class DataGridRenderingTests
         using var view = new DataGridDocumentView(doc);
 
         var grid = new DataGridControl { View = view };
-        grid.Columns.Add(new DataGridColumn<int> { Key = "lane", TypedAccessor = laneAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right });
-        grid.Columns.Add(new DataGridColumn<string> { Key = "swimmer", TypedAccessor = swimmerAccessor, Width = GridLength.Star(1) });
+        grid.Columns.Add(new DataGridColumn<int> { Key = "lane", TypedValueAccessor = laneAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "swimmer", TypedValueAccessor = swimmerAccessor, Width = GridLength.Star(1) });
 
         var root = new ScrollViewer(grid) { HorizontalAlignment = Align.Stretch, VerticalAlignment = Align.Stretch };
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 8));
@@ -66,7 +66,7 @@ public sealed class DataGridRenderingTests
         using var view = new DataGridDocumentView(doc);
 
         var grid = new DataGridControl { View = view };
-        grid.Columns.Add(new DataGridColumn<string> { Key = "text", TypedAccessor = textAccessor, Width = GridLength.Star(1) });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "text", TypedValueAccessor = textAccessor, Width = GridLength.Star(1) });
 
         var root = new ScrollViewer(grid) { HorizontalAlignment = Align.Stretch, VerticalAlignment = Align.Stretch };
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(16, 6));
@@ -100,7 +100,7 @@ public sealed class DataGridRenderingTests
         using var view = new DataGridDocumentView(doc);
 
         var grid = new DataGridControl { View = view };
-        grid.Columns.Add(new DataGridColumn<string> { Key = "name", TypedAccessor = nameAccessor, Width = GridLength.Star(1) });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "name", TypedValueAccessor = nameAccessor, Width = GridLength.Star(1) });
 
         var root = new ScrollViewer(grid) { HorizontalAlignment = Align.Stretch, VerticalAlignment = Align.Stretch };
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(20, 6));
@@ -138,8 +138,8 @@ public sealed class DataGridRenderingTests
         using var view = new DataGridDocumentView(doc);
 
         var grid = new DataGridControl { View = view };
-        grid.Columns.Add(new DataGridColumn<string> { Key = "a", TypedAccessor = aAccessor, Width = GridLength.Star(1) });
-        grid.Columns.Add(new DataGridColumn<string> { Key = "b", TypedAccessor = bAccessor, Width = GridLength.Star(1) });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "a", TypedValueAccessor = aAccessor, Width = GridLength.Star(1) });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "b", TypedValueAccessor = bAccessor, Width = GridLength.Star(1) });
 
         var root = new ScrollViewer(grid) { HorizontalAlignment = Align.Stretch, VerticalAlignment = Align.Stretch };
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(20, 6));
@@ -181,7 +181,7 @@ public sealed class DataGridRenderingTests
         using var view = new DataGridDocumentView(doc);
 
         var grid = new DataGridControl { View = view, ShowHeader = true };
-        grid.Columns.Add(new DataGridColumn<string> { Key = "text", TypedAccessor = textAccessor, Width = GridLength.Star(1) });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "text", TypedValueAccessor = textAccessor, Width = GridLength.Star(1) });
 
         var root = new ScrollViewer(grid) { HorizontalAlignment = Align.Stretch, VerticalAlignment = Align.Stretch };
         using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(18, 6));
@@ -218,7 +218,7 @@ public sealed class DataGridRenderingTests
         using var view = new DataGridDocumentView(doc);
 
         var grid = new DataGridControl { View = view };
-        grid.Columns.Add(new DataGridColumn<string> { Key = "name", TypedAccessor = nameAccessor, Width = GridLength.Star(1) });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "name", TypedValueAccessor = nameAccessor, Width = GridLength.Star(1) });
 
         using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(20, 4));
         driver.Tick();
@@ -259,7 +259,7 @@ public sealed class DataGridRenderingTests
         using var view = new DataGridDocumentView(doc);
 
         var grid = new DataGridControl { View = view };
-        grid.Columns.Add(new DataGridColumn<string> { Key = "name", TypedAccessor = nameAccessor, Width = GridLength.Star(1) });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "name", TypedValueAccessor = nameAccessor, Width = GridLength.Star(1) });
 
         using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(20, 5));
         driver.Tick();
@@ -296,8 +296,8 @@ public sealed class DataGridRenderingTests
         using var view = new DataGridDocumentView(doc);
 
         var grid = new DataGridControl { View = view };
-        grid.Columns.Add(new DataGridColumn<string> { Key = "a", TypedAccessor = aAccessor, Width = GridLength.Auto });
-        grid.Columns.Add(new DataGridColumn<string> { Key = "b", TypedAccessor = bAccessor, Width = GridLength.Auto });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "a", TypedValueAccessor = aAccessor, Width = GridLength.Auto });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "b", TypedValueAccessor = bAccessor, Width = GridLength.Auto });
         grid.CurrentCell = new DataGridCell(1, 0);
 
         using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(30, 6));
@@ -331,8 +331,8 @@ public sealed class DataGridRenderingTests
         using var view = new DataGridDocumentView(doc);
 
         var grid = new DataGridControl { View = view };
-        grid.Columns.Add(new DataGridColumn<string> { Key = "a", TypedAccessor = aAccessor, Width = GridLength.Auto });
-        grid.Columns.Add(new DataGridColumn<string> { Key = "b", TypedAccessor = bAccessor, Width = GridLength.Auto });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "a", TypedValueAccessor = aAccessor, Width = GridLength.Auto });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "b", TypedValueAccessor = bAccessor, Width = GridLength.Auto });
 
         using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(30, 6));
         driver.Tick();
@@ -360,7 +360,7 @@ public sealed class DataGridRenderingTests
         using var view = new DataGridDocumentView(doc);
 
         var grid = new DataGridControl { View = view, ShowRowAnchor = false, ShowHeader = false };
-        grid.Columns.Add(new DataGridColumn<string> { Key = "text", TypedAccessor = textAccessor, Width = GridLength.Fixed(5) });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "text", TypedValueAccessor = textAccessor, Width = GridLength.Fixed(5) });
 
         using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(5, 2));
         driver.Tick();
@@ -388,7 +388,7 @@ public sealed class DataGridRenderingTests
         using var view = new DataGridDocumentView(doc);
 
         var grid = new DataGridControl { View = view, ShowRowAnchor = false, ShowHeader = false };
-        grid.Columns.Add(new DataGridColumn<string> { Key = "text", TypedAccessor = textAccessor, Width = GridLength.Auto });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "text", TypedValueAccessor = textAccessor, Width = GridLength.Auto });
 
         grid.Measure(LayoutConstraints.Unbounded);
         Assert.IsGreaterThanOrEqualTo(grid.DesiredSize.Width, "VeryLongValue".Length, $"Expected autosizing to consider cell content. width={grid.DesiredSize.Width}");
@@ -410,8 +410,8 @@ public sealed class DataGridRenderingTests
 
         using var view = new DataGridDocumentView(doc);
 
-        var colA = new DataGridColumn<string> { Key = "a", TypedAccessor = aAccessor, Width = GridLength.Fixed(4) };
-        var colB = new DataGridColumn<string> { Key = "b", TypedAccessor = bAccessor, Width = GridLength.Fixed(4) };
+        var colA = new DataGridColumn<string> { Key = "a", TypedValueAccessor = aAccessor, Width = GridLength.Fixed(4) };
+        var colB = new DataGridColumn<string> { Key = "b", TypedValueAccessor = bAccessor, Width = GridLength.Fixed(4) };
 
         var grid = new DataGridControl { View = view };
         grid.Columns.Add(colA);
@@ -560,7 +560,7 @@ public sealed class DataGridRenderingTests
 
         // Column-driven (via default DataTemplates editor): should still show the current value and update the model.
         var grid = new DataGridControl { View = view };
-        grid.Columns.Add(new DataGridColumn<int> { Key = "n", TypedAccessor = intAccessor, Width = GridLength.Fixed(6) });
+        grid.Columns.Add(new DataGridColumn<int> { Key = "n", TypedValueAccessor = intAccessor, Width = GridLength.Fixed(6) });
 
         using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(20, 4));
         driver.Tick();
@@ -595,8 +595,8 @@ public sealed class DataGridRenderingTests
 
         using var view = new DataGridDocumentView(doc);
 
-        var colA = new DataGridColumn<string> { Key = "a", TypedAccessor = aAccessor, Width = GridLength.Fixed(4) };
-        var colB = new DataGridColumn<string> { Key = "b", TypedAccessor = bAccessor, Width = GridLength.Fixed(4) };
+        var colA = new DataGridColumn<string> { Key = "a", TypedValueAccessor = aAccessor, Width = GridLength.Fixed(4) };
+        var colB = new DataGridColumn<string> { Key = "b", TypedValueAccessor = bAccessor, Width = GridLength.Fixed(4) };
 
         var grid = new DataGridControl { View = view };
         grid.Columns.Add(colA);
@@ -633,8 +633,8 @@ public sealed class DataGridRenderingTests
 
         using var view = new DataGridDocumentView(doc);
 
-        var colA = new DataGridColumn<string> { Key = "a", TypedAccessor = aAccessor, Width = GridLength.Fixed(4) };
-        var colB = new DataGridColumn<string> { Key = "b", TypedAccessor = bAccessor, Width = GridLength.Fixed(4) };
+        var colA = new DataGridColumn<string> { Key = "a", TypedValueAccessor = aAccessor, Width = GridLength.Fixed(4) };
+        var colB = new DataGridColumn<string> { Key = "b", TypedValueAccessor = bAccessor, Width = GridLength.Fixed(4) };
 
         var grid = new DataGridControl { View = view };
         grid.Columns.Add(colA);

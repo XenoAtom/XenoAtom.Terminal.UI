@@ -17,18 +17,27 @@ Typical usage is:
 ## Example
 
 ```csharp
+using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.DataGrid;
 
-var doc = new DataGridListDocument<MyRow>();
-// doc.SetColumns(...) and doc.AddRow(...) omitted for brevity.
+public sealed partial class MyRow
+{
+    [Bindable] public partial int Id { get; set; }
+    [Bindable] public partial string Name { get; set; } = string.Empty;
+}
+
+var doc = new DataGridListDocument<MyRow>()
+    .AddColumn(MyRow.Accessor.Id)
+    .AddColumn(MyRow.Accessor.Name);
 
 using var view = new DataGridDocumentView(doc);
 
 var grid = new DataGridControl { View = view, FrozenColumns = 1 };
 
 // Provide typed UI columns to enable typed templates/editors.
-// grid.Columns.Add(new DataGridColumn<string> { Key = "...", TypedAccessor = ... });
+grid.Columns.Add(new DataGridColumn<int> { Key = MyRow.Accessor.Id.Name, TypedValueAccessor = MyRow.Accessor.Id });
+grid.Columns.Add(new DataGridColumn<string> { Key = MyRow.Accessor.Name.Name, TypedValueAccessor = MyRow.Accessor.Name });
 
 var root = new ScrollViewer(grid);
 ```

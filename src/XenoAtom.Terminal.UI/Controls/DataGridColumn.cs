@@ -109,7 +109,7 @@ public abstract partial class DataGridColumn : IVisualElement
     /// <summary>
     /// Gets the accessor used to create bindings against a row model for this column.
     /// </summary>
-    public abstract BindingAccessor Accessor { get; }
+    public abstract BindingAccessor ValueAccessor { get; }
 
     internal void Attach(DataGridControl owner) => _owner = owner;
 
@@ -150,13 +150,13 @@ public sealed partial class DataGridColumn<T> : DataGridColumn
     /// Gets or sets the accessor used to create <see cref="Binding{T}"/> instances for this column.
     /// </summary>
     [Bindable]
-    public partial BindingAccessor<T> TypedAccessor { get; set; }
+    public partial BindingAccessor<T> TypedValueAccessor { get; set; }
 
     /// <inheritdoc />
     public override Type ValueType => typeof(T);
 
     /// <inheritdoc />
-    public override BindingAccessor Accessor => TypedAccessor;
+    public override BindingAccessor ValueAccessor => TypedValueAccessor;
 
     /// <summary>
     /// Gets or sets the display template used for cells in this column.
@@ -179,13 +179,13 @@ public sealed partial class DataGridColumn<T> : DataGridColumn
     [Bindable]
     public partial DataTemplate<T> CellEditorTemplate { get; set; }
 
-    partial void OnTypedAccessorChanging(ref BindingAccessor<T> value) => ArgumentNullException.ThrowIfNull(value);
+    partial void OnTypedValueAccessorChanging(ref BindingAccessor<T> value) => ArgumentNullException.ThrowIfNull(value);
 
     internal override string FormatValue(Visual owner, object rowModel, CultureInfo culture)
     {
         _ = owner;
         _ = culture;
-        var binding = new Binding<T>(rowModel, TypedAccessor);
+        var binding = new Binding<T>(rowModel, TypedValueAccessor);
         var value = binding.GetValue();
         if (value is null)
         {
@@ -210,7 +210,7 @@ public sealed partial class DataGridColumn<T> : DataGridColumn
         out bool updated)
     {
         var template = ResolveDisplayTemplate(owner, effectiveReadOnly);
-        var binding = new Binding<T>(rowModel, TypedAccessor);
+        var binding = new Binding<T>(rowModel, TypedValueAccessor);
         var templateValue = new DataTemplateValue<T>(binding);
 
         if (reused is not null && template.TryUpdate is { } updater && updater(reused, templateValue, context))
@@ -233,7 +233,7 @@ public sealed partial class DataGridColumn<T> : DataGridColumn
     internal override bool TryCreateEditorVisual(Visual owner, object rowModel, in DataTemplateContext context, out Visual? editor)
     {
         var template = ResolveEditorTemplate(owner);
-        var binding = new Binding<T>(rowModel, TypedAccessor);
+        var binding = new Binding<T>(rowModel, TypedValueAccessor);
 
         if (!template.IsEmpty && template.Editor is not null)
         {

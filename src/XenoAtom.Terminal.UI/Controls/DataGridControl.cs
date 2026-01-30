@@ -1880,8 +1880,8 @@ public sealed partial class DataGridControl : Visual, IScrollable
         if (column is not null && column.TryCreateEditorVisual(this, rowModel, ctx, out var editor) && editor is not null)
         {
             _activeEditorRowModel = rowModel;
-            _activeEditorAccessor = column.Accessor;
-            _activeEditorOriginalValue = column.Accessor.GetValueAsObject(rowModel);
+            _activeEditorAccessor = column.ValueAccessor;
+            _activeEditorOriginalValue = column.ValueAccessor.GetValueAsObject(rowModel);
 
             PrepareEditorForCell(editor);
             OpenEditor(editor, cell, pooled: false);
@@ -2588,11 +2588,11 @@ public sealed partial class DataGridControl : Visual, IScrollable
     {
         var header = ui.Header;
         var headerWidth = header is null ? TerminalTextUtility.GetWidth(ui.Key.AsSpan()) : MeasureHeaderVisualWidth(header);
-        var baseWidth = ResolveBaseWidth(snapshot, ui, ui.Accessor, ui.ValueType, headerWidth, culture);
+        var baseWidth = ResolveBaseWidth(snapshot, ui, ui.ValueAccessor, ui.ValueType, headerWidth, culture);
 
         return new ResolvedColumn(
             Key: ui.Key,
-            SchemaAccessor: ui.Accessor,
+            SchemaAccessor: ui.ValueAccessor,
             SchemaValueType: ui.ValueType,
             SchemaReadOnly: true,
             HeaderText: ui.Key,

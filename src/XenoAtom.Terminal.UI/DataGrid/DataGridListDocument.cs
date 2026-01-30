@@ -142,6 +142,43 @@ public sealed class DataGridListDocument<T> : IDataGridDocument where T : class
     }
 
     /// <summary>
+    /// Adds a column to the end of the column schema.
+    /// </summary>
+    /// <param name="column">The column to add.</param>
+    /// <returns>This instance.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="column"/> has an empty key.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="column"/> has a null accessor.</exception>
+    public DataGridListDocument<T> AddColumn(DataGridColumnInfo column)
+    {
+        if (string.IsNullOrWhiteSpace(column.Key))
+        {
+            throw new ArgumentException("Column key must not be empty.", nameof(column));
+        }
+
+        ArgumentNullException.ThrowIfNull(column.Accessor);
+
+        _columns.Add(column);
+        BumpVersion(DataGridChangeKind.Schema, columnIndex: _columns.Count - 1, columnCount: 1);
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a typed column to the end of the column schema.
+    /// </summary>
+    /// <typeparam name="TValue">The CLR type of values in the column.</typeparam>
+    /// <param name="column">The typed column to add.</param>
+    /// <returns>This instance.</returns>
+    public DataGridListDocument<T> AddColumn<TValue>(DataGridColumnInfo<TValue> column) => AddColumn((DataGridColumnInfo)column);
+
+    /// <summary>
+    /// Adds a column using a typed accessor. The key and header text default to <see cref="BindingAccessor.Name"/>.
+    /// </summary>
+    /// <typeparam name="TValue">The property type.</typeparam>
+    /// <param name="accessor">The typed accessor.</param>
+    /// <returns>This instance.</returns>
+    public DataGridListDocument<T> AddColumn<TValue>(BindingAccessor<TValue> accessor) => AddColumn((DataGridColumnInfo<TValue>)accessor);
+
+    /// <summary>
     /// Adds a row model to the end of the document.
     /// </summary>
     /// <param name="rowModel">The row model to add.</param>

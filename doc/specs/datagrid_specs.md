@@ -145,9 +145,15 @@ public interface IDataGridSnapshot
 public readonly record struct DataGridColumnInfo(
     string Key,
     string HeaderText,
-    Type? ValueType = null,
-    bool ReadOnly = false,
+    Type? ValueType,
+    bool ReadOnly,
     BindingAccessor Accessor);
+
+public readonly record struct DataGridColumnInfo<T>(
+    string Key,
+    string HeaderText,
+    bool ReadOnly,
+    BindingAccessor<T> Accessor);
 ```
 
 Notes:
@@ -157,6 +163,14 @@ Notes:
 - `ReadOnly` indicates that the underlying data source does not support edits for this column (e.g. no setter, computed
   value, read-only `DataColumn`).
 - `Accessor` MUST be provided and is used by `DataGrid` to create cell bindings against the row model.
+
+Ergonomics:
+
+- For bindable row models, the `[Bindable]` source generator SHOULD generate a nested `Accessor` type that exposes
+  `BindingAccessor<T>` instances for each bindable property (e.g. `MyRow.Accessor.Name`), including inheritance for
+  derived row models.
+- `BindingAccessor<T>` MAY convert to `DataGridColumnInfo<T>` (key/header default to `BindingAccessor.Name` and
+  read-only defaults to `BindingAccessor.IsReadOnly`) so list-backed documents can be configured concisely.
 
 Row model edits:
 
@@ -408,7 +422,7 @@ public abstract partial class DataGridColumn : IVisualElement
     /// <summary>
     /// Gets the accessor used to create bindings against a row model for this column.
     /// </summary>
-    public abstract BindingAccessor Accessor { get; }
+    public abstract BindingAccessor ValueAccessor { get; }
 }
 
 /// <summary>
@@ -420,13 +434,13 @@ public sealed partial class DataGridColumn<T> : DataGridColumn
     /// <summary>
     /// Gets or sets the accessor used to create <see cref="Binding{T}"/> instances for this column.
     /// </summary>
-    [Bindable] public BindingAccessor<T> TypedAccessor { get; set; } = null!;
+    [Bindable] public BindingAccessor<T> TypedValueAccessor { get; set; } = null!;
 
     /// <inheritdoc />
     public override Type ValueType => typeof(T);
 
     /// <inheritdoc />
-    public override BindingAccessor Accessor => TypedAccessor;
+    public override BindingAccessor ValueAccessor => TypedValueAccessor;
 
     /// <summary>
     /// Gets or sets the display template used for cells in this column.
@@ -461,7 +475,7 @@ Notes:
 - Columns SHOULD be typed (`DataGridColumn<T>`) whenever possible to avoid boxing (especially for value types).
   `DataGridColumn<object?>` is the escape hatch for unknown types.
 - `DataGrid` SHOULD create cell bindings using the row model from the snapshot and the column accessor (typically
-  `DataGridColumn<T>.TypedAccessor` or <see cref="DataGridColumnInfo.Accessor"/> when auto-generating columns), then pass:
+  `DataGridColumn<T>.TypedValueAccessor` or <see cref="DataGridColumnInfo.ValueAccessor"/> when auto-generating columns), then pass:
   - a `DataTemplateValue<T>` to display templates, and
   - a `Binding<T>` to editor templates.
 - Read-only behavior:
@@ -779,9 +793,32 @@ Provide an adapter for `IReadOnlyList<T>` / `BindableList<T>` (name illustrative
 
 Columns may be described by:
 
-- `DataGridColumn<TValue>` mapping to a `BindingAccessor<TValue>` on the row model (and optional templates/editors).
+- `DataGridColumnInfo` / `DataGridColumnInfo<TValue>` in the document/view snapshot, backed by `BindingAccessor` / `BindingAccessor<TValue>`.
+- Optional `DataGridColumn<TValue>` UI columns that map by `Key` to a `DataGridColumnInfo` from the snapshot (and provide templates/editors).
 
 This supports “bulk edit a list of view models with bindable properties”.
+
+Example (bindable row model + generated accessors):
+
+```csharp
+public sealed partial class SwimRow
+{
+    [Bindable] public partial int Lane { get; set; }
+    [Bindable] public partial string Swimmer { get; set; } = string.Empty;
+    [Bindable] public partial string Country { get; set; } = string.Empty;
+    [Bindable] public partial double Time { get; set; }
+}
+
+var doc = new DataGridListDocument<SwimRow>();
+using (doc.BeginUpdate())
+{
+    doc
+        .AddColumn(SwimRow.Accessor.Lane)
+        .AddColumn(SwimRow.Accessor.Swimmer)
+        .AddColumn(SwimRow.Accessor.Country)
+        .AddColumn(SwimRow.Accessor.Time);
+}
+```
 
 ---
 

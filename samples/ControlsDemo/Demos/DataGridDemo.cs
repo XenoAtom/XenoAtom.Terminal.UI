@@ -85,19 +85,20 @@ public sealed class DataGridDemo : ControlsDemoBase
         State<int> frozenRows,
         State<bool> readOnly)
     {
-        var laneAccessor = new BindingAccessor<int>("lane", o => ((SwimRow)o).Lane, (o, v) => ((SwimRow)o).Lane = v);
-        var swimmerAccessor = new BindingAccessor<string>("swimmer", o => ((SwimRow)o).Swimmer, (o, v) => ((SwimRow)o).Swimmer = v);
-        var countryAccessor = new BindingAccessor<string>("country", o => ((SwimRow)o).Country, (o, v) => ((SwimRow)o).Country = v);
-        var timeAccessor = new BindingAccessor<double>("time", o => ((SwimRow)o).Time, (o, v) => ((SwimRow)o).Time = v);
+        var laneAccessor = SwimRow.Accessor.Lane;
+        var swimmerAccessor = SwimRow.Accessor.Swimmer;
+        var countryAccessor = SwimRow.Accessor.Country;
+        var timeAccessor = SwimRow.Accessor.Time;
 
         var doc = new DataGridListDocument<SwimRow>();
-        doc.SetColumns(new[]
+        using (doc.BeginUpdate())
         {
-            new DataGridColumnInfo("lane", "Lane", typeof(int), ReadOnly: false, laneAccessor),
-            new DataGridColumnInfo("swimmer", "Swimmer", typeof(string), ReadOnly: false, swimmerAccessor),
-            new DataGridColumnInfo("country", "Country", typeof(string), ReadOnly: false, countryAccessor),
-            new DataGridColumnInfo("time", "Time", typeof(double), ReadOnly: false, timeAccessor),
-        });
+            doc
+                .AddColumn(laneAccessor)
+                .AddColumn(swimmerAccessor)
+                .AddColumn(countryAccessor)
+                .AddColumn(timeAccessor);
+        }
 
         doc.AddRow(new SwimRow { Lane = 4, Swimmer = "Joseph Schooling", Country = "Singapore", Time = 50.39 });
         doc.AddRow(new SwimRow { Lane = 2, Swimmer = "Michael Phelps", Country = "United States", Time = 51.14 });
@@ -127,10 +128,10 @@ public sealed class DataGridDemo : ControlsDemoBase
             .FrozenRows(frozenRows)
             .ReadOnly(readOnly);
 
-        grid.Columns.Add(new DataGridColumn<int> { Key = "lane", TypedAccessor = laneAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right });
-        grid.Columns.Add(new DataGridColumn<string> { Key = "swimmer", TypedAccessor = swimmerAccessor, Width = GridLength.Star(2) });
-        grid.Columns.Add(new DataGridColumn<string> { Key = "country", TypedAccessor = countryAccessor, Width = GridLength.Star(2) });
-        grid.Columns.Add(new DataGridColumn<double> { Key = "time", TypedAccessor = timeAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right });
+        grid.Columns.Add(new DataGridColumn<int> { Key = laneAccessor.Name, TypedValueAccessor = laneAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right });
+        grid.Columns.Add(new DataGridColumn<string> { Key = swimmerAccessor.Name, TypedValueAccessor = swimmerAccessor, Width = GridLength.Star(2) });
+        grid.Columns.Add(new DataGridColumn<string> { Key = countryAccessor.Name, TypedValueAccessor = countryAccessor, Width = GridLength.Star(2) });
+        grid.Columns.Add(new DataGridColumn<double> { Key = timeAccessor.Name, TypedValueAccessor = timeAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right });
 
         var themed = new Border(new ScrollViewer(grid).MinHeight(12).MaxHeight(12))
             .Style(BorderStyle.Rounded)
@@ -192,10 +193,10 @@ public sealed class DataGridDemo : ControlsDemoBase
             .FrozenRows(frozenRows)
             .ReadOnly(readOnly);
 
-        grid.Columns.Add(new DataGridColumn<string> { Key = "date", TypedAccessor = dateAccessor, Width = GridLength.Auto });
-        grid.Columns.Add(new DataGridColumn<string> { Key = "desc", TypedAccessor = descAccessor, Width = GridLength.Star(3) });
-        grid.Columns.Add(new DataGridColumn<double> { Key = "amount", TypedAccessor = amountAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right });
-        grid.Columns.Add(new DataGridColumn<string> { Key = "cat", TypedAccessor = categoryAccessor, Width = GridLength.Star(1) });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "date", TypedValueAccessor = dateAccessor, Width = GridLength.Auto });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "desc", TypedValueAccessor = descAccessor, Width = GridLength.Star(3) });
+        grid.Columns.Add(new DataGridColumn<double> { Key = "amount", TypedValueAccessor = amountAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "cat", TypedValueAccessor = categoryAccessor, Width = GridLength.Star(1) });
 
         var styled = new Border(new ScrollViewer(grid).MinHeight(12).MaxHeight(12))
             .Style(BorderStyle.Single)
@@ -256,9 +257,9 @@ public sealed class DataGridDemo : ControlsDemoBase
             .FrozenRows(frozenRows)
             .ReadOnly(readOnly);
 
-        grid.Columns.Add(new DataGridColumn<int> { Key = "id", TypedAccessor = idAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right });
-        grid.Columns.Add(new DataGridColumn<string> { Key = "planet", TypedAccessor = planetAccessor, Width = GridLength.Star(2) });
-        grid.Columns.Add(new DataGridColumn<double> { Key = "distance_au", TypedAccessor = distAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right });
+        grid.Columns.Add(new DataGridColumn<int> { Key = "id", TypedValueAccessor = idAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "planet", TypedValueAccessor = planetAccessor, Width = GridLength.Star(2) });
+        grid.Columns.Add(new DataGridColumn<double> { Key = "distance_au", TypedValueAccessor = distAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right });
 
         var framed = new Border(new ScrollViewer(grid).MinHeight(12).MaxHeight(12))
             .Style(BorderStyle.Double)

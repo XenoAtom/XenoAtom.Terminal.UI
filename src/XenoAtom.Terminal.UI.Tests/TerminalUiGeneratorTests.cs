@@ -85,6 +85,59 @@ public sealed class TerminalUiGeneratorTests
         Assert.IsTrue(generatedSources.Any(s => s.Contains("Count<T>(this T obj, global::XenoAtom.Terminal.UI.State<", StringComparison.Ordinal)), "Expected generated fluent overloads for State<T>.");
     }
 
+    [TestMethod]
+    public void Generates_Public_Accessor_Class_For_Bindable_Models()
+    {
+        const string source = """
+                              using XenoAtom.Terminal.UI;
+                              
+                              namespace Demo;
+                              
+                              public partial class BaseRow
+                              {
+                                  [Bindable]
+                                  public partial int Id { get; set; }
+                              }
+                              
+                              public partial class DerivedRow : BaseRow
+                              {
+                                  [Bindable]
+                                  public partial string Name { get; set; }
+                              }
+                              """;
+
+        var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview);
+        var compilation = CreateCompilation(source, parseOptions);
+        var generator = new TerminalUiGenerator();
+
+        GeneratorDriver driver = CSharpGeneratorDriver.Create([generator.AsSourceGenerator()], parseOptions: parseOptions);
+        driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var generatorDiagnostics);
+
+        var compilationDiagnostics = outputCompilation.GetDiagnostics();
+        var errors = generatorDiagnostics
+            .Concat(compilationDiagnostics)
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+
+        Assert.IsEmpty(errors, string.Join(Environment.NewLine, errors.Select(x => x.ToString())));
+
+        var runResult = driver.GetRunResult();
+        var generatedSources = runResult.Results
+            .SelectMany(r => r.GeneratedSources)
+            .Select(s => s.SourceText.ToString())
+            .ToList();
+
+        Assert.IsTrue(
+            generatedSources.Any(s => s.Contains("public class Accessor", StringComparison.Ordinal) &&
+                                      s.Contains("public static global::XenoAtom.Terminal.UI.BindingAccessor<int> Id => __Id__BindingAccessor.Instance;", StringComparison.Ordinal)),
+            "Expected generated model Accessor for BaseRow.");
+
+        Assert.IsTrue(
+            generatedSources.Any(s => s.Contains("public new class Accessor : global::Demo.BaseRow.Accessor", StringComparison.Ordinal) &&
+                                      s.Contains("public static global::XenoAtom.Terminal.UI.BindingAccessor<string> Name => __Name__BindingAccessor.Instance;", StringComparison.Ordinal)),
+            "Expected generated model Accessor for DerivedRow with correct inheritance.");
+    }
+
     private static CSharpCompilation CreateCompilation(string source, CSharpParseOptions parseOptions)
     {
         var syntaxTree = CSharpSyntaxTree.ParseText(source, parseOptions);

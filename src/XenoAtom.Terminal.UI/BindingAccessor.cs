@@ -24,7 +24,7 @@ public abstract class BindingAccessor
     public string Name { get; }
 
     /// <summary>
-    /// Gets a value indicating whether the collection is read-only.
+    /// Gets a value indicating whether the property is read-only.
     /// </summary>
     public abstract bool IsReadOnly { get; }
 
@@ -54,11 +54,11 @@ public class BindingAccessor<T> : BindingAccessor
     /// </summary>
     /// <param name="name">The bindable property name.</param>
     /// <param name="getter">A delegate that reads the value from an instance.</param>
-    /// <param name="setter">A delegate that writes the value to an instance.</param>
+    /// <param name="setter">A delegate that writes the value to an instance, or <see langword="null"/> for a read-only property.</param>
     public BindingAccessor(string name, Func<object, T> getter, Action<object, T>? setter) : base(name)
     {
         Getter = getter ?? throw new ArgumentNullException(nameof(getter));
-        Setter = setter ?? throw new ArgumentNullException(nameof(setter));
+        Setter = setter;
     }
 
     /// <summary>
