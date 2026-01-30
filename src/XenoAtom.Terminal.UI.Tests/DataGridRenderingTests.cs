@@ -791,6 +791,52 @@ public sealed class DataGridRenderingTests
         Assert.AreEqual(new KeyGesture(TerminalChar.CtrlC, TerminalModifiers.Ctrl), copy.Gesture);
     }
 
+    [TestMethod]
+    public void DataGrid_Search_Status_Updates_When_Navigating_Matches()
+    {
+        var textAccessor = new BindingAccessor<string>("text", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
+
+        var doc = new DataGridListDocument<TextRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("text", "Text", typeof(string), ReadOnly: false, textAccessor),
+        });
+        doc.AddRow(new TextRow { Text = "aaa" });
+        doc.AddRow(new TextRow { Text = "aaa" });
+        doc.AddRow(new TextRow { Text = "aaa" });
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false };
+        grid.Columns.Add(new DataGridColumn<string> { Key = "text", TypedValueAccessor = textAccessor, Width = GridLength.Star(1) });
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+        driver.App.Focus(grid);
+        driver.Tick();
+
+        // Open search popup and set query to "a" (3 matches).
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlF, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "a" });
+        driver.TickUntil(() => grid.SearchQuery.Text == "a");
+
+        var screen = new AnsiTestScreen(40, 10);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText();
+        StringAssert.Contains(rendered, "0/3");
+
+        // Navigate to the next match (F3) and ensure status updates to 1/3.
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F3 });
+        driver.Tick();
+
+        screen = new AnsiTestScreen(40, 10);
+        screen.Apply(driver.Backend.GetOutText());
+        rendered = screen.GetText();
+        StringAssert.Contains(rendered, "1/3");
+    }
+
     private sealed class SwimRow
     {
         public int Lane { get; set; }

@@ -454,6 +454,9 @@ public sealed partial class DataGridControl : Visual, IScrollable
     [Bindable]
     private partial int ActiveEditorScrollVersion { get; set; }
 
+    [Bindable]
+    private partial int ActiveMatchVersion { get; set; }
+
     partial void OnFrozenRowsChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
     partial void OnFrozenColumnsChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
     partial void OnRowAnchorWidthChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
@@ -1371,6 +1374,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
         _activeMatchIndex = _activeMatchIndex < 0 ? 0 : (_activeMatchIndex + 1) % _matches.Count;
         CurrentCell = _matches[_activeMatchIndex];
+        ActiveMatchVersion++;
     }
 
     private void PreviousMatch()
@@ -1384,6 +1388,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
         _activeMatchIndex = _activeMatchIndex < 0 ? _matches.Count - 1 : (_activeMatchIndex - 1 + _matches.Count) % _matches.Count;
         CurrentCell = _matches[_activeMatchIndex];
+        ActiveMatchVersion++;
     }
 
     private string GetSearchStatusText()
@@ -1391,6 +1396,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
         // Ensure this participates in dependency tracking: query and source version affect matches.
         _ = SourceVersion;
         _ = SearchQuery;
+        _ = ActiveMatchVersion;
 
         if (string.IsNullOrEmpty(SearchQuery.Text))
         {
