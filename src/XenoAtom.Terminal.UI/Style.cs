@@ -31,6 +31,9 @@ public readonly struct Style : IEquatable<Style>
     private const int ContinuationBit = 24;
     private const ulong ContinuationMask = 1ul << ContinuationBit;
 
+    private const int TextStyleSpecifiedBit = 25;
+    private const ulong TextStyleSpecifiedMask = 1ul << TextStyleSpecifiedBit;
+
     // All bits except the background color payload (kind/index + RGBA bytes).
     private const ulong BackgroundFlagsMask = 0x00000000FFFF0000ul;
 
@@ -55,6 +58,8 @@ public readonly struct Style : IEquatable<Style>
     /// Gets the text style flags (decorations) for this cell.
     /// </summary>
     public TextStyle TextStyle => (TextStyle)((_backgroundAndFlags & TextStyleMask) >> TextStyleShift);
+
+    private bool HasTextStyleSpecified => ((_backgroundAndFlags & TextStyleSpecifiedMask) != 0) || TextStyle != 0;
 
     internal bool IsContinuation => (_backgroundAndFlags & ContinuationMask) != 0;
 
@@ -94,12 +99,12 @@ public readonly struct Style : IEquatable<Style>
         }
 
         var textStyle = (byte)TextStyle;
-        if (textStyle == 0)
+        if (!HasTextStyleSpecified)
         {
             textStyle = (byte)under.TextStyle;
         }
 
-        var flags = ((ulong)textStyle << TextStyleShift) | (BackgroundFlagsRaw & ContinuationMask);
+        var flags = ((ulong)textStyle << TextStyleShift) | (BackgroundFlagsRaw & (ContinuationMask | TextStyleSpecifiedMask));
         return new Style(fg, bg | flags);
     }
 
@@ -107,19 +112,33 @@ public readonly struct Style : IEquatable<Style>
     /// Returns a copy with the specified text style flags (replacing any existing flags).
     /// </summary>
     public Style WithTextStyle(TextStyle style)
-        => new(_foreground, (_backgroundAndFlags & ~TextStyleMask) | ((ulong)(byte)style << TextStyleShift));
+        => new(_foreground, (_backgroundAndFlags & ~TextStyleMask) | ((ulong)(byte)style << TextStyleShift) | TextStyleSpecifiedMask);
 
     /// <summary>
     /// Returns a copy with the specified text style flags added.
     /// </summary>
     public Style AddTextStyle(TextStyle style)
-        => new(_foreground, _backgroundAndFlags | ((ulong)(byte)style << TextStyleShift));
+    {
+        if (style == 0)
+        {
+            return this;
+        }
+
+        return new(_foreground, (_backgroundAndFlags | ((ulong)(byte)style << TextStyleShift)) | TextStyleSpecifiedMask);
+    }
 
     /// <summary>
     /// Returns a copy with the specified text style flags removed.
     /// </summary>
     public Style RemoveTextStyle(TextStyle style)
-        => new(_foreground, _backgroundAndFlags & ~((ulong)(byte)style << TextStyleShift));
+    {
+        if (style == 0)
+        {
+            return this;
+        }
+
+        return new(_foreground, (_backgroundAndFlags & ~((ulong)(byte)style << TextStyleShift)) | TextStyleSpecifiedMask);
+    }
 
     /// <summary>
     /// Returns a copy with the foreground cleared to the terminal default (unspecified).
@@ -198,6 +217,11 @@ public readonly struct Style : IEquatable<Style>
         if (a.IsContinuation || b.IsContinuation)
         {
             flags |= ContinuationMask;
+        }
+
+        if ((a._backgroundAndFlags & TextStyleSpecifiedMask) != 0 || (b._backgroundAndFlags & TextStyleSpecifiedMask) != 0)
+        {
+            flags |= TextStyleSpecifiedMask;
         }
 
         return new Style(fg, bg | flags);

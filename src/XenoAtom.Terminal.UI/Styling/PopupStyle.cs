@@ -45,10 +45,13 @@ public sealed record PopupStyle : IStyle<PopupStyle>
     {
         if (SurfaceStyle is { } surface)
         {
-            return surface;
+            // Popups render their surface using blank glyphs; explicitly specify the text style to avoid inheriting
+            // decorations (e.g. underline) from the underlay.
+            return surface.WithTextStyle(surface.TextStyle);
         }
 
         var style = theme.ForegroundTextStyle();
+        style = style.WithTextStyle(style.TextStyle);
         if (theme.PopupSurface is { } bg)
         {
             return style.WithBackground(bg);
@@ -77,10 +80,11 @@ public sealed record PopupStyle : IStyle<PopupStyle>
     {
         if (BorderStyle is { } border)
         {
-            return border;
+            return border.WithTextStyle(border.TextStyle);
         }
 
         var style = theme.BorderStyle(focused: false);
+        style = style.WithTextStyle(style.TextStyle);
 
         // Match the popup surface fill so borders blend naturally when using RGBA strokes.
         if (theme.PopupSurface is { } bg)

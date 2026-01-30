@@ -86,6 +86,8 @@ public sealed record BackdropStyle : IStyle<BackdropStyle>
             style |= TextStyle.Dim;
         }
 
-        return style;
+        // Backdrops typically fill with a blank rune; explicitly specify the text style to avoid inheriting
+        // decorations (e.g. underline) from the underlay.
+        return style.WithTextStyle(style.TextStyle);
     }
 }

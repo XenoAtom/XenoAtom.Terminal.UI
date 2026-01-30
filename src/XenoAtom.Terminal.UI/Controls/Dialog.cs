@@ -223,9 +223,11 @@ public sealed partial class Dialog : Visual, IModalVisual
         var theme = GetTheme();
         var glyphs = theme.Lines;
         var borderStyle = theme.BorderStyle(focused);
+        borderStyle = borderStyle.WithTextStyle(borderStyle.TextStyle);
 
         var dialogBackground = theme.PopupSurface ?? theme.SurfaceAlt ?? theme.Surface;
         var surface = theme.ForegroundTextStyle();
+        surface = surface.WithTextStyle(surface.TextStyle);
         if (dialogBackground is { } bg)
         {
             surface = surface.WithBackground(bg);
