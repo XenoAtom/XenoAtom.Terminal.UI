@@ -122,6 +122,9 @@ public sealed partial class DataGridControl : Visual, IScrollable
     private int _resizeStartUiX;
     private int _resizeStartWidth;
 
+    [Bindable]
+    private partial int HoveredResizeColumnIndex { get; set; }
+
     private int _lastMatchesKey;
     private readonly List<DataGridCell> _matches;
     private int _activeMatchIndex;
@@ -168,7 +171,10 @@ public sealed partial class DataGridControl : Visual, IScrollable
         _activeMatchIndex = -1;
 
         _searchTarget = new DataGridSearchTarget(this);
-        _searchPopup = new SearchReplacePopup(_searchTarget);
+        _searchPopup = new SearchReplacePopup(_searchTarget)
+        {
+            ClearQueryOnClose = true,
+        };
         AttachChild(_searchPopup);
 
         AddCommand(new Command
@@ -211,6 +217,111 @@ public sealed partial class DataGridControl : Visual, IScrollable
             CanExecute = static v => ((DataGridControl)v)._activeEditor is not null,
         });
 
+        AddCommand(new Command
+        {
+            Id = "DataGrid.Find",
+            LabelMarkup = "Find",
+            DescriptionMarkup = "Find text in the table.",
+            Gesture = new KeyGesture(TerminalChar.CtrlF, TerminalModifiers.Ctrl),
+            Importance = CommandImportance.Primary,
+            Presentation = CommandPresentation.CommandBar,
+            Execute = static v => ((DataGridControl)v).OpenSearch(),
+        });
+
+        AddCommand(new Command
+        {
+            Id = "DataGrid.ToggleFilterRow",
+            LabelMarkup = "Filter row",
+            DescriptionMarkup = "Show or hide the filter row.",
+            Gesture = new KeyGesture(TerminalChar.CtrlF, TerminalModifiers.Ctrl | TerminalModifiers.Shift),
+            Importance = CommandImportance.Secondary,
+            Presentation = CommandPresentation.CommandBar,
+            Execute = static v => ((DataGridControl)v).ToggleFilterRow(),
+            CanExecute = static v => ((DataGridControl)v).CanFilter,
+        });
+
+        AddCommand(new Command
+        {
+            Id = "DataGrid.NextMatch",
+            LabelMarkup = "Next match",
+            DescriptionMarkup = "Jump to the next search match.",
+            Gesture = new KeyGesture(TerminalKey.F3),
+            Importance = CommandImportance.Secondary,
+            Presentation = CommandPresentation.CommandBar,
+            Execute = static v => ((DataGridControl)v).NextMatch(),
+        });
+
+        AddCommand(new Command
+        {
+            Id = "DataGrid.PreviousMatch",
+            LabelMarkup = "Prev match",
+            DescriptionMarkup = "Jump to the previous search match.",
+            Gesture = new KeyGesture(TerminalKey.F3, TerminalModifiers.Shift),
+            Importance = CommandImportance.Secondary,
+            Presentation = CommandPresentation.CommandBar,
+            Execute = static v => ((DataGridControl)v).PreviousMatch(),
+        });
+
+        AddCommand(new Command
+        {
+            Id = "DataGrid.SelectAll",
+            LabelMarkup = "Select all",
+            DescriptionMarkup = "Select the entire table.",
+            Gesture = new KeyGesture(TerminalChar.CtrlA, TerminalModifiers.Ctrl),
+            Importance = CommandImportance.Primary,
+            Presentation = CommandPresentation.CommandBar,
+            Execute = static v => ((DataGridControl)v).SelectAll(),
+            CanExecute = static v => ((DataGridControl)v)._activeEditor is null,
+        });
+
+        AddCommand(new Command
+        {
+            Id = "DataGrid.Copy",
+            LabelMarkup = "Copy",
+            DescriptionMarkup = "Copy the current selection to the clipboard.",
+            Gesture = new KeyGesture(TerminalChar.CtrlC, TerminalModifiers.Ctrl),
+            Importance = CommandImportance.Primary,
+            Presentation = CommandPresentation.CommandBar,
+            Execute = static v => ((DataGridControl)v).CopySelection(),
+            CanExecute = static v => ((DataGridControl)v)._activeEditor is null,
+        });
+
+        AddCommand(new Command
+        {
+            Id = "DataGrid.GoToStart",
+            LabelMarkup = "Top",
+            DescriptionMarkup = "Go to the first cell (Ctrl+Home).",
+            Gesture = new KeyGesture(TerminalKey.Home, TerminalModifiers.Ctrl),
+            Importance = CommandImportance.Secondary,
+            Presentation = CommandPresentation.CommandBar,
+            Execute = static v => ((DataGridControl)v).GoToTableEdge(first: true),
+            CanExecute = static v => ((DataGridControl)v)._activeEditor is null,
+        });
+
+        AddCommand(new Command
+        {
+            Id = "DataGrid.GoToEnd",
+            LabelMarkup = "Bottom",
+            DescriptionMarkup = "Go to the last cell (Ctrl+End).",
+            Gesture = new KeyGesture(TerminalKey.End, TerminalModifiers.Ctrl),
+            Importance = CommandImportance.Secondary,
+            Presentation = CommandPresentation.CommandBar,
+            Execute = static v => ((DataGridControl)v).GoToTableEdge(first: false),
+            CanExecute = static v => ((DataGridControl)v)._activeEditor is null,
+        });
+
+        AddCommand(new Command
+        {
+            Id = "DataGrid.EditCell",
+            LabelMarkup = "Edit",
+            DescriptionMarkup = "Edit the current cell.",
+            Gesture = new KeyGesture(TerminalKey.F2),
+            Importance = CommandImportance.Secondary,
+            Presentation = CommandPresentation.CommandBar,
+            Execute = static v => ((DataGridControl)v).StartEdit(),
+            CanExecute = static v => !((DataGridControl)v).ReadOnly && ((DataGridControl)v)._activeEditor is null,
+        });
+
         this.ShowHeader(true);
         this.ShowRowAnchor(true);
         this.RowAnchorWidth(1);
@@ -220,6 +331,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
         this.FrozenColumns(0);
         this.CurrentCell(DataGridCell.None);
         this.SelectedRow(-1);
+        HoveredResizeColumnIndex = -1;
     }
 
     /// <summary>
@@ -640,6 +752,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
         _ = ScrollVersion;
         _ = SourceVersion;
         _ = IsTableSelected;
+        _ = HoveredResizeColumnIndex;
 
         var snapshot = GetSnapshot();
         if (snapshot is null)
@@ -662,6 +775,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
         var visibleColumns = GetVisibleColumnCount(snapshot);
         var frozenRows = Math.Clamp(FrozenRows, 0, rowCount);
         var frozenColumns = Math.Clamp(FrozenColumns, 0, visibleColumns);
+        var hoveredResize = HoveredResizeColumnIndex;
 
         FillRect(buffer, rect, cellStyle);
 
@@ -747,6 +861,18 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
             RenderRow(buffer, snapshot, viewRow, y, rect, visibleColumns, frozenColumns, anchorWidth, cellStyle, selectionStyle, matchStyle, hasSearch ? searchText! : null);
         }
+
+        if (!_resizingColumn && hoveredResize >= 0 && TryGetColumnResizeHandleRect(snapshot, rect, visibleColumns, frozenColumns, hoveredResize, out var resizeHandle))
+        {
+            // Hover highlight for resize handles. This makes the handle discoverable without changing layout.
+            var hoverStyle = Style.None;
+            if (theme.FocusBorder is { } c)
+            {
+                hoverStyle = hoverStyle.WithBackground(c.WithAlpha(0x30));
+            }
+
+            FillRect(buffer, resizeHandle, hoverStyle);
+        }
     }
 
     /// <inheritdoc />
@@ -820,7 +946,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
         var headerHeight = ShowHeader ? 1 : 0;
         var filterHeight = FilterRowVisible && CanFilter ? 1 : 0;
 
-        if (TryBeginColumnResize(snapshot, e, rect, anchorWidth, headerHeight))
+        if (TryBeginColumnResize(snapshot, e, rect))
         {
             e.Handled = true;
             return;
@@ -882,42 +1008,62 @@ public sealed partial class DataGridControl : Visual, IScrollable
     /// <inheritdoc />
     protected override void OnPointerMoved(PointerEventArgs e)
     {
-        if (!_resizingColumn || e.Handled)
+        if (_resizingColumn && !e.Handled)
+        {
+            var snapshot = GetSnapshot();
+            if (snapshot is null)
+            {
+                _resizingColumn = false;
+                return;
+            }
+
+            var columns = EnsureResolvedColumns(snapshot, GetVisibleColumnCount(snapshot));
+            if ((uint)_resizingColumnIndex >= (uint)columns.Count)
+            {
+                _resizingColumn = false;
+                return;
+            }
+
+            var uiColumn = columns[_resizingColumnIndex].Column;
+            if (uiColumn is null)
+            {
+                _resizingColumn = false;
+                return;
+            }
+
+            var delta = e.UiX - _resizeStartUiX;
+            var nextWidth = Math.Max(1, _resizeStartWidth + delta);
+            nextWidth = Math.Max(nextWidth, uiColumn.MinWidth);
+            if (uiColumn.MaxWidth > 0)
+            {
+                nextWidth = Math.Min(nextWidth, uiColumn.MaxWidth);
+            }
+
+            uiColumn.Width = GridLength.Fixed(nextWidth);
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Handled)
         {
             return;
         }
 
-        var snapshot = GetSnapshot();
-        if (snapshot is null)
+        var snapshotForHover = GetSnapshot();
+        if (snapshotForHover is null)
         {
-            _resizingColumn = false;
+            HoveredResizeColumnIndex = -1;
             return;
         }
 
-        var columns = EnsureResolvedColumns(snapshot, GetVisibleColumnCount(snapshot));
-        if ((uint)_resizingColumnIndex >= (uint)columns.Count)
+        var rect = Bounds;
+        if (!rect.Contains(e.UiX, e.UiY))
         {
-            _resizingColumn = false;
+            HoveredResizeColumnIndex = -1;
             return;
         }
 
-        var uiColumn = columns[_resizingColumnIndex].Column;
-        if (uiColumn is null)
-        {
-            _resizingColumn = false;
-            return;
-        }
-
-        var delta = e.UiX - _resizeStartUiX;
-        var nextWidth = Math.Max(1, _resizeStartWidth + delta);
-        nextWidth = Math.Max(nextWidth, uiColumn.MinWidth);
-        if (uiColumn.MaxWidth > 0)
-        {
-            nextWidth = Math.Min(nextWidth, uiColumn.MaxWidth);
-        }
-
-        uiColumn.Width = GridLength.Fixed(nextWidth);
-        e.Handled = true;
+        HoveredResizeColumnIndex = TryHitColumnResizeHandle(snapshotForHover, e.UiX, e.UiY, rect, out var columnIndex) ? columnIndex : -1;
     }
 
     /// <inheritdoc />
@@ -970,14 +1116,14 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
         if ((e.Modifiers & TerminalModifiers.Ctrl) != 0 && e.Char is TerminalChar.CtrlA && _activeEditor is null)
         {
-            SelectEntireTable(snapshot);
+            SelectAll();
             e.Handled = true;
             return;
         }
 
         if ((e.Modifiers & TerminalModifiers.Ctrl) != 0 && e.Char is TerminalChar.CtrlC && _activeEditor is null)
         {
-            CopySelectionToClipboard(snapshot);
+            CopySelection();
             e.Handled = true;
             return;
         }
@@ -986,10 +1132,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
         if ((e.Modifiers & (TerminalModifiers.Ctrl | TerminalModifiers.Shift)) == (TerminalModifiers.Ctrl | TerminalModifiers.Shift)
             && e.Char is TerminalChar.CtrlF)
         {
-            if (CanFilter)
-            {
-                FilterRowVisible = !FilterRowVisible;
-            }
+            ToggleFilterRow();
             e.Handled = true;
             return;
         }
@@ -1042,19 +1185,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
         if ((e.Modifiers & TerminalModifiers.Ctrl) != 0 && e.Key is TerminalKey.Home or TerminalKey.End)
         {
-            IsTableSelected = false;
-            SelectedRow = -1;
-
-            var rows = snapshot.RowCount;
-            var cols = Math.Max(0, GetVisibleColumnCount(snapshot));
-            if (rows <= 0 || cols <= 0)
-            {
-                CurrentCell = DataGridCell.None;
-            }
-            else
-            {
-                CurrentCell = e.Key == TerminalKey.Home ? new DataGridCell(0, 0) : new DataGridCell(rows - 1, cols - 1);
-            }
+            GoToTableEdge(first: e.Key == TerminalKey.Home);
 
             e.Handled = true;
             return;
@@ -1145,6 +1276,80 @@ public sealed partial class DataGridControl : Visual, IScrollable
     {
         VerifyAccess();
         _searchPopup.Close();
+        SearchQuery = default;
+    }
+
+    private void ToggleFilterRow()
+    {
+        VerifyAccess();
+        if (CanFilter)
+        {
+            FilterRowVisible = !FilterRowVisible;
+        }
+    }
+
+    private void SelectAll()
+    {
+        VerifyAccess();
+        var snapshot = GetSnapshot();
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        SelectEntireTable(snapshot);
+    }
+
+    private void CopySelection()
+    {
+        VerifyAccess();
+        var snapshot = GetSnapshot();
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        CopySelectionToClipboard(snapshot);
+    }
+
+    private void GoToTableEdge(bool first)
+    {
+        VerifyAccess();
+        var snapshot = GetSnapshot();
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        IsTableSelected = false;
+        SelectedRow = -1;
+
+        var rows = snapshot.RowCount;
+        var cols = Math.Max(0, GetVisibleColumnCount(snapshot));
+        if (rows <= 0 || cols <= 0)
+        {
+            CurrentCell = DataGridCell.None;
+            return;
+        }
+
+        CurrentCell = first ? new DataGridCell(0, 0) : new DataGridCell(rows - 1, cols - 1);
+    }
+
+    private void StartEdit()
+    {
+        VerifyAccess();
+        if (ReadOnly || _activeEditor is not null)
+        {
+            return;
+        }
+
+        var snapshot = GetSnapshot();
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        _ = TryStartEdit(snapshot);
     }
 
     private void NextMatch()
@@ -1527,8 +1732,16 @@ public sealed partial class DataGridControl : Visual, IScrollable
             return;
         }
 
+        // Apply filters while suppressing bindable notifications:
+        // SetFilters triggers a view rebuild which raises a view-changed event synchronously, updating SourceVersion.
+        // PrepareChildren reads SourceVersion for dependency tracking; suppressing notifications avoids a read->write
+        // loop exception in the same tracking context, while still letting this render pass use the updated snapshot.
+        using (BindingManager.Current.SuppressNotifications())
+        {
+            filterable.SetFilters(filters);
+        }
+
         _lastFilterHash = next;
-        filterable.SetFilters(filters);
     }
 
     private void EnsureCellVisuals(IDataGridViewSnapshot snapshot, Rectangle rect, int headerHeight, int filterHeight, int frozenRows, int frozenColumns)
@@ -1831,7 +2044,13 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
     private NumberBox<T> CreateCellNumberBox<T>(object rowModel, BindingAccessor accessor) where T : struct, System.Numerics.INumber<T>
     {
-        var box = new NumberBox<T>().Value(new Binding<T>(rowModel, WrapAccessor<T>(accessor)));
+        var box = new NumberBox<T>();
+        box.Value(new Binding<T>(rowModel, WrapAccessor<T>(accessor)));
+
+        // Force an initial pull from the binding so the editor text reflects the current value.
+        // Bound properties update their local cached value when read.
+        _ = box.Value;
+
         box.SetStyle(TextBoxStyle.Key, CreateCellEditorTextBoxStyle());
         InitializeTextEditorForCell(box);
         return box;
@@ -2615,63 +2834,123 @@ public sealed partial class DataGridControl : Visual, IScrollable
         return slice;
     }
 
-    private bool TryBeginColumnResize(IDataGridViewSnapshot snapshot, PointerEventArgs e, Rectangle rect, int anchorWidth, int headerHeight)
+    private bool TryBeginColumnResize(IDataGridViewSnapshot snapshot, PointerEventArgs e, Rectangle rect)
     {
-        if (headerHeight <= 0 || e.UiY - rect.Y >= headerHeight)
-        {
-            return false;
-        }
-
-        if (e.UiX - rect.X < anchorWidth)
+        if (!TryHitColumnResizeHandle(snapshot, e.UiX, e.UiY, rect, out var columnIndex))
         {
             return false;
         }
 
         var visibleColumns = GetVisibleColumnCount(snapshot);
-        if (visibleColumns <= 1 || _resolvedColumnStarts.Length < 2)
+        var cols = EnsureResolvedColumns(snapshot, visibleColumns);
+        if ((uint)columnIndex >= (uint)cols.Count || (uint)columnIndex >= (uint)_resolvedColumnWidths.Length)
         {
             return false;
         }
 
-        // Resolve layout coordinates including horizontal scroll.
-        var frozenColumns = Math.Clamp(FrozenColumns, 0, visibleColumns);
-        var relX = e.UiX - rect.X - anchorWidth;
-        var frozenWidth = SumColumnsWidth(0, frozenColumns);
-        var colX = relX;
-        if (relX >= frozenWidth)
+        if (cols[columnIndex].Column is null)
         {
-            colX = frozenWidth + _scroll.OffsetX + (relX - frozenWidth);
+            return false;
         }
 
-        var cols = EnsureResolvedColumns(snapshot, visibleColumns);
-        for (var c = 0; c + 1 < cols.Count && c + 1 < _resolvedColumnStarts.Length; c++)
+        _resizingColumn = true;
+        _resizingColumnIndex = columnIndex;
+        _resizeStartUiX = e.UiX;
+        _resizeStartWidth = _resolvedColumnWidths[columnIndex];
+        HoveredResizeColumnIndex = -1;
+        return true;
+    }
+
+    private bool TryHitColumnResizeHandle(IDataGridViewSnapshot snapshot, int uiX, int uiY, Rectangle rect, out int columnIndex)
+    {
+        columnIndex = -1;
+
+        if (!rect.Contains(uiX, uiY))
         {
-            var boundary = _resolvedColumnStarts[c] + _resolvedColumnWidths[c];
-            var nextStart = _resolvedColumnStarts[c + 1];
-            var sepWidth = Math.Max(0, nextStart - boundary);
+            return false;
+        }
 
-            var hit = sepWidth > 0
-                ? colX >= boundary && colX < nextStart
-                : Math.Abs(colX - boundary) <= 0;
+        var anchorWidth = GetEffectiveRowAnchorWidth();
+        if (uiX - rect.X < anchorWidth)
+        {
+            return false;
+        }
 
-            if (!hit)
+        var visibleColumns = GetVisibleColumnCount(snapshot);
+        if (visibleColumns <= 0)
+        {
+            return false;
+        }
+
+        var frozenColumns = Math.Clamp(FrozenColumns, 0, visibleColumns);
+        var cols = EnsureResolvedColumns(snapshot, visibleColumns);
+
+        for (var c = 0; c < cols.Count && c < _resolvedColumnWidths.Length; c++)
+        {
+            if (cols[c].Column is null)
             {
                 continue;
             }
 
-            if (cols[c].Column is null)
+            if (!TryGetColumnResizeHandleRect(snapshot, rect, visibleColumns, frozenColumns, c, out var handleRect))
             {
-                return false;
+                continue;
             }
 
-            _resizingColumn = true;
-            _resizingColumnIndex = c;
-            _resizeStartUiX = e.UiX;
-            _resizeStartWidth = _resolvedColumnWidths[c];
-            return true;
+            if (handleRect.Contains(uiX, uiY))
+            {
+                columnIndex = c;
+                return true;
+            }
         }
 
         return false;
+    }
+
+    private bool TryGetColumnResizeHandleRect(IDataGridViewSnapshot snapshot, Rectangle rect, int visibleColumns, int frozenColumns, int visibleColumnIndex, out Rectangle rectHandle)
+    {
+        _ = snapshot;
+
+        rectHandle = default;
+        if ((uint)visibleColumnIndex >= (uint)_resolvedColumnWidths.Length || (uint)visibleColumnIndex >= (uint)_resolvedColumnStarts.Length)
+        {
+            return false;
+        }
+
+        var w = _resolvedColumnWidths[visibleColumnIndex];
+        if (w <= 0)
+        {
+            return false;
+        }
+
+        var startUiX = rect.X + GetColumnX(visibleColumnIndex, rect, frozenColumns);
+        var boundaryUiX = startUiX + w;
+
+        if (visibleColumnIndex + 1 < visibleColumns && visibleColumnIndex + 1 < _resolvedColumnStarts.Length)
+        {
+            var nextStartUiX = rect.X + GetColumnX(visibleColumnIndex + 1, rect, frozenColumns);
+            var handleWidth = Math.Max(1, nextStartUiX - boundaryUiX);
+            rectHandle = new Rectangle(boundaryUiX, rect.Y, handleWidth, rect.Height);
+            return true;
+        }
+
+        // Trailing handle after the last column: use any extra available space, and fall back to the last visible cell.
+        var style = GetStyle<DataGridStyle>();
+        var preferred = Math.Max(1, style.ShowVerticalLines ? 1 : style.ColumnSpacing);
+        var available = rect.Right - boundaryUiX;
+        if (available > 0)
+        {
+            rectHandle = new Rectangle(boundaryUiX, rect.Y, Math.Min(preferred, available), rect.Height);
+            return true;
+        }
+
+        if (rect.Width <= 0)
+        {
+            return false;
+        }
+
+        rectHandle = new Rectangle(rect.Right - 1, rect.Y, 1, rect.Height);
+        return true;
     }
 
     private void SelectEntireTable(IDataGridViewSnapshot snapshot)

@@ -130,6 +130,15 @@ public sealed partial class SearchReplacePopup : Visual
     public bool IsOpen => _popup is not null;
 
     /// <summary>
+    /// Gets or sets a value indicating whether the current query should be cleared on close.
+    /// </summary>
+    /// <remarks>
+    /// This only clears the query sent to the target; the popup input fields keep their last values so re-opening
+    /// can restore the previous search text.
+    /// </remarks>
+    public bool ClearQueryOnClose { get; set; }
+
+    /// <summary>
     /// Gets the current query state.
     /// </summary>
     public SearchQuery Query => new(SearchText, CaseSensitive, WholeWord, UseRegex);
@@ -456,6 +465,11 @@ public sealed partial class SearchReplacePopup : Visual
             _offsetX = popup.OffsetX;
             _offsetY = popup.OffsetY;
             _popup = null;
+            if (!_rebuildingPopup && ClearQueryOnClose)
+            {
+                var cleared = default(SearchQuery);
+                _target.SetQuery(in cleared);
+            }
             if (!_rebuildingPopup && _restoreFocus is not null)
             {
                 var app = App ?? Dispatcher.AttachedApp;

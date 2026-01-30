@@ -188,8 +188,17 @@ public sealed record DataTemplates : IStyle<DataTemplates>
             return new TextBlock(() => owner.ToStringValue(value.GetValue()));
         }
 
-        static Visual EditBindingNumber<T>(Binding<T> binding, in DataTemplateContext _) where T : struct, INumber<T>
-            => new NumberBox<T>().Value(binding);
+        static Visual EditBindingNumber<T>(Binding<T> binding, in DataTemplateContext context) where T : struct, INumber<T>
+        {
+            _ = context;
+            var box = new NumberBox<T>().Value(binding);
+
+            // Prime the binding so the editor text reflects the current value immediately.
+            // Otherwise, the NumberBox might render the default value until something reads Value.
+            _ = box.Value;
+
+            return box;
+        }
 
         static Visual EditBindingChar(Binding<char> binding, in DataTemplateContext _)
             => new BoundTextBox<char>(binding,

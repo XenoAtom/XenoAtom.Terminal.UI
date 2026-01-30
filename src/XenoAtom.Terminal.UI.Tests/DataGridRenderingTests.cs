@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.DataGrid;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Layout;
@@ -503,6 +504,236 @@ public sealed class DataGridRenderingTests
         driver.Backend.PushEvent(new TerminalTextEvent { Text = "123" });
         driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
         driver.TickUntil(() => row.Value == 123);
+    }
+
+    [TestMethod]
+    public void DataGrid_Schema_Number_Cell_Editor_Reflects_Current_Value_And_Updates_Source()
+    {
+        var intAccessor = new BindingAccessor<int>("n", o => ((IntRow)o).Value, (o, v) => ((IntRow)o).Value = v);
+
+        var doc = new DataGridListDocument<IntRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("n", "n", typeof(int), ReadOnly: false, intAccessor),
+        });
+
+        var row = new IntRow { Value = 42 };
+        doc.AddRow(row);
+
+        using var view = new DataGridDocumentView(doc);
+
+        // Schema-only: editing should use a NumberBox<int> bound to the model.
+        var grid = new DataGridControl { View = view };
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(20, 4));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F2 });
+        driver.Tick();
+
+        var numberBox = grid.EnumerateVisualsDepthFirst().OfType<NumberBox<int>>().FirstOrDefault(b => b.HasFocus);
+        Assert.IsNotNull(numberBox, "Expected a focused NumberBox<int> editor after starting edit.");
+        Assert.AreEqual("42", numberBox.Text, "Expected number editor to reflect the current cell value.");
+
+        // Replace the full value and commit.
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlA, Modifiers = TerminalModifiers.Ctrl });
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "99" });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
+        driver.TickUntil(() => row.Value == 99);
+    }
+
+    [TestMethod]
+    public void DataGrid_Column_Number_Cell_Editor_Reflects_Current_Value_And_Updates_Source()
+    {
+        var intAccessor = new BindingAccessor<int>("n", o => ((IntRow)o).Value, (o, v) => ((IntRow)o).Value = v);
+
+        var doc = new DataGridListDocument<IntRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("n", "n", typeof(int), ReadOnly: false, intAccessor),
+        });
+
+        var row = new IntRow { Value = 42 };
+        doc.AddRow(row);
+
+        using var view = new DataGridDocumentView(doc);
+
+        // Column-driven (via default DataTemplates editor): should still show the current value and update the model.
+        var grid = new DataGridControl { View = view };
+        grid.Columns.Add(new DataGridColumn<int> { Key = "n", TypedAccessor = intAccessor, Width = GridLength.Fixed(6) });
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(20, 4));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F2 });
+        driver.Tick();
+
+        var numberBox = grid.EnumerateVisualsDepthFirst().OfType<NumberBox<int>>().FirstOrDefault(b => b.HasFocus);
+        Assert.IsNotNull(numberBox, "Expected a focused NumberBox<int> editor after starting edit.");
+        Assert.AreEqual("42", numberBox.Text, "Expected number editor to reflect the current cell value.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlA, Modifiers = TerminalModifiers.Ctrl });
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "99" });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
+        driver.TickUntil(() => row.Value == 99);
+    }
+
+    [TestMethod]
+    public void DataGrid_Allows_Resizing_Columns_By_Dragging_Body_Separator()
+    {
+        var aAccessor = new BindingAccessor<string>("a", o => ((TwoColumnRow)o).A, (o, v) => ((TwoColumnRow)o).A = v);
+        var bAccessor = new BindingAccessor<string>("b", o => ((TwoColumnRow)o).B, (o, v) => ((TwoColumnRow)o).B = v);
+
+        var doc = new DataGridListDocument<TwoColumnRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("a", "A", typeof(string), ReadOnly: false, aAccessor),
+            new DataGridColumnInfo("b", "B", typeof(string), ReadOnly: false, bAccessor),
+        });
+        doc.AddRow(new TwoColumnRow { A = "a", B = "b" });
+        doc.AddRow(new TwoColumnRow { A = "a2", B = "b2" });
+
+        using var view = new DataGridDocumentView(doc);
+
+        var colA = new DataGridColumn<string> { Key = "a", TypedAccessor = aAccessor, Width = GridLength.Fixed(4) };
+        var colB = new DataGridColumn<string> { Key = "b", TypedAccessor = bAccessor, Width = GridLength.Fixed(4) };
+
+        var grid = new DataGridControl { View = view };
+        grid.Columns.Add(colA);
+        grid.Columns.Add(colB);
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(20, 6));
+        driver.Tick();
+
+        var separatorX = grid.Bounds.X + grid.RowAnchorWidth + 4;
+        var bodyY = grid.Bounds.Y + 2; // inside the body (below header)
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = separatorX, Y = bodyY });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Drag, Button = TerminalMouseButton.Left, X = separatorX + 3, Y = bodyY });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = separatorX + 3, Y = bodyY });
+        driver.Tick();
+
+        Assert.AreEqual(GridUnitType.Fixed, colA.Width.Type);
+        Assert.AreEqual(7, (int)Math.Round(colA.Width.Value));
+    }
+
+    [TestMethod]
+    public void DataGrid_Allows_Resizing_Last_Column_By_Dragging_Trailing_Separator()
+    {
+        var aAccessor = new BindingAccessor<string>("a", o => ((TwoColumnRow)o).A, (o, v) => ((TwoColumnRow)o).A = v);
+        var bAccessor = new BindingAccessor<string>("b", o => ((TwoColumnRow)o).B, (o, v) => ((TwoColumnRow)o).B = v);
+
+        var doc = new DataGridListDocument<TwoColumnRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("a", "A", typeof(string), ReadOnly: false, aAccessor),
+            new DataGridColumnInfo("b", "B", typeof(string), ReadOnly: false, bAccessor),
+        });
+        doc.AddRow(new TwoColumnRow { A = "a", B = "b" });
+
+        using var view = new DataGridDocumentView(doc);
+
+        var colA = new DataGridColumn<string> { Key = "a", TypedAccessor = aAccessor, Width = GridLength.Fixed(4) };
+        var colB = new DataGridColumn<string> { Key = "b", TypedAccessor = bAccessor, Width = GridLength.Fixed(4) };
+
+        var grid = new DataGridControl { View = view };
+        grid.Columns.Add(colA);
+        grid.Columns.Add(colB);
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(20, 5));
+        driver.Tick();
+
+        // Trailing boundary is after both columns (including column spacing).
+        var trailingX = grid.Bounds.X + grid.RowAnchorWidth + 4 + 1 + 4;
+        var headerY = grid.Bounds.Y;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = trailingX, Y = headerY });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Drag, Button = TerminalMouseButton.Left, X = trailingX + 2, Y = headerY });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = trailingX + 2, Y = headerY });
+        driver.Tick();
+
+        Assert.AreEqual(GridUnitType.Fixed, colB.Width.Type);
+        Assert.AreEqual(6, (int)Math.Round(colB.Width.Value));
+    }
+
+    [TestMethod]
+    public void DataGrid_CloseSearch_Clears_Query()
+    {
+        var aAccessor = new BindingAccessor<string>("a", o => ((TwoColumnRow)o).A, (o, v) => ((TwoColumnRow)o).A = v);
+
+        var doc = new DataGridListDocument<TwoColumnRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("a", "A", typeof(string), ReadOnly: false, aAccessor),
+        });
+        doc.AddRow(new TwoColumnRow { A = "match" });
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view };
+        grid.SearchQuery = new SearchQuery("match", CaseSensitive: false, WholeWord: false, UseRegex: false);
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(20, 4));
+        driver.Tick();
+
+        grid.CloseSearch();
+        driver.Tick();
+
+        Assert.IsTrue(string.IsNullOrEmpty(grid.SearchQuery.Text), "Expected closing search to clear the search highlight query.");
+    }
+
+    [TestMethod]
+    public void DataGrid_Toggling_Filter_Row_Does_Not_Throw()
+    {
+        var aAccessor = new BindingAccessor<string>("a", o => ((TwoColumnRow)o).A, (o, v) => ((TwoColumnRow)o).A = v);
+
+        var doc = new DataGridListDocument<TwoColumnRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("a", "A", typeof(string), ReadOnly: false, aAccessor),
+        });
+        doc.AddRow(new TwoColumnRow { A = "a" });
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view };
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(20, 6));
+        driver.Tick();
+        driver.App.Focus(grid);
+        driver.Tick();
+
+        // Ctrl+Shift+F toggles the filter row.
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlF, Modifiers = TerminalModifiers.Ctrl | TerminalModifiers.Shift });
+        driver.Tick();
+    }
+
+    [TestMethod]
+    public void DataGrid_Registers_CommandBar_Commands()
+    {
+        var grid = new DataGridControl();
+
+        static Command Find(Visual v, string id)
+        {
+            var cmd = v.Commands.FirstOrDefault(c => string.Equals(c.Id, id, StringComparison.Ordinal));
+            Assert.IsNotNull(cmd, $"Expected command '{id}' to be registered.");
+            return cmd;
+        }
+
+        var find = Find(grid, "DataGrid.Find");
+        Assert.AreEqual(CommandPresentation.CommandBar, find.Presentation);
+        Assert.AreEqual(new KeyGesture(TerminalChar.CtrlF, TerminalModifiers.Ctrl), find.Gesture);
+
+        var toggleFilter = Find(grid, "DataGrid.ToggleFilterRow");
+        Assert.AreEqual(CommandPresentation.CommandBar, toggleFilter.Presentation);
+        Assert.AreEqual(new KeyGesture(TerminalChar.CtrlF, TerminalModifiers.Ctrl | TerminalModifiers.Shift), toggleFilter.Gesture);
+
+        var selectAll = Find(grid, "DataGrid.SelectAll");
+        Assert.AreEqual(CommandPresentation.CommandBar, selectAll.Presentation);
+        Assert.AreEqual(new KeyGesture(TerminalChar.CtrlA, TerminalModifiers.Ctrl), selectAll.Gesture);
+
+        var copy = Find(grid, "DataGrid.Copy");
+        Assert.AreEqual(CommandPresentation.CommandBar, copy.Presentation);
+        Assert.AreEqual(new KeyGesture(TerminalChar.CtrlC, TerminalModifiers.Ctrl), copy.Gesture);
     }
 
     private sealed class SwimRow

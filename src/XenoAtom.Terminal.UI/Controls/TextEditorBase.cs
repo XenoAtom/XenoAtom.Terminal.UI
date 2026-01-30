@@ -80,6 +80,69 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
             Execute = static v => ((TextEditorBase)v).Redo(),
             CanExecute = static v => ((TextEditorBase)v).CanRedo,
         });
+
+        // Text editing shortcuts are handled by TextEditorCore, but registering them as commands ensures
+        // command routing prefers the focused editor over ancestor visuals (e.g. a DataGridControl).
+        AddCommand(new Command
+        {
+            Id = "TextEditor.SelectAll",
+            LabelMarkup = string.Empty,
+            Gesture = new Input.KeyGesture(TerminalChar.CtrlA, TerminalModifiers.Ctrl),
+            Presentation = CommandPresentation.None,
+            Execute = static v => ((TextEditorBase)v).ExecuteEditorShortcut(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlA, Modifiers = TerminalModifiers.Ctrl }),
+        });
+
+        AddCommand(new Command
+        {
+            Id = "TextEditor.Copy",
+            LabelMarkup = string.Empty,
+            Gesture = new Input.KeyGesture(TerminalChar.CtrlC, TerminalModifiers.Ctrl),
+            Presentation = CommandPresentation.None,
+            Execute = static v => ((TextEditorBase)v).ExecuteEditorShortcut(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlC, Modifiers = TerminalModifiers.Ctrl }),
+        });
+
+        AddCommand(new Command
+        {
+            Id = "TextEditor.Paste",
+            LabelMarkup = string.Empty,
+            Gesture = new Input.KeyGesture(TerminalChar.CtrlV, TerminalModifiers.Ctrl),
+            Presentation = CommandPresentation.None,
+            Execute = static v => ((TextEditorBase)v).ExecuteEditorShortcut(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlV, Modifiers = TerminalModifiers.Ctrl }),
+        });
+
+        AddCommand(new Command
+        {
+            Id = "TextEditor.Cut",
+            LabelMarkup = string.Empty,
+            Gesture = new Input.KeyGesture(TerminalChar.CtrlX, TerminalModifiers.Ctrl),
+            Presentation = CommandPresentation.None,
+            Execute = static v => ((TextEditorBase)v).ExecuteEditorShortcut(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlX, Modifiers = TerminalModifiers.Ctrl }),
+        });
+
+        AddCommand(new Command
+        {
+            Id = "TextEditor.CtrlHome",
+            LabelMarkup = string.Empty,
+            Gesture = new Input.KeyGesture(TerminalKey.Home, TerminalModifiers.Ctrl),
+            Presentation = CommandPresentation.None,
+            Execute = static v => ((TextEditorBase)v).ExecuteEditorShortcut(new TerminalKeyEvent { Key = TerminalKey.Home, Modifiers = TerminalModifiers.Ctrl }),
+        });
+
+        AddCommand(new Command
+        {
+            Id = "TextEditor.CtrlEnd",
+            LabelMarkup = string.Empty,
+            Gesture = new Input.KeyGesture(TerminalKey.End, TerminalModifiers.Ctrl),
+            Presentation = CommandPresentation.None,
+            Execute = static v => ((TextEditorBase)v).ExecuteEditorShortcut(new TerminalKeyEvent { Key = TerminalKey.End, Modifiers = TerminalModifiers.Ctrl }),
+        });
+    }
+
+    private void ExecuteEditorShortcut(TerminalKeyEvent keyEvent)
+    {
+        var args = new KeyEventArgs { RawEvent = keyEvent };
+        _core.OnKeyDown(args, BuildEditorOptions());
+        _requestedCaretIndex = _core.CaretIndex;
     }
 
     /// <summary>

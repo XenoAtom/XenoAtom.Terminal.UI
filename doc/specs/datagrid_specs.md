@@ -599,6 +599,23 @@ Recommended representation:
 - Click selects cell/row/column based on `SelectionMode`
 - Drag selects a range (optional V1)
 - Wheel scrolls vertically; `Shift+Wheel` scrolls horizontally (optional V1)
+- Drag the **column resize handle** (the spacing between columns) to resize the left column.
+  - Resize handles SHOULD be active across the full height of the grid (header, filter row, and body), not only the header.
+  - The last column SHOULD also be resizable via a trailing resize handle after the last column.
+  - Hovering a resize handle SHOULD show a distinct hover style to make the affordance discoverable.
+
+### 11.4 Commands (discoverability)
+
+`DataGridControl` SHOULD register UI commands for key gestures it supports so they are discoverable via `CommandBar`.
+Suggested built-in commands:
+
+- `DataGrid.Find` (`Ctrl+F`)
+- `DataGrid.ToggleFilterRow` (`Ctrl+Shift+F`)
+- `DataGrid.NextMatch` (`F3`) / `DataGrid.PreviousMatch` (`Shift+F3`)
+- `DataGrid.SelectAll` (`Ctrl+A`)
+- `DataGrid.Copy` (`Ctrl+C`)
+- `DataGrid.GoToStart` (`Ctrl+Home`) / `DataGrid.GoToEnd` (`Ctrl+End`)
+- `DataGrid.EditCell` (`F2`)
 
 ---
 
@@ -691,6 +708,7 @@ Searching is distinct from filtering: it navigates to matching cells without cha
 - `F3` / `Shift+F3` navigate next/previous match
 - navigating to a match MUST update `CurrentCell` and call `Scroll.ScrollToMakeVisible(...)`
 - matches MAY be highlighted in the viewport (style-driven)
+- closing the search popup SHOULD clear match highlighting (while keeping the popup input fields for the next open)
 
 For large datasets, `DataGrid` MAY delegate match discovery to a view implementing `ISearchableDataGridView`.
 
@@ -729,8 +747,8 @@ For common types, the control SHOULD provide default editors:
 
 - `string` → `TextBox`
 - numeric → `NumberBox`
-- `bool` → `CheckBox` (toggle)
-- enums → `Select<T>` / `EnumSelect`
+- `bool` → `Switch`
+- enums → `Select<T>` / a simple `TextBox` editor with `Enum.TryParse` fallback
 
 For custom types, `CellEditorTemplate` is used.
 
