@@ -809,6 +809,56 @@ public sealed class DataGridRenderingTests
     }
 
     [TestMethod]
+    public void DataGrid_AutoSizes_Column_On_ResizeHandle_DoubleClick()
+    {
+        var aAccessor = new BindingAccessor<string>("a", o => ((TwoColumnRow)o).A, (o, v) => ((TwoColumnRow)o).A = v);
+        var bAccessor = new BindingAccessor<string>("b", o => ((TwoColumnRow)o).B, (o, v) => ((TwoColumnRow)o).B = v);
+
+        var doc = new DataGridListDocument<TwoColumnRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("a", "A", typeof(string), ReadOnly: false, aAccessor),
+            new DataGridColumnInfo("b", "B", typeof(string), ReadOnly: false, bAccessor),
+        });
+
+        // Put the long value beyond the sample rows used by auto sizing so the initial layout doesn't include it.
+        for (var i = 0; i < 100; i++)
+        {
+            var row = new TwoColumnRow { A = "a", B = "Z" };
+            if (i == 99)
+            {
+                row.A = "VeryLongValue";
+            }
+            doc.AddRow(row);
+        }
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false };
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(40, 3));
+        driver.Tick();
+
+        static int GetZIndex(TerminalAppTestDriver d)
+        {
+            var screen = new AnsiTestScreen(40, 3);
+            screen.Apply(d.Backend.GetOutText());
+            var line = screen.GetText().Split('\n')[0].TrimEnd('\r');
+            return line.IndexOf('Z', StringComparison.Ordinal);
+        }
+
+        var before = GetZIndex(driver);
+        Assert.IsGreaterThanOrEqualTo(0, before, "Expected to find cell content 'Z' in the first row.");
+
+        // Double-click the separator between columns (default ColumnSpacing = 1), which starts at x=1 for column A ("a").
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.DoubleClick, Button = TerminalMouseButton.Left, X = 1, Y = 0 });
+        driver.Tick();
+
+        var after = GetZIndex(driver);
+        Assert.IsGreaterThan(before, after, $"Expected column B to shift right after auto-sizing. before={before} after={after}");
+    }
+
+    [TestMethod]
     public void DataGrid_Registers_CommandBar_Commands()
     {
         var grid = new DataGridControl();

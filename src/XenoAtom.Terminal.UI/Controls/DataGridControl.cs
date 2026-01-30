@@ -966,6 +966,13 @@ public sealed partial class DataGridControl : Visual, IScrollable
         var headerHeight = ShowHeader ? 1 : 0;
         var filterHeight = FilterRowVisible && CanFilter ? 1 : 0;
 
+        if (e.Kind == TerminalMouseKind.DoubleClick && TryHitColumnResizeHandle(snapshot, e.UiX, e.UiY, rect, out var autoSizeColumnIndex))
+        {
+            AutoSizeColumn(snapshot, autoSizeColumnIndex);
+            e.Handled = true;
+            return;
+        }
+
         if (TryBeginColumnResize(snapshot, e, rect))
         {
             e.Handled = true;
@@ -2929,6 +2936,54 @@ public sealed partial class DataGridControl : Visual, IScrollable
         }
 
         return slice;
+    }
+
+    private void AutoSizeColumn(IDataGridViewSnapshot snapshot, int visibleColumnIndex)
+    {
+        var visibleColumns = GetVisibleColumnCount(snapshot);
+        var columns = EnsureResolvedColumns(snapshot, visibleColumns);
+        if ((uint)visibleColumnIndex >= (uint)columns.Count)
+        {
+            return;
+        }
+
+        var col = columns[visibleColumnIndex];
+        var culture = GetCulture();
+
+        var headerWidth = col.HeaderVisual is not null
+            ? MeasureHeaderVisualWidth(col.HeaderVisual)
+            : TerminalTextUtility.GetWidth(col.HeaderText.AsSpan());
+
+        var maxWidth = Math.Max(1, headerWidth);
+        var limit = snapshot.RowCount;
+        for (var r = 0; r < limit; r++)
+        {
+            var rowModel = snapshot.GetRowModel(r);
+            var text = col.Column is not null
+                ? col.Column.FormatValue(this, rowModel, culture)
+                : ValueStringFormatter.ToString(col.SchemaAccessor.GetValueAsObject(rowModel), culture);
+
+            maxWidth = Math.Max(maxWidth, TerminalTextUtility.GetWidth(text.AsSpan()));
+
+            if (maxWidth >= col.MaxWidth)
+            {
+                maxWidth = col.MaxWidth;
+                break;
+            }
+        }
+
+        maxWidth = Math.Clamp(maxWidth, Math.Max(1, col.MinWidth), col.MaxWidth);
+
+        if (col.Column is not null)
+        {
+            col.Column.Width = GridLength.Fixed(maxWidth);
+        }
+        else
+        {
+            SetColumnWidthOverride(col.Key, maxWidth);
+        }
+
+        HoveredResizeColumnIndex = -1;
     }
 
     private bool TryBeginColumnResize(IDataGridViewSnapshot snapshot, PointerEventArgs e, Rectangle rect)
