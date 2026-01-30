@@ -2,10 +2,6 @@
 
 `HStack` stacks children horizontally.
 
-Screenshot placeholder:
-
-![HStack](../../img/screenshots/hstack.png)
-
 ## Basic usage
 
 ```csharp
@@ -15,3 +11,7 @@ new HStack(
 ).Spacing(2);
 ```
 
+## Related
+
+- `../layout.md`
+- `./vstack.md`
