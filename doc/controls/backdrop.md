@@ -28,6 +28,8 @@ var overlay = new ZStack(
     new Dialog().Title("Modal").Content("Hello"));
 ```
 
-Screenshot placeholder:
+## Related
 
-![Backdrop](../../img/screenshots/backdrop.png)
+- `./dialog.md`
+- `./popup.md`
+- `../styling.md`
