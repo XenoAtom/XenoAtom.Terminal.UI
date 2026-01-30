@@ -2,10 +2,6 @@
 
 `Button` is a clickable control that renders a label/content and raises a click interaction via a routed event.
 
-Screenshot placeholder:
-
-![Button](../../img/screenshots/button.png)
-
 ## Basic usage
 
 ```csharp
@@ -42,5 +38,6 @@ new Button("Danger")
 
 See also:
 
-- `doc/styling.md`
-
+- `../styling.md`
+- `../commands.md`
+- `../binding.md`
