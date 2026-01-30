@@ -1,0 +1,72 @@
+// Copyright (c) Alexandre Mutel. All rights reserved.
+// Licensed under the BSD-Clause 2 license.
+// See license.txt file in the project root for full license information.
+
+using System.Reflection;
+using XenoAtom.Ansi;
+using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI;
+using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Hosting;
+using XenoAtom.Terminal.UI.Layout;
+using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
+
+namespace XenoAtom.Terminal.UI.Tests;
+
+[TestClass]
+public sealed class DebugOverlayStyleLeakTests
+{
+    [TestMethod]
+    public void DebugOverlay_DoesNotInherit_Foreground_From_Underlay()
+    {
+        var theme = Theme.FromScheme(ColorScheme.RootLoopsDark with { Name = "Test" });
+        var red = Color.Basic16(1);
+
+        var root = new ColoredUnderlay(red)
+            .Style(theme);
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 20));
+        driver.Tick();
+
+        // Enable debug overlay (F12).
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F12 });
+        driver.Tick();
+
+        var app = driver.App;
+        var buffer = (CellBuffer)typeof(TerminalApp).GetField("_renderBuffer", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(app)!;
+
+        // Pick a cell in the overlay content area (1,1). The overlay is rendered at top-left.
+        var index = (1 * buffer.Width) + 1;
+        var cell = buffer.UnsafeCells[index];
+
+        Assert.IsTrue(cell.TryGetForeground(out var fg), "Debug overlay should write an explicit foreground.");
+        Assert.AreNotEqual(red, fg, "Debug overlay should not inherit the underlay foreground.");
+    }
+
+    private sealed class ColoredUnderlay : Visual
+    {
+        private readonly Color _foreground;
+
+        public ColoredUnderlay(Color foreground)
+        {
+            _foreground = foreground;
+            HorizontalAlignment = Align.Stretch;
+            VerticalAlignment = Align.Stretch;
+        }
+
+        protected override void RenderOverride(CellBuffer buffer)
+        {
+            var rect = Bounds;
+            var style = Style.None.WithForeground(_foreground);
+
+            for (var y = rect.Y; y < rect.Bottom; y++)
+            {
+                for (var x = rect.X; x < rect.Right; x++)
+                {
+                    buffer.SetCell(x, y, new Rune('X'), style);
+                }
+            }
+        }
+    }
+}

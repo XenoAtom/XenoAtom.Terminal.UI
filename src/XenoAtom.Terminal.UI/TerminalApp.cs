@@ -1353,7 +1353,10 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
 
         var borderStyle = theme.BorderStyle(focused: true) | TextStyle.Bold;
-        var backgroundStyle = Style.None | TextStyle.Dim;
+
+        // The overlay fills with blank glyphs; ensure we write an explicit foreground to avoid inheriting colors
+        // from the underlay when rendering the overlay text (which preserves the filled cell style).
+        var backgroundStyle = theme.ForegroundTextStyle() | TextStyle.Dim;
         if (theme.Background is { } bg)
         {
             backgroundStyle = backgroundStyle.WithBackground(bg);
