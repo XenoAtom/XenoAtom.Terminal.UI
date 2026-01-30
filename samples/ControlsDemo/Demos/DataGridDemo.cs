@@ -32,11 +32,13 @@ public sealed class DataGridDemo : ControlsDemoBase
         var swim = BuildSwimMeetGrid(showHeader, showRowAnchor, rowAnchorWidth, filterRowVisible, selectionMode, editMode, frozenColumns, frozenRows, readOnly);
         var ledger = BuildLedgerGrid(showHeader, showRowAnchor, rowAnchorWidth, filterRowVisible, selectionMode, editMode, frozenColumns, frozenRows, readOnly);
         var dataTable = BuildDataTableGrid(showHeader, showRowAnchor, rowAnchorWidth, filterRowVisible, selectionMode, editMode, frozenColumns, frozenRows, readOnly);
+        var mixed = BuildMixedTypesGrid(showHeader, showRowAnchor, rowAnchorWidth, filterRowVisible, selectionMode, editMode, frozenColumns, frozenRows, readOnly);
 
         var tabs = new TabControl(
                 new TabPage(header: "Swim Meet", content: swim),
                 new TabPage(header: "Ledger", content: ledger),
-                new TabPage(header: "DataTable", content: dataTable))
+                new TabPage(header: "DataTable", content: dataTable),
+                new TabPage(header: "Mixed", content: mixed))
             .HorizontalAlignment(Align.Stretch)
             .VerticalAlignment(Align.Stretch);
 
@@ -266,6 +268,81 @@ public sealed class DataGridDemo : ControlsDemoBase
             .Padding(new Thickness(1, 0, 1, 0));
         return framed;
     }
+
+    private static Visual BuildMixedTypesGrid(
+        State<bool> showHeader,
+        State<bool> showRowAnchor,
+        State<int> rowAnchorWidth,
+        State<bool> filterRowVisible,
+        State<DataGridSelectionMode> selectionMode,
+        State<DataGridEditMode> editMode,
+        State<int> frozenColumns,
+        State<int> frozenRows,
+        State<bool> readOnly)
+    {
+        var idAccessor = MixedRow.Accessor.Id;
+        var enabledAccessor = MixedRow.Accessor.Enabled;
+        var severityAccessor = MixedRow.Accessor.Severity;
+        var emojiAccessor = MixedRow.Accessor.Emoji;
+        var messageAccessor = MixedRow.Accessor.Message;
+        var progressAccessor = MixedRow.Accessor.Progress;
+
+        var doc = new DataGridListDocument<MixedRow>();
+        using (doc.BeginUpdate())
+        {
+            doc
+                .AddColumn(new DataGridColumnInfo<int>("id", "🆔", ReadOnly: true, idAccessor))
+                .AddColumn(new DataGridColumnInfo<bool>("enabled", "✅ Enabled", ReadOnly: false, enabledAccessor))
+                .AddColumn(new DataGridColumnInfo<Severity>("severity", "⚠️ Severity", ReadOnly: false, severityAccessor))
+                .AddColumn(new DataGridColumnInfo<string>("emoji", "✨", ReadOnly: true, emojiAccessor))
+                .AddColumn(new DataGridColumnInfo<string>("message", "📦 Message", ReadOnly: false, messageAccessor))
+                .AddColumn(new DataGridColumnInfo<double>("progress", "📈 Progress", ReadOnly: false, progressAccessor));
+        }
+
+        var emojis = new[] { "🛰️", "🧪", "🧰", "🧭", "🔧", "📡", "🚀", "🧲" };
+        var messages = new[]
+        {
+            "Boot sequence",
+            "Telemetry sync",
+            "Cache warmup",
+            "Running diagnostics",
+            "Deploying update",
+            "All systems nominal",
+            "Packet loss detected",
+            "Reconnecting…",
+        };
+
+        for (var i = 0; i < 60; i++)
+        {
+            doc.AddRow(new MixedRow
+            {
+                Id = i + 1,
+                Enabled = (i % 3) != 0,
+                Severity = (Severity)(i % 3),
+                Emoji = emojis[i % emojis.Length],
+                Message = $"{messages[i % messages.Length]} #{i + 1:00}",
+                Progress = Math.Round((i % 100) / 10.0, 1),
+            });
+        }
+
+        // Use the schema-only path to demonstrate built-in editors for bool/enum/number.
+        var view = new DataGridDocumentView(doc);
+        var grid = new DataGridControl { View = view }
+            .ShowHeader(showHeader)
+            .ShowRowAnchor(showRowAnchor)
+            .RowAnchorWidth(rowAnchorWidth)
+            .FilterRowVisible(filterRowVisible)
+            .SelectionMode(selectionMode)
+            .EditMode(editMode)
+            .FrozenColumns(frozenColumns)
+            .FrozenRows(frozenRows)
+            .ReadOnly(readOnly);
+
+        var styled = new Border(new ScrollViewer(grid).MinHeight(12).MaxHeight(12))
+            .Style(BorderStyle.Single)
+            .Padding(new Thickness(1, 0, 1, 0));
+        return styled;
+    }
 }
 
 public sealed partial class SwimRow
@@ -288,4 +365,27 @@ internal sealed class LedgerRow
     public string Description { get; set; } = string.Empty;
     public double Amount { get; set; }
     public string Category { get; set; } = string.Empty;
+}
+
+public enum Severity
+{
+    Info = 0,
+    Warning = 1,
+    Error = 2,
+}
+
+public sealed partial class MixedRow
+{
+    public MixedRow()
+    {
+        Emoji = string.Empty;
+        Message = string.Empty;
+    }
+
+    [Bindable] public partial int Id { get; set; }
+    [Bindable] public partial bool Enabled { get; set; }
+    [Bindable] public partial Severity Severity { get; set; }
+    [Bindable] public partial string Emoji { get; set; }
+    [Bindable] public partial string Message { get; set; }
+    [Bindable] public partial double Progress { get; set; }
 }
