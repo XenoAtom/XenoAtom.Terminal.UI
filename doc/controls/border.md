@@ -2,10 +2,6 @@
 
 `Border` draws a border around a single content visual.
 
-Screenshot placeholder:
-
-![Border](../../img/screenshots/border.png)
-
 ## Basic usage
 
 ```csharp
@@ -29,3 +25,13 @@ Use the factory constructor to dynamically recompute content:
 ```csharp
 new Border(() => new TextBlock(DateTime.Now.ToString("T")));
 ```
+
+## Notes
+
+- `Border` is a layout container: the border consumes space around its content.
+- For a labeled frame, see `Group`.
+
+## Related
+
+- `./group.md`
+- `../styling.md`
