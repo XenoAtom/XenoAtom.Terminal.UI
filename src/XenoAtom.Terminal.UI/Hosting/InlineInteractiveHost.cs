@@ -36,6 +36,10 @@ public sealed class InlineInteractiveHost : IDisposable
     private int _lastCursorX;
     private int _lastCursorY;
 
+    internal ICellBufferDiffMetricsSink? MetricsSink { get; set; }
+
+    internal void SetMetricsSink(ICellBufferDiffMetricsSink? sink) => MetricsSink = sink;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="InlineInteractiveHost"/> class.
     /// </summary>
@@ -217,6 +221,20 @@ public sealed class InlineInteractiveHost : IDisposable
     {
         ArgumentNullException.ThrowIfNull(buffer);
 
+        var metricsSink = MetricsSink;
+        var collectMetrics = metricsSink is not null;
+        var cellsTouched = 0;
+
+        void PublishMetrics(int outputChars, int touchedCells, bool forceFull)
+        {
+            if (metricsSink is null)
+            {
+                return;
+            }
+
+            metricsSink.OnRendered(new CellBufferDiffMetrics(outputChars, touchedCells, forceFull));
+        }
+
         _lastWantsCursor = wantsCursor;
         _lastCursorX = cursorX;
         _lastCursorY = cursorY;
@@ -233,6 +251,10 @@ public sealed class InlineInteractiveHost : IDisposable
         if (buffer.Width != viewportWidth)
         {
             HandleResize();
+            if (collectMetrics)
+            {
+                PublishMetrics(outputChars: 0, touchedCells: 0, forceFull: false);
+            }
             return;
         }
 
@@ -283,6 +305,10 @@ public sealed class InlineInteractiveHost : IDisposable
             {
                 if (!cursorChanged)
                 {
+                    if (collectMetrics)
+                    {
+                        PublishMetrics(outputChars: 0, touchedCells: 0, forceFull: false);
+                    }
                     return;
                 }
 
@@ -316,7 +342,12 @@ public sealed class InlineInteractiveHost : IDisposable
 
                     writerLocal.PrivateMode(2026, enabled: false);
 
-                    _terminal.Write(_builder.UnsafeAsSpan()); // atomic write with a single span
+                    var span = _builder.UnsafeAsSpan();
+                    _terminal.Write(span); // atomic write with a single span
+                    if (collectMetrics)
+                    {
+                        PublishMetrics(outputChars: span.Length, touchedCells: 0, forceFull: false);
+                    }
 
                     _lastCursorVisible = wantsCursor;
                     _lastRenderedCursorX = cursorX;
@@ -490,6 +521,11 @@ public sealed class InlineInteractiveHost : IDisposable
                 firstChanged = AdjustStartForWideGlyph(cells, rowIndex, firstChanged);
                 lastChanged = AdjustEndForWideGlyph(buffer, scalars, cells, rowIndex, lastChanged, width);
 
+                if (collectMetrics)
+                {
+                    cellsTouched += (lastChanged - firstChanged) + 1;
+                }
+
                 writer.CursorHorizontalAbsolute(firstChanged + 1);
 
                 var xPos = firstChanged;
@@ -599,7 +635,15 @@ public sealed class InlineInteractiveHost : IDisposable
 
         writer.PrivateMode(2026, enabled: false);
 
-        _terminal.Write(_builder.UnsafeAsSpan()); // atomic write with a single span
+        var output = _builder.UnsafeAsSpan();
+        _terminal.Write(output); // atomic write with a single span
+        if (collectMetrics)
+        {
+            PublishMetrics(
+                outputChars: output.Length,
+                touchedCells: forceFull ? width * height : cellsTouched,
+                forceFull: forceFull);
+        }
 
         scalars.Slice(0, width * height).CopyTo(lastScalars.AsSpan());
         cells.Slice(0, width * height).CopyTo(lastCells.AsSpan());

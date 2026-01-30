@@ -43,6 +43,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private List<Visual>? _hoveredPathScratch;
     private int? _inlineLiveRegionTopRow;
     private bool _debugOverlayVisible;
+    private DebugOverlayMetrics? _debugOverlayMetrics;
     private int _renderFrameIndex;
     private Task? _runTask;
     private CellBuffer? _renderBuffer;
@@ -95,6 +96,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private readonly BindingDependencyIndex _renderIndex = new();
 
     TerminalApp? IVisualElement.App => this;
+    internal DebugOverlayMetrics? DebugOverlayMetrics => _debugOverlayMetrics;
 
     /// <summary>
     /// Gets the global commands registered on this application.
@@ -486,6 +488,9 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         VerifyAccess();
 
         _lastTickTimestamp = timestamp ?? Stopwatch.GetTimestamp();
+        var metrics = _debugOverlayMetrics;
+        metrics?.BeginTick(_lastTickTimestamp);
+
         CancelPendingSequenceIfTimedOut(_lastTickTimestamp);
 
         while (_pendingActions.TryDequeue(out var action))
@@ -500,13 +505,19 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
         AdvanceAnimations(timestamp);
 
+        long userUpdateTicks = 0;
         if (_onUpdate is not null && !_cts.IsCancellationRequested)
         {
             var result = TerminalLoopResult.Continue;
             using (_terminal.CaptureOutput(_updateOutputBuilder))
             {
+                var updateStart = metrics is null ? 0 : Stopwatch.GetTimestamp();
                 _updateContext!.Timestamp = timestamp ?? Stopwatch.GetTimestamp();
                 result = _onUpdate(_updateContext);
+                if (metrics is not null)
+                {
+                    userUpdateTicks = Math.Max(0, Stopwatch.GetTimestamp() - updateStart);
+                }
             }
 
             if (_updateOutputBuilder.Length > 0 && _options.HostKind == TerminalHostKind.Inline)
@@ -537,6 +548,8 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             _renderRequested = false;
             Render();
         }
+
+        metrics?.EndTick(_lastTickTimestamp, userUpdateTicks);
     }
 
     /// <summary>
@@ -971,6 +984,8 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             return;
         }
 
+        var metrics = _debugOverlayMetrics;
+
         foreach (var binding in _pendingBindingWrites)
         {
             if (_dynamicUpdateIndex.TryGetVisuals(binding, out var initVisuals))
@@ -1023,6 +1038,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                     var x = Math.Max(0, bounds.X - 1);
                     var right = Math.Min(LayoutConstants.MaxFinite, bounds.Right + 1);
                     var expanded = new Rectangle(x, bounds.Y, Math.Max(0, right - x), bounds.Height);
+                    metrics?.AddDirtyRect(expanded);
 
                     if (!_pendingRenderDirtyRectValid)
                     {
@@ -1056,14 +1072,30 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
         _inlineLiveRegionTopRow = null;
         _renderFrameIndex++;
+        var metrics = _debugOverlayMetrics;
+        var renderStartTimestamp = metrics is null ? 0 : Stopwatch.GetTimestamp();
+        metrics?.BeginRenderFrame(_renderFrameIndex);
 
         if (_options.HostKind == TerminalHostKind.Fullscreen)
         {
             var width = Math.Max(1, _terminal.Size.Columns);
             var height = Math.Max(1, _terminal.Size.Rows);
 
-            Root.Measure(new LayoutConstraints(0, width, 0, height));
-            Root.Arrange(new Rectangle(0, 0, width, height));
+            if (metrics is not null)
+            {
+                var t0 = Stopwatch.GetTimestamp();
+                Root.Measure(new LayoutConstraints(0, width, 0, height));
+                metrics.RenderMeasureTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+
+                t0 = Stopwatch.GetTimestamp();
+                Root.Arrange(new Rectangle(0, 0, width, height));
+                metrics.RenderArrangeTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+            }
+            else
+            {
+                Root.Measure(new LayoutConstraints(0, width, 0, height));
+                Root.Arrange(new Rectangle(0, 0, width, height));
+            }
 
             var layoutProducedWrites = _pendingBindingWrites.Count > 0;
 
@@ -1085,18 +1117,41 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
             _lastRenderWidth = width;
             _lastRenderHeight = height;
+            metrics?.SetFullRepaint(fullRepaint);
+            if (metrics is not null)
+            {
+                metrics.SetRepaintRect(fullRepaint ? new Rectangle(0, 0, width, height) : ClampToViewport(_pendingRenderDirtyRect, width, height));
+            }
 
             if (fullRepaint)
             {
                 buffer.Clear(baseStyle);
-                Root.RenderTree(buffer);
+                if (metrics is not null)
+                {
+                    var t0 = Stopwatch.GetTimestamp();
+                    Root.RenderTree(buffer);
+                    metrics.RenderTreeTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+                }
+                else
+                {
+                    Root.RenderTree(buffer);
+                }
             }
             else
             {
                 var rect = ClampToViewport(_pendingRenderDirtyRect, width, height);
                 buffer.PushClip(rect);
                 buffer.ClearCurrentClip(baseStyle);
-                Root.RenderTree(buffer);
+                if (metrics is not null)
+                {
+                    var t0 = Stopwatch.GetTimestamp();
+                    Root.RenderTree(buffer);
+                    metrics.RenderTreeTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+                }
+                else
+                {
+                    Root.RenderTree(buffer);
+                }
                 buffer.PopClip();
             }
 
@@ -1105,7 +1160,17 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 RenderDebugOverlay(buffer);
             }
 
-            _fullscreenHost!.Render(buffer, wantsCursor, cursorX, cursorY);
+            if (metrics is not null)
+            {
+                var t0 = Stopwatch.GetTimestamp();
+                _fullscreenHost!.Render(buffer, wantsCursor, cursorX, cursorY);
+                metrics.RenderHostTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+                metrics.EndRenderFrame(renderStartTimestamp, Stopwatch.GetTimestamp());
+            }
+            else
+            {
+                _fullscreenHost!.Render(buffer, wantsCursor, cursorX, cursorY);
+            }
             _pendingRenderHasLayoutImpact = false;
             _pendingRenderDirtyRectValid = false;
             return;
@@ -1114,8 +1179,21 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         {
             var width = Math.Max(1, _terminal.Size.Columns);
 
-            Root.Measure(new LayoutConstraints(0, width, 0, LayoutConstants.Infinite));
-            Root.Arrange(new Rectangle(0, 0, width, Root.DesiredSize.Height));
+            if (metrics is not null)
+            {
+                var t0 = Stopwatch.GetTimestamp();
+                Root.Measure(new LayoutConstraints(0, width, 0, LayoutConstants.Infinite));
+                metrics.RenderMeasureTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+
+                t0 = Stopwatch.GetTimestamp();
+                Root.Arrange(new Rectangle(0, 0, width, Root.DesiredSize.Height));
+                metrics.RenderArrangeTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+            }
+            else
+            {
+                Root.Measure(new LayoutConstraints(0, width, 0, LayoutConstants.Infinite));
+                Root.Arrange(new Rectangle(0, 0, width, Root.DesiredSize.Height));
+            }
 
             var layoutProducedWrites = _pendingBindingWrites.Count > 0;
 
@@ -1136,18 +1214,41 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
             _lastRenderWidth = width;
             _lastRenderHeight = Math.Max(1, _terminal.Size.Rows);
+            metrics?.SetFullRepaint(fullRepaint);
+            if (metrics is not null)
+            {
+                metrics.SetRepaintRect(fullRepaint ? new Rectangle(0, 0, width, buffer.Height) : ClampToViewport(_pendingRenderDirtyRect, width, buffer.Height));
+            }
 
             if (fullRepaint)
             {
                 buffer.Clear(baseStyle);
-                Root.RenderTree(buffer);
+                if (metrics is not null)
+                {
+                    var t0 = Stopwatch.GetTimestamp();
+                    Root.RenderTree(buffer);
+                    metrics.RenderTreeTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+                }
+                else
+                {
+                    Root.RenderTree(buffer);
+                }
             }
             else
             {
                 var rect = ClampToViewport(_pendingRenderDirtyRect, width, buffer.Height);
                 buffer.PushClip(rect);
                 buffer.ClearCurrentClip(baseStyle);
-                Root.RenderTree(buffer);
+                if (metrics is not null)
+                {
+                    var t0 = Stopwatch.GetTimestamp();
+                    Root.RenderTree(buffer);
+                    metrics.RenderTreeTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+                }
+                else
+                {
+                    Root.RenderTree(buffer);
+                }
                 buffer.PopClip();
             }
 
@@ -1156,7 +1257,17 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 RenderDebugOverlay(buffer);
             }
 
-            _inlineHost!.Render(buffer, wantsCursor, cursorX, cursorY);
+            if (metrics is not null)
+            {
+                var t0 = Stopwatch.GetTimestamp();
+                _inlineHost!.Render(buffer, wantsCursor, cursorX, cursorY);
+                metrics.RenderHostTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+                metrics.EndRenderFrame(renderStartTimestamp, Stopwatch.GetTimestamp());
+            }
+            else
+            {
+                _inlineHost!.Render(buffer, wantsCursor, cursorX, cursorY);
+            }
             _inlineLiveRegionTopRow = _inlineHost.LiveRegionTopRow;
 
             _pendingRenderHasLayoutImpact = false;
@@ -1211,10 +1322,40 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
         var focus = FocusedElement;
         var hover = _hoveredElement;
+        var metrics = _debugOverlayMetrics;
 
-        var lines = new[]
+        static double ToMs(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
+        static string FormatMs(long ticks) => ToMs(ticks).ToString("0.0", global::System.Globalization.CultureInfo.InvariantCulture);
+        static string FormatFps(double fps) => fps <= 0 ? "-" : fps.ToString("0.0", global::System.Globalization.CultureInfo.InvariantCulture);
+
+        var dirtyText = "Dirty: <none>";
+        if (metrics is not null && metrics.HasDirtyRect)
         {
-            $"Frame: {_renderFrameIndex}",
+            var r = metrics.DirtyRect;
+            dirtyText = $"Dirty: ({r.X},{r.Y}) {r.Width}x{r.Height}";
+        }
+
+        var repaintText = "Repaint: <unknown>";
+        if (metrics is not null && metrics.HasRepaintRect)
+        {
+            var r = metrics.RepaintRect;
+            repaintText = $"Repaint: ({r.X},{r.Y}) {r.Width}x{r.Height}";
+        }
+
+        var lines = new List<string>(16)
+        {
+            $"Frame: {_renderFrameIndex}  FPS: {FormatFps(metrics?.Fps ?? 0)}",
+            $"Tick: {FormatMs(metrics?.TickTotalTicks ?? 0)}ms  Update: {FormatMs(metrics?.TickUserUpdateTicks ?? 0)}ms",
+            $"Top: Measure {FormatMs(metrics?.RenderMeasureTicks ?? 0)}ms  Arrange {FormatMs(metrics?.RenderArrangeTicks ?? 0)}ms  Render {FormatMs(metrics?.RenderTreeTicks ?? 0)}ms  Host {FormatMs(metrics?.RenderHostTicks ?? 0)}ms",
+            $"Top: Total {FormatMs(metrics?.RenderTotalTicks ?? 0)}ms",
+            $"Calls: DynamicUpdate {(metrics?.DynamicUpdate.Calls ?? 0)} ({FormatMs(metrics?.DynamicUpdate.Ticks ?? 0)}ms)",
+            $"Calls: Prepare {(metrics?.PrepareChildren.Calls ?? 0)} ({FormatMs(metrics?.PrepareChildren.Ticks ?? 0)}ms)",
+            $"Calls: Measure {(metrics?.Measure.Calls ?? 0)} ({FormatMs(metrics?.Measure.Ticks ?? 0)}ms)  Cache {(metrics?.MeasureCacheHits ?? 0)}",
+            $"Calls: Arrange {(metrics?.Arrange.Calls ?? 0)} ({FormatMs(metrics?.Arrange.Ticks ?? 0)}ms)  Cache {(metrics?.ArrangeCacheHits ?? 0)}",
+            $"Calls: Render {(metrics?.RenderOverride.Calls ?? 0)} ({FormatMs(metrics?.RenderOverride.Ticks ?? 0)}ms)  ClipSkips {(metrics?.RenderClipSkips ?? 0)}",
+            repaintText + (metrics is not null && metrics.FullRepaint ? "  (full repaint)" : string.Empty),
+            dirtyText + (metrics is not null && metrics.FullRepaint ? "  (full repaint)" : string.Empty),
+            $"Diff: {(metrics?.DiffOutputChars ?? 0)} chars  {(metrics?.DiffCellsTouched ?? 0)} cells  full={((metrics?.DiffForceFull ?? false) ? "yes" : "no")}",
             $"Focus: {(focus is null ? "<none>" : focus.GetType().Name)}",
             $"Hover: {(hover is null ? "<none>" : hover.GetType().Name)}",
         };
@@ -1226,7 +1367,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
 
         var width = Math.Min(maxWidth, Math.Max(3, contentWidth + 2));
-        var height = Math.Min(maxHeight, Math.Max(3, lines.Length + 2));
+        var height = Math.Min(maxHeight, Math.Max(3, lines.Count + 2));
         if (width < 3 || height < 3)
         {
             return;
@@ -1267,7 +1408,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             buffer.SetCell(right, y, new Rune('|'), borderStyle);
         }
 
-        for (var i = 0; i < lines.Length && i + 1 < bottom; i++)
+        for (var i = 0; i < lines.Count && i + 1 < bottom; i++)
         {
             buffer.WriteText(1, 1 + i, lines[i].AsSpan(), Style.None);
         }
@@ -1792,6 +1933,9 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         if (_options.ToggleDebugOverlayGesture.Matches(keyEvent))
         {
             _debugOverlayVisible = !_debugOverlayVisible;
+            _debugOverlayMetrics = _debugOverlayVisible ? new DebugOverlayMetrics() : null;
+            _fullscreenHost?.SetMetricsSink(_debugOverlayMetrics);
+            _inlineHost?.SetMetricsSink(_debugOverlayMetrics);
             RequestRender();
             return;
         }

@@ -43,6 +43,8 @@ public sealed class FullscreenHost : IDisposable
         _renderer.RenderFullscreen(_terminal, buffer, wantsCursor, cursorX, cursorY);
     }
 
+    internal void SetMetricsSink(ICellBufferDiffMetricsSink? sink) => _renderer.MetricsSink = sink;
+
     /// <summary>
     /// Resets the diff renderer state.
     /// </summary>

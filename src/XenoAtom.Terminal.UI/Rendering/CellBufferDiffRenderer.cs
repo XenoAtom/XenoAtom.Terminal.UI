@@ -24,6 +24,8 @@ public sealed class CellBufferDiffRenderer : IDisposable
     private int _lastCursorX;
     private int _lastCursorY;
 
+    internal ICellBufferDiffMetricsSink? MetricsSink { get; set; }
+
     /// <summary>
     /// Resets the cached frame state.
     /// </summary>
@@ -54,6 +56,10 @@ public sealed class CellBufferDiffRenderer : IDisposable
     {
         ArgumentNullException.ThrowIfNull(terminal);
         ArgumentNullException.ThrowIfNull(buffer);
+
+        var metricsSink = MetricsSink;
+        var collectMetrics = metricsSink is not null;
+        var cellsTouched = 0;
 
         // Use the buffer size as the render viewport.
         // Terminal size can change between consecutive reads while a resize is in progress, so relying on
@@ -162,6 +168,11 @@ public sealed class CellBufferDiffRenderer : IDisposable
             firstChanged = AdjustStartForWideGlyph(cells, rowIndex, firstChanged);
             lastChanged = AdjustEndForWideGlyph(buffer, scalars, cells, rowIndex, lastChanged, width);
 
+            if (collectMetrics)
+            {
+                cellsTouched += (lastChanged - firstChanged) + 1;
+            }
+
             BeginOutput();
             writer.CursorPosition(y + 1, firstChanged + 1);
 
@@ -225,6 +236,10 @@ public sealed class CellBufferDiffRenderer : IDisposable
 
         if (!anyCellChanges && !cursorChanged)
         {
+            if (collectMetrics)
+            {
+                metricsSink!.OnRendered(new CellBufferDiffMetrics(OutputChars: 0, CellsTouched: 0, ForceFull: false));
+            }
             return;
         }
 
@@ -262,6 +277,11 @@ public sealed class CellBufferDiffRenderer : IDisposable
         {
             w.Write(_builder.UnsafeAsSpan());
         });
+
+        if (collectMetrics)
+        {
+            metricsSink!.OnRendered(new CellBufferDiffMetrics(_builder.UnsafeAsSpan().Length, cellsTouched, forceFull));
+        }
 
         if (anyCellChanges)
         {

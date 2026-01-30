@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Diagnostics;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
@@ -590,9 +591,16 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             return;
         }
 
+        var metrics = App?.DebugOverlayMetrics;
+        var startTimestamp = metrics is null ? 0 : Stopwatch.GetTimestamp();
+
         using (var session = BindingManager.Current.StartTracking())
         {
             PrepareChildren();
+            if (metrics is not null)
+            {
+                metrics.RecordPrepareChildren(Math.Max(0, Stopwatch.GetTimestamp() - startTimestamp));
+            }
 
             if (UnionDependencies(ref _prepareChildrenDeps, session.Reads) && App is not null)
             {
@@ -631,10 +639,14 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
         if (!_measureDirty && _hasLastMeasure && constraints.Equals(_lastMeasureConstraints))
         {
+            App?.DebugOverlayMetrics?.RecordMeasureCacheHit();
             return MeasureHints;
         }
 
         var previousDesiredWithoutMargin = _lastDesiredSizeWithoutMargin;
+
+        var metrics = App?.DebugOverlayMetrics;
+        var startTimestamp = metrics is null ? 0 : Stopwatch.GetTimestamp();
 
         SizeHints measureHints;
         using (var session = BindingManager.Current.StartTracking())
@@ -669,7 +681,12 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             _hasLastMeasure = true;
             _lastMeasureConstraints = constraints;
         }
-        
+
+        if (metrics is not null)
+        {
+            metrics.RecordMeasure(Math.Max(0, Stopwatch.GetTimestamp() - startTimestamp));
+        }
+         
         return measureHints;
     }
 
@@ -685,8 +702,12 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
         if (!_arrangeDirty && _hasLastArrange && finalRect.Equals(_lastArrangeRect))
         {
+            App?.DebugOverlayMetrics?.RecordArrangeCacheHit();
             return;
         }
+
+        var metrics = App?.DebugOverlayMetrics;
+        var startTimestamp = metrics is null ? 0 : Stopwatch.GetTimestamp();
 
         using (var session = BindingManager.Current.StartTracking())
         {
@@ -704,6 +725,11 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             _arrangeDirty = false;
             _hasLastArrange = true;
             _lastArrangeRect = finalRect;
+        }
+
+        if (metrics is not null)
+        {
+            metrics.RecordArrange(Math.Max(0, Stopwatch.GetTimestamp() - startTimestamp));
         }
     }
 
@@ -980,12 +1006,14 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         VerifyAccess();
         if (!buffer.ClipIntersects(Bounds))
         {
+            App?.DebugOverlayMetrics?.RecordRenderClipSkip();
             return;
         }
 
         EnsureDynamicUpdatesApplied();
         EnsureChildrenPrepared();
 
+        var metrics = App?.DebugOverlayMetrics;
         bool visible;
         using (var session = BindingManager.Current.StartTracking())
         {
@@ -993,7 +1021,16 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             if (visible)
             {
                 buffer.PushClip(Bounds);
-                RenderOverride(buffer);
+                if (metrics is not null)
+                {
+                    var startTimestamp = Stopwatch.GetTimestamp();
+                    RenderOverride(buffer);
+                    metrics.RecordRenderOverride(Math.Max(0, Stopwatch.GetTimestamp() - startTimestamp));
+                }
+                else
+                {
+                    RenderOverride(buffer);
+                }
                 buffer.PopClip();
             }
 
@@ -1087,6 +1124,9 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
         _dynamicUpdatesDirty = false;
 
+        var metrics = App?.DebugOverlayMetrics;
+        var startTimestamp = metrics is null ? 0 : Stopwatch.GetTimestamp();
+
         using (var session = BindingManager.Current.StartTracking())
         {
             var app = App;
@@ -1110,6 +1150,11 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             {
                 App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.DynamicUpdate, _dynamicUpdateDeps!);
             }
+        }
+
+        if (metrics is not null)
+        {
+            metrics.RecordDynamicUpdate(Math.Max(0, Stopwatch.GetTimestamp() - startTimestamp));
         }
     }
 
