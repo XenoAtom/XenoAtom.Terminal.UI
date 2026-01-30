@@ -132,11 +132,9 @@ public sealed class DataGridDemo : ControlsDemoBase
         grid.Columns.Add(new DataGridColumn<string> { Key = "country", TypedAccessor = countryAccessor, Width = GridLength.Star(2) });
         grid.Columns.Add(new DataGridColumn<double> { Key = "time", TypedAccessor = timeAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right });
 
-        // Give this table its own playful theme.
         var themed = new Border(new ScrollViewer(grid).MinHeight(12).MaxHeight(12))
             .Style(BorderStyle.Rounded)
             .Padding(new Thickness(1, 0, 1, 0));
-        themed.SetStyle(Theme.Key, Theme.FromScheme(ColorScheme.BlueberryDarkSoft, accent: ThemeAccentColor.Cyan));
         return themed;
     }
 
@@ -202,8 +200,6 @@ public sealed class DataGridDemo : ControlsDemoBase
         var styled = new Border(new ScrollViewer(grid).MinHeight(12).MaxHeight(12))
             .Style(BorderStyle.Single)
             .Padding(new Thickness(1, 0, 1, 0));
-        styled.SetStyle(Theme.Key, Theme.FromScheme(ColorScheme.KaleDarkSoft, accent: ThemeAccentColor.Green));
-        styled.SetStyle(DataGridStyle.Key, DataGridStyle.Default with { ColumnSpacing = 2 });
         return styled;
     }
 
@@ -267,8 +263,6 @@ public sealed class DataGridDemo : ControlsDemoBase
         var framed = new Border(new ScrollViewer(grid).MinHeight(12).MaxHeight(12))
             .Style(BorderStyle.Double)
             .Padding(new Thickness(1, 0, 1, 0));
-        framed.SetStyle(Theme.Key, Theme.FromScheme(ColorScheme.RetroBlue, accent: ThemeAccentColor.Yellow));
-        framed.SetStyle(DataGridStyle.Key, DataGridStyle.Default with { ColumnSpacing = 1 });
         return framed;
     }
 }

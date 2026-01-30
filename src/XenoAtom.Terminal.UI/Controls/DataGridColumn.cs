@@ -5,7 +5,6 @@
 using System.Globalization;
 using XenoAtom.Terminal.UI.DataGrid;
 using XenoAtom.Terminal.UI.Templating;
-using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -246,16 +245,6 @@ public sealed partial class DataGridColumn<T> : DataGridColumn
         if (templates.TryResolve<T>(DataTemplateRole.Editor, out var resolved) && !resolved.IsEmpty && resolved.Editor is not null)
         {
             editor = resolved.Editor(binding, context);
-            return true;
-        }
-
-        if (typeof(T) == typeof(string))
-        {
-            var textBox = new TextBox();
-            textBox.TextDocument = new DynamicTextDocument(
-                getter: () => (string?)(object?)binding.GetValue() ?? string.Empty,
-                setter: value => binding.SetValue((T)(object)value));
-            editor = textBox;
             return true;
         }
 

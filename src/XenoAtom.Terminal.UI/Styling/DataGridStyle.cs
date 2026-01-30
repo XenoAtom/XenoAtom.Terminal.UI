@@ -2,9 +2,9 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Ansi;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
-using XenoAtom.Ansi;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
@@ -76,7 +76,7 @@ public sealed record DataGridStyle : IStyle<DataGridStyle>
     /// <summary>
     /// Resolves the base cell style.
     /// </summary>
-    public Style ResolveCellStyle(Theme theme) => CellStyle ?? theme.SurfaceStyle();
+    public Style ResolveCellStyle(Theme theme) => CellStyle ?? theme.InputFillStyle(focused: false);
 
     /// <summary>
     /// Resolves the header style.
@@ -88,8 +88,8 @@ public sealed record DataGridStyle : IStyle<DataGridStyle>
             return header;
         }
 
-        // Default header: bold text on the control fill background for better contrast.
-        return (theme.ControlFillStyle() | TextStyle.Bold);
+        // Default header: match the tab header background (surface) and emphasize text.
+        return theme.SurfaceStyle() | TextStyle.Bold;
     }
 
     /// <summary>

@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Collections;
@@ -15,6 +16,7 @@ using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Scrolling;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Templating;
+using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -76,6 +78,8 @@ public enum DataGridEditMode
 /// </summary>
 public sealed partial class DataGridControl : Visual, IScrollable
 {
+    private const int AutoSizeSampleRowCount = 64;
+
     private readonly ScrollModel _scroll;
     private readonly BindableList<DataGridColumn> _columns;
 
@@ -96,7 +100,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
     private IDataGridViewSnapshot? _lastSnapshot;
     private int _lastSnapshotVersion = -1;
     private int _lastSnapshotColumnCount = -1;
-    private int _lastColumnsVersion = -1;
+    private int _lastColumnsKey;
 
     private int[] _resolvedColumnWidths = Array.Empty<int>();
     private int[] _resolvedColumnStarts = Array.Empty<int>();
@@ -109,7 +113,14 @@ public sealed partial class DataGridControl : Visual, IScrollable
     private object? _activeEditorRowModel;
     private BindingAccessor? _activeEditorAccessor;
     private object? _activeEditorOriginalValue;
-    private bool _pendingStartEdit;
+    private bool _activeEditorPooled;
+
+    private readonly List<TextBox> _textBoxPool = new(8);
+
+    private bool _resizingColumn;
+    private int _resizingColumnIndex;
+    private int _resizeStartUiX;
+    private int _resizeStartWidth;
 
     private int _lastMatchesKey;
     private readonly List<DataGridCell> _matches;
@@ -318,6 +329,12 @@ public sealed partial class DataGridControl : Visual, IScrollable
     [Bindable]
     private partial int MeasuredContentWidth { get; set; }
 
+    [Bindable]
+    private partial bool IsTableSelected { get; set; }
+
+    [Bindable]
+    private partial int ActiveEditorScrollVersion { get; set; }
+
     partial void OnFrozenRowsChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
     partial void OnFrozenColumnsChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
     partial void OnRowAnchorWidthChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
@@ -348,9 +365,13 @@ public sealed partial class DataGridControl : Visual, IScrollable
     {
         _ = value;
         _ensureCurrentCellVisible = true;
-        if (EditMode == DataGridEditMode.OnCellChange)
+        if (EditMode == DataGridEditMode.OnCellChange && !ReadOnly && _activeEditor is null)
         {
-            _pendingStartEdit = true;
+            var snapshot = GetSnapshot();
+            if (snapshot is not null)
+            {
+                _ = TryStartEdit(snapshot);
+            }
         }
     }
 
@@ -477,6 +498,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
     protected override void PrepareChildren()
     {
         ScrollVersion = _scroll.Version;
+        ActiveEditorScrollVersion = _activeEditor is IScrollable scrollable ? scrollable.Scroll.Version : 0;
 
         _ = SourceVersion;
 
@@ -540,9 +562,13 @@ public sealed partial class DataGridControl : Visual, IScrollable
         var rect = finalRect;
 
         _ = ScrollVersion;
+        _ = ActiveEditorScrollVersion;
         _ = MeasuredContentWidth;
         _ = ShowRowAnchor;
         _ = RowAnchorWidth;
+        _ = CurrentCell;
+        _ = SelectedRow;
+        _ = IsTableSelected;
 
         var snapshot = GetSnapshot();
         if (snapshot is null || rect.Width <= 0 || rect.Height <= 0)
@@ -582,17 +608,14 @@ public sealed partial class DataGridControl : Visual, IScrollable
         ArrangeHeaderAndFilter(rect, headerHeight, filterHeight, frozenColumns);
         EnsureCellVisuals(snapshot, rect, headerHeight, filterHeight, frozenRows, frozenColumns);
 
-        if (_pendingStartEdit)
-        {
-            _pendingStartEdit = false;
-            _ = TryStartEdit(snapshot);
-        }
-
         if (_activeEditor is not null)
         {
             var editorRect = TryGetCellRect(_activeEditorCell, rect, headerHeight, filterHeight, frozenRows, frozenColumns);
             if (editorRect is { } r)
             {
+                // DataGridControl does not measure its children in MeasureCore for performance reasons.
+                // Ensure the active editor is measured so its arrange logic doesn't clamp to a 0-size desired height.
+                _activeEditor.Measure(new LayoutConstraints(0, r.Width, 0, r.Height));
                 _activeEditor.Arrange(r);
                 App?.Focus(_activeEditor);
             }
@@ -616,6 +639,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
         _ = ScrollVersion;
         _ = SourceVersion;
+        _ = IsTableSelected;
 
         var snapshot = GetSnapshot();
         if (snapshot is null)
@@ -653,6 +677,18 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
         if (headerHeight > 0)
         {
+            if (anchorWidth > 0)
+            {
+                var anchorRect = new Rectangle(rect.X, rect.Y, Math.Min(anchorWidth, rect.Width), 1);
+                var anchorStyle = IsTableSelected ? selectionStyle : headerStyle;
+                FillRect(buffer, anchorRect, anchorStyle);
+
+                if (IsTableSelected && anchorRect.Width > 0)
+                {
+                    buffer.SetCell(anchorRect.X + anchorRect.Width - 1, rect.Y, new Rune('■'), anchorStyle);
+                }
+            }
+
             var cols = EnsureResolvedColumns(snapshot, visibleColumns);
             for (var c = 0; c < cols.Count && c < _resolvedColumnWidths.Length; c++)
             {
@@ -752,9 +788,25 @@ public sealed partial class DataGridControl : Visual, IScrollable
     /// <inheritdoc />
     protected override void OnPointerPressed(PointerEventArgs e)
     {
-        if (e.Kind != TerminalMouseKind.Down || e.Button != TerminalMouseButton.Left)
+        if (e.Handled)
         {
             return;
+        }
+
+        if (e.Kind is not (TerminalMouseKind.Down or TerminalMouseKind.DoubleClick) || e.Button != TerminalMouseButton.Left)
+        {
+            return;
+        }
+
+        if (_activeEditor is not null && _activeEditor.Bounds.Contains(e.UiX, e.UiY))
+        {
+            return;
+        }
+
+        if (_activeEditor is not null)
+        {
+            // Clicking outside the active editor commits the edit and restores grid interactions.
+            CloseEditor();
         }
 
         var snapshot = GetSnapshot();
@@ -765,10 +817,25 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
         var rect = Bounds;
         var anchorWidth = GetEffectiveRowAnchorWidth();
+        var headerHeight = ShowHeader ? 1 : 0;
+        var filterHeight = FilterRowVisible && CanFilter ? 1 : 0;
+
+        if (TryBeginColumnResize(snapshot, e, rect, anchorWidth, headerHeight))
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (anchorWidth > 0 && e.UiX - rect.X < anchorWidth)
         {
-            var headerHeight = ShowHeader ? 1 : 0;
-            var filterHeight = FilterRowVisible && CanFilter ? 1 : 0;
+            if (headerHeight > 0 && e.UiY - rect.Y < headerHeight)
+            {
+                SelectEntireTable(snapshot);
+                App?.Focus(this);
+                e.Handled = true;
+                return;
+            }
+
             var rowY = e.UiY - rect.Y - headerHeight - filterHeight;
             if (rowY >= 0)
             {
@@ -777,6 +844,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
                 var viewRow = rowY < frozenRows ? rowY : frozenRows + _scroll.OffsetY + (rowY - frozenRows);
                 if ((uint)viewRow < (uint)rowCount)
                 {
+                    IsTableSelected = false;
                     SelectedRow = viewRow;
                     if (CurrentCell == DataGridCell.None)
                     {
@@ -797,16 +865,123 @@ public sealed partial class DataGridControl : Visual, IScrollable
         var hit = TryHitTestCell(snapshot, e.UiX, e.UiY);
         if (hit is { } cell)
         {
+            var wasCurrent = cell == CurrentCell && CurrentCell != DataGridCell.None;
+            IsTableSelected = false;
             SelectedRow = -1;
             CurrentCell = cell;
             App?.Focus(this);
             e.Handled = true;
+
+            if (!ReadOnly && (e.ClickCount >= 2 || wasCurrent) && _activeEditor is null)
+            {
+                _ = TryStartEdit(snapshot);
+            }
         }
+    }
+
+    /// <inheritdoc />
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        if (!_resizingColumn || e.Handled)
+        {
+            return;
+        }
+
+        var snapshot = GetSnapshot();
+        if (snapshot is null)
+        {
+            _resizingColumn = false;
+            return;
+        }
+
+        var columns = EnsureResolvedColumns(snapshot, GetVisibleColumnCount(snapshot));
+        if ((uint)_resizingColumnIndex >= (uint)columns.Count)
+        {
+            _resizingColumn = false;
+            return;
+        }
+
+        var uiColumn = columns[_resizingColumnIndex].Column;
+        if (uiColumn is null)
+        {
+            _resizingColumn = false;
+            return;
+        }
+
+        var delta = e.UiX - _resizeStartUiX;
+        var nextWidth = Math.Max(1, _resizeStartWidth + delta);
+        nextWidth = Math.Max(nextWidth, uiColumn.MinWidth);
+        if (uiColumn.MaxWidth > 0)
+        {
+            nextWidth = Math.Min(nextWidth, uiColumn.MaxWidth);
+        }
+
+        uiColumn.Width = GridLength.Fixed(nextWidth);
+        e.Handled = true;
+    }
+
+    /// <inheritdoc />
+    protected override void OnPointerReleased(PointerEventArgs e)
+    {
+        if (!_resizingColumn || e.Handled)
+        {
+            return;
+        }
+
+        if (e.Kind != TerminalMouseKind.Up || e.Button != TerminalMouseButton.Left)
+        {
+            return;
+        }
+
+        _resizingColumn = false;
+        e.Handled = true;
     }
 
     /// <inheritdoc />
     protected override void OnKeyDown(KeyEventArgs e)
     {
+        var snapshot = GetSnapshot();
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        if (_activeEditor is not null)
+        {
+            if (e.Key is TerminalKey.Up or TerminalKey.Down or TerminalKey.PageUp or TerminalKey.PageDown)
+            {
+                // Single-line editors don't typically use vertical navigation; treat it as leaving edit mode.
+                CloseEditor();
+
+                var delta = e.Key switch
+                {
+                    TerminalKey.Up => -1,
+                    TerminalKey.Down => 1,
+                    TerminalKey.PageUp => -Math.Max(1, _scroll.ViewportHeight - 1),
+                    TerminalKey.PageDown => Math.Max(1, _scroll.ViewportHeight - 1),
+                    _ => 0,
+                };
+
+                MoveCurrentCell(deltaRow: delta, deltaCol: 0);
+                e.Handled = true;
+                return;
+            }
+        }
+
+        if ((e.Modifiers & TerminalModifiers.Ctrl) != 0 && e.Char is TerminalChar.CtrlA && _activeEditor is null)
+        {
+            SelectEntireTable(snapshot);
+            e.Handled = true;
+            return;
+        }
+
+        if ((e.Modifiers & TerminalModifiers.Ctrl) != 0 && e.Char is TerminalChar.CtrlC && _activeEditor is null)
+        {
+            CopySelectionToClipboard(snapshot);
+            e.Handled = true;
+            return;
+        }
+
         // Ctrl+Shift+F: toggle filter row.
         if ((e.Modifiers & (TerminalModifiers.Ctrl | TerminalModifiers.Shift)) == (TerminalModifiers.Ctrl | TerminalModifiers.Shift)
             && e.Char is TerminalChar.CtrlF)
@@ -865,43 +1040,65 @@ public sealed partial class DataGridControl : Visual, IScrollable
             return;
         }
 
-        var snapshot = GetSnapshot();
-        if (snapshot is null)
+        if ((e.Modifiers & TerminalModifiers.Ctrl) != 0 && e.Key is TerminalKey.Home or TerminalKey.End)
         {
+            IsTableSelected = false;
+            SelectedRow = -1;
+
+            var rows = snapshot.RowCount;
+            var cols = Math.Max(0, GetVisibleColumnCount(snapshot));
+            if (rows <= 0 || cols <= 0)
+            {
+                CurrentCell = DataGridCell.None;
+            }
+            else
+            {
+                CurrentCell = e.Key == TerminalKey.Home ? new DataGridCell(0, 0) : new DataGridCell(rows - 1, cols - 1);
+            }
+
+            e.Handled = true;
             return;
         }
 
         switch (e.Key)
         {
             case TerminalKey.Left:
+                IsTableSelected = false;
                 MoveCurrentCell(0, -1);
                 e.Handled = true;
                 return;
             case TerminalKey.Right:
+                IsTableSelected = false;
                 MoveCurrentCell(0, 1);
                 e.Handled = true;
                 return;
             case TerminalKey.Up:
+                IsTableSelected = false;
                 MoveCurrentCell(-1, 0);
                 e.Handled = true;
                 return;
             case TerminalKey.Down:
+                IsTableSelected = false;
                 MoveCurrentCell(1, 0);
                 e.Handled = true;
                 return;
             case TerminalKey.PageUp:
+                IsTableSelected = false;
                 MoveCurrentCell(-Math.Max(1, _scroll.ViewportHeight - 1), 0);
                 e.Handled = true;
                 return;
             case TerminalKey.PageDown:
+                IsTableSelected = false;
                 MoveCurrentCell(Math.Max(1, _scroll.ViewportHeight - 1), 0);
                 e.Handled = true;
                 return;
             case TerminalKey.Home:
+                IsTableSelected = false;
                 CurrentCell = new DataGridCell(CurrentCell.Row, 0);
                 e.Handled = true;
                 return;
             case TerminalKey.End:
+                IsTableSelected = false;
                 CurrentCell = new DataGridCell(CurrentCell.Row, Math.Max(0, GetVisibleColumnCount(snapshot) - 1));
                 e.Handled = true;
                 return;
@@ -1454,12 +1651,11 @@ public sealed partial class DataGridControl : Visual, IScrollable
         }
 
         var column = columns[col].Column;
-        if (column is null)
-        {
-            return false;
-        }
+        var schemaAccessor = columns[col].SchemaAccessor;
+        var schemaValueType = columns[col].SchemaValueType;
+        var schemaReadOnly = columns[col].SchemaReadOnly;
 
-        var effectiveReadOnly = ReadOnly || column.ReadOnly || columns[col].SchemaReadOnly;
+        var effectiveReadOnly = ReadOnly || schemaReadOnly || (column is not null && column.ReadOnly);
         if (effectiveReadOnly)
         {
             return false;
@@ -1467,26 +1663,247 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
         var rowModel = snapshot.GetRowModel(row);
         var ctx = new DataTemplateContext(this, DataTemplateRole.Editor, row, DataTemplateItemState.Focused);
-        if (!column.TryCreateEditorVisual(this, rowModel, ctx, out var editor) || editor is null)
+
+        if (column is not null && column.TryCreateEditorVisual(this, rowModel, ctx, out var editor) && editor is not null)
+        {
+            _activeEditorRowModel = rowModel;
+            _activeEditorAccessor = column.Accessor;
+            _activeEditorOriginalValue = column.Accessor.GetValue(rowModel);
+
+            PrepareEditorForCell(editor);
+            OpenEditor(editor, cell, pooled: false);
+            return true;
+        }
+
+        // Built-in schema-driven editors when no explicit UI column/editor exists.
+        // This keeps the grid usable even with schema-only documents.
+        if (column is null && TryCreateDefaultEditorFromSchema(schemaValueType, rowModel, schemaAccessor, out var schemaEditor) && schemaEditor is not null)
+        {
+            _activeEditorRowModel = rowModel;
+            _activeEditorAccessor = schemaAccessor;
+            _activeEditorOriginalValue = schemaAccessor.GetValue(rowModel);
+
+            OpenEditor(schemaEditor, cell, pooled: false);
+            return true;
+        }
+
+        // Built-in pooled editor for string cells: use TextBox to get full editor behavior (selection, clipboard, overflow indicators).
+        var isStringCell = schemaValueType == typeof(string) || column is DataGridColumn<string>;
+        if (isStringCell && TryCreatePooledTextBoxEditor(rowModel, schemaAccessor, out var textBox))
+        {
+            _activeEditorRowModel = rowModel;
+            _activeEditorAccessor = schemaAccessor;
+            _activeEditorOriginalValue = schemaAccessor.GetValue(rowModel);
+
+            OpenEditor(textBox, cell, pooled: true);
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryCreatePooledTextBoxEditor(object rowModel, BindingAccessor accessor, out TextBox editor)
+    {
+        editor = null!;
+
+        editor = _textBoxPool.Count == 0 ? new TextBox() : PopTextBox();
+        editor.SetStyle(TextBoxStyle.Key, CreateCellEditorTextBoxStyle());
+        editor.TextDocument = new DynamicTextDocument(
+            getter: () => (string?)accessor.GetValue(rowModel) ?? string.Empty,
+            setter: s => accessor.SetValue(rowModel, s));
+        InitializeTextEditorForCell(editor);
+        return true;
+    }
+
+    private void InitializeTextEditorForCell(TextEditorBase editor)
+    {
+        // Editors can carry caret/selection/scroll state from a previous cell. Reset to a predictable state:
+        // - place the caret at the end (F2/edit-mode behavior)
+        // - reset horizontal scroll so initial render isn't shifted
+        var length = editor.TextDocument.CurrentSnapshot.Length;
+        editor.CaretIndex = length;
+        editor.Scroll.SetOffset(0, 0);
+    }
+
+    private TextBoxStyle CreateCellEditorTextBoxStyle()
+    {
+        var theme = GetTheme();
+
+        // Make text selection clearly visible against the (also selection-colored) active cell background.
+        var selection = (theme.Accent ?? theme.FocusBorder ?? theme.Selection)?.WithAlpha(0xA0);
+
+        return TextBoxStyle.Default with
+        {
+            Padding = new Thickness(0, 0, 0, 0),
+            Selection = selection,
+        };
+    }
+
+    private bool TryCreateDefaultEditorFromSchema(Type? schemaValueType, object rowModel, BindingAccessor accessor, out Visual? editor)
+    {
+        editor = null;
+        if (schemaValueType is null)
         {
             return false;
         }
 
-        _activeEditorRowModel = rowModel;
-        _activeEditorAccessor = column.Accessor;
-        _activeEditorOriginalValue = column.Accessor.GetValue(rowModel);
+        if (schemaValueType == typeof(bool))
+        {
+            var boolAccessor = WrapAccessor<bool>(accessor);
+            editor = new Switch().IsOn(new Binding<bool>(rowModel, boolAccessor));
+            return true;
+        }
 
-        OpenEditor(editor, cell);
-        return true;
+        if (schemaValueType == typeof(sbyte))
+        {
+            editor = CreateCellNumberBox<sbyte>(rowModel, accessor);
+            return true;
+        }
+
+        if (schemaValueType == typeof(byte))
+        {
+            editor = CreateCellNumberBox<byte>(rowModel, accessor);
+            return true;
+        }
+
+        if (schemaValueType == typeof(short))
+        {
+            editor = CreateCellNumberBox<short>(rowModel, accessor);
+            return true;
+        }
+
+        if (schemaValueType == typeof(ushort))
+        {
+            editor = CreateCellNumberBox<ushort>(rowModel, accessor);
+            return true;
+        }
+
+        if (schemaValueType == typeof(int))
+        {
+            editor = CreateCellNumberBox<int>(rowModel, accessor);
+            return true;
+        }
+
+        if (schemaValueType == typeof(uint))
+        {
+            editor = CreateCellNumberBox<uint>(rowModel, accessor);
+            return true;
+        }
+
+        if (schemaValueType == typeof(long))
+        {
+            editor = CreateCellNumberBox<long>(rowModel, accessor);
+            return true;
+        }
+
+        if (schemaValueType == typeof(ulong))
+        {
+            editor = CreateCellNumberBox<ulong>(rowModel, accessor);
+            return true;
+        }
+
+        if (schemaValueType == typeof(float))
+        {
+            editor = CreateCellNumberBox<float>(rowModel, accessor);
+            return true;
+        }
+
+        if (schemaValueType == typeof(double))
+        {
+            editor = CreateCellNumberBox<double>(rowModel, accessor);
+            return true;
+        }
+
+        if (schemaValueType == typeof(decimal))
+        {
+            editor = CreateCellNumberBox<decimal>(rowModel, accessor);
+            return true;
+        }
+
+        if (schemaValueType.IsEnum)
+        {
+            editor = CreateEnumEditor(rowModel, accessor, schemaValueType);
+            return true;
+        }
+
+        return false;
     }
 
-    private void OpenEditor(Visual editor, DataGridCell cell)
+    private NumberBox<T> CreateCellNumberBox<T>(object rowModel, BindingAccessor accessor) where T : struct, System.Numerics.INumber<T>
+    {
+        var box = new NumberBox<T>().Value(new Binding<T>(rowModel, WrapAccessor<T>(accessor)));
+        box.SetStyle(TextBoxStyle.Key, CreateCellEditorTextBoxStyle());
+        InitializeTextEditorForCell(box);
+        return box;
+    }
+
+    private TextBox CreateEnumEditor(object rowModel, BindingAccessor accessor, Type enumType)
+    {
+        var culture = GetCulture();
+        var localText = ValueStringFormatter.ToString(accessor.GetValue(rowModel), culture);
+
+        var box = new TextBox();
+        box.SetStyle(TextBoxStyle.Key, CreateCellEditorTextBoxStyle());
+
+        box.TextDocument = new DynamicTextDocument(
+            getter: () => localText,
+            setter: text =>
+            {
+                localText = text ?? string.Empty;
+                if (Enum.TryParse(enumType, localText, ignoreCase: true, out var parsed) && parsed is not null)
+                {
+                    accessor.SetValue(rowModel, parsed);
+                }
+            });
+
+        InitializeTextEditorForCell(box);
+        return box;
+    }
+
+    private static BindingAccessor<T> WrapAccessor<T>(BindingAccessor accessor)
+    {
+        if (accessor is BindingAccessor<T> typed)
+        {
+            return typed;
+        }
+
+        return new BindingAccessor<T>(
+            accessor.Name,
+            owner => (T)accessor.GetValue(owner)!,
+            (owner, value) => accessor.SetValue(owner, value));
+    }
+
+    private TextBox PopTextBox()
+    {
+        var last = _textBoxPool.Count - 1;
+        var editor = _textBoxPool[last];
+        _textBoxPool.RemoveAt(last);
+        return editor;
+    }
+
+    private void OpenEditor(Visual editor, DataGridCell cell, bool pooled)
     {
         CloseEditor();
         _activeEditor = editor;
         _activeEditorCell = cell;
+        _activeEditorPooled = pooled;
         AttachChild(editor);
         App?.Focus(editor);
+    }
+
+    private void PrepareEditorForCell(Visual editor)
+    {
+        if (editor is not TextEditorBase textEditor)
+        {
+            return;
+        }
+
+        if (!editor.HasLocal(TextBoxStyle.Key))
+        {
+            editor.SetStyle(TextBoxStyle.Key, CreateCellEditorTextBoxStyle());
+        }
+
+        InitializeTextEditorForCell(textEditor);
     }
 
     private void CloseEditor()
@@ -1496,12 +1913,23 @@ public sealed partial class DataGridControl : Visual, IScrollable
             return;
         }
 
+        var pooled = _activeEditorPooled;
+        var pooledTextBox = pooled ? _activeEditor as TextBox : null;
+
         DetachChild(_activeEditor);
         _activeEditor = null;
         _activeEditorCell = DataGridCell.None;
         _activeEditorRowModel = null;
         _activeEditorAccessor = null;
         _activeEditorOriginalValue = null;
+        _activeEditorPooled = false;
+
+        if (pooledTextBox is not null)
+        {
+            pooledTextBox.TextDocument = new TextDocument();
+            InitializeTextEditorForCell(pooledTextBox);
+            _textBoxPool.Add(pooledTextBox);
+        }
         App?.Focus(this);
     }
 
@@ -1542,7 +1970,12 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
         CloseEditor();
         MoveCurrentCell(deltaRow: 0, deltaCol: deltaColumn);
-        _pendingStartEdit = true;
+
+        var snapshot = GetSnapshot();
+        if (snapshot is not null && !ReadOnly)
+        {
+            _ = TryStartEdit(snapshot);
+        }
     }
 
     private void MoveCurrentCell(int deltaRow, int deltaCol)
@@ -1553,6 +1986,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
             return;
         }
 
+        IsTableSelected = false;
         SelectedRow = -1;
 
         var rows = snapshot.RowCount;
@@ -1571,6 +2005,11 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
     private bool IsSelectedCell(int row, int visibleColumnIndex)
     {
+        if (IsTableSelected)
+        {
+            return true;
+        }
+
         var current = CurrentCell;
         if (current == DataGridCell.None)
         {
@@ -1841,8 +2280,8 @@ public sealed partial class DataGridControl : Visual, IScrollable
     {
         _ = visibleColumns;
 
-        var columnsVersion = Columns.Version;
-        if (snapshot.Version == _lastSnapshotVersion && snapshot.ColumnCount == _lastSnapshotColumnCount && columnsVersion == _lastColumnsVersion)
+        var columnsKey = ComputeColumnsKey(snapshot);
+        if (snapshot.Version == _lastSnapshotVersion && snapshot.ColumnCount == _lastSnapshotColumnCount && columnsKey == _lastColumnsKey)
         {
             return _cachedResolvedColumns;
         }
@@ -1850,16 +2289,17 @@ public sealed partial class DataGridControl : Visual, IScrollable
         _lastSnapshot = snapshot;
         _lastSnapshotVersion = snapshot.Version;
         _lastSnapshotColumnCount = snapshot.ColumnCount;
-        _lastColumnsVersion = columnsVersion;
+        _lastColumnsKey = columnsKey;
 
         _cachedResolvedColumns.Clear();
+        var culture = GetCulture();
 
         if (Columns.Count == 0)
         {
             for (var i = 0; i < snapshot.ColumnCount; i++)
             {
                 var info = snapshot.GetColumn(i);
-                _cachedResolvedColumns.Add(CreateResolvedFromSchema(info, uiColumn: null));
+                _cachedResolvedColumns.Add(CreateResolvedFromSchema(snapshot, info, uiColumn: null, culture));
             }
         }
         else
@@ -1875,12 +2315,12 @@ public sealed partial class DataGridControl : Visual, IScrollable
                 var schemaIndex = FindSchemaColumnIndex(snapshot, ui.Key);
                 if (schemaIndex < 0)
                 {
-                    _cachedResolvedColumns.Add(CreateResolvedMissingSchema(ui));
+                    _cachedResolvedColumns.Add(CreateResolvedMissingSchema(snapshot, ui, culture));
                     continue;
                 }
 
                 var info = snapshot.GetColumn(schemaIndex);
-                _cachedResolvedColumns.Add(CreateResolvedFromSchema(info, ui));
+                _cachedResolvedColumns.Add(CreateResolvedFromSchema(snapshot, info, ui, culture));
             }
         }
 
@@ -1897,15 +2337,44 @@ public sealed partial class DataGridControl : Visual, IScrollable
         return _cachedResolvedColumns;
     }
 
-    private ResolvedColumn CreateResolvedMissingSchema(DataGridColumn ui)
+    private int ComputeColumnsKey(IDataGridViewSnapshot snapshot)
+    {
+        // Make sure resolved columns react to column property changes even when the list itself doesn't change.
+        // This is intentionally conservative: any column layout-affecting property participates in the cache key.
+        var hc = new HashCode();
+        hc.Add(snapshot.Version);
+        hc.Add(snapshot.ColumnCount);
+
+        var cols = Columns;
+        hc.Add(cols.Count);
+        for (var i = 0; i < cols.Count; i++)
+        {
+            var c = cols[i];
+            hc.Add(c.Visible);
+            hc.Add(c.Key, StringComparer.Ordinal);
+            hc.Add(c.MinWidth);
+            hc.Add(c.MaxWidth);
+            hc.Add(c.Width.Type);
+            hc.Add(c.Width.Value);
+            hc.Add(c.HeaderAlignment);
+            hc.Add(c.CellAlignment);
+            hc.Add(c.ReadOnly);
+            hc.Add(c.Header is null ? 0 : RuntimeHelpers.GetHashCode(c.Header));
+        }
+
+        return hc.ToHashCode();
+    }
+
+    private ResolvedColumn CreateResolvedMissingSchema(IDataGridViewSnapshot snapshot, DataGridColumn ui, CultureInfo culture)
     {
         var header = ui.Header;
         var headerWidth = header is null ? TerminalTextUtility.GetWidth(ui.Key.AsSpan()) : MeasureHeaderVisualWidth(header);
-        var baseWidth = ResolveBaseWidth(ui, headerWidth);
+        var baseWidth = ResolveBaseWidth(snapshot, ui, ui.Accessor, ui.ValueType, headerWidth, culture);
 
         return new ResolvedColumn(
             Key: ui.Key,
             SchemaAccessor: ui.Accessor,
+            SchemaValueType: ui.ValueType,
             SchemaReadOnly: true,
             HeaderText: ui.Key,
             HeaderVisual: header,
@@ -1917,7 +2386,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
             StarWeight: ui.Width.Type == GridUnitType.Star ? ui.Width.Value : 0);
     }
 
-    private ResolvedColumn CreateResolvedFromSchema(DataGridColumnInfo info, DataGridColumn? uiColumn)
+    private ResolvedColumn CreateResolvedFromSchema(IDataGridViewSnapshot snapshot, DataGridColumnInfo info, DataGridColumn? uiColumn, CultureInfo culture)
     {
         var ui = uiColumn;
         var headerVisual = ui?.Header;
@@ -1928,9 +2397,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
         var maxWidth = ui?.MaxWidth ?? int.MaxValue;
         maxWidth = maxWidth <= 0 ? int.MaxValue : maxWidth;
 
-        var baseWidth = ui is null
-            ? Math.Max(1, headerWidth)
-            : ResolveBaseWidth(ui, headerWidth);
+        var baseWidth = ResolveBaseWidth(snapshot, ui, info.Accessor, info.ValueType, headerWidth, culture);
 
         var isStar = ui?.Width.Type == GridUnitType.Star;
         var starWeight = isStar == true ? ui!.Width.Value : 0;
@@ -1938,6 +2405,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
         return new ResolvedColumn(
             Key: ui?.Key ?? info.Key,
             SchemaAccessor: info.Accessor,
+            SchemaValueType: info.ValueType,
             SchemaReadOnly: info.ReadOnly,
             HeaderText: headerText,
             HeaderVisual: headerVisual,
@@ -1949,19 +2417,62 @@ public sealed partial class DataGridControl : Visual, IScrollable
             StarWeight: starWeight);
     }
 
-    private static int ResolveBaseWidth(DataGridColumn ui, int headerWidth)
+    private int ResolveBaseWidth(IDataGridViewSnapshot snapshot, DataGridColumn? ui, BindingAccessor accessor, Type? valueType, int headerWidth, CultureInfo culture)
     {
-        var w = ui.Width;
+        var minWidth = ui?.MinWidth ?? 0;
+        var maxWidth = ui?.MaxWidth ?? int.MaxValue;
+        maxWidth = maxWidth <= 0 ? int.MaxValue : maxWidth;
+
+        var w = ui?.Width ?? GridLength.Auto;
+        var sampleWidth = w.Type is GridUnitType.Auto or GridUnitType.Star
+            ? ComputeSampleContentWidth(snapshot, ui, accessor, valueType, culture)
+            : 0;
+
         var baseWidth = w.Type switch
         {
             GridUnitType.Fixed => (int)Math.Round(w.Value),
-            GridUnitType.Auto => headerWidth,
-            GridUnitType.Star => Math.Max(ui.MinWidth, headerWidth),
-            _ => headerWidth,
+            GridUnitType.Auto => Math.Max(headerWidth, sampleWidth),
+            GridUnitType.Star => Math.Max(Math.Max(minWidth, headerWidth), sampleWidth),
+            _ => Math.Max(headerWidth, sampleWidth),
         };
-        baseWidth = Math.Max(baseWidth, ui.MinWidth);
-        baseWidth = Math.Min(baseWidth, ui.MaxWidth <= 0 ? int.MaxValue : ui.MaxWidth);
+
+        baseWidth = Math.Max(baseWidth, minWidth);
+        baseWidth = Math.Min(baseWidth, maxWidth);
         return Math.Max(1, baseWidth);
+    }
+
+    private int ComputeSampleContentWidth(IDataGridViewSnapshot snapshot, DataGridColumn? column, BindingAccessor accessor, Type? valueType, CultureInfo culture)
+    {
+        _ = valueType;
+
+        var rows = snapshot.RowCount;
+        if (rows <= 0)
+        {
+            return 0;
+        }
+
+        var max = 0;
+        var limit = Math.Min(rows, AutoSizeSampleRowCount);
+        for (var r = 0; r < limit; r++)
+        {
+            var rowModel = snapshot.GetRowModel(r);
+            var text = column is not null
+                ? column.FormatValue(this, rowModel, culture)
+                : ValueStringFormatter.ToString(accessor.GetValue(rowModel), culture);
+            max = Math.Max(max, TerminalTextUtility.GetWidth(text.AsSpan()));
+        }
+
+        var current = CurrentCell;
+        if (current != DataGridCell.None && (uint)current.Row < (uint)rows && current.Row >= limit)
+        {
+            var rowModel = snapshot.GetRowModel(current.Row);
+            var text = column is not null
+                ? column.FormatValue(this, rowModel, culture)
+                : ValueStringFormatter.ToString(accessor.GetValue(rowModel), culture);
+            max = Math.Max(max, TerminalTextUtility.GetWidth(text.AsSpan()));
+        }
+
+        return max;
     }
 
     private int MeasureHeaderVisualWidth(Visual header)
@@ -2010,10 +2521,40 @@ public sealed partial class DataGridControl : Visual, IScrollable
             return;
         }
 
-        var clipped = Clip(text, width);
-        var cells = TerminalTextUtility.GetWidth(clipped);
-        var x = AlignX(rect, alignment, width, cells);
-        buffer.WriteText(x, rect.Y, clipped, style);
+        var textCells = TerminalTextUtility.GetWidth(text);
+        if (textCells <= width)
+        {
+            var x = AlignX(rect, alignment, width, textCells);
+            buffer.WriteText(x, rect.Y, text, style);
+            return;
+        }
+
+        // Truncated: show an ellipsis to make clipping obvious.
+        var ellipsis = new Rune('…');
+        if (TerminalTextUtility.GetRuneWidth(ellipsis) != 1)
+        {
+            ellipsis = new Rune('.');
+        }
+
+        if (width == 1)
+        {
+            buffer.SetCell(rect.X, rect.Y, ellipsis, style);
+            return;
+        }
+
+        var availableTextCells = width - 1;
+        if (alignment == TextAlignment.Right)
+        {
+            var tail = ClipFromEnd(text, availableTextCells);
+            var tailCells = TerminalTextUtility.GetWidth(tail);
+            buffer.SetCell(rect.X, rect.Y, ellipsis, style);
+            buffer.WriteText(rect.X + width - tailCells, rect.Y, tail, style);
+            return;
+        }
+
+        var head = Clip(text, availableTextCells);
+        buffer.WriteText(rect.X, rect.Y, head, style);
+        buffer.SetCell(rect.X + width - 1, rect.Y, ellipsis, style);
     }
 
     private static int AlignX(Rectangle rect, TextAlignment alignment, int availableWidth, int contentWidth)
@@ -2046,9 +2587,199 @@ public sealed partial class DataGridControl : Visual, IScrollable
         return text[..Math.Clamp(endIndex, 0, text.Length)];
     }
 
+    private static ReadOnlySpan<char> ClipFromEnd(ReadOnlySpan<char> text, int maxCells)
+    {
+        if (maxCells <= 0 || text.IsEmpty)
+        {
+            return ReadOnlySpan<char>.Empty;
+        }
+
+        var totalCells = TerminalTextUtility.GetWidth(text);
+        if (totalCells <= maxCells)
+        {
+            return text;
+        }
+
+        var skipCells = totalCells - maxCells;
+        if (!TerminalTextUtility.TryGetIndexAtCell(text, skipCells, out var startIndex))
+        {
+            startIndex = 0;
+        }
+
+        var slice = text[Math.Clamp(startIndex, 0, text.Length)..];
+        if (TerminalTextUtility.GetWidth(slice) > maxCells)
+        {
+            slice = Clip(slice, maxCells);
+        }
+
+        return slice;
+    }
+
+    private bool TryBeginColumnResize(IDataGridViewSnapshot snapshot, PointerEventArgs e, Rectangle rect, int anchorWidth, int headerHeight)
+    {
+        if (headerHeight <= 0 || e.UiY - rect.Y >= headerHeight)
+        {
+            return false;
+        }
+
+        if (e.UiX - rect.X < anchorWidth)
+        {
+            return false;
+        }
+
+        var visibleColumns = GetVisibleColumnCount(snapshot);
+        if (visibleColumns <= 1 || _resolvedColumnStarts.Length < 2)
+        {
+            return false;
+        }
+
+        // Resolve layout coordinates including horizontal scroll.
+        var frozenColumns = Math.Clamp(FrozenColumns, 0, visibleColumns);
+        var relX = e.UiX - rect.X - anchorWidth;
+        var frozenWidth = SumColumnsWidth(0, frozenColumns);
+        var colX = relX;
+        if (relX >= frozenWidth)
+        {
+            colX = frozenWidth + _scroll.OffsetX + (relX - frozenWidth);
+        }
+
+        var cols = EnsureResolvedColumns(snapshot, visibleColumns);
+        for (var c = 0; c + 1 < cols.Count && c + 1 < _resolvedColumnStarts.Length; c++)
+        {
+            var boundary = _resolvedColumnStarts[c] + _resolvedColumnWidths[c];
+            var nextStart = _resolvedColumnStarts[c + 1];
+            var sepWidth = Math.Max(0, nextStart - boundary);
+
+            var hit = sepWidth > 0
+                ? colX >= boundary && colX < nextStart
+                : Math.Abs(colX - boundary) <= 0;
+
+            if (!hit)
+            {
+                continue;
+            }
+
+            if (cols[c].Column is null)
+            {
+                return false;
+            }
+
+            _resizingColumn = true;
+            _resizingColumnIndex = c;
+            _resizeStartUiX = e.UiX;
+            _resizeStartWidth = _resolvedColumnWidths[c];
+            return true;
+        }
+
+        return false;
+    }
+
+    private void SelectEntireTable(IDataGridViewSnapshot snapshot)
+    {
+        if (snapshot.RowCount <= 0 || GetVisibleColumnCount(snapshot) <= 0)
+        {
+            IsTableSelected = false;
+            CurrentCell = DataGridCell.None;
+            SelectedRow = -1;
+            return;
+        }
+
+        IsTableSelected = true;
+        SelectedRow = -1;
+        if (CurrentCell == DataGridCell.None)
+        {
+            CurrentCell = new DataGridCell(0, 0);
+        }
+    }
+
+    private void CopySelectionToClipboard(IDataGridViewSnapshot snapshot)
+    {
+        var cols = EnsureResolvedColumns(snapshot, GetVisibleColumnCount(snapshot));
+        if (cols.Count == 0 || snapshot.RowCount <= 0)
+        {
+            return;
+        }
+
+        var culture = GetCulture();
+        var sb = new StringBuilder();
+
+        if (IsTableSelected)
+        {
+            AppendRow(cols, rowModel: null, culture, sb, isHeader: true);
+            sb.Append('\n');
+
+            for (var r = 0; r < snapshot.RowCount; r++)
+            {
+                var rowModel = snapshot.GetRowModel(r);
+                AppendRow(cols, rowModel, culture, sb, isHeader: false);
+                if (r + 1 < snapshot.RowCount)
+                {
+                    sb.Append('\n');
+                }
+            }
+        }
+        else if (SelectedRow >= 0 || SelectionMode == DataGridSelectionMode.Row)
+        {
+            var rowIndex = SelectedRow >= 0 ? SelectedRow : CurrentCell.Row;
+            if ((uint)rowIndex >= (uint)snapshot.RowCount)
+            {
+                return;
+            }
+
+            var rowModel = snapshot.GetRowModel(rowIndex);
+            AppendRow(cols, rowModel, culture, sb, isHeader: false);
+        }
+        else
+        {
+            var cell = CurrentCell;
+            if (cell == DataGridCell.None || (uint)cell.Row >= (uint)snapshot.RowCount || (uint)cell.Column >= (uint)cols.Count)
+            {
+                return;
+            }
+
+            var rowModel = snapshot.GetRowModel(cell.Row);
+            var c = cols[cell.Column];
+            var text = c.Column is not null
+                ? c.Column.FormatValue(this, rowModel, culture)
+                : ValueStringFormatter.ToString(c.SchemaAccessor.GetValue(rowModel), culture);
+            sb.Append(text);
+        }
+
+        if (sb.Length == 0)
+        {
+            return;
+        }
+
+        App?.Terminal.Clipboard.TrySetText(sb.ToString());
+    }
+
+    private void AppendRow(List<ResolvedColumn> cols, object? rowModel, CultureInfo culture, StringBuilder sb, bool isHeader)
+    {
+        for (var c = 0; c < cols.Count; c++)
+        {
+            if (c != 0)
+            {
+                sb.Append('\t');
+            }
+
+            if (isHeader)
+            {
+                sb.Append(cols[c].HeaderText);
+                continue;
+            }
+
+            var col = cols[c];
+            var text = col.Column is not null
+                ? col.Column.FormatValue(this, rowModel!, culture)
+                : ValueStringFormatter.ToString(col.SchemaAccessor.GetValue(rowModel!), culture);
+            sb.Append(text);
+        }
+    }
+
     private sealed record ResolvedColumn(
         string Key,
         BindingAccessor SchemaAccessor,
+        Type? SchemaValueType,
         bool SchemaReadOnly,
         string HeaderText,
         Visual? HeaderVisual,
