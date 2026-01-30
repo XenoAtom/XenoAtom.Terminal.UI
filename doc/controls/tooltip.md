@@ -33,3 +33,11 @@ new Button("More info")
 
 Tooltips are implemented as a non-interactive overlay in fullscreen apps.
 
+> [!NOTE]
+> Tooltips rely on mouse hover events. In inline/live hosting, hover may not be available depending on the terminal
+> and host configuration.
+
+## Related
+
+- `./popup.md`
+- `../input.md`
