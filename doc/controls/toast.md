@@ -69,3 +69,8 @@ ToastService.Show(() => new Toast
 - `PauseOnHover`: pause timer when the mouse hovers a toast
 
 These can be updated dynamically, and are demonstrated in the Toast demo page of ControlsDemo.
+
+## Related
+
+- `../styling.md`
+- `../input.md`
