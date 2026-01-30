@@ -2,10 +2,6 @@
 
 `Dialog` is a movable window-like overlay used in fullscreen apps.
 
-Screenshot placeholder:
-
-![Dialog](../../img/screenshots/dialog.png)
-
 ## Usage
 
 Dialogs are displayed in fullscreen apps and typically:
@@ -16,5 +12,6 @@ Dialogs are displayed in fullscreen apps and typically:
 
 See also:
 
-- `doc/controls/popup.md`
-
+- `./popup.md`
+- `./backdrop.md`
+- `../input.md`
