@@ -2,10 +2,6 @@
 
 `VStack` stacks children vertically.
 
-Screenshot placeholder:
-
-![VStack](../../img/screenshots/vstack.png)
-
 ## Basic usage
 
 ```csharp
@@ -18,5 +14,5 @@ new VStack(
 
 See also:
 
-- `doc/layout.md`
-
+- `../layout.md`
+- `./hstack.md`
