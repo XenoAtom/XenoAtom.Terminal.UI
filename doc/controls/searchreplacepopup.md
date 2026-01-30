@@ -2,10 +2,6 @@
 
 `SearchReplacePopup` is a reusable Find / Find-and-Replace popup used by controls such as `TextArea` and `LogControl`.
 
-Screenshot placeholder:
-
-![SearchReplacePopup](../../img/screenshots/searchreplacepopup.png)
-
 ## Keyboard
 
 - `Ctrl+F`: open Find (control-specific)
@@ -42,3 +38,10 @@ protected override void ArrangeCore(in Rectangle finalRect)
 ```
 
 The popup UI is rendered using `Popup` in the app window layer, while `SearchReplacePopup` acts as a lightweight anchor visual.
+
+## Related
+
+- `../text-editing.md`
+- `../input.md`
+- `./popup.md`
+- `./textarea.md`
