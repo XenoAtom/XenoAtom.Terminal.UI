@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Text;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Collections;
+using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.DataGrid;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
@@ -105,6 +106,9 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
     private Visual? _activeEditor;
     private DataGridCell _activeEditorCell = DataGridCell.None;
+    private object? _activeEditorRowModel;
+    private BindingAccessor? _activeEditorAccessor;
+    private object? _activeEditorOriginalValue;
     private bool _pendingStartEdit;
 
     private int _lastMatchesKey;
@@ -156,12 +160,55 @@ public sealed partial class DataGridControl : Visual, IScrollable
         _searchPopup = new SearchReplacePopup(_searchTarget);
         AttachChild(_searchPopup);
 
+        AddCommand(new Command
+        {
+            Id = "DataGrid.CommitEdit",
+            LabelMarkup = string.Empty,
+            Gesture = new KeyGesture(TerminalKey.Enter),
+            Presentation = CommandPresentation.None,
+            Execute = static v => ((DataGridControl)v).CommitEdit(),
+            CanExecute = static v => ((DataGridControl)v)._activeEditor is not null,
+        });
+
+        AddCommand(new Command
+        {
+            Id = "DataGrid.CancelEdit",
+            LabelMarkup = string.Empty,
+            Gesture = new KeyGesture(TerminalKey.Escape),
+            Presentation = CommandPresentation.None,
+            Execute = static v => ((DataGridControl)v).CancelEdit(),
+            CanExecute = static v => ((DataGridControl)v)._activeEditor is not null,
+        });
+
+        AddCommand(new Command
+        {
+            Id = "DataGrid.NextCell",
+            LabelMarkup = string.Empty,
+            Gesture = new KeyGesture(TerminalKey.Tab),
+            Presentation = CommandPresentation.None,
+            Execute = static v => ((DataGridControl)v).MoveEditorToAdjacentCell(deltaColumn: 1),
+            CanExecute = static v => ((DataGridControl)v)._activeEditor is not null,
+        });
+
+        AddCommand(new Command
+        {
+            Id = "DataGrid.PreviousCell",
+            LabelMarkup = string.Empty,
+            Gesture = new KeyGesture(TerminalKey.Tab, TerminalModifiers.Shift),
+            Presentation = CommandPresentation.None,
+            Execute = static v => ((DataGridControl)v).MoveEditorToAdjacentCell(deltaColumn: -1),
+            CanExecute = static v => ((DataGridControl)v)._activeEditor is not null,
+        });
+
         this.ShowHeader(true);
+        this.ShowRowAnchor(true);
+        this.RowAnchorWidth(1);
         this.SelectionMode(DataGridSelectionMode.Cell);
         this.EditMode(DataGridEditMode.OnEnter);
         this.FrozenRows(0);
         this.FrozenColumns(0);
         this.CurrentCell(DataGridCell.None);
+        this.SelectedRow(-1);
     }
 
     /// <summary>
@@ -194,6 +241,21 @@ public sealed partial class DataGridControl : Visual, IScrollable
     public partial bool ShowHeader { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether a small row anchor column is shown at the start of each row.
+    /// </summary>
+    /// <remarks>
+    /// The row anchor is a compact affordance used for row selection and for visually tracking the current row.
+    /// </remarks>
+    [Bindable]
+    public partial bool ShowRowAnchor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the width of the row anchor column, in cells.
+    /// </summary>
+    [Bindable]
+    public partial int RowAnchorWidth { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of frozen data rows (in addition to the header).
     /// </summary>
     [Bindable]
@@ -224,6 +286,12 @@ public sealed partial class DataGridControl : Visual, IScrollable
     public partial DataGridCell CurrentCell { get; set; }
 
     /// <summary>
+    /// Gets or sets the row selected via the row anchor, or -1 when no row is selected.
+    /// </summary>
+    [Bindable]
+    public partial int SelectedRow { get; set; }
+
+    /// <summary>
     /// Gets or sets the edit mode.
     /// </summary>
     [Bindable]
@@ -252,6 +320,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
     partial void OnFrozenRowsChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
     partial void OnFrozenColumnsChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
+    partial void OnRowAnchorWidthChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
 
     partial void OnCurrentCellChanging(ref DataGridCell value)
     {
@@ -283,6 +352,24 @@ public sealed partial class DataGridControl : Visual, IScrollable
         {
             _pendingStartEdit = true;
         }
+    }
+
+    partial void OnSelectedRowChanging(ref int value)
+    {
+        if (value < 0)
+        {
+            value = -1;
+            return;
+        }
+
+        var snapshot = GetSnapshot();
+        if (snapshot is null || snapshot.RowCount <= 0)
+        {
+            value = -1;
+            return;
+        }
+
+        value = Math.Clamp(value, 0, snapshot.RowCount - 1);
     }
 
     partial void OnDocumentChanged(IDataGridDocument? value)
@@ -414,20 +501,22 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
         var headerHeight = ShowHeader ? 1 : 0;
         var filterHeight = FilterRowVisible && CanFilter ? 1 : 0;
+        var anchorWidth = GetEffectiveRowAnchorWidth();
 
         var rowCount = snapshot.RowCount;
         var visibleColumns = GetVisibleColumnCount(snapshot);
 
         var columnsWidth = ComputeNaturalColumnsWidth(snapshot, visibleColumns, constraints);
+        var requestedWidth = columnsWidth + anchorWidth;
 
         var height = headerHeight + filterHeight + Math.Max(0, rowCount);
         height = Math.Max(1, height);
 
-        MeasuredContentWidth = Math.Max(0, columnsWidth);
+        MeasuredContentWidth = Math.Max(0, requestedWidth);
 
         var scrollBarThickness = Math.Max(1, GetStyle<ScrollViewerStyle>().ScrollBarThickness);
         var reserveVerticalBar = constraints.IsHeightBounded && height > constraints.MaxHeight;
-        var reservedWidth = columnsWidth + (reserveVerticalBar ? scrollBarThickness : 0);
+        var reservedWidth = requestedWidth + (reserveVerticalBar ? scrollBarThickness : 0);
 
         var min = new Size(4, Math.Max(1, headerHeight + filterHeight + 1));
         var natural = new Size(
@@ -452,6 +541,8 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
         _ = ScrollVersion;
         _ = MeasuredContentWidth;
+        _ = ShowRowAnchor;
+        _ = RowAnchorWidth;
 
         var snapshot = GetSnapshot();
         if (snapshot is null || rect.Width <= 0 || rect.Height <= 0)
@@ -463,15 +554,16 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
         var headerHeight = ShowHeader ? 1 : 0;
         var filterHeight = FilterRowVisible && CanFilter ? 1 : 0;
+        var anchorWidth = GetEffectiveRowAnchorWidth();
 
         var rowCount = snapshot.RowCount;
         var visibleColumns = GetVisibleColumnCount(snapshot);
         var frozenRows = Math.Clamp(FrozenRows, 0, rowCount);
         var frozenColumns = Math.Clamp(FrozenColumns, 0, visibleColumns);
 
-        ResolveColumnLayout(snapshot, visibleColumns, rect.Width);
+        ResolveColumnLayout(snapshot, visibleColumns, Math.Max(0, rect.Width - anchorWidth));
 
-        var frozenWidth = SumColumnsWidth(0, frozenColumns);
+        var frozenWidth = anchorWidth + SumColumnsWidth(0, frozenColumns);
         var scrollViewportWidth = Math.Max(0, rect.Width - frozenWidth);
         var scrollViewportHeight = Math.Max(0, rect.Height - headerHeight - filterHeight - frozenRows);
 
@@ -541,6 +633,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
         var headerHeight = ShowHeader ? 1 : 0;
         var filterHeight = FilterRowVisible && CanFilter ? 1 : 0;
+        var anchorWidth = GetEffectiveRowAnchorWidth();
         var rowCount = snapshot.RowCount;
         var visibleColumns = GetVisibleColumnCount(snapshot);
         var frozenRows = Math.Clamp(FrozenRows, 0, rowCount);
@@ -597,7 +690,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
                 break;
             }
 
-            RenderRow(buffer, snapshot, viewRow, y, rect, visibleColumns, frozenColumns, cellStyle, selectionStyle, matchStyle, hasSearch ? searchText! : null);
+            RenderRow(buffer, snapshot, viewRow, y, rect, visibleColumns, frozenColumns, anchorWidth, cellStyle, selectionStyle, matchStyle, hasSearch ? searchText! : null);
         }
 
         var scrollRowsViewport = Math.Max(0, rect.Height - headerHeight - filterHeight - frozenRows);
@@ -616,7 +709,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
                 break;
             }
 
-            RenderRow(buffer, snapshot, viewRow, y, rect, visibleColumns, frozenColumns, cellStyle, selectionStyle, matchStyle, hasSearch ? searchText! : null);
+            RenderRow(buffer, snapshot, viewRow, y, rect, visibleColumns, frozenColumns, anchorWidth, cellStyle, selectionStyle, matchStyle, hasSearch ? searchText! : null);
         }
     }
 
@@ -670,9 +763,41 @@ public sealed partial class DataGridControl : Visual, IScrollable
             return;
         }
 
+        var rect = Bounds;
+        var anchorWidth = GetEffectiveRowAnchorWidth();
+        if (anchorWidth > 0 && e.UiX - rect.X < anchorWidth)
+        {
+            var headerHeight = ShowHeader ? 1 : 0;
+            var filterHeight = FilterRowVisible && CanFilter ? 1 : 0;
+            var rowY = e.UiY - rect.Y - headerHeight - filterHeight;
+            if (rowY >= 0)
+            {
+                var rowCount = snapshot.RowCount;
+                var frozenRows = Math.Clamp(FrozenRows, 0, rowCount);
+                var viewRow = rowY < frozenRows ? rowY : frozenRows + _scroll.OffsetY + (rowY - frozenRows);
+                if ((uint)viewRow < (uint)rowCount)
+                {
+                    SelectedRow = viewRow;
+                    if (CurrentCell == DataGridCell.None)
+                    {
+                        CurrentCell = new DataGridCell(viewRow, 0);
+                    }
+                    else
+                    {
+                        CurrentCell = new DataGridCell(viewRow, CurrentCell.Column);
+                    }
+
+                    App?.Focus(this);
+                    e.Handled = true;
+                    return;
+                }
+            }
+        }
+
         var hit = TryHitTestCell(snapshot, e.UiX, e.UiY);
         if (hit is { } cell)
         {
+            SelectedRow = -1;
             CurrentCell = cell;
             App?.Focus(this);
             e.Handled = true;
@@ -922,6 +1047,9 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
     private bool CanFilter => View is IFilterableDataGridView;
 
+    private int GetEffectiveRowAnchorWidth()
+        => ShowRowAnchor ? Math.Max(0, RowAnchorWidth) : 0;
+
     private int ComputeNaturalColumnsWidth(IDataGridViewSnapshot snapshot, int visibleColumns, in LayoutConstraints constraints)
     {
         var style = GetStyle<DataGridStyle>();
@@ -1083,14 +1211,16 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
     private int GetColumnX(int visibleColumnIndex, Rectangle rect, int frozenColumns)
     {
+        _ = rect;
+        var anchorWidth = GetEffectiveRowAnchorWidth();
         var start = _resolvedColumnStarts[visibleColumnIndex];
         if (visibleColumnIndex < frozenColumns)
         {
-            return start;
+            return anchorWidth + start;
         }
 
         var frozenWidth = SumColumnsWidth(0, frozenColumns);
-        return frozenWidth + (start - frozenWidth) - _scroll.OffsetX;
+        return anchorWidth + frozenWidth + (start - frozenWidth) - _scroll.OffsetX;
     }
 
     private void EnsureHeaderVisuals()
@@ -1342,6 +1472,10 @@ public sealed partial class DataGridControl : Visual, IScrollable
             return false;
         }
 
+        _activeEditorRowModel = rowModel;
+        _activeEditorAccessor = column.Accessor;
+        _activeEditorOriginalValue = column.Accessor.GetValue(rowModel);
+
         OpenEditor(editor, cell);
         return true;
     }
@@ -1365,7 +1499,50 @@ public sealed partial class DataGridControl : Visual, IScrollable
         DetachChild(_activeEditor);
         _activeEditor = null;
         _activeEditorCell = DataGridCell.None;
+        _activeEditorRowModel = null;
+        _activeEditorAccessor = null;
+        _activeEditorOriginalValue = null;
         App?.Focus(this);
+    }
+
+    private void CommitEdit()
+    {
+        VerifyAccess();
+        if (_activeEditor is null)
+        {
+            return;
+        }
+
+        CloseEditor();
+    }
+
+    private void CancelEdit()
+    {
+        VerifyAccess();
+        if (_activeEditor is null)
+        {
+            return;
+        }
+
+        if (_activeEditorRowModel is not null && _activeEditorAccessor is not null)
+        {
+            _activeEditorAccessor.SetValue(_activeEditorRowModel, _activeEditorOriginalValue);
+        }
+
+        CloseEditor();
+    }
+
+    private void MoveEditorToAdjacentCell(int deltaColumn)
+    {
+        VerifyAccess();
+        if (_activeEditor is null)
+        {
+            return;
+        }
+
+        CloseEditor();
+        MoveCurrentCell(deltaRow: 0, deltaCol: deltaColumn);
+        _pendingStartEdit = true;
     }
 
     private void MoveCurrentCell(int deltaRow, int deltaCol)
@@ -1375,6 +1552,8 @@ public sealed partial class DataGridControl : Visual, IScrollable
         {
             return;
         }
+
+        SelectedRow = -1;
 
         var rows = snapshot.RowCount;
         var cols = Math.Max(0, GetVisibleColumnCount(snapshot));
@@ -1405,6 +1584,17 @@ public sealed partial class DataGridControl : Visual, IScrollable
             DataGridSelectionMode.Column => current.Column == visibleColumnIndex,
             _ => false,
         };
+    }
+
+    private bool IsRowSelected(int row)
+    {
+        if (SelectionMode == DataGridSelectionMode.Row)
+        {
+            var current = CurrentCell;
+            return current != DataGridCell.None && current.Row == row;
+        }
+
+        return SelectedRow >= 0 && SelectedRow == row;
     }
 
     private void EnsureCurrentCellVisible(IDataGridViewSnapshot snapshot, int frozenRows, int frozenColumns)
@@ -1439,6 +1629,12 @@ public sealed partial class DataGridControl : Visual, IScrollable
             return null;
         }
 
+        var anchorWidth = GetEffectiveRowAnchorWidth();
+        if (anchorWidth > 0 && x - rect.X < anchorWidth)
+        {
+            return null;
+        }
+
         var headerHeight = ShowHeader ? 1 : 0;
         var filterHeight = FilterRowVisible && CanFilter ? 1 : 0;
         var rowY = y - rect.Y - headerHeight - filterHeight;
@@ -1458,7 +1654,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
             return null;
         }
 
-        var relX = x - rect.X;
+        var relX = x - rect.X - anchorWidth;
         var frozenWidth = SumColumnsWidth(0, frozenColumns);
         var colX = relX;
         if (relX >= frozenWidth)
@@ -1515,6 +1711,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
         Rectangle rect,
         int visibleColumns,
         int frozenColumns,
+        int rowAnchorWidth,
         Style cellStyle,
         Style selectionStyle,
         Style matchStyle,
@@ -1523,6 +1720,22 @@ public sealed partial class DataGridControl : Visual, IScrollable
         var cols = EnsureResolvedColumns(snapshot, visibleColumns);
         var rowModel = snapshot.GetRowModel(viewRow);
         var culture = GetCulture();
+        var isRowSelected = IsRowSelected(viewRow);
+
+        if (rowAnchorWidth > 0)
+        {
+            var anchorRect = new Rectangle(rect.X, y, Math.Min(rowAnchorWidth, rect.Width), 1);
+            var anchorStyle = isRowSelected ? selectionStyle : cellStyle;
+            FillRect(buffer, anchorRect, anchorStyle);
+
+            if (anchorRect.Width > 0)
+            {
+                var marker = isRowSelected
+                    ? new Rune('■')
+                    : (HasFocusWithin && CurrentCell != DataGridCell.None && CurrentCell.Row == viewRow ? new Rune('>') : new Rune(' '));
+                buffer.SetCell(anchorRect.X + anchorRect.Width - 1, y, marker, anchorStyle);
+            }
+        }
 
         for (var c = 0; c < cols.Count && c < _resolvedColumnWidths.Length; c++)
         {
@@ -1543,7 +1756,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
             var effectiveReadOnly = column is not null && (ReadOnly || column.ReadOnly || schema.SchemaReadOnly);
 
             var isSelected = IsSelectedCell(viewRow, c);
-            var style = isSelected ? selectionStyle : cellStyle;
+            var style = isSelected || isRowSelected ? selectionStyle : cellStyle;
 
             var text = column is not null
                 ? column.FormatValue(this, rowModel, culture)

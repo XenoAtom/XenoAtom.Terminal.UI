@@ -5,7 +5,7 @@ This document specifies a new **high-performance tabular data control** for **Xe
 The existing `Table` control is intentionally simple and geared toward *static display*. A separate control is needed for
 large datasets and advanced interactions (scrolling, frozen rows/columns, selection, sorting, filtering, and bulk edit).
 
-This control is named **`DataGrid`** (and related types) to avoid collision/confusion with `System.Data.DataTable`.
+This control is named **`DataGridControl`** (and related types) to avoid collision/confusion with `System.Data.DataTable`.
 The design is inspired by modern terminal UI patterns and spreadsheet/datagrid ecosystems (e.g. Textual’s DataTable).
 
 ---
@@ -49,11 +49,11 @@ The design is inspired by modern terminal UI patterns and spreadsheet/datagrid e
 
 ## 4. Architecture overview
 
-`DataGrid` is split into three layers:
+`DataGridControl` is split into three layers:
 
 1) **`IDataGridDocument`** — owns data and mutations (similar to `ITextDocument`).
 2) **`IDataGridView`** — provides a sorted/filtered projection over a document (optional but recommended).
-3) **`DataGrid`** — the visual control; handles input, rendering, selection, and editing.
+3) **`DataGridControl`** — the visual control; handles input, rendering, selection, and editing.
 
 The control MUST be able to operate with:
 
@@ -262,7 +262,7 @@ Sorting, filtering, and search API shape (V1):
 
 ---
 
-## 7. `DataGrid` control public API
+## 7. `DataGridControl` control public API
 
 ### 7.1 Control type
 
@@ -271,9 +271,9 @@ using XenoAtom.Terminal.UI.Scrolling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
-public sealed partial class DataGrid : Visual, IScrollable
+public sealed partial class DataGridControl : Visual, IScrollable
 {
-    public DataGrid();
+    public DataGridControl();
 }
 ```
 

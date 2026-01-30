@@ -11,9 +11,9 @@ namespace XenoAtom.Terminal.UI.DataGrid;
 /// This adapter is intended for view-model scenarios where each row model exposes bindable properties and
 /// columns are defined through <see cref="DataGridColumnInfo"/> accessors.
 /// </remarks>
-public sealed class DataGridListDocument : IDataGridDocument
+public sealed class DataGridListDocument<T> : IDataGridDocument where T : class
 {
-    private readonly List<object> _rows;
+    private readonly List<T> _rows;
     private readonly List<DataGridColumnInfo> _columns;
 
     private int _version;
@@ -21,18 +21,18 @@ public sealed class DataGridListDocument : IDataGridDocument
     private DataGridDocumentChangedEventArgs? _pending;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DataGridListDocument"/> class.
+    /// Initializes a new instance of the <see cref="DataGridListDocument{T}"/> class.
     /// </summary>
     public DataGridListDocument()
     {
-        _rows = new List<object>();
+        _rows = new List<T>();
         _columns = new List<DataGridColumnInfo>();
     }
 
     /// <summary>
     /// Gets the row model instances.
     /// </summary>
-    public IReadOnlyList<object> Rows => _rows;
+    public IReadOnlyList<T> Rows => _rows;
 
     /// <summary>
     /// Gets the column schema.
@@ -53,7 +53,22 @@ public sealed class DataGridListDocument : IDataGridDocument
     }
 
     /// <inheritdoc />
-    public void InsertRow(int rowIndex, object rowModel)
+    void IDataGridDocument.InsertRow(int rowIndex, object rowModel)
+    {
+        if (rowModel is not T typedRow)
+        {
+            throw new ArgumentException($"Row model must be of type {typeof(T).FullName}.", nameof(rowModel));
+        }
+
+        InsertRow(rowIndex, typedRow);
+    }
+
+    /// <summary>
+    /// Inserts a row model at the specified index.
+    /// </summary>
+    /// <param name="rowIndex">The index at which to insert the row model.</param>
+    /// <param name="rowModel">The row model to insert.</param>
+    public void InsertRow(int rowIndex, T rowModel)
     {
         ArgumentNullException.ThrowIfNull(rowModel);
         rowIndex = Math.Clamp(rowIndex, 0, _rows.Count);
@@ -62,7 +77,22 @@ public sealed class DataGridListDocument : IDataGridDocument
     }
 
     /// <inheritdoc />
-    public void ReplaceRow(int rowIndex, object rowModel)
+    void IDataGridDocument.ReplaceRow(int rowIndex, object rowModel)
+    {
+        if (rowModel is not T typedRow)
+        {
+            throw new ArgumentException($"Row model must be of type {typeof(T).FullName}.", nameof(rowModel));
+        }
+
+        ReplaceRow(rowIndex, typedRow);
+    }
+
+    /// <summary>
+    /// Replaces a row model at the specified index.
+    /// </summary>
+    /// <param name="rowIndex">The index of the row model to replace.</param>
+    /// <param name="rowModel">The row model to set.</param>
+    public void ReplaceRow(int rowIndex, T rowModel)
     {
         ArgumentNullException.ThrowIfNull(rowModel);
         if ((uint)rowIndex >= (uint)_rows.Count)
@@ -115,7 +145,7 @@ public sealed class DataGridListDocument : IDataGridDocument
     /// Adds a row model to the end of the document.
     /// </summary>
     /// <param name="rowModel">The row model to add.</param>
-    public void AddRow(object rowModel) => InsertRow(_rows.Count, rowModel);
+    public void AddRow(T rowModel) => InsertRow(_rows.Count, rowModel);
 
     /// <inheritdoc />
     public event EventHandler<DataGridDocumentChangedEventArgs>? Changed;
@@ -183,9 +213,9 @@ public sealed class DataGridListDocument : IDataGridDocument
 
     private sealed class UpdateScope : IDisposable
     {
-        private DataGridListDocument? _doc;
+        private DataGridListDocument<T>? _doc;
 
-        public UpdateScope(DataGridListDocument doc) => _doc = doc;
+        public UpdateScope(DataGridListDocument<T> doc) => _doc = doc;
 
         public void Dispose()
         {
@@ -196,10 +226,10 @@ public sealed class DataGridListDocument : IDataGridDocument
 
     private sealed class ListSnapshot : IDataGridSnapshot
     {
-        private readonly DataGridListDocument _doc;
+        private readonly DataGridListDocument<T> _doc;
         private readonly int _version;
 
-        public ListSnapshot(DataGridListDocument doc)
+        public ListSnapshot(DataGridListDocument<T> doc)
         {
             _doc = doc;
             _version = doc._version;

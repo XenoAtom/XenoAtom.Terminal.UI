@@ -17,7 +17,7 @@ public sealed class DataGridRenderingTests
         var laneAccessor = new BindingAccessor<int>("lane", o => ((SwimRow)o).Lane, (o, v) => ((SwimRow)o).Lane = v);
         var swimmerAccessor = new BindingAccessor<string>("swimmer", o => ((SwimRow)o).Swimmer, (o, v) => ((SwimRow)o).Swimmer = v);
 
-        var doc = new DataGridListDocument();
+        var doc = new DataGridListDocument<SwimRow>();
         doc.SetColumns(new[]
         {
             new DataGridColumnInfo("lane", "lane", typeof(int), ReadOnly: false, laneAccessor),
@@ -49,7 +49,7 @@ public sealed class DataGridRenderingTests
     {
         var textAccessor = new BindingAccessor<string>("text", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
 
-        var doc = new DataGridListDocument();
+        var doc = new DataGridListDocument<TextRow>();
         doc.SetColumns(new[]
         {
             new DataGridColumnInfo("text", "text", typeof(string), ReadOnly: false, textAccessor),
@@ -85,7 +85,7 @@ public sealed class DataGridRenderingTests
     {
         var nameAccessor = new BindingAccessor<string>("name", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
 
-        var doc = new DataGridListDocument();
+        var doc = new DataGridListDocument<TextRow>();
         doc.SetColumns(new[]
         {
             new DataGridColumnInfo("name", "name", typeof(string), ReadOnly: false, nameAccessor),
@@ -116,6 +116,49 @@ public sealed class DataGridRenderingTests
         Assert.AreEqual("Hello", row.Text);
     }
 
+    [TestMethod]
+    public void DataGrid_Allows_Tab_To_Move_To_Next_Cell_While_Editing()
+    {
+        var aAccessor = new BindingAccessor<string>("a", o => ((TwoColumnRow)o).A, (o, v) => ((TwoColumnRow)o).A = v);
+        var bAccessor = new BindingAccessor<string>("b", o => ((TwoColumnRow)o).B, (o, v) => ((TwoColumnRow)o).B = v);
+
+        var doc = new DataGridListDocument<TwoColumnRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("a", "a", typeof(string), ReadOnly: false, aAccessor),
+            new DataGridColumnInfo("b", "b", typeof(string), ReadOnly: false, bAccessor),
+        });
+
+        var row = new TwoColumnRow();
+        doc.AddRow(row);
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view };
+        grid.Columns.Add(new DataGridColumn<string> { Key = "a", TypedAccessor = aAccessor, Width = GridLength.Star(1) });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "b", TypedAccessor = bAccessor, Width = GridLength.Star(1) });
+
+        var root = new ScrollViewer(grid) { HorizontalAlignment = Align.Stretch, VerticalAlignment = Align.Stretch };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(20, 6));
+        driver.Tick();
+
+        // Open editor (F2), type in column A, Tab to next cell, type in column B.
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F2 });
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "A1" });
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "B1" });
+        driver.Tick();
+
+        Assert.AreEqual("A1", row.A);
+        Assert.AreEqual("B1", row.B);
+    }
+
     private sealed class SwimRow
     {
         public int Lane { get; set; }
@@ -125,5 +168,11 @@ public sealed class DataGridRenderingTests
     private sealed class TextRow
     {
         public string Text { get; set; } = string.Empty;
+    }
+
+    private sealed class TwoColumnRow
+    {
+        public string A { get; set; } = string.Empty;
+        public string B { get; set; } = string.Empty;
     }
 }

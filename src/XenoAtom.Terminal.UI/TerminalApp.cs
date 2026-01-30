@@ -1817,6 +1817,13 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 popup.Close();
             }
 
+            // Give the focused control (and its command chain) a chance to handle Tab.
+            // This enables cases like DataGrid navigation and editors that want Tab insertion.
+            if (DispatchKeyEvent(keyEvent))
+            {
+                return;
+            }
+
             if ((keyEvent.Modifiers & TerminalModifiers.Shift) != 0)
             {
                 FocusPrevious();

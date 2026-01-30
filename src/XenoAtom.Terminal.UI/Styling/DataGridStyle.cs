@@ -4,6 +4,7 @@
 
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Ansi;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
@@ -75,19 +76,20 @@ public sealed record DataGridStyle : IStyle<DataGridStyle>
     /// <summary>
     /// Resolves the base cell style.
     /// </summary>
-    public Style ResolveCellStyle(Theme theme) => CellStyle ?? theme.ForegroundTextStyle();
+    public Style ResolveCellStyle(Theme theme) => CellStyle ?? theme.SurfaceStyle();
 
     /// <summary>
     /// Resolves the header style.
     /// </summary>
     public Style ResolveHeaderStyle(Theme theme)
     {
-        var style = HeaderStyle ?? (ResolveCellStyle(theme) | TextStyle.Bold);
-        if (theme.Border is { } bg && HeaderStyle is null)
+        if (HeaderStyle is { } header)
         {
-            style = style.WithBackground(bg);
+            return header;
         }
-        return style;
+
+        // Default header: bold text on the control fill background for better contrast.
+        return (theme.ControlFillStyle() | TextStyle.Bold);
     }
 
     /// <summary>
@@ -97,10 +99,21 @@ public sealed record DataGridStyle : IStyle<DataGridStyle>
     {
         if (focused)
         {
-            return SelectedFocused ?? theme.SelectionStyle();
+            if (SelectedFocused is { } focusedStyle)
+            {
+                return focusedStyle;
+            }
+
+            return StrengthenSelection(theme.SelectionStyle(), theme.Selection, minAlpha: 0x70);
         }
 
-        return SelectedUnfocused ?? (Style.None | TextStyle.Bold | theme.BorderStyle(focused: false));
+        if (SelectedUnfocused is { } unfocusedStyle)
+        {
+            return unfocusedStyle;
+        }
+
+        // Keep the selection visible even when focus moves away.
+        return StrengthenSelection(theme.SelectionStyle() | TextStyle.Dim, theme.Selection, minAlpha: 0x40);
     }
 
     /// <summary>
@@ -113,13 +126,24 @@ public sealed record DataGridStyle : IStyle<DataGridStyle>
             return s;
         }
 
-        // Default: use Accent as background when available.
+        // Default: use Accent as a subtle background highlight.
         var style = Style.None;
         if (theme.Accent is { } c)
         {
-            style = style.WithBackground(c);
+            style = style.WithBackground(c.WithAlpha(0x30));
         }
         return style;
     }
-}
 
+    private static Style StrengthenSelection(Style style, Color? color, byte minAlpha)
+    {
+        if (color is not { } c)
+        {
+            return style;
+        }
+
+        // For RGB(A) themes, bump alpha so the selection is clearly visible.
+        // For non-RGB terminals this is typically a no-op.
+        return style.WithBackground(c.WithAlpha(minAlpha));
+    }
+}

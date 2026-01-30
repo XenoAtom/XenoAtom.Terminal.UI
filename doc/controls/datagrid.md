@@ -1,6 +1,6 @@
-# DataGrid
+# DataGridControl
 
-`DataGrid` is an interactive, virtualized, data-bound table control intended for large datasets and rich interaction
+`DataGridControl` is an interactive, virtualized, data-bound table control intended for large datasets and rich interaction
 (scrolling, selection, filtering/search, and inline editing).
 
 The lower-level contracts live in `doc/specs/datagrid_specs.md`.
@@ -9,9 +9,9 @@ The lower-level contracts live in `doc/specs/datagrid_specs.md`.
 
 Typical usage is:
 
-- create an `IDataGridDocument` (e.g. `DataGridListDocument` or `DataGridDataTableDocument`),
+- create an `IDataGridDocument` (e.g. `DataGridListDocument<T>` or `DataGridDataTableDocument`),
 - wrap it in a view (`DataGridDocumentView`) when you want sorting/filtering/search,
-- bind it to `DataGrid.View`,
+- bind it to `DataGridControl.View`,
 - wrap the grid in a `ScrollViewer` to show scrollbars.
 
 ## Example
@@ -19,9 +19,8 @@ Typical usage is:
 ```csharp
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.DataGrid;
-using DataGridControl = XenoAtom.Terminal.UI.Controls.DataGrid;
 
-var doc = new DataGridListDocument();
+var doc = new DataGridListDocument<MyRow>();
 // doc.SetColumns(...) and doc.AddRow(...) omitted for brevity.
 
 using var view = new DataGridDocumentView(doc);
@@ -44,5 +43,5 @@ var root = new ScrollViewer(grid);
 
 ## Notes
 
-- `DataGrid` exposes a `ScrollModel` (via `IScrollable`) so `ScrollViewer` can render scrollbars and synchronize offsets.
+- `DataGridControl` exposes a `ScrollModel` (via `IScrollable`) so `ScrollViewer` can render scrollbars and synchronize offsets.
 - For schema-driven sources, `DataGridColumn.Key` should match `DataGridColumnInfo.Key` from the snapshot.
