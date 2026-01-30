@@ -624,7 +624,7 @@ Recommended representation:
 Suggested built-in commands:
 
 - `DataGrid.Find` (`Ctrl+F`)
-- `DataGrid.ToggleFilterRow` (`Ctrl+Shift+F`)
+- `DataGrid.ToggleFilterRow` (`F4`)
 - `DataGrid.NextMatch` (`F3`) / `DataGrid.PreviousMatch` (`Shift+F3`)
 - `DataGrid.SelectAll` (`Ctrl+A`)
 - `DataGrid.Copy` (`Ctrl+C`)
@@ -702,7 +702,7 @@ Filtering is similarly delegated to the view layer.
 
 Suggested UX (V1):
 
-- `Ctrl+Shift+F`: toggle filter row (one `TextBox` per visible column)
+- `F4`: toggle filter row (one `TextBox` per visible column)
 - typing in a filter box updates filters immediately (no explicit Apply button)
 - `Escape`: clears the current filter box (or closes the filter row if empty)
 

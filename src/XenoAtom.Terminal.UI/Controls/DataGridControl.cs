@@ -92,6 +92,13 @@ public sealed partial class DataGridControl : Visual, IScrollable
     private readonly List<TextBox> _filterBoxes;
 
     private readonly SearchReplacePopup _searchPopup;
+
+    private sealed class FilterTextBox : TextBox
+    {
+        // Filter boxes should keep showing the placeholder when focused, otherwise the filter row can look "blank"
+        // (the caret is rendered via the terminal cursor and may not be visible in screenshots).
+        protected override bool ShowPlaceholderWhenUnfocusedOnly => false;
+    }
     private readonly DataGridSearchTarget _searchTarget;
 
     private IDataGridDocument? _appliedDocument;
@@ -233,7 +240,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
             Id = "DataGrid.ToggleFilterRow",
             LabelMarkup = "Filter row",
             DescriptionMarkup = "Show or hide the filter row.",
-            Gesture = new KeyGesture(TerminalChar.CtrlF, TerminalModifiers.Ctrl | TerminalModifiers.Shift),
+            Gesture = new KeyGesture(TerminalKey.F4),
             Importance = CommandImportance.Secondary,
             Presentation = CommandPresentation.CommandBar,
             Execute = static v => ((DataGridControl)v).ToggleFilterRow(),
@@ -786,7 +793,8 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
         if (filterHeight > 0)
         {
-            FillRect(buffer, new Rectangle(rect.X, rect.Y + headerHeight, rect.Width, 1), headerStyle);
+            // Filter row should look like inputs, not like the header strip.
+            FillRect(buffer, new Rectangle(rect.X, rect.Y + headerHeight, rect.Width, 1), cellStyle);
         }
 
         if (headerHeight > 0)
@@ -1128,9 +1136,9 @@ public sealed partial class DataGridControl : Visual, IScrollable
             return;
         }
 
-        // Ctrl+Shift+F: toggle filter row.
-        if ((e.Modifiers & (TerminalModifiers.Ctrl | TerminalModifiers.Shift)) == (TerminalModifiers.Ctrl | TerminalModifiers.Shift)
-            && e.Char is TerminalChar.CtrlF)
+        // F4: toggle filter row.
+        // Note: Some terminals do not encode Ctrl+Shift+<key> reliably, so we avoid such shortcuts.
+        if (e.Key == TerminalKey.F4 && _activeEditor is null && CanFilter)
         {
             ToggleFilterRow();
             e.Handled = true;
@@ -1596,6 +1604,8 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
                 var x = rect.X + GetColumnX(visibleColumnIndex, rect, frozenColumns);
                 var w = _resolvedColumnWidths[visibleColumnIndex];
+                // DataGridControl does not measure children in MeasureCore; ensure visuals have a non-zero desired height.
+                _headerVisuals[i].Measure(new LayoutConstraints(0, w, 0, 1));
                 _headerVisuals[i].Arrange(new Rectangle(x, yHeader, w, 1));
             }
         }
@@ -1606,6 +1616,8 @@ public sealed partial class DataGridControl : Visual, IScrollable
             {
                 var x = rect.X + GetColumnX(i, rect, frozenColumns);
                 var w = _resolvedColumnWidths[i];
+                // DataGridControl does not measure children in MeasureCore; ensure visuals have a non-zero desired height.
+                _filterVisuals[i].Measure(new LayoutConstraints(0, w, 0, 1));
                 _filterVisuals[i].Arrange(new Rectangle(x, yFilter, w, 1));
             }
         }
@@ -1690,7 +1702,10 @@ public sealed partial class DataGridControl : Visual, IScrollable
         {
             for (var i = 0; i < columns.Count; i++)
             {
-                var box = new TextBox().TextAlignment(TextAlignment.Left);
+                var box = new FilterTextBox()
+                    .TextAlignment(TextAlignment.Left)
+                    .Placeholder("Filter…")
+                    .Style(TextBoxStyle.Default with { Padding = new Thickness(0) });
                 _filterBoxes.Add(box);
                 _filterVisuals.Add(box);
             }

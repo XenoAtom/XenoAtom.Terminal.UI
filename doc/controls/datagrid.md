@@ -46,7 +46,7 @@ var root = new ScrollViewer(grid);
 
 - `Ctrl+F`: open find UI (uses `SearchReplacePopup` in find mode)
 - `F3` / `Shift+F3`: next / previous match
-- `Ctrl+Shift+F`: toggle filter row (when `View` is filterable)
+- `F4`: toggle filter row (when `View` is filterable)
 - Arrow keys / PageUp / PageDown: navigate the current cell
 - `F2` or `Enter`: edit current cell (when editable)
 

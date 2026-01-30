@@ -702,9 +702,36 @@ public sealed class DataGridRenderingTests
         driver.App.Focus(grid);
         driver.Tick();
 
-        // Ctrl+Shift+F toggles the filter row.
-        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlF, Modifiers = TerminalModifiers.Ctrl | TerminalModifiers.Shift });
+        // F4 toggles the filter row.
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F4 });
         driver.Tick();
+    }
+
+    [TestMethod]
+    public void DataGrid_Filter_Row_Renders_Placeholders()
+    {
+        var textAccessor = new BindingAccessor<string>("text", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
+
+        var doc = new DataGridListDocument<TextRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("text", "Text", typeof(string), ReadOnly: false, textAccessor),
+        });
+        doc.AddRow(new TextRow { Text = "Row 0" });
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = true, FilterRowVisible = true };
+        grid.Columns.Add(new DataGridColumn<string> { Key = "text", TypedValueAccessor = textAccessor, Width = GridLength.Star(1) });
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(30, 6));
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(30, 6);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText();
+
+        StringAssert.Contains(rendered, "Filter", "Expected the filter row to render visible placeholder text.");
     }
 
     [TestMethod]
@@ -725,7 +752,7 @@ public sealed class DataGridRenderingTests
 
         var toggleFilter = Find(grid, "DataGrid.ToggleFilterRow");
         Assert.AreEqual(CommandPresentation.CommandBar, toggleFilter.Presentation);
-        Assert.AreEqual(new KeyGesture(TerminalChar.CtrlF, TerminalModifiers.Ctrl | TerminalModifiers.Shift), toggleFilter.Gesture);
+        Assert.AreEqual(new KeyGesture(TerminalKey.F4), toggleFilter.Gesture);
 
         var selectAll = Find(grid, "DataGrid.SelectAll");
         Assert.AreEqual(CommandPresentation.CommandBar, selectAll.Presentation);
