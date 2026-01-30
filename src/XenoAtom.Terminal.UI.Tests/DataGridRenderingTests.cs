@@ -369,7 +369,7 @@ public sealed class DataGridRenderingTests
         screen.Apply(driver.Backend.GetOutText());
         var rendered = screen.GetText();
 
-        StringAssert.Contains(rendered, "abcd…");
+        StringAssert.Contains(rendered, "abc…");
     }
 
     [TestMethod]
@@ -391,7 +391,7 @@ public sealed class DataGridRenderingTests
         grid.Columns.Add(new DataGridColumn<string> { Key = "text", TypedValueAccessor = textAccessor, Width = GridLength.Auto });
 
         grid.Measure(LayoutConstraints.Unbounded);
-        Assert.IsGreaterThanOrEqualTo(grid.DesiredSize.Width, "VeryLongValue".Length, $"Expected autosizing to consider cell content. width={grid.DesiredSize.Width}");
+        Assert.IsGreaterThanOrEqualTo(grid.DesiredSize.Width, TerminalTextUtility.GetWidth("VeryLongValue".AsSpan()) + 1, $"Expected autosizing to consider cell content plus a trailing resize-handle gap. width={grid.DesiredSize.Width}");
     }
 
     [TestMethod]
@@ -732,6 +732,34 @@ public sealed class DataGridRenderingTests
         var rendered = screen.GetText();
 
         StringAssert.Contains(rendered, "Filter", "Expected the filter row to render visible placeholder text.");
+    }
+
+    [TestMethod]
+    public void DataGrid_Reserves_Trailing_Resize_Handle_Gap()
+    {
+        var textAccessor = new BindingAccessor<string>("text", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
+
+        var doc = new DataGridListDocument<TextRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("text", "Text", typeof(string), ReadOnly: false, textAccessor),
+        });
+        doc.AddRow(new TextRow { Text = "ABCDEFGHIJKL" }); // 12 chars
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false };
+        grid.Columns.Add(new DataGridColumn<string> { Key = "text", TypedValueAccessor = textAccessor, Width = GridLength.Star(1) });
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(12, 3));
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(12, 3);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText().Split('\n')[0].TrimEnd('\r');
+
+        Assert.AreEqual(' ', rendered[^1], "Expected the last cell to be reserved as a resize handle gap.");
+        StringAssert.Contains(rendered, "…", "Expected long text to be truncated because of the reserved trailing gap.");
     }
 
     [TestMethod]

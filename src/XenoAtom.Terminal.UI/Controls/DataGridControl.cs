@@ -1478,6 +1478,12 @@ public sealed partial class DataGridControl : Visual, IScrollable
             }
         }
 
+        // Reserve a trailing gap for the last-column resize handle.
+        if (cols.Count > 0)
+        {
+            width += Math.Max(1, showVerticalLines ? 1 : spacing);
+        }
+
         width = Math.Max(1, width);
 
         if (constraints.IsWidthBounded)
@@ -1526,7 +1532,11 @@ public sealed partial class DataGridControl : Visual, IScrollable
             ? 0
             : (columns.Count - 1) * (showVerticalLines ? 1 : spacing);
 
-        var availableForCells = Math.Max(0, availableWidth - separators);
+        // Reserve a trailing gap for the last-column resize handle so it does not overlap the last column content.
+        var trailingGap = columns.Count == 0 ? 0 : Math.Max(1, showVerticalLines ? 1 : spacing);
+        trailingGap = Math.Clamp(trailingGap, 0, Math.Max(0, availableWidth - separators));
+
+        var availableForCells = Math.Max(0, availableWidth - separators - trailingGap);
         var currentTotal = totalFixed;
         for (var i = 0; i < columns.Count; i++)
         {
@@ -1548,6 +1558,29 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
                 var share = (int)Math.Floor(extra * (starWeights[i] / totalStarWeight));
                 _resolvedColumnWidths[i] = Math.Clamp(_resolvedColumnWidths[i] + share, columns[i].MinWidth, columns[i].MaxWidth);
+            }
+        }
+
+        // If fixed widths + min widths overflow, shrink the last column (if possible) to preserve the trailing gap.
+        if (columns.Count > 0 && trailingGap > 0)
+        {
+            var used = separators;
+            for (var i = 0; i < columns.Count; i++)
+            {
+                used += _resolvedColumnWidths[i];
+            }
+
+            var targetUsed = Math.Max(0, availableWidth - trailingGap);
+            var overflow = used - targetUsed;
+            if (overflow > 0)
+            {
+                var last = columns.Count - 1;
+                var shrinkable = Math.Max(0, _resolvedColumnWidths[last] - columns[last].MinWidth);
+                var shrink = Math.Min(overflow, shrinkable);
+                if (shrink > 0)
+                {
+                    _resolvedColumnWidths[last] -= shrink;
+                }
             }
         }
 
