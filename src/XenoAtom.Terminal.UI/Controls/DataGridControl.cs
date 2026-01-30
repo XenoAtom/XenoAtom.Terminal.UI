@@ -82,6 +82,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
     private readonly ScrollModel _scroll;
     private readonly BindableList<DataGridColumn> _columns;
+    private readonly Dictionary<string, int> _columnWidthOverrides = new(StringComparer.Ordinal);
 
     private readonly VisualList<Visual> _headerVisuals;
     private readonly List<int> _headerVisualColumns;
@@ -128,6 +129,8 @@ public sealed partial class DataGridControl : Visual, IScrollable
     private int _resizingColumnIndex;
     private int _resizeStartUiX;
     private int _resizeStartWidth;
+
+    private int _columnWidthVersionCounter;
 
     [Bindable]
     private partial int HoveredResizeColumnIndex { get; set; }
@@ -457,6 +460,9 @@ public sealed partial class DataGridControl : Visual, IScrollable
     [Bindable]
     private partial int ActiveMatchVersion { get; set; }
 
+    [Bindable]
+    private partial int ColumnWidthVersion { get; set; }
+
     partial void OnFrozenRowsChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
     partial void OnFrozenColumnsChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
     partial void OnRowAnchorWidthChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
@@ -637,6 +643,8 @@ public sealed partial class DataGridControl : Visual, IScrollable
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        _ = ColumnWidthVersion;
+
         var snapshot = GetSnapshot();
         if (snapshot is null)
         {
@@ -686,6 +694,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
         _ = ScrollVersion;
         _ = ActiveEditorScrollVersion;
         _ = MeasuredContentWidth;
+        _ = ColumnWidthVersion;
         _ = ShowRowAnchor;
         _ = RowAnchorWidth;
         _ = CurrentCell;
@@ -1035,22 +1044,32 @@ public sealed partial class DataGridControl : Visual, IScrollable
                 return;
             }
 
-            var uiColumn = columns[_resizingColumnIndex].Column;
-            if (uiColumn is null)
-            {
-                _resizingColumn = false;
-                return;
-            }
+            var resolvedColumn = columns[_resizingColumnIndex];
+            var uiColumn = resolvedColumn.Column;
 
             var delta = e.UiX - _resizeStartUiX;
             var nextWidth = Math.Max(1, _resizeStartWidth + delta);
-            nextWidth = Math.Max(nextWidth, uiColumn.MinWidth);
-            if (uiColumn.MaxWidth > 0)
+
+            var minWidth = uiColumn is not null ? uiColumn.MinWidth : resolvedColumn.MinWidth;
+            var maxWidth = uiColumn is not null
+                ? (uiColumn.MaxWidth > 0 ? uiColumn.MaxWidth : int.MaxValue)
+                : resolvedColumn.MaxWidth;
+
+            nextWidth = Math.Max(nextWidth, Math.Max(1, minWidth));
+            if (maxWidth > 0)
             {
-                nextWidth = Math.Min(nextWidth, uiColumn.MaxWidth);
+                nextWidth = Math.Min(nextWidth, maxWidth);
             }
 
-            uiColumn.Width = GridLength.Fixed(nextWidth);
+            if (uiColumn is not null)
+            {
+                uiColumn.Width = GridLength.Fixed(nextWidth);
+            }
+            else
+            {
+                SetColumnWidthOverride(resolvedColumn.Key, nextWidth);
+            }
+
             e.Handled = true;
             return;
         }
@@ -1477,7 +1496,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
         for (var i = 0; i < cols.Count; i++)
         {
-            width += cols[i].BaseWidth;
+            width += ResolveEffectiveColumnWidth(cols[i]);
             if (i + 1 < cols.Count)
             {
                 width += showVerticalLines ? 1 : spacing;
@@ -1498,6 +1517,33 @@ public sealed partial class DataGridControl : Visual, IScrollable
         }
 
         return width;
+    }
+
+    private int ResolveEffectiveColumnWidth(in ResolvedColumn column)
+    {
+        if (column.Column is null && _columnWidthOverrides.TryGetValue(column.Key, out var overrideWidth))
+        {
+            return Math.Clamp(overrideWidth, column.MinWidth, column.MaxWidth);
+        }
+
+        return column.BaseWidth;
+    }
+
+    private void SetColumnWidthOverride(string key, int width)
+    {
+        if (string.IsNullOrEmpty(key))
+        {
+            return;
+        }
+
+        if (_columnWidthOverrides.TryGetValue(key, out var current) && current == width)
+        {
+            return;
+        }
+
+        _columnWidthOverrides[key] = width;
+        _columnWidthVersionCounter++;
+        ColumnWidthVersion = _columnWidthVersionCounter;
     }
 
     private void ResolveColumnLayout(IDataGridViewSnapshot snapshot, int visibleColumns, int availableWidth)
@@ -1521,7 +1567,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
         for (var i = 0; i < columns.Count; i++)
         {
             var c = columns[i];
-            _resolvedColumnWidths[i] = Math.Clamp(Math.Max(0, c.BaseWidth), c.MinWidth, c.MaxWidth);
+            _resolvedColumnWidths[i] = Math.Clamp(Math.Max(0, ResolveEffectiveColumnWidth(c)), c.MinWidth, c.MaxWidth);
             if (c.IsStar)
             {
                 var weight = c.StarWeight <= 0 ? 1 : c.StarWeight;
@@ -2899,11 +2945,6 @@ public sealed partial class DataGridControl : Visual, IScrollable
             return false;
         }
 
-        if (cols[columnIndex].Column is null)
-        {
-            return false;
-        }
-
         _resizingColumn = true;
         _resizingColumnIndex = columnIndex;
         _resizeStartUiX = e.UiX;
@@ -2938,11 +2979,6 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
         for (var c = 0; c < cols.Count && c < _resolvedColumnWidths.Length; c++)
         {
-            if (cols[c].Column is null)
-            {
-                continue;
-            }
-
             if (!TryGetColumnResizeHandleRect(snapshot, rect, visibleColumns, frozenColumns, c, out var handleRect))
             {
                 continue;
