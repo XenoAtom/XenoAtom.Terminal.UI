@@ -20,13 +20,13 @@ NumberBox supports undo/redo:
 - `Ctrl+Z`: undo
 - `Ctrl+R`: redo
 
-See `doc/undo-redo.md`.
+See `../undo-redo.md`.
 
 ## Validation
 
 Validation runs on each text change:
 
-- If the text parses successfully (as `T`) and `ValidateValue` returns `null`, the `Value` is updated.
+- If the text parses successfully (as `T`) and `ValueValidator` returns `null`, the `Value` is updated.
 - Otherwise `Value` is not updated and a validation message is shown below the editor.
 
 ```csharp
@@ -62,3 +62,8 @@ var ui = new NumberBox<int>()
         ValidationPrefix = "Error: ",
     });
 ```
+
+## Related
+
+- `../text-editing.md`
+- `../binding.md`
