@@ -2,85 +2,83 @@
 
 This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 
-> Screenshot links are placeholders and will be added later.
-
 ## Text input
 
-- `doc/controls/textbox.md`
-- `doc/controls/textarea.md`
-- `doc/controls/searchreplacepopup.md`
-- `doc/controls/maskedinput.md`
-- `doc/controls/numberbox.md`
-- `doc/controls/colorpicker.md`
-- `doc/controls/validation.md`
+- [TextBox](./textbox.md)
+- [TextArea](./textarea.md)
+- [SearchReplacePopup](./searchreplacepopup.md)
+- [MaskedInput](./maskedinput.md)
+- [NumberBox](./numberbox.md)
+- [ColorPicker](./colorpicker.md)
+- [Validation](./validation.md)
 
 ## Buttons & toggles
 
-- `doc/controls/button.md`
-- `doc/controls/checkbox.md`
-- `doc/controls/radiobutton.md`
-- `doc/controls/switch.md`
+- [Button](./button.md)
+- [CheckBox](./checkbox.md)
+- [RadioButton](./radiobutton.md)
+- [Switch](./switch.md)
 
 ## Lists & selection
 
-- `doc/controls/listbox.md`
-- `doc/controls/selectionlist.md`
-- `doc/controls/optionlist.md`
-- `doc/controls/select.md`
-- `doc/controls/treeview.md`
+- [ListBox](./listbox.md)
+- [SelectionList](./selectionlist.md)
+- [OptionList](./optionlist.md)
+- [Select](./select.md)
+- [TreeView](./treeview.md)
 
 ## Layout & containers
 
-- `doc/controls/vstack.md`
-- `doc/controls/hstack.md`
-- `doc/controls/wrapstack.md`
-- `doc/controls/grid.md`
-- `doc/controls/docklayout.md`
-- `doc/controls/center.md`
-- `doc/controls/padder.md`
-- `doc/controls/border.md`
-- `doc/controls/group.md`
-- `doc/controls/splitter.md`
+- [VStack](./vstack.md)
+- [HStack](./hstack.md)
+- [WrapStack](./wrapstack.md)
+- [Grid](./grid.md)
+- [DockLayout](./docklayout.md)
+- [Center](./center.md)
+- [Padder](./padder.md)
+- [Border](./border.md)
+- [Group](./group.md)
+- [Splitter](./splitter.md)
 
 ## Scrolling
 
-- `doc/controls/scrollviewer.md`
-- `doc/controls/scrollbar.md`
+- [ScrollViewer](./scrollviewer.md)
+- [ScrollBar](./scrollbar.md)
 
 ## Navigation & chrome
 
-- `doc/controls/tabcontrol.md`
-- `doc/controls/menubar.md`
-- `doc/controls/header.md`
-- `doc/controls/footer.md`
-- `doc/controls/statusbar.md`
-- `doc/controls/commandbar.md`
-- `doc/controls/commandpalette.md`
+- [TabControl](./tabcontrol.md)
+- [MenuBar](./menubar.md)
+- [Header](./header.md)
+- [Footer](./footer.md)
+- [StatusBar](./statusbar.md)
+- [CommandBar](./commandbar.md)
+- [CommandPalette](./commandpalette.md)
 
 ## Data display
 
-- `doc/controls/table.md`
-- `doc/controls/datagrid.md`
-- `doc/controls/textblock.md`
-- `doc/controls/markup.md`
-- `doc/controls/rule.md`
-- `doc/controls/link.md`
-- `doc/controls/logcontrol.md`
-- `doc/controls/progressbar.md`
-- `doc/controls/progresstaskgroup.md`
-- `doc/controls/spinner.md`
-- `doc/controls/breakdownchart.md`
-- `doc/controls/barchart.md`
-- `doc/controls/linechart.md`
-- `doc/controls/sparkline.md`
-- `doc/controls/canvas.md`
-- `doc/controls/textfiglet.md`
+- [Table](./table.md)
+- [DataGridControl](./datagrid.md)
+- [TextBlock](./textblock.md)
+- [Markup](./markup.md)
+- [Rule](./rule.md)
+- [Link](./link.md)
+- [LogControl](./logcontrol.md)
+- [ProgressBar](./progressbar.md)
+- [ProgressTaskGroup](./progresstaskgroup.md)
+- [Spinner](./spinner.md)
+- [BreakdownChart](./breakdownchart.md)
+- [BarChart](./barchart.md)
+- [LineChart](./linechart.md)
+- [Sparkline](./sparkline.md)
+- [Canvas](./canvas.md)
+- [TextFiglet](./textfiglet.md)
 
 ## Overlays
 
-- `doc/controls/popup.md`
-- `doc/controls/contextmenu.md`
-- `doc/controls/dialog.md`
-- `doc/controls/tooltip.md`
-- `doc/controls/backdrop.md`
-- `doc/controls/toast.md`
+- [Popup](./popup.md)
+- [ContextMenu](./contextmenu.md)
+- [Dialog](./dialog.md)
+- [Tooltip](./tooltip.md)
+- [Backdrop](./backdrop.md)
+- [Toast](./toast.md)
