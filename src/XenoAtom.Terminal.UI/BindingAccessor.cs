@@ -24,18 +24,23 @@ public abstract class BindingAccessor
     public string Name { get; }
 
     /// <summary>
+    /// Gets a value indicating whether the collection is read-only.
+    /// </summary>
+    public abstract bool IsReadOnly { get; }
+
+    /// <summary>
     /// Gets the property value from the specified instance.
     /// </summary>
     /// <param name="instance">The property owner.</param>
     /// <returns>The current value.</returns>
-    public abstract object? GetValue(object instance);
+    public abstract object? GetValueAsObject(object instance);
 
     /// <summary>
     /// Sets the property value on the specified instance.
     /// </summary>
     /// <param name="instance">The property owner.</param>
     /// <param name="value">The value to set.</param>
-    public abstract void SetValue(object instance, object? value);
+    public abstract void SetValueAsObject(object instance, object? value);
 }
 
 /// <summary>
@@ -50,7 +55,7 @@ public class BindingAccessor<T> : BindingAccessor
     /// <param name="name">The bindable property name.</param>
     /// <param name="getter">A delegate that reads the value from an instance.</param>
     /// <param name="setter">A delegate that writes the value to an instance.</param>
-    public BindingAccessor(string name, Func<object, T> getter, Action<object, T> setter) : base(name)
+    public BindingAccessor(string name, Func<object, T> getter, Action<object, T>? setter) : base(name)
     {
         Getter = getter ?? throw new ArgumentNullException(nameof(getter));
         Setter = setter ?? throw new ArgumentNullException(nameof(setter));
@@ -64,11 +69,37 @@ public class BindingAccessor<T> : BindingAccessor
     /// <summary>
     /// Gets the delegate used to write the value.
     /// </summary>
-    public Action<object, T> Setter { get; }
+    public Action<object, T>? Setter { get; }
+    
+    /// <inheritdoc />
+    public override bool IsReadOnly => Setter is null;
+
+    /// <summary>
+    /// Gets the value of the property or field from the specified object instance.
+    /// </summary>
+    /// <param name="instance">The object instance from which to retrieve the value. Must not be null.</param>
+    /// <returns>The value of type T obtained from the specified instance.</returns>
+    public T GetValue(object instance) => Getter(instance);
+
+    /// <summary>
+    /// Sets the value of the property on the specified object instance.
+    /// </summary>
+    /// <param name="instance">The object instance whose property value is to be set.</param>
+    /// <param name="value">The value to assign to the property.</param>
+    /// <exception cref="InvalidOperationException">Thrown if the property is read-only.</exception>
+    public void SetValue(object instance, T value)
+    {
+        if (Setter is null) throw new InvalidOperationException($"The property '{Name}' is read-only.");
+        Setter(instance, (T)value!);
+    }
+    
+    /// <inheritdoc />
+    public override object? GetValueAsObject(object instance) => Getter(instance);
 
     /// <inheritdoc />
-    public override object? GetValue(object instance) => Getter(instance);
-
-    /// <inheritdoc />
-    public override void SetValue(object instance, object? value) => Setter(instance, (T)value!);
+    public override void SetValueAsObject(object instance, object? value)
+    {
+        if (Setter is null) throw new InvalidOperationException($"The property '{Name}' is read-only.");
+        Setter(instance, (T)value!);
+    }
 }

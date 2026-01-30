@@ -159,8 +159,8 @@ public sealed class DataGridDocumentView : ISortableDataGridView, IFilterableDat
             var rowA = snapshot.GetRowModel(docRowA);
             var rowB = snapshot.GetRowModel(docRowB);
 
-            var a = column.Accessor.GetValue(rowA);
-            var b = column.Accessor.GetValue(rowB);
+            var a = column.Accessor.GetValueAsObject(rowA);
+            var b = column.Accessor.GetValueAsObject(rowB);
 
             var cmp = CompareValues(a, b);
             if (cmp == 0)
@@ -201,7 +201,7 @@ public sealed class DataGridDocumentView : ISortableDataGridView, IFilterableDat
             }
 
             var column = _columns[colIndex];
-            var value = column.Accessor.GetValue(rowModel);
+            var value = column.Accessor.GetValueAsObject(rowModel);
             var text = ValueStringFormatter.ToString(value, _culture);
             if (text.IndexOf(f.Text!, StringComparison.OrdinalIgnoreCase) < 0)
             {

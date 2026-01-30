@@ -13,6 +13,11 @@ public readonly record struct Binding(object Owner, BindingAccessor Accessor)
     /// Gets a value indicating whether this binding is empty.
     /// </summary>
     public bool IsEmpty => Owner == null || Accessor == null;
+
+    /// <summary>
+    /// Gets a value indicating whether the collection is read-only.
+    /// </summary>
+    public bool IsReadOnly => Accessor.IsReadOnly;
 }
 
 /// <summary>
@@ -27,10 +32,19 @@ public readonly record struct Binding<T>(object Owner, BindingAccessor<T> Access
     public bool IsEmpty => Owner == null || Accessor == null;
 
     /// <summary>
+    /// Gets a value indicating whether the collection is read-only.
+    /// </summary>
+    public bool IsReadOnly => Accessor.IsReadOnly;
+
+    /// <summary>
     /// Sets the bound property value on the binding owner.
     /// </summary>
     /// <param name="value">The value to set.</param>
-    public void SetValue(T value) => Accessor.Setter(Owner, value);
+    public void SetValue(T value)
+    {
+        if (Accessor.Setter is null) throw new InvalidOperationException($"The binding {Accessor.Name} is read-only.");
+        Accessor.Setter(Owner, value);
+    }
 
     /// <summary>
     /// Gets the bound property value from the binding owner.

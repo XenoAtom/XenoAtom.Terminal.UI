@@ -44,8 +44,10 @@ public sealed class StyleKey<T>
         {
         }
 
-        public override object? GetValue(object instance) => throw new NotSupportedException();
+        public override bool IsReadOnly => false;
 
-        public override void SetValue(object instance, object? value) => throw new NotSupportedException();
+        public override object? GetValueAsObject(object instance) => throw new NotSupportedException();
+
+        public override void SetValueAsObject(object instance, object? value) => throw new NotSupportedException();
     }
 }

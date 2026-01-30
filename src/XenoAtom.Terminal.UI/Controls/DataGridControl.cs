@@ -1881,7 +1881,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
         {
             _activeEditorRowModel = rowModel;
             _activeEditorAccessor = column.Accessor;
-            _activeEditorOriginalValue = column.Accessor.GetValue(rowModel);
+            _activeEditorOriginalValue = column.Accessor.GetValueAsObject(rowModel);
 
             PrepareEditorForCell(editor);
             OpenEditor(editor, cell, pooled: false);
@@ -1894,7 +1894,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
         {
             _activeEditorRowModel = rowModel;
             _activeEditorAccessor = schemaAccessor;
-            _activeEditorOriginalValue = schemaAccessor.GetValue(rowModel);
+            _activeEditorOriginalValue = schemaAccessor.GetValueAsObject(rowModel);
 
             OpenEditor(schemaEditor, cell, pooled: false);
             return true;
@@ -1906,7 +1906,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
         {
             _activeEditorRowModel = rowModel;
             _activeEditorAccessor = schemaAccessor;
-            _activeEditorOriginalValue = schemaAccessor.GetValue(rowModel);
+            _activeEditorOriginalValue = schemaAccessor.GetValueAsObject(rowModel);
 
             OpenEditor(textBox, cell, pooled: true);
             return true;
@@ -1922,8 +1922,8 @@ public sealed partial class DataGridControl : Visual, IScrollable
         editor = _textBoxPool.Count == 0 ? new TextBox() : PopTextBox();
         editor.SetStyle(TextBoxStyle.Key, CreateCellEditorTextBoxStyle());
         editor.TextDocument = new DynamicTextDocument(
-            getter: () => (string?)accessor.GetValue(rowModel) ?? string.Empty,
-            setter: s => accessor.SetValue(rowModel, s));
+            getter: () => (string?)accessor.GetValueAsObject(rowModel) ?? string.Empty,
+            setter: s => accessor.SetValueAsObject(rowModel, s));
         InitializeTextEditorForCell(editor);
         return true;
     }
@@ -2059,7 +2059,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
     private TextBox CreateEnumEditor(object rowModel, BindingAccessor accessor, Type enumType)
     {
         var culture = GetCulture();
-        var localText = ValueStringFormatter.ToString(accessor.GetValue(rowModel), culture);
+        var localText = ValueStringFormatter.ToString(accessor.GetValueAsObject(rowModel), culture);
 
         var box = new TextBox();
         box.SetStyle(TextBoxStyle.Key, CreateCellEditorTextBoxStyle());
@@ -2071,7 +2071,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
                 localText = text ?? string.Empty;
                 if (Enum.TryParse(enumType, localText, ignoreCase: true, out var parsed) && parsed is not null)
                 {
-                    accessor.SetValue(rowModel, parsed);
+                    accessor.SetValueAsObject(rowModel, parsed);
                 }
             });
 
@@ -2088,8 +2088,8 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
         return new BindingAccessor<T>(
             accessor.Name,
-            owner => (T)accessor.GetValue(owner)!,
-            (owner, value) => accessor.SetValue(owner, value));
+            owner => (T)accessor.GetValueAsObject(owner)!,
+            (owner, value) => accessor.SetValueAsObject(owner, value));
     }
 
     private TextBox PopTextBox()
@@ -2173,7 +2173,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
         if (_activeEditorRowModel is not null && _activeEditorAccessor is not null)
         {
-            _activeEditorAccessor.SetValue(_activeEditorRowModel, _activeEditorOriginalValue);
+            _activeEditorAccessor.SetValueAsObject(_activeEditorRowModel, _activeEditorOriginalValue);
         }
 
         CloseEditor();
@@ -2418,7 +2418,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
             var text = column is not null
                 ? column.FormatValue(this, rowModel, culture)
-                : ValueStringFormatter.ToString(schema.SchemaAccessor.GetValue(rowModel), culture);
+                : ValueStringFormatter.ToString(schema.SchemaAccessor.GetValueAsObject(rowModel), culture);
 
             if (searchText is not null && searchText.Length != 0 && text.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0)
             {
@@ -2485,7 +2485,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
                 var column = col.Column;
                 var value = column is not null
                     ? column.FormatValue(this, rowModel, culture)
-                    : ValueStringFormatter.ToString(col.SchemaAccessor.GetValue(rowModel), culture);
+                    : ValueStringFormatter.ToString(col.SchemaAccessor.GetValueAsObject(rowModel), culture);
 
                 if (value.IndexOf(text!, comparison) >= 0)
                 {
@@ -2677,7 +2677,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
             var rowModel = snapshot.GetRowModel(r);
             var text = column is not null
                 ? column.FormatValue(this, rowModel, culture)
-                : ValueStringFormatter.ToString(accessor.GetValue(rowModel), culture);
+                : ValueStringFormatter.ToString(accessor.GetValueAsObject(rowModel), culture);
             max = Math.Max(max, TerminalTextUtility.GetWidth(text.AsSpan()));
         }
 
@@ -2687,7 +2687,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
             var rowModel = snapshot.GetRowModel(current.Row);
             var text = column is not null
                 ? column.FormatValue(this, rowModel, culture)
-                : ValueStringFormatter.ToString(accessor.GetValue(rowModel), culture);
+                : ValueStringFormatter.ToString(accessor.GetValueAsObject(rowModel), culture);
             max = Math.Max(max, TerminalTextUtility.GetWidth(text.AsSpan()));
         }
 
@@ -3020,7 +3020,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
             var c = cols[cell.Column];
             var text = c.Column is not null
                 ? c.Column.FormatValue(this, rowModel, culture)
-                : ValueStringFormatter.ToString(c.SchemaAccessor.GetValue(rowModel), culture);
+                : ValueStringFormatter.ToString(c.SchemaAccessor.GetValueAsObject(rowModel), culture);
             sb.Append(text);
         }
 
@@ -3050,7 +3050,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
             var col = cols[c];
             var text = col.Column is not null
                 ? col.Column.FormatValue(this, rowModel!, culture)
-                : ValueStringFormatter.ToString(col.SchemaAccessor.GetValue(rowModel!), culture);
+                : ValueStringFormatter.ToString(col.SchemaAccessor.GetValueAsObject(rowModel!), culture);
             sb.Append(text);
         }
     }

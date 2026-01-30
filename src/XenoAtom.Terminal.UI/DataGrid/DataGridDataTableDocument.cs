@@ -238,14 +238,16 @@ public sealed class DataGridDataTableDocument : IDataGridDocument, IDisposable
             _column = column;
         }
 
-        public override object? GetValue(object instance)
+        public override bool IsReadOnly => _column.ReadOnly;
+
+        public override object? GetValueAsObject(object instance)
         {
             var row = (DataRow)instance;
             var value = row[_column];
             return value == DBNull.Value ? null : value;
         }
 
-        public override void SetValue(object instance, object? value)
+        public override void SetValueAsObject(object instance, object? value)
         {
             var row = (DataRow)instance;
             row[_column] = value ?? DBNull.Value;
