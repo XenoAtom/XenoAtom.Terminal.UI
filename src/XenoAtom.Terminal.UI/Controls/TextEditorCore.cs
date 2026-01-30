@@ -2451,17 +2451,7 @@ internal sealed partial class TextEditorCore
     }
 
     private static bool IsWordBoundary(string text, int start, int length)
-    {
-        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
-
-        var before = start > 0 ? text[start - 1] : '\0';
-        var afterIndex = start + length;
-        var after = afterIndex < text.Length ? text[afterIndex] : '\0';
-
-        var beforeOk = start == 0 || !IsWordChar(before);
-        var afterOk = afterIndex >= text.Length || !IsWordChar(after);
-        return beforeOk && afterOk;
-    }
+        => WordBoundaryUtility.IsWordBoundary(text, start, length);
 
     private readonly record struct TextMatch(int Start, int Length);
 }
