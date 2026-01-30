@@ -60,6 +60,7 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 ## Data display
 
 - `doc/controls/table.md`
+- `doc/controls/datagrid.md`
 - `doc/controls/textblock.md`
 - `doc/controls/markup.md`
 - `doc/controls/rule.md`

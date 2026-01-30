@@ -91,6 +91,7 @@ Highlights:
 
 - Text input: `TextBox`, `TextArea`, `MaskedInput`, `NumberBox`, `ValidationPresenter`
 - Lists: `ListBox`, `OptionList`, `SelectionList`, `Select<T>`, `TreeView`
+- Data: `Table`, `DataGrid`
 - Layout: `VStack`, `HStack`, `Grid`, `DockLayout`, `Splitters`, `Border`, `Group`, `Padder`
 - Overlays: `Popup`, `Dialog`, `TooltipHost`, `Backdrop`
 - Toasts: `Toast`, `ToastHost` (overlay notifications)
