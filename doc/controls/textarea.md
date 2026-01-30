@@ -2,14 +2,17 @@
 
 `TextArea` is a multi-line text editor with soft wrapping by default.
 
-Screenshot placeholder:
-
-![TextArea](../../img/screenshots/textarea.png)
-
 ## Basic usage
 
 ```csharp
 new TextArea("Hello\nWorld");
+```
+
+To two-way bind to a `State<string>`:
+
+```csharp
+var text = new State<string>("Hello\nWorld");
+new TextArea().Text(text);
 ```
 
 ## Find / Replace
@@ -19,7 +22,7 @@ new TextArea("Hello\nWorld");
 - `Ctrl+F`: Find
 - `Ctrl+H`: Replace
 
-See also `doc/controls/searchreplacepopup.md`.
+See also `./searchreplacepopup.md`.
 
 ## Undo / redo
 
@@ -30,7 +33,7 @@ TextArea supports undo/redo:
 
 Replace operations are undoable. `Replace All` is recorded as a single undo step.
 
-See `doc/undo-redo.md`.
+See `../undo-redo.md`.
 
 ## Scroll integration
 
@@ -40,11 +43,15 @@ TextArea implements `IScrollable`, so it integrates with `ScrollViewer`:
 new ScrollViewer(new TextArea(longText));
 ```
 
+When you bound the control (e.g. with `.MaxHeight(...)`) the scroll model provides an extent larger than the viewport,
+and the viewer can render scrollbars and synchronize offsets.
+
 ## Styling
 
 `TextAreaStyle` controls colors, padding, and selection rendering.
 
 See also:
 
-- `doc/text-editing.md`
-- `doc/controls/scrollviewer.md`
+- `../text-editing.md`
+- `../binding.md`
+- `./scrollviewer.md`
