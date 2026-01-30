@@ -2,8 +2,6 @@
 
 `TextBlock` renders read-only text with optional wrapping, alignment, and trimming.
 
-> Screenshot: `docs/images/textblock.png` (placeholder)
-
 ## Basic usage
 
 ```csharp
@@ -38,7 +36,7 @@ new TextBlock("This is a long single line that will be trimmed.")
 ```csharp
 new TextBlock("Centered")
     .TextAlignment(TextAlignment.Center)
-    .HorizontalAlignment(HorizontalAlignment.Stretch);
+    .HorizontalAlignment(Align.Stretch);
 ```
 
 ## Styling
@@ -69,7 +67,7 @@ To fill the whole bounds with a background, enable `FillBackground`:
 
 ```csharp
 new TextBlock("Banner")
-    .HorizontalAlignment(HorizontalAlignment.Stretch)
+    .HorizontalAlignment(Align.Stretch)
     .Style(TextBlockStyle.Default with
     {
         Background = Colors.Blue,
@@ -78,3 +76,7 @@ new TextBlock("Banner")
     });
 ```
 
+## Related
+
+- `../binding.md`
+- `../styling.md`
