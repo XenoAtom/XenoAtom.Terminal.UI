@@ -2,10 +2,6 @@
 
 `RadioButton` is a single-choice toggle used in groups.
 
-Screenshot placeholder:
-
-![RadioButton](../../img/screenshots/radiobutton.png)
-
 ## Basic usage
 
 Use a shared `State<int>` (or any state) to model a selected option.
@@ -19,7 +15,27 @@ new VStack(
 );
 ```
 
+## Interaction
+
+- `Space` / `Enter`: check the radio button.
+- Mouse click: check the radio button.
+
+> [!TIP]
+> For typical forms, keep the group state in a single `State<T>` (int/enum) and derive each button’s checked value
+> from it, as in the example above. This avoids keeping separate booleans in sync.
+
+## RadioButtonList<T>
+
+For a scrollable, templated, single-choice list (radio-group as a list control), use `RadioButtonList<T>`.
+It is useful when you have many options and want consistent keyboard navigation.
+
 ## Styling
 
 `RadioButtonStyle` controls glyphs and colors.
 
+`RadioButtonListStyle` (when using `RadioButtonList<T>`) controls marker glyphs, spacing, and selection visuals.
+
+## Related
+
+- `../binding.md`
+- `./optionlist.md`
