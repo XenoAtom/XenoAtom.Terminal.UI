@@ -66,8 +66,6 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private long _pendingSequenceTimestamp;
     private Visual? _pendingSequenceFocus;
 
-    private Visual? _visualBeingDynamicallyInitialized;
-
     private readonly List<IAnimatedVisual> _animatedVisuals = new();
     private long _nextAnimationTick = long.MaxValue;
 
@@ -916,11 +914,6 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         _nextAnimationTick = next;
     }
 
-    internal void SetVisualBeingDynamicallyInitialized(Visual? visual)
-    {
-        _visualBeingDynamicallyInitialized = visual;
-    }
-
     private void OnValueChanged(Binding binding)
     {
         // Don't record bindings for visuals not yet attached to the app (e.g. in initializers)
@@ -929,11 +922,6 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             if (visual.App is null)
             {
                 return;
-            }
-
-            if (_visualBeingDynamicallyInitialized is not null && !ReferenceEquals(_visualBeingDynamicallyInitialized, visual))
-            {
-                throw new InvalidOperationException($"A change was detected on a visual ({visual.GetType().Name}) outside of a current visual ({_visualBeingDynamicallyInitialized.GetType().Name}) being initialized .");
             }
         }
 

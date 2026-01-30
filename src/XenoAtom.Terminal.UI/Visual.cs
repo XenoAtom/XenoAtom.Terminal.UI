@@ -1131,20 +1131,12 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         {
             var app = App;
 
-            app?.SetVisualBeingDynamicallyInitialized(this);
-            try
+            for (var i = 0; i < _dynamicUpdates.Count; i++)
             {
-                for (var i = 0; i < _dynamicUpdates.Count; i++)
-                {
-                    _dynamicUpdates[i](this);
-                }
+                _dynamicUpdates[i](this);
+            }
 
-                OnDynamicUpdated();
-            }
-            finally
-            {
-                app?.SetVisualBeingDynamicallyInitialized(null);
-            }
+            OnDynamicUpdated();
 
             if (ReplaceDependencies(ref _dynamicUpdateDeps, session.Reads) && App is not null)
             {
