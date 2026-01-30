@@ -18,7 +18,7 @@ using XenoAtom.Terminal.UI.Templating;
 namespace XenoAtom.Terminal.UI.Controls;
 
 /// <summary>
-/// Specifies the selection mode for <see cref="DataGrid"/>.
+/// Specifies the selection mode for <see cref="DataGridControl"/>.
 /// </summary>
 public enum DataGridSelectionMode
 {
@@ -50,7 +50,7 @@ public readonly record struct DataGridCell(int Row, int Column)
 }
 
 /// <summary>
-/// Specifies when editing starts in a <see cref="DataGrid"/>.
+/// Specifies when editing starts in a <see cref="DataGridControl"/>.
 /// </summary>
 public enum DataGridEditMode
 {
@@ -73,7 +73,7 @@ public enum DataGridEditMode
 /// <summary>
 /// A high-performance, scrollable, virtualized, data-bound grid control.
 /// </summary>
-public sealed partial class DataGrid : Visual, IScrollable
+public sealed partial class DataGridControl : Visual, IScrollable
 {
     private readonly ScrollModel _scroll;
     private readonly BindableList<DataGridColumn> _columns;
@@ -118,9 +118,9 @@ public sealed partial class DataGrid : Visual, IScrollable
     private readonly List<ResolvedColumn> _cachedResolvedColumns = new(32);
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DataGrid"/> class.
+    /// Initializes a new instance of the <see cref="DataGridControl"/> class.
     /// </summary>
-    public DataGrid()
+    public DataGridControl()
     {
         Focusable = true;
         HorizontalAlignment = Align.Stretch;
@@ -1865,9 +1865,9 @@ public sealed partial class DataGrid : Visual, IScrollable
 
     private sealed class DataGridSearchTarget : ISearchReplaceTarget
     {
-        private readonly DataGrid _owner;
+        private readonly DataGridControl _owner;
 
-        public DataGridSearchTarget(DataGrid owner) => _owner = owner;
+        public DataGridSearchTarget(DataGridControl owner) => _owner = owner;
 
         public string Title => "DataGrid";
         public bool SupportsReplace => false;

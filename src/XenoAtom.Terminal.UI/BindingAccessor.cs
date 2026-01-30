@@ -42,7 +42,7 @@ public abstract class BindingAccessor
 /// Describes how to get/set a bindable property from an object instance.
 /// </summary>
 /// <typeparam name="T">The property type.</typeparam>
-public abstract class BindingAccessor<T> : BindingAccessor
+public class BindingAccessor<T> : BindingAccessor
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="BindingAccessor{T}"/> class.
@@ -50,7 +50,7 @@ public abstract class BindingAccessor<T> : BindingAccessor
     /// <param name="name">The bindable property name.</param>
     /// <param name="getter">A delegate that reads the value from an instance.</param>
     /// <param name="setter">A delegate that writes the value to an instance.</param>
-    protected BindingAccessor(string name, Func<object, T> getter, Action<object, T> setter) : base(name)
+    public BindingAccessor(string name, Func<object, T> getter, Action<object, T> setter) : base(name)
     {
         Getter = getter ?? throw new ArgumentNullException(nameof(getter));
         Setter = setter ?? throw new ArgumentNullException(nameof(setter));

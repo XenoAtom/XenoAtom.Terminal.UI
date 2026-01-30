@@ -5,7 +5,6 @@
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.DataGrid;
 using XenoAtom.Terminal.UI.Hosting;
-using DataGridControl = XenoAtom.Terminal.UI.Controls.DataGrid;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -15,8 +14,8 @@ public sealed class DataGridRenderingTests
     [TestMethod]
     public void DataGrid_Renders_Header_And_Cells()
     {
-        var laneAccessor = new DelegateAccessor<int>("lane", o => ((SwimRow)o).Lane, (o, v) => ((SwimRow)o).Lane = v);
-        var swimmerAccessor = new DelegateAccessor<string>("swimmer", o => ((SwimRow)o).Swimmer, (o, v) => ((SwimRow)o).Swimmer = v);
+        var laneAccessor = new BindingAccessor<int>("lane", o => ((SwimRow)o).Lane, (o, v) => ((SwimRow)o).Lane = v);
+        var swimmerAccessor = new BindingAccessor<string>("swimmer", o => ((SwimRow)o).Swimmer, (o, v) => ((SwimRow)o).Swimmer = v);
 
         var doc = new DataGridListDocument();
         doc.SetColumns(new[]
@@ -48,7 +47,7 @@ public sealed class DataGridRenderingTests
     [TestMethod]
     public void DataGrid_Scrolls_Vertically_Inside_ScrollViewer()
     {
-        var textAccessor = new DelegateAccessor<string>("text", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
+        var textAccessor = new BindingAccessor<string>("text", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
 
         var doc = new DataGridListDocument();
         doc.SetColumns(new[]
@@ -84,7 +83,7 @@ public sealed class DataGridRenderingTests
     [TestMethod]
     public void DataGrid_Allows_Editing_String_Cell()
     {
-        var nameAccessor = new DelegateAccessor<string>("name", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
+        var nameAccessor = new BindingAccessor<string>("name", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
 
         var doc = new DataGridListDocument();
         doc.SetColumns(new[]
@@ -126,12 +125,5 @@ public sealed class DataGridRenderingTests
     private sealed class TextRow
     {
         public string Text { get; set; } = string.Empty;
-    }
-
-    private sealed class DelegateAccessor<T> : BindingAccessor<T>
-    {
-        public DelegateAccessor(string name, Func<object, T> getter, Action<object, T> setter) : base(name, getter, setter)
-        {
-        }
     }
 }

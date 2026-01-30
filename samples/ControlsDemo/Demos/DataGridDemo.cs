@@ -1,7 +1,6 @@
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.DataGrid;
-using DataGridControl = XenoAtom.Terminal.UI.Controls.DataGrid;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
@@ -14,10 +13,10 @@ public sealed class DataGridDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
-        var laneAccessor = new DelegateAccessor<int>("lane", o => ((SwimRow)o).Lane, (o, v) => ((SwimRow)o).Lane = v);
-        var swimmerAccessor = new DelegateAccessor<string>("swimmer", o => ((SwimRow)o).Swimmer, (o, v) => ((SwimRow)o).Swimmer = v);
-        var countryAccessor = new DelegateAccessor<string>("country", o => ((SwimRow)o).Country, (o, v) => ((SwimRow)o).Country = v);
-        var timeAccessor = new DelegateAccessor<double>("time", o => ((SwimRow)o).Time, (o, v) => ((SwimRow)o).Time = v);
+        var laneAccessor = new BindingAccessor<int>("lane", o => ((SwimRow)o).Lane, (o, v) => ((SwimRow)o).Lane = v);
+        var swimmerAccessor = new BindingAccessor<string>("swimmer", o => ((SwimRow)o).Swimmer, (o, v) => ((SwimRow)o).Swimmer = v);
+        var countryAccessor = new BindingAccessor<string>("country", o => ((SwimRow)o).Country, (o, v) => ((SwimRow)o).Country = v);
+        var timeAccessor = new BindingAccessor<double>("time", o => ((SwimRow)o).Time, (o, v) => ((SwimRow)o).Time = v);
 
         var doc = new DataGridListDocument();
         doc.SetColumns(new[]
@@ -56,7 +55,8 @@ public sealed class DataGridDemo : ControlsDemoBase
                 DemoUi.Hint("DataGrid is scrollable in both directions. Wrap it in a ScrollViewer to show scrollbars."),
                 DemoUi.Hint("Ctrl+F: search (find), F3/Shift+F3: next/previous match"),
                 DemoUi.Hint("Ctrl+Shift+F: toggle filter row, F2: edit current cell"),
-                new Border(new ScrollViewer(grid).MinHeight(12).MaxHeight(12)))
+                new Border(new ScrollViewer(grid).MinHeight(12).MaxHeight(12)).MinWidth(40).MaxWidth(120).HorizontalAlignment(Align.Stretch)
+                )
             .Spacing(1);
 
         return panel;
@@ -68,12 +68,5 @@ public sealed class DataGridDemo : ControlsDemoBase
         public string Swimmer { get; set; } = string.Empty;
         public string Country { get; set; } = string.Empty;
         public double Time { get; set; }
-    }
-
-    private sealed class DelegateAccessor<T> : BindingAccessor<T>
-    {
-        public DelegateAccessor(string name, Func<object, T> getter, Action<object, T> setter) : base(name, getter, setter)
-        {
-        }
     }
 }

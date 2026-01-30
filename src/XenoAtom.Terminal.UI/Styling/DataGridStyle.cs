@@ -2,12 +2,13 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
 
 namespace XenoAtom.Terminal.UI.Styling;
 
 /// <summary>
-/// Defines styling for <see cref="Controls.DataGrid"/>.
+/// Defines styling for <see cref="DataGridControl"/>.
 /// </summary>
 public sealed record DataGridStyle : IStyle<DataGridStyle>
 {

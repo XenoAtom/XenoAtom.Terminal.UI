@@ -9,11 +9,11 @@ using XenoAtom.Terminal.UI.Templating;
 namespace XenoAtom.Terminal.UI.Controls;
 
 /// <summary>
-/// Defines a column for <see cref="DataGrid"/>.
+/// Defines a column for <see cref="DataGridControl"/>.
 /// </summary>
 public abstract partial class DataGridColumn : IVisualElement
 {
-    private DataGrid? _owner;
+    private DataGridControl? _owner;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DataGridColumn"/> class.
@@ -111,9 +111,9 @@ public abstract partial class DataGridColumn : IVisualElement
     /// </summary>
     public abstract BindingAccessor Accessor { get; }
 
-    internal void Attach(DataGrid owner) => _owner = owner;
+    internal void Attach(DataGridControl owner) => _owner = owner;
 
-    internal void Detach(DataGrid owner)
+    internal void Detach(DataGridControl owner)
     {
         if (ReferenceEquals(_owner, owner))
         {
