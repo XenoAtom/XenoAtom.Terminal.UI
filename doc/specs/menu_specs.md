@@ -1,3 +1,7 @@
+---
+title: "Menu System & Context Menus (Specs)"
+---
+
 # Menu System & Context Menus (Specs)
 
 This document specifies a cohesive **menu system v1** integrated with the unified `Command` model.

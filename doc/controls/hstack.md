@@ -1,3 +1,7 @@
+---
+title: HStack
+---
+
 # HStack
 
 `HStack` stacks children horizontally.

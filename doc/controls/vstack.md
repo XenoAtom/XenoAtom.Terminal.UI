@@ -1,3 +1,7 @@
+---
+title: VStack
+---
+
 # VStack
 
 `VStack` stacks children vertically.

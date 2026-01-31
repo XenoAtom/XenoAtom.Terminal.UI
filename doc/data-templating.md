@@ -1,3 +1,7 @@
+---
+title: Data templating
+---
+
 # Data templating
 
 Many controls in XenoAtom.Terminal.UI are **data-driven**: they take a list of values (`T`) and render each value using a **data template**.

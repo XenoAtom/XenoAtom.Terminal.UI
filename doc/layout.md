@@ -1,3 +1,7 @@
+---
+title: Layout
+---
+
 # Layout
 
 Terminal UI layout is cell-based (integer coordinates) and uses a two-pass protocol:

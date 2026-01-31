@@ -1,3 +1,7 @@
+---
+title: Data Template Specifications
+---
+
 # Data Template Specifications
 
 This document specifies a uniform, idiomatic, and extensible **data templating** model for `XenoAtom.Terminal.UI`.

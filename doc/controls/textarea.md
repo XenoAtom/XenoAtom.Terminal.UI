@@ -1,3 +1,7 @@
+---
+title: TextArea
+---
+
 # TextArea
 
 `TextArea` is a multi-line text editor with soft wrapping by default.

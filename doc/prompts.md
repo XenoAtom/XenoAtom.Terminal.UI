@@ -1,3 +1,7 @@
+---
+title: Prompts (Inline)
+---
+
 # Prompts (Inline)
 
 XenoAtom.Terminal.UI provides a small set of inline prompts built on top of the regular controls and the hosting

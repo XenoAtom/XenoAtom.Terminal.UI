@@ -1,3 +1,7 @@
+---
+title: Table
+---
+
 # Table
 
 `Table` displays a grid of cells. Cells and headers are visuals for full composability.

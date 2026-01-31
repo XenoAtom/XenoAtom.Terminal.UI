@@ -1,3 +1,7 @@
+---
+title: TextFiglet
+---
+
 # TextFiglet
 
 `TextFiglet` renders large banner text using a FIGlet font.

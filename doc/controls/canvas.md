@@ -1,3 +1,7 @@
+---
+title: Canvas
+---
+
 # Canvas
 
 `Canvas` is an immediate-mode drawing surface for cell-based terminal graphics.

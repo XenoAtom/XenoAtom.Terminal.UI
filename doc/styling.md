@@ -1,3 +1,7 @@
+---
+title: "Styling & Themes"
+---
+
 # Styling & Themes
 
 XenoAtom.Terminal.UI uses a theme/style model built on ANSI colors and cell styling.

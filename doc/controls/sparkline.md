@@ -1,3 +1,7 @@
+---
+title: Sparkline
+---
+
 # Sparkline
 
 `Sparkline` renders an inline sparkline visualization.

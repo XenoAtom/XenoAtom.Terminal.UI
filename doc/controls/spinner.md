@@ -1,3 +1,7 @@
+---
+title: Spinner
+---
+
 # Spinner
 
 `Spinner` is an animated indicator control with a large set of built-in styles.

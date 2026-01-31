@@ -1,3 +1,7 @@
+---
+title: Border
+---
+
 # Border
 
 `Border` draws a border around a single content visual.

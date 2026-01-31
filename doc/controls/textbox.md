@@ -1,3 +1,7 @@
+---
+title: TextBox
+---
+
 # TextBox
 
 `TextBox` is a single-line text editor.

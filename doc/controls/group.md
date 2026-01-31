@@ -1,3 +1,7 @@
+---
+title: Group
+---
+
 # Group
 
 `Group` is a border-like container with optional corner labels (top-left/top-right/bottom-left/bottom-right).

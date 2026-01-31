@@ -1,3 +1,7 @@
+---
+title: "Binding & State"
+---
+
 # Binding & State
 
 XenoAtom.Terminal.UI uses a binding model designed for terminal UIs:

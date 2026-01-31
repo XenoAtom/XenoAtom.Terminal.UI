@@ -1,3 +1,7 @@
+---
+title: WrapStack controls specs (WrapHStack / WrapVStack)
+---
+
 # WrapStack controls specs (WrapHStack / WrapVStack)
 
 This document specifies *wrapping stack* layout controls for XenoAtom.Terminal.UI:

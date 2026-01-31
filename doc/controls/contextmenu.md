@@ -1,3 +1,7 @@
+---
+title: Context menus
+---
+
 # Context menus
 
 XenoAtom.Terminal.UI supports **context menus** (right-click menus) in fullscreen applications.

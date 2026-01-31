@@ -1,3 +1,7 @@
+---
+title: SelectionList
+---
+
 # SelectionList
 
 `SelectionList<T>` is a multi-select list widget (checkbox-style selection in-layout).

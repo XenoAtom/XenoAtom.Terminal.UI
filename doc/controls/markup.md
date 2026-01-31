@@ -1,3 +1,7 @@
+---
+title: Markup
+---
+
 # Markup
 
 `Markup` renders XenoAtom.Terminal markup text as a visual (with wrapping and styling).

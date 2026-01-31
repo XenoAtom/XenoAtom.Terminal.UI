@@ -1,3 +1,7 @@
+---
+title: Scrolling
+---
+
 # Scrolling
 
 XenoAtom.Terminal.UI uses a single scrolling model across controls: `IScrollable` + `ScrollModel`.

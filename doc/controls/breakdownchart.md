@@ -1,3 +1,7 @@
+---
+title: BreakdownChart
+---
+
 # BreakdownChart
 
 `BreakdownChart` renders a segmented proportional bar (a “breakdown”) with an optional legend. It is useful for showing how

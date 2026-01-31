@@ -1,3 +1,7 @@
+---
+title: StatusBar
+---
+
 # StatusBar
 
 `StatusBar` is a footer-like control for status text and key hints.

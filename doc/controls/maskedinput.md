@@ -1,3 +1,7 @@
+---
+title: MaskedInput
+---
+
 # MaskedInput
 
 `MaskedInput` is a template-based single-line editor for structured values such as credit cards, dates, identifiers, etc.

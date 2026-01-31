@@ -1,3 +1,7 @@
+---
+title: DataGridControl
+---
+
 # DataGridControl
 
 `DataGridControl` is an interactive, virtualized, data-bound table control intended for large datasets and rich interaction:

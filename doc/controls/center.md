@@ -1,3 +1,7 @@
+---
+title: Center
+---
+
 # Center
 
 `Center` centers its content within the available space.

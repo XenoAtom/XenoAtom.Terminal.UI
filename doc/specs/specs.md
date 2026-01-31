@@ -1,3 +1,7 @@
+---
+title: XenoAtom.Terminal.UI Specifications
+---
+
 # XenoAtom.Terminal.UI Specifications
 
 This document contains specifications for the `XenoAtom.Terminal.UI` project.

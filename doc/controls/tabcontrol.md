@@ -1,3 +1,7 @@
+---
+title: TabControl
+---
+
 # TabControl
 
 `TabControl` hosts multiple tab pages with clickable headers.

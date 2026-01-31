@@ -1,3 +1,7 @@
+---
+title: Undo/Redo Architecture (TextEditorCore/Base + Search/Replace)
+---
+
 # Undo/Redo Architecture (TextEditorCore/Base + Search/Replace)
 
 This document specifies a **lightweight**, **predictable**, and **extensible** undo/redo system for

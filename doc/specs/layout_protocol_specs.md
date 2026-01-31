@@ -1,3 +1,7 @@
+---
+title: Layout Protocol Specification + Control Guidance
+---
+
 # Layout Protocol Specification + Control Guidance
 
 Below is the **full, integrated specification** for the `LayoutConstraints + SizeHints` protocol, updated per your requirements:

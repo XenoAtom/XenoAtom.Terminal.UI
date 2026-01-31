@@ -1,3 +1,7 @@
+---
+title: Control Development Guide (Contributor/AI/Agent Checklist)
+---
+
 # Control Development Guide (Contributor/AI/Agent Checklist)
 
 This document captures the most important project-specific rules and conventions for implementing new controls and framework features in **XenoAtom.Terminal.UI**.

@@ -1,3 +1,7 @@
+---
+title: Backdrop
+---
+
 # Backdrop
 
 `Backdrop` is a full-viewport fill control typically used behind modal UI (dialogs, popups) to dim or clear the

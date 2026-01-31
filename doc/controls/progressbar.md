@@ -1,3 +1,7 @@
+---
+title: ProgressBar
+---
+
 # ProgressBar
 
 `ProgressBar` renders a progress bar using different variants (thin, shaded, segmented, bracketed).

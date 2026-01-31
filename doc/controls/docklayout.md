@@ -1,3 +1,7 @@
+---
+title: DockLayout
+---
+
 # DockLayout
 
 `DockLayout` docks visuals to edges (Top/Bottom/Left/Right) and gives remaining space to the content area.

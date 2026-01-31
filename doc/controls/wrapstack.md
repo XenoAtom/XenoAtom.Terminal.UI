@@ -1,3 +1,7 @@
+---
+title: WrapStack (WrapHStack / WrapVStack)
+---
+
 # WrapStack (WrapHStack / WrapVStack)
 
 Wrap stacks arrange children in a **flow layout**: items are placed along a main axis until they no longer fit, then a new run is started.

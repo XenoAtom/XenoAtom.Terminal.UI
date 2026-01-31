@@ -1,3 +1,7 @@
+---
+title: Toast
+---
+
 # Toast
 
 `Toast` notifications are non-blocking overlays used to provide brief feedback without interrupting the user.

@@ -1,3 +1,7 @@
+---
+title: Switch
+---
+
 # Switch
 
 `Switch` is a compact on/off toggle with a thumb and label.

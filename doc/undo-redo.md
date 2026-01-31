@@ -1,3 +1,7 @@
+---
+title: Undo/Redo (Text Editors)
+---
+
 # Undo/Redo (Text Editors)
 
 XenoAtom.Terminal.UI provides a lightweight undo/redo system for text editors built on `TextEditorBase` / `TextEditorCore`.

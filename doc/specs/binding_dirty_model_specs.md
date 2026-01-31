@@ -1,3 +1,7 @@
+---
+title: Binding + Dirty Model (Internal Spec)
+---
+
 # Binding + Dirty Model (Internal Spec)
 
 This document describes how **XenoAtom.Terminal.UI** keeps the visual tree up-to-date **without manual invalidation**.

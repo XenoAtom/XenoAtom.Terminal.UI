@@ -1,3 +1,7 @@
+---
+title: XenoAtom.Terminal.UI User Guide
+---
+
 # XenoAtom.Terminal.UI User Guide
 
 XenoAtom.Terminal.UI is a modern retained-mode terminal UI framework built on top of XenoAtom.Terminal.

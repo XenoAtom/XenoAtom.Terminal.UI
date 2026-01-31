@@ -1,3 +1,7 @@
+---
+title: Rule
+---
+
 # Rule
 
 `Rule` renders a horizontal separator line.

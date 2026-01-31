@@ -1,3 +1,7 @@
+---
+title: Dialog
+---
+
 # Dialog
 
 `Dialog` is a movable window-like overlay used in fullscreen apps.

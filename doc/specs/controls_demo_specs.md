@@ -1,3 +1,7 @@
+---
+title: "Specifications for ControlsDemo (\"MegaDemo\")"
+---
+
 # Specifications for ControlsDemo ("MegaDemo")
 
 This document specifies a “ControlsDemo” app showcasing XenoAtom.Terminal.UI controls and composition patterns. It should feel like a polished, modern application and be the primary place to:

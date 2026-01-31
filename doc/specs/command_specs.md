@@ -1,3 +1,7 @@
+---
+title: "Command System & Key Hints (Specs)"
+---
+
 # Command System & Key Hints (Specs)
 
 This document proposes a **command system** for XenoAtom.Terminal.UI that unifies:

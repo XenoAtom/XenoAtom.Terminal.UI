@@ -1,3 +1,7 @@
+---
+title: "Debugging & Performance Tools"
+---
+
 # Debugging & Performance Tools
 
 XenoAtom.Terminal.UI includes built-in diagnostics to help you understand when and why the UI updates, and how much work

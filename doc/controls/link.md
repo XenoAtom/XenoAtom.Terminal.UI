@@ -1,3 +1,7 @@
+---
+title: Link
+---
+
 # Link
 
 `Link` renders a hyperlink-like visual and can be activated by keyboard/mouse.

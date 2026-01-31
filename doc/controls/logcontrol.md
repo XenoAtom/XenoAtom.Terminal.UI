@@ -1,3 +1,7 @@
+---
+title: LogControl
+---
+
 # LogControl
 
 `LogControl` is a high-performance scrolling log viewer intended for “tail-like” workloads (frequent appends).

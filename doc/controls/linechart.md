@@ -1,3 +1,7 @@
+---
+title: LineChart
+---
+
 # LineChart
 
 `LineChart` renders a simple line chart.

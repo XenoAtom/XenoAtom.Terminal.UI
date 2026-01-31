@@ -1,3 +1,7 @@
+---
+title: Padder
+---
+
 # Padder
 
 `Padder` adds padding around a single content visual. Use it when you want spacing without drawing any border.

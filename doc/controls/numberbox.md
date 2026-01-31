@@ -1,3 +1,7 @@
+---
+title: NumberBox
+---
+
 # NumberBox
 
 `NumberBox<T>` is a single-line numeric editor built on the `TextEditorCore` infrastructure. It provides caret/selection/clipboard support like `TextBox`, while keeping a bindable numeric `Value`.

@@ -1,3 +1,7 @@
+---
+title: DataGrid (High-Performance Data Table) Control Specs
+---
+
 # DataGrid (High-Performance Data Table) Control Specs
 
 This document specifies a new **high-performance tabular data control** for **XenoAtom.Terminal.UI**.

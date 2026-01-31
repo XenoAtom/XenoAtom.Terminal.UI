@@ -1,3 +1,7 @@
+---
+title: Grid
+---
+
 # Grid
 
 `Grid` arranges children into rows and columns using explicit `GridCell` entries (no attached properties).

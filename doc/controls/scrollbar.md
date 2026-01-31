@@ -1,3 +1,7 @@
+---
+title: ScrollBar
+---
+
 # ScrollBar
 
 `ScrollBar` is the abstract base for standalone scroll bars.

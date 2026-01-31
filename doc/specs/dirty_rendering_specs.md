@@ -1,3 +1,7 @@
+---
+title: Dirty Rendering (Internal Spec)
+---
+
 # Dirty Rendering (Internal Spec)
 
 This document explores options to reduce the CPU cost of rendering when only a small part of the visual tree changes.

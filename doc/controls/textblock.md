@@ -1,3 +1,7 @@
+---
+title: TextBlock
+---
+
 # TextBlock
 
 `TextBlock` renders read-only text with optional wrapping, alignment, and trimming.

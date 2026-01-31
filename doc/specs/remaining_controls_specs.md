@@ -1,3 +1,7 @@
+---
+title: "Remaining Controls & Enhancements (v1)"
+---
+
 # Remaining Controls & Enhancements (v1)
 
 This document describes the remaining controls and enhancements planned for the “first complete release” of the library.

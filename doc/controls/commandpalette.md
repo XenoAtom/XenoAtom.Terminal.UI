@@ -1,3 +1,7 @@
+---
+title: CommandPalette
+---
+
 # CommandPalette
 
 `CommandPalette` is a searchable command launcher built on top of the unified `Command` system.

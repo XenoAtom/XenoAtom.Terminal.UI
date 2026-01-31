@@ -1,3 +1,7 @@
+---
+title: Command Palette (Specs)
+---
+
 # Command Palette (Specs)
 
 This document specifies the **CommandPalette v1** for XenoAtom.Terminal.UI and how it integrates with the unified

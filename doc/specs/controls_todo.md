@@ -1,3 +1,7 @@
+---
+title: High priority control specs
+---
+
 ## Core library tracking table
 
 This is the list of controls planned for the core XenoAtom.Terminal.UI library. These are prioritized based on general usefulness and implementation complexity. The goal is to deliver a solid base set of controls that cover most app needs while keeping the core library lightweight and maintainable.

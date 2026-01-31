@@ -1,3 +1,7 @@
+---
+title: CommandBar
+---
+
 # CommandBar
 
 `CommandBar` displays a single-row “key hints” strip for the current focus context.

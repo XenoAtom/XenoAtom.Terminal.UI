@@ -1,3 +1,7 @@
+---
+title: BarChart
+---
+
 # BarChart
 
 `BarChart` renders a horizontal bar chart with a label column and a bar column. When enabled, the value text is

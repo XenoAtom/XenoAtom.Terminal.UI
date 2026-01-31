@@ -1,3 +1,7 @@
+---
+title: Culture and Value Formatting
+---
+
 # Culture and Value Formatting
 
 XenoAtom.Terminal.UI formats values using a configurable `CultureInfo`.

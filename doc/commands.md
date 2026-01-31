@@ -1,3 +1,7 @@
+---
+title: Commands and Key Hints
+---
+
 # Commands and Key Hints
 
 XenoAtom.Terminal.UI provides a lightweight **command system** to make keyboard shortcuts discoverable and reusable across UI surfaces (key hints, command palette, menus).

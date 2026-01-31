@@ -1,3 +1,7 @@
+---
+title: "Text Editing (TextBox, TextArea, MaskedInput)"
+---
+
 # Text Editing (TextBox, TextArea, MaskedInput)
 
 XenoAtom.Terminal.UI includes a text subsystem designed to scale from a single-line TextBox to a future Code Editor.

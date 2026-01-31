@@ -1,3 +1,7 @@
+---
+title: Splitter (HSplitter / VSplitter)
+---
+
 # Splitter (HSplitter / VSplitter)
 
 Splitters resize adjacent content panes using mouse drag.

@@ -1,3 +1,7 @@
+---
+title: ProgressTaskGroup
+---
+
 # ProgressTaskGroup
 
 `ProgressTaskGroup` displays a set of progress tasks as rows with configurable columns (label, progress bar, percentage, spinner…).

@@ -1,3 +1,7 @@
+---
+title: Popup
+---
+
 # Popup
 
 `Popup` is an overlay surface used for dropdowns, context menus, and lightweight transient UI.

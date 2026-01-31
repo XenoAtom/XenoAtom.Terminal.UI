@@ -1,3 +1,7 @@
+---
+title: MenuBar
+---
+
 # MenuBar
 
 `MenuBar` provides application chrome with menus and keyboard navigation.

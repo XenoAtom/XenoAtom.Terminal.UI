@@ -1,3 +1,7 @@
+---
+title: Validation
+---
+
 # Validation
 
 `ValidationPresenter` is a small wrapper control that shows a validation/status message above or below another control.

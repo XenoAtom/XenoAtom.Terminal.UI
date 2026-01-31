@@ -1,3 +1,7 @@
+---
+title: Toast / Notification Control Specs
+---
+
 # Toast / Notification Control Specs
 
 This document specifies a **toast/notification** system for XenoAtom.Terminal.UI:

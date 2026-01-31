@@ -1,3 +1,7 @@
+---
+title: Tooltip
+---
+
 # Tooltip
 
 Tooltips display additional information when the user hovers a visual.

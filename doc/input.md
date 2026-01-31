@@ -1,3 +1,7 @@
+---
+title: "Input, Focus & Events"
+---
+
 # Input, Focus & Events
 
 XenoAtom.Terminal.UI is built on the unified input event stream of XenoAtom.Terminal:

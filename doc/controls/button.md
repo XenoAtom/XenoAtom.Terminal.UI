@@ -1,3 +1,7 @@
+---
+title: Button
+---
+
 # Button
 
 `Button` is a clickable control that renders a label/content and raises a click interaction via a routed event.

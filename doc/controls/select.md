@@ -1,3 +1,7 @@
+---
+title: Select / Dropdown
+---
+
 # Select / Dropdown
 
 `Select<T>` is a compact dropdown control. It opens a popup list and closes when:

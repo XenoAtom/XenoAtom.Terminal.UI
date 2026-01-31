@@ -1,3 +1,7 @@
+---
+title: ListBox
+---
+
 # ListBox
 
 `ListBox<T>` displays a scrollable list of items and supports selection/focus interaction.

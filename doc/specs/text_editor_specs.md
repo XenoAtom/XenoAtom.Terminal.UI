@@ -1,3 +1,7 @@
+---
+title: Text Editor Architecture (Current Implementation + CodeEditor Roadmap)
+---
+
 # Text Editor Architecture (Current Implementation + CodeEditor Roadmap)
 
 This document describes the **current** text editor architecture in XenoAtom.Terminal.UI and the **next steps** required to evolve it into a production-grade `CodeEditor`.

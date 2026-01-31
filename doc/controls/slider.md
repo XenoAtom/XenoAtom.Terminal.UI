@@ -1,3 +1,7 @@
+---
+title: Slider
+---
+
 # Slider
 
 `Slider` selects a value in a range and supports mouse/keyboard interaction.

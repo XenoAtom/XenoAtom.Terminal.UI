@@ -1,3 +1,7 @@
+---
+title: "Hosting & Terminal Integration"
+---
+
 # Hosting & Terminal Integration
 
 XenoAtom.Terminal.UI is designed to feel integrated with `XenoAtom.Terminal`:

@@ -1,3 +1,7 @@
+---
+title: Controls Reference
+---
+
 # Controls Reference
 
 This section documents the built-in controls provided by XenoAtom.Terminal.UI.

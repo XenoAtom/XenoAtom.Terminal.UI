@@ -1,3 +1,7 @@
+---
+title: "Rendering & Performance"
+---
+
 # Rendering & Performance
 
 Rendering is done through an intermediate cell buffer and a diff renderer:

@@ -1,3 +1,7 @@
+---
+title: TreeView
+---
+
 # TreeView
 
 `TreeView` displays hierarchical nodes with expand/collapse interaction and selection.

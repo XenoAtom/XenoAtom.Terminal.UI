@@ -1,3 +1,7 @@
+---
+title: Markup Parsing (MarkupTextParser)
+---
+
 # Markup Parsing (MarkupTextParser)
 
 XenoAtom.Terminal.UI includes a lightweight parser for ANSI markup:
