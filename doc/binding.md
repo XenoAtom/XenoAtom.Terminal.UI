@@ -43,6 +43,52 @@ The source generator emits:
 - property accessors wired into the binding hub
 - fluent extension methods for `T`, `Func<T>`, and `State<T>` overloads
 
+## Bindable models (your own data types)
+
+You can also use `[Bindable]` on your own model classes so controls can bind to them directly.
+This is especially useful for data-driven controls like [DataGridControl](./controls/datagrid.md).
+
+Example:
+
+```csharp
+using XenoAtom.Terminal.UI;
+
+public sealed partial class TodoItem
+{
+    [Bindable] public partial bool Done { get; set; }
+    [Bindable] public partial string Title { get; set; } = string.Empty;
+}
+```
+
+The generator produces strongly-typed `BindingAccessor<T>` instances that you can reuse across the app:
+
+```csharp
+var done = TodoItem.Accessor.Done;
+var title = TodoItem.Accessor.Title;
+```
+
+You can plug these accessors into the data grid document model without writing manual getters/setters:
+
+```csharp
+using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.DataGrid;
+
+var doc = new DataGridListDocument<TodoItem>()
+    .AddColumn(TodoItem.Accessor.Done)
+    .AddColumn(TodoItem.Accessor.Title);
+
+doc.AddRow(new TodoItem { Done = false, Title = "Write docs" });
+doc.AddRow(new TodoItem { Done = true, Title = "Ship v1" });
+
+using var view = new DataGridDocumentView(doc);
+var grid = new DataGridControl { View = view };
+```
+
+> [!NOTE]
+> `[Bindable]` requires source generation. In most projects this is enabled automatically by referencing
+> `XenoAtom.Terminal.UI` (which brings the generator as an analyzer). If you use custom build settings, ensure the
+> source generator package is included so your partial properties are generated.
+
 ## When to use `Func<T>`
 
 Use `Func<T>` to compute a value on demand, while still being dependency-tracked:
