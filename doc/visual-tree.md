@@ -39,6 +39,5 @@ When a binding changes, the framework re-runs only the required parts of:
 
 See also:
 
-- `doc/binding.md`
-- `doc/layout.md`
-
+- [Binding](./binding.md)
+- [Layout](./layout.md)

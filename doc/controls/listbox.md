@@ -58,6 +58,6 @@ new ListBox<string>()
 
 ## Related
 
-- `../data-templating.md`
-- `../binding.md`
-- `./scrollviewer.md`
+- [Data Templating](../data-templating.md)
+- [Binding](../binding.md)
+- [ScrollViewer](./scrollviewer.md)

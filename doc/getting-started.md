@@ -62,5 +62,5 @@ Terminal.Run(
 
 See also:
 
-- `doc/hosting.md`
-- `doc/controls/index.md`
+- [Hosting](./hosting.md)
+- [Controls Reference](./controls/index.md)

@@ -33,5 +33,5 @@ new Border(() => new TextBlock(DateTime.Now.ToString("T")));
 
 ## Related
 
-- `./group.md`
-- `../styling.md`
+- [Group](./group.md)
+- [Styling](../styling.md)

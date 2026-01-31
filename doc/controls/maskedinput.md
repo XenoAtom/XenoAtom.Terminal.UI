@@ -84,7 +84,7 @@ MaskedInput supports undo/redo:
 - `Ctrl+Z`: undo
 - `Ctrl+R`: redo
 
-See `doc/undo-redo.md`.
+See [Undo/Redo](../undo-redo.md).
 
 ## Styling
 

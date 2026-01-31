@@ -21,5 +21,5 @@ new Slider().Minimum(0).Maximum(100).Value(value);
 
 ## Related
 
-- `../binding.md`
-- `../styling.md`
+- [Binding](../binding.md)
+- [Styling](../styling.md)

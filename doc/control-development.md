@@ -5,14 +5,14 @@ This document captures the most important project-specific rules and conventions
 It is intentionally concise and opinionated: follow it unless you have a strong reason not to.
 
 Related docs (more detail):
-- `doc/visual-tree.md`
-- `doc/binding.md`
-- `doc/layout.md` and `doc/specs/layout_protocol_specs.md`
-- `doc/rendering.md`
-- `doc/styling.md`
-- `doc/data-templating.md` and `doc/specs/data_template_specs.md`
-- `doc/text-editing.md` and `doc/specs/text_editor_specs.md`
-- `doc/hosting.md`
+- [Visual Tree](./visual-tree.md)
+- [Binding](./binding.md)
+- [Layout](./layout.md) and [Layout Protocol Specs](./specs/layout_protocol_specs.md)
+- [Rendering](./rendering.md)
+- [Styling](./styling.md)
+- [Data Templating](./data-templating.md) and [Data Template Specs](./specs/data_template_specs.md)
+- [Text Editing](./text-editing.md) and [Text Editor Specs](./specs/text_editor_specs.md)
+- [Hosting](./hosting.md)
 
 ## 1) Prefer the framework patterns (don’t “do it manually”)
 
@@ -69,7 +69,7 @@ This rule applies across the entire codebase. If a control uses backing fields d
 ## 3) Layout: follow the protocol
 
 All controls must implement the **current** layout protocol (`Measure(in LayoutConstraints)` returning `SizeHints`, `Arrange(in Rectangle)`), as described in:
-- `doc/specs/layout_protocol_specs.md`
+- [Layout Protocol Specs](./specs/layout_protocol_specs.md)
 
 Key rules:
 - `Natural` size in `SizeHints` must be **finite**. Never return infinity as “desired size”.
@@ -91,7 +91,7 @@ Key rules:
 - Use `TerminalTextUtility` (from `XenoAtom.Terminal`) for width and navigation utilities when dealing with cursor movement, trimming, wrapping, and selection.
 
 ### Styles
-- Use the theme/style system (see `doc/styling.md`) rather than hardcoding colors/glyphs.
+- Use the theme/style system (see [Styling](./styling.md)) rather than hardcoding colors/glyphs.
 - Control-specific style records should contain glyphs/colors and be overridden via `Style(...)`.
 
 ## 5) Input + events

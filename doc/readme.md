@@ -10,32 +10,32 @@ This guide documents the concepts, features, and controls of the library.
 
 ## Quick start
 
-- `doc/getting-started.md`
+- [Getting Started](./getting-started.md)
 
 ## Hosting & integration
 
-- `doc/hosting.md` (inline vs fullscreen, update loops)
-- `doc/prompts.md` (inline prompts built on top of `Terminal.Live`)
+- [Hosting](./hosting.md) (inline vs fullscreen, update loops)
+- [Prompts](./prompts.md) (inline prompts built on top of `Terminal.Live`)
 
 ## Core concepts
 
-- `doc/visual-tree.md` (Visuals, fluent API, dynamic composition)
-- `doc/binding.md` (`State<T>`, bindable properties, dependency tracking)
-- `doc/data-templating.md` (DataTemplates, DataPresenter<T>, item templates)
-- `doc/culture.md` (culture-aware value formatting)
-- `doc/layout.md` (layout protocol, alignment, margin/padding)
-- `doc/input.md` (keyboard/mouse, focus, routed events, capture)
-- `doc/commands.md` (commands, key sequences, key hints with CommandBar)
-- `doc/styling.md` (Theme, styles, environment)
-- `doc/rendering.md` (cell buffer, diff renderer, performance)
-- `doc/scrolling.md` (ScrollViewer, scroll models, scrollbars)
-- `doc/text-editing.md` (TextBox/TextArea/MaskedInput and the text subsystem)
-- `doc/undo-redo.md` (undo/redo for text editors)
-- `doc/markup-parsing.md` (`MarkupTextParser`, styled runs)
+- [Visual Tree](./visual-tree.md) (Visuals, fluent API, dynamic composition)
+- [Binding](./binding.md) (`State<T>`, bindable properties, dependency tracking)
+- [Data Templating](./data-templating.md) (DataTemplates, DataPresenter<T>, item templates)
+- [Culture](./culture.md) (culture-aware value formatting)
+- [Layout](./layout.md) (layout protocol, alignment, margin/padding)
+- [Input](./input.md) (keyboard/mouse, focus, routed events, capture)
+- [Commands](./commands.md) (commands, key sequences, key hints with CommandBar)
+- [Styling](./styling.md) (Theme, styles, environment)
+- [Rendering](./rendering.md) (cell buffer, diff renderer, performance)
+- [Scrolling](./scrolling.md) (ScrollViewer, scroll models, scrollbars)
+- [Text Editing](./text-editing.md) (TextBox/TextArea/MaskedInput and the text subsystem)
+- [Undo/Redo](./undo-redo.md) (undo/redo for text editors)
+- [Markup Parsing](./markup-parsing.md) (`MarkupTextParser`, styled runs)
 
 ## Controls reference
 
-- `doc/controls/index.md`
+- [Controls Reference](./controls/index.md)
 
 ## Samples
 
@@ -50,7 +50,7 @@ The `samples` folder contains end-to-end demos:
 
 The `doc/specs` folder contains deeper design documents and implementation notes used during development:
 
-- `doc/specs/layout_protocol_specs.md`
-- `doc/specs/text_editor_specs.md`
-- `doc/specs/specs.md`
-- `doc/specs/original_specs.md`
+- [Layout Protocol Specs](./specs/layout_protocol_specs.md)
+- [Text Editor Specs](./specs/text_editor_specs.md)
+- [Specs Index](./specs/specs.md)
+- [Original Specs](./specs/original_specs.md)

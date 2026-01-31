@@ -27,5 +27,5 @@ If the content is not scrollable, the scroll viewer owns its scroll offsets and 
 
 See also:
 
-- `doc/controls/scrollviewer.md`
-- `doc/controls/scrollbar.md`
+- [ScrollViewer](./controls/scrollviewer.md)
+- [ScrollBar](./controls/scrollbar.md)

@@ -20,7 +20,7 @@ Text editors support undo/redo:
 - `Ctrl+Z`: undo
 - `Ctrl+R`: redo
 
-See `doc/undo-redo.md`.
+See [Undo/Redo](./undo-redo.md).
 
 ## Wrapping
 
@@ -38,4 +38,4 @@ new ScrollViewer(new TextArea(text))
 
 See the living design document:
 
-- `doc/specs/text_editor_specs.md`
+- [Text Editor Specs](./specs/text_editor_specs.md)

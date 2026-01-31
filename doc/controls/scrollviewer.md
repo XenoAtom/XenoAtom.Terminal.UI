@@ -66,5 +66,5 @@ When the extent exceeds the viewport, ScrollViewer:
 
 ## Related
 
-- `../scrolling.md`
-- `./scrollbar.md`
+- [Scrolling](../scrolling.md)
+- [ScrollBar](./scrollbar.md)

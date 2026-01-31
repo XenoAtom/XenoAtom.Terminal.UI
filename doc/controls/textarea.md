@@ -22,7 +22,7 @@ new TextArea().Text(text);
 - `Ctrl+F`: Find
 - `Ctrl+H`: Replace
 
-See also `./searchreplacepopup.md`.
+See also [SearchReplacePopup](./searchreplacepopup.md).
 
 ## Undo / redo
 
@@ -33,7 +33,7 @@ TextArea supports undo/redo:
 
 Replace operations are undoable. `Replace All` is recorded as a single undo step.
 
-See `../undo-redo.md`.
+See [Undo/Redo](../undo-redo.md).
 
 ## Scroll integration
 
@@ -52,6 +52,6 @@ and the viewer can render scrollbars and synchronize offsets.
 
 See also:
 
-- `../text-editing.md`
-- `../binding.md`
-- `./scrollviewer.md`
+- [Text Editing](../text-editing.md)
+- [Binding](../binding.md)
+- [ScrollViewer](./scrollviewer.md)

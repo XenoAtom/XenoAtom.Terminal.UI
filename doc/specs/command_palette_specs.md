@@ -1,7 +1,7 @@
 # Command Palette (Specs)
 
 This document specifies the **CommandPalette v1** for XenoAtom.Terminal.UI and how it integrates with the unified
-`Command` system (`doc/specs/command_specs.md`).
+`Command` system ([Command Specs](./command_specs.md)).
 
 The goal is to make commands **discoverable**, **searchable**, and **easy to invoke**, while staying consistent with:
 
@@ -270,4 +270,3 @@ While the palette is open:
 2. Refactor `CommandPalette` to operate on `Command` directly.
 3. Remove `CommandPaletteItem` and update demos/docs/tests.
 4. Add optional `Command.Name` / `Command.SearchText` if we agree it’s needed for the future “command prompt” feature.
-

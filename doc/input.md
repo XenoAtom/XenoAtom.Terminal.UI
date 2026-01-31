@@ -29,6 +29,5 @@ This prevents “hover bleed” and inconsistent pressed/drag behavior.
 
 See also:
 
-- `doc/controls/button.md`
-- `doc/controls/scrollviewer.md`
-
+- [Button](./controls/button.md)
+- [ScrollViewer](./controls/scrollviewer.md)

@@ -12,6 +12,6 @@ Dialogs are displayed in fullscreen apps and typically:
 
 See also:
 
-- `./popup.md`
-- `./backdrop.md`
-- `../input.md`
+- [Popup](./popup.md)
+- [Backdrop](./backdrop.md)
+- [Input](../input.md)

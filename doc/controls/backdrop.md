@@ -30,6 +30,6 @@ var overlay = new ZStack(
 
 ## Related
 
-- `./dialog.md`
-- `./popup.md`
-- `../styling.md`
+- [Dialog](./dialog.md)
+- [Popup](./popup.md)
+- [Styling](../styling.md)

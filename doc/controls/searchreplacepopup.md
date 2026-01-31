@@ -41,7 +41,7 @@ The popup UI is rendered using `Popup` in the app window layer, while `SearchRep
 
 ## Related
 
-- `../text-editing.md`
-- `../input.md`
-- `./popup.md`
-- `./textarea.md`
+- [Text Editing](../text-editing.md)
+- [Input](../input.md)
+- [Popup](./popup.md)
+- [TextArea](./textarea.md)

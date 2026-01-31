@@ -20,7 +20,7 @@ NumberBox supports undo/redo:
 - `Ctrl+Z`: undo
 - `Ctrl+R`: redo
 
-See `../undo-redo.md`.
+See [Undo/Redo](../undo-redo.md).
 
 ## Validation
 
@@ -65,5 +65,5 @@ var ui = new NumberBox<int>()
 
 ## Related
 
-- `../text-editing.md`
-- `../binding.md`
+- [Text Editing](../text-editing.md)
+- [Binding](../binding.md)

@@ -14,5 +14,5 @@ new VStack(
 
 See also:
 
-- `../layout.md`
-- `./hstack.md`
+- [Layout](../layout.md)
+- [HStack](./hstack.md)

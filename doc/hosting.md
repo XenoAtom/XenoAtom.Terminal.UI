@@ -58,5 +58,5 @@ Fullscreen `Terminal.Run(...)` exits when the configured exit gesture is trigger
 
 See also:
 
-- `doc/input.md`
-- `doc/rendering.md`
+- [Input](./input.md)
+- [Rendering](./rendering.md)

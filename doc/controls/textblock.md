@@ -78,5 +78,5 @@ new TextBlock("Banner")
 
 ## Related
 
-- `../binding.md`
-- `../styling.md`
+- [Binding](../binding.md)
+- [Styling](../styling.md)

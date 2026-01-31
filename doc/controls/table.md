@@ -22,6 +22,6 @@ new Table()
 
 ## Related
 
-- `./datagrid.md`
-- `../layout.md`
-- `../styling.md`
+- [DataGridControl](./datagrid.md)
+- [Layout](../layout.md)
+- [Styling](../styling.md)

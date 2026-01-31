@@ -72,5 +72,5 @@ These can be updated dynamically, and are demonstrated in the Toast demo page of
 
 ## Related
 
-- `../styling.md`
-- `../input.md`
+- [Styling](../styling.md)
+- [Input](../input.md)

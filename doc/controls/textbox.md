@@ -29,7 +29,7 @@ TextBox supports undo/redo:
 - `Ctrl+Z`: undo
 - `Ctrl+R`: redo
 
-See `../undo-redo.md`.
+See [Undo/Redo](../undo-redo.md).
 
 ## Password mode
 
@@ -65,6 +65,6 @@ TextBox uses background on the text region while keeping borders visually compat
 
 See also:
 
-- `../text-editing.md`
-- `../binding.md`
-- `../styling.md`
+- [Text Editing](../text-editing.md)
+- [Binding](../binding.md)
+- [Styling](../styling.md)

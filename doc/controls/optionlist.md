@@ -46,6 +46,6 @@ If you don’t set `ItemTemplate`, the template is resolved from the environment
 
 ## Related
 
-- `../data-templating.md`
-- `../binding.md`
-- `./scrollviewer.md`
+- [Data Templating](../data-templating.md)
+- [Binding](../binding.md)
+- [ScrollViewer](./scrollviewer.md)

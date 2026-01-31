@@ -37,6 +37,5 @@ Rendering glyphs (borders, scrollbars, etc.) are stored in styles using `Rune` s
 
 See also:
 
-- `doc/controls/button.md`
-- `doc/controls/border.md`
-
+- [Button](./controls/button.md)
+- [Border](./controls/border.md)

@@ -39,5 +39,5 @@ Tooltips are implemented as a non-interactive overlay in fullscreen apps.
 
 ## Related
 
-- `./popup.md`
-- `../input.md`
+- [Popup](./popup.md)
+- [Input](../input.md)

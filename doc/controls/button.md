@@ -38,6 +38,6 @@ new Button("Danger")
 
 See also:
 
-- `../styling.md`
-- `../commands.md`
-- `../binding.md`
+- [Styling](../styling.md)
+- [Commands](../commands.md)
+- [Binding](../binding.md)

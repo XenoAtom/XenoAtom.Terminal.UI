@@ -3,7 +3,7 @@
 `DataGridControl` is an interactive, virtualized, data-bound table control intended for large datasets and rich interaction:
 scrolling, selection, searching/filtering, column resizing, and inline editing.
 
-The lower-level contracts and data model live in `../specs/datagrid_specs.md`.
+The lower-level contracts and data model live in [DataGrid Specs](../specs/datagrid_specs.md).
 
 ## Quick start
 
@@ -122,7 +122,7 @@ When editing starts, the control chooses an editor:
 
 > [!TIP]
 > If you need a custom cell editor or display, provide a typed `DataGridColumn<T>` and use templates.
-> See `../data-templating.md`.
+> See [Data Templating](../data-templating.md).
 
 ## Notes
 
@@ -131,8 +131,8 @@ When editing starts, the control chooses an editor:
 
 ## Related
 
-- `../specs/datagrid_specs.md`
-- `../scrolling.md`
-- `../binding.md`
-- `../data-templating.md`
-- `./scrollviewer.md`
+- [DataGrid Specs](../specs/datagrid_specs.md)
+- [Scrolling](../scrolling.md)
+- [Binding](../binding.md)
+- [Data Templating](../data-templating.md)
+- [ScrollViewer](./scrollviewer.md)

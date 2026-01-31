@@ -45,6 +45,6 @@ var bar = new CommandBar()
 
 ## See also
 
-- `../commands.md`
-- `../specs/command_specs.md`
-- `../input.md`
+- [Commands](../commands.md)
+- [Command Specs](../specs/command_specs.md)
+- [Input](../input.md)

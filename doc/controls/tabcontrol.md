@@ -31,5 +31,5 @@ new TabControl(
 
 ## Related
 
-- `../styling.md`
-- `../layout.md`
+- [Styling](../styling.md)
+- [Layout](../layout.md)

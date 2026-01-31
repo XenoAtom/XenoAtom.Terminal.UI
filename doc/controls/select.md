@@ -52,6 +52,6 @@ var placements = new Select<PopupPlacement>()
 
 ## Related
 
-- `../data-templating.md`
-- `../binding.md`
-- `./popup.md`
+- [Data Templating](../data-templating.md)
+- [Binding](../binding.md)
+- [Popup](./popup.md)

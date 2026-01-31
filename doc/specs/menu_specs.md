@@ -12,8 +12,8 @@ It covers:
 
 Related specs:
 
-- `doc/specs/command_specs.md`
-- `doc/specs/command_palette_specs.md`
+- [Command Specs](./command_specs.md)
+- [Command Palette Specs](./command_palette_specs.md)
 
 ---
 
@@ -245,8 +245,8 @@ Add or refine:
   - show a `MenuBar` demo driven by `Command` instances
   - show right-click context menu on a `TextArea` and `LogControl`
 - Update docs:
-  - `doc/controls/menubar.md` should mention command integration
-  - add `doc/controls/contextmenu.md`
+  - [MenuBar](../controls/menubar.md) should mention command integration
+  - add [ContextMenu](../controls/contextmenu.md)
 
 ---
 
@@ -271,4 +271,3 @@ Add or refine:
 3. Implement `ContextMenu` control and `ContextMenuService`.
 4. Add default command-based context menu generation using `CommandPresentation.ContextMenu`.
 5. Update demos/docs/tests.
-

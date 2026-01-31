@@ -7,7 +7,7 @@ Terminal UI layout is cell-based (integer coordinates) and uses a two-pass proto
 
 The detailed specification is in:
 
-- `doc/specs/layout_protocol_specs.md`
+- [Layout Protocol Specs](./specs/layout_protocol_specs.md)
 
 ## Alignment
 
@@ -32,5 +32,4 @@ Containers and content controls may choose defaults more appropriate for their r
 
 See also:
 
-- `doc/controls/index.md`
-
+- [Controls Reference](./controls/index.md)

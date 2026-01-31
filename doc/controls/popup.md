@@ -34,7 +34,7 @@ Popups participate in focus. Common dismissal patterns:
 
 ## Related
 
-- `./dialog.md`
-- `./contextmenu.md`
-- `./select.md`
-- `./tooltip.md`
+- [Dialog](./dialog.md)
+- [ContextMenu](./contextmenu.md)
+- [Select](./select.md)
+- [Tooltip](./tooltip.md)

@@ -13,5 +13,5 @@ new HStack(
 
 ## Related
 
-- `../layout.md`
-- `./vstack.md`
+- [Layout](../layout.md)
+- [VStack](./vstack.md)

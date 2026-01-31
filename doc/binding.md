@@ -111,4 +111,4 @@ When building your own control:
 
 See also:
 
-- `./text-editing.md`
+- [Text Editing](./text-editing.md)

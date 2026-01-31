@@ -24,5 +24,5 @@ new Switch("Enabled").IsOn(enabled);
 
 ## Related
 
-- `../binding.md`
-- `../styling.md`
+- [Binding](../binding.md)
+- [Styling](../styling.md)

@@ -37,5 +37,5 @@ It is useful when you have many options and want consistent keyboard navigation.
 
 ## Related
 
-- `../binding.md`
-- `./optionlist.md`
+- [Binding](../binding.md)
+- [OptionList](./optionlist.md)

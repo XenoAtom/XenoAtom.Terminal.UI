@@ -61,7 +61,7 @@ palette.Style(CommandPaletteStyle.Default with
 
 ## Related
 
-- `../commands.md`
-- `../input.md`
-- `./commandbar.md`
-- `./popup.md`
+- [Commands](../commands.md)
+- [Input](../input.md)
+- [CommandBar](./commandbar.md)
+- [Popup](./popup.md)

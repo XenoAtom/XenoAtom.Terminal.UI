@@ -88,9 +88,9 @@ While a modal popup/menu is active, global shortcuts are not executed â€œbehindâ
 
 ## Related docs
 
-- `doc/controls/commandbar.md`
-- `doc/input.md`
-- `doc/controls/commandpalette.md`
-- `doc/controls/menubar.md`
-- `doc/controls/contextmenu.md`
-- `doc/specs/command_specs.md`
+- [CommandBar](./controls/commandbar.md)
+- [Input](./input.md)
+- [CommandPalette](./controls/commandpalette.md)
+- [MenuBar](./controls/menubar.md)
+- [ContextMenu](./controls/contextmenu.md)
+- [Command Specs](./specs/command_specs.md)

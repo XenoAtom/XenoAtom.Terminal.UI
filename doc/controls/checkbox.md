@@ -26,5 +26,5 @@ The label can be a `Visual`, and spacing between glyph and label is controlled b
 
 ## Related
 
-- `../binding.md`
-- `../styling.md`
+- [Binding](../binding.md)
+- [Styling](../styling.md)

@@ -23,7 +23,7 @@ The design is inspired by modern terminal UI patterns and spreadsheet/datagrid e
   - versioning,
   - change notifications,
   - batching.
-- **Templating** for display and editing via `DataTemplate<T>` (see `doc/specs/data_template_specs.md`).
+- **Templating** for display and editing via `DataTemplate<T>` (see [Data Template Specs](./data_template_specs.md)).
 - **Bulk editing UX**: cell navigation + inline editor, with efficient commit/cancel and validation hooks.
 
 ## 2. Non-goals (V1)
@@ -489,7 +489,7 @@ Notes:
 
 ### 8.2 Data template context for cells
 
-To reuse the existing `DataTemplate<T>` contract (see `doc/specs/data_template_specs.md`), `DataGrid` SHOULD use
+To reuse the existing `DataTemplate<T>` contract (see [Data Template Specs](./data_template_specs.md)), `DataGrid` SHOULD use
 `DataTemplateContext` as follows when invoking `CellTemplate` / `CellEditorTemplate`:
 
 - `Owner` = the `DataGrid` instance
@@ -580,7 +580,7 @@ For templated cells/headers/editors, `DataGrid` SHOULD maintain recycle pools ke
 - role (Display vs Editor),
 - and (optionally) column key.
 
-This mirrors the `DataTemplate<T>.TryUpdate(...)` pattern from `doc/specs/data_template_specs.md`.
+This mirrors the `DataTemplate<T>.TryUpdate(...)` pattern from [Data Template Specs](./data_template_specs.md).
 
 ---
 
