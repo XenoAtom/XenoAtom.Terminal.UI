@@ -28,6 +28,8 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
 - **Rendering**:
   - Cell-buffer renderer + diffing, efficient batched output, synchronized output (DEC 2026)
   - Alpha-aware colors (`RGBA`) with blending support for modern UI effects
+- **Debug overlay**:
+  - Built-in performance overlay (toggle with `F12`) to inspect frame timings, invalidation, and diff output
 - **Cross-platform + AOT-friendly**: `net10.0` and NativeAOT-oriented design (built on XenoAtom.Terminal)
 
 Screenshot placeholder (to be updated):

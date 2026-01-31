@@ -32,6 +32,7 @@ This guide documents the concepts, features, and controls of the library.
 - [Text Editing](./text-editing.md) (TextBox/TextArea/MaskedInput and the text subsystem)
 - [Undo/Redo](./undo-redo.md) (undo/redo for text editors)
 - [Markup Parsing](./markup-parsing.md) (`MarkupTextParser`, styled runs)
+- [Debugging](./debugging.md) (debug overlay, performance metrics)
 
 ## Controls reference
 
