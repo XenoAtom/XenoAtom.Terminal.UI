@@ -9,6 +9,32 @@ XenoAtom.Terminal.UI uses a theme/style model built on ANSI colors and cell styl
 - Fullscreen apps typically use `Theme.Default` (RGB scheme).
 - Inline/live widgets typically use `Theme.Terminal` (uses terminal default colors).
 
+Themes are resolved from the environment (`Visual.GetTheme()`), and can be overridden per subtree.
+
+### Applying a theme
+
+```csharp
+using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Styling;
+
+var themed = new Group(new TextArea("Themed region"))
+    .Style(Theme.FromScheme(ColorScheme.CherryDark));
+```
+
+## What a Theme contains
+
+`Theme` is intentionally “semantic”: controls mostly consume design tokens such as:
+
+- `Surface`, `PopupSurface`: background surfaces
+- `ControlFill`, `ControlFillHover`, `ControlFillPressed`: button-like fills
+- `InputFill`, `InputFillFocused`: text input surfaces
+- `Border`, `FocusBorder`: stroke colors
+- `Accent`, `Selection`: key interaction colors
+
+> [!NOTE]
+> For RGB schemes, many tokens are derived using subtle **alpha overlays**. This is how the default theme achieves
+> “lifted” panels and soft hover effects without hard-coded colors.
+
 ## Styles
 
 Controls obtain their styles from the environment:
@@ -29,7 +55,37 @@ var danger = ButtonStyle.Default with { Tone = ControlTone.Error };
 Schemes can be:
 
 - terminal-indexed (`Color.Basic16(...)`)
-- RGB (`Color.Rgb(...)`)
+- RGB (`Color.Rgb(...)` / `Color.RgbA(...)`)
+
+### Root Loops schemes (built-in + generator)
+
+XenoAtom.Terminal.UI ships with a set of curated color schemes generated with **Root Loops**:
+
+- Website: `https://rootloops.sh`
+- Generator code: `ColorScheme.Generate(...)`
+- Predefined schemes: `ColorScheme.GetPredefinedSchemes()`
+
+`Theme.Default` and `Theme.DefaultLight` are built from:
+
+- `ColorScheme.RootLoopsDark`
+- `ColorScheme.RootLoopsLight`
+
+You can list all built-in schemes (for example in a demo):
+
+```csharp
+var schemes = ColorScheme.GetPredefinedSchemes();
+```
+
+## Alpha blending (RGBA)
+
+XenoAtom.Terminal.UI supports alpha-aware colors via `Color.RgbA(r,g,b,a)`.
+Even though the terminal ultimately renders a single color per cell, alpha colors are blended during rendering so
+overlays and lifted surfaces look consistent.
+
+Guidance:
+
+- Use low alpha for hover/focus overlays (e.g. `0x10` to `0x40`).
+- Prefer themes for most colors; use raw RGB(A) for special-purpose visuals.
 
 ## Glyphs
 
@@ -39,3 +95,4 @@ See also:
 
 - [Button](./controls/button.md)
 - [Border](./controls/border.md)
+- [Rendering](./rendering.md)
