@@ -20,6 +20,20 @@ var ui = new VStack(
 );
 ```
 
+> [!NOTE]
+> `State<T>` is itself a bindable model: it is just a class with a single `[Bindable]` property named `Value`.
+> Use `State<T>` for small, UI-only state. Use a custom bindable model when you want to group multiple related
+> values together.
+
+Conceptually, `State<T>` is similar to:
+
+```csharp
+public sealed partial class MyState<T>
+{
+    [Bindable] public partial T Value { get; set; }
+}
+```
+
 ## Tracking contexts (what gets invalidated)
 
 Bindable values are tracked when they are *read* during a “tracking context”, including:
@@ -53,18 +67,42 @@ Example:
 ```csharp
 using XenoAtom.Terminal.UI;
 
-public sealed partial class TodoItem
+public enum WorkItemKind { Feature, Bug, Chore }
+public enum WorkItemPriority { Low, Medium, High, Critical }
+
+public sealed partial class WorkItem
 {
     [Bindable] public partial bool Done { get; set; }
+    [Bindable] public partial WorkItemKind Kind { get; set; }
+    [Bindable] public partial WorkItemPriority Priority { get; set; }
+    [Bindable] public partial int EstimateHours { get; set; }
     [Bindable] public partial string Title { get; set; } = string.Empty;
+    [Bindable] public partial string Notes { get; set; } = string.Empty;
 }
 ```
 
-The generator produces strongly-typed `BindingAccessor<T>` instances that you can reuse across the app:
+The generator produces a `Bind` helper (for bindings) and strongly-typed `BindingAccessor<T>` instances (for reuse):
+
+### Binding a model to controls (forms)
 
 ```csharp
-var done = TodoItem.Accessor.Done;
-var title = TodoItem.Accessor.Title;
+var model = new WorkItem();
+
+var ui = new VStack(
+    new HStack(new Switch().IsOn(model.Bind.Done), "Done").Spacing(1),
+    new EnumSelect<WorkItemKind>().Value(model.Bind.Kind),
+    new EnumSelect<WorkItemPriority>().Value(model.Bind.Priority),
+    new NumberBox<int>().Value(model.Bind.EstimateHours),
+    new TextBox().Text(model.Bind.Title),
+    new TextArea().Text(model.Bind.Notes).MinHeight(5).MaxHeight(5).Scrollable()
+);
+```
+
+### Reusing accessors (DataGrid, documents, schema)
+
+```csharp
+var done = WorkItem.Accessor.Done;
+var title = WorkItem.Accessor.Title;
 ```
 
 You can plug these accessors into the data grid document model without writing manual getters/setters:
@@ -73,12 +111,12 @@ You can plug these accessors into the data grid document model without writing m
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.DataGrid;
 
-var doc = new DataGridListDocument<TodoItem>()
-    .AddColumn(TodoItem.Accessor.Done)
-    .AddColumn(TodoItem.Accessor.Title);
+var doc = new DataGridListDocument<WorkItem>()
+    .AddColumn(WorkItem.Accessor.Done)
+    .AddColumn(WorkItem.Accessor.Title);
 
-doc.AddRow(new TodoItem { Done = false, Title = "Write docs" });
-doc.AddRow(new TodoItem { Done = true, Title = "Ship v1" });
+doc.AddRow(new WorkItem { Done = false, Title = "Write docs" });
+doc.AddRow(new WorkItem { Done = true, Title = "Ship v1" });
 
 using var view = new DataGridDocumentView(doc);
 var grid = new DataGridControl { View = view };
