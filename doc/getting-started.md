@@ -63,4 +63,4 @@ Terminal.Run(
 See also:
 
 - [Hosting](./hosting.md)
-- [Controls Reference](./controls/index.md)
+- [Controls Reference](./controls/readme.md)

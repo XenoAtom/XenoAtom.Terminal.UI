@@ -32,4 +32,4 @@ Containers and content controls may choose defaults more appropriate for their r
 
 See also:
 
-- [Controls Reference](./controls/index.md)
+- [Controls Reference](./controls/readme.md)

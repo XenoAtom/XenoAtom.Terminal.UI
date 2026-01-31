@@ -35,7 +35,7 @@ This guide documents the concepts, features, and controls of the library.
 
 ## Controls reference
 
-- [Controls Reference](./controls/index.md)
+- [Controls Reference](./controls/readme.md)
 
 ## Samples
 

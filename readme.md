@@ -85,7 +85,7 @@ Terminal.Run(
 
 ## 🧩 Controls included
 
-The library ships with a large set of built-in controls. See [Controls Reference](doc/controls/index.md) for the full reference.
+The library ships with a large set of built-in controls. See [Controls Reference](doc/controls/readme.md) for the full reference.
 
 Highlights:
 
