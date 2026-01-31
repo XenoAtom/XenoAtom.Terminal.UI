@@ -17,6 +17,8 @@ namespace XenoAtom.Terminal.UI.Controls;
 public sealed partial class Table : Visual
 {
     private int[]? _columnWidths;
+    private int _headerRowHeight;
+    private int[]? _rowHeights;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Table"/> class.
@@ -95,6 +97,8 @@ public sealed partial class Table : Visual
         if (columns == 0)
         {
             _columnWidths = Array.Empty<int>();
+            _rowHeights = Array.Empty<int>();
+            _headerRowHeight = 0;
             return SizeHints.Fixed(default);
         }
 
@@ -135,14 +139,8 @@ public sealed partial class Table : Visual
 
         var desiredWidth = ComputeRequiredWidth(widths, padding.Horizontal, showOuterBorder, showVerticalLines);
 
-        var rowHeight = GetRowHeight(padding);
-        var desiredHeight = ComputeRequiredHeight(
-            headerCount: HeaderCells.Count,
-            rowCount: RowCells.Count,
-            rowHeight,
-            showOuterBorder,
-            showHeaderSeparator,
-            showRowSeparators);
+        ComputeRowHeights(widths, padding);
+        var desiredHeight = ComputeRequiredHeight(_headerRowHeight, _rowHeights, showOuterBorder, showHeaderSeparator, showRowSeparators);
 
         return SizeHints.Fixed(constraints.Clamp(new Size(desiredWidth, desiredHeight)));
     }
@@ -162,15 +160,16 @@ public sealed partial class Table : Visual
         FitColumnWidthsToWidth(widths, finalRect.Width, padding.Horizontal, showOuterBorder, showVerticalLines, expandToAvailable: true);
 
         var columns = widths.Length;
-        var rowHeight = GetRowHeight(padding);
+        var headerRowHeight = _headerRowHeight <= 0 ? GetMinRowHeight(padding) : _headerRowHeight;
+        var rowHeights = _rowHeights;
 
         var xStart = finalRect.X + (showOuterBorder ? 1 : 0);
         var y = finalRect.Y + (showOuterBorder ? 1 : 0);
 
         if (HeaderCells.Count > 0)
         {
-            ArrangeRow(xStart, y, rowHeight, widths, padding, showVerticalLines, HeaderCells);
-            y += rowHeight;
+            ArrangeRow(xStart, y, headerRowHeight, widths, padding, showVerticalLines, HeaderCells);
+            y += headerRowHeight;
 
             if (showHeaderSeparator)
             {
@@ -180,6 +179,7 @@ public sealed partial class Table : Visual
 
         for (var r = 0; r < RowCells.Count; r++)
         {
+            var rowHeight = rowHeights is not null && (uint)r < (uint)rowHeights.Length ? rowHeights[r] : GetMinRowHeight(padding);
             ArrangeRow(xStart, y, rowHeight, widths, padding, showVerticalLines, RowCells[r]);
             y += rowHeight;
 
@@ -217,7 +217,8 @@ public sealed partial class Table : Visual
         var headerStyle = tableStyle.ResolveHeaderStyle(theme);
 
         var columns = widths.Length;
-        var rowHeight = GetRowHeight(padding);
+        var headerRowHeight = _headerRowHeight <= 0 ? GetMinRowHeight(padding) : _headerRowHeight;
+        var rowHeights = _rowHeights;
 
         var y = rect.Y;
         if (showOuterBorder && rect.Width >= 2 && rect.Height >= 2)
@@ -229,8 +230,8 @@ public sealed partial class Table : Visual
         var rowTop = rect.Y + (showOuterBorder ? 1 : 0);
         if (HeaderCells.Count > 0 && rowTop < rect.Y + rect.Height)
         {
-            RenderRowArea(buffer, rect, rowTop, rowHeight, widths, padding, showOuterBorder, showVerticalLines, glyphs, headerStyle, borderStyle);
-            rowTop += rowHeight;
+            RenderRowArea(buffer, rect, rowTop, headerRowHeight, widths, padding, showOuterBorder, showVerticalLines, glyphs, headerStyle, borderStyle);
+            rowTop += headerRowHeight;
 
             if (showHeaderSeparator && rowTop < rect.Y + rect.Height)
             {
@@ -241,6 +242,7 @@ public sealed partial class Table : Visual
 
         for (var r = 0; r < RowCells.Count && rowTop < rect.Y + rect.Height; r++)
         {
+            var rowHeight = rowHeights is not null && (uint)r < (uint)rowHeights.Length ? rowHeights[r] : GetMinRowHeight(padding);
             RenderRowArea(buffer, rect, rowTop, rowHeight, widths, padding, showOuterBorder, showVerticalLines, glyphs, cellStyle, borderStyle);
             rowTop += rowHeight;
 
@@ -434,7 +436,7 @@ public sealed partial class Table : Visual
         }
     }
 
-    private static int GetRowHeight(Thickness padding)
+    private static int GetMinRowHeight(Thickness padding)
     {
         var vertical = Math.Max(0, padding.Top) + Math.Max(0, padding.Bottom);
         return Math.Max(1, 1 + vertical);
@@ -460,7 +462,7 @@ public sealed partial class Table : Visual
         return LayoutConstants.ClampFinite(total);
     }
 
-    private static int ComputeRequiredHeight(int headerCount, int rowCount, int rowHeight, bool showOuterBorder, bool showHeaderSeparator, bool showRowSeparators)
+    private static int ComputeRequiredHeight(int headerRowHeight, int[]? rowHeights, bool showOuterBorder, bool showHeaderSeparator, bool showRowSeparators)
     {
         var height = 0;
         if (showOuterBorder)
@@ -468,16 +470,23 @@ public sealed partial class Table : Visual
             height += 2;
         }
 
-        if (headerCount > 0)
+        if (headerRowHeight > 0)
         {
-            height += rowHeight;
+            height += headerRowHeight;
             if (showHeaderSeparator)
             {
                 height += 1;
             }
         }
 
-        height += rowCount * rowHeight;
+        var rowCount = rowHeights?.Length ?? 0;
+        if (rowCount > 0 && rowHeights is not null)
+        {
+            for (var i = 0; i < rowCount; i++)
+            {
+                height += rowHeights[i];
+            }
+        }
 
         if (showRowSeparators && rowCount > 1)
         {
@@ -485,6 +494,56 @@ public sealed partial class Table : Visual
         }
 
         return Math.Max(0, height);
+    }
+
+    private void ComputeRowHeights(int[] widths, Thickness padding)
+    {
+        var columns = widths.Length;
+        var padTop = Math.Max(0, padding.Top);
+        var padBottom = Math.Max(0, padding.Bottom);
+        var verticalPadding = padTop + padBottom;
+
+        var minRowHeight = GetMinRowHeight(padding);
+        var contentConstraints = new LayoutConstraints(0, 0, 0, LayoutConstants.Infinite);
+
+        _headerRowHeight = 0;
+        if (HeaderCells.Count > 0)
+        {
+            var maxContentHeight = 1;
+            for (var c = 0; c < columns && c < HeaderCells.Count; c++)
+            {
+                contentConstraints = contentConstraints with { MaxWidth = Math.Max(0, widths[c]) };
+                var cell = HeaderCells[c];
+                cell.Measure(contentConstraints);
+                maxContentHeight = Math.Max(maxContentHeight, cell.DesiredSize.Height);
+            }
+
+            _headerRowHeight = Math.Max(minRowHeight, LayoutConstants.ClampFinite(maxContentHeight + verticalPadding));
+        }
+
+        if (RowCells.Count == 0)
+        {
+            _rowHeights = Array.Empty<int>();
+            return;
+        }
+
+        var rowHeights = new int[RowCells.Count];
+        for (var r = 0; r < RowCells.Count; r++)
+        {
+            var row = RowCells[r];
+            var maxContentHeight = 1;
+            for (var c = 0; c < columns && c < row.Count; c++)
+            {
+                contentConstraints = contentConstraints with { MaxWidth = Math.Max(0, widths[c]) };
+                var cell = row[c];
+                cell.Measure(contentConstraints);
+                maxContentHeight = Math.Max(maxContentHeight, cell.DesiredSize.Height);
+            }
+
+            rowHeights[r] = Math.Max(minRowHeight, LayoutConstants.ClampFinite(maxContentHeight + verticalPadding));
+        }
+
+        _rowHeights = rowHeights;
     }
 
     private static void FitColumnWidthsToWidth(int[] widths, int availableWidth, int paddingHorizontal, bool showOuterBorder, bool showVerticalLines, bool expandToAvailable)

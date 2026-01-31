@@ -21,6 +21,7 @@ new Table()
 ## Notes
 
 - `Table` is best for relatively small datasets where you want rich per-cell visuals.
+- Row height is computed from the tallest cell in the row, so multi-line visuals (e.g. `VStack`, `TextArea`) work as expected.
 - For very large datasets, prefer `DataGridControl` (virtualized, scrollable, selection/search/editing).
 
 ## Related
