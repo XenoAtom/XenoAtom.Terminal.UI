@@ -1,5 +1,8 @@
 # Scrolling
 
+XenoAtom.Terminal.UI uses a single scrolling model across controls: `IScrollable` + `ScrollModel`.
+This keeps scrollbars, mouse wheel behavior, and nested scrolling consistent.
+
 ## ScrollViewer
 
 `ScrollViewer` provides clipped scrolling for any content visual:
@@ -20,6 +23,52 @@ This is how `TextArea` integrates with `ScrollViewer`.
 ### Content that does not implement `IScrollable`
 
 If the content is not scrollable, the scroll viewer owns its scroll offsets and scrolls by translating the content viewport.
+
+## IScrollable and ScrollModel
+
+`IScrollable` is a simple contract:
+
+```csharp
+public interface IScrollable
+{
+    ScrollModel Scroll { get; }
+}
+```
+
+`ScrollModel` represents the state of a scrollable surface:
+
+- `ViewportWidth` / `ViewportHeight`: visible region size (in cells/rows)
+- `ExtentWidth` / `ExtentHeight`: total scrollable size (in cells/rows)
+- `OffsetX` / `OffsetY`: current scroll position
+- `Version`: a bindable “snapshot” of the current scroll state
+
+### How it works in practice
+
+- The scrollable control updates `ScrollModel` during `Arrange`:
+  - `Scroll.SetViewport(viewportWidth, viewportHeight)`
+  - `Scroll.SetExtent(extentWidth, extentHeight)`
+- `ScrollViewer` reads the model to decide:
+  - whether scrollbars should be visible,
+  - the thumb size and range,
+  - how to clamp offsets.
+
+### Version and dependency tracking
+
+`ScrollModel.Version` is a bindable property updated whenever viewport/extent/offset changes.
+Controls often mirror it into an internal bindable property in `PrepareChildren` to avoid “read then write” tracking loops.
+
+See [Binding](./binding.md) for the pattern.
+
+## Implementing a custom scrollable control
+
+At a high level:
+
+1. Add a `ScrollModel` field: `private readonly ScrollModel _scroll;`
+2. Implement `IScrollable.Scroll => _scroll;`
+3. In `Arrange`, update viewport/extent and render content offset by `Scroll.OffsetX/OffsetY`.
+
+> [!TIP]
+> Prefer `Scroll.ScrollToMakeVisible(...)` when you need “ensure selection visible” behavior.
 
 ## ScrollBar
 
