@@ -19,7 +19,7 @@ Add a `ToastHost` at the root of your fullscreen app and show toasts with `Toast
 ```csharp
 var root = new ToastHost(
         new DockLayout()
-            .Top(new Header().Title("My App"))
+            .Top(new Header().Left("My App"))
             .Content(mainContent)
             .Bottom(new Footer()))
     .Position(ToastPosition.TopRight)

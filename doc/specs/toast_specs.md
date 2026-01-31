@@ -160,7 +160,7 @@ A typical app has a single `ToastHost` at the root level:
 ```csharp
 var root = new ToastHost(
     new DockLayout()
-        .Top(new Header().Title("My App"))
+        .Top(new Header().Left("My App"))
         .Content(mainContent)
         .Bottom(new Footer()));
 
@@ -465,7 +465,7 @@ The exact colors come from `Theme` semantic tokens.
 ```csharp
 var root = new ToastHost(
         new DockLayout()
-            .Top(new Header().Title("My App"))
+            .Top(new Header().Left("My App"))
             .Content(mainContent)
             .Bottom(new Footer()))
     .Position(ToastPosition.TopRight)
