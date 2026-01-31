@@ -15,8 +15,11 @@ new Slider().Minimum(0).Maximum(100).Value(value);
 - PageUp/PageDown adjust by a larger step.
 - Mouse click/drag moves the thumb.
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Start` 
+
+## Styling
 `SliderStyle` controls track/thumb glyphs and colors.
 
 ## Related

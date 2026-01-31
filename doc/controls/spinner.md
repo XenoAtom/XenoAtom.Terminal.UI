@@ -16,8 +16,11 @@ new Spinner().Style(SpinnerStyles.Dots);
 
 Spinner styles define frames (strings) and a frame rate. Frames can be multi-rune strings.
 
-See also:
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+See also:
 - `src/XenoAtom.Terminal.UI/Styling/SpinnerStyle.cs`
 - `src/XenoAtom.Terminal.UI/Styling/SpinnerStyles.cs`
 

@@ -23,8 +23,11 @@ FIGlet fonts are represented by `FigletFont` (namespace `XenoAtom.Terminal.UI.Fi
 - Use embedded fonts from `FigletPredefinedFont` (e.g. `FigletPredefinedFont.Standard`, `FigletPredefinedFont.Slant`).
 - Load a `.flf` font from a stream with `FigletFont.Load(...)`.
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Styling
 Use `TextFigletStyle` to change the foreground/background and decorations:
 
 ```csharp

@@ -12,3 +12,9 @@ Screenshot placeholder:
 new Center(new Button("OK"));
 ```
 
+
+
+## Defaults
+
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+

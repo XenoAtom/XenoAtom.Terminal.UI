@@ -57,3 +57,9 @@ menuBar.Style(MenuListStyle.Default with
     PopupTemplateFactory = null, // no wrapper
 });
 ```
+
+
+## Defaults
+
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+

@@ -37,8 +37,11 @@ By default, the chart derives bounds from items (`Minimum = 0`, `Maximum = max(i
 - `BarChart.Minimum`
 - `BarChart.Maximum`
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Start` 
+
+## Styling
 The chart is styled via `BarChartStyle`:
 
 - `Padding`: padding around the grid.

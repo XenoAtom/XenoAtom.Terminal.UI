@@ -44,16 +44,22 @@ new ListBox<string>()
         Editor: null));
 ```
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch` 
+
+## Styling
 `ListBoxStyle` controls:
 
 - selected row style,
 - optional selection marker glyph and spacing,
 - per-row background filling (important when item visuals rely on style inheritance).
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch` 
+
+## Styling
 `ListBoxStyle` controls selection/hover colors and spacing.
 
 ## Related

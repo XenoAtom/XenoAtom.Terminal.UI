@@ -35,8 +35,11 @@ var picker = new ColorPicker()
 
 `null` entries in the palette are treated as `Color.Default`.
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Start` 
+
+## Styling
 `ColorPicker` is styled through `ColorPickerStyle`:
 
 ```csharp

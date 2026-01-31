@@ -27,8 +27,11 @@ var root = new DockLayout()
 Terminal.Run(root);
 ```
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Styling
 Use `CommandBarStyle` to change bar/keycap colors:
 
 ```csharp

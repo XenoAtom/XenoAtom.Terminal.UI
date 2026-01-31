@@ -35,6 +35,11 @@ When used inside `ScrollViewer`, scrollbars are automatically bound to the targe
 > [!NOTE]
 > If you host a scrollbar directly, you are responsible for keeping its range/value consistent with the content.
 
+## Defaults
+
+- `VScrollBar`: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Stretch`
+- `HScrollBar`: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Start`
+
 ## Styling
 
 `ScrollBarStyle` controls track/thumb rendering and colors.

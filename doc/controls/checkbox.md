@@ -20,8 +20,11 @@ The label can be a `Visual`, and spacing between glyph and label is controlled b
 - `Space` / `Enter`: toggle when focused.
 - Mouse click: toggle.
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Styling
 `CheckBoxStyle` controls glyphs, spacing, and colors for normal/hover/focused/disabled states.
 
 ## Related

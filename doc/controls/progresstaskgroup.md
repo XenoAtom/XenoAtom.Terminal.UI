@@ -51,3 +51,8 @@ var etaColumn = new ProgressTaskColumn(task => new TextBlock(() => $"v={task.Val
 var group = new ProgressTaskGroup()
     .Columns([ProgressTaskColumns.Label(), etaColumn, ProgressTaskColumns.Bar()]);
 ```
+
+## Defaults
+
+- Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Start` 
+

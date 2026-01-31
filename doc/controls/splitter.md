@@ -18,3 +18,9 @@ new HStack(
 
 `SplitterStyle` controls handle glyphs and colors.
 
+
+
+## Defaults
+
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+

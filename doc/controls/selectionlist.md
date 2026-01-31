@@ -45,8 +45,11 @@ Mouse:
 Like other list controls, items are rendered using `DataTemplate<T>`.
 If you don’t set `ItemTemplate`, the template is resolved from the environment (`DataTemplates`).
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Styling
 `SelectionListStyle` controls glyphs, spacing, and selection visuals.
 
 ## Related

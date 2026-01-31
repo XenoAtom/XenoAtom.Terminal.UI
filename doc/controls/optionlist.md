@@ -40,8 +40,11 @@ new OptionList<string>()
 Like other list controls, `OptionList<T>` uses `DataTemplate<T>` to render items.
 If you don’t set `ItemTemplate`, the template is resolved from the environment (`DataTemplates`).
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Styling
 `OptionListStyle` controls marker glyphs, spacing, hover/selection styles, and layout details.
 
 ## Related

@@ -35,8 +35,11 @@ new Canvas()
 - `DrawCircle`
 - `WriteText`
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch` 
+
+## Styling
 `CanvasStyle` controls the default rune and style used by primitives when you don't pass them explicitly:
 
 ```csharp

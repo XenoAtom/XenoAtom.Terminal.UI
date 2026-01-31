@@ -46,8 +46,11 @@ var placements = new Select<PopupPlacement>()
 - `Enter` confirms the current selection.
 - `Tab` / `Escape` closes the popup.
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Styling
 `SelectStyle` controls padding, arrow glyph, and colors for the collapsed control and the popup surface.
 
 ## Related

@@ -29,8 +29,11 @@ new VStack(
 For a scrollable, templated, single-choice list (radio-group as a list control), use `RadioButtonList<T>`.
 It is useful when you have many options and want consistent keyboard navigation.
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Styling
 `RadioButtonStyle` controls glyphs and colors.
 
 `RadioButtonListStyle` (when using `RadioButtonList<T>`) controls marker glyphs, spacing, and selection visuals.

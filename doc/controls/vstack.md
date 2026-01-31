@@ -12,7 +12,10 @@ new VStack(
 ).Spacing(1);
 ```
 
-See also:
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Start` 
+
+See also:
 - [Layout](../layout.md)
 - [HStack](./hstack.md)

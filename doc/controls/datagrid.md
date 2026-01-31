@@ -129,8 +129,11 @@ When editing starts, the control chooses an editor:
 - `DataGridControl` exposes a `ScrollModel` (via `IScrollable`) so `ScrollViewer` can render scrollbars and synchronize offsets.
 - For UI columns, `DataGridColumn.Key` should match `DataGridColumnInfo.Key` from the snapshot.
 
-## Related
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch` 
+
+## Related
 - [DataGrid Specs](../specs/datagrid_specs.md)
 - [Scrolling](../scrolling.md)
 - [Binding](../binding.md)

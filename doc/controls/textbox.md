@@ -59,8 +59,11 @@ When content is wider than the viewport, the TextBox can show start/end indicato
 > [!NOTE]
 > In password mode, copy/cut is typically disabled so the masked value doesn’t leak via clipboard.
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Styling
 TextBox uses background on the text region while keeping borders visually compatible with the terminal background.
 
 See also:

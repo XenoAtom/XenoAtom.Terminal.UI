@@ -70,6 +70,10 @@ ToastService.Show(() => new Toast
 
 These can be updated dynamically, and are demonstrated in the Toast demo page of ControlsDemo.
 
+## Defaults
+
+- `ToastHost`: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch`
+
 ## Related
 
 - [Styling](../styling.md)

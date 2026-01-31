@@ -32,8 +32,11 @@ Popups participate in focus. Common dismissal patterns:
 > When you show a popup from a control, keep the focus rules explicit: decide whether focus should move into the popup
 > (typical for menus) or remain on the originating control (typical for passive tooltips).
 
-## Related
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Related
 - [Dialog](./dialog.md)
 - [ContextMenu](./contextmenu.md)
 - [Select](./select.md)

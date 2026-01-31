@@ -46,8 +46,11 @@ breakdown.SegmentClicked((_, e) =>
 - `BreakdownChart.LegendPlacement`: `Above` or `Below` (default: `Below`).
 - `BreakdownChart.ShowValues` / `BreakdownChart.ShowPercentages`: controls legend value display.
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Start` 
+
+## Styling
 `BreakdownChart` is styled via `BreakdownStyle`:
 
 - `FillRune`: rune used to fill the bar (default is a space with colored backgrounds).

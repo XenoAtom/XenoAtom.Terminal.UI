@@ -46,8 +46,11 @@ new ScrollViewer(new TextArea(longText));
 When you bound the control (e.g. with `.MaxHeight(...)`) the scroll model provides an extent larger than the viewport,
 and the viewer can render scrollbars and synchronize offsets.
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Styling
 `TextAreaStyle` controls colors, padding, and selection rendering.
 
 See also:

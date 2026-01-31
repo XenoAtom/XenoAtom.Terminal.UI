@@ -17,6 +17,11 @@ Screenshot: `img/controls/wrapstack.png` (placeholder)
   - `ConstrainToRun` (default): children are measured with the available main-axis constraint. This is usually what you want for text that can wrap.
   - `Unconstrained`: children are measured with an unbounded main axis so they can report their intrinsic size (content may overflow and will be clipped).
 
+## Defaults
+
+- `WrapHStack`: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Stretch`
+- `WrapVStack`: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Start`
+
 ## Example
 
 ```csharp
@@ -32,4 +37,3 @@ var content =
     .RunSpacing(1)
     .Justify(justify);
 ```
-

@@ -37,7 +37,10 @@ Tooltips are implemented as a non-interactive overlay in fullscreen apps.
 > Tooltips rely on mouse hover events. In inline/live hosting, hover may not be available depending on the terminal
 > and host configuration.
 
-## Related
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Related
 - [Popup](./popup.md)
 - [Input](../input.md)

@@ -39,8 +39,11 @@ new TextBlock("Centered")
     .HorizontalAlignment(Align.Stretch);
 ```
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Styling
 Use `TextBlockStyle` to override colors and decorations for a subtree (or for a single `TextBlock`):
 
 ```csharp

@@ -51,8 +51,11 @@ var ui = new NumberBox<double>()
     .FormatProvider(CultureInfo.InvariantCulture);
 ```
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Styling
 The validation message is styled via `NumberBoxStyle` (`NumberBoxStyle.Key`).
 
 ```csharp

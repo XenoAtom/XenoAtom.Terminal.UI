@@ -86,8 +86,11 @@ MaskedInput supports undo/redo:
 
 See [Undo/Redo](../undo-redo.md).
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Styling
 `MaskedInput` uses `MaskedInputStyle` (derived from `TextBoxStyle`) for padding and background fill. Placeholder and
 separator foregrounds are also configurable. The style also controls the placeholder glyphs used when the template does not
 specify a `;c` suffix.

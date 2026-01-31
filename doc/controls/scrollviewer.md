@@ -59,8 +59,11 @@ When the extent exceeds the viewport, ScrollViewer:
 > If you expect scrollbars to appear, prefer bounding one axis (`MinHeight/MaxHeight` or `MinWidth/MaxWidth`)
 > so the control has a reason to clip and scroll.
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch` 
+
+## Styling
 `ScrollViewerStyle` controls scrollbar thickness and color palette.
 `ScrollBarStyle` controls track/thumb colors and glyphs.
 

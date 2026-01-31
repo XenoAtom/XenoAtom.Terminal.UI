@@ -59,8 +59,11 @@ palette.Style(CommandPaletteStyle.Default with
 });
 ```
 
-## Related
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Related
 - [Commands](../commands.md)
 - [Input](../input.md)
 - [CommandBar](./commandbar.md)

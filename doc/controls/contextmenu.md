@@ -63,3 +63,9 @@ ContextMenuService.Show(target, items, uiX: 10, uiY: 5);
 
 This is useful when building custom interactions (for example a toolbar button that opens a menu).
 
+
+
+## Defaults
+
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+

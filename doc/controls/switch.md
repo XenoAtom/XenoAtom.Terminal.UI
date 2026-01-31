@@ -9,8 +9,11 @@ var enabled = new State<bool>(true);
 new Switch("Enabled").IsOn(enabled);
 ```
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Styling
 `SwitchStyle` controls:
 
 - left/right segment colors

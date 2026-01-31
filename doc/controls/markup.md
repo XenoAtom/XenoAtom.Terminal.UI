@@ -13,7 +13,10 @@ new Markup("[bold]Hello[/] [gray]world[/]!");
 - Markup is parsed using the XenoAtom.Terminal markup parser.
 - Use `Markup` when you want inline color and text styles without building a full visual tree.
 
-## Related
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Related
 - [Markup Parsing](../markup-parsing.md)
 - [Styling](../styling.md)

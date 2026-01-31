@@ -11,8 +11,11 @@ new TabControl(
     new TabPage("Tab2", "ContentTab2"));
 ```
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch` 
+
+## Styling
 `TabControlStyle` controls header rendering (button-like appearance, hover/pressed/selected states) and the content wrapper.
 
 By default, the selected tab content is wrapped in a border.

@@ -39,8 +39,11 @@ protected override void ArrangeCore(in Rectangle finalRect)
 
 The popup UI is rendered using `Popup` in the app window layer, while `SearchReplacePopup` acts as a lightweight anchor visual.
 
-## Related
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Related
 - [Text Editing](../text-editing.md)
 - [Input](../input.md)
 - [Popup](./popup.md)

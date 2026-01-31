@@ -40,8 +40,11 @@ log.Search("error");
 log.GoToNextMatch();
 ```
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch` 
+
+## Styling
 Use `LogControlStyle` and `LogControlSearchStyle` to customize colors and rendering:
 
 ```csharp

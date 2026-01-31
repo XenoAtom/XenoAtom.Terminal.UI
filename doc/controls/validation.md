@@ -40,8 +40,11 @@ var editor = new TextBox().Text(port)
         });
 ```
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Styling
 Validation presentation is controlled by `ValidationStyle` (padding, glyphs, colors). You can override it for a subtree:
 
 ```csharp

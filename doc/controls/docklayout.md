@@ -15,3 +15,9 @@ new DockLayout()
     .Content(new ScrollViewer(new TextArea(longText)));
 ```
 
+
+
+## Defaults
+
+- Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch` 
+

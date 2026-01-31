@@ -20,3 +20,9 @@ new Grid()
 
 Cells can span multiple rows/columns via `rowSpan` / `columnSpan`.
 
+
+
+## Defaults
+
+- Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch` 
+

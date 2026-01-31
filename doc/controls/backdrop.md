@@ -12,8 +12,11 @@ Key points:
 - The fill style writes an explicit foreground so nested content that “inherits” colors (e.g. `TextBlockStyle.Default`)
   does not accidentally pick up foreground colors from whatever was rendered underneath.
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch` 
+
+## Styling
 `Backdrop` uses `BackdropStyle` from the visual environment.
 
 - `BackdropStyle.Default` is intended for modal dimming (it uses a dim text attribute and a theme-derived background).

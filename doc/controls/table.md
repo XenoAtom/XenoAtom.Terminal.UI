@@ -11,8 +11,11 @@ new Table()
     .AddRow("Render", "OK");
 ```
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Styling
 `TableStyle` controls border glyphs, header style, separators, and line visibility.
 
 ## Notes

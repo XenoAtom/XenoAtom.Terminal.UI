@@ -20,3 +20,9 @@ Any `Visual` can be wrapped in a `Padder` using `VisualExtensions.Pad(...)`:
 new TextBlock("Hello").Pad(2);
 ```
 
+
+
+## Defaults
+
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+

@@ -22,8 +22,11 @@ new Button().Content(new HStack("Save", new Spinner()))
 - Keyboard: typically activated with Enter/Space when focused.
 - Mouse: click/press/release is tracked; mouse capture prevents hover/press from “leaking” to other controls.
 
-## Styling
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Styling
 Use `ButtonStyle` to control:
 
 - tone (default/primary/success/warning/error)

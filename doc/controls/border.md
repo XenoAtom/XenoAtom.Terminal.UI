@@ -31,7 +31,10 @@ new Border(() => new TextBlock(DateTime.Now.ToString("T")));
 - `Border` is a layout container: the border consumes space around its content.
 - For a labeled frame, see `Group`.
 
-## Related
+## Defaults
 
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Related
 - [Group](./group.md)
 - [Styling](../styling.md)

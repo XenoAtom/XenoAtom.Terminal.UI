@@ -27,3 +27,9 @@ new Group("Rounded")
     .Style(GroupStyle.Rounded)
     .Content("Content");
 ```
+
+
+## Defaults
+
+- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
