@@ -1,4 +1,22 @@
 doc:
   - {path: readme.md, title: User Guide}
   - {path: getting-started.md, title: ✨ Getting Started}
-  # TODO update with other files
+  - {path: visual-tree.md, title: 🌳 Visual Tree}
+  - {path: binding.md, title: 🔗 Binding & State}
+  - {path: data-templating.md, title: 🧩 Data Templating}
+  - {path: layout.md, title: 📐 Layout}
+  - {path: input.md, title: ⌨️ Input}
+  - {path: commands.md, title: ⌨️ Commands}
+  - {path: styling.md, title: 🎨 Styling & Themes}
+  - {path: rendering.md, title: 🖨️ Rendering}
+  - {path: scrolling.md, title: 🧭 Scrolling}
+  - {path: text-editing.md, title: ✍️ Text Editing}
+  - {path: undo-redo.md, title: ↩️ Undo/Redo}
+  - {path: markup-parsing.md, title: 🏷️ Markup Parsing}
+  - {path: culture.md, title: 🌍 Culture}
+  - {path: debugging.md, title: 🐞 Debugging}
+  - {path: hosting.md, title: 🧷 Hosting}
+  - {path: prompts.md, title: 💬 Prompts}
+  - {path: control-development.md, title: 🛠️ Control Development}
+  - {path: controls/readme.md, title: 🧱 Controls Reference}
+  - {path: specs/readme.md, title: 🧪 Specs & Design Notes}

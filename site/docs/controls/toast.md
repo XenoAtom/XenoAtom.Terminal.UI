@@ -7,7 +7,7 @@ title: Toast
 `Toast` notifications are non-blocking overlays used to provide brief feedback without interrupting the user.
 They are hosted by `ToastHost`, which stacks toasts in a chosen corner and manages timers and dismissal.
 
-> Screenshot: `doc/images/toast.png` (placeholder)
+> Screenshot: `site/img/toast.png` (placeholder)
 
 ## Key features
 

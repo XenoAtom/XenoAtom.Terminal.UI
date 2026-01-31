@@ -6,7 +6,7 @@ title: ColorPicker
 
 `ColorPicker` is an input control used to select a `XenoAtom.Terminal.UI.Color` (RGB or RGBA).
 
-> Screenshot: `doc/screenshots/colorpicker.png` (placeholder)
+> Screenshot: `site/img/colorpicker.png` (placeholder)
 
 ## Usage
 

@@ -5,8 +5,8 @@ The project is in a pre-release state. Remove this line when the project reaches
 ## Overview
 
 - In the `readme.md` file, you will find general information about the XenoAtom.Terminal.UI project.
-- In the `doc/readme.md` file you will find the user guide documentation for the XenoAtom.Terminal.UI library.
-- For control/framework implementation guidelines, you must follow `doc/control-development.md`.
+- In the `site/docs/readme.md` file you will find the user guide documentation for the XenoAtom.Terminal.UI library.
+- For control/framework implementation guidelines, you must follow `site/docs/control-development.md`.
 
 ## Project Structure
 
@@ -14,14 +14,16 @@ The project is in a pre-release state. Remove this line when the project reaches
 - In the `src/XenoAtom.Terminal.UI.SourceGen` folder you will find the Roslyn source generator used by the library.
 - In the `src/XenoAtom.Terminal.UI.Tests` folder you will find the unit tests for the library.
 - In the `samples` folder you will find sample applications demonstrating the usage of XenoAtom.Terminal.UI.
-- In the `doc` folder you will find user documentation; specifications are in `doc/specs`.
+- In the `site` folder you will find the website and documentation; user docs are in `site/docs` and specs are in `site/docs/specs`.
 
 ## Building and Testing
 
 - To build the project, navigate to the `src` directory and run `dotnet build -c Release`.
 - To run the unit tests, navigate to the `src` directory and run `dotnet test -c Release`.
+- To build the website, navigate to the `site` directory and run `lunet build`.
 - Ensure that all tests pass successfully before submitting any changes.
-- Ensure that user guide documentation (`doc/readme.md`) and top-level readme are updated to reflect any changes made to the library.
+- Ensure that user guide documentation (`site/docs/readme.md`) and top-level readme are updated to reflect any changes made to the library.
+- Ensure that the website builds successfully (`lunet build` from the `site` directory) when changing `site/**`.
 
 ## General Coding Instructions
 

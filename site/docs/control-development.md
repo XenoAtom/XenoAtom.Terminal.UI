@@ -183,5 +183,5 @@ When the routed event is raised via `RaiseEvent(...)`, the routing system:
 ## 9) Documentation quality
 
 - New public APIs require XML docs (CS1591 must stay clean).
-- Add or update user-guide docs in `doc/` when introducing new concepts/controls.
-- Specs live in `doc/specs` and should be kept aligned with implementation.
+- Add or update user-guide docs in `site/docs/` when introducing new concepts/controls.
+- Specs live in `site/docs/specs` and should be kept aligned with implementation.

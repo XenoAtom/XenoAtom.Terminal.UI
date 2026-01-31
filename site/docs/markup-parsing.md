@@ -41,7 +41,7 @@ The typical rendering pattern is:
 2. Render the plain text into a `CellBuffer`.
 3. Apply the `Style` from each `StyledRun` while drawing the corresponding range.
 
-> Screenshot: `doc/images/markuptextparser.png` (placeholder)
+> Screenshot: `site/img/markuptextparser.png` (placeholder)
 
 ## Notes
 

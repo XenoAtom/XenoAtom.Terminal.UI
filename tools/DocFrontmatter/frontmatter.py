@@ -298,6 +298,7 @@ def apply(
     paths: Iterable[Path],
     *,
     title_mode: str,
+    force_title: bool,
     set_values: dict[str, Any],
     unset_keys: set[str],
     dry_run: bool,
@@ -312,16 +313,25 @@ def apply(
         processed += 1
         doc = read_markdown(path)
         fm = dict(doc.frontmatter)
+        did_mutate = False
 
         inferred_title = infer_title(path, doc.body, title_mode)
-        if inferred_title is not None:
+        if inferred_title is not None and (force_title or "title" not in fm):
             fm["title"] = inferred_title
+            did_mutate = True
 
         for key, value in set_values.items():
-            fm[key] = value
+            if key not in fm or fm[key] != value:
+                fm[key] = value
+                did_mutate = True
 
         for key in unset_keys:
-            fm.pop(key, None)
+            if key in fm:
+                fm.pop(key, None)
+                did_mutate = True
+
+        if not did_mutate:
+            continue
 
         if write_markdown(doc, frontmatter=fm, body=doc.body, dry_run=dry_run):
             changed += 1
@@ -334,18 +344,23 @@ def main(argv: list[str]) -> int:
         description="Add/update YAML frontmatter in Markdown files.",
         epilog=(
             "Examples:\n"
-            "  python tools/DocFrontmatter/frontmatter.py doc/**/*.md --title auto\n"
-            "  python tools/DocFrontmatter/frontmatter.py doc/**/*.md --set sidebar=Controls --set draft=false\n"
-            "  python tools/DocFrontmatter/frontmatter.py doc/**/*.md --unset draft --dry-run\n"
+            "  python tools/DocFrontmatter/frontmatter.py site/**/*.md --title auto\n"
+            "  python tools/DocFrontmatter/frontmatter.py site/**/*.md --set sidebar=Controls --set draft=false\n"
+            "  python tools/DocFrontmatter/frontmatter.py site/**/*.md --unset draft --dry-run\n"
         ),
         formatter_class=argparse.RawTextHelpFormatter,
     )
-    parser.add_argument("paths", nargs="+", help="Markdown files and/or glob patterns (e.g. doc/**/*.md)")
+    parser.add_argument("paths", nargs="+", help="Markdown files and/or glob patterns (e.g. site/docs/**/*.md)")
     parser.add_argument(
         "--title",
         default="auto",
         choices=["auto", "from-h1", "from-filename", "none"],
         help="How to infer the 'title' property (default: auto).",
+    )
+    parser.add_argument(
+        "--force-title",
+        action="store_true",
+        help="Overwrite existing 'title' values (default: only set when missing).",
     )
     parser.add_argument("--set", action="append", default=[], help="Set/update a frontmatter key (key=value). Can be repeated.")
     parser.add_argument("--unset", action="append", default=[], help="Remove a frontmatter key. Can be repeated.")
@@ -360,6 +375,7 @@ def main(argv: list[str]) -> int:
         processed, changed = apply(
             paths,
             title_mode=args.title,
+            force_title=args.force_title,
             set_values=set_values,
             unset_keys=unset_keys,
             dry_run=args.dry_run,
@@ -375,4 +391,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
-

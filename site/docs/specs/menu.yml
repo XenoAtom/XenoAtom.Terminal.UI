@@ -1,0 +1,20 @@
+specs:
+  - {path: readme.md, title: 🧪 Specs Index}
+  - {path: specs.md, title: Specs Overview}
+  - {path: datagrid_specs.md, title: DataGridControl Specs}
+  - {path: data_template_specs.md, title: Data Templates Specs}
+  - {path: binding_dirty_model_specs.md, title: Binding Dirty Model Specs}
+  - {path: dirty_rendering_specs.md, title: Dirty Rendering Specs}
+  - {path: text_editor_specs.md, title: Text Editor Specs}
+  - {path: layout_protocol_specs.md, title: Layout Protocol Specs}
+  - {path: command_specs.md, title: Command Specs}
+  - {path: command_palette_specs.md, title: Command Palette Specs}
+  - {path: menu_specs.md, title: Menu Specs}
+  - {path: toast_specs.md, title: Toast Specs}
+  - {path: undo_redo_specs.md, title: Undo/Redo Specs}
+  - {path: wrapstack_specs.md, title: WrapStack Specs}
+  - {path: controls_demo_specs.md, title: Controls Demo Specs}
+  - {path: controls_todo.md, title: Controls TODO}
+  - {path: remaining_controls_specs.md, title: Remaining Controls Specs}
+  - {path: original_specs.md, title: Original Specs}
+

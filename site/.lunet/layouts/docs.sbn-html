@@ -2,12 +2,33 @@
 layout: base
 ---
 <div class="container">
+  {{~
+    url = page.url ?? ""
+    menu_key = "doc"
+    if url | string.starts_with "/docs/controls"
+      menu_key = "controls"
+    else if url | string.starts_with "/docs/specs"
+      menu_key = "specs"
+    end
+    menu = site.menu[menu_key] ?? site.menu.doc
+  ~}}
   <div class="row">
       <div id="docsSidebar" class="col-12 col-lg-3 align-self-start sticky-top menu-sidebar collapse d-lg-block">
-        {{ site.menu.doc.render { kind: "menu",  collapsible: true, post_active: '<nav class="js-toc toc"></nav>'} }}
+        {{ menu.render { kind: "menu",  collapsible: true, post_active: '<nav class="js-toc toc"></nav>'} }}
       </div>
       <div class="col-12 col-lg-9 js-toc-content">
-        {{ site.menu.doc.breadcrumb }}
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a class="breadcrumb-link" href="/">Home</a></li>
+          {{~ if url | string.starts_with "/docs" ~}}
+          <li class="breadcrumb-item"><a class="breadcrumb-link" href="/docs/">Docs</a></li>
+            {{~ if url | string.starts_with "/docs/controls" ~}}
+          <li class="breadcrumb-item"><a class="breadcrumb-link" href="/docs/controls/">Controls</a></li>
+            {{~ else if url | string.starts_with "/docs/specs" ~}}
+          <li class="breadcrumb-item"><a class="breadcrumb-link" href="/docs/specs/">Specs</a></li>
+            {{~ end ~}}
+          {{~ end ~}}
+          <li class="breadcrumb-item active">{{ page.title }}</li>
+        </ol>
         <p id="lunet-results"></p>
         <!-- Toggle button visible only on small screens -->
         <button
@@ -20,8 +41,6 @@ layout: base
           aria-label="Toggle docs menu">
           Table of Contents
         </button>
-        
-        <h1>{{ page.title }}</h1>
 <!-- lunet:summarize -->
 {{ content }}
       </div>

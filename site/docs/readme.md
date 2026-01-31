@@ -53,7 +53,7 @@ The `samples` folder contains end-to-end demos:
 
 ## Specs and design notes
 
-The `doc/specs` folder contains deeper design documents and implementation notes used during development:
+The `site/docs/specs` folder contains deeper design documents and implementation notes used during development:
 
 - [Layout Protocol Specs](specs/layout_protocol_specs.md)
 - [Text Editor Specs](specs/text_editor_specs.md)

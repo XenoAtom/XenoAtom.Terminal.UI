@@ -1,7 +1,7 @@
 # Site Settings
 author = "Alexandre Mutel"
-title = "Terminal"
-description = "A modern terminal UI toolkit for .NET applications."
+title = "XenoAtom.Terminal.UI"
+description = "A modern retained-mode terminal UI framework for .NET."
 
 basepath = ""
 baseurl = baseurl ?? "https://xenoatom.github.io/terminal"

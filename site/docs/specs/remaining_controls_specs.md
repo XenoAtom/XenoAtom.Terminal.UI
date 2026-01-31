@@ -647,7 +647,7 @@ If async event handlers are needed in v1, prefer adding explicit helpers (non-br
 For each control/feature above:
 
 - XML API docs for public types/members.
-- A user guide page under `doc/controls/` (or `doc/` for non-control features).
+- A user guide page under `site/docs/controls/` (or `site/docs/` for non-control features).
 - A ControlsDemo page (or additions to an existing page where appropriate).
 - Unit tests:
   - Measure/Arrange in nested layouts

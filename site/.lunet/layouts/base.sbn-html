@@ -4,7 +4,7 @@ layout: _default
 {{~
   path0 = (page.url | string.downcase | string.split '/')[0] ?? "home" ## first part of the url ##
   case path0
-    when 'home', 'docs'
+    when 'home', 'docs', 'banner'
       pathclass = 'xenoatom-' + path0
     else
       pathclass = 'xenoatom-404'

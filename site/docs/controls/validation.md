@@ -7,7 +7,7 @@ title: Validation
 `ValidationPresenter` is a small wrapper control that shows a validation/status message above or below another control.
 It is designed to be reusable across the library (prompts, inputs, pickers) and in user code.
 
-> Screenshot placeholder: `doc/controls/screenshots/validation.png`
+> Screenshot placeholder: `site/img/validation.png`
 
 ## Basic usage
 
