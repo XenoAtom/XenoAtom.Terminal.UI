@@ -1,0 +1,578 @@
+/**********************************************
+ * general
+ **********************************************/
+
+$xenoatom-top-offset: 120.5px;
+$font-size-base: 1.25rem;
+$font-family-base: Figtree, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+$bootstrap-icons-font-dir: "/fonts";
+
+@import "bootstrap";
+@import "bootstrap-icons";
+
+:root {
+    --bs-body-bg-rgb: 31, 30, 50;
+    --bs-body-bg: rgb(31, 30, 50);
+    --bs-body-color-darker-20: hsl(from var(--bs-body-color) h s calc(l - 20));
+    --bs-body-color-darker-10: hsl(from var(--bs-body-color) h s calc(l - 10));
+    --color-c64-red: #F80001;
+    --color-c64-orange: #FB6A01;
+    --color-c64-yellow: #ECE304;
+    --color-c64-green: #4CAB27;
+    --color-c64-blue: #3966AD;
+    --bs-font-sans-serif: #{inspect($font-family-base)};
+}
+
+@font-face {
+    font-family: 'Figtree';
+    src: url('/fonts/Figtree-VariableFont_wght.ttf') format('truetype');
+
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+$search-bg: lighten($body-bg, 5%);
+
+.xenoatom-logo {
+    display: block;
+    width: auto;
+    height: 96px;
+}
+
+// Show focus only for keyboard users
+#xenoatom .navbar-brand:focus {
+    outline: none;
+}
+
+#xenoatom .navbar-brand:focus-visible {
+    outline: 2px dotted var(--bs-link-color);
+    outline-offset: 4px;
+    border-radius: 4px;
+}
+
+body {
+    width: calc(100vw - 34px); /* https://stackoverflow.com/a/25981719 */
+}
+
+a {
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    outline: none;
+    padding-bottom: 0.25em;
+    scroll-margin-top: $xenoatom-top-offset;
+}
+
+#xenoatom .breadcrumb {
+    padding-left: 0.1rem
+}
+
+.xenoatom-color-0 {
+    color: #FF7F2A;
+}
+.xenoatom-color-1 {
+    color: #FFCC00;
+}
+.xenoatom-color-2 {
+    color: #66FF00;
+}
+.xenoatom-color-3 {
+    color: #00CCFF;
+}
+
+blockquote {
+    color: #777;
+    background-color: rgba(0,0,0, 0.05);
+    border-left-color: #35cb8c;
+    border-left-style: solid;
+    border-left-width: 5px;
+    padding-left: 10px;
+}
+
+*:focus {
+    outline: 0 !important;
+}
+
+button.copy-to-clipboard-button > span {
+    @extend .bi;
+    @extend .bi-copy;
+}
+
+button.copy-to-clipboard-button[data-copy-state="copy-success"] > span {
+    @extend .bi-check-lg;
+    color: #28a745;
+}
+
+button.copy-to-clipboard-button[data-copy-state="copy-error"] > span {
+    @extend .bi-x-lg;
+    color: #dc3545;
+}
+
+.c64-text {
+    background-image: linear-gradient(to right, var(--color-c64-red), var(--color-c64-orange), var(--color-c64-yellow), var(--color-c64-green), var(--color-c64-blue));
+    background-clip: text;
+    color: transparent;
+}
+
+.c64-number {
+    color: black;
+    text-shadow:
+        0 0 2px rgba(255,255,255,0.9),
+        0 0 6px rgba(255,255,255,0.8),
+        0 0 12px rgba(255,255,255,0.7),
+        0 0 18px rgba(255,255,255,0.6);
+}
+
+.hero-text span.c64-number, .hero-text span.c64-text {
+    font-size: 1.5em;
+}
+
+/* Round the video container and clip overflow */
+.c64-video-wrap {
+    position: relative;
+    z-index: 0; // ensure the wrapper forms a stacking context
+}
+
+.c64-video-wrap::before {
+    content: "";
+    position: absolute;
+    inset: -2rem -3rem -30rem -3rem;                 // glow outside the video bounds
+    background-image: linear-gradient(0deg, transparent 33%,
+    rgb(74, 21, 68),
+    rgb(59, 33, 86),
+    rgb(45, 37, 101),
+    rgb(26, 43, 107));
+    filter: blur(5rem);
+    z-index: -1;                  // behind the video
+    pointer-events: none;
+}
+
+.c64-video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;            // fill the frame without distortion
+}
+
+.carousel-caption {
+    padding-left: 2rem;
+}
+
+.svg-diagram {
+  width: 100%;
+  max-width: 1200px;  /* pick your target max size */
+  height: auto;
+  padding-bottom: 1em;
+}
+
+/**********************************************
+ * alerts (NOTE, TIP, WARNING, CAUTION, IMPORTANT)
+ **********************************************/
+
+@mixin lunet-alert-icon {
+    @extend .bi;
+    font-size: 1.3em;
+    padding-right: 0.5rem;
+    width: 1.4em;
+}
+
+@mixin lunet-alert {
+    @extend .alert;
+    border-radius: .5em;
+}
+
+@mixin lunet-alert-heading-text {
+    font-weight: bold;
+    content: "Information";
+}
+
+.lunet-alert-note-icon {
+    @include lunet-alert-icon;
+    @extend .bi-info-circle;
+}
+
+.lunet-alert-note {
+    @include lunet-alert;
+    @extend .alert-info;
+}
+
+.lunet-alert-note-heading-text::before {
+    @include lunet-alert-heading-text;
+    content: "Note";
+}
+
+.lunet-alert-tip-icon {
+    @include lunet-alert-icon;
+    @extend .bi-lightbulb;
+}
+
+.lunet-alert-tip {
+    @include lunet-alert;
+    @extend .alert-success;
+}
+
+.lunet-alert-tip-heading-text::before {
+    @include lunet-alert-heading-text;
+    content: "Tip";
+}
+
+.lunet-alert-warning-icon {
+    @include lunet-alert-icon;
+    @extend .bi-exclamation-triangle;
+}
+
+.lunet-alert-warning {
+    @include lunet-alert;
+    @extend .alert-warning;
+}
+
+.lunet-alert-warning-heading-text::before {
+    @include lunet-alert-heading-text;
+    content: "Warning";
+}
+
+.lunet-alert-important-icon {
+    @include lunet-alert-icon;
+    @extend .bi-flag;
+}
+
+.lunet-alert-caution-icon {
+    @include lunet-alert-icon;
+    @extend .bi-exclamation-triangle;
+}
+
+.lunet-alert-important {
+    @include lunet-alert;
+    @extend .alert-primary;
+}
+
+.lunet-alert-caution {
+    @include lunet-alert;
+    @extend .alert-danger;
+}
+
+.lunet-alert-caution-heading-text::before {
+    @include lunet-alert-heading-text;
+    content: "Caution";
+}
+
+.lunet-alert-important-heading-text::before {
+    @include lunet-alert-heading-text;
+    content: "Important";
+}
+
+.lunet-alert-callout-icon {
+    @include lunet-alert-icon;
+    @extend .bi-megaphone;
+}
+
+.lunet-alert-callout {
+    @include lunet-alert;
+    @extend .alert-success;
+    @extend .alert-dismissible;
+}
+
+.lunet-alert-callout-heading-text::before {
+    @include lunet-alert-heading-text;
+    content: "Announcement";
+}
+
+/**********************************************
+ * search bar
+ **********************************************/
+/* Bootstrap 5-powered search dropdown */
+.xenoatom-search .dropdown-menu {
+    max-height: 50vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    z-index: 1055; /* above sticky navbar (1020) */
+}
+
+/**********************************************
+ * frontpage
+ **********************************************/
+.xenoatom-home, .xenoatom-docs {
+    font-size: 1.25rem;
+}
+
+.xenoatom-home h3 > i {
+    font-size: 1.3em;
+    margin-right: 1rem;
+}
+
+.xenoatom-home h3 i.bi {
+    text-shadow: 1px 1px 3px #444444;
+}
+
+.img-card {
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    margin-bottom: 0.8rem;
+    border-radius: 0.6rem!important;
+    width: 332px;
+}
+
+.jumbotron {
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    background: transparent url("/img/xenoatom-banner.jpg") 50% 50% no-repeat;
+    color: white;
+    text-shadow: 4px 4px 3px #111111;
+}
+
+/**********************************************
+ * top navigation bar
+ **********************************************/
+#xenoatom .navbar .navbar-nav a {
+    padding-top: 4px;
+    //padding-bottom: 4px;
+}
+
+// #xenoatom .btn-info {
+//     color: white;
+// }
+
+// #xenoatom .btn-success {
+//     color: white;
+// }
+
+// #xenoatom .btn-outline-secondary {
+//     border-color: #6c757d;
+// }
+
+// #xenoatom .btn-outline-secondary:hover {
+//     color: white;
+// }
+
+// #xenoatom .btn-outline-secondary:hover {
+//     color: white;
+// }
+
+// #xenoatom .btn-secondary {
+//     color: white;
+// }
+
+#xenoatom .navbar .navbar-nav li {
+    margin-right: 10px;
+}
+
+
+#xenoatom .navbar a {
+    text-decoration: none;
+}
+
+#xenoatom li.nav-item.active a.nav-link {
+    // use text-shadow instead of font-weight to avoid resize of container and shift of the following menu items
+    //text-shadow: 0px 0px 1px $body-color-bold-shadow;
+    border-bottom-color: red;
+    border-bottom-style: solid;
+}
+
+#xenoatom .navbar-right .btn .bi {
+    padding: 0.25rem;
+}
+
+.bi-heart {
+    color: #ea4aaa;
+}
+
+#xenoatom .navbar {
+    background-color: var(--bs-body-bg);
+}
+
+footer {
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+/**********************************************
+ * menu in documentation
+ **********************************************/
+.xenoatom-docs ol.menu {
+    list-style: none;
+    padding-inline-start: 0px;
+}
+
+.xenoatom-docs span.menu-item-row {
+    display: inline-block;
+    width: 100%;
+    padding-bottom: 0.8rem;
+}
+
+.xenoatom-docs a.menu-link {
+    display: inline-block;
+    width: 100%;
+    position: relative;
+    color: var(--bs-body-color-darker-10);
+}
+
+.xenoatom-docs a.menu-link-show {
+    display: inline-block;
+    position: absolute;
+    right: 30px;
+}
+
+.xenoatom-docs span.menu-item-row:hover {
+    //background-color: rgba(0,0,0,0.05);
+}
+
+.xenoatom-docs li.menu-item.active {
+    padding-bottom: 0.5em;
+    // border-left-color: red;
+    // border-left-style: solid;
+    // border-left-width: 2px;
+}
+
+.xenoatom-docs li.menu-item > span > a.menu-link:hover {
+    color: var(--bs-body-color);
+}
+
+.xenoatom-docs li.menu-item.active > span > a.menu-link {
+    display: inline-block;
+    width: 100%;
+    font-weight: 600;
+    color: var(--bs-link-color);
+}
+
+.xenoatom-docs a.menu-link-show::before {
+    content: '\276F';
+    display: inline-block;
+    transform: translateY(3px) rotate(90deg);
+    transition: transform 0.2s;
+}
+
+.xenoatom-docs a.menu-link-show.collapsed::before {
+    display: inline-block;
+    content: '\276F';
+    transform: translateY(2px) rotate(0deg);
+    transition: transform 0.2s;
+}
+
+.xenoatom-docs ol.menu ol.menu  {
+    margin-left: 0.8rem;
+}
+
+.xenoatom-docs li.menu-item {
+    list-style-type: none;
+    padding-inline-start: 0px;
+    border-width: thin;
+    border-color: rgba(0, 0, 0, 0.1);
+    border-top-style: none;
+    border-left-style: none;
+    border-right-style: none;
+    border-bottom-style: solid;
+}
+
+.xenoatom-docs li.menu-item li.menu-item:last-child {
+    border-bottom-style: none;
+}
+
+.xenoatom-docs li.menu-item a
+{
+    text-decoration-line: none;
+}
+
+.xenoatom-docs footer {
+    padding-bottom: 75vh;
+}
+
+.menu-level1, .menu-level2, .menu-level3, .menu-level4 {
+    font-size: 0.95em;
+}
+
+/**********************************************
+ * toc in documentation
+ **********************************************/
+.xenoatom-docs .toc-link::before {
+    width: 0px;
+}
+
+.menu-sidebar {
+    top: $xenoatom-top-offset;
+    z-index: 0;
+}
+
+.xenoatom-docs .toc-link {
+    padding-bottom: 0.1em;
+}
+
+.xenoatom-docs .menu a.toc-link {
+    //text-decoration-line: underline;
+    //text-decoration-style: dotted;
+    color: var(--bs-body-color-darker-20);
+    //color: var(--bs-body-color);
+}
+
+.xenoatom-docs a.toc-link:hover {
+    text-decoration-line: underline;
+    text-decoration-style: solid;
+    color: var(--bs-body-color-darker-10);
+}
+
+.xenoatom-docs a.toc-link {
+    display: inline-block;
+    width: 100%;
+}
+
+.xenoatom-docs a.toc-link.is-active-link {
+    //border-right-color: #00CCFF;
+}
+
+.xenoatom-docs .toc-title {
+    //border-bottom-style: solid;
+    //border-bottom-width: thin;
+    padding-inline-start: 0.5rem;
+    //border-bottom-color: rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.xenoatom-docs .toc {
+    padding-right: 3px;
+}
+
+.xenoatom-docs ::-webkit-scrollbar {
+    padding-left: 2px;
+    width: 8px;
+    background-color: $search-bg;
+}
+
+.xenoatom-docs ::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-color: rgba(0, 0, 0, 0.4);
+    border-style: solid;
+    border-width: thin;
+}
+
+.xenoatom-docs ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.xenoatom-docs .js-toc {
+    max-height: 50vh;
+    border-left-width: 1px;
+    border-left-color: #333;
+    border-left-style: solid;
+    //padding-left: 0.5rem;
+    font-size: 1.05rem;
+}
+
+/* Remove sticky on mobile */
+@media screen and (max-width: 768px) {
+    .sticky-top {
+        position: relative !important;
+    }
+
+    .select2-results__option {
+        width: auto;
+    }
+
+    pre.language-xenoatom {
+        font-size: 0.75rem;
+    }
+
+    .menu-sidebar {
+        top: auto!important;
+    }
+}

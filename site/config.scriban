@@ -1,0 +1,107 @@
+# Site Settings
+author = "Alexandre Mutel"
+title = "Terminal"
+description = "A modern terminal UI toolkit for .NET applications."
+
+basepath = ""
+baseurl = baseurl ?? "https://xenoatom.github.io/terminal"
+
+# Use `base` as a default layout
+layout = "base"
+
+# Github repository
+github_user = "XenoAtom"
+github_repo_url = "https://github.com/XenoAtom/XenoAtom.Terminal.UI/"
+
+# Enable search indexing
+with search
+    enable = true
+    # engine = "lunr"
+    # worker = true
+    excludes.add ["/404.md", "/banner.md"]
+end
+
+# Configure OpenGraph and Twitter cards
+with cards
+    with twitter
+        enable = true
+        card = "summary_large_image"
+        user = "xoofx"
+        image = "/img/XenoAtom-Terminal-UI-Banner.png"
+    end
+    with og
+        enable = true
+        image = "/img/XenoAtom-Terminal-UI-Banner.png"
+    end
+end
+
+# Resources bundle
+with bundle
+    bootstrap = resource "npm:bootstrap" "5.3.8"
+    bootstrap_icons = resource "npm:bootstrap-icons" "1.13.1"
+    tocbot = resource "npm:tocbot" "4.36.4"
+    anchorjs = resource "npm:anchor-js" "5.0.0"
+    prismjs = resource "npm:prismjs" "1.30.0"
+
+    #mermaid = resource "npm:mermaid" "11.12.1"
+    scss.includes.add bootstrap.path + "/scss"
+    scss.includes.add bootstrap_icons.path + "/font"
+
+    # css files
+    css tocbot "/dist/tocbot.css"
+    css "/css/prism.css"
+    #css bootstrap_icons "/font/bootstrap-icons.min.css"
+    css "/css/main.scss"
+
+    # js files
+    js bootstrap "/dist/js/bootstrap.bundle.min.js"
+    js anchorjs "/anchor.min.js"
+    js tocbot "/dist/tocbot.min.js"
+    js prismjs "/prism.js"
+    js prismjs "/components/prism-shell-session.min.js"
+    js prismjs "/components/prism-clike.min.js"
+    js prismjs "/components/prism-c.min.js"
+    js prismjs "/components/prism-cpp.min.js"
+    js prismjs "/components/prism-csharp.min.js"
+    js prismjs "/components/prism-asm6502.min.js"
+    js prismjs "/components/prism-json.min.js"
+    js prismjs "/plugins/toolbar/prism-toolbar.min.js"
+    js prismjs "/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"
+    #js mermaid "/dist/mermaid.min.js"
+    js "/js/main.js"
+
+    # copy font files
+    content bootstrap_icons "/font/fonts/bootstrap-icons.*" "/fonts/"
+
+    # concatenate css/js files
+    scss.use_dart_sass = true # Use Dart Sass for SCSS compilation
+    concat = true
+    minify = true
+end
+
+with attributes
+    # match "/blog/**/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*.md" {
+    #    url: "/:section/:year/:month/:day/:title:output_ext"
+    #}
+end
+
+with builtins
+    # render tags from a post
+    # func render_tags(post)
+    #     if !post.tags; ret null; end;
+    #     result = post.tags.size == 1 ? '<i class="bi bi-tag"></i>' : '<i class="bi bi-tags"></i>'
+    #     for tag in post.tags
+    #         result = result + (for.first?'':', ') + '<a href="' + site.taxonomies["tags"].terms[tag].url + '">' + tag + '</a>'
+    #     end
+    #     ret result
+    # end
+end
+
+with markdown
+    # Use Bootstrap img_fluid for all Markdown image links
+    options.css_img_attr = "img-fluid"
+end
+
+# Configure some HTML defaults
+html.head.title = do; ret (page.title == "Home" ? site.title : page.title + " | " + site.title); end
+html.attributes = 'data-bs-theme="dark" lang="en" itemscope itemtype="http://schema.org/WebPage"'

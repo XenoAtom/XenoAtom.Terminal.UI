@@ -1,0 +1,7 @@
+home:
+  - {path: readme.md, folder: true}
+  - {path: docs/readme.md, folder: true}
+
+home2:
+  - {url: "https://github.com/sponsors/xoofx", title: '<i class="bi bi-heart"></i> Sponsor', link_class: btn btn-outline-secondary, }
+  - {url: "https://github.com/XenoAtom/XenoAtom.Terminal.UI/", title: '<i class="bi bi-github"></i> GitHub', link_class: btn btn-info}

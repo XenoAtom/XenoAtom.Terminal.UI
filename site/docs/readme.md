@@ -1,0 +1,61 @@
+---
+title: XenoAtom.Terminal.UI User Guide
+---
+
+# XenoAtom.Terminal.UI User Guide
+
+XenoAtom.Terminal.UI is a modern retained-mode terminal UI framework built on top of XenoAtom.Terminal.
+It supports both:
+
+- **Inline widgets** that render as part of normal terminal output (`Terminal.Write`, `Terminal.Live`)
+- **Fullscreen applications** (alternate screen, focus navigation, routed input, dialogs, etc.)
+
+This guide documents the concepts, features, and controls of the library.
+
+## Quick start
+
+- [Getting Started](getting-started.md)
+
+## Hosting & integration
+
+- [Hosting](hosting.md) (inline vs fullscreen, update loops)
+- [Prompts](prompts.md) (inline prompts built on top of `Terminal.Live`)
+
+## Core concepts
+
+- [Visual Tree](visual-tree.md) (Visuals, fluent API, dynamic composition)
+- [Binding](binding.md) (`State<T>`, bindable properties, dependency tracking)
+- [Data Templating](data-templating.md) (DataTemplates, DataPresenter<T>, item templates)
+- [Culture](culture.md) (culture-aware value formatting)
+- [Layout](layout.md) (layout protocol, alignment, margin/padding)
+- [Input](input.md) (keyboard/mouse, focus, routed events, capture)
+- [Commands](commands.md) (commands, key sequences, key hints with CommandBar)
+- [Styling](styling.md) (Theme, styles, environment)
+- [Rendering](rendering.md) (cell buffer, diff renderer, performance)
+- [Scrolling](scrolling.md) (ScrollViewer, scroll models, scrollbars)
+- [Text Editing](text-editing.md) (TextBox/TextArea/MaskedInput and the text subsystem)
+- [Undo/Redo](undo-redo.md) (undo/redo for text editors)
+- [Markup Parsing](markup-parsing.md) (`MarkupTextParser`, styled runs)
+- [Debugging](debugging.md) (debug overlay, performance metrics)
+
+## Controls reference
+
+- [Controls Reference](controls/readme.md)
+
+## Samples
+
+The `samples` folder contains end-to-end demos:
+
+- `samples/FullscreenDemo`: fullscreen UI showcase.
+- `samples/ControlsDemo`: catalog-style demo.
+- `samples/InlineLiveDemo`: inline/live example (interactive).
+- `samples/Playground`: experiments and minimal repros.
+
+## Specs and design notes
+
+The `doc/specs` folder contains deeper design documents and implementation notes used during development:
+
+- [Layout Protocol Specs](specs/layout_protocol_specs.md)
+- [Text Editor Specs](specs/text_editor_specs.md)
+- [Specs Index](specs/specs.md)
+- [Original Specs](specs/original_specs.md)

@@ -373,3 +373,6 @@ artifacts-dotnet-releaser/
 
 # Verify
 *.received.*
+
+# Ignore Lunet build output
+.lunet/build

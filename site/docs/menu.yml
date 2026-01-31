@@ -1,0 +1,4 @@
+doc:
+  - {path: readme.md, title: User Guide}
+  - {path: getting-started.md, title: ✨ Getting Started}
+  # TODO update with other files
