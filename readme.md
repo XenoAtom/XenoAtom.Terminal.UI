@@ -45,7 +45,7 @@ Screenshot placeholder (to be updated):
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Controls;
 
-Terminal.Write(new TextBlock("Hello from XenoAtom.Terminal.UI"));
+Terminal.Write(new Group(new HStack("Hello", "from", "Terminal.UI").Spacing(1)).Title("Welcome"));
 ```
 
 Inline “live” widget (updates without clearing your output):

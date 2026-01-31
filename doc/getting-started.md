@@ -19,7 +19,7 @@ XenoAtom.Terminal.UI integrates into `XenoAtom.Terminal` via C# 14 extension mem
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Controls;
 
-Terminal.Write(new TextBlock("Hello from Terminal.UI"));
+Terminal.Write(new Group(new HStack("Hello", "from", "Terminal.UI").Spacing(1)).Title("Welcome"));
 ```
 
 ## Inline live widget
