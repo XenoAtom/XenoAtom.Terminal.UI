@@ -11,7 +11,7 @@ og_type: website
       <span class="c64-text">XenoAtom.Terminal.UI</span>
     </h1>
     <p class="lead mt-3 mb-4">
-      A modern <strong>retained-mode</strong> terminal UI framework for .NET.<br>
+      A modern, <strong>reactive retained-mode</strong> terminal UI framework for .NET.<br>
       Compose visuals, bind to state, and let the framework handle layout + rendering efficiently.
     </p>
     <div class="d-flex justify-content-center gap-3 mt-4 flex-wrap">
