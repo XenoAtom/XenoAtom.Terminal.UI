@@ -13,8 +13,8 @@ The detailed specification is in:
 
 By default:
 
-- `HorizontalAlignment` is `Left`
-- `VerticalAlignment` is `Top`
+- `HorizontalAlignment` is `Align.Start`
+- `VerticalAlignment` is `Align.Start`
 
 Containers and content controls may choose defaults more appropriate for their role (e.g. `ScrollViewer` stretches).
 

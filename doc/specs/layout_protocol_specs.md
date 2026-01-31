@@ -133,13 +133,13 @@ Interpretation:
 
 Each node exposes:
 
-* `HorizontalAlignment ∈ { Left, Center, Right, Stretch }`
-* `VerticalAlignment   ∈ { Top, Center, Bottom, Stretch }`
+* `HorizontalAlignment ∈ { Start, Center, End, Stretch }`
+* `VerticalAlignment   ∈ { Start, Center, End, Stretch }`
 
 **Default framework alignment** (your current default):
 
-* Horizontal: `Left`
-* Vertical: `Top`
+* Horizontal: `Align.Start`
+* Vertical: `Align.Start`
 
 This spec integrates alignment as an **arrange-time policy**.
 

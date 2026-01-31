@@ -7,7 +7,7 @@ It renders a solid rune (space by default) across its bounds using the style res
 
 Key points:
 
-- It is **stretched by default** (`HorizontalAlignment.Stretch` / `VerticalAlignment.Stretch`).
+- It is **stretched by default** (`HorizontalAlignment = Align.Stretch` / `VerticalAlignment = Align.Stretch`).
 - It is commonly placed as the first child of a `ZStack` to provide a surface behind overlay content.
 - The fill style writes an explicit foreground so nested content that “inherits” colors (e.g. `TextBlockStyle.Default`)
   does not accidentally pick up foreground colors from whatever was rendered underneath.
