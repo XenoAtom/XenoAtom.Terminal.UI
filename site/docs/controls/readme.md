@@ -6,6 +6,8 @@ title: Controls Reference
 
 This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 
+![Welcome](../../img/controls/welcome.png){.terminal}
+
 > [!NOTE]
 > Most pages include an auto-generated screenshot from `samples/ControlsDemo`.
 > Regenerate them with `dotnet run -c Release --project samples/ControlsDemo -- --export-screenshots`.

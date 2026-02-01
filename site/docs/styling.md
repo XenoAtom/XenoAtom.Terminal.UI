@@ -6,6 +6,8 @@ title: "Styling & Themes"
 
 XenoAtom.Terminal.UI uses a theme/style model built on ANSI colors and cell styling.
 
+![Rootloops](../img/controls/rootloops.png){.terminal}
+
 ## Theme
 
 `Theme` is a set of style values used as the default environment for visuals.
