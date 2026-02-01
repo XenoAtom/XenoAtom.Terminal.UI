@@ -107,11 +107,13 @@ public static class CellBufferSvgExporter
                 var scalar = scalars[i];
                 var text = string.Empty;
                 var w = 1;
+                var hasInk = false;
 
                 if (scalar < 0 && buffer.TryGetTextElement(scalar, out var textElement, out var elementWidth))
                 {
                     text = textElement;
                     w = Math.Max(1, elementWidth);
+                    hasInk = textElement.Length > 0;
                 }
                 else
                 {
@@ -120,6 +122,7 @@ public static class CellBufferSvgExporter
                     var written = rune.EncodeToUtf16(runeBuffer);
                     text = new string(runeBuffer[..written]);
                     w = Math.Max(1, TerminalTextUtility.GetRuneWidth(rune));
+                    hasInk = value != ' ';
                 }
 
                 // Merge following cells if they share the same style and are not continuation cells.
@@ -156,6 +159,7 @@ public static class CellBufferSvgExporter
                         runText.Append(nextElement);
                         runWidth += Math.Max(1, nextElementWidth);
                         nextCol += Math.Max(1, nextElementWidth);
+                        hasInk |= nextElement.Length > 0;
                         continue;
                     }
 
@@ -167,14 +171,18 @@ public static class CellBufferSvgExporter
                     var nextW = Math.Max(1, TerminalTextUtility.GetRuneWidth(nextRune));
                     runWidth += nextW;
                     nextCol += nextW;
+                    hasInk |= nextValue != ' ';
                 }
 
                 var runXpx = col * cellWidth;
                 var runYpx = row * cellHeight;
                 var runWpx = runWidth * cellWidth;
 
+                var hasBg = TryGetBackgroundColor(style, options, out var bgCss);
+                var bgDiffersFromBase = hasBg && (!options.FillBackground || !StringComparer.Ordinal.Equals(bgCss, baseBgCss));
+
                 // Background (only when it differs from the base background).
-                if (TryGetBackgroundColor(style, options, out var bgCss) && (!options.FillBackground || !StringComparer.Ordinal.Equals(bgCss, baseBgCss)))
+                if (bgDiffersFromBase)
                 {
                     sb.Append("<rect x=\"");
                     sb.Append(runXpx.ToString(CultureInfo.InvariantCulture));
@@ -189,11 +197,19 @@ public static class CellBufferSvgExporter
                     sb.Append("\"/>");
                 }
 
-                // Text
-                var textCss = TryGetForegroundColor(style, options, out var fgCss) ? fgCss : options.DefaultForegroundCss;
-                var escaped = EscapeXml(runText.ToString());
-                if (escaped.Length > 0)
+                // If the run contains only spaces and uses the base background, it is redundant: the base background rect already covers it.
+                if (!hasInk && !bgDiffersFromBase)
                 {
+                    col = nextCol;
+                    continue;
+                }
+
+                // Text (skip pure whitespace runs; backgrounds may still be meaningful)
+                if (hasInk)
+                {
+                    var textCss = TryGetForegroundColor(style, options, out var fgCss) ? fgCss : options.DefaultForegroundCss;
+                    var escaped = EscapeXml(runText.ToString());
+
                     sb.Append("<text class=\"t\" x=\"");
                     sb.Append(runXpx.ToString(CultureInfo.InvariantCulture));
                     sb.Append("\" y=\"");
