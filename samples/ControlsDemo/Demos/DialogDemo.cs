@@ -1,5 +1,6 @@
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.ControlsDemo;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
@@ -12,7 +13,7 @@ public sealed class DialogDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
-        var showModal = new Button("Show modal dialog").Click(() =>
+        Dialog CreateDialog()
         {
             Dialog? dlg = null;
             dlg = new Dialog()
@@ -26,13 +27,25 @@ public sealed class DialogDemo : ControlsDemoBase
                         new Button("Close").Click(() => dlg!.Close()))
                     .Spacing(1));
 
+            return dlg;
+        }
+
+        var showModal = new Button("Show modal dialog").Click(() =>
+        {
+            var dlg = CreateDialog();
             dlg.Show();
         });
 
-        return new VStack(
+        var root = new VStack(
                 DemoUi.Hint("Dialogs are supported in fullscreen apps (WindowLayer)."),
                 showModal)
             .Spacing(1);
+
+        return root.InScreenshot(context, () =>
+        {
+            var dlg = CreateDialog();
+            dlg.Show();
+        });
     }
 }
 

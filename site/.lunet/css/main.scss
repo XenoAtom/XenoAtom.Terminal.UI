@@ -11,18 +11,79 @@ $bootstrap-icons-font-dir: "/fonts";
 @import "bootstrap";
 @import "bootstrap-icons";
 
-:root {
-    // #1e212c
+$xenoatom-ansi: (
+    // Rootloops ANSI palette (replace this map to change site theme):
+    // https://rootloops.sh?sugar=7&colors=9&sogginess=2&flavor=1&fruit=10&milk=0.96
+    background: #1f1b25,
+    foreground: #dcd8e4,
+    cursor: #a69eb6,
 
-    --bs-body-bg-rgb: 20, 23, 31;
-    --bs-body-bg: rgb(20, 23, 31);
+    black: #35303f,
+    red: #f75b72,
+    green: #67af34,
+    yellow: #c98b1a,
+    blue: #509af6,
+    magenta: #ca64f3,
+    cyan: #1faeae,
+    white: #a69eb6,
+
+    brightBlack: #5d566c,
+    brightRed: #fb8590,
+    brightGreen: #75c73b,
+    brightYellow: #e49f27,
+    brightBlue: #77b1fb,
+    brightMagenta: #d68af7,
+    brightCyan: #24c6c6,
+    brightWhite: #d0ccdb
+);
+
+@function xenoatom-ansi($key) {
+    @return map-get($xenoatom-ansi, $key);
+}
+
+$xenoatom-background: xenoatom-ansi(background);
+$xenoatom-foreground: xenoatom-ansi(foreground);
+$xenoatom-code-bg: mix(#ffffff, $xenoatom-background, 3%);
+$xenoatom-code-inline-bg: mix(#ffffff, $xenoatom-background, 5%);
+$xenoatom-code-selection-bg: mix(#ffffff, $xenoatom-background, 20%);
+
+:root {
+    --xenoatom-color-background: #{$xenoatom-background};
+    --xenoatom-color-background-rgb: #{red($xenoatom-background)}, #{green($xenoatom-background)}, #{blue($xenoatom-background)};
+    --xenoatom-color-foreground: #{$xenoatom-foreground};
+    --xenoatom-color-foreground-rgb: #{red($xenoatom-foreground)}, #{green($xenoatom-foreground)}, #{blue($xenoatom-foreground)};
+    --xenoatom-color-cursor: #{xenoatom-ansi(cursor)};
+
+    --xenoatom-color-black: #{xenoatom-ansi(black)};
+    --xenoatom-color-red: #{xenoatom-ansi(red)};
+    --xenoatom-color-green: #{xenoatom-ansi(green)};
+    --xenoatom-color-yellow: #{xenoatom-ansi(yellow)};
+    --xenoatom-color-blue: #{xenoatom-ansi(blue)};
+    --xenoatom-color-magenta: #{xenoatom-ansi(magenta)};
+    --xenoatom-color-cyan: #{xenoatom-ansi(cyan)};
+    --xenoatom-color-white: #{xenoatom-ansi(white)};
+
+    --xenoatom-color-bright-black: #{xenoatom-ansi(brightBlack)};
+    --xenoatom-color-bright-red: #{xenoatom-ansi(brightRed)};
+    --xenoatom-color-bright-green: #{xenoatom-ansi(brightGreen)};
+    --xenoatom-color-bright-yellow: #{xenoatom-ansi(brightYellow)};
+    --xenoatom-color-bright-blue: #{xenoatom-ansi(brightBlue)};
+    --xenoatom-color-bright-magenta: #{xenoatom-ansi(brightMagenta)};
+    --xenoatom-color-bright-cyan: #{xenoatom-ansi(brightCyan)};
+    --xenoatom-color-bright-white: #{xenoatom-ansi(brightWhite)};
+
+    // Derived colors used by the website CSS (kept as variables so Prism + others can follow theme).
+    --xenoatom-code-bg: #{$xenoatom-code-bg};
+    --xenoatom-code-inline-bg: #{$xenoatom-code-inline-bg};
+    --xenoatom-code-selection-bg: #{$xenoatom-code-selection-bg};
+
+    // Bootstrap runtime theme variables (do not rely on compile-time Bootstrap theming).
+    --bs-body-bg-rgb: var(--xenoatom-color-background-rgb);
+    --bs-body-bg: var(--xenoatom-color-background);
+    --bs-body-color-rgb: var(--xenoatom-color-foreground-rgb);
+    --bs-body-color: var(--xenoatom-color-foreground);
     --bs-body-color-darker-20: hsl(from var(--bs-body-color) h s calc(l - 20));
     --bs-body-color-darker-10: hsl(from var(--bs-body-color) h s calc(l - 10));
-    --color-c64-red: #F80001;
-    --color-c64-orange: #FB6A01;
-    --color-c64-yellow: #ECE304;
-    --color-c64-green: #4CAB27;
-    --color-c64-blue: #3966AD;
     --bs-font-sans-serif: #{inspect($font-family-base)};
 }
 
@@ -73,17 +134,44 @@ h1, h2, h3, h4, h5, h6 {
     padding-left: 0.1rem
 }
 
+// Bootstrap Icons helpers
+.xenoatom-icon,
+.xenoatom-feature-icon {
+    margin-right: 0.55rem;
+    vertical-align: -0.1em;
+}
+
+.xenoatom-feature-icon {
+    font-size: 1.15em;
+}
+
+// Semantic accent colors for icons (keep these lightweight and reusable).
+.xenoatom-icon--input { color: var(--xenoatom-color-yellow); }
+.xenoatom-icon--actions { color: var(--xenoatom-color-green); }
+.xenoatom-icon--lists { color: var(--xenoatom-color-cyan); }
+.xenoatom-icon--layout { color: var(--xenoatom-color-magenta); }
+.xenoatom-icon--scroll { color: var(--xenoatom-color-blue); }
+.xenoatom-icon--chrome { color: var(--xenoatom-color-bright-white); }
+.xenoatom-icon--data { color: var(--xenoatom-color-blue); }
+.xenoatom-icon--overlays { color: var(--xenoatom-color-magenta); }
+
+.xenoatom-icon--binding { color: var(--xenoatom-color-cyan); }
+.xenoatom-icon--controls { color: var(--xenoatom-color-green); }
+.xenoatom-icon--editing { color: var(--xenoatom-color-yellow); }
+.xenoatom-icon--themes { color: var(--xenoatom-color-magenta); }
+.xenoatom-icon--debug { color: var(--xenoatom-color-red); }
+
 .xenoatom-color-0 {
-    color: #FF7F2A;
+    color: var(--xenoatom-color-red);
 }
 .xenoatom-color-1 {
-    color: #FFCC00;
+    color: var(--xenoatom-color-yellow);
 }
 .xenoatom-color-2 {
-    color: #66FF00;
+    color: var(--xenoatom-color-green);
 }
 .xenoatom-color-3 {
-    color: #00CCFF;
+    color: var(--xenoatom-color-cyan);
 }
 
 blockquote {
@@ -115,7 +203,13 @@ button.copy-to-clipboard-button[data-copy-state="copy-error"] > span {
 }
 
 .c64-text {
-    background-image: linear-gradient(to right, var(--color-c64-red), var(--color-c64-orange), var(--color-c64-yellow), var(--color-c64-green), var(--color-c64-blue));
+    background-image: linear-gradient(to right,
+        var(--xenoatom-color-red),
+        var(--xenoatom-color-yellow),
+        var(--xenoatom-color-green),
+        var(--xenoatom-color-cyan),
+        var(--xenoatom-color-blue),
+        var(--xenoatom-color-magenta));
     background-clip: text;
     color: transparent;
 }
@@ -169,6 +263,79 @@ button.copy-to-clipboard-button[data-copy-state="copy-error"] > span {
   max-width: 1200px;  /* pick your target max size */
   height: auto;
   padding-bottom: 1em;
+}
+
+/**********************************************
+ * terminal screenshots (faux window chrome)
+ **********************************************/
+
+.terminal-window {
+    display: inline-block;
+    max-width: 100%;
+    margin: 1rem 0;
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--xenoatom-color-background);
+    border: 1px solid rgba(var(--xenoatom-color-foreground-rgb), 0.14);
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.45),
+        0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.terminal-window__bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(
+        to bottom,
+        rgba(var(--xenoatom-color-foreground-rgb), 0.08),
+        rgba(var(--xenoatom-color-foreground-rgb), 0.03)
+    );
+    border-bottom: 1px solid rgba(var(--xenoatom-color-foreground-rgb), 0.10);
+}
+
+.terminal-window__controls {
+    display: inline-flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex: 0 0 auto;
+}
+
+.terminal-window__dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    box-shadow:
+        inset 0 0 0 1px rgba(0, 0, 0, 0.25),
+        0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.terminal-window__dot--red { background: var(--xenoatom-color-red); }
+.terminal-window__dot--yellow { background: var(--xenoatom-color-yellow); }
+.terminal-window__dot--green { background: var(--xenoatom-color-green); }
+
+.terminal-window__title {
+    flex: 1 1 auto;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.2;
+    color: rgba(var(--xenoatom-color-foreground-rgb), 0.88);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 2.5rem; // compensate for left controls to keep title visually centered
+}
+
+.terminal-window__content {
+    background: var(--xenoatom-color-background);
+}
+
+.terminal-window__content > .terminal {
+    display: block;
+    max-width: 100%;
+    height: auto;
 }
 
 /**********************************************
@@ -365,6 +532,12 @@ button.copy-to-clipboard-button[data-copy-state="copy-error"] > span {
     text-decoration: none;
 }
 
+#xenoatom .navbar .navbar-nav a i.bi {
+    margin-right: 0.4rem;
+    opacity: 0.9;
+    color: currentColor;
+}
+
 #xenoatom li.nav-item.active a.nav-link {
     // use text-shadow instead of font-weight to avoid resize of container and shift of the following menu items
     //text-shadow: 0px 0px 1px $body-color-bold-shadow;
@@ -408,6 +581,15 @@ footer {
     width: 100%;
     position: relative;
     color: var(--bs-body-color-darker-10);
+}
+
+.xenoatom-docs a.menu-link i.bi {
+    width: 1.25em;
+    display: inline-block;
+    text-align: center;
+    margin-right: 0.55rem;
+    opacity: 0.9;
+    color: currentColor;
 }
 
 .xenoatom-docs a.menu-link-show {
@@ -494,6 +676,13 @@ footer {
 .menu-sidebar {
     top: $xenoatom-top-offset;
     z-index: 0;
+
+    // Keep docs sidebars navigable when the menu is taller than the viewport.
+    // (Works with Bootstrap's `sticky-top` and `collapse` behavior.)
+    max-height: calc(100vh - #{$xenoatom-top-offset});
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
 }
 
 .xenoatom-docs .toc-link {
@@ -547,21 +736,32 @@ li.toc-list-item {
     padding-right: 3px;
 }
 
+// Scrollbar styling (theme-friendly)
+.xenoatom-docs,
+.xenoatom-docs * {
+    scrollbar-width: thin; // Firefox
+    scrollbar-color:
+        rgba(var(--xenoatom-color-foreground-rgb), 0.28)
+        rgba(var(--xenoatom-color-foreground-rgb), 0.06);
+}
+
 .xenoatom-docs ::-webkit-scrollbar {
-    padding-left: 2px;
-    width: 8px;
-    background-color: $search-bg;
+    width: 10px;
+    height: 10px;
+}
+
+.xenoatom-docs ::-webkit-scrollbar-track {
+    background-color: rgba(var(--xenoatom-color-foreground-rgb), 0.05);
 }
 
 .xenoatom-docs ::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2);
-    border-color: rgba(0, 0, 0, 0.4);
-    border-style: solid;
-    border-width: thin;
+    background-color: rgba(var(--xenoatom-color-foreground-rgb), 0.18);
+    border-radius: 999px;
+    border: 2px solid rgba(var(--xenoatom-color-foreground-rgb), 0.05);
 }
 
 .xenoatom-docs ::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(0, 0, 0, 0.4);
+    background-color: rgba(var(--xenoatom-color-foreground-rgb), 0.26);
 }
 
 .xenoatom-docs .js-toc {
@@ -589,5 +789,6 @@ li.toc-list-item {
 
     .menu-sidebar {
         top: auto!important;
+        max-height: none;
     }
 }

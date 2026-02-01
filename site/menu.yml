@@ -1,8 +1,8 @@
 home:
-  - {path: readme.md, title: Home}
-  - {path: docs/readme.md, title: Docs}
-  - {path: docs/controls/readme.md, title: Controls}
-  - {path: docs/specs/readme.md, title: Specs}
+  - {path: readme.md, title: "<i class='bi bi-house-door' aria-hidden='true'></i> Home"}
+  - {path: docs/readme.md, title: "<i class='bi bi-book' aria-hidden='true'></i> Docs"}
+  - {path: docs/controls/readme.md, title: "<i class='bi bi-ui-checks-grid' aria-hidden='true'></i> Controls"}
+  - {path: docs/specs/readme.md, title: "<i class='bi bi-journal-code' aria-hidden='true'></i> Specs"}
 
 home2:
   - {url: "https://github.com/sponsors/xoofx", title: '<i class="bi bi-heart"></i> Sponsor', link_class: btn btn-outline-secondary, }

@@ -49,6 +49,75 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     obs.observe(btn, { attributes: true, attributeFilter: ['data-copy-state'] });
   });
+
+  function wrapTerminalElement(element) {
+      if (!element || element.closest('.terminal-window')) return;
+
+      // Only wrap elements that are rendered as a "terminal screenshot" in docs.
+      const tagName = element.tagName?.toUpperCase();
+      if (tagName !== 'IMG' && tagName !== 'SVG' && tagName !== 'PRE') return;
+
+      const titleText =
+          element.getAttribute('data-terminal-title') ||
+          element.getAttribute('title') ||
+          element.getAttribute('alt') ||
+          '';
+
+      const wrapper = document.createElement('figure');
+      wrapper.className = 'terminal-window';
+
+      const bar = document.createElement('div');
+      bar.className = 'terminal-window__bar';
+
+      const controls = document.createElement('div');
+      controls.className = 'terminal-window__controls';
+
+      const dotRed = document.createElement('span');
+      dotRed.className = 'terminal-window__dot terminal-window__dot--red';
+      const dotYellow = document.createElement('span');
+      dotYellow.className = 'terminal-window__dot terminal-window__dot--yellow';
+      const dotGreen = document.createElement('span');
+      dotGreen.className = 'terminal-window__dot terminal-window__dot--green';
+      controls.append(dotRed, dotYellow, dotGreen);
+
+      const title = document.createElement('div');
+      title.className = 'terminal-window__title';
+      title.textContent = titleText;
+      title.title = titleText;
+
+      bar.append(controls, title);
+
+      const content = document.createElement('div');
+      content.className = 'terminal-window__content';
+
+      const parent = element.parentNode;
+      if (!parent) return;
+
+      parent.insertBefore(wrapper, element);
+      wrapper.append(bar, content);
+      content.appendChild(element);
+  }
+
+  document.querySelectorAll('.terminal').forEach(wrapTerminalElement);
+
+  function scrollSidebarToActiveItem(sidebar) {
+      if (!sidebar || sidebar.scrollHeight <= sidebar.clientHeight) return;
+
+      const activeItem = sidebar.querySelector('li.menu-item.active');
+      if (!activeItem) return;
+
+      const target = activeItem.querySelector('a.menu-link') || activeItem;
+      requestAnimationFrame(() => {
+          const sidebarRect = sidebar.getBoundingClientRect();
+          const targetRect = target.getBoundingClientRect();
+          const targetTopInSidebar = (targetRect.top - sidebarRect.top) + sidebar.scrollTop;
+          const desiredTop = targetTopInSidebar - (sidebar.clientHeight / 2) + (targetRect.height / 2);
+          const maxTop = sidebar.scrollHeight - sidebar.clientHeight;
+          sidebar.scrollTop = Math.max(0, Math.min(desiredTop, maxTop));
+      });
+  }
+
+  document.querySelectorAll('.menu-sidebar').forEach(scrollSidebarToActiveItem);
 });
 
 // Initialize bootstrap tooltips
@@ -218,4 +287,3 @@ if (searchInput && searchMenu) {
         });
     }
 }
-

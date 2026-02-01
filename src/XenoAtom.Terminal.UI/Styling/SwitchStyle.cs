@@ -47,7 +47,7 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
     /// <summary>
     /// Gets the glyph used for the thumb.
     /// </summary>
-    public Rune ThumbGlyph { get; init; } = new('⬛');
+    public Rune ThumbGlyph { get; init; } = new('⬤');
 
     /// <summary>Gets the base style for the track when the switch is on.</summary>
     public Style? TrackOn { get; init; }

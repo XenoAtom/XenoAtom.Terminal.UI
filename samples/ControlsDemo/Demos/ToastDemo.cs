@@ -1,5 +1,6 @@
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.ControlsDemo;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
@@ -119,7 +120,7 @@ public sealed class ToastDemo : ControlsDemoBase
                 new Button("Dismiss all").Click(() => context.ToastHost?.DismissAll()))
             .Spacing(1);
 
-        return new VStack(
+        var root = new VStack(
                 DemoUi.Hint("Toasts are overlay notifications that do not steal focus."),
                 new Group().Padding(1).Content(new VStack(
                         DemoUi.Title("Host settings"),
@@ -135,5 +136,12 @@ public sealed class ToastDemo : ControlsDemoBase
                         actions)
                     .Spacing(1).MinWidth(60)))
             .Spacing(1);
+
+        return root.InScreenshot(context, () =>
+        {
+            ShowToast(ToastSeverity.Info);
+            ShowToast(ToastSeverity.Success);
+            ShowActionToast();
+        });
     }
 }

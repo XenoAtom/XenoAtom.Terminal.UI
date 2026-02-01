@@ -80,6 +80,13 @@ internal sealed partial class TextEditorCore
     [Bindable]
     public partial int Version { get; private set; }
 
+    private void IncrementVersion()
+    {
+        // `Version++` would read+write the bindable property in the same tracking context, which the binding system
+        // forbids to prevent dependency loops. Use the generated backing field directly instead.
+        Version = unchecked(_version + 1);
+    }
+
     private static int NormalizeIndexToTextElementBoundary(ReadOnlySpan<char> text, int index)
     {
         index = Math.Clamp(index, 0, text.Length);
@@ -121,7 +128,7 @@ internal sealed partial class TextEditorCore
         ClearSelection();
         _preferredColumn = -1;
         EnsureCaretVisible(options);
-        Version++;
+        IncrementVersion();
     }
 
     private string GetText()
@@ -221,7 +228,7 @@ internal sealed partial class TextEditorCore
     {
         UpdateExtent(options);
         EnsureCaretVisible(options);
-        Version++;
+        IncrementVersion();
     }
 
     public void OnDocumentChanged()
@@ -351,7 +358,7 @@ internal sealed partial class TextEditorCore
             _caretIndex = _selectionEnd >= 0 ? _selectionEnd : index;
             _preferredColumn = -1;
             EnsureCaretVisible(options);
-            Version++;
+            IncrementVersion();
             e.Handled = true;
             return;
         }
@@ -369,7 +376,7 @@ internal sealed partial class TextEditorCore
         _caretIndex = index;
         _preferredColumn = -1;
         EnsureCaretVisible(options);
-        Version++;
+        IncrementVersion();
         e.Handled = true;
     }
 
@@ -385,7 +392,7 @@ internal sealed partial class TextEditorCore
         _caretIndex = index;
         _preferredColumn = -1;
         EnsureCaretVisible(options);
-        Version++;
+        IncrementVersion();
         e.Handled = true;
     }
 
@@ -1221,7 +1228,7 @@ internal sealed partial class TextEditorCore
         _caretIndex = index;
         _preferredColumn = -1;
         EnsureCaretVisible(options);
-        Version++;
+        IncrementVersion();
     }
 
     private void MoveCaretHorizontal(int delta, bool extendSelection, in TextEditorOptions options)
@@ -1516,7 +1523,7 @@ internal sealed partial class TextEditorCore
             RebuildSearchMatches();
         }
 
-        Version++;
+        IncrementVersion();
     }
 
     internal void Redo(in TextEditorOptions options)
@@ -1545,7 +1552,7 @@ internal sealed partial class TextEditorCore
             RebuildSearchMatches();
         }
 
-        Version++;
+        IncrementVersion();
     }
 
     private void SelectAll()
@@ -1559,7 +1566,7 @@ internal sealed partial class TextEditorCore
         _selectionAnchor = 0;
         _selectionEnd = text.Length;
         _caretIndex = text.Length;
-        Version++;
+        IncrementVersion();
     }
 
     private void UpdateSelectionAfterCaretMove(bool shift, int oldCaretIndex)
@@ -1567,7 +1574,7 @@ internal sealed partial class TextEditorCore
         if (!shift)
         {
             ClearSelection();
-            Version++;
+            IncrementVersion();
             return;
         }
 
@@ -1577,7 +1584,7 @@ internal sealed partial class TextEditorCore
         }
 
         _selectionEnd = _caretIndex;
-        Version++;
+        IncrementVersion();
     }
 
     private (int Start, int End) GetOrderedSelection()
@@ -2229,7 +2236,7 @@ internal sealed partial class TextEditorCore
         if (_searchMatches.Count == 0)
         {
             _activeSearchMatchIndex = -1;
-            Version++;
+            IncrementVersion();
             return;
         }
 
@@ -2247,7 +2254,7 @@ internal sealed partial class TextEditorCore
 
         _activeSearchMatchIndex = active;
         SelectActiveSearchMatch(options);
-        Version++;
+        IncrementVersion();
     }
 
     internal void GoToNextSearchMatch(in TextEditorOptions options)
@@ -2264,7 +2271,7 @@ internal sealed partial class TextEditorCore
         }
 
         SelectActiveSearchMatch(options);
-        Version++;
+        IncrementVersion();
     }
 
     internal void GoToPreviousSearchMatch(in TextEditorOptions options)
@@ -2281,7 +2288,7 @@ internal sealed partial class TextEditorCore
         }
 
         SelectActiveSearchMatch(options);
-        Version++;
+        IncrementVersion();
     }
 
     internal int ReplaceCurrentSearchMatch(string replacement, in TextEditorOptions options)
@@ -2299,7 +2306,7 @@ internal sealed partial class TextEditorCore
             ClearSelection();
         });
         RebuildSearchMatches();
-        Version++;
+        IncrementVersion();
         return 1;
     }
 
@@ -2335,7 +2342,7 @@ internal sealed partial class TextEditorCore
             _preferredColumn = -1;
             UpdateAfterDocumentChange(options);
             RebuildSearchMatches();
-            Version++;
+            IncrementVersion();
 
             var after = CaptureStateSnapshot();
             _undoRedo.CommitGroup(after);

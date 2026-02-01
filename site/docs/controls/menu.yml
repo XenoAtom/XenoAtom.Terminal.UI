@@ -1,5 +1,5 @@
 controls:
-  - {path: readme.md, title: ✨ All Controls}
+  - {path: readme.md, title: "<i class='bi bi-ui-checks-grid' aria-hidden='true'></i> All Controls"}
   - {path: textbox.md, title: TextBox}
   - {path: textarea.md, title: TextArea}
   - {path: maskedinput.md, title: MaskedInput}

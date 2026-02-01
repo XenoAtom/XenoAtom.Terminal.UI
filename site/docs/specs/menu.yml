@@ -1,5 +1,5 @@
 specs:
-  - {path: readme.md, title: 🧪 Specs Index}
+  - {path: readme.md, title: "<i class='bi bi-journal-code' aria-hidden='true'></i> Specs Index"}
   - {path: specs.md, title: Specs Overview}
   - {path: datagrid_specs.md, title: DataGridControl Specs}
   - {path: data_template_specs.md, title: Data Templates Specs}
@@ -17,4 +17,3 @@ specs:
   - {path: controls_todo.md, title: Controls TODO}
   - {path: remaining_controls_specs.md, title: Remaining Controls Specs}
   - {path: original_specs.md, title: Original Specs}
-

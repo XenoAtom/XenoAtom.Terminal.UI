@@ -2,6 +2,7 @@ using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.ControlsDemo;
 using XenoAtom.Terminal.UI.Input;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
@@ -66,7 +67,7 @@ public sealed class CommandPaletteDemo : ControlsDemoBase
             Execute = _ => counter.Value = 0,
         });
 
-        return host;
+        return host.InScreenshot(context, () => palette.Show());
     }
 }
 

@@ -9,7 +9,7 @@ https://prismjs.com/download.html#themes=prism-coy&languages=markup+clike+c+csha
 /* https://github.com/PrismJS/prism-themes/blob/master/themes/prism-vsc-dark-plus.css */
 	pre[class*="language-"],
 	code[class*="language-"] {
-		color: #d4d4d4;
+		color: var(--xenoatom-color-foreground, #d4d4d4);
 		border-radius: 0.5em;
 		font-size: 16px;
 		text-shadow: none;
@@ -34,7 +34,7 @@ https://prismjs.com/download.html#themes=prism-coy&languages=markup+clike+c+csha
 	pre[class*="language-"] *::selection,
 	code[class*="language-"] *::selection {
 		text-shadow: none;
-		background: #1c202c;
+		background: var(--xenoatom-code-selection-bg, #1c202c);
 	}
 
 	@media print {
@@ -48,14 +48,14 @@ https://prismjs.com/download.html#themes=prism-coy&languages=markup+clike+c+csha
 		padding: 1em;
 		margin: .5em 0;
 		overflow: auto;
-		background: #1c202c;
+		background: var(--xenoatom-code-bg, #1c202c);
 	}
 
 	:not(pre) > code[class*="language-"] {
 		padding: .1em .3em;
 		border-radius: .3em;
-		color: #db4c69;
-		background: #f9f2f4;
+		color: var(--xenoatom-color-bright-red, #db4c69);
+		background: var(--xenoatom-code-inline-bg, #1c202c);
 	}
 	/*********************************************************
 	* Tokens

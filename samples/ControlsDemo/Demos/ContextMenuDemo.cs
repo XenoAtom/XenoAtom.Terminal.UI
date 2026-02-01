@@ -1,6 +1,7 @@
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.ControlsDemo;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
@@ -39,12 +40,18 @@ public sealed class ContextMenuDemo : ControlsDemoBase
             new MenuItem("Clear", () => custom.Text = string.Empty),
         };
 
-        return new VStack(
+        var root = new VStack(
                 DemoUi.Title("Context menus"),
                 new TextBlock("Right-click to open a context menu. If ContextMenuFactory is not provided, the framework discovers commands with CommandPresentation.ContextMenu.")
                     .Wrap(true),
                 new Group().TopLeftText("Command-based").Padding(1).Content(text),
                 new Group().TopLeftText("Factory-based").Padding(1).Content(custom))
             .Spacing(1);
+
+        return root.InScreenshot(context, () =>
+        {
+            var items = custom.ContextMenuFactory?.Invoke(custom) ?? Array.Empty<MenuItem>();
+            _ = ContextMenuService.Show(custom, items, uiX: 6, uiY: 8);
+        });
     }
 }

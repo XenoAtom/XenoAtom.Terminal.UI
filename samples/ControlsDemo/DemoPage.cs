@@ -35,6 +35,7 @@ internal static class DemoPage
 
         var content = demo.Build(new DemoContext
         {
+            IsScreenshot = context.IsScreenshot,
             Log = AppendLog,
             NavigateToDemoId = context.NavigateToDemoId,
             Runtime = context.Runtime,

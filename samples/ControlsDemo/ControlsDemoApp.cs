@@ -128,6 +128,7 @@ internal static class ControlsDemoApp
                 ? new Center().Content("No demos found.")
                 : DemoPage.Build(demo, new DemoContext
                 {
+                    IsScreenshot = false,
                     NavigateToDemoId = NavigateToId,
                     Log = _ => { },
                     Runtime = runtime,

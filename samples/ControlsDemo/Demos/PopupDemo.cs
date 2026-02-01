@@ -1,5 +1,6 @@
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.ControlsDemo;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
@@ -79,7 +80,7 @@ public sealed class PopupDemo : ControlsDemoBase
             return p;
         }
 
-        return new VStack(
+        var root = new VStack(
                 DemoUi.Hint("Popups are useful for dropdowns and context menus."),
                 "This is a line of text to give space",
                 "This is another line",
@@ -87,5 +88,13 @@ public sealed class PopupDemo : ControlsDemoBase
                 "Now you can try it:",
                 new HStack(anchor, longAnchor, "Placement:", placement).Spacing(1))
             .Spacing(1);
+
+        return root.InScreenshot(context, () =>
+        {
+            longPopup ??= CreateLongPopup();
+            longPopup.Anchor = longAnchor;
+            longPopup.Placement = PopupPlacement.Below;
+            longPopup.Show();
+        });
     }
 }

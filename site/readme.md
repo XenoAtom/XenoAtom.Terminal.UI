@@ -14,8 +14,8 @@ og_type: website
       Compose visuals, bind to state, and let the framework handle layout + rendering efficiently.
     </p>
     <div class="d-flex justify-content-center gap-3 mt-4 flex-wrap">
-      <a href="/docs/getting-started/" class="btn btn-primary btn-lg">Get started</a>
-      <a href="/docs/controls/" class="btn btn-outline-light btn-lg">Browse controls</a>
+      <a href="/docs/getting-started/" class="btn btn-primary btn-lg"><i class="bi bi-rocket-takeoff"></i> Get started</a>
+      <a href="/docs/controls/" class="btn btn-outline-light btn-lg"><i class="bi bi-ui-checks-grid"></i> Browse controls</a>
       <a href="https://github.com/XenoAtom/XenoAtom.Terminal.UI/" class="btn btn-info btn-lg"><i class="bi bi-github"></i> GitHub</a>
     </div>
     <div class="mt-4 text-start mx-auto" style="max-width: 56rem;">
@@ -28,7 +28,7 @@ og_type: website
   <div class="row row-cols-1 row-cols-lg-2 gx-5 gy-5">
     <div class="col">
       <div class="card h-100">
-        <div class="card-header display-6">🔗 Binding-first UI</div>
+        <div class="card-header display-6"><i class="bi bi-link-45deg xenoatom-feature-icon xenoatom-icon--binding"></i> Binding-first UI</div>
         <div class="card-body">
           <p class="card-text">
             Bindable properties are tracked during update/layout/render. Change state and only the affected visuals are invalidated.
@@ -39,7 +39,7 @@ og_type: website
     </div>
     <div class="col">
       <div class="card h-100">
-        <div class="card-header display-6">🧱 Composable controls</div>
+        <div class="card-header display-6"><i class="bi bi-ui-checks-grid xenoatom-feature-icon xenoatom-icon--controls"></i> Composable controls</div>
         <div class="card-body">
           <p class="card-text">
             Inputs, layout containers, menus, overlays, charts, and more — all composable and styleable.
@@ -50,7 +50,7 @@ og_type: website
     </div>
     <div class="col">
       <div class="card h-100">
-        <div class="card-header display-6">✍️ Text editing</div>
+        <div class="card-header display-6"><i class="bi bi-pencil-square xenoatom-feature-icon xenoatom-icon--editing"></i> Text editing</div>
         <div class="card-body">
           <p class="card-text">
             TextBox/TextArea with selection, scrolling, clipboard, and Find/Replace — powered by a shared text subsystem.
@@ -61,7 +61,7 @@ og_type: website
     </div>
     <div class="col">
       <div class="card h-100">
-        <div class="card-header display-6">📊 DataGridControl</div>
+        <div class="card-header display-6"><i class="bi bi-table xenoatom-feature-icon xenoatom-icon--data"></i> DataGridControl</div>
         <div class="card-body">
           <p class="card-text">
             A virtualized data grid with selection, filtering, search, and in-place editing.
@@ -72,7 +72,7 @@ og_type: website
     </div>
     <div class="col">
       <div class="card h-100">
-        <div class="card-header display-6">🎨 Themes &amp; alpha blending</div>
+        <div class="card-header display-6"><i class="bi bi-palette2 xenoatom-feature-icon xenoatom-icon--themes"></i> Themes &amp; alpha blending</div>
         <div class="card-body">
           <p class="card-text">
             Themes are derived from palettes and color schemes, with built-in alpha blending for subtle, layered UIs.
@@ -83,7 +83,7 @@ og_type: website
     </div>
     <div class="col">
       <div class="card h-100">
-        <div class="card-header display-6">🐞 Debug overlay</div>
+        <div class="card-header display-6"><i class="bi bi-bug xenoatom-feature-icon xenoatom-icon--debug"></i> Debug overlay</div>
         <div class="card-body">
           <p class="card-text">
             Press <kbd>F12</kbd> in fullscreen apps to inspect FPS, dirty regions, diff stats, and per-pass timings.

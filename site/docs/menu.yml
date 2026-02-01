@@ -1,22 +1,22 @@
 doc:
-  - {path: readme.md, title: User Guide}
-  - {path: getting-started.md, title: ✨ Getting Started}
-  - {path: visual-tree.md, title: 🌳 Visual Tree}
-  - {path: binding.md, title: 🔗 Binding & State}
-  - {path: data-templating.md, title: 🧩 Data Templating}
-  - {path: layout.md, title: 📐 Layout}
-  - {path: input.md, title: ⌨️ Input}
-  - {path: commands.md, title: ⌨️ Commands}
-  - {path: styling.md, title: 🎨 Styling & Themes}
-  - {path: rendering.md, title: 🖨️ Rendering}
-  - {path: scrolling.md, title: 🧭 Scrolling}
-  - {path: text-editing.md, title: ✍️ Text Editing}
-  - {path: undo-redo.md, title: ↩️ Undo/Redo}
-  - {path: markup-parsing.md, title: 🏷️ Markup Parsing}
-  - {path: culture.md, title: 🌍 Culture}
-  - {path: debugging.md, title: 🐞 Debugging}
-  - {path: hosting.md, title: 🧷 Hosting}
-  - {path: prompts.md, title: 💬 Prompts}
-  - {path: control-development.md, title: 🛠️ Control Development}
-  - {path: controls/readme.md, title: 🧱 Controls Reference}
-  - {path: specs/readme.md, title: 🧪 Specs & Design Notes}
+  - {path: readme.md, title: "<i class='bi bi-book' aria-hidden='true'></i> User Guide"}
+  - {path: getting-started.md, title: "<i class='bi bi-rocket-takeoff' aria-hidden='true'></i> Getting Started"}
+  - {path: visual-tree.md, title: "<i class='bi bi-diagram-3' aria-hidden='true'></i> Visual Tree"}
+  - {path: binding.md, title: "<i class='bi bi-link-45deg' aria-hidden='true'></i> Binding & State"}
+  - {path: data-templating.md, title: "<i class='bi bi-puzzle' aria-hidden='true'></i> Data Templating"}
+  - {path: layout.md, title: "<i class='bi bi-bounding-box' aria-hidden='true'></i> Layout"}
+  - {path: input.md, title: "<i class='bi bi-keyboard' aria-hidden='true'></i> Input"}
+  - {path: commands.md, title: "<i class='bi bi-terminal' aria-hidden='true'></i> Commands"}
+  - {path: styling.md, title: "<i class='bi bi-palette2' aria-hidden='true'></i> Styling & Themes"}
+  - {path: rendering.md, title: "<i class='bi bi-display' aria-hidden='true'></i> Rendering"}
+  - {path: scrolling.md, title: "<i class='bi bi-arrows-move' aria-hidden='true'></i> Scrolling"}
+  - {path: text-editing.md, title: "<i class='bi bi-pencil-square' aria-hidden='true'></i> Text Editing"}
+  - {path: undo-redo.md, title: "<i class='bi bi-arrow-counterclockwise' aria-hidden='true'></i> Undo/Redo"}
+  - {path: markup-parsing.md, title: "<i class='bi bi-code-square' aria-hidden='true'></i> Markup Parsing"}
+  - {path: culture.md, title: "<i class='bi bi-globe2' aria-hidden='true'></i> Culture"}
+  - {path: debugging.md, title: "<i class='bi bi-bug' aria-hidden='true'></i> Debugging"}
+  - {path: hosting.md, title: "<i class='bi bi-plug' aria-hidden='true'></i> Hosting"}
+  - {path: prompts.md, title: "<i class='bi bi-chat-left-text' aria-hidden='true'></i> Prompts"}
+  - {path: control-development.md, title: "<i class='bi bi-tools' aria-hidden='true'></i> Control Development"}
+  - {path: controls/readme.md, title: "<i class='bi bi-ui-checks-grid' aria-hidden='true'></i> Controls Reference"}
+  - {path: specs/readme.md, title: "<i class='bi bi-journal-code' aria-hidden='true'></i> Specs & Design Notes"}

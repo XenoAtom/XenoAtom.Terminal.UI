@@ -138,6 +138,7 @@ internal static class ScreenshotExport
 
                 var demoContext = new DemoContext
                 {
+                    IsScreenshot = true,
                     Log = _ => { },
                     NavigateToDemoId = _ => { },
                     Runtime = runtime,
@@ -145,7 +146,27 @@ internal static class ScreenshotExport
                     ToastHost = null,
                 };
 
-                var root = demo.Build(demoContext);
+                Visual root;
+                if (string.Equals(typeName, "ToastDemo", StringComparison.Ordinal))
+                {
+                    // ToastService locates ToastHost via the running TerminalApp. Provide one as the root wrapper.
+                    var toastHost = new ToastHost();
+                    var content = demo.Build(new DemoContext
+                    {
+                        IsScreenshot = true,
+                        Log = demoContext.Log,
+                        NavigateToDemoId = demoContext.NavigateToDemoId,
+                        Runtime = demoContext.Runtime,
+                        Theme = demoContext.Theme,
+                        ToastHost = toastHost,
+                    });
+                    toastHost.Content = content;
+                    root = toastHost;
+                }
+                else
+                {
+                    root = demo.Build(demoContext);
+                }
 
                 string svg;
                 if (RequiresAppSnapshot(typeName))
@@ -190,6 +211,12 @@ internal static class ScreenshotExport
 
     private static bool RequiresAppSnapshot(string typeName)
         => string.Equals(typeName, "CommandBarDemo", StringComparison.Ordinal) ||
+           string.Equals(typeName, "CommandPaletteDemo", StringComparison.Ordinal) ||
+           string.Equals(typeName, "ContextMenuDemo", StringComparison.Ordinal) ||
+           string.Equals(typeName, "DialogDemo", StringComparison.Ordinal) ||
+           string.Equals(typeName, "PopupDemo", StringComparison.Ordinal) ||
+           string.Equals(typeName, "SearchReplacePopupDemo", StringComparison.Ordinal) ||
+           string.Equals(typeName, "ToastDemo", StringComparison.Ordinal) ||
            string.Equals(typeName, "TooltipDemo", StringComparison.Ordinal);
 
     private static string GetOutputSlug(string typeName, HashSet<string> taken)

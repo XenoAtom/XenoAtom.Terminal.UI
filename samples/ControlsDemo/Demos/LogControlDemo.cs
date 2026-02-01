@@ -1,6 +1,7 @@
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Templating;
+using XenoAtom.Terminal.UI.ControlsDemo;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
@@ -23,6 +24,26 @@ public sealed class LogControlDemo : ControlsDemoBase
         }.WrapText(wrap);
 
         log.AppendMarkupLine("[dim]Try: mouse wheel, PageUp/Down, Ctrl+F, Ctrl+A, Ctrl+C[/]");
+
+        if (context.IsScreenshot)
+        {
+            for (int j = 0; j < 60; j++)
+            {
+                var id = nextId.Value++;
+                if (j % 7 == 0)
+                {
+                    log.AppendMarkupLine($"[green]✔[/] [dim]#{id}[/] [bold]Downloaded[/] [cyan]🗃️[/] item [dim](cached)[/]");
+                }
+                else if (j % 11 == 0)
+                {
+                    log.AppendMarkupLine($"[warning]⚠[/] [dim]#{id}[/] Retrying after transient error (attempt [bold]{(j % 3) + 1}[/]/3)…");
+                }
+                else
+                {
+                    log.AppendLine($"Message {id} — The quick brown fox jumps over the lazy dog.");
+                }
+            }
+        }
 
         return new VStack(
                 DemoUi.Hint("LogControl is optimized for appending and renders only the visible rows."),

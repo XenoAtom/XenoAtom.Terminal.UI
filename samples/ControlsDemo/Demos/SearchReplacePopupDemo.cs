@@ -1,5 +1,6 @@
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.ControlsDemo;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
@@ -27,7 +28,7 @@ public sealed class SearchReplacePopupDemo : ControlsDemoBase
             .VerticalAlignment(Align.Stretch)
             .HorizontalAlignment(Align.Stretch);
 
-        return new VStack(
+        var root = new VStack(
                 DemoUi.Hint("SearchReplacePopup is a reusable component hosted by controls like TextArea and LogControl."),
                 new Group("TextArea").Padding(1).Content(new Border(editor).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch))
                     .HorizontalAlignment(Align.Stretch)
@@ -35,6 +36,8 @@ public sealed class SearchReplacePopupDemo : ControlsDemoBase
             .Spacing(1)
             .HorizontalAlignment(Align.Stretch)
             .VerticalAlignment(Align.Stretch);
+
+        return root.InScreenshot(context, () => editor.OpenReplace("foo"));
     }
 }
 
