@@ -11,36 +11,76 @@ This document captures design and implementation notes for `Padder`.
 
 ## Overview
 
-- **Status**: Implemented
-- **Primary purpose**: Provide `Padder` as a retained-mode control with bindable properties and predictable layout/rendering behavior.
-- **Key design constraints**:
-  - reactive dependency tracking (measure/arrange/render)
-  - allocation-conscious rendering
-  - AOT/trimming friendliness (no runtime reflection by default)
+ - **Status**: Implemented
+ - **Primary purpose**: Adds padding around a single content visual.
+ - **Role in the framework**:
+   - lightweight layout primitive for spacing/indent
+   - base class for “chrome” controls that need reserved space via an internal inset (e.g. `Border`)
 
-## Implementation notes
+## Public API surface
 
-- Source code lives under `src/XenoAtom.Terminal.UI` (search for `Padder` and `PadderStyle`).
-- Public properties are typically `[Bindable]` (generated accessors) and participate in the binding dirty model.
+### Type
+
+- `Padder : ContentVisual`
+
+### Constructors
+
+- `Padder()`
+- `Padder(Visual content)`
+- `Padder(Func<Visual> contentFactory)`
+  - The factory is evaluated during dynamic updates and can rebuild the child when its tracked dependencies change.
+
+### Bindables
+
+- `Padding : Thickness`
+  - Applied around the content, in cells. Negative values are clamped to `0` per side when combined with `Inset`.
+
+### Extensibility point
+
+- `protected virtual Thickness Inset`
+  - Additional internal padding reserved by derived controls (default: `Thickness.Zero`).
 
 ## Layout & rendering
 
-- Follows the standard `Measure` → `Arrange` → `Render` pipeline.
-- Uses style inheritance from the visual tree; control-specific style is typically `PadderStyle`.
+`Padder` only affects layout; it does not render anything itself.
+
+### Effective padding
+
+Internally, `Padder` uses:
+
+- `EffectivePadding = max(0, Padding + Inset)` per side
+
+This allows derived controls to reserve internal chrome space while still allowing user padding.
+
+### Measure
+
+- Computes child constraints by subtracting `EffectivePadding.Horizontal/Vertical` from the parent max constraints.
+- Measures `Content` with these inner constraints (or treats content as `SizeHints.Fixed(Size.Zero)` when null).
+- Returns `SizeHints` as `ContentHints + EffectivePadding`, preserving the child’s flex grow/shrink factors.
+
+### Arrange
+
+- Computes an inner rectangle:
+  - `x = finalRect.X + EffectivePadding.Left`
+  - `y = finalRect.Y + EffectivePadding.Top`
+  - `width = max(0, finalRect.Width - EffectivePadding.Horizontal)`
+  - `height = max(0, finalRect.Height - EffectivePadding.Vertical)`
+- Arranges the content into that rectangle (if non-null).
 
 ## Input & commands
 
-- Keyboard/mouse behaviors (when applicable) are exposed via commands so they are discoverable (e.g., CommandBar / CommandPalette).
+`Padder` does not handle input and does not expose commands.
 
 ## Styling
 
-- Styling is controlled via the theme and `PadderStyle` (where applicable).
+There is no `PadderStyle`. Visual appearance is determined entirely by the child.
 
 ## Tests & demos
 
-- Look for rendering/input tests in `src/XenoAtom.Terminal.UI.Tests`.
-- See the ControlsDemo for interactive examples.
+Tests that lock down current behavior:
+
+- `src/XenoAtom.Terminal.UI.Tests/PadderMeasureArrangeTests.cs`
 
 ## Future / v2 ideas
 
-- Consider documenting additional style knobs and adding more deterministic rendering tests as features grow.
+- Consider a “background fill” variant (Padder + fill) as a dedicated control if it becomes a common pattern.
