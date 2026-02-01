@@ -1,0 +1,70 @@
+specs_controls:
+  - {path: readme.md, title: "<i class='bi bi-ui-checks' aria-hidden='true'></i> Control Specs"}
+
+  - {path: textbox.md, title: TextBox}
+  - {path: textarea.md, title: TextArea}
+  - {path: maskedinput.md, title: MaskedInput}
+  - {path: numberbox.md, title: NumberBox}
+  - {path: searchreplacepopup.md, title: SearchReplacePopup}
+  - {path: validation.md, title: Validation}
+  - {path: colorpicker.md, title: ColorPicker}
+
+  - {path: button.md, title: Button}
+  - {path: checkbox.md, title: CheckBox}
+  - {path: radiobutton.md, title: RadioButton}
+  - {path: switch.md, title: Switch}
+  - {path: link.md, title: Link}
+
+  - {path: listbox.md, title: ListBox}
+  - {path: optionlist.md, title: OptionList}
+  - {path: selectionlist.md, title: SelectionList}
+  - {path: select.md, title: Select}
+  - {path: treeview.md, title: TreeView}
+
+  - {path: vstack.md, title: VStack}
+  - {path: hstack.md, title: HStack}
+  - {path: wrapstack.md, title: WrapStack}
+  - {path: grid.md, title: Grid}
+  - {path: docklayout.md, title: DockLayout}
+  - {path: splitter.md, title: Splitter}
+  - {path: center.md, title: Center}
+  - {path: padder.md, title: Padder}
+  - {path: border.md, title: Border}
+  - {path: group.md, title: Group}
+
+  - {path: scrollbar.md, title: ScrollBar}
+  - {path: scrollviewer.md, title: ScrollViewer}
+
+  - {path: tabcontrol.md, title: TabControl}
+  - {path: menubar.md, title: MenuBar}
+  - {path: menu-system.md, title: Menu System}
+  - {path: header.md, title: Header}
+  - {path: footer.md, title: Footer}
+  - {path: statusbar.md, title: StatusBar}
+  - {path: commandbar.md, title: CommandBar}
+  - {path: commandpalette.md, title: CommandPalette}
+
+  - {path: table.md, title: Table}
+  - {path: datagrid.md, title: DataGridControl}
+  - {path: textblock.md, title: TextBlock}
+  - {path: markup.md, title: Markup}
+  - {path: rule.md, title: Rule}
+  - {path: logcontrol.md, title: LogControl}
+  - {path: progressbar.md, title: ProgressBar}
+  - {path: progresstaskgroup.md, title: ProgressTaskGroup}
+  - {path: spinner.md, title: Spinner}
+
+  - {path: breakdownchart.md, title: BreakdownChart}
+  - {path: barchart.md, title: BarChart}
+  - {path: linechart.md, title: LineChart}
+  - {path: sparkline.md, title: Sparkline}
+  - {path: canvas.md, title: Canvas}
+  - {path: textfiglet.md, title: TextFiglet}
+
+  - {path: popup.md, title: Popup}
+  - {path: contextmenu.md, title: ContextMenu}
+  - {path: dialog.md, title: Dialog}
+  - {path: tooltip.md, title: Tooltip}
+  - {path: backdrop.md, title: Backdrop}
+  - {path: toast.md, title: Toast}
+

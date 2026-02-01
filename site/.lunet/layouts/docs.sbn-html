@@ -9,6 +9,11 @@ layout: base
       menu_key = "controls"
     else if url | string.starts_with "/docs/specs"
       menu_key = "specs"
+      if url | string.starts_with "/docs/specs/controls"
+        menu_key = "specs_controls"
+      else if url | string.starts_with "/docs/specs/archive"
+        menu_key = "specs_archive"
+      end
     end
     menu = site.menu[menu_key] ?? site.menu.doc
   ~}}
