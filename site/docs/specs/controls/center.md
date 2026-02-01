@@ -12,35 +12,57 @@ This document captures design and implementation notes for `Center`.
 ## Overview
 
 - **Status**: Implemented
-- **Primary purpose**: Provide `Center` as a retained-mode control with bindable properties and predictable layout/rendering behavior.
-- **Key design constraints**:
-  - reactive dependency tracking (measure/arrange/render)
-  - allocation-conscious rendering
-  - AOT/trimming friendliness (no runtime reflection by default)
+- **Primary purpose**: Centers a single child within the available bounds.
+- **Content model**: `Center` is a `ContentVisual` and arranges only `Content`.
 
-## Implementation notes
+## Public API surface
 
-- Source code lives under `src/XenoAtom.Terminal.UI` (search for `Center` and `CenterStyle`).
-- Public properties are typically `[Bindable]` (generated accessors) and participate in the binding dirty model.
+### Type
+
+- `Center : ContentVisual`
+
+### Inherited properties
+
+`Center` uses `ContentVisual.Content` (and the usual `Visual` sizing/alignment properties), but it does not introduce
+any new bindables of its own.
 
 ## Layout & rendering
 
-- Follows the standard `Measure` → `Arrange` → `Render` pipeline.
-- Uses style inheritance from the visual tree; control-specific style is typically `CenterStyle`.
+`Center` is purely a layout helper; it does not render anything itself.
+
+### Measure
+
+- If `Content` is null: `DesiredSize = (0,0)`.
+- Otherwise: returns `Content.Measure(constraints)`.
+
+### Arrange
+
+- If `Content` is null: no-op.
+- Otherwise:
+  - clamps arranged width/height to the smaller of:
+    - available size (`finalRect`)
+    - `Content.DesiredSize`
+  - centers the resulting rectangle within `finalRect`:
+    - `x = finalRect.X + (finalRect.Width - w) / 2`
+    - `y = finalRect.Y + (finalRect.Height - h) / 2`
+
+This means:
+
+- the child is never stretched by `Center`
+- oversized children are arranged to a clipped rectangle (normal visual clipping rules apply)
 
 ## Input & commands
 
-- Keyboard/mouse behaviors (when applicable) are exposed via commands so they are discoverable (e.g., CommandBar / CommandPalette).
+`Center` does not handle input and does not expose commands.
 
 ## Styling
 
-- Styling is controlled via the theme and `CenterStyle` (where applicable).
+There is no `CenterStyle`. Visual appearance is determined entirely by the child.
 
 ## Tests & demos
 
-- Look for rendering/input tests in `src/XenoAtom.Terminal.UI.Tests`.
-- See the ControlsDemo for interactive examples.
+There are no dedicated unit tests for `Center` at the time of writing.
 
 ## Future / v2 ideas
 
-- Consider documenting additional style knobs and adding more deterministic rendering tests as features grow.
+- Consider adding a small deterministic layout test if future changes introduce more behavior (e.g. margins or alignment overrides).
