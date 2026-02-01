@@ -9,7 +9,7 @@ title: ColorPicker
 > Screenshot: `site/img/colorpicker.png` (placeholder)
 
 
-![ColorPicker](../../img/controls/colorpicker.svg)
+![ColorPicker](../../img/controls/colorpicker.svg){.terminal}
 
 ## Usage
 

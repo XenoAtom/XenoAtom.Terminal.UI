@@ -7,7 +7,7 @@ title: Group
 `Group` is a border-like container with optional corner labels (top-left/top-right/bottom-left/bottom-right).
 
 
-![Group](../../img/controls/group.svg)
+![Group](../../img/controls/group.svg){.terminal}
 
 ## Basic usage
 

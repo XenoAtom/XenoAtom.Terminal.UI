@@ -7,7 +7,7 @@ title: ListBox
 `ListBox<T>` displays a scrollable list of items and supports selection/focus interaction.
 
 
-![ListBox](../../img/controls/listbox.svg)
+![ListBox](../../img/controls/listbox.svg){.terminal}
 
 ## Items
 

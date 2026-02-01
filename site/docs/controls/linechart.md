@@ -7,7 +7,7 @@ title: LineChart
 `LineChart` renders a simple line chart.
 
 
-![LineChart](../../img/controls/linechart.svg)
+![LineChart](../../img/controls/linechart.svg){.terminal}
 
 ## Basic usage
 

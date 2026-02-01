@@ -7,7 +7,7 @@ title: TextBox
 `TextBox` is a single-line text editor.
 
 
-![TextBox](../../img/controls/textbox.svg)
+![TextBox](../../img/controls/textbox.svg){.terminal}
 
 ## Basic usage
 

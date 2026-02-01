@@ -7,7 +7,7 @@ title: Button
 `Button` is a clickable control that renders a label/content and raises a click interaction via a routed event.
 
 
-![Button](../../img/controls/button.svg)
+![Button](../../img/controls/button.svg){.terminal}
 
 ## Basic usage
 

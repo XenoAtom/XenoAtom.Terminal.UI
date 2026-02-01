@@ -7,7 +7,7 @@ title: Splitter (HSplitter / VSplitter)
 Splitters resize adjacent content panes using mouse drag.
 
 
-![Splitter](../../img/controls/splitter.svg)
+![Splitter](../../img/controls/splitter.svg){.terminal}
 
 ## Basic usage
 

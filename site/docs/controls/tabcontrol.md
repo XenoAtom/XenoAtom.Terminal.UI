@@ -8,7 +8,7 @@ title: TabControl
 Tab headers are visuals, enabling rich header content (icons, counters, etc.).
 
 
-![TabControl](../../img/controls/tabcontrol.svg)
+![TabControl](../../img/controls/tabcontrol.svg){.terminal}
 
 ## Basic usage
 

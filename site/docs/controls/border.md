@@ -7,7 +7,7 @@ title: Border
 `Border` draws a border around a single content visual.
 
 
-![Border](../../img/controls/border.svg)
+![Border](../../img/controls/border.svg){.terminal}
 
 ## Basic usage
 

@@ -12,7 +12,7 @@ Wrap stacks arrange children in a **flow layout**: items are placed along a main
 Screenshot: `img/controls/wrapstack.png` (placeholder)
 
 
-![WrapStack (WrapHStack / WrapVStack)](../../img/controls/wrapstack.svg)
+![WrapStack (WrapHStack / WrapVStack)](../../img/controls/wrapstack.svg){.terminal}
 
 ## Key properties
 

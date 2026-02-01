@@ -7,7 +7,7 @@ title: Slider
 `Slider` selects a value in a range and supports mouse/keyboard interaction.
 
 
-![Slider](../../img/controls/slider.svg)
+![Slider](../../img/controls/slider.svg){.terminal}
 
 ## Basic usage
 

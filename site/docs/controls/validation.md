@@ -9,7 +9,7 @@ It is designed to be reusable across the library (prompts, inputs, pickers) and 
 
 
 
-![Validation](../../img/controls/validation.svg)
+![Validation](../../img/controls/validation.svg){.terminal}
 
 ## Basic usage
 

@@ -9,7 +9,7 @@ title: ScrollBar
 Use `VScrollBar` (vertical) or `HScrollBar` (horizontal).
 
 
-![ScrollBar](../../img/controls/scrollbar.svg)
+![ScrollBar](../../img/controls/scrollbar.svg){.terminal}
 
 ## Basic usage
 

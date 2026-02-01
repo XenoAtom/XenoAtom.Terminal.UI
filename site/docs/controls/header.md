@@ -8,7 +8,7 @@ title: Header
 
 `Header` is typically used as the top bar of a `DockLayout`.
 
-![Header](../../img/controls/header.svg)
+![Header](../../img/controls/header.svg){.terminal}
 
 ## Basic usage
 

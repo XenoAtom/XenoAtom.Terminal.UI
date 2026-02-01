@@ -7,7 +7,7 @@ title: TextFiglet
 `TextFiglet` renders large banner text using a FIGlet font.
 
 
-![TextFiglet](../../img/controls/textfiglet.svg)
+![TextFiglet](../../img/controls/textfiglet.svg){.terminal}
 
 ## Basic usage
 

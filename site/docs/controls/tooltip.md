@@ -6,7 +6,7 @@ title: Tooltip
 
 Tooltips display additional information when the user hovers a visual.
 
-![Tooltip](../../img/controls/tooltip.svg)
+![Tooltip](../../img/controls/tooltip.svg){.terminal}
 
 ## Basic usage
 

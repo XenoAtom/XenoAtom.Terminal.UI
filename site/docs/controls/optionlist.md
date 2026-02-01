@@ -7,7 +7,7 @@ title: OptionList
 `OptionList<T>` is a single-choice list widget optimized for keyboard/mouse selection.
 
 
-![OptionList](../../img/controls/optionlist.svg)
+![OptionList](../../img/controls/optionlist.svg){.terminal}
 
 ## Basic usage
 

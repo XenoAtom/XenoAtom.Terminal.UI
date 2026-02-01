@@ -10,7 +10,7 @@ scrolling, selection, searching/filtering, column resizing, and inline editing.
 The lower-level contracts and data model live in [DataGrid Specs](../specs/datagrid_specs.md).
 
 
-![DataGridControl](../../img/controls/datagrid.svg)
+![DataGridControl](../../img/controls/datagrid.svg){.terminal}
 
 ## Quick start
 

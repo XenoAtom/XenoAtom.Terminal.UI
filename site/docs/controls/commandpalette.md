@@ -7,7 +7,7 @@ title: CommandPalette
 `CommandPalette` is a searchable command launcher built on top of the unified `Command` system.
 
 
-![CommandPalette](../../img/controls/commandpalette.svg)
+![CommandPalette](../../img/controls/commandpalette.svg){.terminal}
 
 ## Fullscreen-only
 

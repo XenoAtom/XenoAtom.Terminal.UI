@@ -7,7 +7,7 @@ title: ProgressBar
 `ProgressBar` renders a progress bar using different variants (thin, shaded, segmented, bracketed).
 
 
-![ProgressBar](../../img/controls/progressbar.svg)
+![ProgressBar](../../img/controls/progressbar.svg){.terminal}
 
 ## Basic usage
 

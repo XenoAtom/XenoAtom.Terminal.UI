@@ -12,7 +12,7 @@ This enables:
 - Per-control overrides
 - Allocation-friendly virtualization/recycling (via `DataTemplate<T>.TryUpdate` and `Release`)
 
-![Data templates](../img/controls/data-templating.svg)
+![Data templates](../img/controls/data-templating.svg){.terminal}
 
 ## DataTemplates registry
 

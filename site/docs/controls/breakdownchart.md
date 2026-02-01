@@ -9,7 +9,7 @@ a total value is distributed across categories (disk usage, budgets, KPIs, resou
 
 
 
-![BreakdownChart](../../img/controls/breakdownchart.svg)
+![BreakdownChart](../../img/controls/breakdownchart.svg){.terminal}
 
 ## Basic usage
 

@@ -9,7 +9,7 @@ title: Rule
 Rule is horizontal-only.
 
 
-![Rule](../../img/controls/rule.svg)
+![Rule](../../img/controls/rule.svg){.terminal}
 
 ## Basic usage
 

@@ -9,7 +9,7 @@ title: NumberBox
 > Screenshots: `docs/images/numberbox-basic.png` (placeholder)
 
 
-![NumberBox](../../img/controls/numberbox.svg)
+![NumberBox](../../img/controls/numberbox.svg){.terminal}
 
 ## Basic usage
 

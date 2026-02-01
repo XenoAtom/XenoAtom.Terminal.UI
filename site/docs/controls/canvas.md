@@ -7,7 +7,7 @@ title: Canvas
 `Canvas` is an immediate-mode drawing surface for cell-based terminal graphics.
 
 
-![Canvas](../../img/controls/canvas.svg)
+![Canvas](../../img/controls/canvas.svg){.terminal}
 
 ## Basic usage
 

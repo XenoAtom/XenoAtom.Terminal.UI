@@ -7,7 +7,7 @@ title: MenuBar
 `MenuBar` provides application chrome with menus and keyboard navigation.
 
 
-![MenuBar](../../img/controls/menubar.svg)
+![MenuBar](../../img/controls/menubar.svg){.terminal}
 
 ## Fullscreen-only
 

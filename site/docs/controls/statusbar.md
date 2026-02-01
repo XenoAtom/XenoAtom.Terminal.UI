@@ -8,7 +8,7 @@ title: StatusBar
 
 You may prefer `Header`/`Footer` for new apps.
 
-![StatusBar](../../img/controls/statusbar.svg)
+![StatusBar](../../img/controls/statusbar.svg){.terminal}
 
 ## Basic usage
 

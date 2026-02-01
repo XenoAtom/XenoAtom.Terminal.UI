@@ -10,7 +10,7 @@ It supports selection + copy, a maximum retained capacity, optional wrapping, an
 > Screenshot: `site/img/logcontrol.png` (placeholder)
 
 
-![LogControl](../../img/controls/logcontrol.svg)
+![LogControl](../../img/controls/logcontrol.svg){.terminal}
 
 ## Key features
 
