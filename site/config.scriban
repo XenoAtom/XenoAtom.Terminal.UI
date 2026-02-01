@@ -5,9 +5,9 @@ description = "A modern retained-mode terminal UI framework for .NET."
 
 baseurl = baseurl ?? "https://xenoatom.github.io"
 if environment == "dev"
-    basepath = environment == "prod" ? "/terminal" : ""
+    basepath = ""
 else
-    basepath = "/terminal"
+    # basepath = "/terminal" # this is not working
 end
 
 # Use `base` as a default layout
