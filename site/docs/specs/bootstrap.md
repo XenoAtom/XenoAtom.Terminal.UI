@@ -4,7 +4,7 @@ title: XenoAtom.Terminal.UI Specifications
 
 # XenoAtom.Terminal.UI Specifications
 
-This document contains specifications for the `XenoAtom.Terminal.UI` project.
+This document contains the original specifications for the `XenoAtom.Terminal.UI` project.
 
 Status: Draft (v0.2 - first round)
 
