@@ -6,9 +6,8 @@ title: Center
 
 `Center` centers its content within the available space.
 
-Screenshot placeholder:
 
-![Center](../../img/screenshots/controls-demo/elderberry-dark-soft/center.svg)
+![Center](../../img/controls/center.svg)
 
 ## Basic usage
 
@@ -21,4 +20,3 @@ new Center(new Button("OK"));
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
-

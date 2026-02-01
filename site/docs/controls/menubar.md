@@ -6,9 +6,8 @@ title: MenuBar
 
 `MenuBar` provides application chrome with menus and keyboard navigation.
 
-Screenshot placeholder:
 
-![MenuBar](../../img/screenshots/controls-demo/elderberry-dark-soft/menu-bar.svg)
+![MenuBar](../../img/controls/menubar.svg)
 
 ## Fullscreen-only
 
@@ -66,4 +65,3 @@ menuBar.Style(MenuListStyle.Default with
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
-

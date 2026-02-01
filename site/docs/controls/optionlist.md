@@ -6,6 +6,9 @@ title: OptionList
 
 `OptionList<T>` is a single-choice list widget optimized for keyboard/mouse selection.
 
+
+![OptionList](../../img/controls/optionlist.svg)
+
 ## Basic usage
 
 ```csharp

@@ -6,9 +6,8 @@ title: Canvas
 
 `Canvas` is an immediate-mode drawing surface for cell-based terminal graphics.
 
-Screenshot placeholder:
 
-![Canvas](../../img/screenshots/controls-demo/elderberry-dark-soft/canvas.svg)
+![Canvas](../../img/controls/canvas.svg)
 
 ## Basic usage
 
@@ -50,4 +49,3 @@ new Canvas()
 new Canvas()
     .Style(CanvasStyle.Default with { DefaultRune = new Rune('█') });
 ```
-

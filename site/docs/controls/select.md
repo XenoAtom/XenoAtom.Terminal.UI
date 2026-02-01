@@ -9,6 +9,9 @@ title: Select / Dropdown
 - clicking outside
 - pressing Tab or Escape
 
+
+![Select / Dropdown](../../img/controls/select.svg)
+
 ## Basic usage
 
 ```csharp

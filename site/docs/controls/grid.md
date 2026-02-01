@@ -6,9 +6,8 @@ title: Grid
 
 `Grid` arranges children into rows and columns using explicit `GridCell` entries (no attached properties).
 
-Screenshot placeholder:
 
-![Grid](../../img/screenshots/controls-demo/elderberry-dark-soft/grid.svg)
+![Grid](../../img/controls/grid.svg)
 
 ## Basic usage
 
@@ -29,4 +28,3 @@ Cells can span multiple rows/columns via `rowSpan` / `columnSpan`.
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch` 
-

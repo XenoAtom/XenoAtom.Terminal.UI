@@ -8,6 +8,9 @@ title: Rule
 
 Rule is horizontal-only.
 
+
+![Rule](../../img/controls/rule.svg)
+
 ## Basic usage
 
 ```csharp

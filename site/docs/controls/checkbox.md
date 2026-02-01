@@ -6,6 +6,9 @@ title: CheckBox
 
 `CheckBox` is a two-state toggle control (checked/unchecked) with a label/content.
 
+
+![CheckBox](../../img/controls/checkbox.svg)
+
 ## Basic usage
 
 ```csharp

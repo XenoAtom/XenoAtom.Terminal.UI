@@ -6,6 +6,9 @@ title: Dialog
 
 `Dialog` is a movable window-like overlay used in fullscreen apps.
 
+
+![Dialog](../../img/controls/dialog.svg)
+
 ## Usage
 
 Dialogs are displayed in fullscreen apps and typically:

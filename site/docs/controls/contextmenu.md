@@ -6,9 +6,8 @@ title: Context menus
 
 XenoAtom.Terminal.UI supports **context menus** (right-click menus) in fullscreen applications.
 
-Screenshot placeholder:
 
-![Context menu](../../img/screenshots/controls-demo/elderberry-dark-soft/context-menu.svg)
+![Context menu](../../img/controls/contextmenu.svg)
 
 ## Fullscreen-only
 
@@ -72,4 +71,3 @@ This is useful when building custom interactions (for example a toolbar button t
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
-

@@ -9,6 +9,76 @@ namespace XenoAtom.Terminal.UI.ControlsDemo;
 
 internal static class ScreenshotExport
 {
+    private static readonly Dictionary<string, string> TypeNameToDocSlug = new(StringComparer.Ordinal)
+    {
+        // Controls docs use concatenated names (e.g. textbox.md, barchart.md).
+        ["AccordionDemo"] = "accordion",
+        ["BackdropDemo"] = "backdrop",
+        ["BarChartDemo"] = "barchart",
+        ["BorderDemo"] = "border",
+        ["BreakdownDemo"] = "breakdownchart",
+        ["ButtonDemo"] = "button",
+        ["CanvasDemo"] = "canvas",
+        ["CenterDemo"] = "center",
+        ["CheckBoxDemo"] = "checkbox",
+        ["ColorPickerDemo"] = "colorpicker",
+        ["CommandBarDemo"] = "commandbar",
+        ["CommandPaletteDemo"] = "commandpalette",
+        ["ContextMenuDemo"] = "contextmenu",
+        ["DataGridDemo"] = "datagrid",
+        ["DialogDemo"] = "dialog",
+        ["DockLayoutDemo"] = "docklayout",
+        ["FooterDemo"] = "footer",
+        ["GridDemo"] = "grid",
+        ["GroupDemo"] = "group",
+        ["HeaderDemo"] = "header",
+        ["HStackDemo"] = "hstack",
+        ["LineChartDemo"] = "linechart",
+        ["LinkDemo"] = "link",
+        ["ListBoxDemo"] = "listbox",
+        ["LogControlDemo"] = "logcontrol",
+        ["MarkupDemo"] = "markup",
+        ["MaskedInputDemo"] = "maskedinput",
+        ["MenuBarDemo"] = "menubar",
+        ["NumberBoxDemo"] = "numberbox",
+        ["OptionListDemo"] = "optionlist",
+        ["PadderDemo"] = "padder",
+        ["PopupDemo"] = "popup",
+        ["ProgressBarDemo"] = "progressbar",
+        ["ProgressTaskGroupDemo"] = "progresstaskgroup",
+        ["RadioButtonDemo"] = "radiobutton",
+        ["RuleDemo"] = "rule",
+        ["ScrollBarDemo"] = "scrollbar",
+        ["ScrollViewerDemo"] = "scrollviewer",
+        ["SearchReplacePopupDemo"] = "searchreplacepopup",
+        ["SelectDemo"] = "select",
+        ["SelectionListDemo"] = "selectionlist",
+        ["SliderDemo"] = "slider",
+        ["SparklineDemo"] = "sparkline",
+        ["SpinnerDemo"] = "spinner",
+        ["SplitterDemo"] = "splitter",
+        ["StatusBarDemo"] = "statusbar",
+        ["SwitchDemo"] = "switch",
+        ["TabControlDemo"] = "tabcontrol",
+        ["TableDemo"] = "table",
+        ["TextAreaDemo"] = "textarea",
+        ["TextBlockDemo"] = "textblock",
+        ["TextBoxDemo"] = "textbox",
+        ["TextFigletDemo"] = "textfiglet",
+        ["ToastDemo"] = "toast",
+        ["TooltipDemo"] = "tooltip",
+        ["TreeViewDemo"] = "treeview",
+        ["ValidationDemo"] = "validation",
+        ["VStackDemo"] = "vstack",
+        ["WrapStackDemo"] = "wrapstack",
+
+        // Docs outside /controls.
+        ["DataTemplatesDemo"] = "data-templating",
+        ["ColorSchemeDemo"] = "color-scheme",
+        ["BindableModelsDemo"] = "bindable-models",
+        ["BindingsAndCompositionDemo"] = "bindings-and-composition",
+    };
+
     public static int ExportAll(string outputDirectory, int width, int maxHeight, ColorScheme scheme)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
@@ -19,9 +89,7 @@ internal static class ScreenshotExport
         var theme = Theme.FromScheme(scheme);
         var demos = DemoRegistry.Load();
 
-        var schemeSlug = Slugify(scheme.Name ?? "theme");
-        var outputRoot = Path.Combine(outputDirectory, schemeSlug);
-        Directory.CreateDirectory(outputRoot);
+        Directory.CreateDirectory(outputDirectory);
 
         var runtime = new DemoRuntime();
 
@@ -66,8 +134,7 @@ internal static class ScreenshotExport
                     continue;
                 }
 
-                var slug = Slugify(RemoveDemoSuffix(typeName));
-                slug = EnsureUniqueSlug(slug, taken);
+                var slug = GetOutputSlug(typeName, taken);
 
                 var demoContext = new DemoContext
                 {
@@ -98,7 +165,7 @@ internal static class ScreenshotExport
                     svg = CellBufferSvgExporter.Export(buffer, svgOptions);
                 }
 
-                var path = Path.Combine(outputRoot, slug + ".svg");
+                var path = Path.Combine(outputDirectory, slug + ".svg");
                 File.WriteAllText(path, svg, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
                 written++;
             }
@@ -107,7 +174,7 @@ internal static class ScreenshotExport
             {
                 var appRoot = ControlsDemoApp.Build(out var _);
                 var svg = TerminalAppSnapshotRenderer.RenderSvg(appRoot, width, maxHeight, theme, null, svgOptions);
-                var path = Path.Combine(outputRoot, EnsureUniqueSlug("controls-demo", taken) + ".svg");
+                var path = Path.Combine(outputDirectory, EnsureUniqueSlug("controls-demo", taken) + ".svg");
                 File.WriteAllText(path, svg, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
                 written++;
             }
@@ -124,6 +191,18 @@ internal static class ScreenshotExport
     private static bool RequiresAppSnapshot(string typeName)
         => string.Equals(typeName, "CommandBarDemo", StringComparison.Ordinal) ||
            string.Equals(typeName, "TooltipDemo", StringComparison.Ordinal);
+
+    private static string GetOutputSlug(string typeName, HashSet<string> taken)
+    {
+        if (TypeNameToDocSlug.TryGetValue(typeName, out var docSlug))
+        {
+            return EnsureUniqueSlug(docSlug, taken);
+        }
+
+        // Fallback to kebab-case when there is no doc mapping.
+        var slug = Slugify(RemoveDemoSuffix(typeName));
+        return EnsureUniqueSlug(slug, taken);
+    }
 
     private static string EnsureUniqueSlug(string slug, HashSet<string> taken)
     {

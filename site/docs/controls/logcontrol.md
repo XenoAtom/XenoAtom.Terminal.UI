@@ -9,6 +9,9 @@ It supports selection + copy, a maximum retained capacity, optional wrapping, an
 
 > Screenshot: `site/img/logcontrol.png` (placeholder)
 
+
+![LogControl](../../img/controls/logcontrol.svg)
+
 ## Key features
 
 - Append text or markup without creating a visual per line.

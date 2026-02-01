@@ -6,6 +6,9 @@ title: RadioButton
 
 `RadioButton` is a single-choice toggle used in groups.
 
+
+![RadioButton](../../img/controls/radiobutton.svg)
+
 ## Basic usage
 
 Use a shared `State<int>` (or any state) to model a selected option.

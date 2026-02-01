@@ -6,9 +6,8 @@ title: Group
 
 `Group` is a border-like container with optional corner labels (top-left/top-right/bottom-left/bottom-right).
 
-Screenshot placeholder:
 
-![Group](../../img/screenshots/controls-demo/elderberry-dark-soft/group.svg)
+![Group](../../img/controls/group.svg)
 
 ## Basic usage
 
@@ -36,4 +35,3 @@ new Group("Rounded")
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
-

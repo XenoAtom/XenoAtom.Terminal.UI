@@ -6,6 +6,9 @@ title: Link
 
 `Link` renders a hyperlink-like visual and can be activated by keyboard/mouse.
 
+
+![Link](../../img/controls/link.svg)
+
 ## Basic usage
 
 ```csharp

@@ -12,9 +12,7 @@ This enables:
 - Per-control overrides
 - Allocation-friendly virtualization/recycling (via `DataTemplate<T>.TryUpdate` and `Release`)
 
-Screenshot placeholder:
-
-![Data templates](../img/screenshots/controls-demo/elderberry-dark-soft/data-templates.svg)
+![Data templates](../img/controls/data-templating.svg)
 
 ## DataTemplates registry
 

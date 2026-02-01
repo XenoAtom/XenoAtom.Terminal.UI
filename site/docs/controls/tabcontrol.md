@@ -7,6 +7,9 @@ title: TabControl
 `TabControl` hosts multiple tab pages with clickable headers.
 Tab headers are visuals, enabling rich header content (icons, counters, etc.).
 
+
+![TabControl](../../img/controls/tabcontrol.svg)
+
 ## Basic usage
 
 ```csharp

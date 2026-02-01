@@ -6,9 +6,8 @@ title: TextFiglet
 
 `TextFiglet` renders large banner text using a FIGlet font.
 
-Screenshot placeholder:
 
-![TextFiglet](../../img/screenshots/controls-demo/elderberry-dark-soft/text-figlet.svg)
+![TextFiglet](../../img/controls/textfiglet.svg)
 
 ## Basic usage
 

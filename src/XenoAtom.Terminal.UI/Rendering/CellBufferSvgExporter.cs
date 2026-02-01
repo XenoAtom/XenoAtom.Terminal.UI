@@ -55,7 +55,11 @@ public static class CellBufferSvgExporter
         sb.Append(options.FontFamilyCss);
         sb.Append(";font-size:");
         sb.Append(cellHeight.ToString(CultureInfo.InvariantCulture));
-        sb.Append("px;dominant-baseline:text-before-edge;white-space:pre}");
+        sb.Append("px;dominant-baseline:text-before-edge;white-space:pre;");
+        // Ensure deterministic cell alignment across browsers/fallback fonts (avoid kerning/ligatures drift).
+        sb.Append("font-variant-ligatures:none;font-kerning:none;");
+        sb.Append("font-feature-settings:\"liga\" 0,\"calt\" 0;");
+        sb.Append("letter-spacing:0}");
         sb.Append("</style>");
 
         var baseStyle = ResolveBaseStyle(buffer, crop, options);
@@ -79,9 +83,9 @@ public static class CellBufferSvgExporter
         for (var row = 0; row < crop.Height; row++)
         {
             var y = crop.Y + row;
-            if ((uint)y >= (uint)buffer.Height)
+            if (y < 0 || y >= buffer.Height)
             {
-                break;
+                continue;
             }
 
             var rowBase = y * buffer.Width;
@@ -89,7 +93,13 @@ public static class CellBufferSvgExporter
             while (col < crop.Width)
             {
                 var x = crop.X + col;
-                if ((uint)x >= (uint)buffer.Width)
+                if (x < 0)
+                {
+                    col++;
+                    continue;
+                }
+
+                if (x >= buffer.Width)
                 {
                     break;
                 }
@@ -217,6 +227,9 @@ public static class CellBufferSvgExporter
                     sb.Append("\" fill=\"");
                     sb.Append(textCss);
                     sb.Append("\"");
+                    sb.Append(" textLength=\"");
+                    sb.Append(runWpx.ToString(CultureInfo.InvariantCulture));
+                    sb.Append("\" lengthAdjust=\"spacing\"");
 
                     var textStyle = style.TextStyle;
                     if ((textStyle & TextStyle.Bold) != 0)
@@ -270,7 +283,8 @@ public static class CellBufferSvgExporter
         if (options.Padding != default)
         {
             crop = Inflate(crop, options.Padding);
-            crop = Clamp(crop, buffer.Width, buffer.Height);
+            // Don't clamp after padding: screenshots often need a consistent 1-cell breathing room even when
+            // the content touches the viewport edges (e.g. wide tables). Out-of-range cells are treated as empty.
         }
 
         return crop;
@@ -290,17 +304,17 @@ public static class CellBufferSvgExporter
 
         for (var y = crop.Y; y < crop.Bottom; y++)
         {
-            if ((uint)y >= (uint)buffer.Height)
+            if (y < 0 || y >= buffer.Height)
             {
-                break;
+                continue;
             }
 
             var rowBase = y * buffer.Width;
             for (var x = crop.X; x < crop.Right; x++)
             {
-                if ((uint)x >= (uint)buffer.Width)
+                if (x < 0 || x >= buffer.Width)
                 {
-                    break;
+                    continue;
                 }
 
                 var i = rowBase + x;
@@ -348,10 +362,78 @@ public static class CellBufferSvgExporter
             return s.WithoutContinuation();
         }
 
-        var x = Math.Clamp(crop.X, 0, Math.Max(0, buffer.Width - 1));
-        var y = Math.Clamp(crop.Y, 0, Math.Max(0, buffer.Height - 1));
-        var i = (y * buffer.Width) + x;
-        return buffer.UnsafeCells[i].WithoutContinuation();
+        // Prefer the most common "empty cell" style (space + non-continuation) within the crop area.
+        // This is robust when the top-left cell contains text (e.g. a title line) but the background style
+        // is what should drive auto-crop decisions.
+        var scalars = buffer.UnsafeScalars;
+        var cells = buffer.UnsafeCells;
+
+        var counts = new Dictionary<Style, int>();
+        for (var y = crop.Y; y < crop.Bottom; y++)
+        {
+            if (y < 0 || y >= buffer.Height)
+            {
+                continue;
+            }
+
+            var rowBase = y * buffer.Width;
+            for (var x = crop.X; x < crop.Right; x++)
+            {
+                if (x < 0 || x >= buffer.Width)
+                {
+                    continue;
+                }
+
+                var i = rowBase + x;
+                var cell = cells[i];
+                if (cell.IsContinuation)
+                {
+                    continue;
+                }
+
+                var scalar = scalars[i];
+                if (scalar < 0)
+                {
+                    continue;
+                }
+
+                if (scalar != 0 && scalar != ' ')
+                {
+                    continue;
+                }
+
+                var style = cell.WithoutContinuation();
+                if (counts.TryGetValue(style, out var c))
+                {
+                    counts[style] = c + 1;
+                }
+                else
+                {
+                    counts.Add(style, 1);
+                }
+            }
+        }
+
+        if (counts.Count > 0)
+        {
+            var best = default(Style);
+            var bestCount = -1;
+            foreach (var (style, count) in counts)
+            {
+                if (count > bestCount)
+                {
+                    best = style;
+                    bestCount = count;
+                }
+            }
+            return best.WithoutContinuation();
+        }
+
+        // Fallback to the crop origin style.
+        var x0 = Math.Clamp(crop.X, 0, Math.Max(0, buffer.Width - 1));
+        var y0 = Math.Clamp(crop.Y, 0, Math.Max(0, buffer.Height - 1));
+        var i0 = (y0 * buffer.Width) + x0;
+        return cells[i0].WithoutContinuation();
     }
 
     private static bool TryGetForegroundColor(Style style, CellBufferSvgExportOptions options, out string css)

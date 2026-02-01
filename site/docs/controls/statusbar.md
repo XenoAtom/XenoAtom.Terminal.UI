@@ -8,7 +8,7 @@ title: StatusBar
 
 You may prefer `Header`/`Footer` for new apps.
 
-![StatusBar](../../img/screenshots/controls-demo/elderberry-dark-soft/status-bar.svg)
+![StatusBar](../../img/controls/statusbar.svg)
 
 ## Basic usage
 

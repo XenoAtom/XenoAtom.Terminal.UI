@@ -6,6 +6,9 @@ title: Sparkline
 
 `Sparkline` renders an inline sparkline visualization.
 
+
+![Sparkline](../../img/controls/sparkline.svg)
+
 ## Basic usage
 
 ```csharp

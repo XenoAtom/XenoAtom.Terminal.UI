@@ -6,6 +6,9 @@ title: CommandPalette
 
 `CommandPalette` is a searchable command launcher built on top of the unified `Command` system.
 
+
+![CommandPalette](../../img/controls/commandpalette.svg)
+
 ## Fullscreen-only
 
 `CommandPalette` uses the popup/window system and is available only in fullscreen `Terminal.Run(...)` applications.

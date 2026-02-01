@@ -7,7 +7,9 @@ title: BarChart
 `BarChart` renders a horizontal bar chart with a label column and a bar column. When enabled, the value text is
 rendered near the end of the filled portion of each bar (instead of being flush-right at the end of the chart).
 
-> Screenshots: TODO
+
+
+![BarChart](../../img/controls/barchart.svg)
 
 ## Basic usage
 

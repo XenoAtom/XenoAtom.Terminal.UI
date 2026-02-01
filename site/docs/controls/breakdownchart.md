@@ -7,7 +7,9 @@ title: BreakdownChart
 `BreakdownChart` renders a segmented proportional bar (a “breakdown”) with an optional legend. It is useful for showing how
 a total value is distributed across categories (disk usage, budgets, KPIs, resource usage, etc.).
 
-> Screenshots: TODO
+
+
+![BreakdownChart](../../img/controls/breakdownchart.svg)
 
 ## Basic usage
 

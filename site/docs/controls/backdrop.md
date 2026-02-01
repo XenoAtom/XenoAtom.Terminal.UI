@@ -7,7 +7,7 @@ title: Backdrop
 `Backdrop` is a full-viewport fill control typically used behind modal UI (dialogs, popups) to dim or clear the
 content underneath.
 
-![Backdrop](../../img/screenshots/controls-demo/elderberry-dark-soft/backdrop.svg)
+![Backdrop](../../img/controls/backdrop.svg)
 
 It renders a solid rune (space by default) across its bounds using the style resolved from `BackdropStyle`.
 

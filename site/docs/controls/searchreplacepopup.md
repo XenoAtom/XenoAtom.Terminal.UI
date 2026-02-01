@@ -6,6 +6,9 @@ title: SearchReplacePopup
 
 `SearchReplacePopup` is a reusable Find / Find-and-Replace popup used by controls such as `TextArea` and `LogControl`.
 
+
+![SearchReplacePopup](../../img/controls/searchreplacepopup.svg)
+
 ## Keyboard
 
 - `Ctrl+F`: open Find (control-specific)

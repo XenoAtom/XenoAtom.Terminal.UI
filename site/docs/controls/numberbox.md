@@ -8,6 +8,9 @@ title: NumberBox
 
 > Screenshots: `docs/images/numberbox-basic.png` (placeholder)
 
+
+![NumberBox](../../img/controls/numberbox.svg)
+
 ## Basic usage
 
 ```csharp

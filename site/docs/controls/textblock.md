@@ -6,6 +6,9 @@ title: TextBlock
 
 `TextBlock` renders read-only text with optional wrapping, alignment, and trimming.
 
+
+![TextBlock](../../img/controls/textblock.svg)
+
 ## Basic usage
 
 ```csharp

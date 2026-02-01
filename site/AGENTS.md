@@ -40,7 +40,7 @@ Regenerate all screenshots (run from the repo root):
 
 `dotnet run -c Release --project samples/ControlsDemo -- --export-screenshots`
 
-Outputs are written under `site/img/screenshots/controls-demo/**`.
+Outputs are written under `site/img/controls/**`.
 
 ## Notes for agents
 

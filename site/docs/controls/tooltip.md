@@ -6,7 +6,7 @@ title: Tooltip
 
 Tooltips display additional information when the user hovers a visual.
 
-![Tooltip](../../img/screenshots/controls-demo/elderberry-dark-soft/tooltip.svg)
+![Tooltip](../../img/controls/tooltip.svg)
 
 ## Basic usage
 

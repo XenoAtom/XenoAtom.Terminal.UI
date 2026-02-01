@@ -6,9 +6,8 @@ title: Spinner
 
 `Spinner` is an animated indicator control with a large set of built-in styles.
 
-Screenshot placeholder:
 
-![Spinner](../../img/screenshots/controls-demo/elderberry-dark-soft/spinner.svg)
+![Spinner](../../img/controls/spinner.svg)
 
 ## Basic usage
 
@@ -27,4 +26,3 @@ Spinner styles define frames (strings) and a frame rate. Frames can be multi-run
 See also:
 - `src/XenoAtom.Terminal.UI/Styling/SpinnerStyle.cs`
 - `src/XenoAtom.Terminal.UI/Styling/SpinnerStyles.cs`
-

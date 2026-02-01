@@ -6,9 +6,8 @@ title: ProgressBar
 
 `ProgressBar` renders a progress bar using different variants (thin, shaded, segmented, bracketed).
 
-Screenshot placeholder:
 
-![ProgressBar](../../img/screenshots/controls-demo/elderberry-dark-soft/progress-bar.svg)
+![ProgressBar](../../img/controls/progressbar.svg)
 
 ## Basic usage
 

@@ -8,6 +8,9 @@ title: ScrollBar
 
 Use `VScrollBar` (vertical) or `HScrollBar` (horizontal).
 
+
+![ScrollBar](../../img/controls/scrollbar.svg)
+
 ## Basic usage
 
 Scrollbars are typically used through `ScrollViewer`, but can be used directly:

@@ -6,6 +6,9 @@ title: HStack
 
 `HStack` stacks children horizontally.
 
+
+![HStack](../../img/controls/hstack.svg)
+
 ## Basic usage
 
 ```csharp

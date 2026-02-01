@@ -9,6 +9,9 @@ They are hosted by `ToastHost`, which stacks toasts in a chosen corner and manag
 
 > Screenshot: `site/img/toast.png` (placeholder)
 
+
+![Toast](../../img/controls/toast.svg)
+
 ## Key features
 
 - Severity-based styling (`Info`, `Success`, `Warning`, `Error`).

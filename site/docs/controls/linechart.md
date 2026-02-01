@@ -6,6 +6,9 @@ title: LineChart
 
 `LineChart` renders a simple line chart.
 
+
+![LineChart](../../img/controls/linechart.svg)
+
 ## Basic usage
 
 ```csharp

@@ -8,6 +8,9 @@ title: Popup
 
 Popups close when focus is lost or when the user clicks outside (depending on configuration).
 
+
+![Popup](../../img/controls/popup.svg)
+
 ## Anchoring
 
 Popups can be positioned relative to:

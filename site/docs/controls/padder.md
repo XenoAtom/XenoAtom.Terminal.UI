@@ -6,9 +6,8 @@ title: Padder
 
 `Padder` adds padding around a single content visual. Use it when you want spacing without drawing any border.
 
-Screenshot placeholder:
 
-![Padder](../../img/screenshots/controls-demo/elderberry-dark-soft/padder.svg)
+![Padder](../../img/controls/padder.svg)
 
 ## Basic usage
 
@@ -29,4 +28,3 @@ new TextBlock("Hello").Pad(2);
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
-

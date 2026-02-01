@@ -11,6 +11,9 @@ Wrap stacks arrange children in a **flow layout**: items are placed along a main
 
 Screenshot: `img/controls/wrapstack.png` (placeholder)
 
+
+![WrapStack (WrapHStack / WrapVStack)](../../img/controls/wrapstack.svg)
+
 ## Key properties
 
 - `Spacing`: space between items in the same run.

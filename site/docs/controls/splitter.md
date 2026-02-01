@@ -6,9 +6,8 @@ title: Splitter (HSplitter / VSplitter)
 
 Splitters resize adjacent content panes using mouse drag.
 
-Screenshot placeholder:
 
-![Splitter](../../img/screenshots/controls-demo/elderberry-dark-soft/splitter.svg)
+![Splitter](../../img/controls/splitter.svg)
 
 ## Basic usage
 
@@ -27,4 +26,3 @@ new HStack(
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
-

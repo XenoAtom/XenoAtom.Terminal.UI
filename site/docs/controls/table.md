@@ -6,6 +6,9 @@ title: Table
 
 `Table` displays a grid of cells. Cells and headers are visuals for full composability.
 
+
+![Table](../../img/controls/table.svg)
+
 ## Basic usage
 
 ```csharp

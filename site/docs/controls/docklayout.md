@@ -6,9 +6,8 @@ title: DockLayout
 
 `DockLayout` docks visuals to edges (Top/Bottom/Left/Right) and gives remaining space to the content area.
 
-Screenshot placeholder:
 
-![DockLayout](../../img/screenshots/controls-demo/elderberry-dark-soft/dock-layout.svg)
+![DockLayout](../../img/controls/docklayout.svg)
 
 ## Basic usage
 
@@ -24,4 +23,3 @@ new DockLayout()
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch` 
-

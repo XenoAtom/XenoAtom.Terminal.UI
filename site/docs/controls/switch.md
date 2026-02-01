@@ -6,6 +6,9 @@ title: Switch
 
 `Switch` is a compact on/off toggle with a thumb and label.
 
+
+![Switch](../../img/controls/switch.svg)
+
 ## Basic usage
 
 ```csharp

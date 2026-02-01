@@ -6,6 +6,9 @@ title: ListBox
 
 `ListBox<T>` displays a scrollable list of items and supports selection/focus interaction.
 
+
+![ListBox](../../img/controls/listbox.svg)
+
 ## Items
 
 Items are data values. By default, the list resolves a `DataTemplate<T>` from the environment (`DataTemplates`) to render each item.

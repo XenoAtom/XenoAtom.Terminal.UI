@@ -6,6 +6,9 @@ title: TreeView
 
 `TreeView` displays hierarchical nodes with expand/collapse interaction and selection.
 
+
+![TreeView](../../img/controls/treeview.svg)
+
 ## Basic usage
 
 ```csharp

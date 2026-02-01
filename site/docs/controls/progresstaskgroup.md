@@ -6,9 +6,8 @@ title: ProgressTaskGroup
 
 `ProgressTaskGroup` displays a set of progress tasks as rows with configurable columns (label, progress bar, percentage, spinner…).
 
-Screenshot placeholder:
 
-![ProgressTaskGroup](../../img/screenshots/controls-demo/elderberry-dark-soft/progress-task-group.svg)
+![ProgressTaskGroup](../../img/controls/progresstaskgroup.svg)
 
 ## Basic usage
 
@@ -59,4 +58,3 @@ var group = new ProgressTaskGroup()
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Start` 
-

@@ -8,6 +8,9 @@ title: ColorPicker
 
 > Screenshot: `site/img/colorpicker.png` (placeholder)
 
+
+![ColorPicker](../../img/controls/colorpicker.svg)
+
 ## Usage
 
 ```csharp
@@ -54,4 +57,3 @@ picker.Style(new ColorPickerStyle
     PaletteColumns = 10,
 });
 ```
-

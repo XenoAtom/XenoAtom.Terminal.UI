@@ -6,6 +6,9 @@ title: TextBox
 
 `TextBox` is a single-line text editor.
 
+
+![TextBox](../../img/controls/textbox.svg)
+
 ## Basic usage
 
 ```csharp

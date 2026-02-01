@@ -6,9 +6,8 @@ title: MaskedInput
 
 `MaskedInput` is a template-based single-line editor for structured values such as credit cards, dates, identifiers, etc.
 
-Screenshot placeholder:
 
-![MaskedInput](../../img/screenshots/controls-demo/elderberry-dark-soft/masked-input.svg)
+![MaskedInput](../../img/controls/maskedinput.svg)
 
 ## Basic usage
 

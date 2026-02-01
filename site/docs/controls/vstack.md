@@ -6,6 +6,9 @@ title: VStack
 
 `VStack` stacks children vertically.
 
+
+![VStack](../../img/controls/vstack.svg)
+
 ## Basic usage
 
 ```csharp

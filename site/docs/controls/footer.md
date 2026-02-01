@@ -8,7 +8,7 @@ title: Footer
 
 `Footer` is typically used as the bottom bar of a `DockLayout`.
 
-![Footer](../../img/screenshots/controls-demo/elderberry-dark-soft/footer.svg)
+![Footer](../../img/controls/footer.svg)
 
 ## Basic usage
 

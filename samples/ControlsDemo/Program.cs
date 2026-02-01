@@ -7,7 +7,7 @@ var argsList = args ?? Array.Empty<string>();
 
 if (argsList.Length > 0 && argsList[0].Equals("--export-screenshots", StringComparison.OrdinalIgnoreCase))
 {
-    var outputDir = Path.Combine(Directory.GetCurrentDirectory(), "site", "img", "screenshots", "controls-demo");
+    var outputDir = Path.Combine(Directory.GetCurrentDirectory(), "site", "img", "controls");
     var width = 100;
     var maxHeight = 40;
     var scheme = ColorScheme.ElderberryDarkSoft;

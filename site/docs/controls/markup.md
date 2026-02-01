@@ -6,6 +6,9 @@ title: Markup
 
 `Markup` renders XenoAtom.Terminal markup text as a visual (with wrapping and styling).
 
+
+![Markup](../../img/controls/markup.svg)
+
 ## Basic usage
 
 ```csharp

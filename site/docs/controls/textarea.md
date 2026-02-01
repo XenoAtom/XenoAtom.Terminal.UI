@@ -6,6 +6,9 @@ title: TextArea
 
 `TextArea` is a multi-line text editor with soft wrapping by default.
 
+
+![TextArea](../../img/controls/textarea.svg)
+
 ## Basic usage
 
 ```csharp

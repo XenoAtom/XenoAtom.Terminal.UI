@@ -6,6 +6,9 @@ title: ScrollViewer
 
 `ScrollViewer` provides a viewport with optional horizontal/vertical scrollbars for any content.
 
+
+![ScrollViewer](../../img/controls/scrollviewer.svg)
+
 ## Basic usage
 
 ```csharp
