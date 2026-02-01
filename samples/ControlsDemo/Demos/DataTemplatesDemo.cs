@@ -1,7 +1,7 @@
+using System;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Templating;
-using System;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
@@ -46,7 +46,7 @@ public sealed class DataTemplatesDemo : ControlsDemoBase
 
         var boolValue = new State<bool>(true);
         var charValue = new State<char>('A');
-        var guidValue = new State<Guid>(Guid.NewGuid());
+        var guidValue = new State<Guid>(new Guid("01234567-89ab-cdef-0123-456789abcdef"));
         var sbyteValue = new State<sbyte>(-12);
         var byteValue = new State<byte>(200);
         var shortValue = new State<short>(-1234);
@@ -60,8 +60,8 @@ public sealed class DataTemplatesDemo : ControlsDemoBase
         var dateOnlyValue = new State<DateOnly>(new DateOnly(2024, 1, 1));
         var timeOnlyValue = new State<TimeOnly>(new TimeOnly(12, 34, 56));
         var timeSpanValue = new State<TimeSpan>(TimeSpan.FromMinutes(90));
-        var dateTimeValue = new State<DateTime>(DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc));
-        var dateTimeOffsetValue = new State<DateTimeOffset>(DateTimeOffset.UtcNow);
+        var dateTimeValue = new State<DateTime>(new DateTime(2024, 1, 2, 3, 4, 5, DateTimeKind.Utc));
+        var dateTimeOffsetValue = new State<DateTimeOffset>(new DateTimeOffset(2024, 1, 2, 3, 4, 5, TimeSpan.Zero));
         var enumValue = new State<DemoEnum>(DemoEnum.Beta);
 
         var enumTemplates = DataTemplates.Default.Derive(builder => builder.RegisterEnum<DemoEnum>());

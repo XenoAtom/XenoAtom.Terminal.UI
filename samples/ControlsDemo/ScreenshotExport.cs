@@ -1,8 +1,8 @@
-using System.Globalization;
 using System.Text;
 using XenoAtom.Terminal.UI.ControlsDemo;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
+using System.Globalization;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo;
 
@@ -27,52 +27,69 @@ internal static class ScreenshotExport
         var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var written = 0;
 
-        for (var i = 0; i < demos.Count; i++)
+        var previousCulture = CultureInfo.CurrentCulture;
+        var previousUiCulture = CultureInfo.CurrentUICulture;
+        try
         {
-            var demo = demos[i];
-            var id = demo.Metadata.Id;
-            if (string.IsNullOrWhiteSpace(id))
+            // Make the generated SVG stable across environments (e.g. number/date formatting).
+            CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+            CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
+
+            for (var i = 0; i < demos.Count; i++)
             {
-                continue;
+                // Make the generated SVG stable across runs (avoid stopwatch-based drift).
+                runtime.Frame.Value = 123;
+                runtime.Pulse01.Value = 0.5;
+                runtime.Progress01.Value = 0.10;
+
+                var demo = demos[i];
+                var id = demo.Metadata.Id;
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    continue;
+                }
+
+                // Skip internal pages that don't represent a control screenshot.
+                var typeName = GetTypeNameFromId(id);
+                if (string.Equals(typeName, "WelcomeDemo", StringComparison.Ordinal) ||
+                    string.Equals(typeName, "ControlsDemoApp", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var slug = Slugify(RemoveDemoSuffix(typeName));
+                slug = EnsureUniqueSlug(slug, taken);
+
+                var demoContext = new DemoContext
+                {
+                    Log = _ => { },
+                    NavigateToDemoId = _ => { },
+                    Runtime = runtime,
+                    Theme = theme,
+                    ToastHost = null,
+                };
+
+                var root = demo.Build(demoContext);
+
+                var buffer = VisualSnapshotRenderer.Render(root, width: width, maxHeight: maxHeight, theme: theme);
+                var svg = CellBufferSvgExporter.Export(buffer, new CellBufferSvgExportOptions
+                {
+                    AutoCrop = true,
+                    Padding = new Geometry.Thickness(1),
+                    FillBackground = true,
+                    CellWidthPx = 9,
+                    CellHeightPx = 18,
+                });
+
+                var path = Path.Combine(outputRoot, slug + ".svg");
+                File.WriteAllText(path, svg, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                written++;
             }
-
-            // Skip internal pages that don't represent a control screenshot.
-            var typeName = GetTypeNameFromId(id);
-            if (string.Equals(typeName, "WelcomeDemo", StringComparison.Ordinal) ||
-                string.Equals(typeName, "ControlsDemoApp", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            var slug = Slugify(RemoveDemoSuffix(typeName));
-            slug = EnsureUniqueSlug(slug, taken);
-
-            var demoContext = new DemoContext
-            {
-                Log = _ => { },
-                NavigateToDemoId = _ => { },
-                Runtime = runtime,
-                Theme = theme,
-                ToastHost = null,
-            };
-
-            // Render a stable snapshot.
-            runtime.Advance();
-            var root = demo.Build(demoContext);
-
-            var buffer = VisualSnapshotRenderer.Render(root, width: width, maxHeight: maxHeight, theme: theme);
-            var svg = CellBufferSvgExporter.Export(buffer, new CellBufferSvgExportOptions
-            {
-                AutoCrop = true,
-                Padding = new Geometry.Thickness(1),
-                FillBackground = true,
-                CellWidthPx = 9,
-                CellHeightPx = 18,
-            });
-
-            var path = Path.Combine(outputRoot, slug + ".svg");
-            File.WriteAllText(path, svg, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-            written++;
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previousCulture;
+            CultureInfo.CurrentUICulture = previousUiCulture;
         }
 
         return written;
@@ -160,4 +177,3 @@ internal static class ScreenshotExport
         return result.Length == 0 ? "demo" : result;
     }
 }
-
