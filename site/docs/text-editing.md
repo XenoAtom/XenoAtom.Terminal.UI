@@ -1,23 +1,42 @@
 ---
-title: "Text Editing (TextBox, TextArea, MaskedInput)"
+title: "Text Editing"
 ---
 
-# Text Editing (TextBox, TextArea, MaskedInput)
+# Text Editing
 
-XenoAtom.Terminal.UI includes a text subsystem designed to scale from a single-line TextBox to a future Code Editor.
+Text input is a first-class feature of XenoAtom.Terminal.UI: you get a shared editing engine across multiple controls,
+with selection, clipboard, undo/redo, scrolling, and integrated Find/Replace.
 
-![SearchReplacePopup](../img/controls/searchreplacepopup.svg){.terminal}
+![TextArea with Search/Replace popup](../img/controls/searchreplacepopup.svg){.terminal}
 
-## Architecture (v1)
+## Controls built on the text infrastructure
 
-The v1 foundation includes:
+These controls share the same editing engine and most of the same user experience:
 
-- `TextEditorBase` + `TextEditorCore` (shared editing behaviors)
-- `ITextDocument` and document implementations
-  - `DynamicTextDocument` (bridges a bindable `Text` property to a document)
-  - `TextDocument` (simple document implementation)
+- [TextBox](controls/textbox.md) — single-line editor, password mode, overflow indicators
+- [TextArea](controls/textarea.md) — multi-line editor, soft wrapping, Find/Replace popup
+- [MaskedInput](controls/maskedinput.md) — structured templates (credit cards, dates, IDs, etc.)
+- [NumberBox](controls/numberbox.md) — numeric value binding with inline validation
 
-Text controls use the terminal cursor as the caret (no fake reverse-video caret rendering).
+Other controls also *use* the same infrastructure for parts of their UX:
+
+- [SearchReplacePopup](controls/searchreplacepopup.md) — reusable Find / Replace UI (hosted by TextArea and LogControl)
+- [LogControl](controls/logcontrol.md) — selection/copy + Find (Ctrl+F)
+- [DataGridControl](controls/datagrid.md) — in-place editing uses text editors (e.g. TextBox/NumberBox)
+
+## Editing features
+
+Across the editors above you typically get:
+
+- **Caret + selection**: keyboard and mouse selection, text element (grapheme) aware navigation.
+- **Clipboard**: copy/cut/paste shortcuts when enabled by the control’s clipboard mode/settings.
+- **Undo/redo**: built-in history (`Ctrl+Z` / `Ctrl+R`) integrated with programmatic edits.
+- **Overflow + scrolling**:
+  - Single-line editors provide overflow indicators when content is wider than the viewport.
+  - Multi-line editors integrate with `ScrollViewer` via `IScrollable`.
+
+> [!TIP]
+> Most controls expose their shortcuts as commands, so a focused editor can be discoverable via a `CommandBar`.
 
 ## Undo / redo
 
@@ -28,20 +47,49 @@ Text editors support undo/redo:
 
 See [Undo/Redo](undo-redo.md).
 
-## Wrapping
+## Find / Replace
 
-`TextArea` uses soft wrapping by default.
+`TextArea` includes a built-in Find / Replace UI powered by the reusable [SearchReplacePopup](controls/searchreplacepopup.md):
+
+- `Ctrl+F`: Find
+- `Ctrl+H`: Replace
+
+The same popup component is also used by other controls (for example, `LogControl` hosts it in Find-only mode).
+
+> [!NOTE]
+> Find/Replace is hosted by the editor control and rendered as a window-layer popup in fullscreen apps. The host keeps the popup
+> anchored to the editor and forwards query/navigation updates through an `ISearchReplaceTarget`.
 
 ## Scroll integration
 
-`TextArea` implements `IScrollable` so it can be wrapped in a `ScrollViewer`:
+Text editors that can extend beyond their viewport implement `IScrollable`, so they integrate naturally with `ScrollViewer`:
 
 ```csharp
-new ScrollViewer(new TextArea(text))
+new ScrollViewer(new TextArea(longText))
 ```
 
-## Specs and next steps
+## How it works (conceptual)
 
-See the living design document:
+The text editing stack is split into a few focused parts:
 
+- **`TextEditorBase`**: shared control base for editors (focus, commands, cursor integration).
+- **`TextEditorCore`**: editing behavior (navigation, selection, word operations, clipboard, undo/redo, search matches).
+- **`ITextDocument`**: document abstraction for storage and edits.
+  - `TextDocument`: a simple document implementation.
+  - `DynamicTextDocument`: bridges a bindable `Text` property to the editor engine.
+- **`ScrollModel`**: viewport/extent model used by `IScrollable` controls and `ScrollViewer`.
+
+The caret is rendered using the terminal cursor (not a fake reverse-video “block” cell), which keeps rendering stable and works well
+with accessibility settings in many terminals.
+
+## See also
+
+- [TextBox](controls/textbox.md)
+- [TextArea](controls/textarea.md)
+- [MaskedInput](controls/maskedinput.md)
+- [NumberBox](controls/numberbox.md)
+- [SearchReplacePopup](controls/searchreplacepopup.md)
+- [Binding & State](binding.md)
+- [Input](input.md)
+- [Undo/Redo](undo-redo.md)
 - [Text Editor Specs](specs/text_editor_specs.md)
