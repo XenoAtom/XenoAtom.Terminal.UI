@@ -85,3 +85,4 @@ These can be updated dynamically, and are demonstrated in the Toast demo page of
 
 - [Styling](../styling.md)
 - [Input](../input.md)
+- [Toast Specs](../specs/controls/toast.md)

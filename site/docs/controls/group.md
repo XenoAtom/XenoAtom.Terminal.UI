@@ -35,3 +35,7 @@ new Group("Rounded")
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Related
+
+- [Group Specs](../specs/controls/group.md)

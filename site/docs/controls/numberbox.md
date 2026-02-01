@@ -77,3 +77,4 @@ var ui = new NumberBox<int>()
 
 - [Text Editing](../text-editing.md)
 - [Binding](../binding.md)
+- [NumberBox Specs](../specs/controls/numberbox.md)

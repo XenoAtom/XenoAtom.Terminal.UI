@@ -55,3 +55,4 @@ When used inside `ScrollViewer`, scrollbars are automatically bound to the targe
 
 - [Scrolling](../scrolling.md)
 - [ScrollViewer](scrollviewer.md)
+- [ScrollBar Specs](../specs/controls/scrollbar.md)

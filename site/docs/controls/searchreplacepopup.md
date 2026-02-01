@@ -55,3 +55,4 @@ The popup UI is rendered using `Popup` in the app window layer, while `SearchRep
 - [Input](../input.md)
 - [Popup](popup.md)
 - [TextArea](textarea.md)
+- [SearchReplacePopup Specs](../specs/controls/searchreplacepopup.md)

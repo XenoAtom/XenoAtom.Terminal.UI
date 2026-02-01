@@ -62,3 +62,7 @@ log.Style(LogControlStyle.Default with
 ```
 
 > Note: `WrapText` is a control property (not a style) so you can toggle it dynamically without cloning styles.
+
+## Related
+
+- [LogControl Specs](../specs/controls/logcontrol.md)

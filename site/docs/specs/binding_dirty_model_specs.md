@@ -45,7 +45,7 @@ raises `BindingManager.ValueChanged`. The `TerminalApp` records these bindings, 
 
 ## The five phases
 
-### 1) Dynamic update (optional)
+### Dynamic update (optional)
 
 Dynamic updates exist for **explicit** “re-evaluate later” behavior (e.g. dynamic list rebuild, animation-driven
 properties, etc.).
@@ -55,7 +55,7 @@ properties, etc.).
 
 Controls should **not** use dynamic updates to wire internal children or templates. Use `PrepareChildren()` for that.
 
-### 2) PrepareChildren()
+### PrepareChildren()
 
 `PrepareChildren()` is the canonical place to synchronize *public API state* into *internal child visuals*.
 
@@ -74,21 +74,21 @@ Properties read during `PrepareChildren()` are tracked. When any of them changes
 - Fast (it runs on the UI thread)
 - Allocation-light (avoid rebuilding trees unless needed)
 
-### 3) Measure(constraints)
+### Measure(constraints)
 
 Measure returns **finite** `SizeHints` and must never return infinity for `Natural` or `Min`.
 
 Measure reads must go through bindable properties so dependencies are tracked. Avoid using private fields directly if
 those fields correspond to user-configurable state.
 
-### 4) Arrange(finalRect)
+### Arrange(finalRect)
 
 Arrange receives a **finite** rectangle and lays out children.
 
 Arrange can depend on state (alignment, scroll offsets, etc.) and those reads are tracked to invalidate arrangement
 when necessary.
 
-### 5) RenderTree(buffer)
+### RenderTree(buffer)
 
 Render reads are tracked separately from measure/arrange. Rendering should:
 

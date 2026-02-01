@@ -12,9 +12,9 @@ The goals are:
 - Preserve API compatibility for `TextBox` / `TextArea` while enabling future growth.
 - Provide a concrete roadmap (performance, extensibility, usability).
 
-## 1. Current implementation: code map
+## Current implementation: code map
 
-### 1.1 Controls
+### Controls
 
 - `TextEditorBase` (`src/XenoAtom.Terminal.UI/Controls/TextEditorBase.cs`)
 - `TextEditorCore` (`src/XenoAtom.Terminal.UI/Controls/TextEditorCore.cs`) (internal)
@@ -22,7 +22,7 @@ The goals are:
 - `TextArea` (`src/XenoAtom.Terminal.UI/Controls/TextArea.cs`)
 - `MaskedInput` (`src/XenoAtom.Terminal.UI/Controls/MaskedInput.cs`) (inherits `TextBox`)
 
-### 1.2 Text model
+### Text model
 
 - `ITextDocument` (`src/XenoAtom.Terminal.UI/Text/ITextDocument.cs`)
 - `ITextSnapshot` (`src/XenoAtom.Terminal.UI/Text/ITextSnapshot.cs`)
@@ -33,15 +33,15 @@ The goals are:
 - `TextPosition` / `TextRange` (`src/XenoAtom.Terminal.UI/Text/TextTypes.cs`)
 - `TextDocumentChangedEventArgs` (`src/XenoAtom.Terminal.UI/Text/TextDocumentChangedEventArgs.cs`)
 
-### 1.3 Scrolling integration
+### Scrolling integration
 
 - `ScrollModel` (`src/XenoAtom.Terminal.UI/Scrolling/ScrollModel.cs`)
 - `IScrollable` (`src/XenoAtom.Terminal.UI/Scrolling/IScrollable.cs`)
 - `ScrollViewer` (`src/XenoAtom.Terminal.UI/Controls/ScrollViewer.cs`)
 
-## 2. Goals (re-stated with current framework constraints)
+## Goals (re-stated with current framework constraints)
 
-### 2.1 Functional scope (what exists now)
+### Functional scope (what exists now)
 
 - Shared editing engine for single-line and multi-line editors.
 - Caret + linear selection + clipboard integration.
@@ -50,7 +50,7 @@ The goals are:
 - Horizontal scrolling for single-line (and for multi-line when wrapping is disabled).
 - Terminal cursor integration via `ICursorProvider` (caret is not rendered in-buffer).
 
-### 2.2 Framework alignment requirements (non-negotiable)
+### Framework alignment requirements (non-negotiable)
 
 - Layout uses `Measure(in LayoutConstraints)` / `Arrange(Rectangle)` and `SizeHints`.
 - Binding dependency tracking relies on property usage; “hidden” backing-field reads bypass tracking.
@@ -59,9 +59,9 @@ The goals are:
 - Clipboard must go through `Terminal.Clipboard`.
 - The caret should be a terminal cursor location (not reverse-video glyphs).
 
-## 3. Text model: contracts and current semantics
+## Text model: contracts and current semantics
 
-### 3.1 `ITextDocument` and versioning
+### `ITextDocument` and versioning
 
 `ITextDocument` provides:
 
@@ -76,7 +76,7 @@ Current contract assumptions:
 - The editor refreshes cached data when `Version` changes.
 - The document stores user input as-is (no line-ending normalization).
 
-### 3.2 Snapshots and line model
+### Snapshots and line model
 
 `TextSnapshot` contains:
 
@@ -88,7 +88,7 @@ Current contract assumptions:
 - `Start`, `Length`, `LineBreakLength`
 - `End` and `EndIncludingBreak`
 
-### 3.3 Bridging bindable `Text` with `DynamicTextDocument`
+### Bridging bindable `Text` with `DynamicTextDocument`
 
 `TextEditorBase` is document-first. `TextBox` and `TextArea` each define their own bindable `Text` property and set:
 
@@ -108,9 +108,9 @@ Important note:
 
 - `DynamicTextDocument.Replace(...)` currently performs `text.ToString()` for the inserted span and rebuilds the entire string. This is acceptable for V1 but not for CodeEditor-scale documents.
 
-## 4. Editor control model: `TextEditorBase` + `TextEditorCore`
+## Editor control model: `TextEditorBase` + `TextEditorCore`
 
-### 4.1 `TextEditorBase` responsibilities
+### `TextEditorBase` responsibilities
 
 `TextEditorBase` is a `Visual` that:
 
@@ -124,7 +124,7 @@ Important note:
   - `WordWrap`
 - exposes `ITextDocument TextDocument` (public, swappable)
 
-### 4.2 `TextEditorCore` responsibilities
+### `TextEditorCore` responsibilities
 
 `TextEditorCore` is internal and currently owns:
 
@@ -136,7 +136,7 @@ Important note:
 - scrolling behavior (“ensure caret visible”)
 - keyboard/mouse command handling
 
-### 4.3 Rendering hook: segment writer
+### Rendering hook: segment writer
 
 Rendering goes through a `TextSegmentWriter` delegate. `TextEditorBase` supplies a `WriteTextSegment(...)` virtual method used by the delegate.
 
@@ -146,16 +146,16 @@ Current examples:
 
 For CodeEditor, this hook will need to grow into a layered, styled text pipeline (see section 8.4).
 
-### 4.4 Cursor policy
+### Cursor policy
 
 Caret rendering is out-of-band:
 
 - `TextEditorCore.TryGetCursorCell(...)` computes (x,y) in terminal cells.
 - The terminal cursor is moved by the host (`TerminalApp`) based on the focused `ICursorProvider`.
 
-## 5. Layout and scrolling behavior
+## Layout and scrolling behavior
 
-### 5.1 Internal scroll model (`ScrollModel`)
+### Internal scroll model (`ScrollModel`)
 
 The editor sets:
 
@@ -165,7 +165,7 @@ The editor sets:
 
 `ScrollModel.ScrollToMakeVisible(...)` is used to keep the caret visible.
 
-### 5.2 `TextBox` overflow indicators (horizontal)
+### `TextBox` overflow indicators (horizontal)
 
 `TextBox` uses `ScrollModel.OffsetX` and supports optional overflow indicators via style:
 
@@ -174,7 +174,7 @@ The editor sets:
 
 When indicators are visible, `TextBox` shrinks the editor rectangle to reserve one cell for each indicator.
 
-### 5.3 `TextArea` word-wrap
+### `TextArea` word-wrap
 
 `TextArea` defaults to `WordWrap = true`.
 
@@ -185,7 +185,7 @@ Current behavior:
 
 Wrap behavior is cell-based and rune-based; it is not “word wrap” with whitespace-aware breakpoints.
 
-### 5.4 Integrating `TextArea` with `ScrollViewer` (concrete API)
+### Integrating `TextArea` with `ScrollViewer` (concrete API)
 
 `TextEditorBase` implements `IScrollable`, so `ScrollViewer` can bind to it.
 
@@ -201,16 +201,16 @@ When the content implements `IScrollable`:
 - scrollbars update the editor’s `ScrollModel`
 - `ScrollViewer.HorizontalOffset`/`VerticalOffset` remain in sync with the editor scroll offsets
 
-## 6. Input and command behavior (current)
+## Input and command behavior (current)
 
-### 6.1 Text insertion
+### Text insertion
 
 - `OnTextInput`: inserts `e.Text`
 - `OnPaste`: inserts the pasted string
 - `Enter`: inserts `\n` if `AcceptsReturn` is enabled (multi-line)
 - `Tab`: inserts `\t` if `AcceptTab` is enabled
 
-### 6.2 Selection
+### Selection
 
 - Shift + navigation extends selection.
 - Mouse drag extends selection.
@@ -218,7 +218,7 @@ When the content implements `IScrollable`:
 
 Selection is linear only.
 
-### 6.3 Navigation
+### Navigation
 
 - Arrow keys move by rune (`TerminalTextUtility.GetNextRuneIndex/GetPreviousRuneIndex`).
 - Ctrl+Left / Ctrl+Right move by “word” category (letters/digits/underscore vs whitespace vs other).
@@ -226,18 +226,18 @@ Selection is linear only.
 - Ctrl+Home / Ctrl+End move to start/end of document in multi-line.
 - PageUp / PageDown move by viewport height in multi-line.
 
-### 6.4 Delete operations
+### Delete operations
 
 - Backspace/Delete remove selection if present.
 - Otherwise remove rune (or word in certain Ctrl-modified cases in single-line paths).
 
-### 6.5 Clipboard
+### Clipboard
 
 - Ctrl+C copies selection to `Terminal.Clipboard`.
 - Ctrl+X cuts selection to `Terminal.Clipboard`.
 - Ctrl+V pastes from `Terminal.Clipboard.Text`.
 
-### 6.6 Emacs-like kill/yank parity
+### Emacs-like kill/yank parity
 
 Implemented:
 
@@ -246,7 +246,7 @@ Implemented:
 - Ctrl+W: kill previous word
 - Ctrl+Y: yank (insert kill buffer)
 
-## 7. Known limitations (intentional for V1)
+## Known limitations (intentional for V1)
 
 The current foundation is intentionally simple. Missing pieces include:
 
@@ -258,9 +258,9 @@ The current foundation is intentionally simple. Missing pieces include:
 - A classification + decoration pipeline (syntax highlighting, diagnostics, search highlights, etc.).
 - Background services with snapshot version gating.
 
-## 8. CodeEditor roadmap (what we need next)
+## CodeEditor roadmap (what we need next)
 
-### 8.1 Performance: document storage and incremental line index
+### Performance: document storage and incremental line index
 
 For CodeEditor-scale workloads, introduce a new `ITextDocument` implementation:
 
@@ -273,7 +273,7 @@ Compatibility constraint:
 
 - `TextBox`/`TextArea` must keep working with `DynamicTextDocument`.
 
-### 8.2 Undo/redo
+### Undo/redo
 
 Add an undo manager (likely an internal controller layered on top of the document operations):
 
@@ -282,7 +282,7 @@ Add an undo manager (likely an internal controller layered on top of the documen
 
 This must work with any `ITextDocument` including `DynamicTextDocument`.
 
-### 8.3 Scrolling policy: caret-follow vs user scrolling
+### Scrolling policy: caret-follow vs user scrolling
 
 Today the editor keeps the caret visible aggressively.
 
@@ -297,7 +297,7 @@ This likely requires separating:
 - the scroll offsets controlled by user gesture
 - the “bring caret into view” behavior as a mode (or threshold-based)
 
-### 8.4 Rendering extensibility: classification and layers
+### Rendering extensibility: classification and layers
 
 The current segment-writer hook is sufficient for masking, but CodeEditor requires:
 
@@ -313,7 +313,7 @@ Proposed direction:
   - input: snapshot + viewport (rows) + wrap settings
   - output: styled segments + decoration overlays
 
-### 8.5 CodeEditor chrome and UI composition
+### CodeEditor chrome and UI composition
 
 Implement `CodeEditor` as a control composed around the editor surface:
 
@@ -329,7 +329,7 @@ Likely composition:
   - editor surface visual
   - optional minimap / overlays
 
-### 8.6 Background services and version gating
+### Background services and version gating
 
 Add snapshot-based services runnable off-thread:
 
@@ -342,7 +342,7 @@ All service results must be version-gated:
 - include snapshot version in the result
 - discard stale results on the UI thread if the document version advanced
 
-## 9. Checklist
+## Checklist
 
 ### Implemented
 

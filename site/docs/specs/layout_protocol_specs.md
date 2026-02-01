@@ -17,7 +17,7 @@ After the spec, you'll find **control-by-control guidance**, grouped by shared b
 
 # Layout Protocol Specification (Terminal UI, Integer Coordinates)
 
-## 1. Goals
+## Goals
 
 1. Prevent "infinite desired size" propagation (even when measuring unbounded).
 2. Represent **Fill/Stretch** without requiring children to return the available size from Measure.
@@ -27,7 +27,7 @@ After the spec, you'll find **control-by-control guidance**, grouped by shared b
 
 ---
 
-## 2. Required geometry assumptions
+## Required geometry assumptions
 
 You already have:
 
@@ -43,13 +43,13 @@ This spec refers to conceptual members `Width`, `Height`, `X`, `Y`. Map to your 
 
 ---
 
-## 3. Constants and runtime validation
+## Constants and runtime validation
 
-### 3.1 Unbounded maximum
+### Unbounded maximum
 
 * `Unbounded` / "infinite" maximum is represented by `int.MaxValue`.
 
-### 3.2 Runtime validation and exceptions
+### Runtime validation and exceptions
 
 **MUST**: If any invariant in this spec is violated, throw a runtime exception (Release included).
 
@@ -58,7 +58,7 @@ Recommended exception types:
 * `LayoutException : Exception` for protocol violations (bad sizes, bad constraints, overflow).
 * `ArgumentOutOfRangeException` for public API misuse (negative sizes, etc.).
 
-### 3.3 Overflow handling
+### Overflow handling
 
 You asked to keep calculations in `int`. That's fine, but you must define what happens if arithmetic overflows.
 
@@ -80,9 +80,9 @@ This spec assumes **Option A** (checked + throw). (You can switch to saturating 
 
 ---
 
-## 4. Types
+## Types
 
-### 4.1 `LayoutConstraints`
+### `LayoutConstraints`
 
 Represents the allowable size range for a node.
 
@@ -106,7 +106,7 @@ Notes (implementation detail):
 * `int.MaxValue` is reserved as the unbounded sentinel and must never be used as a *finite* size.
 * The implementation defines `MaxFinite = int.MaxValue - 1` as the largest finite size allowed for `Min`/`Natural`.
 
-### 4.2 `SizeHints`
+### `SizeHints`
 
 Returned by Measure.
 
@@ -133,7 +133,7 @@ Interpretation:
 * `Max`: largest meaningful size (can be unbounded)
 * Flex fields: how a *parent* distributes surplus/deficit space when computing slots
 
-### 4.3 Alignment
+### Alignment
 
 Each node exposes:
 
@@ -149,9 +149,9 @@ This spec integrates alignment as an **arrange-time policy**.
 
 ---
 
-## 5. Node protocol
+## Node protocol
 
-### 5.1 Interface
+### Interface
 
 ```csharp
 public class Visual
@@ -169,7 +169,7 @@ Notes:
   It must not be used by controls internally: control layout code must always call `Measure(in LayoutConstraints)` on children so that
   constraints remain explicit and unboundedness is never confused with “request infinity”.
 
-### 5.2 Measure contract (normative)
+### Measure contract (normative)
 
 When `Measure(constraints)` is called, a node:
 
@@ -184,7 +184,7 @@ When `Measure(constraints)` is called, a node:
 
 Measure is allowed to be called multiple times with different constraints. Results must be deterministic for the same inputs.
 
-### 5.3 Arrange contract (normative)
+### Arrange contract (normative)
 
 When `Arrange(finalRect)` is called, a node:
 
@@ -196,11 +196,11 @@ Nodes MAY re-measure children during Arrange **only** for dependency resolution 
 
 ---
 
-## 6. Slot-based layout and alignment integration
+## Slot-based layout and alignment integration
 
 A parent container computes a **slot rectangle** for each child. Then it applies the child's alignment and hints to produce the final rectangle passed to `child.Arrange`.
 
-### 6.1 Alignment rule: alignment is applied to a slot
+### Alignment rule: alignment is applied to a slot
 
 Given:
 
@@ -261,7 +261,7 @@ A leaf can be "Stretch" without ever returning "available" from Measure. Unbound
 
 ---
 
-## 7. Flex allocation (how parents compute slots)
+## Flex allocation (how parents compute slots)
 
 Containers that distribute space along one axis (HStack/VStack, some grids, etc.) use **flex allocation**.
 
@@ -281,7 +281,7 @@ Rules (MUST):
 
 **Note:** Alignment is applied **after** the slot is computed. Flex alloc decides slot sizes; alignment decides how the child uses them.
 
-### 7.1 Relationship between Alignment and Flex
+### Relationship between Alignment and Flex
 
 In this framework, `Stretch` alignment implies “willingness to grow” on that axis when a parent runs a flex allocation algorithm.
 
@@ -297,14 +297,14 @@ Implementation note:
 
 ---
 
-## 8. ScrollViewer specification (extent vs viewport)
+## ScrollViewer specification (extent vs viewport)
 
 ScrollViewer must distinguish:
 
 * **Extent**: content size (from measuring content unbounded in scroll directions)
 * **Viewport**: arranged size (finalRect)
 
-### 8.1 Measure
+### Measure
 
 Given parent `constraints`, define `childConstraints`:
 
@@ -337,7 +337,7 @@ ScrollViewer typically reports:
 * `Max` = constraints.Max (it shouldn't exceed what parent allows)
 * FlexGrow default: usually 1 in both axes (it's a viewport-y control)
 
-### 8.2 Arrange
+### Arrange
 
 Given `finalRect` (viewport):
 
@@ -359,7 +359,7 @@ If content is smaller than viewport and you want centering, apply alignment betw
 
 ---
 
-## 9. Text wrapping ("for width" dependency)
+## Text wrapping ("for width" dependency)
 
 Some nodes' height depends on width (TextBlock with wrapping, TextArea, Table, etc.)
 
@@ -375,7 +375,7 @@ Any such internal re-measure must not invalidate ancestors during the same pass.
 
 ---
 
-## 10. Mandatory runtime checks
+## Mandatory runtime checks
 
 The layout engine MUST validate at runtime (Release included):
 

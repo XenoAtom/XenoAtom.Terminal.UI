@@ -26,3 +26,7 @@ Spinner styles define frames (strings) and a frame rate. Frames can be multi-run
 See also:
 - `src/XenoAtom.Terminal.UI/Styling/SpinnerStyle.cs`
 - `src/XenoAtom.Terminal.UI/Styling/SpinnerStyles.cs`
+
+## Related
+
+- [Spinner Specs](../specs/controls/spinner.md)

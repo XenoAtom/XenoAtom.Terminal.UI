@@ -49,3 +49,7 @@ new Canvas()
 new Canvas()
     .Style(CanvasStyle.Default with { DefaultRune = new Rune('█') });
 ```
+
+## Related
+
+- [Canvas Specs](../specs/controls/canvas.md)

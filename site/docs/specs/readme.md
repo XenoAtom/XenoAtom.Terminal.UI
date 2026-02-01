@@ -4,24 +4,29 @@ title: "Specs & Design Notes"
 
 # Specs & Design Notes
 
-This folder contains deeper design documents and implementation notes used during development.
+This folder contains contributor-facing design notes and implementation specs.
+They are useful when you want to understand *why* a feature behaves a certain way, or when you’re contributing changes.
 
-They are **not** a stable end-user API reference, but they are useful when:
+> [!NOTE]
+> If you’re looking for end-user documentation, start here instead:
+>
+> - [User Guide](../readme.md)
+> - [Controls Reference](../controls/readme.md)
 
-- contributing to the library
-- understanding why a feature behaves a certain way
-- exploring future work and open questions
+## How to navigate
 
-If you’re looking for the user-facing documentation, start here instead:
+- [Control Specs](controls/readme.md) — one spec file per control
+- [Controls Roadmap](controls_todo.md) — what’s next / what’s missing
+- [Archive](archive/readme.md) — historical documents kept for context
 
-- [User Guide](../readme.md)
-- [Controls Reference](../controls/readme.md)
+## Framework & cross-cutting specs
 
-## Index
+- [Binding Dirty Model](binding_dirty_model_specs.md)
+- [Layout Protocol](layout_protocol_specs.md)
+- [Dirty Rendering](dirty_rendering_specs.md)
+- [Commands](command_specs.md)
+- [Data Templates](data_template_specs.md)
+- [Text Editor](text_editor_specs.md)
+- [Undo/Redo](undo_redo_specs.md)
 
-- [Specs Overview](specs.md)
-- [DataGridControl Specs](datagrid_specs.md)
-- [Data Templates Specs](data_template_specs.md)
-- [Text Editor Specs](text_editor_specs.md)
-- [Layout Protocol Specs](layout_protocol_specs.md)
 

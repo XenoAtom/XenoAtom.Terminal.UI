@@ -23,9 +23,9 @@ but adapts them to a retained-mode terminal UI with:
 
 ---
 
-## 1. Design goals
+## Design goals
 
-### 1.1 Primary goals
+### Primary goals
 
 1. **Uniform API** across the codebase for "data -> `Visual`" mapping.
 2. **Environment-scoped defaults**:
@@ -43,14 +43,14 @@ but adapts them to a retained-mode terminal UI with:
    - The core templating pipeline should avoid hot-path allocations; in particular, presenters should be generic
      (`DataPresenter<T>`) to avoid boxing.
 
-### 1.2 Non-goals (V1)
+### Non-goals (V1)
 
 - XAML-style triggers and named template parts.
 - A full MVVM framework.
 
 ---
 
-## 2. Terminology
+## Terminology
 
 - **Data template**: a contract that converts a data value into a `Visual` subtree (and optionally updates an existing subtree).
 - **Template role**: why a template is being used. At minimum:
@@ -63,9 +63,9 @@ but adapts them to a retained-mode terminal UI with:
 
 ---
 
-## 3. Proposed public surface
+## Proposed public surface
 
-### 3.1 `DataTemplateRole`
+### `DataTemplateRole`
 
 ```csharp
 public enum DataTemplateRole
@@ -80,7 +80,7 @@ Notes:
 - Most item controls use `Display` by default.
 - Editor surfaces (future: forms/property grids) use `Editor`.
 
-### 3.2 `DataTemplateContext`
+### `DataTemplateContext`
 
 `DataTemplateContext` provides metadata to templates without forcing every control to invent its own signature.
 
@@ -108,7 +108,7 @@ Guidance:
   (similar to WPF’s `ItemContainerStyle`).
 - `Index` MUST be `-1` when the template is not item-based (e.g. a single `DataPresenter<T>`).
 
-### 3.3 `DataTemplate<T>` (recyclable contract)
+### `DataTemplate<T>` (recyclable contract)
 
 The core template representation is a **struct** so template slots are not themselves delegates (avoids method-resolution conflicts
 and keeps bindable properties simple). Internally it can still wrap delegates.
@@ -152,11 +152,11 @@ Normative rules:
 - `TryUpdate` MUST NOT attach/detach visuals directly; it should only update bindable properties/state on the provided visual subtree.
   (The owning control manages parenting.)
 
-### 3.4 `DataTemplates` (environment-scoped registry)
+### `DataTemplates` (environment-scoped registry)
 
 `DataTemplates` is an environment-scoped registry of templates, resolved via `Visual.GetStyle<DataTemplates>()`.
 
-#### 3.4.1 Immutability without duplication (overlay chaining)
+#### Immutability without duplication (overlay chaining)
 
 `DataTemplates` SHOULD be immutable and *replaced* via `Visual.Set(...)` when changed.
 
@@ -195,7 +195,7 @@ Why immutability works well with bindings:
 - The registry itself does not need to be bindable or mutable to be reactive; *replacing* the environment value is enough.
   This keeps the templating model simple and allocation-free in hot paths.
 
-#### 3.4.2 Registry construction (builder-style)
+#### Registry construction (builder-style)
 
 For usability, the API SHOULD include a builder-style entry point to avoid repeatedly copying internal tables when registering
 multiple templates at once.
@@ -249,13 +249,13 @@ Notes:
 - `Register(...)` can remain as a convenience method, but the documentation SHOULD recommend `Derive(...)` for any non-trivial
   set of registrations.
 
-#### 3.4.3 Resolution matching
+#### Resolution matching
 
 Resolution MUST support:
 
 - Exact match for `TryResolve<T>(...)` (strongly typed; allocation-free).
 
-### 3.5 `DataPresenter<T>`
+### `DataPresenter<T>`
 
 `DataPresenter<T>` hosts a single value and resolves a template to render it.
 
@@ -283,7 +283,7 @@ Caching guidance:
 - The presenter SHOULD keep the produced child visual until the *effective template* changes.
 - The presenter MUST NOT rebuild solely because the value changes: templates receive a `Binding<T>` and should react via bindings.
 
-### 3.6 Template properties on item controls
+### Template properties on item controls
 
 Controls that render items should expose a template slot:
 
@@ -301,7 +301,7 @@ Rules:
 
 ---
 
-## 4. Resolution rules (normative)
+## Resolution rules (normative)
 
 When a control needs a visual for a bindable value `binding` and role `role`:
 
@@ -313,7 +313,7 @@ When a control needs a visual for a bindable value `binding` and role `role`:
    - If the current value is `Visual`, use it directly (identity).
    - Else render `new TextBlock(() => binding.GetValue()?.ToString())`.
 
-### 4.1 Typed vs runtime resolution
+### Typed vs runtime resolution
 
 To keep `DataPresenter<T>` allocation-free:
 
@@ -326,7 +326,7 @@ Notes:
 
 If a consumer wants heterogeneous items without boxing, they should use a reference-type base/interface for `T`.
 
-### 4.2 Null handling
+### Null handling
 
 `null` SHOULD be treated as a valid input:
 
@@ -335,11 +335,11 @@ If a consumer wants heterogeneous items without boxing, they should use a refere
 
 ---
 
-## 5. Virtualization and recycling
+## Virtualization and recycling
 
 This section defines how templating supports large data sets with minimal allocations.
 
-### 5.1 Recycling contract
+### Recycling contract
 
 Virtualizing controls SHOULD:
 
@@ -356,7 +356,7 @@ Notes:
 - “Detached” means: not parented to a live control and not participating in layout/render.
 - `Release` is a finalizer-style hook for pooled visuals; it should be treated as “this instance will never be reused again”.
 
-### 5.2 Important guidance for recyclable templates
+### Important guidance for recyclable templates
 
 For templates to be safely recyclable:
 
@@ -371,22 +371,22 @@ Recommended pattern for maximum reuse:
 
 This pattern is a strong differentiator for a binding-driven terminal UI: you get React-like reuse without a diff engine.
 
-### 5.3 Pool sizing
+### Pool sizing
 
 Pools SHOULD be bounded (configurable per control style/options) to avoid unbounded memory usage when scrolling through huge lists.
 
 ---
 
-## 6. Interaction with the binding system
+## Interaction with the binding system
 
-### 6.1 Tracked reads
+### Tracked reads
 
 Template resolution MUST be a tracked read:
 
 - Controls MUST read template slots through bindable properties (e.g. `ItemTemplate`), not private fields.
 - Controls MUST read the `DataTemplates` registry via `Get<DataTemplates>()` so changes to the registry can invalidate dependent visuals.
 
-### 6.2 Rebuild vs update triggers
+### Rebuild vs update triggers
 
 Controls should rebuild item visuals when:
 
@@ -397,11 +397,11 @@ Controls should NOT rebuild visuals merely because a `State<T>` value changes; t
 
 ---
 
-## 7. Defaults (recommended)
+## Defaults (recommended)
 
 The default theme should ship with templates that make “drop data in UI” productive.
 
-### 7.1 Display defaults
+### Display defaults
 
 Recommended defaults for `DataTemplateRole.Display`:
 
@@ -411,13 +411,13 @@ Recommended defaults for `DataTemplateRole.Display`:
 - Numeric primitives -> `new TextBlock(() => binding.GetValue().ToString())`
 - `Visual` -> identity (already a visual)
 
-### 7.2 Reactive display defaults
+### Reactive display defaults
 
 Recommended guidance:
 
 - Prefer building visuals that read `value.GetValue()` (for display) or `binding.GetValue()` (for editors) inside a lambda so changes are tracked automatically.
 
-### 7.3 Editor defaults (reactive + bidirectional)
+### Editor defaults (reactive + bidirectional)
 
 Editor templates should generally exist for types that have built-in editor controls:
 
@@ -429,9 +429,9 @@ This enables a future property grid/forms experience without adding a new framew
 
 ---
 
-## 8. Examples
+## Examples
 
-### 8.1 Per-instance item template
+### Per-instance item template
 
 ```csharp
 new Select<MyModel>()
@@ -448,7 +448,7 @@ new Select<MyModel>()
         Editor: null));
 ```
 
-### 8.2 Subtree-scoped defaults (overlay chaining)
+### Subtree-scoped defaults (overlay chaining)
 
 ```csharp
 var templates = new DataTemplates { Parent = DataTemplates.Default }
@@ -465,7 +465,7 @@ new VStack(
 .Set(templates);
 ```
 
-### 8.3 `DataPresenter<T>` for “just show this value”
+### `DataPresenter<T>` for “just show this value”
 
 ```csharp
 var name = new State<string?>("Alex");
@@ -478,13 +478,13 @@ new VStack(
 
 ---
 
-## 9. Control adoption (status)
+## Control adoption (status)
 
 This repository is pre-1.0; breaking changes are acceptable if they improve usability and consistency. The focus is on simplifying
 user code and making the framework more coherent, while keeping performance excellent. Tests, samples, and documentation MUST be
 updated accordingly.
 
-### 9.1 Controls already generic (`<T>`) that adopt the model
+### Controls already generic (`<T>`) that adopt the model
 
 #### `Select<T>`
 
@@ -499,7 +499,7 @@ Benefits:
 - Environment defaults become possible (app-wide item rendering).
 - Future virtualization can reuse the `TryUpdate` path.
 
-### 9.2 Controls that became generic
+### Controls that became generic
 
 #### `OptionList<T>`
 
@@ -549,7 +549,7 @@ Migration strategy:
 
 ---
 
-## 10. Future extensions (V2+)
+## Future extensions (V2+)
 
 The V1 primitives above are chosen to unlock:
 
@@ -564,7 +564,7 @@ The V1 primitives above are chosen to unlock:
 
 ---
 
-## 11. Namespaces and code organization (proposal)
+## Namespaces and code organization (proposal)
 
 Data templating types SHOULD live in a dedicated namespace to keep the public API discoverable:
 

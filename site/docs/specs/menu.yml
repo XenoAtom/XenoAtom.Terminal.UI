@@ -1,19 +1,15 @@
 specs:
   - {path: readme.md, title: "<i class='bi bi-journal-code' aria-hidden='true'></i> Specs Index"}
-  - {path: specs.md, title: Specs Overview}
-  - {path: datagrid_specs.md, title: DataGridControl Specs}
-  - {path: data_template_specs.md, title: Data Templates Specs}
-  - {path: binding_dirty_model_specs.md, title: Binding Dirty Model Specs}
-  - {path: dirty_rendering_specs.md, title: Dirty Rendering Specs}
-  - {path: text_editor_specs.md, title: Text Editor Specs}
-  - {path: layout_protocol_specs.md, title: Layout Protocol Specs}
-  - {path: command_specs.md, title: Command Specs}
-  - {path: command_palette_specs.md, title: Command Palette Specs}
-  - {path: menu_specs.md, title: Menu Specs}
-  - {path: toast_specs.md, title: Toast Specs}
-  - {path: undo_redo_specs.md, title: Undo/Redo Specs}
-  - {path: wrapstack_specs.md, title: WrapStack Specs}
-  - {path: controls_demo_specs.md, title: Controls Demo Specs}
-  - {path: controls_todo.md, title: Controls TODO}
-  - {path: remaining_controls_specs.md, title: Remaining Controls Specs}
-  - {path: original_specs.md, title: Original Specs}
+  - {path: controls/readme.md, title: "<i class='bi bi-ui-checks' aria-hidden='true'></i> Control Specs"}
+  - {path: controls_todo.md, title: "<i class='bi bi-check2-square' aria-hidden='true'></i> Controls Roadmap"}
+
+  - {path: binding_dirty_model_specs.md, title: "<i class='bi bi-link-45deg' aria-hidden='true'></i> Binding Dirty Model"}
+  - {path: layout_protocol_specs.md, title: "<i class='bi bi-bounding-box' aria-hidden='true'></i> Layout Protocol"}
+  - {path: dirty_rendering_specs.md, title: "<i class='bi bi-brush' aria-hidden='true'></i> Dirty Rendering"}
+  - {path: command_specs.md, title: "<i class='bi bi-terminal' aria-hidden='true'></i> Commands"}
+  - {path: data_template_specs.md, title: "<i class='bi bi-puzzle' aria-hidden='true'></i> Data Templates"}
+  - {path: text_editor_specs.md, title: "<i class='bi bi-pencil-square' aria-hidden='true'></i> Text Editor"}
+  - {path: undo_redo_specs.md, title: "<i class='bi bi-arrow-counterclockwise' aria-hidden='true'></i> Undo/Redo"}
+
+  - {path: controls_demo_specs.md, title: "<i class='bi bi-controller' aria-hidden='true'></i> Controls Demo"}
+  - {path: archive/readme.md, title: "<i class='bi bi-archive' aria-hidden='true'></i> Archive"}

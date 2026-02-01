@@ -14,9 +14,9 @@ The goal is to make “what can I do right now?” obvious without sacrificing p
 
 ---
 
-## 1. Goals / non-goals
+## Goals / non-goals
 
-### 1.1 Goals (v1)
+### Goals (v1)
 
 - Provide a first-class concept of an **Action/Command** with:
   - an optional **key gesture**
@@ -37,14 +37,14 @@ The goal is to make “what can I do right now?” obvious without sacrificing p
 - Make it easy for existing controls to expose their “important” shortcuts:
   - focus on **discoverable** shortcuts, not basic navigation (arrows, home/end, etc.)
 
-### 1.2 Non-goals (v1)
+### Non-goals (v1)
 
 - A full WPF-style routed `ICommand` framework.
 - Localization infrastructure (the API should allow it, but it’s not required for v1).
 
 ---
 
-## 2. Current code map
+## Current code map
 
 Existing related types:
 
@@ -63,7 +63,7 @@ The command system should build on this rather than replace everything immediate
 
 ---
 
-## 3. Concepts and terminology
+## Concepts and terminology
 
 - **Command**: a user-facing action that can be invoked by:
   - keyboard gesture
@@ -79,9 +79,9 @@ The command system should build on this rather than replace everything immediate
 
 ---
 
-## 4. Proposed API surface (v1)
+## Proposed API surface (v1)
 
-### 4.1 Command model
+### Command model
 
 Introduce a new type (name can vary, examples below use `Command`):
 
@@ -141,7 +141,7 @@ Notes:
   `KeyGesture(char, TerminalModifiers)` because terminals commonly emit control characters rather than the printable
   letter (see existing usage throughout the codebase).
 
-#### 4.1.1 `KeySequence`
+#### `KeySequence`
 
 Introduce a small type to represent sequences and to keep formatting/parsing centralized:
 
@@ -163,7 +163,7 @@ Notes:
 - Sequences are expected to be short (usually 2 strokes).
 - Formatting should use existing `KeyGesture.ToString()` for each stroke.
 
-### 4.2 Registration and lookup
+### Registration and lookup
 
 Add an internal list of commands per `Visual` and optionally per `TerminalApp`.
 
@@ -203,7 +203,7 @@ Lookup algorithm for UI surfaces:
    - local-first, then global
    - within each group: `Importance` then stable insertion order
 
-### 4.3 Keyboard execution (gesture routing)
+### Keyboard execution (gesture routing)
 
 Gesture routing should remain consistent with today’s behavior:
 
@@ -216,11 +216,11 @@ Gesture routing should remain consistent with today’s behavior:
 This is implemented by resolving `Command` instances during `TerminalApp.DispatchKeyEvent(...)`, using the same focus-walk
 (`FocusedElement → Parent`) and then falling back to `TerminalApp.GlobalCommands`.
 
-### 4.4 Key sequences (multi-stroke shortcuts)
+### Key sequences (multi-stroke shortcuts)
 
 Key sequences must be supported in v1 (e.g. Emacs-style `Ctrl+K` followed by another key).
 
-#### 4.4.1 Resolution rules
+#### Resolution rules
 
 When a key event arrives:
 
@@ -233,7 +233,7 @@ When a key event arrives:
    - If a sequence matches, execute that command and exit sequence mode.
    - If no sequence matches, exit sequence mode and treat the key event as unhandled (or optionally show a brief “no match” hint).
 
-#### 4.4.2 Prefix conflicts
+#### Prefix conflicts
 
 To keep single-key bindings simple and predictable:
 
@@ -244,7 +244,7 @@ To keep single-key bindings simple and predictable:
 
 This avoids “wait for timeout to disambiguate” behavior.
 
-#### 4.4.3 Cancellation and timeout
+#### Cancellation and timeout
 
 - Sequence mode is cancelled by:
   - `Esc`, or
@@ -254,7 +254,7 @@ This avoids “wait for timeout to disambiguate” behavior.
 
 The timeout should be configurable (likely on `TerminalAppOptions` in the future).
 
-#### 4.4.4 UI surfaces while in sequence mode
+#### UI surfaces while in sequence mode
 
 While a prefix is active, command discovery UI should adapt:
 
@@ -263,7 +263,7 @@ While a prefix is active, command discovery UI should adapt:
   - match the current context.
 - The bar should show the prefix as a “pending” keycap (e.g. `Ctrl+K …`) to explain the current state.
 
-### 4.4 Interop with existing `KeyBinding`
+### Interop with existing `KeyBinding`
 
 XenoAtom.Terminal.UI implements **Option B**: `Command` is the single model for shortcuts and discoverability.
 
@@ -273,9 +273,9 @@ XenoAtom.Terminal.UI implements **Option B**: `Command` is the single model for 
 
 ---
 
-## 5. `CommandBar` control (key hints)
+## `CommandBar` control (key hints)
 
-### 5.1 Purpose
+### Purpose
 
 `CommandBar` is a lightweight control that displays the most relevant commands for the current context (focused element),
 similar to “key hints”:
@@ -284,7 +284,7 @@ similar to “key hints”:
 Ctrl+F Find | Ctrl+H Replace | Ctrl+Z Undo | Ctrl+R Redo | Ctrl+Q Quit
 ```
 
-### 5.2 Suggested API
+### Suggested API
 
 ```csharp
 public sealed class CommandBar : Visual
@@ -305,7 +305,7 @@ Behavior:
 - When not enough space is available:
   - show fewer items; optionally show a trailing “More…” hint that can open a help popup.
 
-### 5.3 Styling
+### Styling
 
 Add `CommandBarStyle`:
 
@@ -322,9 +322,9 @@ Markup usage:
 
 ---
 
-## 6. Command surfaces beyond the bar
+## Command surfaces beyond the bar
 
-### 6.1 Command palette integration
+### Command palette integration
 
 CommandPalette should be able to show all commands that have `CommandPresentation.CommandPalette`.
 
@@ -333,7 +333,7 @@ Longer term:
 - unify `CommandPaletteItem` with `Command` (palette entries can be commands)
 - allow palette to include “dynamic” commands (e.g. per selected node)
 
-### 6.2 MenuBar and context menus
+### MenuBar and context menus
 
 Menu items and context menu entries should be able to reference a `Command`:
 
@@ -353,11 +353,11 @@ This creates a cohesive path:
 
 ---
 
-## 7. Guidance for updating existing controls (v1)
+## Guidance for updating existing controls (v1)
 
 Focus on “discoverable” shortcuts that users benefit from seeing:
 
-### 7.1 Text editors (`TextBox`, `TextArea`, `MaskedInput`, `NumberBox<T>`)
+### Text editors (`TextBox`, `TextArea`, `MaskedInput`, `NumberBox<T>`)
 
 Register commands (typically local):
 
@@ -367,12 +367,12 @@ Register commands (typically local):
 - Select all (`Ctrl+A`) (if supported)
 - Find / Replace (`Ctrl+F` / `Ctrl+H`) where applicable
 
-### 7.2 LogControl
+### LogControl
 
 - Find (`Ctrl+F`)
 - Next / previous match (`Enter` / `Shift+Enter`) could be included if helpful
 
-### 7.3 App/global
+### App/global
 
 Register at `TerminalApp`:
 
@@ -382,7 +382,7 @@ Register at `TerminalApp`:
 
 ---
 
-## 8. Dependency tracking and performance notes
+## Dependency tracking and performance notes
 
 - `CanExecute` / `IsVisible` may read bindable properties (e.g. `TextEditorBase.CanUndo`).
   - When `CommandBar` renders/evaluates these, dependency tracking should naturally trigger re-render when these values change.
@@ -394,7 +394,7 @@ Register at `TerminalApp`:
 
 ---
 
-## 9. Testing plan
+## Testing plan
 
 - Unit tests for resolution order:
   - focused command overrides parent/global for same gesture
@@ -410,7 +410,7 @@ Register at `TerminalApp`:
 
 ---
 
-## 10. Implementation steps (recommended)
+## Implementation steps (recommended)
 
 1. Introduce `Command` + per-visual registration (`Visual.AddCommand`) and app/global registration.
 2. Route gestures to commands (reuse existing focus-walk logic).

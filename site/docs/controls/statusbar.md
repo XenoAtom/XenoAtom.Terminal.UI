@@ -26,3 +26,4 @@ new StatusBar()
 
 - [Header](header.md)
 - [Footer](footer.md)
+- [StatusBar Specs](../specs/controls/statusbar.md)

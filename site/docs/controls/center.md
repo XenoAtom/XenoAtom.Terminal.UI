@@ -20,3 +20,7 @@ new Center(new Button("OK"));
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Related
+
+- [Center Specs](../specs/controls/center.md)

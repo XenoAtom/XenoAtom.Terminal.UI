@@ -26,3 +26,7 @@ new VStack(
 See also:
 - [Layout](../layout.md)
 - [HStack](hstack.md)
+
+## Related
+
+- [VStack Specs](../specs/controls/vstack.md)

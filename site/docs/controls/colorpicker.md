@@ -57,3 +57,7 @@ picker.Style(new ColorPickerStyle
     PaletteColumns = 10,
 });
 ```
+
+## Related
+
+- [ColorPicker Specs](../specs/controls/colorpicker.md)

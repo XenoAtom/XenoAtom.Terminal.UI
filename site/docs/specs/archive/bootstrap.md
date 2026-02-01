@@ -1,5 +1,5 @@
 ---
-title: XenoAtom.Terminal.UI Specifications
+title: Bootstrap (original spec draft)
 ---
 
 # XenoAtom.Terminal.UI Specifications
@@ -9,6 +9,10 @@ This document contains the original specifications for the `XenoAtom.Terminal.UI
 Status: Draft (v0.2 - first round)
 
 All names used in this document are preliminary and subject to change.
+
+> [!WARNING]
+> This is an **early** design document kept for historical context.
+> It may not reflect the current implementation or current naming.
 
 ## Resources
 
@@ -29,7 +33,7 @@ For inspiration:
 
 ## Vision
 
-`XenoAtom.Terminal.UI` aims to be the best .NET terminal UI framework by combining:
+`XenoAtom.Terminal.UI` aims to be a modern .NET terminal UI framework by combining:
 
 - A retained-mode component tree (predictable, debuggable).
 - A modern dependency tracking/binding model (targeted invalidation, minimal recomputation).

@@ -65,3 +65,7 @@ See also:
 - [Text Editing](../text-editing.md)
 - [Binding](../binding.md)
 - [ScrollViewer](scrollviewer.md)
+
+## Related
+
+- [TextArea Specs](../specs/controls/textarea.md)

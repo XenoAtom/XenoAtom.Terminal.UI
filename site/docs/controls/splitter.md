@@ -26,3 +26,7 @@ new HStack(
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Related
+
+- [Splitter (HSplitter / VSplitter) Specs](../specs/controls/splitter.md)

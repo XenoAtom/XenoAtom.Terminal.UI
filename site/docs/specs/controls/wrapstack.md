@@ -19,19 +19,19 @@ Design goals:
 
 ---
 
-## 1. Prerequisites (already in the codebase)
+## Prerequisites (already in the codebase)
 
-### 1.1 Alignment
+### Alignment
 
 XenoAtom.Terminal.UI uses a single `Align` enum for both `HorizontalAlignment` and `VerticalAlignment` on `Visual`.
 
 WrapStack controls MUST rely on child *self-alignment* being applied during `Visual.Arrange(...)` (i.e., children are arranged into a *slot rectangle* and `Align.Start/Center/End/Stretch` positions/sizes them within that slot).
 
-### 1.2 Clipping
+### Clipping
 
 All visuals are clipped to their `Bounds` automatically (`CellBuffer.PushClip(Bounds)` in `Visual.RenderTree`). Therefore WrapStack controls MUST NOT expose an overflow mode; children that don’t fit are clipped.
 
-### 1.3 Flex allocation helper
+### Flex allocation helper
 
 The codebase already provides `Layout.FlexAllocator.Allocate(...)` to distribute available main-axis size across items based on per-axis:
 
@@ -42,9 +42,9 @@ WrapStack SHOULD reuse `FlexAllocator` per run so “stretch” and “shrink”
 
 ---
 
-## 2. Public API
+## Public API
 
-### 2.1 Types
+### Types
 
 Provide two concrete panels (no `Orientation` switch, consistent with `HStack`/`VStack`, `HScrollBar`/`VScrollBar`, etc.):
 
@@ -55,7 +55,7 @@ public sealed partial class WrapVStack : Panel;
 
 Implementation MAY use an internal shared base (e.g. `WrapStackBase : Panel`) but the public surface MUST remain two explicit controls.
 
-### 2.2 Bindable properties (shared)
+### Bindable properties (shared)
 
 All properties below MUST be `[Bindable]` so the source generator produces fluent extensions.
 
@@ -106,16 +106,16 @@ public enum WrapMeasureMode
 
 `ConstrainToRun` is the default because it produces correct measurements for wrapping text (height depends on available width).
 
-### 2.3 Defaults
+### Defaults
 
 - `WrapHStack` constructor SHOULD set `HorizontalAlignment = Align.Start` (shrink-wrap by default, similar to `HStack`).
 - `WrapVStack` constructor SHOULD set `VerticalAlignment = Align.Start` (shrink-wrap by default, similar to `VStack`).
 
 ---
 
-## 3. Layout terminology
+## Layout terminology
 
-### 3.1 Axes
+### Axes
 
 WrapHStack:
 
@@ -127,7 +127,7 @@ WrapVStack:
 - `main = Y` (height)
 - `cross = X` (width)
 
-### 3.2 Run
+### Run
 
 A run is a consecutive sequence of children placed along the main axis until the next child would exceed the available main-axis size.
 
@@ -138,11 +138,11 @@ Per run:
 
 ---
 
-## 4. Measure specification
+## Measure specification
 
 WrapStack MUST implement the layout protocol by overriding `MeasureCore(in LayoutConstraints)` and returning `SizeHints`.
 
-### 4.1 Inputs
+### Inputs
 
 Let:
 
@@ -151,7 +151,7 @@ Let:
 
 `LayoutConstants.Infinite` means “unbounded”.
 
-### 4.2 Child measurement
+### Child measurement
 
 For each child in `Children` order:
 
@@ -165,7 +165,7 @@ For each child in `Children` order:
      - WrapVStack: `new LayoutConstraints(constraints.MinWidth, constraints.MaxWidth, 0, childMaxHeight)`
 2. Call `child.Measure(childConstraints)` to obtain the child’s `SizeHints`.
 
-### 4.3 Run building
+### Run building
 
 WrapStack MUST build runs greedily, based on children’s measured **natural** main-axis size:
 
@@ -182,7 +182,7 @@ Rules:
 - If `candidate > maxMain` and the current run already has at least one item, finalize the run and start a new run.
 - A single oversized item MUST still be placed (never create an empty run).
 
-### 4.4 Panel size hints
+### Panel size hints
 
 The panel’s `Natural` size is derived from the runs built at the current `maxMain`:
 
@@ -220,11 +220,11 @@ WrapStack MUST represent “fill” at the panel level using its own alignment (
 
 ---
 
-## 5. Arrange specification
+## Arrange specification
 
 WrapStack MUST override `ArrangeCore(in Rectangle finalRect)` and position children without creating intermediate row/column visuals.
 
-### 5.1 Reflow on arrange
+### Reflow on arrange
 
 The panel MUST be able to reflow based on the arranged size, not just the measured constraints (same principle as `BreakdownLegend.EnsureRows`).
 
@@ -237,7 +237,7 @@ Specifically:
 
 This ensures correct behavior when a parent measured unbounded (extent discovery) but arranges bounded (viewport).
 
-### 5.2 Per-run flex allocation (main axis)
+### Per-run flex allocation (main axis)
 
 For each run, determine:
 
@@ -262,7 +262,7 @@ Allocate `itemMainAllocated[i]` for run items using `FlexAllocator` on the main 
 
 This MUST be performed per run (not globally) so “stretch” items can fill the remaining space of their row/column.
 
-### 5.3 Justification (main axis)
+### Justification (main axis)
 
 After allocation, compute leftover:
 
@@ -281,7 +281,7 @@ Otherwise adjust start offset and/or spacing:
 
 Remainder handling SHOULD be deterministic and stable (e.g. distribute +1 to gaps left-to-right).
 
-### 5.4 Child slots and self alignment
+### Child slots and self alignment
 
 Run cross size is the maximum natural cross size of its children:
 
@@ -302,7 +302,7 @@ Finally advance:
 
 ---
 
-## 6. ScrollViewer considerations
+## ScrollViewer considerations
 
 ScrollViewer uses unbounded constraints in scroll directions to discover extent.
 
@@ -315,7 +315,7 @@ If an app needs wrapping even under an unbounded main axis, it SHOULD set a fini
 
 ---
 
-## 7. Implementation notes (for this repo)
+## Implementation notes (for this repo)
 
 - Use `Children.Version` (from `VisualList`) plus the relevant bindable properties (`Spacing`, `RunSpacing`, `Justify`, `MeasureMode`) to invalidate cached run metadata.
 - Run metadata SHOULD be stored as indices into `Children` (avoid re-parenting or duplicating visuals).

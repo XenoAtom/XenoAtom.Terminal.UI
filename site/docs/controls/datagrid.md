@@ -7,7 +7,7 @@ title: DataGridControl
 `DataGridControl` is an interactive, virtualized, data-bound table control intended for large datasets and rich interaction:
 scrolling, selection, searching/filtering, column resizing, and inline editing.
 
-The lower-level contracts and data model live in [DataGrid Specs](../specs/datagrid_specs.md).
+The lower-level contracts and data model live in [DataGrid Specs](../specs/controls/datagrid.md).
 
 
 ![DataGridControl](../../img/controls/datagrid.svg){.terminal}
@@ -141,7 +141,7 @@ When editing starts, the control chooses an editor:
 - Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch` 
 
 ## Related
-- [DataGrid Specs](../specs/datagrid_specs.md)
+- [DataGrid Specs](../specs/controls/datagrid.md)
 - [Scrolling](../scrolling.md)
 - [Binding](../binding.md)
 - [Data Templating](../data-templating.md)

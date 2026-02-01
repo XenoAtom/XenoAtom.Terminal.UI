@@ -21,9 +21,9 @@ Design goals:
 
 ---
 
-## 1. Prerequisites (already in the codebase)
+## Prerequisites (already in the codebase)
 
-### 1.1 Fullscreen overlay layering (`WindowLayer`)
+### Fullscreen overlay layering (`WindowLayer`)
 
 In fullscreen mode, `TerminalApp` wraps the user root into a `WindowLayer` (unless the root already is a `WindowLayer`).
 That gives the framework a place to host:
@@ -47,19 +47,19 @@ The most idiomatic way to achieve this in the current architecture is to place t
 In practice, this is implemented by a `ToastHost` that wraps the app content and overlays a toast layer above it
 (typically via a `ZStack` internally).
 
-### 1.2 Animation infrastructure
+### Animation infrastructure
 
 `IAnimatedVisual` and `TerminalApp.AdvanceAnimations` provide tick-based animation. Toasts MAY use this for entrance/exit effects and progress indicators.
 
-### 1.3 Theme and styling
+### Theme and styling
 
 Toasts MUST use the existing `Theme` system for colors (Primary, Success, Warning, Error) and should follow the established style record pattern.
 
 ---
 
-## 2. Public API
+## Public API
 
-### 2.1 Toast severity
+### Toast severity
 
 ```csharp
 public enum ToastSeverity
@@ -78,7 +78,7 @@ public enum ToastSeverity
 }
 ```
 
-### 2.2 Toast position
+### Toast position
 
 ```csharp
 public enum ToastPosition
@@ -103,7 +103,7 @@ public enum ToastPosition
 }
 ```
 
-### 2.3 Toast control
+### Toast control
 
 ```csharp
 public sealed partial class Toast : Visual
@@ -150,7 +150,7 @@ public void PauseTimer();
 public void ResumeTimer();
 ```
 
-### 2.4 ToastHost control
+### ToastHost control
 
 ```csharp
 public sealed partial class ToastHost : ContentVisual, IAnimatedVisual
@@ -198,7 +198,7 @@ public void DismissAll();
 public void Dismiss(Func<Toast, bool> predicate);
 ```
 
-### 2.5 Fluent configuration (no builder)
+### Fluent configuration (no builder)
 
 This framework already provides fluent APIs via `[Bindable]` properties and source generation, so a dedicated
 `ToastBuilder` type is not required.
@@ -208,7 +208,7 @@ Prefer:
 - `toastHost.Show(() => new Toast()... )`
 - `ToastService.Show(() => new Toast()... )`
 
-### 2.6 ToastService (static/ambient API)
+### ToastService (static/ambient API)
 
 For convenience, provide a static service that resolves the `ToastHost` from the current app context:
 
@@ -236,9 +236,9 @@ The service resolves `ToastHost` via:
 
 ---
 
-## 3. Layout specification
+## Layout specification
 
-### 3.1 Toast visual structure
+### Toast visual structure
 
 A toast is composed of:
 
@@ -257,7 +257,7 @@ Layout SHOULD use existing controls internally:
 - `ProgressBar` (thin variant) for countdown
 - `Button` for close/action
 
-### 3.2 ToastHost layout
+### ToastHost layout
 
 `ToastHost` is a **content wrapper**. Internally it contains two children:
 
@@ -326,7 +326,7 @@ the behavior stays consistent across fullscreen and inline hosts.
 // - Then it stacks children inside that rect.
 ```
 
-### 3.3 Toast sizing
+### Toast sizing
 
 Toasts SHOULD have:
 - `MinWidth`: style-defined (e.g., 30 cells)
@@ -335,9 +335,9 @@ Toasts SHOULD have:
 
 ---
 
-## 4. Lifecycle and timing
+## Lifecycle and timing
 
-### 4.1 Toast states
+### Toast states
 
 ```
 [Created] → [Entering] → [Visible] → [Exiting] → [Dismissed]
@@ -351,14 +351,14 @@ State transitions:
 - **Visible → Exiting**: Duration elapsed OR user dismissed OR programmatic dismiss
 - **Exiting → Dismissed**: Exit animation complete; toast removed from host
 
-### 4.2 Timer behavior
+### Timer behavior
 
 - Timer starts when toast enters `Visible` state
 - Timer pauses on mouse hover (if `PauseOnHover` enabled)
 - Timer resets if `ResetTimer()` called
 - Timer ignored if `Duration` is `null` (persistent toast)
 
-### 4.3 Animation (optional for v1)
+### Animation (optional for v1)
 
 Terminal animation is limited, but simple effects are possible:
 
@@ -368,7 +368,7 @@ Terminal animation is limited, but simple effects are possible:
 
 For v1, instant appear/disappear is acceptable. Animation can be added in v1.1.
 
-### 4.4 Queue overflow
+### Queue overflow
 
 When `visibleToasts.Count >= MaxVisible`:
 
@@ -380,9 +380,9 @@ Default SHOULD be Option A for best UX.
 
 ---
 
-## 5. Input handling
+## Input handling
 
-### 5.1 Focus policy
+### Focus policy
 
 Toasts MUST NOT steal focus from the current control. They are informational overlays.
 
@@ -390,14 +390,14 @@ Toasts MUST NOT steal focus from the current control. They are informational ove
 - For v1, close/action visuals SHOULD be pointer-driven and not participate in normal tab traversal by default.
   Advanced scenarios can opt into focus by providing focusable action content explicitly.
 
-### 5.2 Mouse interaction
+### Mouse interaction
 
 - **Hover**: Pauses auto-dismiss timer (if `PauseOnHover`)
 - **Click close button**: Dismisses toast
 - **Click action button**: Invokes action, then optionally dismisses
 - **Click elsewhere on toast**: No default action (configurable via event)
 
-### 5.3 Keyboard interaction
+### Keyboard interaction
 
 When toast (or its buttons) is focused:
 - `Escape`: Dismiss toast
@@ -410,9 +410,9 @@ Global shortcuts (optional, app-configurable):
 
 ---
 
-## 6. Styling
+## Styling
 
-### 6.1 ToastStyle record
+### ToastStyle record
 
 ```csharp
 public sealed record ToastStyle : IStyle<ToastStyle>
@@ -449,7 +449,7 @@ public sealed record ToastStyle : IStyle<ToastStyle>
 }
 ```
 
-### 6.2 Severity-based theming
+### Severity-based theming
 
 | Severity | Background | Border | Icon Color |
 |----------|------------|--------|------------|
@@ -462,9 +462,9 @@ The exact colors come from `Theme` semantic tokens.
 
 ---
 
-## 7. Integration patterns
+## Integration patterns
 
-### 7.1 Basic setup (fullscreen app)
+### Basic setup (fullscreen app)
 
 ```csharp
 var root = new ToastHost(
@@ -478,7 +478,7 @@ var root = new ToastHost(
 Terminal.Run(root);
 ```
 
-### 7.2 Showing toasts
+### Showing toasts
 
 ```csharp
 // Simple API
@@ -500,7 +500,7 @@ var toast = toastHost.Show("Processing...", ToastSeverity.Info);
 toast.Dismiss();
 ```
 
-### 7.3 Persistent notifications
+### Persistent notifications
 
 ```csharp
 // For ongoing operations
@@ -517,7 +517,7 @@ ToastService.Success("Upload complete!");
 
 ---
 
-## 8. Event args
+## Event args
 
 ```csharp
 public enum ToastDismissReason
@@ -552,7 +552,7 @@ public sealed class ToastActionEventArgs : RoutedEventArgs
 
 ---
 
-## 9. Inline mode considerations
+## Inline mode considerations
 
 Toast notifications are primarily designed for fullscreen apps. In inline mode:
 
@@ -562,7 +562,7 @@ Toast notifications are primarily designed for fullscreen apps. In inline mode:
 
 ---
 
-## 10. Accessibility considerations
+## Accessibility considerations
 
 - Toasts SHOULD NOT convey critical information that requires user action (use dialogs for that)
 - Screen reader integration is terminal-dependent; toasts should have meaningful text content
@@ -571,9 +571,9 @@ Toast notifications are primarily designed for fullscreen apps. In inline mode:
 
 ---
 
-## 11. Implementation notes
+## Implementation notes
 
-### 11.1 Internal state
+### Internal state
 
 ```csharp
 internal sealed class ToastEntry
@@ -586,21 +586,21 @@ internal sealed class ToastEntry
 }
 ```
 
-### 11.2 Animation ticks
+### Animation ticks
 
 `ToastHost` SHOULD implement `IAnimatedVisual` to:
 - Track toast timers
 - Trigger dismiss when duration elapses
 - Update progress bars
 
-### 11.3 Rendering order
+### Rendering order
 
 Toasts render in stack order:
 - Newest toasts appear at the "anchor" position
 - Older toasts shift away from the edge
 - This creates natural visual hierarchy
 
-### 11.4 Memory management
+### Memory management
 
 - Dismissed toasts SHOULD be removed from the visual tree promptly
 - Consider pooling `Toast` instances for high-frequency scenarios
@@ -608,7 +608,7 @@ Toasts render in stack order:
 
 ---
 
-## 12. Future extensions (post-v1)
+## Future extensions (post-v1)
 
 - **Toast groups**: Group related toasts (e.g., "3 files saved")
 - **Undo actions**: Built-in undo pattern (`ToastService.Success("Deleted", undo: () => Restore())`)

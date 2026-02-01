@@ -56,3 +56,7 @@ The chart is styled via `BarChartStyle`:
 - `DefaultBarColors`: optional palette used when items do not provide `BarColor`.
 
 `BarChartStyle.ValueTextStyle` can be used to customize the default value text (when `BarChartItem.ValueLabel` is not set).
+
+## Related
+
+- [BarChart Specs](../specs/controls/barchart.md)

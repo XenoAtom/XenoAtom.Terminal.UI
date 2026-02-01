@@ -24,3 +24,7 @@ new ProgressBar().Value(progress);
 `ProgressBarStyle` controls variants, glyphs, and color palette.
 
 If you want to display a label, a percentage, or a spinner next to a progress bar, use `ProgressTaskGroup`.
+
+## Related
+
+- [ProgressBar Specs](../specs/controls/progressbar.md)

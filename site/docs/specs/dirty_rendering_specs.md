@@ -9,7 +9,7 @@ This document explores options to reduce the CPU cost of rendering when only a s
 It is **internal** documentation for framework contributors. It intentionally focuses on correctness and minimal-complexity
 approaches that fit the existing **binding/dependency tracking** and **CellBuffer diff rendering** model.
 
-## 1. Context
+## Context
 
 Today, `TerminalApp.Render()`:
 
@@ -21,7 +21,7 @@ Today, `TerminalApp.Render()`:
 This keeps terminal output efficient, but it still runs a significant amount of **UI traversal + rendering code** on
 every frame, even when the visual change is localized (spinner tick, caret blink, hover change, etc.).
 
-## 2. Goals
+## Goals
 
 - Reduce CPU cost of rendering for localized visual updates.
 - Avoid manual invalidation APIs from controls (keep the binding-driven dirty model).
@@ -30,13 +30,13 @@ every frame, even when the visual change is localized (spinner tick, caret blink
   - z-order/overlap (popups, dialogs),
   - alpha blending (future/optional).
 
-## 3. Non-goals (for V1 of this feature)
+## Non-goals (for V1 of this feature)
 
 - Do not require controls to always paint their full bounds.
 - Do not introduce a per-control retained “layer cache” (memory heavy, complex invalidation).
 - Do not change the external rendering contract of `RenderOverride(CellBuffer)` (controls remain unaware).
 
-## 4. Why “Render dirtiness” is different from Measure/Arrange
+## Why “Render dirtiness” is different from Measure/Arrange
 
 Measure/Arrange can be skipped for subtrees because they do not depend on previously rendered pixels.
 
@@ -54,7 +54,7 @@ So any “render dirty” optimization must either:
 Therefore, a practical optimization is usually based on **dirty regions** (rectangles) and **incremental buffer
 updates**, not only “dirty flags”.
 
-## 5. Options
+## Options
 
 ### Option A — Full-frame repaint (current behavior)
 
@@ -107,9 +107,9 @@ This option is not recommended unless the framework enforces a “fully paints b
 
 Not recommended for now.
 
-## 6. Proposed approach (Option B)
+## Proposed approach (Option B)
 
-### 6.1. Render buffer lifecycle
+### Render buffer lifecycle
 
 Treat `_renderBuffer` as the authoritative “current frame” buffer:
 
@@ -118,7 +118,7 @@ Treat `_renderBuffer` as the authoritative “current frame” buffer:
 
 `CellBufferDiffRenderer` continues to diff the buffer against its internal “last frame” state.
 
-### 6.2. Dirty region representation
+### Dirty region representation
 
 Start minimal:
 
@@ -134,7 +134,7 @@ Recommended heuristics:
 - If more than `N` dirty rects, union them.
 - If dirty area > ~30–50% of viewport, fall back to full repaint.
 
-### 6.3. When to mark “full repaint”
+### When to mark “full repaint”
 
 Full repaint is the safe fallback when:
 
@@ -149,7 +149,7 @@ Pragmatic rule:
 This keeps the incremental optimization targeted at **render-only** updates (caret, animation, hover, small content
 changes).
 
-### 6.4. Render-only dirty rectangle sources
+### Render-only dirty rectangle sources
 
 When a binding write affects render-only dependencies:
 
@@ -160,7 +160,7 @@ If the visual might have moved since last frame (rare without layout), this is s
 
 - Under the “full repaint if arrange ran” rule, moves come from arrange and trigger full repaint.
 
-### 6.5. Layout dirty rectangle sources (future refinement)
+### Layout dirty rectangle sources (future refinement)
 
 If we want to avoid “full repaint on arrange” later, we must track old and new bounds:
 
@@ -169,7 +169,7 @@ If we want to avoid “full repaint on arrange” later, we must track old and n
 
 This is optional and can be deferred until the render-only optimization is stable.
 
-### 6.6. How to repaint a dirty region correctly
+### How to repaint a dirty region correctly
 
 Algorithm for render-only repaint:
 
@@ -179,7 +179,7 @@ Algorithm for render-only repaint:
 
 Important: we render **from root** so that overlap/z-order is correct.
 
-### 6.7. Minimizing tree traversal work
+### Minimizing tree traversal work
 
 Update `Visual.RenderTree` to early-out:
 
@@ -190,7 +190,7 @@ Update `Visual.RenderTree` to early-out:
 
 This preserves correctness and reduces CPU time significantly when repainting a small region.
 
-### 6.8. Render dependencies and skipping work
+### Render dependencies and skipping work
 
 When a visual is skipped because it is outside the dirty region:
 
@@ -199,20 +199,20 @@ When a visual is skipped because it is outside the dirty region:
 
 This aligns with the existing dependency model used for measure/arrange/prepare children.
 
-## 7. Interaction with CellBufferDiffRenderer
+## Interaction with CellBufferDiffRenderer
 
-### 7.1. Baseline behavior
+### Baseline behavior
 
 Even if rendering becomes incremental, the diff renderer can still diff the full buffer.
 
 This preserves correctness and keeps the optimization localized to rendering CPU time.
 
-### 7.2. Optional future optimization
+### Optional future optimization
 
 If necessary later, the diff renderer can accept a dirty region and only scan those cells. This should be considered a
 separate optimization step because it complicates cursor/color state reconstruction.
 
-## 8. Fullscreen vs inline host notes
+## Fullscreen vs inline host notes
 
 - Fullscreen host: viewport is fixed and a full repaint is always possible.
 - Inline host: the live region is anchored and can move due to terminal scrolling; incremental repaint can still work
@@ -220,7 +220,7 @@ separate optimization step because it complicates cursor/color state reconstruct
 
 This spec focuses on the core rendering optimization. Host-specific behavior should be addressed separately.
 
-## 9. Risk assessment / complexity
+## Risk assessment / complexity
 
 **Low risk**
 - Early-out render traversal when clip does not intersect bounds.
@@ -231,7 +231,7 @@ This spec focuses on the core rendering optimization. Host-specific behavior sho
 **High risk**
 - Avoiding full repaint on layout changes (requires old/new bounds tracking and more complex invalidation).
 
-## 10. Recommendation
+## Recommendation
 
 Implement Option B in two stages:
 
@@ -242,7 +242,7 @@ Implement Option B in two stages:
    - Track old/new bounds to reduce full repaint on layout changes.
    - Consider diff-scanning only dirty regions if profiling shows it matters.
 
-## 11. Current implementation status (Stage 1 applied)
+## Current implementation status (Stage 1 applied)
 
 Stage 1 has been implemented with the following concrete changes:
 

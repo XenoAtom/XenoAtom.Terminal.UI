@@ -38,3 +38,4 @@ The label can be a `Visual`, and spacing between glyph and label is controlled b
 
 - [Binding](../binding.md)
 - [Styling](../styling.md)
+- [CheckBox Specs](../specs/controls/checkbox.md)

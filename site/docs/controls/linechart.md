@@ -35,3 +35,4 @@ By default the chart auto-scales to the min/max values in `Values`. You can over
 
 - [Sparkline](sparkline.md)
 - [Styling](../styling.md)
+- [LineChart Specs](../specs/controls/linechart.md)

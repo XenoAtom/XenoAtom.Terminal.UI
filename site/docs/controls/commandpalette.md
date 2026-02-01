@@ -75,3 +75,4 @@ palette.Style(CommandPaletteStyle.Default with
 - [Input](../input.md)
 - [CommandBar](commandbar.md)
 - [Popup](popup.md)
+- [CommandPalette Specs](../specs/controls/commandpalette.md)

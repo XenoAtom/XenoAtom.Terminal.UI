@@ -75,3 +75,7 @@ breakdown.Style(new BreakdownStyle
     SegmentGap = 0,
 });
 ```
+
+## Related
+
+- [BreakdownChart Specs](../specs/controls/breakdownchart.md)

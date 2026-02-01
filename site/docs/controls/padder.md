@@ -28,3 +28,7 @@ new TextBlock("Hello").Pad(2);
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Related
+
+- [Padder Specs](../specs/controls/padder.md)

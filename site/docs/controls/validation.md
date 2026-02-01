@@ -64,3 +64,7 @@ var editor = new TextBox("Hello")
     .Validate(/* ... */)
     .Style(custom);
 ```
+
+## Related
+
+- [Validation Specs](../specs/controls/validation.md)

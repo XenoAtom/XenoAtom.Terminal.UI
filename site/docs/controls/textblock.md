@@ -90,3 +90,4 @@ new TextBlock("Banner")
 
 - [Binding](../binding.md)
 - [Styling](../styling.md)
+- [TextBlock Specs](../specs/controls/textblock.md)

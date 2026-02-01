@@ -40,3 +40,4 @@ new Rule()
 ## Related
 
 - [Styling](../styling.md)
+- [Rule Specs](../specs/controls/rule.md)

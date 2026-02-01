@@ -45,3 +45,4 @@ new Border(() => new TextBlock(DateTime.Now.ToString("T")));
 ## Related
 - [Group](group.md)
 - [Styling](../styling.md)
+- [Border Specs](../specs/controls/border.md)

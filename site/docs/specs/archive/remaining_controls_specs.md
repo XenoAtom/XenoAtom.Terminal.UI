@@ -8,6 +8,9 @@ This document describes the remaining controls and enhancements planned for the 
 It is written to be implementation-oriented: the intent is that an implementer can follow this document and add the
 controls with minimal design guesswork.
 
+> [!WARNING]
+> This document is kept for historical context. Some details may be outdated compared to the current implementation.
+
 This spec assumes the current architecture:
 
 - Retained-mode `Visual` tree with binding dependency tracking (measure/arrange/render dependencies).
@@ -21,7 +24,7 @@ This spec assumes the current architecture:
 
 ## TreeView Enhancements
 
-### 1. Spacing fix for emoji / grapheme clusters
+### Spacing fix for emoji / grapheme clusters
 
 - Change `TreeViewStyle.SpaceBetweenGlyphAndText` default from `2` → `1`.
   - Rationale: grapheme cluster width is now handled correctly across the stack; the previous “2” was compensating for
@@ -29,7 +32,7 @@ This spec assumes the current architecture:
   - This should align the TreeView with other list-like controls (ListBox, OptionList, SelectionList) that use “one gap”
     by default.
 
-### 2. Hierarchy guide lines (default ON)
+### Hierarchy guide lines (default ON)
 
 TreeView should be able to render classic tree “guide lines” (vertical continuation + branch joints), configurable
 through style.
@@ -113,7 +116,7 @@ Tooltips should be usable on any visual without attached properties (which the f
 
 ### Public API
 
-#### 1. `TooltipHost`
+#### `TooltipHost`
 
 Introduce a wrapper control that owns a tooltip for a single child:
 
@@ -135,7 +138,7 @@ Notes:
   - Recommended: the tooltip visual should be `IsEnabled = false` so `TerminalApp.DispatchMouseEvent` will skip it and
     deliver input to the underlying element.
 
-#### 2. Fluent syntax
+#### Fluent syntax
 
 Add a `VisualExtensions.Tooltip(...)` convenience:
 

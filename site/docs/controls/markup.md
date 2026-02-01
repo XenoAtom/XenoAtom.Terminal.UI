@@ -27,3 +27,4 @@ new Markup("[bold]Hello[/] [gray]world[/]!");
 ## Related
 - [Markup Parsing](../markup-parsing.md)
 - [Styling](../styling.md)
+- [Markup Specs](../specs/controls/markup.md)

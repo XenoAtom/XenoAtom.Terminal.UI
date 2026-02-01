@@ -55,3 +55,7 @@ var bar = new CommandBar()
 - [Commands](../commands.md)
 - [Command Specs](../specs/command_specs.md)
 - [Input](../input.md)
+
+## Related
+
+- [CommandBar Specs](../specs/controls/commandbar.md)

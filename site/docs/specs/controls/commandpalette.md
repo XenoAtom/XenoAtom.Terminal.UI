@@ -5,7 +5,7 @@ title: Command Palette (Specs)
 # Command Palette (Specs)
 
 This document specifies the **CommandPalette v1** for XenoAtom.Terminal.UI and how it integrates with the unified
-`Command` system ([Command Specs](command_specs.md)).
+`Command` system ([Command Specs](../command_specs.md)).
 
 The goal is to make commands **discoverable**, **searchable**, and **easy to invoke**, while staying consistent with:
 
@@ -15,9 +15,9 @@ The goal is to make commands **discoverable**, **searchable**, and **easy to inv
 
 ---
 
-## 1. Goals / non-goals
+## Goals / non-goals
 
-### 1.1 Goals (v1)
+### Goals (v1)
 
 - Provide a first-class **command palette UX**:
   - open/close via command shortcut (typically `Ctrl+P`, configurable)
@@ -38,14 +38,14 @@ The goal is to make commands **discoverable**, **searchable**, and **easy to inv
 - Integrate with the binding engine:
   - `CanExecute` and `IsVisible` affect the list and automatically invalidate when their dependencies change
 
-### 1.2 Non-goals (v1)
+### Non-goals (v1)
 
 - A full “omnibox” with modes (`>`, `:`) and pluggable non-command providers (files, symbols, etc.).
 - Inline hosting (popups/windows are fullscreen-only today).
 
 ---
 
-## 2. Current state (code)
+## Current state (code)
 
 Existing controls:
 
@@ -59,9 +59,9 @@ The current implementation is **not integrated with `Command`** (it is a separat
 
 ---
 
-## 3. Proposed v1 design
+## Proposed v1 design
 
-### 3.1 Palette item model: use `Command` directly
+### Palette item model: use `Command` directly
 
 The palette should operate on `XenoAtom.Terminal.UI.Commands.Command`.
 
@@ -76,7 +76,7 @@ For v1, we do **not** want a separate `CommandPaletteItem` abstraction:
 - Remove `CommandPaletteItem`.
 - The palette is responsible for building a display row for each `Command`.
 
-### 3.2 How palette collects commands
+### How palette collects commands
 
 Introduce a **single internal helper** that all command surfaces can use:
 
@@ -104,11 +104,11 @@ Rules:
 
 This is the same philosophy as `CommandBar`, but centralized so `CommandPalette` and future `ContextMenu` use the same logic.
 
-### 3.3 Search text: how commands should be matched
+### Search text: how commands should be matched
 
 Command palette needs a searchable string for each command.
 
-#### 3.3.1 Minimal v1 rule (no `Command` API changes)
+#### Minimal v1 rule (no `Command` API changes)
 
 Search text is computed as:
 
@@ -122,7 +122,7 @@ Implementation note: **do not allocate** for search. Instead:
 
 This is enough for v1 and avoids adding new API surface to `Command`.
 
-#### 3.3.2 Optional v1 enhancement (recommended): add `Name` / `SearchText`
+#### Optional v1 enhancement (recommended): add `Name` / `SearchText`
 
 If we want command palette and future “command prompt” (`/help`) to be first-class, consider extending `Command` with:
 
@@ -138,7 +138,7 @@ Matching then uses:
 
 **Note:** this is safe for NativeAOT and minimal overhead because it is static metadata per command.
 
-### 3.4 Ranking rules
+### Ranking rules
 
 Given query `q` and candidate text `t`, rank as:
 
@@ -153,7 +153,7 @@ Ties:
 
 The v1 implementation can be simple and deterministic (no fuzzy scoring required).
 
-### 3.5 Executing a command from the palette
+### Executing a command from the palette
 
 When user activates a selected item:
 
@@ -167,9 +167,9 @@ When user activates a selected item:
 
 ---
 
-## 4. UI behavior
+## UI behavior
 
-### 4.1 Opening / closing
+### Opening / closing
 
 - Palette opens as a `Popup` hosted by the app window layer (fullscreen only).
 - Palette closes when:
@@ -177,7 +177,7 @@ When user activates a selected item:
   - focus moves outside palette (click outside)
   - command executed successfully
 
-### 4.2 Focus management
+### Focus management
 
 When opened:
 
@@ -189,7 +189,7 @@ While open:
 - `Tab` stays within the palette (search box ↔ results list)
 - global commands that conflict should not execute (palette should capture key events)
 
-### 4.3 List behavior
+### List behavior
 
 - results are virtualized using existing list control (`OptionList<Command>`)
 - the list shows:
@@ -199,9 +199,9 @@ While open:
 
 ---
 
-## 5. Styling and templating
+## Styling and templating
 
-### 5.1 Palette style
+### Palette style
 
 Introduce `CommandPaletteStyle` (or update existing one) with:
 
@@ -210,7 +210,7 @@ Introduce `CommandPaletteStyle` (or update existing one) with:
 - optional `DescriptionVisible` / `ShowDescription`
 - optional `MaxWidth`, `ResultsHeight`, padding, etc.
 
-### 5.2 Default item template
+### Default item template
 
 Default row visual (single line):
 
@@ -231,9 +231,9 @@ Shortcut formatting:
 
 ---
 
-## 6. Context integration
+## Context integration
 
-### 6.1 Palette command(s)
+### Palette command(s)
 
 The palette itself should be opened by a command registered by the app:
 
@@ -243,7 +243,7 @@ The palette itself should be opened by a command registered by the app:
   - either `Ctrl+P` (recommended)
   - or a sequence such as `Ctrl+K Ctrl+P` (common in editors)
 
-### 6.2 Updating list as context changes
+### Updating list as context changes
 
 While the palette is open:
 
@@ -252,7 +252,7 @@ While the palette is open:
 
 ---
 
-## 7. Tests
+## Tests
 
 - Collect logic:
   - local overrides global (same `Id`)
@@ -268,7 +268,7 @@ While the palette is open:
 
 ---
 
-## 8. Implementation steps
+## Implementation steps
 
 1. Introduce `CommandQuery` helper (internal) used by command surfaces.
 2. Refactor `CommandPalette` to operate on `Command` directly.

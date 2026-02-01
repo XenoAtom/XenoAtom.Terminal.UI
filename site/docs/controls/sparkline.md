@@ -33,3 +33,4 @@ new Sparkline()
 
 - [LineChart](linechart.md)
 - [Styling](../styling.md)
+- [Sparkline Specs](../specs/controls/sparkline.md)

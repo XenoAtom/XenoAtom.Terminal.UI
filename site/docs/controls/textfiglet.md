@@ -37,3 +37,7 @@ Use `TextFigletStyle` to change the foreground/background and decorations:
 new TextFiglet("XenoAtom")
     .Style(TextFigletStyle.Default with { TextStyle = CellStyle.None | TextStyle.Bold });
 ```
+
+## Related
+
+- [TextFiglet Specs](../specs/controls/textfiglet.md)

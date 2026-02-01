@@ -17,9 +17,9 @@ The goal is to provide an implementation blueprint that fits the existing framew
 
 ---
 
-## 1. Goals / non-goals
+## Goals / non-goals
 
-### 1.1 Goals
+### Goals
 
 - Undo/redo of **document mutations** initiated by an editor:
   - typing, paste, delete/backspace, "kill" operations, replace/replace-all.
@@ -34,7 +34,7 @@ The goal is to provide an implementation blueprint that fits the existing framew
   - if the document changes outside the editor's undo system, the undo history MUST be invalidated.
 - Keep it efficient enough for typical terminal usage while remaining simple to implement.
 
-### 1.2 Non-goals (v1)
+### Non-goals (v1)
 
 - Persistent history across app runs.
 - Branching undo trees (linear undo/redo only).
@@ -44,7 +44,7 @@ The goal is to provide an implementation blueprint that fits the existing framew
 
 ---
 
-## 2. Code map / current architecture
+## Code map / current architecture
 
 Relevant existing types:
 
@@ -62,7 +62,7 @@ Relevant existing types:
 
 ---
 
-## 3. Concepts and terminology
+## Concepts and terminology
 
 - **Undo stack**: sequence of performed undoable edits (oldest → newest).
 - **Redo stack**: sequence of undone edits that can be redone (oldest → newest).
@@ -75,9 +75,9 @@ Relevant existing types:
 
 ---
 
-## 4. Public API surface (v1)
+## Public API surface (v1)
 
-### 4.1 `TextEditorBase` API
+### `TextEditorBase` API
 
 Expose undo/redo as editor-level behavior (owned by the editor by default):
 
@@ -94,7 +94,7 @@ Notes:
 - `CanUndo/CanRedo` MUST update when the stacks change. They should be implemented as bindable properties so UI can react.
 - `ClearUndoHistory()` MUST clear both stacks and update `CanUndo/CanRedo`.
 
-### 4.2 Optional future API (v2+)
+### Optional future API (v2+)
 
 - Share undo history across multiple editor views of the same document (document-owned manager).
 - Undo scopes exposed as `IDisposable BeginUndoGroup(string? label = null)` for advanced callers.
@@ -103,9 +103,9 @@ v1 can keep the core manager internal but should keep the design compatible with
 
 ---
 
-## 5. Internal design (recommended)
+## Internal design (recommended)
 
-### 5.1 Ownership model (v1)
+### Ownership model (v1)
 
 For v1, the simplest and safest model is:
 
@@ -118,9 +118,9 @@ If the editor's `TextDocument` is replaced (`TextEditorBase.TextDocument = ...`)
 - attach to the new document,
 - clear undo/redo stacks.
 
-### 5.2 Data structures
+### Data structures
 
-#### 5.2.1 `TextChange`
+#### `TextChange`
 
 Represents a replace operation at a position:
 
@@ -136,7 +136,7 @@ Undo applies the inverse:
 
 Redo applies the forward operation again.
 
-#### 5.2.2 `EditorStateSnapshot`
+#### `EditorStateSnapshot`
 
 Undo should restore editor state meaningfully. Minimum fields:
 
@@ -155,7 +155,7 @@ Restoration rules:
 - Ensure they are aligned to a grapheme/text-element boundary (`TerminalTextUtility.GetPreviousTextElementIndex` / `GetNextTextElementIndex`).
 - After restoration, call `EnsureCaretVisible(...)` to make the caret visible (or restore scroll offsets if you store them).
 
-#### 5.2.3 `UndoEntry`
+#### `UndoEntry`
 
 An undo entry contains:
 
@@ -166,7 +166,7 @@ An undo entry contains:
 - `DateTime Timestamp` (or tick count) for coalescing windows
 - Optional metadata for merging (see 5.4).
 
-### 5.3 Applying undo/redo
+### Applying undo/redo
 
 Undo/redo MUST not create new undo entries while applying changes:
 
@@ -186,11 +186,11 @@ Implementation note:
 
 - Use `using var _ = document.BeginUpdate();` around applying all changes in an entry to reduce intermediate work.
 
-### 5.4 Coalescing rules
+### Coalescing rules
 
 Coalescing should be supported, but conservative:
 
-#### 5.4.1 Typing coalescing (default)
+#### Typing coalescing (default)
 
 Typing edits (insertion with no selection) MAY be merged into the previous entry when:
 
@@ -203,7 +203,7 @@ Typing edits (insertion with no selection) MAY be merged into the previous entry
 
 If merged, the previous entry's `InsertedText` grows and the `After` snapshot updates.
 
-#### 5.4.2 Backspace/delete coalescing
+#### Backspace/delete coalescing
 
 Repeated backspace/delete can coalesce similarly when:
 
@@ -211,7 +211,7 @@ Repeated backspace/delete can coalesce similarly when:
 - within time window,
 - deletion positions are contiguous and direction-consistent.
 
-#### 5.4.3 Non-coalescing operations
+#### Non-coalescing operations
 
 These should NOT coalesce by default:
 
@@ -220,7 +220,7 @@ These should NOT coalesce by default:
 - Kill operations (`Ctrl+K/U/W`) (unless you explicitly decide to treat them as delete coalescing)
 - Any operation performed while selection exists (replace selection) unless explicitly grouped in a transaction
 
-### 5.5 Transactions / grouping
+### Transactions / grouping
 
 Some operations apply multiple document changes but should be one undo step:
 
@@ -240,7 +240,7 @@ During an open group:
 - the redo stack MUST be cleared on commit (like any new entry),
 - group commit produces a single `UndoEntry`.
 
-### 5.6 External changes and invalidation
+### External changes and invalidation
 
 Undo history is only valid if the document hasn't changed unexpectedly.
 
@@ -260,9 +260,9 @@ Notes:
 
 ---
 
-## 6. Integration in `TextEditorCore`
+## Integration in `TextEditorCore`
 
-### 6.1 Central rule: mutate through a single path
+### Central rule: mutate through a single path
 
 All document mutation code paths in `TextEditorCore` MUST route through one helper that:
 
@@ -276,7 +276,7 @@ All document mutation code paths in `TextEditorCore` MUST route through one help
 
 This prevents missing cases and keeps behavior consistent.
 
-### 6.2 Mutations that must be captured
+### Mutations that must be captured
 
 At minimum:
 
@@ -288,7 +288,7 @@ At minimum:
   - `ReplaceCurrentSearchMatch(...)`
   - `ReplaceAllSearchMatches(...)` (transaction)
 
-### 6.3 Search/Replace integration points
+### Search/Replace integration points
 
 - "Find" does not affect undo.
 - "Replace current" records one Replace entry.
@@ -299,9 +299,9 @@ the undo transaction MUST record changes in the **same execution order**, and un
 
 ---
 
-## 7. Keyboard shortcuts and conflicts
+## Keyboard shortcuts and conflicts
 
-### 7.1 Terminal realities
+### Terminal realities
 
 Terminal key input differs per terminal and OS:
 
@@ -313,7 +313,7 @@ Therefore:
 - Defaults must be conservative and predictable.
 - Multiple gestures for redo should be supported.
 
-### 7.2 Default bindings (recommended)
+### Default bindings (recommended)
 
 **Undo**:
 
@@ -328,14 +328,14 @@ Important: the current editor supports Emacs-like kill/yank (`Ctrl+K/U/W/Y`). In
 - `Ctrl+Y` is already used for yank and MUST remain yank by default.
 - redo should default to `Ctrl+Shift+Z` (and could also support `Ctrl+R` if you want an alternative that's more likely to be emitted).
 
-### 7.3 Configurability
+### Configurability
 
 Expose a configuration mechanism for undo/redo gestures in `TextEditorBase` (or a derived options object),
 so applications can choose Windows-like vs Emacs-like behavior.
 
 ---
 
-## 8. Testing requirements
+## Testing requirements
 
 Add unit tests for:
 
@@ -360,7 +360,7 @@ For time-based coalescing tests:
 
 ---
 
-## 9. Future roadmap (CodeEditor)
+## Future roadmap (CodeEditor)
 
 When introducing a piece-table/rope based document (CodeEditor v2), consider moving undo/redo closer to the document:
 

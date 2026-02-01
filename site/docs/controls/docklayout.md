@@ -23,3 +23,7 @@ new DockLayout()
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch` 
+
+## Related
+
+- [DockLayout Specs](../specs/controls/docklayout.md)

@@ -39,3 +39,4 @@ If you don’t provide `Text`, the URI is used as the display text.
 
 - [Input](../input.md)
 - [Styling](../styling.md)
+- [Link Specs](../specs/controls/link.md)

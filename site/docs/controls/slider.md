@@ -33,3 +33,4 @@ new Slider().Minimum(0).Maximum(100).Value(value);
 
 - [Binding](../binding.md)
 - [Styling](../styling.md)
+- [Slider Specs](../specs/controls/slider.md)

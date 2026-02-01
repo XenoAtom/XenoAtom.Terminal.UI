@@ -14,7 +14,7 @@ The design is inspired by modern terminal UI patterns and spreadsheet/datagrid e
 
 ---
 
-## 1. Goals
+## Goals
 
 - **High performance** with large datasets (10k+ rows) through virtualization and allocation-conscious rendering.
 - **Scrollable** in both directions, with optional **frozen** header/rows/columns.
@@ -27,10 +27,10 @@ The design is inspired by modern terminal UI patterns and spreadsheet/datagrid e
   - versioning,
   - change notifications,
   - batching.
-- **Templating** for display and editing via `DataTemplate<T>` (see [Data Template Specs](data_template_specs.md)).
+- **Templating** for display and editing via `DataTemplate<T>` (see [Data Template Specs](../data_template_specs.md)).
 - **Bulk editing UX**: cell navigation + inline editor, with efficient commit/cancel and validation hooks.
 
-## 2. Non-goals (V1)
+## Non-goals (V1)
 
 - A full spreadsheet formula engine.
 - Per-cell arbitrary nested interactive UI as the default rendering path (allowed, but not the fast path).
@@ -39,7 +39,7 @@ The design is inspired by modern terminal UI patterns and spreadsheet/datagrid e
 
 ---
 
-## 3. Terminology
+## Terminology
 
 - **Document**: the mutable underlying data structure (rows, columns, values) with change notifications.
 - **Snapshot**: an immutable view of a document at a specific version (read-only; safe for rendering).
@@ -51,7 +51,7 @@ The design is inspired by modern terminal UI patterns and spreadsheet/datagrid e
 
 ---
 
-## 4. Architecture overview
+## Architecture overview
 
 `DataGridControl` is split into three layers:
 
@@ -66,9 +66,9 @@ The control MUST be able to operate with:
 
 ---
 
-## 5. Data model contracts
+## Data model contracts
 
-### 5.1 `IDataGridDocument` (mutation + versioning)
+### `IDataGridDocument` (mutation + versioning)
 
 The document API SHOULD follow the same design principles as `ITextDocument`:
 
@@ -122,7 +122,7 @@ public interface IDataGridDocument
 }
 ```
 
-### 5.2 `IDataGridSnapshot` (stable reads for rendering)
+### `IDataGridSnapshot` (stable reads for rendering)
 
 Snapshots MUST be:
 
@@ -182,7 +182,7 @@ Row model edits:
 - Structural edits (row insertion/removal/replacement) are performed through `IDataGridDocument` methods and MUST raise
   `Changed` events with `Rows` (or `Reset`) so views can invalidate caches.
 
-### 5.3 Change event args
+### Change event args
 
 Changes should be communicated as *coarse ranges* and *kinds* to keep invalidation fast.
 
@@ -226,7 +226,7 @@ Normative guidance:
 
 ---
 
-## 6. View model for sorting/filtering/search (V1)
+## View model for sorting/filtering/search (V1)
 
 To avoid forcing `DataGrid` to materialize or reorder large datasets itself, projection concerns (sorting, filtering,
 searching) SHOULD be delegated to an `IDataGridView` abstraction.
@@ -280,9 +280,9 @@ Sorting, filtering, and search API shape (V1):
 
 ---
 
-## 7. `DataGridControl` control public API
+## `DataGridControl` control public API
 
-### 7.1 Control type
+### Control type
 
 ```csharp
 using XenoAtom.Terminal.UI.Scrolling;
@@ -295,7 +295,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
 }
 ```
 
-### 7.2 Bindable properties
+### Bindable properties
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -316,7 +316,7 @@ The control MUST expose a `ScrollModel` for interoperability with `ScrollViewer`
 public ScrollModel Scroll { get; }
 ```
 
-### 7.3 Selection types
+### Selection types
 
 ```csharp
 namespace XenoAtom.Terminal.UI.Controls;
@@ -352,7 +352,7 @@ Selection model rules:
 - In `Row` mode, `CurrentCell.Column` represents the “current column” for horizontal navigation, but selection is row-based.
 - In `Column` mode, `CurrentCell.Row` represents the “current row” for vertical navigation, but selection is column-based.
 
-### 7.4 Routed events (suggested)
+### Routed events (suggested)
 
 `DataGrid` SHOULD expose routed events for:
 
@@ -370,9 +370,9 @@ Event args should include (at minimum):
 
 ---
 
-## 8. Columns and templating
+## Columns and templating
 
-### 8.1 `DataGridColumn`
+### `DataGridColumn`
 
 The column object is responsible for:
 
@@ -491,9 +491,9 @@ Notes:
   - For read-only cells, `DataGrid` MUST use `ReadOnlyCellTemplate` when it is not empty; otherwise it MUST use
     `CellTemplate` (and then environment/default fallbacks as usual).
 
-### 8.2 Data template context for cells
+### Data template context for cells
 
-To reuse the existing `DataTemplate<T>` contract (see [Data Template Specs](data_template_specs.md)), `DataGrid` SHOULD use
+To reuse the existing `DataTemplate<T>` contract (see [Data Template Specs](../data_template_specs.md)), `DataGrid` SHOULD use
 `DataTemplateContext` as follows when invoking `CellTemplate` / `CellEditorTemplate`:
 
 - `Owner` = the `DataGrid` instance
@@ -506,9 +506,9 @@ needing a `(row, column)` pair in the context.
 
 ---
 
-## 9. Scrolling + frozen panes
+## Scrolling + frozen panes
 
-### 9.1 Scrolling model
+### Scrolling model
 
 `DataGrid` MUST be vertically and horizontally scrollable and MUST express its scroll state through its `ScrollModel`:
 
@@ -533,7 +533,7 @@ Extent computation:
 - `ExtentHeight` MUST be `HeaderHeight + FrozenRows + RowCount` (in terminal rows), plus optional separators.
 - `ExtentWidth` MUST be the sum of resolved column widths plus optional separators/borders.
 
-### 9.2 Frozen regions
+### Frozen regions
 
 `DataGrid` MUST support:
 
@@ -550,9 +550,9 @@ Implementation guidance:
 
 ---
 
-## 10. Virtualization and recycling (performance-critical)
+## Virtualization and recycling (performance-critical)
 
-### 10.1 Row/column virtualization
+### Row/column virtualization
 
 The control MUST NOT allocate or measure visuals for off-screen rows/cells by default.
 
@@ -564,7 +564,7 @@ Stronger requirement (recommended):
 
 - Virtualize both dimensions: only visible rows AND visible columns may have realized cell visuals.
 
-### 10.2 Fast rendering path
+### Fast rendering path
 
 To keep performance predictable for large datasets, the default display path SHOULD be “render text directly”:
 
@@ -576,7 +576,7 @@ To keep performance predictable for large datasets, the default display path SHO
 
 Cell templating (Visual-based) SHOULD still be supported, but it is not the universal fast path.
 
-### 10.3 Recycling pools
+### Recycling pools
 
 For templated cells/headers/editors, `DataGrid` SHOULD maintain recycle pools keyed by:
 
@@ -584,13 +584,13 @@ For templated cells/headers/editors, `DataGrid` SHOULD maintain recycle pools ke
 - role (Display vs Editor),
 - and (optionally) column key.
 
-This mirrors the `DataTemplate<T>.TryUpdate(...)` pattern from [Data Template Specs](data_template_specs.md).
+This mirrors the `DataTemplate<T>.TryUpdate(...)` pattern from [Data Template Specs](../data_template_specs.md).
 
 ---
 
-## 11. Selection and navigation
+## Selection and navigation
 
-### 11.1 Keyboard navigation (default bindings)
+### Keyboard navigation (default bindings)
 
 Suggested bindings (exact gestures may evolve):
 
@@ -602,7 +602,7 @@ Suggested bindings (exact gestures may evolve):
 
 `DataGrid` MUST keep the current cell visible by calling `Scroll.ScrollToMakeVisible(...)` as navigation occurs.
 
-### 11.2 Selection ranges
+### Selection ranges
 
 Selection SHOULD be representable without materializing all selected indices (important for large ranges).
 
@@ -612,7 +612,7 @@ Recommended representation:
 - optional additional ranges (multi-select),
 - support for row/column ranges.
 
-### 11.3 Mouse support (when available)
+### Mouse support (when available)
 
 - Click selects cell/row/column based on `SelectionMode`
 - Drag selects a range (optional V1)
@@ -622,7 +622,7 @@ Recommended representation:
   - The last column SHOULD also be resizable via a trailing resize handle after the last column.
   - Hovering a resize handle SHOULD show a distinct hover style to make the affordance discoverable.
 
-### 11.4 Commands (discoverability)
+### Commands (discoverability)
 
 `DataGridControl` SHOULD register UI commands for key gestures it supports so they are discoverable via `CommandBar`.
 Suggested built-in commands:
@@ -637,7 +637,7 @@ Suggested built-in commands:
 
 ---
 
-## 12. Sorting, filtering, and search
+## Sorting, filtering, and search
 
 Sorting, filtering, and searching are part of V1.
 
@@ -682,7 +682,7 @@ public interface ISearchableDataGridView : IDataGridView
 
 Views MUST raise `Changed` with `Kind = DataGridChangeKind.Projection` when these settings change.
 
-### 12.1 Sorting
+### Sorting
 
 Sorting MUST be expressed through the view layer when possible:
 
@@ -694,7 +694,7 @@ Suggested UX:
 - click header toggles `None → Asc → Desc → None`
 - `Shift+click` adds/removes secondary sort (multi-sort)
 
-### 12.2 Filtering
+### Filtering
 
 Filtering is similarly delegated to the view layer.
 
@@ -716,7 +716,7 @@ Filtering semantics (default view implementation):
 - per-column filters are AND-ed together,
 - a global “quick filter” MAY be supported (matches any visible column).
 
-### 12.3 Searching (find)
+### Searching (find)
 
 Searching is distinct from filtering: it navigates to matching cells without changing the row set.
 
@@ -732,9 +732,9 @@ For large datasets, `DataGrid` MAY delegate match discovery to a view implementi
 
 ---
 
-## 13. Editing model (bulk edit)
+## Editing model (bulk edit)
 
-### 13.1 Edit lifecycle
+### Edit lifecycle
 
 `DataGrid` MUST support a single active editor at a time (spreadsheet-style) for performance:
 
@@ -747,7 +747,7 @@ Read-only rule:
 
 - `DataGrid` MUST NOT enter edit mode for a read-only cell (see section 8.1).
 
-### 13.2 Validation hooks
+### Validation hooks
 
 Validation SHOULD be supported via:
 
@@ -759,7 +759,7 @@ On validation failure:
 - the edit MUST remain active,
 - the control SHOULD show an inline validation hint (style-driven).
 
-### 13.3 Typed editing
+### Typed editing
 
 For common types, the control SHOULD provide default editors:
 
@@ -772,9 +772,9 @@ For custom types, `CellEditorTemplate` is used.
 
 ---
 
-## 14. Adapters and integrations
+## Adapters and integrations
 
-### 14.1 `System.Data.DataTable`
+### `System.Data.DataTable`
 
 Provide an adapter (name illustrative):
 
@@ -789,7 +789,7 @@ Requirements:
   Value changes SHOULD be reflected through the row model binding surface (preferred) or by raising `Reset` when
   fine-grained invalidation is not practical.
 
-### 14.2 Items source / view-model lists
+### Items source / view-model lists
 
 Provide an adapter for `IReadOnlyList<T>` / `BindableList<T>` (name illustrative):
 
@@ -826,7 +826,7 @@ using (doc.BeginUpdate())
 
 ---
 
-## 15. Styling
+## Styling
 
 Introduce a style record similar to `TableStyle`, `ListBoxStyle`, etc.:
 
@@ -853,7 +853,7 @@ This is closer to Textual’s DataTable than `TableStyle.Grid`.
 
 ---
 
-## 16. Relationship to existing `Table`
+## Relationship to existing `Table`
 
 - `Table` remains the lightweight “static display” control.
 - `DataGrid` is the “interactive, virtualized, data-bound” control.

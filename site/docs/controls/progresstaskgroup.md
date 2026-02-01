@@ -58,3 +58,7 @@ var group = new ProgressTaskGroup()
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Start` 
+
+## Related
+
+- [ProgressTaskGroup Specs](../specs/controls/progresstaskgroup.md)

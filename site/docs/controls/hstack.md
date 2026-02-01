@@ -25,3 +25,4 @@ new HStack(
 ## Related
 - [Layout](../layout.md)
 - [VStack](vstack.md)
+- [HStack Specs](../specs/controls/hstack.md)

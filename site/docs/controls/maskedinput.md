@@ -97,3 +97,7 @@ See [Undo/Redo](../undo-redo.md).
 `MaskedInput` uses `MaskedInputStyle` (derived from `TextBoxStyle`) for padding and background fill. Placeholder and
 separator foregrounds are also configurable. The style also controls the placeholder glyphs used when the template does not
 specify a `;c` suffix.
+
+## Related
+
+- [MaskedInput Specs](../specs/controls/maskedinput.md)

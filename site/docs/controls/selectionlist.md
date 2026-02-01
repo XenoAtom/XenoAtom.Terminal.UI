@@ -64,3 +64,4 @@ If you don’t set `ItemTemplate`, the template is resolved from the environment
 - [Data Templating](../data-templating.md)
 - [Binding](../binding.md)
 - [ScrollViewer](scrollviewer.md)
+- [SelectionList Specs](../specs/controls/selectionlist.md)

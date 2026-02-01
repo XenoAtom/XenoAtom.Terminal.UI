@@ -78,3 +78,4 @@ When the extent exceeds the viewport, ScrollViewer:
 
 - [Scrolling](../scrolling.md)
 - [ScrollBar](scrollbar.md)
+- [ScrollViewer Specs](../specs/controls/scrollviewer.md)

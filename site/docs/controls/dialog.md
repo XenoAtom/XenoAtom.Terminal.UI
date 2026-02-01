@@ -25,3 +25,7 @@ See also:
 - [Popup](popup.md)
 - [Backdrop](backdrop.md)
 - [Input](../input.md)
+
+## Related
+
+- [Dialog Specs](../specs/controls/dialog.md)

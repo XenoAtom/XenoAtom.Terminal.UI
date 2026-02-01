@@ -65,3 +65,7 @@ menuBar.Style(MenuListStyle.Default with
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+
+## Related
+
+- [MenuBar Specs](../specs/controls/menubar.md)

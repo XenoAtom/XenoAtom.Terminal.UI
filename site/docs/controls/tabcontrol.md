@@ -43,3 +43,4 @@ new TabControl(
 
 - [Styling](../styling.md)
 - [Layout](../layout.md)
+- [TabControl Specs](../specs/controls/tabcontrol.md)

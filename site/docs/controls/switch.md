@@ -36,3 +36,4 @@ new Switch("Enabled").IsOn(enabled);
 
 - [Binding](../binding.md)
 - [Styling](../styling.md)
+- [Switch Specs](../specs/controls/switch.md)
