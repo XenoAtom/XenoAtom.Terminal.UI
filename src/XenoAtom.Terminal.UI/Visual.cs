@@ -443,6 +443,29 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     public Theme GetTheme() => GetStyle<Theme>();
 
     /// <summary>
+    /// Gets the absolute bounds of this visual in the coordinate space of the visual tree root.
+    /// </summary>
+    /// <remarks>
+    /// The returned rectangle is based on the arranged <see cref="Bounds"/> of this visual and its ancestors.
+    /// </remarks>
+    public Rectangle GetAbsoluteBounds()
+    {
+        VerifyAccess();
+
+        var rect = Bounds;
+        var x = rect.X;
+        var y = rect.Y;
+        for (var p = Parent; p is not null; p = p.Parent)
+        {
+            var pb = p.Bounds;
+            x += pb.X;
+            y += pb.Y;
+        }
+
+        return new Rectangle(x, y, rect.Width, rect.Height);
+    }
+
+    /// <summary>
     /// Registers a dynamic update callback for this visual.
     /// </summary>
     /// <remarks>
