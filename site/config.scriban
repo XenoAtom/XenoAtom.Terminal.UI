@@ -3,8 +3,12 @@ author = "Alexandre Mutel"
 title = "XenoAtom.Terminal.UI"
 description = "A modern retained-mode terminal UI framework for .NET."
 
-basepath = ""
-baseurl = baseurl ?? "https://xenoatom.github.io/terminal"
+baseurl = baseurl ?? "https://xenoatom.github.io"
+if environment == "dev"
+    basepath = environment == "prod" ? "/terminal" : ""
+else
+    basepath = "/terminal"
+end
 
 # Use `base` as a default layout
 layout = "base"

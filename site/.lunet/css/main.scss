@@ -3,7 +3,7 @@
  **********************************************/
 
 $xenoatom-top-offset: 120.5px;
-$font-size-base: 1.25rem;
+$font-size-base: 1rem;
 $font-family-base: Figtree, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
 $bootstrap-icons-font-dir: "/fonts";
@@ -296,11 +296,11 @@ button.copy-to-clipboard-button[data-copy-state="copy-error"] > span {
  * frontpage
  **********************************************/
 .xenoatom-home, .xenoatom-docs {
-    font-size: 1.25rem;
+    //font-size: 1.25rem;
 }
 
 .xenoatom-home h3 > i {
-    font-size: 1.3em;
+    //font-size: 1.3em;
     margin-right: 1rem;
 }
 
@@ -495,18 +495,22 @@ footer {
 }
 
 .xenoatom-docs .toc-link {
-    padding-bottom: 0.1em;
+    //padding-bottom: 0.1em;
 }
 
-.xenoatom-docs .menu a.toc-link {
-    //text-decoration-line: underline;
+li.toc-list-item {
+    list-style-type: none;
+}
+
+.xenoatom-docs a.toc-link {
+    text-decoration-line: none;
     //text-decoration-style: dotted;
     color: var(--bs-body-color-darker-20);
     //color: var(--bs-body-color);
 }
 
 .xenoatom-docs a.toc-link:hover {
-    text-decoration-line: underline;
+    text-decoration-line: node;
     text-decoration-style: solid;
     color: var(--bs-body-color-darker-10);
 }
@@ -516,16 +520,25 @@ footer {
     width: 100%;
 }
 
-.xenoatom-docs a.toc-link.is-active-link {
-    //border-right-color: #00CCFF;
+.xenoatom-docs .js-toc a.toc-link.is-active-link {
+    border-left-color: #00CCFF;
+    border-left-style: solid;
+}
+
+.xenoatom-docs .js-toc a.toc-link {
+    display: block;
+    padding: .125rem 0 .125rem .75rem;
+    text-decoration: none;
+    border-left: .125rem solid transparent;
 }
 
 .xenoatom-docs .toc-title {
-    //border-bottom-style: solid;
-    //border-bottom-width: thin;
-    padding-inline-start: 0.5rem;
+    border-bottom-style: solid;
+    border-bottom-width: thin;
+    font-size: 1rem;
+    //padding-inline-start: 0.5rem;
     //border-bottom-color: rgba(0, 0, 0, 0.1);
-    text-align: center;
+    //text-align: center;
 }
 
 .xenoatom-docs .toc {
@@ -550,12 +563,12 @@ footer {
 }
 
 .xenoatom-docs .js-toc {
-    max-height: 50vh;
-    border-left-width: 1px;
-    border-left-color: #333;
-    border-left-style: solid;
+    //max-height: 50vh;
+    // border-left-width: 1px;
+    // border-left-color: #333;
+    // border-left-style: solid;
     //padding-left: 0.5rem;
-    font-size: 1.05rem;
+    //font-size: 1.05rem;
 }
 
 /* Remove sticky on mobile */

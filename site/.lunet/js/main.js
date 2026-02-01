@@ -64,9 +64,10 @@ if (jstoc.length > 0)
         // Where to grab the headings to build the table of contents.
         contentSelector: '.js-toc-content',
         // Which headings to grab inside of the contentSelector element.
-        headingSelector: 'h2, h3, h4, h5',
+        headingSelector: 'h2, h3, h4',
         collapseDepth: 3,
-        orderedList: true,
+        // Ensure correct positioning
+        hasInnerContainers: true,
     });
 }
 

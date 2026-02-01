@@ -6,6 +6,8 @@ title: Controls Reference
 
 This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 
+<div class="row"><div class="col">
+
 ## Text input
 
 - [TextBox](textbox.md)
@@ -43,6 +45,8 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 - [Border](border.md)
 - [Group](group.md)
 - [Splitter](splitter.md)
+
+</div><div class="col">
 
 ## Scrolling
 
@@ -86,3 +90,5 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 - [Tooltip](tooltip.md)
 - [Backdrop](backdrop.md)
 - [Toast](toast.md)
+
+</div></div>
