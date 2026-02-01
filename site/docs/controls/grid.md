@@ -8,7 +8,7 @@ title: Grid
 
 Screenshot placeholder:
 
-![Grid](../../img/screenshots/grid.png)
+![Grid](../../img/screenshots/controls-demo/elderberry-dark-soft/grid.svg)
 
 ## Basic usage
 

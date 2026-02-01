@@ -8,7 +8,7 @@ title: ProgressTaskGroup
 
 Screenshot placeholder:
 
-![ProgressTaskGroup](../../img/screenshots/progresstaskgroup.png)
+![ProgressTaskGroup](../../img/screenshots/controls-demo/elderberry-dark-soft/progress-task-group.svg)
 
 ## Basic usage
 

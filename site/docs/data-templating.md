@@ -14,7 +14,7 @@ This enables:
 
 Screenshot placeholder:
 
-![Data templates](../img/screenshots/data-templates.png)
+![Data templates](../img/screenshots/controls-demo/elderberry-dark-soft/data-templates.svg)
 
 ## DataTemplates registry
 

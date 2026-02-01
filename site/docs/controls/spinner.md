@@ -8,7 +8,7 @@ title: Spinner
 
 Screenshot placeholder:
 
-![Spinner](../../img/screenshots/spinner.png)
+![Spinner](../../img/screenshots/controls-demo/elderberry-dark-soft/spinner.svg)
 
 ## Basic usage
 

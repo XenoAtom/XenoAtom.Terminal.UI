@@ -6,6 +6,10 @@ title: Controls Reference
 
 This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 
+> [!NOTE]
+> Most pages include an auto-generated screenshot from `samples/ControlsDemo`.
+> Regenerate them with `dotnet run -c Release --project samples/ControlsDemo -- --export-screenshots`.
+
 <div class="row"><div class="col">
 
 ## Text input

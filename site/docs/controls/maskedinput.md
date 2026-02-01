@@ -8,7 +8,7 @@ title: MaskedInput
 
 Screenshot placeholder:
 
-![MaskedInput](../../img/screenshots/maskedinput.png)
+![MaskedInput](../../img/screenshots/controls-demo/elderberry-dark-soft/masked-input.svg)
 
 ## Basic usage
 

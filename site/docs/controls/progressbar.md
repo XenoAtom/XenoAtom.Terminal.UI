@@ -8,7 +8,7 @@ title: ProgressBar
 
 Screenshot placeholder:
 
-![ProgressBar](../../img/screenshots/progressbar.png)
+![ProgressBar](../../img/screenshots/controls-demo/elderberry-dark-soft/progress-bar.svg)
 
 ## Basic usage
 

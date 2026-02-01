@@ -8,7 +8,7 @@ title: Center
 
 Screenshot placeholder:
 
-![Center](../../img/screenshots/center.png)
+![Center](../../img/screenshots/controls-demo/elderberry-dark-soft/center.svg)
 
 ## Basic usage
 

@@ -32,6 +32,16 @@ Build the site (always run this after changing `site/**`):
 
 Run from the `site` folder.
 
+## Generating control screenshots
+
+The controls documentation uses auto-generated SVG screenshots rendered from the ControlsDemo.
+
+Regenerate all screenshots (run from the repo root):
+
+`dotnet run -c Release --project samples/ControlsDemo -- --export-screenshots`
+
+Outputs are written under `site/img/screenshots/controls-demo/**`.
+
 ## Notes for agents
 
 - `readme.md` in a folder becomes the folder’s `index.html`. Keep these `readme.md` files compatible with both GitHub and the website.

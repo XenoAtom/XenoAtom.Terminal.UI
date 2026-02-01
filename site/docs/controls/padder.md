@@ -8,7 +8,7 @@ title: Padder
 
 Screenshot placeholder:
 
-![Padder](../../img/screenshots/padder.png)
+![Padder](../../img/screenshots/controls-demo/elderberry-dark-soft/padder.svg)
 
 ## Basic usage
 

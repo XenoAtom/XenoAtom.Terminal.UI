@@ -8,7 +8,7 @@ Splitters resize adjacent content panes using mouse drag.
 
 Screenshot placeholder:
 
-![Splitter](../../img/screenshots/splitter.png)
+![Splitter](../../img/screenshots/controls-demo/elderberry-dark-soft/splitter.svg)
 
 ## Basic usage
 

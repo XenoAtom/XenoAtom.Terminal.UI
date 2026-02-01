@@ -8,7 +8,7 @@ title: Canvas
 
 Screenshot placeholder:
 
-![Canvas](../../img/screenshots/canvas.png)
+![Canvas](../../img/screenshots/controls-demo/elderberry-dark-soft/canvas.svg)
 
 ## Basic usage
 

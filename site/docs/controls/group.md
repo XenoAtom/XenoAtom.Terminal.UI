@@ -8,7 +8,7 @@ title: Group
 
 Screenshot placeholder:
 
-![Group](../../img/screenshots/group.png)
+![Group](../../img/screenshots/controls-demo/elderberry-dark-soft/group.svg)
 
 ## Basic usage
 

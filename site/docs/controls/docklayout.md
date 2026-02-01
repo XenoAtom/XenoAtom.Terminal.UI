@@ -8,7 +8,7 @@ title: DockLayout
 
 Screenshot placeholder:
 
-![DockLayout](../../img/screenshots/docklayout.png)
+![DockLayout](../../img/screenshots/controls-demo/elderberry-dark-soft/dock-layout.svg)
 
 ## Basic usage
 

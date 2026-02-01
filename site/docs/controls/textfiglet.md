@@ -8,7 +8,7 @@ title: TextFiglet
 
 Screenshot placeholder:
 
-![TextFiglet](../../img/screenshots/textfiglet.png)
+![TextFiglet](../../img/screenshots/controls-demo/elderberry-dark-soft/text-figlet.svg)
 
 ## Basic usage
 

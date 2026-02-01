@@ -8,7 +8,7 @@ XenoAtom.Terminal.UI supports **context menus** (right-click menus) in fullscree
 
 Screenshot placeholder:
 
-![Context menu](../../img/screenshots/contextmenu.png)
+![Context menu](../../img/screenshots/controls-demo/elderberry-dark-soft/context-menu.svg)
 
 ## Fullscreen-only
 

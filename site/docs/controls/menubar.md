@@ -8,7 +8,7 @@ title: MenuBar
 
 Screenshot placeholder:
 
-![MenuBar](../../img/screenshots/menubar.png)
+![MenuBar](../../img/screenshots/controls-demo/elderberry-dark-soft/menu-bar.svg)
 
 ## Fullscreen-only
 
