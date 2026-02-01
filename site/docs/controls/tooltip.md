@@ -6,7 +6,7 @@ title: Tooltip
 
 Tooltips display additional information when the user hovers a visual.
 
-> Screenshot: `TODO`
+![Tooltip](../../img/screenshots/controls-demo/elderberry-dark-soft/tooltip.svg)
 
 ## Basic usage
 

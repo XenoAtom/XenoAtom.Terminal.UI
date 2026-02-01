@@ -9,7 +9,7 @@ title: CommandBar
 It collects `Command` instances registered on the focused visual (and its parents) plus app-level commands, then renders
 them as a sequence of keycaps and labels.
 
-> Screenshot placeholder: `img/screenshots/commandbar.png`
+![CommandBar](../../img/screenshots/controls-demo/elderberry-dark-soft/command-bar.svg)
 
 ## Example
 

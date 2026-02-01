@@ -1,8 +1,9 @@
+using System.Globalization;
 using System.Text;
+using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.ControlsDemo;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
-using System.Globalization;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo;
 
@@ -26,6 +27,15 @@ internal static class ScreenshotExport
 
         var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var written = 0;
+
+        var svgOptions = new CellBufferSvgExportOptions
+        {
+            AutoCrop = true,
+            Padding = new Geometry.Thickness(1),
+            FillBackground = true,
+            CellWidthPx = 9,
+            CellHeightPx = 18,
+        };
 
         var previousCulture = CultureInfo.CurrentCulture;
         var previousUiCulture = CultureInfo.CurrentUICulture;
@@ -51,8 +61,7 @@ internal static class ScreenshotExport
 
                 // Skip internal pages that don't represent a control screenshot.
                 var typeName = GetTypeNameFromId(id);
-                if (string.Equals(typeName, "WelcomeDemo", StringComparison.Ordinal) ||
-                    string.Equals(typeName, "ControlsDemoApp", StringComparison.Ordinal))
+                if (string.Equals(typeName, "ControlsDemoApp", StringComparison.Ordinal))
                 {
                     continue;
                 }
@@ -71,17 +80,34 @@ internal static class ScreenshotExport
 
                 var root = demo.Build(demoContext);
 
-                var buffer = VisualSnapshotRenderer.Render(root, width: width, maxHeight: maxHeight, theme: theme);
-                var svg = CellBufferSvgExporter.Export(buffer, new CellBufferSvgExportOptions
+                string svg;
+                if (RequiresAppSnapshot(typeName))
                 {
-                    AutoCrop = true,
-                    Padding = new Geometry.Thickness(1),
-                    FillBackground = true,
-                    CellWidthPx = 9,
-                    CellHeightPx = 18,
-                });
+                    // Some visuals rely on TerminalApp (window layer, focus, commands). Use a lightweight in-memory app snapshot.
+                    Func<Visual, bool>? hover = null;
+                    if (string.Equals(typeName, "TooltipDemo", StringComparison.Ordinal))
+                    {
+                        hover = static v => v is TooltipHost th && th.ShowDelayMilliseconds == 0;
+                    }
+
+                    svg = TerminalAppSnapshotRenderer.RenderSvg(root, width, maxHeight, theme, hover, svgOptions);
+                }
+                else
+                {
+                    var buffer = VisualSnapshotRenderer.Render(root, width: width, maxHeight: maxHeight, theme: theme);
+                    svg = CellBufferSvgExporter.Export(buffer, svgOptions);
+                }
 
                 var path = Path.Combine(outputRoot, slug + ".svg");
+                File.WriteAllText(path, svg, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                written++;
+            }
+
+            // Also export the full ControlsDemo app welcome page (useful as a "hero" image elsewhere).
+            {
+                var appRoot = ControlsDemoApp.Build(out var _);
+                var svg = TerminalAppSnapshotRenderer.RenderSvg(appRoot, width, maxHeight, theme, null, svgOptions);
+                var path = Path.Combine(outputRoot, EnsureUniqueSlug("controls-demo", taken) + ".svg");
                 File.WriteAllText(path, svg, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
                 written++;
             }
@@ -94,6 +120,10 @@ internal static class ScreenshotExport
 
         return written;
     }
+
+    private static bool RequiresAppSnapshot(string typeName)
+        => string.Equals(typeName, "CommandBarDemo", StringComparison.Ordinal) ||
+           string.Equals(typeName, "TooltipDemo", StringComparison.Ordinal);
 
     private static string EnsureUniqueSlug(string slug, HashSet<string> taken)
     {

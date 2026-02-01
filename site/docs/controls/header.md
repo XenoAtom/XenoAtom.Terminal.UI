@@ -8,6 +8,8 @@ title: Header
 
 `Header` is typically used as the top bar of a `DockLayout`.
 
+![Header](../../img/screenshots/controls-demo/elderberry-dark-soft/header.svg)
+
 ## Basic usage
 
 ```csharp
