@@ -46,12 +46,12 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 - [Group](group.md)
 - [Splitter](splitter.md)
 
-</div><div class="col">
-
 ## Scrolling
 
 - [ScrollViewer](scrollviewer.md)
 - [ScrollBar](scrollbar.md)
+
+</div><div class="col">
 
 ## Navigation & chrome
 

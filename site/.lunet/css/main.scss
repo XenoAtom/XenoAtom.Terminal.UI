@@ -12,8 +12,10 @@ $bootstrap-icons-font-dir: "/fonts";
 @import "bootstrap-icons";
 
 :root {
-    --bs-body-bg-rgb: 31, 30, 50;
-    --bs-body-bg: rgb(31, 30, 50);
+    // #1e212c
+
+    --bs-body-bg-rgb: 20, 23, 31;
+    --bs-body-bg: rgb(20, 23, 31);
     --bs-body-color-darker-20: hsl(from var(--bs-body-color) h s calc(l - 20));
     --bs-body-color-darker-10: hsl(from var(--bs-body-color) h s calc(l - 10));
     --color-c64-red: #F80001;
@@ -419,7 +421,7 @@ footer {
 }
 
 .xenoatom-docs li.menu-item.active {
-    padding-bottom: 0.5em;
+    //padding-bottom: 0.5em;
     // border-left-color: red;
     // border-left-style: solid;
     // border-left-width: 2px;

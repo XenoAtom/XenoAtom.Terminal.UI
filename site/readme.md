@@ -6,7 +6,6 @@ og_type: website
 
 <section class="text-center py-5 text-white hero-text">
   <div class="container">
-    <img class="xenoatom-logo mb-3" src="/img/xenoatom-logo.png" alt="XenoAtom.Terminal.UI" width="96" height="96">
     <h1 class="fw-bold display-6">
       <span class="c64-text">XenoAtom.Terminal.UI</span>
     </h1>
