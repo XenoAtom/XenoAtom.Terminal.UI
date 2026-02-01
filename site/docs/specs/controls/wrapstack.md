@@ -1,322 +1,221 @@
 ---
-title: WrapStack controls specs (WrapHStack / WrapVStack)
+title: WrapStack Specs (WrapHStack / WrapVStack)
 ---
 
-# WrapStack controls specs (WrapHStack / WrapVStack)
+# WrapStack Specs (WrapHStack / WrapVStack)
 
-This document specifies *wrapping stack* layout controls for XenoAtom.Terminal.UI:
+This document captures design and implementation notes for the wrapping stack layout controls:
 
-- `WrapHStack` (horizontal flow layout, wraps into rows)
-- `WrapVStack` (vertical flow layout, wraps into columns)
+- `WrapHStack` (horizontal flow; wraps into rows)
+- `WrapVStack` (vertical flow; wraps into columns)
 
-The goal is to generalize the “wrap row packing” logic currently used internally by `BreakdownChart` for its legend, and provide a reusable layout primitive.
+> [!NOTE]
+> For end-user usage and examples, see [WrapStack](../../controls/wrapstack.md).
 
-Design goals:
+## Overview
 
-- **Idiomatic to this framework**: retained visuals, `Panel` + `VisualList<Visual> Children`, `[Bindable]` properties, automatic dependency tracking.
-- **Layout-protocol compliant**: `LayoutConstraints` + `SizeHints`, `LayoutConstants.Infinite` sentinel, no “infinite DesiredSize”.
-- **Allocation-conscious**: compute run metadata without re-parenting child visuals or creating intermediate row/column visuals.
+- **Status**: Implemented
+- **Primary purpose**: A simple “flow layout” primitive for terminal UIs (legends, tag lists, button groups, compact option rows).
+- **Key characteristics**:
+  - deterministic run building based on children natural sizes
+  - optional justification within each run (`Start/Center/End/Space*`)
+  - optional unconstrained child measurement on the main axis (`MeasureMode`)
+  - allocation-conscious arrange via `ArrayPool<T>`
 
----
-
-## Prerequisites (already in the codebase)
-
-### Alignment
-
-XenoAtom.Terminal.UI uses a single `Align` enum for both `HorizontalAlignment` and `VerticalAlignment` on `Visual`.
-
-WrapStack controls MUST rely on child *self-alignment* being applied during `Visual.Arrange(...)` (i.e., children are arranged into a *slot rectangle* and `Align.Start/Center/End/Stretch` positions/sizes them within that slot).
-
-### Clipping
-
-All visuals are clipped to their `Bounds` automatically (`CellBuffer.PushClip(Bounds)` in `Visual.RenderTree`). Therefore WrapStack controls MUST NOT expose an overflow mode; children that don’t fit are clipped.
-
-### Flex allocation helper
-
-The codebase already provides `Layout.FlexAllocator.Allocate(...)` to distribute available main-axis size across items based on per-axis:
-
-- `Min / Natural / Max`
-- `FlexGrow / FlexShrink`
-
-WrapStack SHOULD reuse `FlexAllocator` per run so “stretch” and “shrink” behave consistently with `HStack` / `VStack`.
-
----
-
-## Public API
+## Public API surface
 
 ### Types
 
-Provide two concrete panels (no `Orientation` switch, consistent with `HStack`/`VStack`, `HScrollBar`/`VScrollBar`, etc.):
+- `WrapHStack : WrapStackBase`
+- `WrapVStack : WrapStackBase`
 
-```csharp
-public sealed partial class WrapHStack : Panel;
-public sealed partial class WrapVStack : Panel;
-```
+`WrapStackBase` is an internal implementation base (`EditorBrowsable(Never)`); prefer the concrete controls.
 
-Implementation MAY use an internal shared base (e.g. `WrapStackBase : Panel`) but the public surface MUST remain two explicit controls.
+### Shared bindables
 
-### Bindable properties (shared)
+All values below are `[Bindable]` on `WrapStackBase`:
 
-All properties below MUST be `[Bindable]` so the source generator produces fluent extensions.
+- `Spacing : int`
+  - Space between items in the same run. Negative values are clamped to `0`.
+- `RunSpacing : int`
+  - Space between runs. Negative values are clamped to `0`.
+- `Justify : WrapJustify`
+  - How leftover space is distributed along the main axis *within each run*.
+- `MeasureMode : WrapMeasureMode`
+  - How children are measured on the main axis.
 
-#### Spacing
+### Enums
 
-- `int Spacing { get; set; }`  
-  Spacing between items in the same run (row/column). Values < 0 are treated as 0.
+`WrapJustify`:
 
-- `int RunSpacing { get; set; }`  
-  Spacing between runs. Values < 0 are treated as 0.
+- `Start`
+- `Center`
+- `End`
+- `SpaceBetween`
+- `SpaceAround`
+- `SpaceEvenly`
 
-#### Justification (main axis within a run)
+`WrapMeasureMode`:
 
-Expose a “CSS/Flutter-like” justification model, but keep it scoped to a run:
-
-```csharp
-public enum WrapJustify
-{
-    Start,
-    Center,
-    End,
-    SpaceBetween,
-    SpaceAround,
-    SpaceEvenly,
-}
-```
-
-- `WrapJustify Justify { get; set; } = WrapJustify.Start;`
-
-Notes:
-
-- Justification is applied **after** flex allocation in the run.
-- Negative leftover space (run content wider than available) MUST behave like `Start` (no negative spacing).
-
-#### Measure mode (main axis)
-
-WrapStack needs to decide how children are measured on the *main axis*:
-
-```csharp
-public enum WrapMeasureMode
-{
-    ConstrainToRun,
-    Unconstrained,
-}
-```
-
-- `WrapMeasureMode MeasureMode { get; set; } = WrapMeasureMode.ConstrainToRun;`
-
-`ConstrainToRun` is the default because it produces correct measurements for wrapping text (height depends on available width).
+- `ConstrainToRun` (default)
+- `Unconstrained`
 
 ### Defaults
 
-- `WrapHStack` constructor SHOULD set `HorizontalAlignment = Align.Start` (shrink-wrap by default, similar to `HStack`).
-- `WrapVStack` constructor SHOULD set `VerticalAlignment = Align.Start` (shrink-wrap by default, similar to `VStack`).
-
----
+- `WrapHStack` defaults `HorizontalAlignment = Align.Start` (shrink-wrap on X unless parent stretches it).
+- `WrapVStack` defaults `VerticalAlignment = Align.Start` (shrink-wrap on Y unless parent stretches it).
+- `Justify = WrapJustify.Start`
+- `MeasureMode = WrapMeasureMode.ConstrainToRun`
+- `Spacing = 0`, `RunSpacing = 0`
 
 ## Layout terminology
 
-### Axes
+Wrap stacks define:
 
-WrapHStack:
+- **main axis**: the direction items are placed within a run
+- **cross axis**: the direction runs are stacked
 
-- `main = X` (width)
-- `cross = Y` (height)
+For `WrapHStack`:
 
-WrapVStack:
+- main axis = X (width)
+- cross axis = Y (height)
 
-- `main = Y` (height)
-- `cross = X` (width)
+For `WrapVStack`:
 
-### Run
+- main axis = Y (height)
+- cross axis = X (width)
 
-A run is a consecutive sequence of children placed along the main axis until the next child would exceed the available main-axis size.
+## Measure
 
-Per run:
+### Measuring children
 
-- `runMainAllocated = sum(itemMainAllocated) + Spacing*(n-1)`
-- `runCrossNatural = max(itemCrossNatural)`
+Each child is measured before runs are built:
 
----
+- If `MeasureMode == Unconstrained`, children are measured with `MaxMain = ∞`.
+- If `MeasureMode == ConstrainToRun`, children are measured with `MaxMain = constraints.MaxMain`.
 
-## Measure specification
+This exists to support text-like visuals where height depends on width:
 
-WrapStack MUST implement the layout protocol by overriding `MeasureCore(in LayoutConstraints)` and returning `SizeHints`.
-
-### Inputs
-
-Let:
-
-- `maxMain` be `constraints.MaxWidth` (WrapHStack) or `constraints.MaxHeight` (WrapVStack)
-- `maxCross` be the other axis max
-
-`LayoutConstants.Infinite` means “unbounded”.
-
-### Child measurement
-
-For each child in `Children` order:
-
-1. Derive `childConstraints`:
-   - main axis max:
-     - `MeasureMode == ConstrainToRun` → `maxMain`
-     - `MeasureMode == Unconstrained`  → `LayoutConstants.Infinite`
-   - cross axis min/max passes through from `constraints` (same patterns as `HStack`/`VStack`).
-   - concrete mapping:
-     - WrapHStack: `new LayoutConstraints(0, childMaxWidth, constraints.MinHeight, constraints.MaxHeight)`
-     - WrapVStack: `new LayoutConstraints(constraints.MinWidth, constraints.MaxWidth, 0, childMaxHeight)`
-2. Call `child.Measure(childConstraints)` to obtain the child’s `SizeHints`.
+- `ConstrainToRun`: lets a `TextBlock`/`Markup` wrap to the available width
+- `Unconstrained`: lets items keep their intrinsic width and overflow is expected to be clipped
 
 ### Run building
 
-WrapStack MUST build runs greedily, based on children’s measured **natural** main-axis size:
+Runs are built using **natural** main-axis sizes (`MeasureHints.Natural`):
 
-- WrapHStack: `childMain = child.MeasureHints.Natural.Width`
-- WrapVStack: `childMain = child.MeasureHints.Natural.Height`
+- Items are appended to the current run while:
+  - `runMain + Spacing + childMain <= availableMain`
+- Otherwise a new run is started.
 
-When adding a child to the current run:
+Special cases:
 
-- `candidate = runMainNatural + (runCount > 0 ? Spacing : 0) + childMain`
+- `availableMain <= 0`: each child becomes its own run (deterministic ordering; everything overflows)
+- `availableMain == ∞`: all children are placed into a single run
 
-Rules:
+### Size hints computation
 
-- If `maxMain` is unbounded (`LayoutConstants.Infinite`), wrapping is disabled → a single run is built.
-- If `candidate > maxMain` and the current run already has at least one item, finalize the run and start a new run.
-- A single oversized item MUST still be placed (never create an empty run).
+For each run, the implementation tracks:
 
-### Panel size hints
+- `MainNatural`, `MainMin`
+- `CrossNatural`, `CrossMin`
+- whether any child in the run has an infinite max on the cross axis (`MaxCrossInfinite`)
 
-The panel’s `Natural` size is derived from the runs built at the current `maxMain`:
+The wrap stack’s reported sizes:
 
-- WrapHStack:
-  - `Natural.Width  = max(runMainNatural)` (clamped to `constraints.MaxWidth` when bounded)
-  - `Natural.Height = sum(runCrossNatural) + RunSpacing*(runCount - 1)`
-- WrapVStack:
-  - `Natural.Height = max(runMainNatural)` (clamped to `constraints.MaxHeight` when bounded)
-  - `Natural.Width  = sum(runCrossNatural) + RunSpacing*(runCount - 1)`
+- `NaturalMain = max(run.MainNatural)`
+- `NaturalCross = sum(run.CrossNatural) + RunSpacing * (runs - 1)`
+- `MinMain = max(run.MainMin)` (clamped to `NaturalMain`)
+- `MinCross = sum(run.CrossMin) + RunSpacing * (runs - 1)` (clamped to `NaturalCross`)
+- `MaxMain = ∞`
+- `MaxCross = ∞` if any run has `MaxCrossInfinite`, otherwise `NaturalCross`
 
-`Min` / `Max`:
+The result is converted back to `(Width, Height)` depending on orientation.
 
-- WrapHStack:
-  - `Min.Width` SHOULD be `max(child.MeasureHints.Min.Width)` clamped to `<= Natural.Width`.
-  - `Min.Height` SHOULD be derived from runs:
-    - per run `runCrossMin = max(child.MeasureHints.Min.Height)`
-    - `Min.Height = sum(runCrossMin) + RunSpacing*(runCount - 1)` clamped to `<= Natural.Height`.
-  - `Max.Width` MAY be `LayoutConstants.Infinite` (recommended for v1).
-  - `Max.Height` MAY be `Natural.Height` (recommended for v1), unless any child max height is infinite, in which case it MAY be `LayoutConstants.Infinite`.
-- WrapVStack:
-  - `Min.Height` SHOULD be `max(child.MeasureHints.Min.Height)` clamped to `<= Natural.Height`.
-  - `Min.Width` SHOULD be derived from runs:
-    - per run `runCrossMin = max(child.MeasureHints.Min.Width)`
-    - `Min.Width = sum(runCrossMin) + RunSpacing*(runCount - 1)` clamped to `<= Natural.Width`.
-  - `Max.Height` MAY be `LayoutConstants.Infinite` (recommended for v1).
-  - `Max.Width` MAY be `Natural.Width` (recommended for v1), unless any child max width is infinite, in which case it MAY be `LayoutConstants.Infinite`.
+## Arrange
 
-Flex:
+### Remeasuring for ConstrainToRun
 
-WrapStack MUST represent “fill” at the panel level using its own alignment (same as base `Visual.MeasureCore` behavior):
+`ConstrainToRun` supports a common terminal UI pattern:
 
-- `growX = HorizontalAlignment == Align.Stretch ? 1 : 0`
-- `growY = VerticalAlignment == Align.Stretch ? 1 : 0`
-- `shrinkX/shrinkY` MAY be `1` when `Natural > Min` on that axis.
+- measure with unbounded width (e.g. inside a scroll viewer or when a parent doesn’t know its width yet)
+- then arrange with a finite width
 
----
+If `MeasureMode == ConstrainToRun` and the final main-axis size differs from the main-axis size used when runs were last computed,
+children are re-measured with `MaxMain = finalMain` before run building.
 
-## Arrange specification
+### Per-run sizing via FlexAllocator
 
-WrapStack MUST override `ArrangeCore(in Rectangle finalRect)` and position children without creating intermediate row/column visuals.
+Within each run, the available main-axis size is:
 
-### Reflow on arrange
+- `available = finalMain - Spacing * (itemCount - 1)`
 
-The panel MUST be able to reflow based on the arranged size, not just the measured constraints (same principle as `BreakdownLegend.EnsureRows`).
+The run then allocates per-item sizes using `Layout.FlexAllocator.Allocate(...)` with each child’s:
 
-Specifically:
+- `Min`, `Natural`, `Max`
+- `FlexGrow`, `FlexShrink`
 
-- If the last run layout was computed at a different main-axis size than the current final rect:
-  - WrapHStack: `finalRect.Width`
-  - WrapVStack: `finalRect.Height`
-  the panel MUST rebuild its run list in `ArrangeCore` using that main-axis size.
+This makes wrapping stacks consistent with other layout containers for “stretch/shrink” behavior.
 
-This ensures correct behavior when a parent measured unbounded (extent discovery) but arranges bounded (viewport).
+The cross-axis size of a run is:
 
-### Per-run flex allocation (main axis)
+- `runCross = run.CrossNatural` (max natural cross of children in the run)
 
-For each run, determine:
+Children are arranged into slots of:
 
-- WrapHStack: `slotMain = finalRect.Width`
-- WrapVStack: `slotMain = finalRect.Height`
-- `availableForItems = max(0, slotMain - Spacing*(n-1))`
+- `WrapHStack`: `(width = allocatedMain, height = runCross)`
+- `WrapVStack`: `(width = runCross, height = allocatedMain)`
 
-Allocate `itemMainAllocated[i]` for run items using `FlexAllocator` on the main axis:
+Child self-alignment then positions/sizes it inside its slot (`Align.Start/Center/End/Stretch`).
 
-- WrapHStack:
-  - `min[i] = child.MeasureHints.Min.Width`
-  - `natural[i] = child.MeasureHints.Natural.Width`
-  - `max[i] = child.MeasureHints.Max.Width`
-  - `grow[i] = child.MeasureHints.FlexGrowX`
-  - `shrink[i] = child.MeasureHints.FlexShrinkX`
-- WrapVStack:
-  - `min[i] = child.MeasureHints.Min.Height`
-  - `natural[i] = child.MeasureHints.Natural.Height`
-  - `max[i] = child.MeasureHints.Max.Height`
-  - `grow[i] = child.MeasureHints.FlexGrowY`
-  - `shrink[i] = child.MeasureHints.FlexShrinkY`
+### Justification
 
-This MUST be performed per run (not globally) so “stretch” items can fill the remaining space of their row/column.
+After allocation, any remaining space on the main axis is distributed using `Justify`:
 
-### Justification (main axis)
+- `Start`: no offset; keep `Spacing`
+- `Center`: leading offset = `leftover / 2`
+- `End`: leading offset = `leftover`
+- `SpaceBetween`: add extra to gaps between items (no leading/trailing padding)
+- `SpaceEvenly`: distribute including start/end edges
+- `SpaceAround`: distribute around items (start/end edges get half of the between-item space)
 
-After allocation, compute leftover:
+The implementation keeps a deterministic result without extra allocations by:
 
-- `leftover = slotMain - (sum(itemMainAllocated) + Spacing*(n-1))`
+- computing a base offset and base gap
+- distributing remainder (`leftover % gaps`) as `+1` to the first N gaps
 
-If `leftover <= 0`, behave like `WrapJustify.Start`.
+### Allocation strategy
 
-Otherwise adjust start offset and/or spacing:
+To keep `Arrange` allocation-conscious, the implementation:
 
-- `Start`: `offset=0`, `gap=Spacing`
-- `Center`: `offset=leftover/2`, `gap=Spacing`
-- `End`: `offset=leftover`, `gap=Spacing`
-- `SpaceBetween` (n>1): `offset=0`, `gap=Spacing + leftover/(n-1)`
-- `SpaceAround` (n>0): `gap=Spacing + leftover/n`, `offset=gap/2`
-- `SpaceEvenly` (n>0): `gap=Spacing + leftover/(n+1)`, `offset=gap`
+- computes the max number of items in any run
+- rents integer arrays from `ArrayPool<int>` for:
+  - mins, naturals, maxs, grows, shrinks, results
+- returns them after arranging all runs
 
-Remainder handling SHOULD be deterministic and stable (e.g. distribute +1 to gaps left-to-right).
+## Performance characteristics
 
-### Child slots and self alignment
+- Run building is `O(n)` over children and uses cached results keyed on:
+  - children version (`Children.Version`)
+  - main-axis size
+  - `Spacing`, `RunSpacing`, `Justify`, `MeasureMode`
+- Per-run allocation uses pooled arrays; no per-frame allocations on the hot path for typical sizes.
 
-Run cross size is the maximum natural cross size of its children:
+## Tests & demos
 
-- WrapHStack: `runCross = max(child.MeasureHints.Natural.Height)`
-- WrapVStack: `runCross = max(child.MeasureHints.Natural.Width)`
+Tests that lock down current behavior:
 
-Each child receives a slot rectangle:
+- `src/XenoAtom.Terminal.UI.Tests/WrapHStackLayoutTests.cs`
+- `src/XenoAtom.Terminal.UI.Tests/WrapVStackLayoutTests.cs`
 
-- main size = `itemMainAllocated`
-- cross size = `runCross`
+Notable covered scenarios:
 
-The panel MUST call `child.Arrange(slot)` for each item so the child’s own alignment (`HorizontalAlignment` / `VerticalAlignment`) can apply inside the slot.
+- wrapping into new runs with `Spacing` and `RunSpacing`
+- justification offsets (`Center`, `End`)
+- `MeasureMode.Unconstrained` allowing main-axis overflow
 
-Finally advance:
+## Future / v2 ideas
 
-- main cursor += `itemMainAllocated + gap`
-- cross cursor += `runCross + RunSpacing` after each run
+- Add an optional “balanced” packing mode (bin packing / near-equal run widths) for some UIs (currently it’s greedy and deterministic).
+- Consider exposing cross-axis alignment and/or per-run baseline alignment for text-heavy layouts.
+- Consider an opt-in virtualization story for very large child collections (today it always measures and arranges all children).
 
----
-
-## ScrollViewer considerations
-
-ScrollViewer uses unbounded constraints in scroll directions to discover extent.
-
-This implies:
-
-- WrapHStack measured with `MaxWidth = LayoutConstants.Infinite` will not wrap horizontally (it will produce a single long row), which is correct when horizontal scrolling is enabled.
-- WrapHStack measured with bounded width and unbounded height (vertical scrolling) will still wrap normally.
-
-If an app needs wrapping even under an unbounded main axis, it SHOULD set a finite `MaxWidth/MaxHeight` on the WrapStack instance (or wrap it in a container that bounds the axis).
-
----
-
-## Implementation notes (for this repo)
-
-- Use `Children.Version` (from `VisualList`) plus the relevant bindable properties (`Spacing`, `RunSpacing`, `Justify`, `MeasureMode`) to invalidate cached run metadata.
-- Run metadata SHOULD be stored as indices into `Children` (avoid re-parenting or duplicating visuals).
-- Temporary arrays needed for `FlexAllocator` SHOULD be stack-allocated for small runs or rented from `ArrayPool<int>` for larger runs (implementation detail).
