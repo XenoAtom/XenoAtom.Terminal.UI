@@ -10,6 +10,10 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 
 > [!NOTE]
 > Most pages include an auto-generated screenshot from `samples/ControlsDemo`.
+>
+> The rendering on the website may differ slightly from the actual control appearance in your terminal environment, due to the fact that it is a SVG export.
+> The terminal will better represent the control visuals.
+>
 > Regenerate them with `dotnet run -c Release --project samples/ControlsDemo -- --export-screenshots`.
 
 <div class="row"><div class="col">

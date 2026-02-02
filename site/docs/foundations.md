@@ -24,6 +24,11 @@ XenoAtom.Terminal.UI is built on a small stack of focused libraries. Together th
         <div class="small">
           Retained-mode UI framework for .NET terminal apps: visual tree, binding/state, layout, controls, scrolling, overlays.
         </div>
+        <div class="mt-2 small">
+          <a href="../"><i class="bi bi-book" aria-hidden="true"></i> Docs</a>
+          <span class="mx-2 text-muted">|</span>
+          <a href="https://github.com/XenoAtom/XenoAtom.Terminal.UI"><i class="bi bi-github" aria-hidden="true"></i> GitHub</a>
+        </div>        
       </div>
     </div>
   </div>
@@ -86,6 +91,7 @@ In other words:
 
 ## How they fit together
 
+{.table}
 | Library | Role | Depends on |
 |---|---|---|
 | **XenoAtom.Terminal.UI** | UI widgets + layout + rendering | XenoAtom.Terminal, XenoAtom.Ansi |

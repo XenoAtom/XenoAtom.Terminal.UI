@@ -47,7 +47,7 @@ og_type: website
             Inputs, layout containers, menus, overlays, charts, and more — all composable and styleable.
           </p>
 
-[Controls Reference](docs/controls.md)
+[Controls Reference](docs/controls/readme.md)
 
 </div>
       </div>
