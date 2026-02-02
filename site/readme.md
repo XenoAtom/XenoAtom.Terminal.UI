@@ -34,7 +34,7 @@ og_type: website
             Bindable properties are tracked during update/layout/render. Change state and only the affected visuals are invalidated.
           </p>
 
-          [Binding &amp; State](docs/binding.md)
+[Binding &amp; State](docs/binding.md)
 
 </div>
       </div>
@@ -47,7 +47,7 @@ og_type: website
             Inputs, layout containers, menus, overlays, charts, and more — all composable and styleable.
           </p>
 
-          [Controls Reference](docs/controls.md)
+[Controls Reference](docs/controls.md)
 
 </div>
       </div>
@@ -60,7 +60,7 @@ og_type: website
             TextBox/TextArea with selection, scrolling, clipboard, and Find/Replace — powered by a shared text subsystem.
           </p>
 
-          [Text Editing](docs/text-editing.md)
+[Text Editing](docs/text-editing.md)
 
 </div>
       </div>
@@ -73,7 +73,8 @@ og_type: website
             A virtualized data grid with selection, filtering, search, and in-place editing.
           </p>
 
-          [DataGridControl](docs/controls/datagrid.md)
+[DataGridControl](docs/controls/datagrid.md)
+
 </div>
       </div>
     </div>
@@ -85,7 +86,7 @@ og_type: website
             Themes are derived from palettes and color schemes, with built-in alpha blending for subtle, layered UIs.
           </p>
 
-          [Styling](docs/styling.md) &amp; [Rendering](docs/rendering.md)
+[Styling](docs/styling.md) &amp; [Rendering](docs/rendering.md)
 
 </div>
       </div>
@@ -98,7 +99,8 @@ og_type: website
             Press <kbd>F12</kbd> in fullscreen apps to inspect FPS, dirty regions, diff stats, and per-pass timings.
           </p>
 
-          [Debugging](docs/debugging.md)
+[Debugging](docs/debugging.md)
+
 </div>
       </div>
     </div>
@@ -131,7 +133,7 @@ og_type: website
         </div>
       </div>
 
-      <i class="bi bi-journal-text"></i>[Ecosystem &amp; foundations](docs/foundations.md)
+[<i class="bi bi-journal-text"></i> Ecosystem &amp; foundations](docs/foundations.md)
     
 </div>
   </div>
