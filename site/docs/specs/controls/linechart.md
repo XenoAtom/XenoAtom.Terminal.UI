@@ -4,43 +4,108 @@ title: LineChart Specs
 
 # LineChart Specs
 
-This document captures design and implementation notes for `LineChart`.
+This document specifies the current behavior and design of the `LineChart` control as implemented.
 
 > [!NOTE]
 > For end-user usage and examples, see [LineChart](../../controls/linechart.md).
 
-## Overview
+## Goals
 
-- **Status**: Implemented
-- **Primary purpose**: Provide `LineChart` as a retained-mode control with bindable properties and predictable layout/rendering behavior.
-- **Key design constraints**:
-  - reactive dependency tracking (measure/arrange/render)
-  - allocation-conscious rendering
-  - AOT/trimming friendliness (no runtime reflection by default)
+- Provide a simple, terminal-friendly trend visualization for a single series of numeric values.
+- Support optional fixed scale (`Minimum`/`Maximum`) or auto scaling from data.
+- Keep rendering deterministic and lightweight (no axes/labels in v1).
 
-## Implementation notes
+## Non-goals (current implementation)
 
-- Source code lives under `src/XenoAtom.Terminal.UI` (search for `LineChart` and `LineChartStyle`).
-- Public properties are typically `[Bindable]` (generated accessors) and participate in the binding dirty model.
+- Multi-series charts, legends, gridlines, axis labels (not implemented).
+- Interpolated lines between points (the current renderer plots one point per column).
+- Interaction/selection (display-only).
 
-## Layout & rendering
+## Public surface (v1)
 
-- Follows the standard `Measure` → `Arrange` → `Render` pipeline.
-- Uses style inheritance from the visual tree; control-specific style is typically `LineChartStyle`.
+- `Values : BindableList<double>`
+- `Minimum : double?`
+- `Maximum : double?`
 
-## Input & commands
+## Defaults
 
-- Keyboard/mouse behaviors (when applicable) are exposed via commands so they are discoverable (e.g., CommandBar / CommandPalette).
+- Default height preference is 4 rows in measure when unconstrained (see below).
+- Default point glyph is `LineChartStyle.PointGlyph` (U+2022 BULLET).
+
+## Implementation map
+
+- Control: `src/XenoAtom.Terminal.UI/Controls/LineChart.cs`
+- Style: `src/XenoAtom.Terminal.UI/Styling/LineChartStyle.cs`
+- Demo: `samples/ControlsDemo/Demos/LineChartDemo.cs`
+- Tests: `src/XenoAtom.Terminal.UI.Tests/VisualizationTests.cs` (basic point rendering)
+
+## Layout
+
+`LineChart` is a render-only control (it does not have children).
+
+### Measure
+
+- If `Values.Count == 0`, desired size is `Size.Zero`.
+- Otherwise:
+  - `width = min(constraints.MaxWidth, max(1, Values.Count))`
+  - `height = min(constraints.MaxHeight, max(1, 4))`
+
+This means:
+
+- The chart naturally wants to be at least 4 rows tall (when possible).
+- When the available width is smaller than the number of values, multiple values are aggregated per column during rendering.
+
+## Rendering
+
+### Scale resolution
+
+- If `Minimum` and/or `Maximum` are not set, the chart scans `Values` and computes min/max from finite values.
+- `NaN` and `Infinity` values are ignored for min/max computation.
+- If all values are non-finite, the chart renders nothing.
+- If `max <= min`, `max` is forced to `min + 1` to avoid division by zero.
+
+### Column sampling
+
+For each output column `x` in the arranged width:
+
+- Determine the covered source indices:
+  - `start = (x * count) / width`
+  - `end = ((x + 1) * count) / width` (at least `start + 1`)
+- Compute a column sample as the maximum finite value in `[start..end)`.
+  - If the range contains no finite values, the sample falls back to `min`.
+
+The sample is normalized:
+
+- `t = clamp((sample - min) / (max - min), 0..1)`
+
+Then mapped to a row:
+
+- `y = rect.Y + round((1 - t) * (height - 1))`
+
+The point is drawn with `LineChartStyle.PointGlyph` and `LineChartStyle.ResolvePointStyle(theme)`.
+
+> [!NOTE]
+> The sampling uses max-per-bucket. This is a simple way to preserve peaks when downsampling, but it means the control
+> is closer to a compact "trend/peak" plot than a mathematically interpolated line.
 
 ## Styling
 
-- Styling is controlled via the theme and `LineChartStyle` (where applicable).
+`LineChartStyle` provides:
 
-## Tests & demos
+- `PointGlyph` (defaults to U+2022 BULLET)
+- `PointStyle` (optional; otherwise uses theme foreground and `theme.Accent` when available)
 
-- Look for rendering/input tests in `src/XenoAtom.Terminal.UI.Tests`.
-- See the ControlsDemo for interactive examples.
+## Input handling
 
-## Future / v2 ideas
+None.
 
-- Consider documenting additional style knobs and adding more deterministic rendering tests as features grow.
+## Tests and demos
+
+- `LineChartDemo` shows a basic series rendered at a fixed height.
+- `VisualizationTests.LineChart_Renders_Points` asserts that the point glyph is present in output.
+
+## Future ideas
+
+- Render connecting segments (line interpolation) and optionally fill under the curve.
+- Add optional axes/labels and support for multiple series.
+- Add alternate sampling modes (min/max/avg) for downsampling.
