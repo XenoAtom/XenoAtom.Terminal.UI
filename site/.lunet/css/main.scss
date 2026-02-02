@@ -680,7 +680,6 @@ footer {
 
 .menu-sidebar {
     top: $xenoatom-top-offset;
-    z-index: 0;
 
     // Keep docs sidebars navigable when the menu is taller than the viewport.
     // (Works with Bootstrap's `sticky-top` and `collapse` behavior.)
@@ -688,6 +687,17 @@ footer {
     overflow-y: auto;
     overflow-x: hidden;
     overscroll-behavior: contain;
+}
+
+// Only apply low z-index when sidebar is visible as a regular column (not offcanvas)
+@include media-breakpoint-up(md) {
+    #docs-sidebar-menu.menu-sidebar {
+        z-index: 0;
+    }
+}
+
+#docs-sidebar-toc.menu-sidebar {
+    z-index: 0;
 }
 
 .xenoatom-docs .toc-link {
@@ -795,5 +805,17 @@ li.toc-list-item {
     .menu-sidebar {
         top: auto!important;
         max-height: none;
+    }
+}
+
+/* Fix responsive offcanvas sidebar layout on large screens */
+@include media-breakpoint-up(md) {
+    #docs-sidebar-menu .offcanvas-body {
+        display: block;
+        padding: 0;
+        overflow-y: visible;
+    }
+    #docs-sidebar-menu .offcanvas-header {
+        display: none;
     }
 }

@@ -1,7 +1,7 @@
 ---
 layout: base
 ---
-<div class="container">
+<div class="container-xxl">
   {{~
     url = page.url ?? ""
     menu_key = "doc"
@@ -18,10 +18,23 @@ layout: base
     menu = site.menu[menu_key] ?? site.menu.doc
   ~}}
   <div class="row">
-      <div id="docsSidebar" class="col col-lg-2 align-self-start sticky-top menu-sidebar collapse d-lg-block">
-        {{ menu.render { kind: "menu",  collapsible: true } }}
-      </div>
-      <div class="col col-xxl-8 js-toc-content">
+      <!-- Left sidebar - responsive offcanvas (offcanvas on mobile, visible sidebar on md+) -->
+      <nav id="docs-sidebar-menu" class="col-md-3 col-xxl-2 offcanvas-md offcanvas-start sticky-md-top menu-sidebar align-self-start order-1 order-md-0" tabindex="-1" aria-labelledby="docs-sidebar-menu-label">
+        <div class="offcanvas-header">
+          <h5 class="offcanvas-title" id="docs-sidebar-menu-label">Menu</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#docs-sidebar-menu" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+          {{ menu.render { kind: "menu",  collapsible: true } }}
+        </div>
+      </nav>
+      <!-- Right sidebar (TOC) - collapsible on mobile, visible sidebar on xxl+ -->
+      <aside id="docs-sidebar-toc" class="col-12 col-xxl-2 sticky-xxl-top menu-sidebar align-self-start order-0 order-xxl-2 collapse d-xxl-block">
+        <h3 class="toc-title">On this page</h3>
+        <nav class="js-toc"></nav>
+      </aside>
+      <!-- Main content column -->
+      <div class="col-12 col-md-9 col-xxl-8 order-2 order-md-1 js-toc-content">
         <ol class="breadcrumb">
           <li class="breadcrumb-item"><a class="breadcrumb-link" href="/">Home</a></li>
           {{~ if url | string.starts_with "/docs" ~}}
@@ -35,23 +48,30 @@ layout: base
           <li class="breadcrumb-item active">{{ page.title }}</li>
         </ol>
         <p id="lunet-results"></p>
-        <!-- Toggle button visible only on small screens -->
-        <button
-          class="btn btn-outline-secondary btn-sm d-lg-none mb-3"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#docsSidebar"
-          aria-controls="docsSidebar"
-          aria-expanded="false"
-          aria-label="Toggle docs menu">
-          Table of Contents
-        </button>
+        <!-- Toggle buttons visible only on small screens -->
+        <div class="d-md-none mb-3">
+          <button
+            class="btn btn-outline-secondary btn-sm me-2"
+            type="button"
+            data-bs-toggle="offcanvas"
+            data-bs-target="#docs-sidebar-menu"
+            aria-controls="docs-sidebar-menu"
+            aria-label="Toggle docs menu">
+            Menu
+          </button>
+          <button
+            class="btn btn-outline-secondary btn-sm d-xxl-none"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#docs-sidebar-toc"
+            aria-controls="docs-sidebar-toc"
+            aria-expanded="false"
+            aria-label="Toggle Table Of Contents">
+            On this page
+          </button>
+        </div>
 <!-- lunet:summarize -->
 {{ content }}
-      </div>
-      <div id="docsSidebar" class="col col-lg-2 align-self-start sticky-top menu-sidebar collapse d-lg-block js-toc-content">
-        <h3 class="toc-title">On this page</h3>
-        <nav class="js-toc"></nav>
       </div>
   </div>
 </div>
