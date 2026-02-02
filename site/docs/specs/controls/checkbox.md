@@ -12,35 +12,87 @@ This document captures design and implementation notes for `CheckBox`.
 ## Overview
 
 - **Status**: Implemented
-- **Primary purpose**: Provide `CheckBox` as a retained-mode control with bindable properties and predictable layout/rendering behavior.
-- **Key design constraints**:
-  - reactive dependency tracking (measure/arrange/render)
-  - allocation-conscious rendering
-  - AOT/trimming friendliness (no runtime reflection by default)
+- **Primary purpose**: A toggle control representing a boolean value with an optional label visual.
+- **Interaction**: toggles on `Space`/`Enter` and left click.
 
-## Implementation notes
+## Public API surface
 
-- Source code lives under `src/XenoAtom.Terminal.UI` (search for `CheckBox` and `CheckBoxStyle`).
-- Public properties are typically `[Bindable]` (generated accessors) and participate in the binding dirty model.
+### Type
+
+- `CheckBox : Visual` (sealed)
+
+### Constructors
+
+- `CheckBox()` sets `Focusable = true`.
+- `CheckBox(string text, bool isChecked = false)` convenience ctor:
+  - sets `Text` and `IsChecked`
+
+### Bindable properties
+
+- `Text : Visual?` (label)
+- `IsChecked : bool`
 
 ## Layout & rendering
 
-- Follows the standard `Measure` → `Arrange` → `Render` pipeline.
-- Uses style inheritance from the visual tree; control-specific style is typically `CheckBoxStyle`.
+### Measure
 
-## Input & commands
+Measure depends on:
 
-- Keyboard/mouse behaviors (when applicable) are exposed via commands so they are discoverable (e.g., CommandBar / CommandPalette).
+- `CheckBoxStyle.CheckedGlyph` / `UncheckedGlyph` rune width
+- `CheckBoxStyle.SpaceBetweenGlyphAndText`
+- label desired width (measured unbounded width, 1 line height)
+
+Desired size is a single row:
+
+- `width = glyphWidth + gap + labelWidth`
+- `height = 1`
+
+### Arrange
+
+- Arranges the label to the right of the glyph and gap:
+  - `x = finalRect.X + glyphWidth + gap`
+  - width clamped to available
+
+### Render
+
+- Fills the whole row with the resolved style so children inheriting `Style.None` get consistent colors.
+- Draws:
+  - checked/unchecked glyph at `Bounds.X` (bold)
+  - gap spaces after the glyph (when a label exists)
+
+## Interaction
+
+### Keyboard
+
+- `Space` / `Enter`: toggles `IsChecked`.
+
+### Pointer
+
+- Left click toggles `IsChecked` immediately on press.
 
 ## Styling
 
-- Styling is controlled via the theme and `CheckBoxStyle` (where applicable).
+### CheckBoxStyle
+
+Key knobs:
+
+- `CheckedGlyph` / `UncheckedGlyph` (defaults `☑` / `☐`)
+- `SpaceBetweenGlyphAndText` (default `2`)
+- optional styles: `Normal`, `Hovered`, `Focused`, `Disabled`
+
+Default style resolution:
+
+- focused: bold + `Theme.FocusBorder` (when available)
+- hovered: uses `Theme.Accent` (when available)
+- disabled: dim + `Theme.Disabled` (when available)
 
 ## Tests & demos
 
-- Look for rendering/input tests in `src/XenoAtom.Terminal.UI.Tests`.
-- See the ControlsDemo for interactive examples.
+- Tests:
+  - `src/XenoAtom.Terminal.UI.Tests/CheckBoxTests.cs`
+- Demo:
+  - ControlsDemo includes checkbox examples.
 
 ## Future / v2 ideas
 
-- Consider documenting additional style knobs and adding more deterministic rendering tests as features grow.
+- Add an indeterminate state (tri-state) if needed for hierarchical selection UIs.
