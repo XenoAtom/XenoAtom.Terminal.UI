@@ -73,6 +73,7 @@ internal static class ScreenshotExport
         ["WrapStackDemo"] = "wrapstack",
 
         // Docs outside /controls.
+        ["AlphaBlendingDemo"] = "alpha-blending",
         ["DataTemplatesDemo"] = "data-templating",
         ["ColorSchemeDemo"] = "color-scheme",
         ["BindableModelsDemo"] = "bindable-models",

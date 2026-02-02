@@ -16,6 +16,21 @@ This makes rendering:
 - fast (diffing avoids rewriting unchanged areas),
 - compatible with both fullscreen and inline/live hosting.
 
+## Why a cell buffer?
+
+Terminals are *stateful*. If you write a line and then later move the cursor and overwrite a few characters, the terminal
+keeps the rest of the previous frame. That makes it hard to reason about rendering correctness, clipping, and focus
+effects.
+
+XenoAtom.Terminal.UI instead treats each frame as a **complete 2D buffer**:
+
+- every visual renders into a `CellBuffer`
+- the buffer represents the *entire desired terminal state* for that frame
+- a diff renderer compares the new buffer to the previous buffer and emits minimal ANSI updates
+
+This is the same high-level approach used by many modern retained-mode UI systems: render to an intermediate
+representation, then efficiently update the output.
+
 ## Render pipeline (high level)
 
 In a typical frame, the app performs:
@@ -57,6 +72,28 @@ Controls render by calling:
 - `buffer.SetCell(x, y, rune, style)`
 - `buffer.WriteText(x, y, span, style)`
 
+### Coordinate space
+
+`CellBuffer` coordinates are **integer cell coordinates**:
+
+- `x` is the column (0..Width-1)
+- `y` is the row (0..Height-1)
+
+Most controls use their `Bounds` (a `Rectangle`) as their render region:
+
+```csharp
+var rect = Bounds;
+for (var y = rect.Y; y < rect.Y + rect.Height; y++)
+{
+    for (var x = rect.X; x < rect.X + rect.Width; x++)
+    {
+        buffer.SetCell(x, y, new Rune(' '), backgroundStyle);
+    }
+}
+```
+
+### Clipping
+
 The buffer is clipped by the visual tree while rendering. For performance, many controls start with a quick clip check:
 
 ```csharp
@@ -65,6 +102,37 @@ if (!buffer.ClipIntersects(rect))
     return;
 }
 ```
+
+### Text, graphemes, and wide characters
+
+Terminals render in **cells**, but Unicode characters do not map 1:1 to cells:
+
+- some glyphs are **wide** (CJK, emoji) and occupy 2 cells
+- some sequences are **grapheme clusters** (e.g. emoji with variation selectors) and should be treated as one visual unit
+
+`CellBuffer.WriteText` handles this by iterating text elements and measuring their cell width with
+`TerminalTextUtility`. If an element is wider than 1 cell, the buffer marks the subsequent cell(s) as **continuations**.
+
+> [!TIP]
+> When writing custom text rendering, prefer `buffer.WriteText(...)` or measure using `TerminalTextUtility` so that your
+> control behaves correctly with wide/complex Unicode.
+
+### Style inheritance (overlay rendering)
+
+Controls often render in layers:
+
+1) fill a background
+2) render children
+3) draw focus rings, selection highlights, markers, etc.
+
+`CellBuffer.SetCell` merges the incoming style with the existing cell style using `Style.MergeUnspecified(...)`.
+That means:
+
+- if you write a cell with `Style.None.WithForeground(...)` it keeps the previous background
+- if you write a cell with `Style.None.WithBackground(...)` it keeps the previous foreground (unless you override it)
+
+This pattern is used heavily across the library (e.g. list rows fill their row background so the item visuals can inherit
+that style).
 
 ## Diff renderer
 
@@ -91,6 +159,41 @@ Internally, alpha colors are **blended** during rendering so that stacked overla
 terminal output is still a concrete color per cell (terminals don’t have real alpha), but the blending makes layered UIs
 look consistent.
 
+### How alpha blending works
+
+Alpha blending happens **when a cell is written**.
+
+`CellBuffer.SetCell`:
+
+1) reads the existing cell style (the “under” layer)
+2) merges unspecified parts from the under style into the new style
+3) if the *overlay* contains `ColorKind.RgbA`, it blends the RGBA color over the resolved destination color
+
+Rules:
+
+- only **RGBA** colors are blended (`ColorKind.RgbA`)
+- palette colors (`Default`, `Basic16`, `Indexed256`) are treated as opaque and never blended
+- blending is performed in **linear color space** using lookup tables for speed and stable output
+- the result is stored as an **opaque** `ColorKind.Rgb` (because terminals can’t represent alpha in SGR)
+
+Blending is applied for:
+
+- **background RGBA**: blended over the existing background color
+- **foreground RGBA**: blended over the resolved background for that cell (foreground is “painted over” the background)
+
+> [!NOTE]
+> If the destination background is not RGB (e.g. a palette color), alpha is ignored and the RGBA is treated as an
+> opaque RGB color. This keeps output deterministic across terminals with different color capabilities.
+
+### Alpha blending demo
+
+The following screenshot is generated from the ControlsDemo and shows three translucent panels overlapping. The overlap
+regions are computed by the `CellBuffer` blending algorithm:
+
+![Alpha blending demo](../img/controls/alpha-blending.svg){.terminal}
+
+You can reproduce it by running the ControlsDemo and opening the **Rendering → Alpha blending** page.
+
 > [!TIP]
 > Prefer alpha overlays for “soft” elevation, but avoid stacking many translucent layers over large areas if your UI is
 > extremely dynamic; it increases per-cell work.
@@ -100,6 +203,49 @@ look consistent.
 The rendering path reuses internal buffers where possible to minimize per-frame allocations.
 
 ## Writing fast custom controls
+
+### Implementing `RenderOverride`
+
+Controls typically follow a predictable pattern:
+
+1) bail out if there is nothing to draw
+2) resolve styles based on the theme and state
+3) fill the background surface (so children can inherit predictable colors)
+4) render content/children
+5) draw chrome (borders, focus, markers)
+
+Example:
+
+```csharp
+protected override void RenderOverride(CellBuffer buffer)
+{
+    var rect = Bounds;
+    if (rect.Width <= 0 || rect.Height <= 0 || !buffer.ClipIntersects(rect))
+    {
+        return;
+    }
+
+    var theme = GetTheme();
+    var style = GetStyle<MyControlStyle>();
+
+    var background = style.ResolveBackground(theme, HasFocus);
+    for (var y = rect.Y; y < rect.Y + rect.Height; y++)
+    {
+        for (var x = rect.X; x < rect.X + rect.Width; x++)
+        {
+            buffer.SetCell(x, y, new Rune(' '), background);
+        }
+    }
+
+    // Render content (children usually render after this control returns).
+    buffer.WriteText(rect.X + 1, rect.Y, "Hello", style.ResolveText(theme));
+
+    // Draw a simple border.
+    var border = style.ResolveBorder(theme, HasFocus);
+    buffer.SetCell(rect.X, rect.Y, new Rune('['), border);
+    buffer.SetCell(rect.X + rect.Width - 1, rect.Y, new Rune(']'), border);
+}
+```
 
 Guidelines:
 
