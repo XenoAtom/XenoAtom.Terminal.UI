@@ -4,7 +4,7 @@ title: OptionList Specs
 
 # OptionList Specs
 
-This document captures design and implementation notes for `OptionList<T>`.
+This document captures the design and implementation details of `OptionList<T>`.
 
 > [!NOTE]
 > For end-user usage and examples, see [OptionList](../../controls/optionlist.md).
@@ -12,33 +12,25 @@ This document captures design and implementation notes for `OptionList<T>`.
 ## Overview
 
 - **Status**: Implemented
-- **Primary purpose**: Display a vertical list of options with selection, hover, and optional activation.
-- **Scrolling**: Implements `IScrollable` with an internal `ScrollModel` (supports vertical + horizontal scrolling).
-- **Templating**: Uses `DataTemplate<T>` for item visuals, with recycling (`TryUpdate` / `Release`) to reduce allocations.
-- **Option metadata**:
-  - per-item enabled state (`ItemIsEnabled`)
-  - per-item search text (`ItemSearchText`) for type-to-jump
-  - richer layout via `OptionListItem` (content + shortcut + description)
+- **Purpose**: Display a vertical list of options with single selection, hover state, and optional activation.
+- **Scrolling**: Implements `IScrollable` via an owned `ScrollModel` (vertical and horizontal offsets, no built-in scrollbars).
+- **Templating**: Uses `DataTemplate<T>` (display role) to build item visuals, with recycling support.
+- **Rows**: Supports multi-line item visuals by using a uniform item height (the max height across items).
 
 ## Public API surface
 
 ### Type
 
-- `OptionList<T> : Visual, IScrollable` (sealed)
+- `public sealed partial class OptionList<T> : Visual, IScrollable`
 
 ### Bindable properties
 
 - `Items : BindableList<T>`
 - `SelectedIndex : int`
-  - clamped to the nearest enabled item (see `ItemIsEnabled`)
 - `ActivateOnClick : bool`
-  - when enabled, clicking an item raises an activation event
 - `ItemTemplate : DataTemplate<T>`
-  - display template for items (local override; can fall back to `DataTemplates`)
 - `ItemIsEnabled : Delegator<Func<T, bool>>`
-  - optional callback for disabling specific items
 - `ItemSearchText : Delegator<Func<T, string?>>`
-  - optional callback used for type-to-jump search strings
 
 ### Routed events
 
@@ -47,98 +39,127 @@ This document captures design and implementation notes for `OptionList<T>`.
 
 ### Scrolling
 
-- `Scroll : ScrollModel` (content-owned scroll model)
+- `Scroll : ScrollModel` (owned scroll model)
 
-## Item visuals & OptionListItem
+## Item visuals
 
-`OptionList<T>` creates one visual per item and attaches them as children.
+`OptionList<T>` maintains a child `Visual` for each item:
 
-The library also provides `OptionListItem` as a convenience visual for richer rows:
+- If an item `T` is already a `Visual`, it is used directly.
+- Otherwise, the list uses `ItemTemplate` (or the environment `DataTemplates`) in `DataTemplateRole.Display`.
+- If no template is available, the list falls back to a `TextBlock` that calls `ToString()` on the item.
 
-- `OptionListItem.Content : Visual?` (main label/content)
-- `OptionListItem.Shortcut : Visual?` (right-aligned shortcut hint)
-- `OptionListItem.Description : Visual?` (second line)
-- `OptionListItem.SearchText : string?` (override for type-to-jump)
+### Recycling
+
+When the list rebuilds its item visuals (items version or resolved template change), removed visuals are added to a recycle pool.
+During rebuild, the list may reuse pooled visuals when:
+
+- `DataTemplate<T>.TryUpdate` is provided and returns `true`.
+- Otherwise the pooled visual is released via `DataTemplate<T>.Release` (if provided) and a new visual is created.
+
+## OptionListItem (convenience row)
+
+The library provides `OptionListItem : Visual` as a convenient row visual for menus and command-like lists:
+
+- `Content : Visual?` - main label/content (line 1)
+- `Shortcut : Visual?` - optional shortcut area (line 1, right-aligned)
+- `Description : Visual?` - optional second line, indented
+- `SearchText : string?` - optional search text for type-to-jump
 
 `OptionListItem` measures:
 
 - width as the max of:
   - `Content` width (plus optional `Shortcut` + gap)
   - `DescriptionIndent + Description` width
-- height:
-  - `1` when no description
-  - `2` when description is present
+- height is `1` when `Description` is null, otherwise `2`.
 
 ## Layout & scrolling behavior
 
-### Prepare
+### PrepareChildren and scroll version
 
 `PrepareChildren` snapshots scroll state:
 
 - `ScrollVersion = _scroll.Version`
 
-`Arrange`/`Render` then read `ScrollVersion` as a dependency while still being able to update the underlying scroll model safely.
+`Arrange` and `Render` read `ScrollVersion` so scroll changes trigger layout/render updates without causing "read then write"
+dependency loops (a common pattern for `IScrollable` controls in this codebase).
 
 ### Measure
 
-Measure computes:
+Measure:
 
-- prefix width:
-  - `markerWidth = runeWidth(OptionListStyle.MarkerGlyph)`
+- Ensures item visuals exist (see above) and measures every child with unbounded constraints.
+- Computes a prefix width:
+  - `markerWidth = runeWidth(OptionListStyle.MarkerGlyph)` (minimum 1)
   - `prefixWidth = markerWidth + OptionListStyle.SpaceBetweenGlyphAndText`
-- item desired width/height:
-  - items are measured unbounded to find max width and max height across items
-  - `MeasuredItemHeight = max(1, maxItemHeight)`
-- `MeasuredContentWidth = prefixWidth + maxItemWidth`
-- desired height = `items.Count * MeasuredItemHeight` (at least 1)
+- Stores:
+  - `MeasuredItemHeight` = the maximum item `DesiredSize.Height` (minimum 1)
+  - `MeasuredContentWidth` = `prefixWidth + maxItemWidth`
+- Computes desired height as `items.Count * MeasuredItemHeight` (minimum 1).
 
-When the height is bounded and vertical overflow is expected, measure reserves extra width for a vertical scrollbar using `ScrollViewerStyle.ScrollBarThickness` to avoid “bar introduces overflow” loops.
+Important: the list uses a uniform item height (max across items). If you mix 1-row and 2-row items, all rows will reserve
+2 rows of height.
+
+### ScrollViewer interaction (reserved width)
+
+When the available height is bounded and the content is taller than the available height, measure reserves additional width
+equal to `ScrollViewerStyle.ScrollBarThickness`. This avoids a common loop where adding a vertical scrollbar reduces width,
+which would introduce horizontal overflow.
 
 ### Arrange
 
 Arrange:
 
-- reads `_ = ScrollVersion` and ensures item visuals exist
-- computes `viewportHeight` as a multiple of `MeasuredItemHeight` so scrolling stays row-aligned
-- sets scroll viewport and extent:
-  - extent height = `count * itemHeight`
-  - extent width = `max(innerWidth, MeasuredContentWidth)` for horizontal scrolling
-- clamps/aligns offsets:
-  - vertical offsets are aligned to full rows (`OffsetY` snapped to multiples of `itemHeight`)
-- arranges each item at the correct translated position based on scroll offsets
+- Ensures item visuals exist.
+- Chooses a viewport height that is an integer multiple of `MeasuredItemHeight` so scrolling stays row-aligned.
+- Updates the scroll model:
+  - `ViewportWidth = bounds.Width`
+  - `ViewportHeight = viewportItems * itemHeight`
+  - `ExtentHeight = itemCount * itemHeight`
+  - `ExtentWidth = max(viewportWidth, MeasuredContentWidth)`
+- Keeps `OffsetY` clamped and aligned to full item rows.
+- Arranges every item visual (including offscreen ones). Offscreen items will be arranged outside the list bounds.
 
-Selection changes set a flag so `Arrange` can call `EnsureSelectedVisible(...)`.
+### EnsureSelectedVisible
+
+When selection changes, the list sets a flag and scrolls in arrange so the selected row is visible:
+
+- If the selection is above the viewport, it scrolls up to put it at the top.
+- If the selection is below the viewport, it scrolls down to put it at the bottom.
 
 ## Interaction
 
 ### Keyboard
 
-`OptionList<T>` supports typical list navigation and selection changes, and it also supports “type-to-jump”:
+Keyboard navigation:
 
-- typed characters build a short-lived buffer (`_typeBuffer`) used to find the next matching item based on `ItemSearchText`, `OptionListItem.SearchText`, visible text content, or `ToString()`.
+- Up/Down, PageUp/PageDown, Home/End: move selection
+- Enter/Space: activate selected item (raises `ItemActivated`)
+- Type-to-jump:
+  - typing non-control characters appends to a 1-second buffer
+  - the list selects the first item whose search text starts with the buffer (case-insensitive)
 
 ### Pointer
 
-- hover tracking sets an internal `HoveredIndex` (used for hover styling)
-- click selects, and optionally activates (`ActivateOnClick`)
+- Hover updates an internal `HoveredIndex` used for hover styling.
+- Left click selects on press (if enabled).
+- Left click can also activate on release when `ActivateOnClick` is true and the press/release happened on the selected row.
+- Mouse wheel moves selection by 1 step (and selection scrolling keeps it visible).
 
 ## Styling
 
 ### OptionListStyle
 
-Key knobs:
+OptionList uses `OptionListStyle` (`src/XenoAtom.Terminal.UI/Styling/OptionListStyle.cs`):
 
-- `MarkerGlyph`, spacing and indent:
+- `MarkerGlyph` and spacing:
   - `SpaceBetweenGlyphAndText`
-  - `SpaceBetweenContentAndShortcut`
-  - `DescriptionIndent`
-- styles:
+  - `SpaceBetweenContentAndShortcut` (used by `OptionListItem`)
+  - `DescriptionIndent` (used by `OptionListItem`)
+- Item styles:
   - `Item`, `SelectedFocused`, `SelectedUnfocused`, `Hovered`, `Disabled`
 
-Default resolution uses theme colors:
-
-- hovered style uses `Theme.ControlFillHover` / `Theme.SurfaceAlt` when available
-- focused selection is bold and uses `Theme.FocusBorder`/accent-like colors
+The default style resolution uses theme colors (accent and hover fill) when available.
 
 ## Tests & demos
 
@@ -146,9 +167,10 @@ Default resolution uses theme colors:
   - `src/XenoAtom.Terminal.UI.Tests/OptionListTests.cs`
   - `src/XenoAtom.Terminal.UI.Tests/ListControlHorizontalScrollViewerTests.cs` (OptionList inside ScrollViewer sizing rules)
 - Demo:
-  - ControlsDemo includes OptionList examples (including shortcuts/description patterns).
+  - `samples/ControlsDemo/Demos/OptionListDemo.cs`
 
 ## Future / v2 ideas
 
-- Support multi-selection and/or checkable option lists.
-- Add virtualization for very large lists.
+- Virtualize and/or lazily create item visuals for very large lists (today the list measures and arranges all items).
+- Add multi-selection and/or checkable rows as a separate control or mode.
+- Add richer search (wrap-around, next-match cycling, highlight).
