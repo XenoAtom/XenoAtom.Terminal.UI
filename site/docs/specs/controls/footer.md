@@ -4,43 +4,97 @@ title: Footer Specs
 
 # Footer Specs
 
-This document captures design and implementation notes for `Footer`.
+This document specifies the current behavior and design of the `Footer` control as implemented.
 
 > [!NOTE]
 > For end-user usage and examples, see [Footer](../../controls/footer.md).
 
-## Overview
+## Goals
 
-- **Status**: Implemented
-- **Primary purpose**: Provide `Footer` as a retained-mode control with bindable properties and predictable layout/rendering behavior.
-- **Key design constraints**:
-  - reactive dependency tracking (measure/arrange/render)
-  - allocation-conscious rendering
-  - AOT/trimming friendliness (no runtime reflection by default)
+- Provide a lightweight, single-row footer bar for app chrome.
+- Offer three slots (`Left`, `Center`, `Right`) with predictable placement and clipping.
+- Always clear/paint its background so content behind it cannot bleed into the footer row.
+- Remain allocation-conscious and compatible with the binding dirty model (slot visuals can be dynamic).
 
-## Implementation notes
+## Non-goals
 
-- Source code lives under `src/XenoAtom.Terminal.UI` (search for `Footer` and `FooterStyle`).
-- Public properties are typically `[Bindable]` (generated accessors) and participate in the binding dirty model.
+- Multi-line footer (the footer is always height `1`).
+- Automatic wrapping/ellipsis behavior inside slots (delegate to the contained visuals).
+- Input handling (the footer itself is non-interactive; slots may be interactive).
 
-## Layout & rendering
+## Public surface (v1)
 
-- Follows the standard `Measure` → `Arrange` → `Render` pipeline.
-- Uses style inheritance from the visual tree; control-specific style is typically `FooterStyle`.
+- `Left : Visual?`
+- `Center : Visual?`
+- `Right : Visual?`
 
-## Input & commands
+## Defaults
 
-- Keyboard/mouse behaviors (when applicable) are exposed via commands so they are discoverable (e.g., CommandBar / CommandPalette).
+- Default alignment: `HorizontalAlignment = Align.Stretch`.
+- Default height: `1` (fixed).
+
+## Implementation map
+
+- Control: `src/XenoAtom.Terminal.UI/Controls/Footer.cs`
+- Style: `src/XenoAtom.Terminal.UI/Styling/FooterStyle.cs`
+- Demo: `samples/ControlsDemo/Demos/FooterDemo.cs`
+- Tests (usage as app chrome root):
+  - `src/XenoAtom.Terminal.UI.Tests/AppChromeTests.cs`
+
+## Layout
+
+### Child order
+
+Children are exposed in order: `Left`, `Center`, `Right` (when present).
+
+### Measure
+
+- Each slot is measured with `maxWidth = infinite` and `maxHeight = 1` (single-line).
+- The natural width is computed as:
+  - `leftWidth + rightWidth` (when `Center` is null)
+  - otherwise `max(leftWidth + rightWidth, leftWidth + centerWidth + rightWidth)`
+- Returns `SizeHints.FlexX` with:
+  - `min = (0, 1)`
+  - `natural = (requiredWidth, 1)`
+  - `growX = 1`, `shrinkX = 1`
+
+This means `Footer` is happy to stretch horizontally but never requests extra height.
+
+### Arrange
+
+Given a final rect (width `W`):
+
+- `Left` is arranged at `X` with width `min(W, leftDesiredWidth)`.
+- `Right` is arranged at `Right - min(W, rightDesiredWidth)`.
+- `Center` (if present) gets at most `max(0, W - leftW - rightW)` cells.
+  - It is arranged centered within that remaining space.
+
+`Center` will clip naturally if it is wider than the remaining space.
+
+## Rendering
+
+- Footer is app chrome: it always clears its entire row to spaces using the resolved footer style, ensuring a stable background.
+- Slot visuals then render on top through normal visual tree rendering.
 
 ## Styling
 
-- Styling is controlled via the theme and `FooterStyle` (where applicable).
+`FooterStyle` resolves to a single cell `Style`:
 
-## Tests & demos
+- `Foreground`: `FooterStyle.Foreground ?? theme.Foreground`
+- `Background`: `FooterStyle.Background ?? theme.SurfaceAlt`
+- Always includes `TextStyle.Bold`.
 
-- Look for rendering/input tests in `src/XenoAtom.Terminal.UI.Tests`.
-- See the ControlsDemo for interactive examples.
+## Input handling
 
-## Future / v2 ideas
+`Footer` itself does not handle input. If a slot contains a focusable visual, that visual behaves normally.
 
-- Consider documenting additional style knobs and adding more deterministic rendering tests as features grow.
+## Tests and demos
+
+- `FooterDemo` shows typical hint/status usage with non-wrapping markup visuals.
+- `AppChromeTests` verifies header/footer integration when used in a `DockLayout` root.
+
+## Future ideas
+
+- Optional slot spacing/padding knobs (can be achieved today by wrapping slot visuals).
+- Optional "separator" rendering between slots.
+- A "compact" style preset (less bold, different background) as a theme convenience.
