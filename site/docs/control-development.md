@@ -16,9 +16,10 @@ Related docs (more detail):
 - [Styling](styling.md)
 - [Data Templating](data-templating.md) and [Data Template Specs](specs/data_template_specs.md)
 - [Text Editing](text-editing.md) and [Text Editor Specs](specs/text_editor_specs.md)
+- [Input](input.md)
 - [Hosting](hosting.md)
 
-## 1) Prefer the framework patterns (don’t “do it manually”)
+## Prefer the framework patterns (don't "do it manually")
 
 ### Use `[Bindable]` for UI state
 - Control state that impacts **measure/arrange/render/input** should usually be a `[Bindable]` property so dependency tracking works.
@@ -40,7 +41,7 @@ Related docs (more detail):
 - If you have a model object that must participate in dependency tracking, it should implement `IVisualElement` so it can bind to an app context without being a `Visual`.
 - Typical examples: items/nodes/tasks used by list/tree/progress components.
 
-## 2) Binding + dependency tracking: how to not break it
+## Binding + dependency tracking: how to not break it
 
 The UI invalidation system relies on **tracking which bindable values were read** during:
 - Visual build/composition
@@ -51,7 +52,7 @@ The UI invalidation system relies on **tracking which bindable values were read*
 ### Always read bindable properties via the property, not the backing field
 Bad (bypasses tracking):
 ```csharp
-// _content is a field; reading it doesn’t register a dependency.
+// _content is a field; reading it doesn't register a dependency.
 var content = _content;
 ```
 Good:
@@ -61,30 +62,30 @@ var content = Content;
 
 This rule applies across the entire codebase. If a control uses backing fields directly, it will not update correctly when values change.
 
-### Avoid manual “render requests”
-- Don’t call `App?.RequestRender()` from bindable setters.
-- Bindable setters should be “pure” state updates + change notification through `BindingManager`.
+### Avoid manual "render requests"
+- Don't call `App?.RequestRender()` from bindable setters.
+- Bindable setters should be "pure" state updates + change notification through `BindingManager`.
 
 ### Lists are observable too
 - Use `BindableList<T>` / `VisualList<T>` for collections that affect UI.
 - If you need fluent population, prefer the generated `Items(...)`/`Children(...)` list-replacement fluent APIs.
-- Avoid appending repeatedly during “dynamic updates” or rebuild cycles; list population should be idempotent.
+- Avoid appending repeatedly during "dynamic updates" or rebuild cycles; list population should be idempotent.
 
-## 3) Layout: follow the protocol
+## Layout: follow the protocol
 
 All controls must implement the **current** layout protocol (`Measure(in LayoutConstraints)` returning `SizeHints`, `Arrange(in Rectangle)`), as described in:
 - [Layout Protocol Specs](specs/layout_protocol_specs.md)
 
 Key rules:
-- `Natural` size in `SizeHints` must be **finite**. Never return infinity as “desired size”.
-- “Stretch” is a parent responsibility during arrange (flex/allocation), not something a leaf expresses by returning max constraints in measure.
+- `Natural` size in `SizeHints` must be **finite**. Never return infinity as "desired size".
+- "Stretch" is a parent responsibility during arrange (flex/allocation), not something a leaf expresses by returning max constraints in measure.
 - For scrollable content, distinguish **extent** vs **viewport** (see ScrollViewer spec/implementation).
 
 ### Alignment defaults
 - Terminal UI defaults are generally `Align.Start` for both axes unless a specific control requires stretch semantics.
-- Don’t overuse alignment in demos; keep examples minimal.
+- Don't overuse alignment in demos; keep examples minimal.
 
-## 4) Rendering: correctness first, then performance
+## Rendering: correctness first, then performance
 
 ### Render through the framework primitives
 - Render to `CellBuffer` / renderer infrastructure; avoid per-cell `Terminal.Write(...)` style output from controls.
@@ -98,11 +99,11 @@ Key rules:
 - Use the theme/style system (see [Styling](styling.md)) rather than hardcoding colors/glyphs.
 - Control-specific style records should contain glyphs/colors and be overridden via `Style(...)`.
 
-## 5) Input + events
+## Input + events
 
 ### Use routed events for UI interactions
-- Terminal input events are “raw”. Controls should expose routed events (preview/bubble) where appropriate.
-- When implementing interactions that depend on press/drag/release, ensure mouse capture rules are respected (drag shouldn’t leak hover to other visuals).
+- Terminal input events are "raw". Controls should expose routed events (preview/bubble) where appropriate.
+- When implementing interactions that depend on press/drag/release, ensure mouse capture rules are respected (drag shouldn't leak hover to other visuals).
 
 ### `RoutedEventAttribute`: how it works (source-generated)
 
@@ -118,7 +119,7 @@ Rules:
 - The containing type must be `partial`.
 - The method must return `void` and take exactly **one** parameter (the event args type).
 - The event name is derived from the method name:
-  - `OnClick(ClickEventArgs e)` → `ClickEvent` and `ClickRouted`.
+  - `OnClick(ClickEventArgs e)` -> `ClickEvent` and `ClickRouted`.
 - Routing strategy defaults to `Bubble` if not specified.
 
 Example (typical button click):
@@ -153,13 +154,13 @@ When the routed event is raised via `RaiseEvent(...)`, the routing system:
 - Use `TerminalChar.*` constants for control characters (e.g., `TerminalChar.CtrlC`).
 - Prefer `KeyGesture` parsing/printing helpers when dealing with configurable shortcuts.
 
-## 6) Hosting: fullscreen vs inline/live are different
+## Hosting: fullscreen vs inline/live are different
 
 - Fullscreen rendering can own the whole viewport/background.
 - Inline/live must behave like a flowing console: content should scroll, cursor must end up in the right place after the live region, and resize should not corrupt the screen.
 - Prefer using the existing hosting abstractions (`Terminal.Live`, `Terminal.Run`) rather than custom terminal manipulation in controls.
 
-## 7) Source generator expectations
+## Source generator expectations
 
 ### `[Bindable]`
 - Generates storage, `BindingAccessor`, `IBindings`, and fluent extension methods.
@@ -169,18 +170,18 @@ When the routed event is raised via `RaiseEvent(...)`, the routing system:
 - Generates fluent-only extension methods for non-bindable properties.
 - Same Delegator rule as `[Bindable]`.
 
-## 8) Tests and demos
+## Tests and demos
 
 ### Tests
 - Add unit tests for new controls and for regressions.
-- Prefer deterministic “tick” driven app/test harness patterns; avoid `Task.Delay` based tests.
+- Prefer deterministic "tick" driven app/test harness patterns; avoid `Task.Delay` based tests.
 - Use MSTest recommended asserts where available.
 
 ### Samples
 - Update `samples` to demonstrate new features.
 - Keep demos readable: minimal nesting, strong defaults, fluent configuration.
 
-## 9) Documentation quality
+## Documentation quality
 
 - New public APIs require XML docs (CS1591 must stay clean).
 - Add or update user-guide docs in `site/docs/` when introducing new concepts/controls.
