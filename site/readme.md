@@ -33,8 +33,10 @@ og_type: website
           <p class="card-text">
             Bindable properties are tracked during update/layout/render. Change state and only the affected visuals are invalidated.
           </p>
-          <a href="/docs/binding/">Binding &amp; State</a>
-        </div>
+
+          [Binding &amp; State](docs/binding.md)
+
+</div>
       </div>
     </div>
     <div class="col">
@@ -44,8 +46,10 @@ og_type: website
           <p class="card-text">
             Inputs, layout containers, menus, overlays, charts, and more — all composable and styleable.
           </p>
-          <a href="/docs/controls/">Controls Reference</a>
-        </div>
+
+          [Controls Reference](docs/controls.md)
+
+</div>
       </div>
     </div>
     <div class="col">
@@ -55,8 +59,10 @@ og_type: website
           <p class="card-text">
             TextBox/TextArea with selection, scrolling, clipboard, and Find/Replace — powered by a shared text subsystem.
           </p>
-          <a href="/docs/text-editing/">Text Editing</a>
-        </div>
+
+          [Text Editing](docs/text-editing.md)
+
+</div>
       </div>
     </div>
     <div class="col">
@@ -66,8 +72,9 @@ og_type: website
           <p class="card-text">
             A virtualized data grid with selection, filtering, search, and in-place editing.
           </p>
-          <a href="/docs/controls/datagrid/">DataGridControl</a>
-        </div>
+
+          [DataGridControl](docs/controls/datagrid.md)
+</div>
       </div>
     </div>
     <div class="col">
@@ -77,8 +84,10 @@ og_type: website
           <p class="card-text">
             Themes are derived from palettes and color schemes, with built-in alpha blending for subtle, layered UIs.
           </p>
-          <a href="/docs/styling/">Styling</a> &amp; <a href="/docs/rendering/">Rendering</a>
-        </div>
+
+          [Styling](docs/styling.md) &amp; [Rendering](docs/rendering.md)
+
+</div>
       </div>
     </div>
     <div class="col">
@@ -88,8 +97,9 @@ og_type: website
           <p class="card-text">
             Press <kbd>F12</kbd> in fullscreen apps to inspect FPS, dirty regions, diff stats, and per-pass timings.
           </p>
-          <a href="/docs/debugging/">Debugging</a>
-        </div>
+
+          [Debugging](docs/debugging.md)
+</div>
       </div>
     </div>
   </div>
@@ -109,7 +119,7 @@ og_type: website
           <img src="/img/xenoatom-terminal.svg" alt="XenoAtom.Terminal" width="56" height="56" loading="lazy">
           <span class="fw-semibold">XenoAtom.Terminal</span>
         </div>
-        <i class="bi bi-arrow-right text-secondary" aria-hidden="true"></i>
+        <i class="bi bi-plus text-secondary" aria-hidden="true"></i>
         <div class="d-flex align-items-center gap-2">
           <img src="/img/xenoatom-logo.png" alt="XenoAtom.Terminal.UI" width="56" height="56" loading="lazy">
           <span class="fw-semibold">XenoAtom.Terminal.UI</span>
@@ -120,7 +130,9 @@ og_type: website
           <span class="fw-semibold">XenoAtom.Ansi</span>
         </div>
       </div>
-      <a href="/docs/foundations/" class="btn btn-outline-light"><i class="bi bi-journal-text"></i> Ecosystem &amp; foundations</a>
-    </div>
+
+      <i class="bi bi-journal-text"></i>[Ecosystem &amp; foundations](docs/foundations.md)
+    
+</div>
   </div>
 </section>
