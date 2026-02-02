@@ -34,6 +34,7 @@ public sealed partial class CommandBar : Visual
     public CommandBar()
     {
         Presentation = CommandPresentation.CommandBar;
+        HorizontalAlignment = Align.Stretch;
         _markupParser = new MarkupTextParser();
         _localCommands = new List<(Command, Visual, bool)>(16);
         _globalCommands = new List<(Command, Visual, bool)>(8);

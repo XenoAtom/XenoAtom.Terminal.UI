@@ -17,6 +17,32 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// </summary>
 public sealed partial class Center : ContentVisual
 {
+    /// <summary>
+    /// Initializes a new instance of the Center class.
+    /// </summary>
+    public Center()
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the Center class with the specified visual content.
+    /// </summary>
+    /// <param name="content">The visual element to be centered. Cannot be null.</param>
+    public Center(Visual content)
+    {
+        Content = content;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the Center class with the specified content generator.
+    /// </summary>
+    /// <param name="content">A delegate that returns the Visual to be centered. This function is invoked to generate the content when needed
+    /// and must not be null.</param>
+    public Center(Func<Visual> content)
+    {
+        Content = new ComputedVisual(content);
+    }
+    
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {

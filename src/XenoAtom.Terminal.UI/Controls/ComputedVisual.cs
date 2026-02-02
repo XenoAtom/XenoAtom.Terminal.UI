@@ -81,6 +81,17 @@ public sealed partial class ComputedVisual : Visual
 
         if (desired is null)
         {
+            // Bind wrapper layout/visibility properties to the computed child so the computed visual behaves like the child
+            // in its container (alignment, min/max, margin, etc.).
+            this.BindHorizontalAlignment(default);
+            this.BindVerticalAlignment(default);
+            this.BindMinWidth(default);
+            this.BindMinHeight(default);
+            this.BindMaxWidth(default);
+            this.BindMaxHeight(default);
+            this.BindMargin(default);
+            this.BindIsVisible(default);
+            this.BindIsEnabled(default);
             return;
         }
 
