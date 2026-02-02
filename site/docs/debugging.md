@@ -14,6 +14,8 @@ overlay.
 
 The gesture is configurable via `TerminalAppOptions.ToggleDebugOverlayGesture` (default: `F12`).
 
+![Debug Overlay](../img/debugging.png){.terminal}
+
 > [!TIP]
 > Keep the overlay enabled while developing dynamic UIs. It makes “silent” performance bugs obvious (for example: a
 > control constantly re-measuring due to an unstable binding).

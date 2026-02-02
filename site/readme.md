@@ -77,7 +77,7 @@ og_type: website
           <p class="card-text">
             Themes are derived from palettes and color schemes, with built-in alpha blending for subtle, layered UIs.
           </p>
-          <a href="/docs/styling/">Styling</a>
+          <a href="/docs/styling/">Styling</a> &amp; <a href="/docs/rendering/">Rendering</a>
         </div>
       </div>
     </div>
