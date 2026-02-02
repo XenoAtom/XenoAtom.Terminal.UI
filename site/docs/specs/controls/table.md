@@ -12,35 +12,123 @@ This document captures design and implementation notes for `Table`.
 ## Overview
 
 - **Status**: Implemented
-- **Primary purpose**: Provide `Table` as a retained-mode control with bindable properties and predictable layout/rendering behavior.
-- **Key design constraints**:
-  - reactive dependency tracking (measure/arrange/render)
-  - allocation-conscious rendering
-  - AOT/trimming friendliness (no runtime reflection by default)
+- **Primary purpose**: Layout and render a grid of header cells and row cells, with optional borders/separators.
+- **Content model**: Each cell is a `Visual` (not just text), so tables can embed composed UIs (e.g. `VStack`, `TextArea`, badges).
+- **Sizing strategy**:
+  - columns size to the max desired width across header + rows (then fit to available width)
+  - rows size to the max desired height across cells **for the chosen column widths**
 
-## Implementation notes
+## Public API surface
 
-- Source code lives under `src/XenoAtom.Terminal.UI` (search for `Table` and `TableStyle`).
-- Public properties are typically `[Bindable]` (generated accessors) and participate in the binding dirty model.
+### Type
+
+- `Table : Visual` (sealed)
+
+### Bindable properties
+
+- `HeaderCells : VisualList<Visual>`
+  - header row cells; can be empty (no header row)
+- `RowCells : BindableList<VisualList<Visual>>`
+  - a list of rows; each row is a `VisualList<Visual>` owned by the table
+- `ShowHeaderSeparator : bool`
+  - additional toggle layered on top of `TableStyle.ShowHeaderSeparator`
+
+### Fluent helpers
+
+Most call sites use `VisualExtensions` helpers:
+
+- `Headers(params Visual[] headers)` / `AddHeader(Visual header)`
+- `AddRow(params Visual[] cells)` / `Rows(params Visual[][] rows)`
+
+These helpers create row lists with the correct owner (`new VisualList<Visual>(table, ...)`) so `RowCells` validation passes.
 
 ## Layout & rendering
 
-- Follows the standard `Measure` → `Arrange` → `Render` pipeline.
-- Uses style inheritance from the visual tree; control-specific style is typically `TableStyle`.
+### Measure
 
-## Input & commands
+Measure computes the intrinsic “grid” size in three phases:
 
-- Keyboard/mouse behaviors (when applicable) are exposed via commands so they are discoverable (e.g., CommandBar / CommandPalette).
+1) **Determine column count**: `max(HeaderCells.Count, max(RowCells[r].Count))`.
+2) **Compute per-column desired widths**:
+   - measure every header/row cell with `LayoutConstraints.Unbounded`
+   - take `max(cell.DesiredSize.Width)` per column
+3) **Fit widths to available**:
+   - `FitColumnWidthsToWidth(widths, constraints.MaxWidth, ...)` with `expandToAvailable: false`
+   - if required width exceeds available, columns are clamped to an equal “per-column” width
+
+Then it computes row heights:
+
+- cells are re-measured with `MaxWidth = columnWidth` (unbounded height)
+- row height is `max(cell.DesiredSize.Height)` across columns plus `TableStyle.CellPadding.Vertical`
+- header row height is computed similarly
+
+The resulting fixed desired size includes:
+
+- `TableStyle.CellPadding` and separator widths
+- optional outer border
+- optional header separator / row separators
+
+### Arrange
+
+Arrange re-fits the cached column widths to the final width:
+
+- `FitColumnWidthsToWidth(..., expandToAvailable: true)`
+  - if there is extra width, it is added to the **last column**
+
+Cells are then arranged in row order:
+
+- each cell is given a `Rectangle` that is the column content width and row content height (after padding)
+- if vertical separators are enabled, an extra 1-cell column is reserved between columns
+- if row separators are enabled, an extra 1-cell row is reserved between rows
+
+### Render
+
+Rendering draws the table “chrome” (backgrounds and separators); cells render themselves as children.
+
+`Table` uses:
+
+- `LineGlyphs` (from `TableStyle.Glyphs` or `Theme.Lines`) for borders/separators
+- `TableStyle.ResolveBorderStyle(theme, focused)` for lines/borders (`focused = HasFocusWithin`)
+- `TableStyle.ResolveCellStyle(theme)` for body background fill
+- `TableStyle.ResolveHeaderStyle(theme)` for header background fill
+
+Render order:
+
+1) outer border top line (optional)
+2) header row area fill (optional)
+3) header separator line (optional)
+4) each row area fill + row separators (optional)
+5) outer border bottom line (optional)
+
+## Validation & safety
+
+- `RowCells` only accepts rows whose `VisualOwner` is the `Table` instance; otherwise it throws.
+- Removing a row clears it to detach its children.
 
 ## Styling
 
-- Styling is controlled via the theme and `TableStyle` (where applicable).
+### TableStyle
+
+Key knobs:
+
+- chrome toggles: `ShowOuterBorder`, `ShowVerticalLines`, `ShowRowSeparators`, `ShowHeaderSeparator`
+- `CellPadding` (applied inside every cell)
+- optional overrides:
+  - `Glyphs` (single/rounded/double line sets)
+  - `CellStyle`, `HeaderStyle`, `BorderStyle`
+
+Provided presets:
+
+- `TableStyle.Minimal`, `TableStyle.Grid`, `TableStyle.RoundedGrid`, `TableStyle.DoubleGrid`
 
 ## Tests & demos
 
-- Look for rendering/input tests in `src/XenoAtom.Terminal.UI.Tests`.
-- See the ControlsDemo for interactive examples.
+- Tests:
+  - `src/XenoAtom.Terminal.UI.Tests/TableRenderingTests.cs` (including multi-line cell content)
+- Demo:
+  - ControlsDemo includes multiple table examples (including composed cells).
 
 ## Future / v2 ideas
 
-- Consider documenting additional style knobs and adding more deterministic rendering tests as features grow.
+- Support per-column alignment and per-column width policies (fixed, min/max, proportional).
+- Support column spanning / row spanning for richer layouts.
