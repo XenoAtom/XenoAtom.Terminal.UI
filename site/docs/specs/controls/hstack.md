@@ -12,35 +12,65 @@ This document captures design and implementation notes for `HStack`.
 ## Overview
 
 - **Status**: Implemented
-- **Primary purpose**: Provide `HStack` as a retained-mode control with bindable properties and predictable layout/rendering behavior.
-- **Key design constraints**:
-  - reactive dependency tracking (measure/arrange/render)
-  - allocation-conscious rendering
-  - AOT/trimming friendliness (no runtime reflection by default)
+- **Primary purpose**: Arrange children horizontally in a stack with optional spacing.
+- **Layout model**:
+  - measures width as sum of children widths + spacing
+  - measures height as the max child height
+  - allocates child widths using the flex allocator (respecting min/natural/max + grow/shrink)
 
-## Implementation notes
+## Public API surface
 
-- Source code lives under `src/XenoAtom.Terminal.UI` (search for `HStack` and `HStackStyle`).
-- Public properties are typically `[Bindable]` (generated accessors) and participate in the binding dirty model.
+### Type
 
-## Layout & rendering
+- `HStack : Panel` (sealed)
 
-- Follows the standard `Measure` → `Arrange` → `Render` pipeline.
-- Uses style inheritance from the visual tree; control-specific style is typically `HStackStyle`.
+### Constructors
 
-## Input & commands
+- `HStack()` sets `HorizontalAlignment = Align.Start`.
+- `HStack(params Visual[] children)` sets alignment and adds the children.
 
-- Keyboard/mouse behaviors (when applicable) are exposed via commands so they are discoverable (e.g., CommandBar / CommandPalette).
+### Bindable properties
 
-## Styling
+- `Spacing : int`
+  - number of blank columns between children (clamped to `>= 0`)
 
-- Styling is controlled via the theme and `HStackStyle` (where applicable).
+## Layout behavior
+
+### Measure
+
+For `N` children and `spacing = max(0, Spacing)`:
+
+- `totalSpacing = spacing * max(0, N - 1)`
+- each child is measured with:
+  - height constrained by the parent (`MinHeight/MaxHeight`)
+  - width unbounded below (`MinWidth = 0`) and bounded above (`MaxWidth`)
+- resulting stack hints:
+  - `Min.Width` / `Natural.Width` are the **sum** across children plus `totalSpacing`
+  - `Max.Width` is the sum of max widths (or infinite if any child max width is infinite)
+  - `Min.Height` / `Natural.Height` / `Max.Height` are based on the **maximum** height across children
+  - `FlexGrowX` / `FlexShrinkX` are the sum across children
+
+The result is normalized via `SizeHints.Normalize()`.
+
+### Arrange
+
+Arrange allocates each child width using `FlexAllocator.Allocate(...)`:
+
+- available width = `finalRect.Width - totalSpacing`
+- allocator inputs are per-child `MeasureHints` (min/natural/max + grow/shrink on X)
+- each child is arranged with:
+  - full stack height (`finalRect.Height`)
+  - allocated width
+  - stacked `x` offsets with `Spacing` columns between children
+
+## Styling & rendering
+
+- `HStack` has no dedicated style and does not render anything itself; children render normally.
 
 ## Tests & demos
 
-- Look for rendering/input tests in `src/XenoAtom.Terminal.UI.Tests`.
-- See the ControlsDemo for interactive examples.
+- `HStack` is exercised broadly through layout protocol tests and ControlsDemo layouts.
 
 ## Future / v2 ideas
 
-- Consider documenting additional style knobs and adding more deterministic rendering tests as features grow.
+- Add optional “baseline alignment” for text-heavy stacks (if the text system exposes baselines).
