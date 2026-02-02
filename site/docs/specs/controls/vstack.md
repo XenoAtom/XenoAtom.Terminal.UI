@@ -12,35 +12,65 @@ This document captures design and implementation notes for `VStack`.
 ## Overview
 
 - **Status**: Implemented
-- **Primary purpose**: Provide `VStack` as a retained-mode control with bindable properties and predictable layout/rendering behavior.
-- **Key design constraints**:
-  - reactive dependency tracking (measure/arrange/render)
-  - allocation-conscious rendering
-  - AOT/trimming friendliness (no runtime reflection by default)
+- **Primary purpose**: Arrange children vertically in a stack with optional spacing.
+- **Layout model**:
+  - measures height as sum of children heights + spacing
+  - measures width as the max child width
+  - allocates child heights using the flex allocator (respecting min/natural/max + grow/shrink)
 
-## Implementation notes
+## Public API surface
 
-- Source code lives under `src/XenoAtom.Terminal.UI` (search for `VStack` and `VStackStyle`).
-- Public properties are typically `[Bindable]` (generated accessors) and participate in the binding dirty model.
+### Type
 
-## Layout & rendering
+- `VStack : Panel` (sealed)
 
-- Follows the standard `Measure` → `Arrange` → `Render` pipeline.
-- Uses style inheritance from the visual tree; control-specific style is typically `VStackStyle`.
+### Constructors
 
-## Input & commands
+- `VStack()` sets `VerticalAlignment = Align.Start`.
+- `VStack(params Visual[] children)` sets alignment and adds the children.
 
-- Keyboard/mouse behaviors (when applicable) are exposed via commands so they are discoverable (e.g., CommandBar / CommandPalette).
+### Bindable properties
 
-## Styling
+- `Spacing : int`
+  - number of blank rows between children (clamped to `>= 0`)
 
-- Styling is controlled via the theme and `VStackStyle` (where applicable).
+## Layout behavior
+
+### Measure
+
+For `N` children and `spacing = max(0, Spacing)`:
+
+- `totalSpacing = spacing * max(0, N - 1)`
+- each child is measured with:
+  - width constrained by the parent (`MinWidth/MaxWidth`)
+  - height unbounded below (`MinHeight = 0`) and bounded above (`MaxHeight`)
+- resulting stack hints:
+  - `Min.Width` / `Natural.Width` / `Max.Width` are based on the **maximum** width across children
+  - `Min.Height` / `Natural.Height` are the **sum** across children plus `totalSpacing`
+  - `Max.Height` is the sum of max heights (or infinite if any child max height is infinite)
+  - `FlexGrowY` / `FlexShrinkY` are the sum across children
+
+The result is normalized via `SizeHints.Normalize()`.
+
+### Arrange
+
+Arrange allocates each child height using `FlexAllocator.Allocate(...)`:
+
+- available height = `finalRect.Height - totalSpacing`
+- allocator inputs are per-child `MeasureHints` (min/natural/max + grow/shrink on Y)
+- each child is arranged with:
+  - full stack width (`finalRect.Width`)
+  - allocated height
+  - stacked `y` offsets with `Spacing` rows between children
+
+## Styling & rendering
+
+- `VStack` has no dedicated style and does not render anything itself; children render normally.
 
 ## Tests & demos
 
-- Look for rendering/input tests in `src/XenoAtom.Terminal.UI.Tests`.
-- See the ControlsDemo for interactive examples.
+- `VStack` is exercised broadly through layout protocol tests and ControlsDemo layouts.
 
 ## Future / v2 ideas
 
-- Consider documenting additional style knobs and adding more deterministic rendering tests as features grow.
+- Support per-child cross-axis alignment overrides (beyond what each child already supports via its own alignment).
