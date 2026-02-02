@@ -7,8 +7,8 @@ title: Terminal User Guide
 XenoAtom.Terminal.UI is a modern retained-mode terminal UI framework built on top of XenoAtom.Terminal.
 It supports both:
 
-- **Inline widgets** that render as part of normal terminal output (`Terminal.Write`, `Terminal.Live`)
-- **Fullscreen applications** (alternate screen, focus navigation, routed input, dialogs, etc.)
+- Inline widgets that render as part of normal terminal output (`Terminal.Write`, `Terminal.Live`)
+- Fullscreen applications (alternate screen, focus navigation, routed input, dialogs, etc.)
 
 This guide documents the concepts, features, and controls of the library.
 
@@ -20,8 +20,8 @@ This guide documents the concepts, features, and controls of the library.
 
 Terminal.UI is built on:
 
-- [XenoAtom.Terminal](terminal.md) — terminal I/O, input events, hosting (inline + fullscreen)
-- [XenoAtom.Ansi](ansi.md) — ANSI/VT primitives and markup used by the `Markup` control and parsers
+- [XenoAtom.Terminal](terminal.md) - terminal I/O, input events, hosting (inline + fullscreen)
+- [XenoAtom.Ansi](ansi.md) - ANSI/VT primitives and markup used by the `Markup` control and parsers
 
 See also:
 
@@ -46,7 +46,7 @@ See also:
 - [Scrolling](scrolling.md) (ScrollViewer, scroll models, scrollbars)
 - [Text Editing](text-editing.md) (TextBox/TextArea/MaskedInput and the text subsystem)
 - [Undo/Redo](undo-redo.md) (undo/redo for text editors)
-- [Markup Parsing](markup-parsing.md) (`MarkupTextParser`, styled runs)
+- [Markup](markup.md) (markup syntax, semantic tokens, `MarkupTextParser`)
 - [Debugging](debugging.md) (debug overlay, performance metrics)
 
 ## Controls reference

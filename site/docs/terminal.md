@@ -8,18 +8,18 @@ XenoAtom.Terminal is the foundation underneath XenoAtom.Terminal.UI. It is a mod
 designed for TUI/CLI apps: safe output, terminal-native capabilities, unified input events, and deterministic testing.
 
 > [!NOTE]
-> XenoAtom.Terminal is a **terminal API**, not a widget framework. Terminal.UI provides the widget/layout layer.
+> XenoAtom.Terminal is a terminal API, not a widget framework. Terminal.UI provides the widget/layout layer.
 
 ## Why use it (vs `System.Console`)?
 
 XenoAtom.Terminal keeps a familiar console-like surface (`Write`, `ReadKey`, cursor, colors), while adding the
 capabilities that are hard to do correctly and portably with `System.Console`:
 
-- **Atomic ANSI-safe output** (no interleaved styling/cursor ops)
-- **Markup/styling** built on `XenoAtom.Ansi`
-- **Unified input event stream** (keyboard, mouse, resize, bracketed paste when available)
-- **Scopes** that restore terminal state on dispose (cursor, raw mode, alternate screen, etc.)
-- **Backends** for deterministic testing (in-memory backend)
+- Atomic ANSI-safe output (no interleaved styling/cursor ops)
+- Markup/styling built on `XenoAtom.Ansi`
+- Unified input event stream (keyboard, mouse, resize, bracketed paste when available)
+- Scopes that restore terminal state on dispose (cursor, raw mode, alternate screen, etc.)
+- Backends for deterministic testing (in-memory backend)
 
 ## Getting started
 
@@ -64,7 +64,11 @@ Markup output (powered by `XenoAtom.Ansi`):
 Terminal.WriteMarkup("[bold green]Hello[/] [gray]world[/]!");
 ```
 
-### Capabilities & environment differences
+See:
+
+- [Markup](markup.md) (syntax reference and Terminal.UI semantic tokens)
+
+### Capabilities and environment differences
 
 Terminal behavior depends on the host (Windows Console vs terminal emulator vs CI logs). You can inspect capabilities:
 
@@ -110,14 +114,14 @@ var line = Terminal.ReadLine(new TerminalReadLineOptions
 Highlights:
 
 - history (scoped, not global), completion, undo/redo
-- fixed-width view + optional ellipsis
+- fixed-width view and optional ellipsis
 - bracketed paste and optional mouse editing (when supported)
 
-Terminal.UI builds higher-level prompt controls on top of Terminal’s live hosting; see:
+Terminal.UI builds higher-level prompt controls on top of Terminal's live hosting; see:
 
 - [Prompts](prompts.md) (inline prompts built on `Terminal.Live`)
 
-## Testing & backends
+## Testing and backends
 
 Terminal can run against a virtual/in-memory backend, which makes it suitable for deterministic tests. Terminal.UI tests
 use the same idea at the UI layer (render to buffers and diff).
@@ -126,12 +130,12 @@ use the same idea at the UI layer (render to buffers and diff).
 
 Terminal.UI integrates as extension members on `Terminal`:
 
-- `Terminal.Write(Visual)` — render once
-- `Terminal.Live(Visual, onUpdate)` — inline live region
-- `Terminal.Run(Visual, onUpdate)` — fullscreen app (alternate screen)
+- `Terminal.Write(Visual)` - render once
+- `Terminal.Live(Visual, onUpdate)` - inline live region
+- `Terminal.Run(Visual, onUpdate)` - fullscreen app (alternate screen)
 
 See:
 
 - [Hosting](hosting.md)
 - [Rendering](rendering.md)
- - [Ecosystem & Foundations](foundations.md)
+- [Ecosystem and Foundations](foundations.md)

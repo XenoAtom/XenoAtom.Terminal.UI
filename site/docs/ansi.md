@@ -4,22 +4,21 @@ title: XenoAtom.Ansi
 
 # XenoAtom.Ansi
 
-XenoAtom.Ansi is the low-level ANSI/VT library that powers markup and styling in XenoAtom.Terminal and
-XenoAtom.Terminal.UI.
+XenoAtom.Ansi is the low-level ANSI/VT library that powers markup and styling in XenoAtom.Terminal and XenoAtom.Terminal.UI.
 
 It provides:
 
 - ANSI/VT sequence emission (SGR styles, some cursor/screen operations)
-- Lightweight **markup** rendering (Spectre.Console-like tags)
+- Lightweight markup rendering (Spectre.Console-like tags)
 - ANSI parsing/tokenization and styled runs
 - ANSI-aware text utilities (strip/measure/wrap/truncate)
 
-## Markup (the syntax used by Terminal.UI)
+## Markup
 
 Terminal.UI uses XenoAtom.Ansi markup syntax in multiple places:
 
 - the [`Markup`](controls/markup.md) control
-- prompt help strings (e.g. `HelpMarkup(...)`)
+- prompt help strings (for example `HelpMarkup(...)`)
 - internal markup parsing utilities (`MarkupTextParser`)
 
 Example:
@@ -28,8 +27,8 @@ Example:
 new Markup("[bold yellow]Warning:[/] disk is almost full");
 ```
 
-Markup is designed to be safe with interpolated values: user input is escaped so it can’t inject tags when you use the
-interpolated handler APIs. When you build markup manually, you can escape with:
+Markup is designed to be safe with interpolated values: user input is escaped so it cannot inject tags when you use the interpolated handler APIs.
+When you build markup manually, you can escape with:
 
 ```csharp
 using XenoAtom.Ansi;
@@ -37,21 +36,22 @@ using XenoAtom.Ansi;
 var safe = AnsiMarkup.Escape(userInput);
 ```
 
-## How Terminal.UI turns markup into UI styles
+See:
 
-Terminal/UI styling is not “raw ANSI”. Terminal.UI parses markup into:
+- [Markup](markup.md) (syntax reference and Terminal.UI semantic tokens)
+
+## How Terminal.UI uses markup
+
+Terminal.UI does not render "raw ANSI". It parses markup into:
 
 - plain text
 - a list of styled runs (`StyledRun[]`) that reference `Terminal.UI.Style`
 
-See:
-
-- [Markup Parsing](markup-parsing.md) (`MarkupTextParser`)
+These runs are then rendered into a `CellBuffer`.
 
 ## ANSI emission (AnsiWriter)
 
-If you are using XenoAtom.Terminal directly (without Terminal.UI), XenoAtom.Ansi provides `AnsiWriter` for producing
-escape sequences efficiently:
+If you are using XenoAtom.Terminal directly (without Terminal.UI), XenoAtom.Ansi provides `AnsiWriter` for producing escape sequences efficiently:
 
 ```csharp
 using XenoAtom.Ansi;
@@ -62,8 +62,7 @@ w.Foreground(AnsiColors.BrightYellow).Decorate(AnsiDecorations.Bold).Write("Warn
 ```
 
 > [!NOTE]
-> Terminal.UI does not render “raw ANSI”. It renders a `CellBuffer` and then writes ANSI via the host.
-> `AnsiWriter` is most useful when you are building a CLI/TUI directly on XenoAtom.Terminal.
+> Terminal.UI renders a `CellBuffer` and then writes ANSI via the host. `AnsiWriter` is most useful when you are building a CLI/TUI directly on XenoAtom.Terminal.
 
 ## Relationship to Terminal and Terminal.UI
 

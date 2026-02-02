@@ -8,6 +8,8 @@ This document captures the design and implementation details of `Markup` (the co
 
 > [!NOTE]
 > For end-user usage and examples, see [Markup](../../controls/markup.md).
+>
+> For the markup syntax reference, see [Markup](../../markup.md).
 
 ## Overview
 

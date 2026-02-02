@@ -4,6 +4,7 @@ doc:
   - {path: foundations.md, title: "<i class='bi bi-diagram-3' aria-hidden='true'></i> Ecosystem"}
   - {path: terminal.md, title: "<i class='bi bi-terminal' aria-hidden='true'></i> XenoAtom.Terminal"}
   - {path: ansi.md, title: "<i class='bi bi-code-slash' aria-hidden='true'></i> XenoAtom.Ansi"}
+  - {path: markup.md, title: "<i class='bi bi-code-square' aria-hidden='true'></i> Markup"}
   - {path: visual-tree.md, title: "<i class='bi bi-diagram-3' aria-hidden='true'></i> Visual Tree"}
   - {path: binding.md, title: "<i class='bi bi-link-45deg' aria-hidden='true'></i> Binding & State"}
   - {path: data-templating.md, title: "<i class='bi bi-puzzle' aria-hidden='true'></i> Data Templating"}
@@ -15,7 +16,6 @@ doc:
   - {path: scrolling.md, title: "<i class='bi bi-arrows-move' aria-hidden='true'></i> Scrolling"}
   - {path: text-editing.md, title: "<i class='bi bi-pencil-square' aria-hidden='true'></i> Text Editing"}
   - {path: undo-redo.md, title: "<i class='bi bi-arrow-counterclockwise' aria-hidden='true'></i> Undo/Redo"}
-  - {path: markup-parsing.md, title: "<i class='bi bi-code-square' aria-hidden='true'></i> Markup Parsing"}
   - {path: culture.md, title: "<i class='bi bi-globe2' aria-hidden='true'></i> Culture"}
   - {path: debugging.md, title: "<i class='bi bi-bug' aria-hidden='true'></i> Debugging"}
   - {path: hosting.md, title: "<i class='bi bi-plug' aria-hidden='true'></i> Hosting"}
