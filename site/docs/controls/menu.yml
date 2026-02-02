@@ -1,5 +1,6 @@
 controls:
   - {path: readme.md, title: "<i class='bi bi-ui-checks-grid' aria-hidden='true'></i> All Controls"}
+  - {title: "<i class='bi bi-keyboard xenoatom-icon xenoatom-icon--input' aria-hidden='true'></i> Text input", separator: true}
   - {path: textbox.md, title: TextBox}
   - {path: textarea.md, title: TextArea}
   - {path: maskedinput.md, title: MaskedInput}
@@ -8,18 +9,21 @@ controls:
   - {path: validation.md, title: Validation}
   - {path: colorpicker.md, title: ColorPicker}
 
+  - {title: "<i class='bi bi-toggle-on xenoatom-icon xenoatom-icon--actions' aria-hidden='true'></i> Buttons & toggles", separator: true}
   - {path: button.md, title: Button}
   - {path: checkbox.md, title: CheckBox}
   - {path: radiobutton.md, title: RadioButton}
   - {path: switch.md, title: Switch}
   - {path: link.md, title: Link}
 
+  - {title: "<i class='bi bi-list-check xenoatom-icon xenoatom-icon--lists' aria-hidden='true'></i> Lists & selection", separator: true}
   - {path: listbox.md, title: ListBox}
   - {path: optionlist.md, title: OptionList}
   - {path: selectionlist.md, title: SelectionList}
   - {path: select.md, title: Select}
   - {path: treeview.md, title: TreeView}
 
+  - {title: "<i class='bi bi-layout-split xenoatom-icon xenoatom-icon--layout' aria-hidden='true'></i> Layout & containers", separator: true}
   - {path: vstack.md, title: VStack}
   - {path: hstack.md, title: HStack}
   - {path: wrapstack.md, title: WrapStack}
@@ -31,9 +35,11 @@ controls:
   - {path: border.md, title: Border}
   - {path: group.md, title: Group}
 
+  - {title: "<i class='bi bi-arrows-move xenoatom-icon xenoatom-icon--scroll' aria-hidden='true'></i> Scrolling", separator: true}
   - {path: scrollbar.md, title: ScrollBar}
   - {path: scrollviewer.md, title: ScrollViewer}
 
+  - {title: "<i class='bi bi-window xenoatom-icon xenoatom-icon--chrome' aria-hidden='true'></i> Navigation & chrome", separator: true}
   - {path: tabcontrol.md, title: TabControl}
   - {path: menubar.md, title: MenuBar}
   - {path: header.md, title: Header}
@@ -42,6 +48,7 @@ controls:
   - {path: commandbar.md, title: CommandBar}
   - {path: commandpalette.md, title: CommandPalette}
 
+  - {title: "<i class='bi bi-table xenoatom-icon xenoatom-icon--data' aria-hidden='true'></i> Data display", separator: true}
   - {path: table.md, title: Table}
   - {path: datagrid.md, title: DataGridControl}
   - {path: textblock.md, title: TextBlock}
@@ -59,6 +66,7 @@ controls:
   - {path: canvas.md, title: Canvas}
   - {path: textfiglet.md, title: TextFiglet}
 
+  - {title: "<i class='bi bi-layers xenoatom-icon xenoatom-icon--overlays' aria-hidden='true'></i> Overlays", separator: true}
   - {path: popup.md, title: Popup}
   - {path: contextmenu.md, title: ContextMenu}
   - {path: dialog.md, title: Dialog}
