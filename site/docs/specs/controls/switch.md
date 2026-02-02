@@ -12,35 +12,111 @@ This document captures design and implementation notes for `Switch`.
 ## Overview
 
 - **Status**: Implemented
-- **Primary purpose**: Provide `Switch` as a retained-mode control with bindable properties and predictable layout/rendering behavior.
-- **Key design constraints**:
-  - reactive dependency tracking (measure/arrange/render)
-  - allocation-conscious rendering
-  - AOT/trimming friendliness (no runtime reflection by default)
+- **Primary purpose**: A compact toggle switch with optional inline content (label) rendered next to the track.
+- **Content model**: `Switch : ContentVisual` (single child `Content`).
+- **Interaction**:
+  - toggles on `Space`/`Enter` and left click
+  - supports `Left`/`Right` to force off/on
+- **Rendering note**: Carefully handles RGBA track fills to avoid double-applied alpha blending when drawing the thumb over the track.
 
-## Implementation notes
+## Public API surface
 
-- Source code lives under `src/XenoAtom.Terminal.UI` (search for `Switch` and `SwitchStyle`).
-- Public properties are typically `[Bindable]` (generated accessors) and participate in the binding dirty model.
+### Type
+
+- `Switch : ContentVisual` (sealed)
+
+### Constructors
+
+- `Switch()` sets `Focusable = true`.
+- `Switch(Visual content)` assigns `Content`.
+
+### Bindable properties
+
+- `IsOn : bool`
+  - raises the `Toggled` routed event when it changes
+- `IsPressed : bool` (read-only public)
+  - set during pointer press/release for pressed styling
+
+### Routed events
+
+- `Toggled` (bubble): raised with old/new boolean values.
 
 ## Layout & rendering
 
-- Follows the standard `Measure` → `Arrange` → `Render` pipeline.
-- Uses style inheritance from the visual tree; control-specific style is typically `SwitchStyle`.
+### Measure
 
-## Input & commands
+- Track width is fixed at 4 cells (`TrackWidth = 4`).
+- If there is content:
+  - measures content with width reduced by `TrackWidth + SwitchStyle.SpaceBetweenGlyphAndText`
+  - desired size is:
+    - `width = TrackWidth + gap + contentWidth`
+    - `height = max(1, contentHeight)`
+- If no content: desired size is `(TrackWidth, 1)`.
 
-- Keyboard/mouse behaviors (when applicable) are exposed via commands so they are discoverable (e.g., CommandBar / CommandPalette).
+### Arrange
+
+- Content is arranged to the right of the track + gap within `finalRect`.
+- The track itself is drawn in `Render` and is vertically centered within the control’s height.
+
+### Render
+
+Track rendering:
+
+- Draws up to `min(TrackWidth, Bounds.Width)` cells for the track.
+- Uses `SwitchStyle.TrackLeft`/`TrackRight` for the first/last cell glyphs, spaces otherwise.
+- Resolves per-segment track style with `SwitchStyle.ResolveTrackPart(...)`:
+  - segments are considered “active” based on `IsOn` and thumb position
+  - hovered/pressed/focused variants are applied by the style resolver
+
+Thumb rendering:
+
+- Computes a `thumbIndex`:
+  - for full 4-cell track: index is `1` (off) or `2` (on)
+  - for smaller tracks, clamps to the available range
+- Renders `SwitchStyle.ThumbGlyph` over the track.
+- Avoids double alpha blending:
+  - if the track background is RGBA, the thumb style is *not* merged with the track style
+  - otherwise, merges unspecified style parts from the track into the thumb (`MergeUnspecified`)
+
+## Interaction
+
+### Keyboard
+
+- `Space` / `Enter`: toggle
+- `Left`: set `IsOn = false`
+- `Right`: set `IsOn = true`
+
+### Pointer
+
+- left press sets `IsPressed = true`
+- left release clears `IsPressed` and toggles `IsOn` if released within bounds
 
 ## Styling
 
-- Styling is controlled via the theme and `SwitchStyle` (where applicable).
+### SwitchStyle
+
+Key knobs:
+
+- geometry:
+  - `SpaceBetweenGlyphAndText`
+  - `TrackLeft` / `TrackRight`
+  - `ThumbGlyph` (default `⬤`; see `SwitchStyle.Round` preset)
+- track styles:
+  - `TrackOn*`, `TrackOff*` (active/inactive parts)
+  - `TrackHovered`, `TrackPressed`, `TrackFocused`, `TrackDisabled`
+- thumb styles:
+  - `ThumbOn`, `ThumbOff`, `ThumbDisabled`
+
+Default resolution uses theme colors like `Theme.Primary`, `Theme.Surface`, `Theme.SurfaceAlt`, `Theme.Selection`, `Theme.FocusBorder`.
 
 ## Tests & demos
 
-- Look for rendering/input tests in `src/XenoAtom.Terminal.UI.Tests`.
-- See the ControlsDemo for interactive examples.
+- Tests:
+  - `src/XenoAtom.Terminal.UI.Tests/SwitchTests.cs`
+- Demo:
+  - ControlsDemo includes switch examples (with and without inline content).
 
 ## Future / v2 ideas
 
-- Consider documenting additional style knobs and adding more deterministic rendering tests as features grow.
+- Support configurable track width (while keeping a sensible default).
+- Add optional “animated” toggling (if/when the framework supports lightweight animations).
