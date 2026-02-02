@@ -91,6 +91,12 @@ public sealed class SwitchTests
 
         var sw = new Switch();
         sw.Style(theme);
+        var style = SwitchStyle.Default with
+        {
+            ThumbGlyphOff = new Rune('O'),
+            ThumbGlyphOn = new Rune('X'),
+        };
+        sw.Style(style);
         sw.Measure(new Size(10, 1));
         sw.Arrange(new Rectangle(0, 0, 10, 1));
 
@@ -100,12 +106,12 @@ public sealed class SwitchTests
         typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(sw, new object[] { buffer });
 
         var scalars = (int[])typeof(CellBuffer).GetField("_scalars", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
-        Assert.AreEqual(RadioButtonStyle.Default.UncheckedGlyph.Value, scalars[1], "Expected off-state thumb glyph at the default off thumb position.");
+        Assert.AreEqual(style.ThumbGlyphOff.Value, scalars[1], "Expected off-state thumb glyph at the default off thumb position.");
 
         sw.IsOn = true;
         buffer.Clear(theme.BaseTextStyle());
         typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(sw, new object[] { buffer });
         scalars = (int[])typeof(CellBuffer).GetField("_scalars", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
-        Assert.AreEqual(RadioButtonStyle.Default.CheckedGlyph.Value, scalars[2], "Expected on-state thumb glyph at the default on thumb position.");
+        Assert.AreEqual(style.ThumbGlyphOn.Value, scalars[2], "Expected on-state thumb glyph at the default on thumb position.");
     }
 }
