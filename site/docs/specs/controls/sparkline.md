@@ -12,35 +12,117 @@ This document captures design and implementation notes for `Sparkline`.
 ## Overview
 
 - **Status**: Implemented
-- **Primary purpose**: Provide `Sparkline` as a retained-mode control with bindable properties and predictable layout/rendering behavior.
-- **Key design constraints**:
-  - reactive dependency tracking (measure/arrange/render)
-  - allocation-conscious rendering
-  - AOT/trimming friendliness (no runtime reflection by default)
+- **Primary purpose**: Render a compact, one-row trend visualization from a numeric series.
+- **Key goals**:
+  - be cheap to render (single row, no child visuals)
+  - scale automatically by default, with optional explicit min/max
+  - preserve spikes when downsampling to a smaller width
+  - avoid per-render allocations
+- **Non-goals**:
+  - multi-row sparklines (use `LineChart` / `Canvas` for richer charts)
+  - interactive input/hover markers in v1
 
 ## Implementation notes
 
-- Source code lives under `src/XenoAtom.Terminal.UI` (search for `Sparkline` and `SparklineStyle`).
-- Public properties are typically `[Bindable]` (generated accessors) and participate in the binding dirty model.
+- Primary implementation:
+  - `src/XenoAtom.Terminal.UI/Controls/Sparkline.cs`
+  - `src/XenoAtom.Terminal.UI/Styling/SparklineStyle.cs`
+- Tests:
+  - `src/XenoAtom.Terminal.UI.Tests/VisualizationTests.cs` (sparkline rendering)
+- Demo:
+  - `samples/ControlsDemo/Demos/SparklineDemo.cs`
 
-## Layout & rendering
+## Public API surface
 
-- Follows the standard `Measure` → `Arrange` → `Render` pipeline.
-- Uses style inheritance from the visual tree; control-specific style is typically `SparklineStyle`.
+### Type
 
-## Input & commands
+- `Sparkline : Visual` (sealed)
 
-- Keyboard/mouse behaviors (when applicable) are exposed via commands so they are discoverable (e.g., CommandBar / CommandPalette).
+### Properties
+
+- `Values : BindableList<double>`
+  - The source series.
+  - The list instance is created in the constructor and owned by the control.
+- `Minimum : double?` (bindable)
+  - Optional explicit minimum used for scaling.
+- `Maximum : double?` (bindable)
+  - Optional explicit maximum used for scaling.
+
+There are no events and no input handling.
+
+## Layout and rendering
+
+### Measure
+
+The sparkline measures as a one-row fixed-size visual:
+- height is always 1
+- natural width is based on `Values.Count`
+
+Implementation details:
+- `MeasureCore` returns `SizeHints.Fixed(constraints.Clamp(new Size(max(0, Values.Count), 1)))`.
+- In practice, the arranged width can be smaller or larger depending on parent layout constraints and alignment.
+
+### Render
+
+The sparkline renders into `Bounds` (single row) and uses `SparklineStyle` for:
+- glyph selection (`SparklineStyle.Glyphs`)
+- cell style (`SparklineStyle.Resolve(theme)`)
+
+#### Scaling
+
+Scaling uses a min/max range:
+- if `Minimum` and/or `Maximum` are not provided, they are computed from `Values` by scanning the list once
+- `NaN` and infinities are ignored during min/max computation and sampling
+- if no finite values exist, the sparkline renders nothing
+- if `max <= min`, the code forces `max = min + 1.0` to avoid division by zero
+
+#### Downsampling and spike preservation
+
+When `Bounds.Width` is smaller than `Values.Count`, the sparkline down-samples values into buckets.
+
+For each output column `x`:
+- compute the input bucket range:
+  - `start = (x * count) / width`
+  - `end = ((x + 1) * count) / width`
+  - if `end <= start`, clamp `end = min(count, start + 1)`
+- take the maximum value in that bucket (ignoring non-finite values)
+
+Using the bucket maximum preserves spikes: a single high sample will still show up in the downsampled output.
+
+When `Bounds.Width` is larger than `Values.Count`, the integer mapping causes some buckets to repeat the same input
+indices, effectively stretching the series horizontally.
+
+#### Level mapping
+
+Each sampled value is normalized to a [0..1] range and mapped to 8 levels:
+- `t = (sample - min) / (max - min)` clamped to [0..1]
+- `level = round(t * 7)` (0..7)
+- `rune = glyphs.GetLevel(level)`
+
+Note: the default glyph set (`Blocks8`) uses non-ASCII block glyphs in code. Specs and docs should avoid embedding those
+glyph characters directly; refer to glyph set names instead.
 
 ## Styling
 
-- Styling is controlled via the theme and `SparklineStyle` (where applicable).
+### SparklineStyle
 
-## Tests & demos
+`SparklineStyle` controls:
+- `Glyphs : SparklineGlyphs` (default: `Blocks8`)
+- `Style : Style?` override
 
-- Look for rendering/input tests in `src/XenoAtom.Terminal.UI.Tests`.
-- See the ControlsDemo for interactive examples.
+`SparklineStyle.Resolve(theme)` returns:
+- `Style` if explicitly provided
+- otherwise, `theme.ForegroundTextStyle()` with `theme.Accent` as the foreground when available
+
+The sparkline does not fill background cells; it only sets the single rune per output column with the resolved style.
+
+## Tests
+
+`VisualizationTests.Sparkline_Renders_Block_Glyphs` validates that rendering produces block glyph output by checking for
+the presence of the expected code points (e.g., U+2581..U+2588) when using the default glyph set.
 
 ## Future / v2 ideas
 
-- Consider documenting additional style knobs and adding more deterministic rendering tests as features grow.
+- Optional alternative downsampling modes (min/avg) and/or dual sampling to show min/max ranges.
+- Optional per-level coloring (thresholds or gradients) as part of `SparklineStyle`.
+- Multi-row sparkline variants (at that point, likely a separate control rather than extending `Sparkline`).
