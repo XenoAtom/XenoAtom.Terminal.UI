@@ -488,7 +488,16 @@ public sealed partial class BreakdownChart : Visual
             }
 
             var segment = _owner.Segments[_hoveredIndex];
-            var tooltip = segment.Tooltip ?? CreateDefaultTooltip(segment);
+            // Tooltips are hosted in a separate window, so the visual instance must not already be attached elsewhere.
+            // If a user accidentally reuses a visual as a tooltip from another part of the tree, fall back to the default
+            // tooltip rather than crashing.
+            var tooltip = segment.Tooltip;
+            if (tooltip is not null && tooltip.Parent is not null)
+            {
+                tooltip = null;
+            }
+
+            tooltip ??= CreateDefaultTooltip(segment);
             if (tooltip is null)
             {
                 CloseTooltip();
@@ -547,12 +556,34 @@ public sealed partial class BreakdownChart : Visual
                 };
             }
 
+            // Segment labels are typically part of the legend visual tree. We can't reuse the same Visual instance
+            // inside the tooltip window, so we create a detached representation of the label when needed.
+            var tooltipLabel = label.Parent is null ? label : CreateDetachedTooltipLabel(label);
+
             return new VStack
             {
-                label,
+                tooltipLabel,
                 $"{value} ({pctText})"
             }.Spacing(0);
         }
+
+        private static Visual CreateDetachedTooltipLabel(Visual label)
+            => label switch
+            {
+                TextBlock tb => new TextBlock(tb.Text ?? string.Empty)
+                {
+                    Wrap = tb.Wrap,
+                    TextAlignment = tb.TextAlignment,
+                    Trimming = tb.Trimming,
+                },
+                Markup markup => new Markup(markup.Text ?? string.Empty)
+                {
+                    Wrap = markup.Wrap,
+                    TextAlignment = markup.TextAlignment,
+                    Trimming = markup.Trimming,
+                },
+                _ => new TextBlock(label.ToString() ?? label.GetType().Name) { Wrap = false },
+            };
 
         private static void FillRange(CellBuffer buffer, int x, int y, int width, Rune rune, Style style)
         {

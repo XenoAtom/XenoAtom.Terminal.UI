@@ -34,6 +34,38 @@ public sealed class BreakdownTests
     }
 
     [TestMethod]
+    public void Breakdown_Default_Tooltip_DoesNot_Reparent_Segment_Label()
+    {
+        // Regression test for a crash where the default tooltip attempted to reuse the segment label visual (already
+        // attached to the legend), causing a "visual already has a parent" exception when the tooltip window opened.
+        var breakdown = new BreakdownChart()
+            .ShowValues(false)
+            .ShowPercentages(false)
+            .Style(new BreakdownStyle { FillRune = new Rune('#') })
+            .Segment(1, new TextBlock("A"));
+
+        var root = new VStack
+        {
+            " ",
+            " ",
+            breakdown,
+        };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 10));
+        driver.Tick();
+
+        var x = breakdown.Bounds.X + 1;
+        var y = breakdown.Bounds.Y;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, Button = TerminalMouseButton.None, X = x, Y = y });
+        driver.Tick(2);
+
+        var screen = new AnsiTestScreen(30, 10);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "(100%)");
+    }
+
+    [TestMethod]
     public void Breakdown_Distributes_Segment_Widths_LeftToRight()
     {
         var breakdown = new BreakdownChart()
