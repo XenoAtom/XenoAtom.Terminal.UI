@@ -24,7 +24,7 @@ new Switch("Enabled").IsOn(enabled);
 `SwitchStyle` controls:
 
 - left/right segment colors
-- thumb glyph
+- thumb glyphs (`ThumbGlyphOn` / `ThumbGlyphOff`)
 - background/foreground for normal/hover/pressed/disabled
 
 ## Interaction

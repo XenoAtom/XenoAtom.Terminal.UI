@@ -21,7 +21,8 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
     /// </summary>
     public static SwitchStyle Round { get; } = new()
     {
-        ThumbGlyph = new('⬤'),
+        ThumbGlyphOn = new('⬤'),
+        ThumbGlyphOff = RadioButtonStyle.Default.UncheckedGlyph,
     };
 
     /// <summary>
@@ -47,7 +48,12 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
     /// <summary>
     /// Gets the glyph used for the thumb.
     /// </summary>
-    public Rune ThumbGlyph { get; init; } = new('⬤');
+    public Rune ThumbGlyphOn { get; init; } = RadioButtonStyle.Default.CheckedGlyph;
+
+    /// <summary>
+    /// Gets the glyph used for the thumb when the switch is off.
+    /// </summary>
+    public Rune ThumbGlyphOff { get; init; } = RadioButtonStyle.Default.UncheckedGlyph;
 
     /// <summary>Gets the base style for the track when the switch is on.</summary>
     public Style? TrackOn { get; init; }

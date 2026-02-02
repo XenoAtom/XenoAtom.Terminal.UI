@@ -147,7 +147,8 @@ public sealed partial class Switch : ContentVisual
             {
                 mergedThumb = thumbStyle.MergeUnspecified(thumbTrackStyle);
             }
-            buffer.SetCell(x + thumbIndex, y, style.ThumbGlyph, mergedThumb);
+            var thumbGlyph = IsOn ? style.ThumbGlyphOn : style.ThumbGlyphOff;
+            buffer.SetCell(x + thumbIndex, y, thumbGlyph, mergedThumb);
         }
     }
 

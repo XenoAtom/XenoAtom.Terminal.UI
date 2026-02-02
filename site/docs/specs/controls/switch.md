@@ -73,7 +73,7 @@ Thumb rendering:
 - Computes a `thumbIndex`:
   - for full 4-cell track: index is `1` (off) or `2` (on)
   - for smaller tracks, clamps to the available range
-- Renders `SwitchStyle.ThumbGlyph` over the track.
+- Renders `SwitchStyle.ThumbGlyphOn` / `ThumbGlyphOff` over the track.
 - Avoids double alpha blending:
   - if the track background is RGBA, the thumb style is *not* merged with the track style
   - otherwise, merges unspecified style parts from the track into the thumb (`MergeUnspecified`)
@@ -100,7 +100,7 @@ Key knobs:
 - geometry:
   - `SpaceBetweenGlyphAndText`
   - `TrackLeft` / `TrackRight`
-  - `ThumbGlyph` (default `⬤`; see `SwitchStyle.Round` preset)
+  - `ThumbGlyphOn` / `ThumbGlyphOff` (defaults match `RadioButtonStyle` checked/unchecked glyphs; see `SwitchStyle.Round` preset)
 - track styles:
   - `TrackOn*`, `TrackOff*` (active/inactive parts)
   - `TrackHovered`, `TrackPressed`, `TrackFocused`, `TrackDisabled`

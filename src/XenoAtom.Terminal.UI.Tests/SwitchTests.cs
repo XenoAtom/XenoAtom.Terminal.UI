@@ -9,6 +9,7 @@ using XenoAtom.Terminal.UI.Hosting;
 using System.Reflection;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -81,5 +82,30 @@ public sealed class SwitchTests
 
         Assert.IsTrue(cells[2].TryGetBackground(out var thumbOnBg));
         Assert.AreEqual(rightOnBg, thumbOnBg);
+    }
+
+    [TestMethod]
+    public void Switch_Renders_Different_Thumb_Glyphs_For_On_And_Off()
+    {
+        var theme = Theme.FromScheme(ColorScheme.ElderberryDarkSoft);
+
+        var sw = new Switch();
+        sw.Style(theme);
+        sw.Measure(new Size(10, 1));
+        sw.Arrange(new Rectangle(0, 0, 10, 1));
+
+        var buffer = new CellBuffer(10, 1);
+        buffer.Clear(theme.BaseTextStyle());
+
+        typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(sw, new object[] { buffer });
+
+        var scalars = (int[])typeof(CellBuffer).GetField("_scalars", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
+        Assert.AreEqual(RadioButtonStyle.Default.UncheckedGlyph.Value, scalars[1], "Expected off-state thumb glyph at the default off thumb position.");
+
+        sw.IsOn = true;
+        buffer.Clear(theme.BaseTextStyle());
+        typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(sw, new object[] { buffer });
+        scalars = (int[])typeof(CellBuffer).GetField("_scalars", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
+        Assert.AreEqual(RadioButtonStyle.Default.CheckedGlyph.Value, scalars[2], "Expected on-state thumb glyph at the default on thumb position.");
     }
 }
