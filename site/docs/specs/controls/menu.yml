@@ -12,6 +12,7 @@ specs_controls:
   - {path: button.md, title: Button}
   - {path: checkbox.md, title: CheckBox}
   - {path: radiobutton.md, title: RadioButton}
+  - {path: radiobuttonlist.md, title: RadioButtonList}
   - {path: switch.md, title: Switch}
   - {path: link.md, title: Link}
 
@@ -67,4 +68,3 @@ specs_controls:
   - {path: tooltip.md, title: Tooltip}
   - {path: backdrop.md, title: Backdrop}
   - {path: toast.md, title: Toast}
-
