@@ -94,3 +94,33 @@ og_type: website
     </div>
   </div>
 </section>
+
+<section class="container my-5">
+  <div class="card">
+    <div class="card-header display-6">
+      <i class="bi bi-diagram-3 xenoatom-feature-icon xenoatom-icon--data"></i> Built on a small stack
+    </div>
+    <div class="card-body">
+      <p class="card-text">
+        XenoAtom.Terminal.UI builds on <strong>XenoAtom.Terminal</strong> (hosting + I/O) and <strong>XenoAtom.Ansi</strong> (markup + ANSI/VT primitives).
+      </p>
+      <div class="d-flex flex-wrap align-items-center gap-4 mt-3 mb-3">
+        <div class="d-flex align-items-center gap-2">
+          <img src="/img/xenoatom-terminal.svg" alt="XenoAtom.Terminal" width="56" height="56" loading="lazy">
+          <span class="fw-semibold">XenoAtom.Terminal</span>
+        </div>
+        <i class="bi bi-arrow-right text-secondary" aria-hidden="true"></i>
+        <div class="d-flex align-items-center gap-2">
+          <img src="/img/xenoatom-logo.png" alt="XenoAtom.Terminal.UI" width="56" height="56" loading="lazy">
+          <span class="fw-semibold">XenoAtom.Terminal.UI</span>
+        </div>
+        <i class="bi bi-plus text-secondary" aria-hidden="true"></i>
+        <div class="d-flex align-items-center gap-2">
+          <img src="/img/xenoatom-ansi.svg" alt="XenoAtom.Ansi" width="56" height="56" loading="lazy">
+          <span class="fw-semibold">XenoAtom.Ansi</span>
+        </div>
+      </div>
+      <a href="/docs/foundations/" class="btn btn-outline-light"><i class="bi bi-journal-text"></i> Ecosystem &amp; foundations</a>
+    </div>
+  </div>
+</section>

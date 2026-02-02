@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512" overflow="visible" role="img" aria-label="XenoAtom Terminal logo">
+  <defs>
+    <!-- Brand outer gradient -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#12D6DF"/>
+      <stop offset="0.45" stop-color="#6B5BFF"/>
+      <stop offset="1" stop-color="#FF4FD8"/>
+    </linearGradient>
+
+    <!-- Inner panel gradient -->
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#070A12" stop-opacity="0.96"/>
+      <stop offset="1" stop-color="#0E1330" stop-opacity="0.92"/>
+    </linearGradient>
+
+    <!-- Accent gradient for underline/orbit -->
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7CFFB2"/>
+      <stop offset="0.5" stop-color="#FFD166"/>
+      <stop offset="1" stop-color="#7AA7FF"/>
+    </linearGradient>
+
+    <!-- Soft shadow -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000000" flood-opacity="0.33"/>
+    </filter>
+
+    <!-- Very light glow (kept subtle to survive small sizes) -->
+    <filter id="glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="2.2" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Outer badge -->
+  <rect x="0" y="0" width="512" height="512" rx="92" fill="url(#bg)" filter="url(#shadow)"/>
+
+  <!-- Inner terminal tile -->
+  <g transform="translate(46 56)">
+    <g transform="scale(1.22)">
+      <rect x="0" y="0" width="344" height="328" rx="52" fill="url(#panel)"/>
+      <rect x="0" y="0" width="344" height="328" rx="52" fill="none" stroke="#FFFFFF" stroke-opacity="0.14" stroke-width="2"/>
+
+      <!-- Header bar (minimal) -->
+      <rect x="0" y="0" width="344" height="78" rx="52" fill="#0B1220" fill-opacity="0.55"/>
+      <rect x="0" y="62" width="344" height="16" fill="#000000" fill-opacity="0.10"/>
+
+      <!-- Window dots -->
+      <g transform="translate(30 39)" opacity="0.95">
+        <circle r="7" cx="0" cy="0" fill="#FF5F56"/>
+        <circle r="7" cx="22" cy="0" fill="#FFBD2E"/>
+        <circle r="7" cx="44" cy="0" fill="#27C93F"/>
+      </g>
+
+      <!-- BIG ESC[ badge (readable at small sizes) -->
+      <g transform="translate(30 270)" filter="url(#glow)">
+        <rect x="0" y="-36" width="136" height="52" rx="18" fill="url(#accent)" opacity="0.98"/>
+      </g>
+
+      <!-- ANSI word (large, clean) -->
+      <g transform="translate(30 170)" filter="url(#glow)">
+        <text x="0" y="0"
+              font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace"
+              font-size="100"
+              font-weight="900"
+
+              fill="#F2F7FF"
+              fill-opacity="0.98">&gt;TERM</text>
+
+        <!-- Neon underline -->
+        <rect x="4" y="18" width="280" height="12" rx="6" fill="url(#accent)" opacity="0.92"/>
+      </g>
+
+      <!-- Atom accent (simple, bold) -->
+      <g transform="translate(250 260)" filter="url(#glow)" opacity="0.95">
+        <circle cx="0" cy="0" r="10" fill="#7CFFB2"/>
+        <ellipse cx="0" cy="0" rx="42" ry="16" fill="none" stroke="url(#accent)" stroke-width="6"/>
+        <g transform="rotate(60)">
+          <ellipse cx="0" cy="0" rx="42" ry="16" fill="none" stroke="url(#accent)" stroke-width="6" opacity="0.85"/>
+        </g>
+        <g transform="rotate(120)">
+          <ellipse cx="0" cy="0" rx="42" ry="16" fill="none" stroke="url(#accent)" stroke-width="6" opacity="0.85"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

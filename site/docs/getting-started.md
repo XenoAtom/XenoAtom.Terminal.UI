@@ -66,5 +66,8 @@ Terminal.Run(
 
 See also:
 
+- [Ecosystem & Foundations](foundations.md)
+- [XenoAtom.Terminal](terminal.md)
+- [XenoAtom.Ansi](ansi.md)
 - [Hosting](hosting.md)
 - [Controls Reference](controls/readme.md)

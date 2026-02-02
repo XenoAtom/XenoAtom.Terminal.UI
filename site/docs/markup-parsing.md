@@ -7,6 +7,9 @@ title: Markup Parsing (MarkupTextParser)
 XenoAtom.Terminal.UI includes a lightweight parser for ANSI markup:
 `XenoAtom.Terminal.UI.Text.MarkupTextParser`.
 
+The markup syntax and tokenization are provided by **XenoAtom.Ansi** (`AnsiMarkup` / `AnsiStyle`). Terminal.UI builds on
+that to produce `Style` + `StyledRun[]` that can be rendered efficiently into the `CellBuffer`.
+
 This is useful when you want to:
 
 - Accept markup input.
@@ -47,4 +50,8 @@ The typical rendering pattern is:
 
 - `MarkupTextParser` instances are reusable and keep internal buffers to minimize allocations.
 - Instances are not thread-safe.
+
+See also:
+
+- [XenoAtom.Ansi](ansi.md)
 

@@ -16,6 +16,17 @@ This guide documents the concepts, features, and controls of the library.
 
 - [Getting Started](getting-started.md)
 
+## Ecosystem
+
+Terminal.UI is built on:
+
+- [XenoAtom.Terminal](terminal.md) — terminal I/O, input events, hosting (inline + fullscreen)
+- [XenoAtom.Ansi](ansi.md) — ANSI/VT primitives and markup used by the `Markup` control and parsers
+
+See also:
+
+- [Ecosystem & Foundations](foundations.md)
+
 ## Hosting & integration
 
 - [Hosting](hosting.md) (inline vs fullscreen, update loops)

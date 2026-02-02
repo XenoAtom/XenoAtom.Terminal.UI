@@ -1,6 +1,9 @@
 doc:
   - {path: readme.md, title: "<i class='bi bi-book' aria-hidden='true'></i> User Guide"}
   - {path: getting-started.md, title: "<i class='bi bi-rocket-takeoff' aria-hidden='true'></i> Getting Started"}
+  - {path: foundations.md, title: "<i class='bi bi-diagram-3' aria-hidden='true'></i> Ecosystem"}
+  - {path: terminal.md, title: "<i class='bi bi-terminal' aria-hidden='true'></i> XenoAtom.Terminal"}
+  - {path: ansi.md, title: "<i class='bi bi-code-slash' aria-hidden='true'></i> XenoAtom.Ansi"}
   - {path: visual-tree.md, title: "<i class='bi bi-diagram-3' aria-hidden='true'></i> Visual Tree"}
   - {path: binding.md, title: "<i class='bi bi-link-45deg' aria-hidden='true'></i> Binding & State"}
   - {path: data-templating.md, title: "<i class='bi bi-puzzle' aria-hidden='true'></i> Data Templating"}
