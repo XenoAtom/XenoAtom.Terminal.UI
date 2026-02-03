@@ -57,6 +57,7 @@ See also:
 
 The `samples` folder contains end-to-end demos:
 
+- [Demos](demos.md) (screenshots, videos, and GitHub links)
 - `samples/FullscreenDemo`: fullscreen UI showcase.
 - `samples/ControlsDemo`: catalog-style demo.
 - `samples/InlineLiveDemo`: inline/live example (interactive).

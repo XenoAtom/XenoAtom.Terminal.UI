@@ -1,14 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\\DemoTool.props" />
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <IsPackable>false</IsPackable>
+
+    <PackageId>XenoAtom.Terminal.UI.InlineLiveDemo</PackageId>
+    <ToolCommandName>xenoatom-inline-live-demo</ToolCommandName>
+    <Description>Inline live regions demo for XenoAtom.Terminal.UI.</Description>
+    <PackageTags>terminal;ui;demo;live</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\XenoAtom.Terminal.UI\XenoAtom.Terminal.UI.csproj" />
   </ItemGroup>
 </Project>
-
