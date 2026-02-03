@@ -548,8 +548,8 @@ Visual BuildDashboard()
         .Font(FigletPredefinedFont.Small)
         .TextAlignment(TextAlignment.Left);
 
-    var leftPane = new VStack(
-        new HStack(
+    var leftPane = new HSplitter(
+        new VStack(
             new Group()
                 .TopLeftText("Text input")
                 .TopRightText("Tab to move focus")
@@ -560,23 +560,6 @@ Visual BuildDashboard()
                         new VStack("Title:", validatedTitle).HorizontalAlignment(Align.Stretch))
                     .Spacing(1)
                     .HorizontalAlignment(Align.Stretch)).VerticalAlignment(Align.Stretch).HorizontalAlignment(Align.Stretch),
-            new Group()
-                .TopLeftText("Buttons & toggles")
-                .TopRightText("Click / Space / Enter")
-                .Padding(1)
-                .Content(new VStack(
-                        overlaysRow,
-                        new HStack(
-                                new VStack("CheckBox:", acceptTermsCheckBox, new TextBlock(() => acceptTerms.Value ? "Accepted" : "Not accepted")).Spacing(1),
-                                new VStack("Switch:", enableAnimations, new VStack("Manual progress:", progressSlider).Spacing(0)).Spacing(1).HorizontalAlignment(Align.Stretch),
-                                new VStack("Radio:", new HStack(radioBalanced, radioFast, radioPretty).Spacing(2), new TextBlock(() => $"Quality: {quality.Value}")).Spacing(1))
-                            .Spacing(3)
-                            .HorizontalAlignment(Align.Stretch),
-                        new HStack("Link:", link).Spacing(1))
-                    .Spacing(1)
-                    .HorizontalAlignment(Align.Stretch)).VerticalAlignment(Align.Stretch).HorizontalAlignment(Align.Stretch)
-        ).HorizontalAlignment(Align.Stretch),
-        new HStack(
             new Group()
                 .TopLeftText("Lists & selection")
                 .TopRightText("Wheel scroll")
@@ -594,22 +577,37 @@ Visual BuildDashboard()
                         new VStack("TreeView:", tree.MinHeight(6).MaxHeight(6)).Spacing(1).HorizontalAlignment(Align.Stretch))
                     .Spacing(1)
                     .VerticalAlignment(Align.Stretch)
-                    .HorizontalAlignment(Align.Stretch)).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch),
-            new VStack(
-                new Group()
-                    .TopLeftText("Layout & scrolling")
-                    .TopRightText("Wrap / Pad / ScrollBar")
-                    .Padding(1)
-                    .Content(new VStack(
-                            new VStack("WrapHStack:", wrap).Spacing(1),
-                            new VStack("Padder + Center:", padded).Spacing(1),
-                            new VStack("TabControl:", tabSample).Spacing(1)
-                        ).Spacing(1).VerticalAlignment(Align.Stretch)
-                    ).HorizontalAlignment(Align.Stretch),
-                new Center(banner)
-            )
-        ).HorizontalAlignment(Align.Stretch)
-    ).VerticalAlignment(Align.Stretch);
+                    .HorizontalAlignment(Align.Stretch)).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch)).VerticalAlignment(Align.Stretch),
+        new VStack(
+            new Group()
+                .TopLeftText("Buttons & toggles")
+                .TopRightText("Click / Space / Enter")
+                .Padding(1)
+                .Content(new VStack(
+                        overlaysRow,
+                        new HStack(
+                                new VStack("CheckBox:", acceptTermsCheckBox, new TextBlock(() => acceptTerms.Value ? "Accepted" : "Not accepted")).Spacing(1),
+                                new VStack("Switch:", enableAnimations, new VStack("Manual progress:", progressSlider).Spacing(0)).Spacing(1).HorizontalAlignment(Align.Stretch),
+                                new VStack("Radio:", new HStack(radioBalanced, radioFast, radioPretty).Spacing(2), new TextBlock(() => $"Quality: {quality.Value}")).Spacing(1))
+                            .Spacing(3)
+                            .HorizontalAlignment(Align.Stretch),
+                        new HStack("Link:", link).Spacing(1))
+                    .Spacing(1)
+                    .HorizontalAlignment(Align.Stretch)).VerticalAlignment(Align.Stretch).HorizontalAlignment(Align.Stretch),
+            new Group()
+                .TopLeftText("Layout & scrolling")
+                .TopRightText("Wrap / Pad / ScrollBar")
+                .Padding(1)
+                .Content(new VStack(
+                        new VStack("WrapHStack:", wrap).Spacing(1),
+                        new VStack("Padder + Center:", padded).Spacing(1),
+                        new VStack("TabControl:", tabSample).Spacing(1)
+                    ).Spacing(1).VerticalAlignment(Align.Stretch)
+                ).HorizontalAlignment(Align.Stretch),
+            new Center(banner)
+        ).VerticalAlignment(Align.Stretch)
+    ).Ratio(0.5);
+        
 
 
     var visualsPanel = new Group()
