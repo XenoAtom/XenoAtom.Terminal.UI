@@ -345,9 +345,13 @@ public partial class Toast : Visual
             hasHeader = true;
         }
 
-        if (title is not null)
+        // Always update the title host content so we detach previous visuals when Title becomes null.
+        _titleHost.Content = title;
+
+        // Keep a stretch spacer between the left side (icon/title) and the close button so the close
+        // button stays on the right even when there is no title.
+        if (title is not null || showClose)
         {
-            _titleHost.Content = title;
             _header.Children.Add(_titleHost);
             hasHeader = true;
         }

@@ -12,6 +12,31 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class ToastHostTests
 {
     [TestMethod]
+    public void Toast_Renders_CloseButton_OnRight_When_TitleMissing()
+    {
+        var host = new ToastHost(new VStack())
+        {
+            Position = ToastPosition.TopLeft,
+        };
+
+        using var driver = new TerminalAppTestDriver(host, TerminalHostKind.Fullscreen, new TerminalSize(40, 8));
+        driver.Tick();
+
+        driver.App.Post(() => host.Show(new TextBlock("Message")));
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(40, 8);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText().Replace("\r", string.Empty);
+
+        var lineWithClose = rendered.Split('\n').FirstOrDefault(line => line.Contains('X'));
+        Assert.IsNotNull(lineWithClose, "Expected toast close button to be rendered.");
+
+        var closeIndex = lineWithClose!.IndexOf('X');
+        Assert.IsGreaterThanOrEqualTo(20, closeIndex, $"Expected toast close button near the right edge, but it was at column {closeIndex}. Line='{lineWithClose}'");
+    }
+
+    [TestMethod]
     public void ToastHost_Dismisses_Oldest_When_MaxVisible_Reached()
     {
         var host = new ToastHost(new VStack())
