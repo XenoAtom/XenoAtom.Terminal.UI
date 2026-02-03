@@ -265,7 +265,10 @@ public partial class Toast : Visual
 
         _border.Padding = style.Padding;
 
-        var baseStyle = style.ResolveStyle(theme, severity);
+        // Clear any text decorations inherited from visuals behind the toast by writing a surface style that
+        // explicitly specifies "no decorations" (TextStyleSpecified=1, TextStyle=0). This prevents underline/bold
+        // leaks when the toast is rendered on top of styled content.
+        var baseStyle = style.ResolveStyle(theme, severity).WithTextStyle(0);
         if (_lastContainerStyle != baseStyle)
         {
             StyleEnvironment ??= new Dictionary<object, object?>();

@@ -98,4 +98,48 @@ public sealed class OverlaySurfaceTextStyleLeakTests
 
         Assert.AreEqual((TextStyle)0, cell.TextStyle & TextStyle.Underline, "Popup surface should not inherit underline from underlay.");
     }
+
+    [TestMethod]
+    public void Toast_Surface_DoesNotInherit_Underline_Or_Foreground_From_Underlay()
+    {
+        var theme = Theme.FromScheme(ColorScheme.RootLoopsDark with { Name = "Test" });
+        var underlayForeground = Color.Basic16(1);
+
+        var buffer = new CellBuffer(40, 10);
+        buffer.Clear(theme.BaseTextStyle());
+
+        var underlayStyle = theme.BaseTextStyle()
+            .WithForeground(underlayForeground)
+            .WithTextStyle(TextStyle.Underline);
+        for (var y = 0; y < buffer.Height; y++)
+        {
+            for (var x = 0; x < buffer.Width; x++)
+            {
+                buffer.SetCell(x, y, new Rune('X'), underlayStyle);
+            }
+        }
+
+        var toast = new Toast
+        {
+            Severity = ToastSeverity.Success,
+            Title = null,
+            Content = new TextBlock("Button: Success clicked"),
+        }.Style(theme);
+
+        toast.Measure(new Size(buffer.Width, buffer.Height));
+        toast.Arrange(new Rectangle(0, 0, buffer.Width, buffer.Height));
+        var rect = toast.Bounds;
+        Assert.IsTrue(rect.Width >= 3 && rect.Height >= 3, "Toast is expected to render a surface area.");
+
+        toast.RenderTree(buffer);
+
+        var xInside = rect.X + 1;
+        var yInside = rect.Y + 1;
+        var index = (yInside * buffer.Width) + xInside;
+        var cell = buffer.UnsafeCells[index];
+
+        Assert.AreEqual((TextStyle)0, cell.TextStyle & TextStyle.Underline, "Toast surface should not inherit underline from underlay.");
+        Assert.IsTrue(cell.TryGetForeground(out var fg), "Toast surface should write an explicit foreground.");
+        Assert.AreNotEqual(underlayForeground, fg, "Toast surface should not inherit the underlay foreground.");
+    }
 }
