@@ -113,36 +113,86 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         _maxHeight = int.MaxValue;
     }
 
+    /// <summary>
+    /// Gets or sets the horizontal alignment of this visual within its layout slot.
+    /// </summary>
+    /// <remarks>
+    /// This value is interpreted by the parent layout during arrange. In particular, <see cref="Align.Stretch"/> requests
+    /// taking all available width.
+    /// </remarks>
     [Bindable]
     public partial Align HorizontalAlignment { get; set; }
 
+    /// <summary>
+    /// Gets or sets the vertical alignment of this visual within its layout slot.
+    /// </summary>
+    /// <remarks>
+    /// This value is interpreted by the parent layout during arrange. In particular, <see cref="Align.Stretch"/> requests
+    /// taking all available height.
+    /// </remarks>
     [Bindable]
     public partial Align VerticalAlignment { get; set; }
 
+    /// <summary>
+    /// Gets or sets the minimum desired width of this visual, in cells.
+    /// </summary>
     [Bindable]
     public partial int MinWidth { get; set; }
 
+    /// <summary>
+    /// Gets or sets the minimum desired height of this visual, in cells.
+    /// </summary>
     [Bindable]
     public partial int MinHeight { get; set; }
 
+    /// <summary>
+    /// Gets or sets the maximum desired width of this visual, in cells.
+    /// </summary>
     [Bindable]
     public partial int MaxWidth { get; set; }
 
+    /// <summary>
+    /// Gets or sets the maximum desired height of this visual, in cells.
+    /// </summary>
     [Bindable]
     public partial int MaxHeight { get; set; }
 
+    /// <summary>
+    /// Gets or sets the outer margin around this visual.
+    /// </summary>
+    /// <remarks>
+    /// Margins are handled by the parent layout and contribute to the layout slot size and position of this visual.
+    /// </remarks>
     [Bindable]
     public partial Thickness Margin { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether this visual is visible.
+    /// </summary>
+    /// <remarks>
+    /// When set to <see langword="false"/>, the visual is not rendered and does not participate in layout or input.
+    /// </remarks>
     [Bindable]
     public partial bool IsVisible { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether this visual is enabled.
+    /// </summary>
+    /// <remarks>
+    /// Disabled visuals typically do not receive input and may render using a disabled style.
+    /// </remarks>
     [Bindable]
     public partial bool IsEnabled { get; set; }
 
+    /// <summary>
+    /// Gets a value indicating whether this visual currently has keyboard focus.
+    /// </summary>
     [Bindable]
     public partial bool HasFocus { get; internal set; }
 
+    /// <summary>
+    /// Gets a value indicating whether this visual, or any of its descendants, currently has focus.
+    /// </summary>
     [Bindable]
     public partial bool HasFocusWithin { get; internal set; }
 
@@ -163,6 +213,9 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         }
     }
 
+    /// <summary>
+    /// Gets a value indicating whether the pointer is currently hovering this visual.
+    /// </summary>
     [Bindable]
     public partial bool IsHovered { get; internal set; }
 

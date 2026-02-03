@@ -212,12 +212,27 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     [Bindable]
     public partial int MaxUndoEntries { get; set; }
 
+    /// <summary>
+    /// Gets or sets the placeholder text displayed when the editor is empty.
+    /// </summary>
     [Bindable]
     public partial string? Placeholder { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the editor accepts the Tab key as input.
+    /// </summary>
+    /// <remarks>
+    /// When enabled, pressing Tab inserts a tab character (or triggers indentation behavior) instead of moving focus to the next control.
+    /// </remarks>
     [Bindable]
     public partial bool AcceptTab { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether word-wrapping is enabled.
+    /// </summary>
+    /// <remarks>
+    /// When enabled, long lines wrap within the editor viewport rather than scrolling horizontally.
+    /// </remarks>
     [Bindable]
     public partial bool WordWrap { get; set; }
 

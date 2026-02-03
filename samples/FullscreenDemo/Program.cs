@@ -201,13 +201,6 @@ var gridFilterRow = new State<bool>(false);
 
 Visual BuildDashboard()
 {
-    Button CreatePopupLauncher(string label)
-    {
-        Button? btn = null;
-        btn = new Button(label).Click(() => TogglePopup(btn));
-        return btn;
-    }
-
     // Buttons shared across multiple sections (popup uses the button as anchor).
     popupButton = new Button("Popup").Click(() => TogglePopup(popupButton));
     var dialogButton = new Button("Dialog").Click(ShowModalDialog);

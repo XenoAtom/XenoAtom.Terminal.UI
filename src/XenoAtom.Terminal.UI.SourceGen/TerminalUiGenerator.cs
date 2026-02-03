@@ -12,6 +12,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Xml.Linq;
 
 #pragma warning disable RS2000 // New analyzer diagnostics are tracked out-of-band for this repo.
 
@@ -73,6 +74,14 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             messageFormat: "The bindable property '{0}' must be declared as a partial auto-property declaration (no bodies)",
             category: "XenoAtom.Terminal.UI.SourceGen",
             defaultSeverity: DiagnosticSeverity.Error,
+            isEnabledByDefault: true);
+
+        public static readonly DiagnosticDescriptor BindablePropertyMissingPartialWarning = new(
+            id: "XATUI008",
+            title: "Bindable property should be partial",
+            messageFormat: "The bindable property '{0}' is an auto-property without the 'partial' keyword; binding tracking will not be generated",
+            category: "XenoAtom.Terminal.UI.SourceGen",
+            defaultSeverity: DiagnosticSeverity.Warning,
             isEnabledByDefault: true);
 
         public static readonly DiagnosticDescriptor RoutedEventMethodMustHaveSingleArg = new(
@@ -174,6 +183,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
         string ContainingTypeDisplayName,
         string PropertyName,
         string PropertyTypeFullyQualified,
+        string? PropertyDocumentationXml,
         bool IsDelegateProperty,
         bool IsDelegatorProperty,
         string? DelegatorDelegateTypeFullyQualified,
@@ -230,6 +240,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             var isDelegateProperty = propertySymbol.Type.TypeKind == TypeKind.Delegate;
             var (isDelegatorProperty, delegatorDelegateTypeFullyQualified) = TryGetDelegatorDelegateType(context.SemanticModel.Compilation, propertySymbol.Type, typeFormat);
             var (isBindableListProperty, bindableListElementTypeFullyQualified) = TryGetBindableListElementType(context.SemanticModel.Compilation, propertySymbol.Type, typeFormat);
+            var propertyDocumentationXml = propertySymbol.GetDocumentationCommentXml(cancellationToken: cancellationToken);
 
             var isBindableListFluentOnlyProperty = false;
             var includeInBindings = true;
@@ -270,6 +281,12 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     {
                         diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.BindablePropertyMustHaveGetterAndSetter, propertySyntax.Identifier.GetLocation(), propertySymbol.Name));
                         return new BindablePropertyResult(null, diagnostics.ToImmutable());
+                    }
+
+                    // A non-partial auto-property means we cannot generate read/write tracking. This usually indicates a missing 'partial' keyword.
+                    if (IsAutoPropertyDeclaration(propertySyntax))
+                    {
+                        diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.BindablePropertyMissingPartialWarning, propertySyntax.Identifier.GetLocation(), propertySymbol.Name));
                     }
                 }
             }
@@ -321,6 +338,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 ContainingTypeDisplayName: containingTypeDisplayName,
                 PropertyName: propertyName,
                 PropertyTypeFullyQualified: propertyTypeFullyQualified,
+                PropertyDocumentationXml: string.IsNullOrWhiteSpace(propertyDocumentationXml) ? null : propertyDocumentationXml,
                 IsDelegateProperty: isDelegateProperty,
                 IsDelegatorProperty: isDelegatorProperty,
                 DelegatorDelegateTypeFullyQualified: delegatorDelegateTypeFullyQualified,
@@ -468,6 +486,11 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                 return false;
             }
 
+            return IsAutoPropertyDeclaration(propertySyntax);
+        }
+
+        private static bool IsAutoPropertyDeclaration(PropertyDeclarationSyntax propertySyntax)
+        {
             if (propertySyntax.ExpressionBody is not null)
             {
                 return false;
@@ -807,9 +830,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     continue;
                 }
 
-                sb.Append(methodIndent).AppendLine("/// <summary>");
-                sb.Append(methodIndent).Append("/// Sets <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> and returns the same instance.");
-                sb.Append(methodIndent).AppendLine("/// </summary>");
+                AppendFluentPropertyXmlDocumentation(sb, methodIndent, receiverTypeXml, propName, p.PropertyDocumentationXml);
                 sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
                 sb.Append(methodIndent).Append("/// <param name=\"").Append(argName).AppendLine("\">The value to set.</param>");
                 sb.Append(methodIndent).AppendLine("/// <returns>The same instance for chaining.</returns>");
@@ -1042,6 +1063,98 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             return sb.ToString();
         }
 
+        private static void AppendFluentPropertyXmlDocumentation(
+            StringBuilder sb,
+            string indent,
+            string receiverTypeXml,
+            string propertyName,
+            string? propertyDocumentationXml)
+        {
+            var fallbackSummary = $"Sets <see cref=\"{receiverTypeXml}.{EscapeIdentifier(propertyName)}\"/> and returns the same instance.";
+
+            if (string.IsNullOrWhiteSpace(propertyDocumentationXml))
+            {
+                sb.Append(indent).AppendLine("/// <summary>");
+                sb.Append(indent).Append("/// ").AppendLine(fallbackSummary);
+                sb.Append(indent).AppendLine("/// </summary>");
+                return;
+            }
+
+            try
+            {
+                var doc = XDocument.Parse(propertyDocumentationXml, LoadOptions.PreserveWhitespace);
+                var member = doc.Root;
+                if (member is null)
+                {
+                    throw new InvalidOperationException("Missing root element.");
+                }
+
+                var summaryElement = member.Element("summary");
+                var remarksElement = member.Element("remarks");
+
+                sb.Append(indent).AppendLine("/// <summary>");
+                var summaryInnerXml = summaryElement is null ? string.Empty : GetInnerXml(summaryElement);
+                if (string.IsNullOrWhiteSpace(summaryInnerXml))
+                {
+                    sb.Append(indent).Append("/// ").AppendLine(fallbackSummary);
+                }
+                else
+                {
+                    foreach (var line in FormatXmlDocText(TransformPropertySummaryToSetterSummary(summaryInnerXml)))
+                    {
+                        sb.Append(indent).Append("/// ").AppendLine(line);
+                    }
+                }
+                sb.Append(indent).AppendLine("/// </summary>");
+
+                if (remarksElement is not null)
+                {
+                    var remarksInnerXml = GetInnerXml(remarksElement);
+                    if (!string.IsNullOrWhiteSpace(remarksInnerXml))
+                    {
+                        sb.Append(indent).AppendLine("/// <remarks>");
+                        foreach (var line in FormatXmlDocText(remarksInnerXml))
+                        {
+                            sb.Append(indent).Append("/// ").AppendLine(line);
+                        }
+                        sb.Append(indent).AppendLine("/// </remarks>");
+                    }
+                }
+            }
+            catch
+            {
+                sb.Append(indent).AppendLine("/// <summary>");
+                sb.Append(indent).Append("/// ").AppendLine(fallbackSummary);
+                sb.Append(indent).AppendLine("/// </summary>");
+            }
+        }
+
+        private static IEnumerable<string> FormatXmlDocText(string xmlText)
+        {
+            var normalized = xmlText.Replace("\r\n", "\n").Replace('\r', '\n');
+            var lines = normalized.Split('\n');
+            var start = 0;
+            while (start < lines.Length && string.IsNullOrWhiteSpace(lines[start]))
+            {
+                start++;
+            }
+            for (var i = start; i < lines.Length; i++)
+            {
+                yield return lines[i].TrimEnd();
+            }
+        }
+
+        private static string TransformPropertySummaryToSetterSummary(string summaryInnerXml)
+        {
+            // Most properties follow the "Gets or sets ..." pattern; translate it for a setter fluent API.
+            var text = summaryInnerXml.TrimStart();
+            return text.StartsWith("Gets or sets", StringComparison.Ordinal)
+                ? "Sets" + text.Substring("Gets or sets".Length)
+                : summaryInnerXml;
+        }
+
+        private static string GetInnerXml(XElement element) => string.Concat(element.Nodes());
+
         private static string GetExtensionClassName(INamedTypeSymbol type)
         {
             var containingTypes = GetContainingTypes(type);
@@ -1149,9 +1262,6 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     sb.Append(baseIndent).Append("partial void On").Append(p.PropertyName).Append("Changed(").Append(p.PropertyTypeFullyQualified).AppendLine(" value);");
                     sb.AppendLine();
 
-                    sb.Append(baseIndent).AppendLine("/// <summary>");
-                    sb.Append(baseIndent).Append("/// Gets or sets the value of <c>").Append(p.PropertyName).AppendLine("</c>.");
-                    sb.Append(baseIndent).AppendLine("/// </summary>");
                     sb.Append(baseIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                     sb.Append(baseIndent).Append(p.PropertyModifiers).Append(' ').Append(p.PropertyTypeFullyQualified).Append(' ').Append(p.PropertyName).AppendLine();
                     sb.Append(baseIndent).AppendLine("{");
@@ -1708,7 +1818,8 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             var indent = new string(' ', string.IsNullOrEmpty(ns) ? 0 : 4);
             var extensionClassName = GetExtensionClassName(containingType);
 
-            var receiverTypeXml = DocumentationCommentId.CreateDeclarationId(containingType);
+            string receiverTypeXml = DocumentationCommentId.CreateDeclarationId(containingType)
+                ?? containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
             sb.Append(indent).AppendLine("/// <summary>");
             sb.Append(indent).Append("/// Fluent extension methods for configuring instances of <see cref=\"")
@@ -2156,7 +2267,8 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
 
             var indent = new string(' ', string.IsNullOrEmpty(ns) ? 0 : 4);
             var extensionClassName = GetExtensionClassName(containingType);
-            var receiverTypeXml = DocumentationCommentId.CreateDeclarationId(containingType);
+            var receiverTypeXml = DocumentationCommentId.CreateDeclarationId(containingType)
+                ?? containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
             sb.Append(indent).AppendLine("/// <summary>");
             sb.Append(indent).Append("/// Fluent extension methods for registering routed event handlers on <see cref=\"")

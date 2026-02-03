@@ -62,22 +62,31 @@ public readonly record struct GridLength(GridUnitType Type, double Value)
 public sealed partial class RowDefinition
 {
     /// <summary>
+    /// Initializes a new instance of the <see cref="RowDefinition"/> class with default values.
+    /// </summary>
+    public RowDefinition()
+    {
+        Height = GridLength.Star(1);
+        MaxHeight = int.MaxValue;
+    }
+
+    /// <summary>
     /// Gets or sets the row height.
     /// </summary>
     [Bindable]
-    public GridLength Height { get; set; } = GridLength.Star(1);
+    public partial GridLength Height { get; set; }
 
     /// <summary>
     /// Gets or sets the minimum row height.
     /// </summary>
     [Bindable]
-    public int MinHeight { get; set; }
+    public partial int MinHeight { get; set; }
 
     /// <summary>
     /// Gets or sets the maximum row height.
     /// </summary>
     [Bindable]
-    public int MaxHeight { get; set; } = int.MaxValue;
+    public partial int MaxHeight { get; set; }
 }
 
 /// <summary>
@@ -86,20 +95,29 @@ public sealed partial class RowDefinition
 public sealed partial class ColumnDefinition
 {
     /// <summary>
+    /// Initializes a new instance of the <see cref="ColumnDefinition"/> class with default values.
+    /// </summary>
+    public ColumnDefinition()
+    {
+        Width = GridLength.Star(1);
+        MaxWidth = int.MaxValue;
+    }
+
+    /// <summary>
     /// Gets or sets the column width.
     /// </summary>
     [Bindable]
-    public GridLength Width { get; set; } = GridLength.Star(1);
+    public partial GridLength Width { get; set; }
 
     /// <summary>
     /// Gets or sets the minimum column width.
     /// </summary>
     [Bindable]
-    public int MinWidth { get; set; }
+    public partial int MinWidth { get; set; }
 
     /// <summary>
     /// Gets or sets the maximum column width.
     /// </summary>
     [Bindable]
-    public int MaxWidth { get; set; } = int.MaxValue;
+    public partial int MaxWidth { get; set; }
 }
