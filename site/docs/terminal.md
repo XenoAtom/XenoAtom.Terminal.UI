@@ -131,7 +131,7 @@ use the same idea at the UI layer (render to buffers and diff).
 Terminal.UI integrates as extension members on `Terminal`:
 
 - `Terminal.Write(Visual)` - render once
-- `Terminal.Live(Visual, onUpdate)` - inline live region
+- `Terminal.Live(Visual, onUpdate)` - inline live region (mouse reporting is disabled by default)
 - `Terminal.Run(Visual, onUpdate)` - fullscreen app (alternate screen)
 
 See:

@@ -38,6 +38,42 @@ The update callback returns a `TerminalLoopResult`:
 
 You can also use the overload that receives a `TerminalRunningContext` to access the host kind and terminal instance.
 
+### Mouse input (default: off)
+
+By default, inline live regions do **not** enable terminal mouse reporting. This preserves the terminal emulator's
+default mouse behavior (for example: selecting/copying text with the mouse).
+
+If you want mouse interactions (hover, clicks, scroll wheel) for controls hosted in `Terminal.Live`, enable it:
+
+```csharp
+using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI;
+using XenoAtom.Terminal.UI.Controls;
+
+Terminal.Live(
+    new VStack(new Button("Click me")).Padding(1),
+    onUpdate: () => TerminalLoopResult.Continue,
+    options: new TerminalLiveOptions { EnableMouse = true, MouseMode = TerminalMouseMode.Move });
+```
+
+### Filling the viewport height
+
+Inline live regions measure with an "infinite" height by default, so a simple visual like a `VStack("Hello")` will
+typically only reserve a single row.
+
+If you want the live region to reserve the full visible terminal height (useful for backgrounds, canvases, and layouts
+that need vertical space), set the root visual to `VerticalAlignment(Align.Stretch)`:
+
+```csharp
+using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Layout;
+
+Terminal.Live(
+    new VStack("Hello").VerticalAlignment(Align.Stretch),
+    onUpdate: () => TerminalLoopResult.Continue);
+```
+
 ### Writing during updates
 
 During `onUpdate`, you can write regular output via `Terminal.WriteLine(...)` / `Terminal.Write(...)`.

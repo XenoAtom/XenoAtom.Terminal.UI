@@ -48,6 +48,10 @@ Terminal.Live(
     });
 ```
 
+> [!NOTE]
+> Inline live regions do not enable terminal mouse reporting by default (so your terminal can keep text selection).
+> If you need mouse input for interactive controls, use the `TerminalLiveOptions` overload with `EnableMouse = true`.
+
 ## Fullscreen app
 
 Use `Terminal.Run` to run a fullscreen app (alternate screen). Your UI is a `Visual` tree.

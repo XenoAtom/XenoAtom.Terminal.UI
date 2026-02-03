@@ -1157,21 +1157,25 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
         {
             var width = Math.Max(1, _terminal.Size.Columns);
+            var viewportHeight = Math.Max(1, _terminal.Size.Rows);
+            var stretchRootToViewport = Root.VerticalAlignment == Align.Stretch;
 
             if (metrics is not null)
             {
                 var t0 = Stopwatch.GetTimestamp();
-                Root.Measure(new LayoutConstraints(0, width, 0, LayoutConstants.Infinite));
+                Root.Measure(new LayoutConstraints(0, width, 0, stretchRootToViewport ? viewportHeight : LayoutConstants.Infinite));
                 metrics.RenderMeasureTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
 
                 t0 = Stopwatch.GetTimestamp();
-                Root.Arrange(new Rectangle(0, 0, width, Root.DesiredSize.Height));
+                var arrangeHeight = stretchRootToViewport ? viewportHeight : Root.DesiredSize.Height;
+                Root.Arrange(new Rectangle(0, 0, width, arrangeHeight));
                 metrics.RenderArrangeTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
             }
             else
             {
-                Root.Measure(new LayoutConstraints(0, width, 0, LayoutConstants.Infinite));
-                Root.Arrange(new Rectangle(0, 0, width, Root.DesiredSize.Height));
+                Root.Measure(new LayoutConstraints(0, width, 0, stretchRootToViewport ? viewportHeight : LayoutConstants.Infinite));
+                var arrangeHeight = stretchRootToViewport ? viewportHeight : Root.DesiredSize.Height;
+                Root.Arrange(new Rectangle(0, 0, width, arrangeHeight));
             }
 
             var layoutProducedWrites = _pendingBindingWrites.Count > 0;
@@ -1181,7 +1185,8 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
             var wantsCursor = TryGetDesiredCursor(out var cursorX, out var cursorY);
 
-            var buffer = EnsureRenderBuffer(width, Math.Max(1, Root.DesiredSize.Height));
+            var bufferHeight = stretchRootToViewport ? viewportHeight : Math.Max(1, Root.DesiredSize.Height);
+            var buffer = EnsureRenderBuffer(width, bufferHeight);
             var baseStyle = Root.GetTheme().BaseTextStyle();
 
             var fullRepaint =
@@ -1192,7 +1197,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 !_pendingRenderDirtyRectValid;
 
             _lastRenderWidth = width;
-            _lastRenderHeight = Math.Max(1, _terminal.Size.Rows);
+            _lastRenderHeight = viewportHeight;
             metrics?.SetFullRepaint(fullRepaint);
             if (metrics is not null)
             {

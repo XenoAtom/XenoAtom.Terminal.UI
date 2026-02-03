@@ -281,7 +281,12 @@ public static partial class TerminalExtensions
         public TerminalInstance Live(Visual visual, Func<TerminalRunningContext, TerminalLoopResult> onUpdate)
         {
             ArgumentNullException.ThrowIfNull(instance);
-            var appOptions = new TerminalAppOptions { HostKind = TerminalHostKind.Inline, Culture = CultureInfo.InvariantCulture };
+            var appOptions = new TerminalAppOptions
+            {
+                HostKind = TerminalHostKind.Inline,
+                Culture = CultureInfo.InvariantCulture,
+                EnableMouse = false,
+            };
             RunHostedAsync(instance, visual, appOptions, onUpdate, CancellationToken.None)
                 .AsTask()
                 .GetAwaiter()
@@ -296,7 +301,13 @@ public static partial class TerminalExtensions
         public TerminalInstance Live(Visual visual, Func<TerminalRunningContext, TerminalLoopResult> onUpdate, TerminalLiveOptions options)
         {
             ArgumentNullException.ThrowIfNull(instance);
-            var appOptions = new TerminalAppOptions { HostKind = TerminalHostKind.Inline, Culture = options.Culture ?? CultureInfo.InvariantCulture };
+            var appOptions = new TerminalAppOptions
+            {
+                HostKind = TerminalHostKind.Inline,
+                Culture = options.Culture ?? CultureInfo.InvariantCulture,
+                EnableMouse = options.EnableMouse,
+                MouseMode = options.MouseMode,
+            };
             RunHostedAsync(instance, visual, appOptions, onUpdate, CancellationToken.None)
                 .AsTask()
                 .GetAwaiter()
@@ -317,7 +328,12 @@ public static partial class TerminalExtensions
         public async ValueTask<TerminalInstance> LiveAsync(Visual visual, Func<TerminalRunningContext, TerminalLoopResult> onUpdate, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(instance);
-            var appOptions = new TerminalAppOptions { HostKind = TerminalHostKind.Inline, Culture = CultureInfo.InvariantCulture };
+            var appOptions = new TerminalAppOptions
+            {
+                HostKind = TerminalHostKind.Inline,
+                Culture = CultureInfo.InvariantCulture,
+                EnableMouse = false,
+            };
             await RunHostedAsync(instance, visual, appOptions, onUpdate, cancellationToken).ConfigureAwait(false);
 
             return instance;
@@ -329,7 +345,13 @@ public static partial class TerminalExtensions
         public async ValueTask<TerminalInstance> LiveAsync(Visual visual, Func<TerminalRunningContext, TerminalLoopResult> onUpdate, TerminalLiveOptions options, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(instance);
-            var appOptions = new TerminalAppOptions { HostKind = TerminalHostKind.Inline, Culture = options.Culture ?? CultureInfo.InvariantCulture };
+            var appOptions = new TerminalAppOptions
+            {
+                HostKind = TerminalHostKind.Inline,
+                Culture = options.Culture ?? CultureInfo.InvariantCulture,
+                EnableMouse = options.EnableMouse,
+                MouseMode = options.MouseMode,
+            };
             await RunHostedAsync(instance, visual, appOptions, onUpdate, cancellationToken).ConfigureAwait(false);
 
             return instance;
