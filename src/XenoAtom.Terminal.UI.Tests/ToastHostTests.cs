@@ -3,8 +3,11 @@
 // See license.txt file in the project root for full license information.
 
 using System.Linq;
+using System.Reflection;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Hosting;
+using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -25,15 +28,33 @@ public sealed class ToastHostTests
         driver.App.Post(() => host.Show(new TextBlock("Message")));
         driver.Tick();
 
-        var screen = new AnsiTestScreen(40, 8);
-        screen.Apply(driver.Backend.GetOutText());
-        var rendered = screen.GetText().Replace("\r", string.Empty);
+        Assert.HasCount(1, host.VisibleToasts);
+        var toast = host.VisibleToasts[0];
+        var rect = toast.Bounds;
+        Assert.IsTrue(rect.Width > 0 && rect.Height > 0);
 
-        var lineWithClose = rendered.Split('\n').FirstOrDefault(line => line.Contains('X'));
-        Assert.IsNotNull(lineWithClose, "Expected toast close button to be rendered.");
+        var style = toast.GetStyle<ToastStyle>();
+        var padding = style.Padding;
 
-        var closeIndex = lineWithClose!.IndexOf('X');
-        Assert.IsGreaterThanOrEqualTo(20, closeIndex, $"Expected toast close button near the right edge, but it was at column {closeIndex}. Line='{lineWithClose}'");
+        var buffer = (CellBuffer)typeof(TerminalApp).GetField("_renderBuffer", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(driver.App)!;
+        var closeRune = style.CloseIcon.EnumerateRunes().FirstOrDefault(new Rune('X'));
+
+        // Close button is rendered on the first content line (after border+padding). Border has a fixed inset of 1 cell.
+        var y = rect.Y + (padding.Top + 1);
+        var closeX = -1;
+        for (var x = rect.X; x < rect.Right; x++)
+        {
+            var index = (y * buffer.Width) + x;
+            if (buffer.UnsafeScalars[index] == closeRune.Value)
+            {
+                closeX = x;
+            }
+        }
+
+        Assert.AreNotEqual(-1, closeX, "Expected toast close button glyph to be rendered on the header line.");
+
+        var expectedRight = rect.Right - padding.Right - 2;
+        Assert.IsGreaterThanOrEqualTo(expectedRight - 2, closeX, $"Expected toast close button near the right edge. closeX={closeX} expectedRight={expectedRight} rect={rect}");
     }
 
     [TestMethod]
