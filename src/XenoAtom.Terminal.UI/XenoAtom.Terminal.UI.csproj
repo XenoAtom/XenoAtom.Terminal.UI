@@ -26,9 +26,16 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <TerminalUiSourceGenAssembly>$(MSBuildThisFileDirectory)..\XenoAtom.Terminal.UI.SourceGen\bin\$(Configuration)\netstandard2.0\XenoAtom.Terminal.UI.SourceGen.dll</TerminalUiSourceGenAssembly>
+  </PropertyGroup>
+
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)../../img/XenoAtom.Terminal.UI.png" Pack="true" PackagePath="/" />
     <None Include="$(MSBuildThisFileDirectory)../../readme.md" Pack="true" PackagePath="/" />
+    <!-- Ship the source generator with the main package (no separate SourceGen NuGet). -->
+    <None Include="$(TerminalUiSourceGenAssembly)" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="$(TerminalUiSourceGenAssembly).pdb" Condition="Exists('$(TerminalUiSourceGenAssembly).pdb')" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
   <ItemGroup>
