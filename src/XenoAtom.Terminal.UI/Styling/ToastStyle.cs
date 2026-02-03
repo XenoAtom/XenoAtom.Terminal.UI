@@ -71,7 +71,7 @@ public sealed record ToastStyle : IStyle<ToastStyle>
     /// <summary>
     /// Gets the icon used for the close button.
     /// </summary>
-    public string CloseIcon { get; init; } = "X";
+    public string CloseIcon { get; init; } = "\u2715";
 
     /// <summary>
     /// Gets the progress bar style used for countdowns.
