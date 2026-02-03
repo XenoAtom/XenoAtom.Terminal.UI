@@ -19,7 +19,7 @@ layout: base
   ~}}
   <div class="row">
       <!-- Left sidebar - responsive offcanvas (offcanvas on mobile, visible sidebar on md+) -->
-      <nav id="docs-sidebar-menu" class="col-md-3 col-xxl-2 offcanvas-md offcanvas-start sticky-md-top menu-sidebar align-self-start order-1 order-md-0" tabindex="-1" aria-labelledby="docs-sidebar-menu-label">
+      <nav id="docs-sidebar-menu" class="col-md-3 col-xxl-2 offcanvas-md offcanvas-start sticky-md-top menu-sidebar align-self-start order-1 order-md-0" tabindex="-1" aria-labelledby="docs-sidebar-menu-label" aria-expanded="true">
         <div class="offcanvas-header">
           <h5 class="offcanvas-title" id="docs-sidebar-menu-label">Menu</h5>
           <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#docs-sidebar-menu" aria-label="Close"></button>
@@ -29,7 +29,7 @@ layout: base
         </div>
       </nav>
       <!-- Right sidebar (TOC) - collapsible on mobile, visible sidebar on xxl+ -->
-      <aside id="docs-sidebar-toc" class="col-12 col-xxl-2 sticky-xxl-top menu-sidebar align-self-start order-0 order-xxl-2 collapse d-xxl-block">
+      <aside id="docs-sidebar-toc" class="col-12 col-xxl-2 sticky-xxl-top menu-sidebar align-self-start order-0 order-xxl-2 collapse d-xxl-block" aria-expanded="true">
         <h3 class="toc-title">On this page</h3>
         <nav class="js-toc"></nav>
       </aside>
