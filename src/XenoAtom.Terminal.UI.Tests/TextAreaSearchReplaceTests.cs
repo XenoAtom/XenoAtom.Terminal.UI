@@ -111,6 +111,28 @@ public sealed class TextAreaSearchReplaceTests
     }
 
     [TestMethod]
+    public void TextArea_Closing_Find_Popup_Clears_Search_Query()
+    {
+        var editor = new TextArea("foo bar foo");
+        using var driver = new TerminalAppTestDriver(editor, TerminalHostKind.Fullscreen, new TerminalSize(60, 10));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlF, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "foo" });
+        driver.Tick();
+
+        var target = editor.CreateSearchReplaceTarget();
+        Assert.AreNotEqual("No search", target.GetStatusText(), "Expected an active search query once text is entered.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        driver.Tick();
+
+        Assert.AreEqual("No search", target.GetStatusText(), "Closing the find popup should clear match highlighting.");
+    }
+
+    [TestMethod]
     public void TextArea_ReplaceAll_Updates_Document_Text()
     {
         var editor = new TextArea("foo bar foo");

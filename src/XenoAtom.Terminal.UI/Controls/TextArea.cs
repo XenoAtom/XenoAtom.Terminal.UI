@@ -34,7 +34,11 @@ public sealed partial class TextArea : TextEditorBase
             getter: () => Text ?? string.Empty,
             setter: value => Text = value);
 
-        _searchPopup = new SearchReplacePopup(CreateSearchReplaceTarget());
+        _searchPopup = new SearchReplacePopup(CreateSearchReplaceTarget())
+        {
+            // Closing the popup should remove match highlights.
+            ClearQueryOnClose = true,
+        };
         AttachChild(_searchPopup);
 
         AddCommand(new Command

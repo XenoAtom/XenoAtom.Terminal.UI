@@ -68,7 +68,11 @@ public sealed partial class LogControl : Visual
         // Default behavior: wrap long lines to the viewport width.
         this.WrapText(true);
 
-        _searchPopup = new SearchReplacePopup(new LogSearchTarget(this));
+        _searchPopup = new SearchReplacePopup(new LogSearchTarget(this))
+        {
+            // Closing the popup should remove match highlights.
+            ClearQueryOnClose = true,
+        };
 
         AttachChild(_scrollViewer);
         AttachChild(_searchPopup);

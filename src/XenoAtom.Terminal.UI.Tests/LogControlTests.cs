@@ -141,6 +141,30 @@ public sealed class LogControlTests
     }
 
     [TestMethod]
+    public void LogControl_Closing_Search_Popup_Clears_SearchText()
+    {
+        var log = new LogControl();
+        using var driver = new TerminalAppTestDriver(log, TerminalHostKind.Fullscreen, new TerminalSize(60, 10));
+        driver.Tick();
+
+        log.AppendLine("foo bar");
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlF, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "foo" });
+        driver.Tick();
+
+        Assert.AreEqual("foo", log.SearchText);
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        driver.Tick();
+
+        Assert.IsTrue(string.IsNullOrEmpty(log.SearchText), "Closing the search popup should clear match highlighting.");
+    }
+
+    [TestMethod]
     public void LogControl_Search_And_Navigate_Matches_Scrolls_To_Results()
     {
         var log = new LogControl();
