@@ -12,6 +12,59 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class OptionListTests
 {
     [TestMethod]
+    public void OptionList_Clears_HoveredIndex_When_Mouse_Leaves()
+    {
+        var list = new OptionList<OptionListItem> { MinHeight = 4, MaxHeight = 4 };
+        list.Items.AddRange(
+            new OptionListItem("First"),
+            new OptionListItem("Second"),
+            new OptionListItem("Third"));
+
+        var root = new VStack(list, new TextBlock("Below")).Spacing(0);
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        // Move over the second item.
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, Button = TerminalMouseButton.None, X = 2, Y = 1 });
+        driver.Tick();
+        Assert.AreEqual(1, list.HoveredIndex);
+
+        // Move outside the list (over the TextBlock below).
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, Button = TerminalMouseButton.None, X = 2, Y = 8 });
+        driver.Tick();
+        Assert.AreEqual(-1, list.HoveredIndex);
+    }
+
+    [TestMethod]
+    public void OptionList_Aligns_Shortcuts_To_Right_Edge()
+    {
+        var list = new OptionList<OptionListItem> { MinHeight = 4, MaxHeight = 4 };
+        list.Items.AddRange(
+            new OptionListItem("Build", "Ctrl+B"),
+            new OptionListItem("Run", "F5"));
+
+        var root = new VStack { list };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(40, 10);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText();
+
+        var lines = rendered.Split('\n');
+        var buildLine = lines.FirstOrDefault(l => l.Contains("Ctrl+B", StringComparison.Ordinal));
+        var runLine = lines.FirstOrDefault(l => l.Contains("F5", StringComparison.Ordinal));
+
+        Assert.IsNotNull(buildLine);
+        Assert.IsNotNull(runLine);
+
+        var buildEnd = buildLine!.IndexOf("Ctrl+B", StringComparison.Ordinal) + "Ctrl+B".Length - 1;
+        var runEnd = runLine!.IndexOf("F5", StringComparison.Ordinal) + "F5".Length - 1;
+
+        Assert.AreEqual(buildEnd, runEnd, "Expected shortcuts to align to the same right edge.");
+    }
+
+    [TestMethod]
     public void OptionList_ArrowDown_Raises_SelectionChanged()
     {
         var list = new OptionList<OptionListItem> { MinHeight = 4, MaxHeight = 4 };

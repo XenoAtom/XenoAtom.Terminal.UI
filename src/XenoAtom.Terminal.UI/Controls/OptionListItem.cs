@@ -22,6 +22,7 @@ public sealed partial class OptionListItem : Visual
     /// </summary>
     public OptionListItem()
     {
+        HorizontalAlignment = Align.Stretch;
     }
 
     /// <summary>
@@ -31,6 +32,7 @@ public sealed partial class OptionListItem : Visual
     /// <param name="shortcut">The optional shortcut visual.</param>
     public OptionListItem(Visual content, Visual? shortcut = null)
     {
+        HorizontalAlignment = Align.Stretch;
         this.Content(content);
         this.Shortcut(shortcut);
     }

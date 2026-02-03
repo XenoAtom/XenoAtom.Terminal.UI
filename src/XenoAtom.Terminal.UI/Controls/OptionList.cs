@@ -144,6 +144,13 @@ public sealed partial class OptionList<T> : Visual, IScrollable
     protected override void PrepareChildren()
     {
         ScrollVersion = _scroll.Version;
+
+        // HoveredIndex is tracked from pointer move events. When the pointer leaves the control, we may not receive
+        // further move events, so reset the hover state based on the framework-managed IsHovered flag.
+        if (!IsHovered)
+        {
+            HoveredIndex = -1;
+        }
     }
 
     /// <inheritdoc/>
@@ -280,7 +287,8 @@ public sealed partial class OptionList<T> : Visual, IScrollable
 
         var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.MarkerGlyph));
         var gap = Math.Max(0, style.SpaceBetweenGlyphAndText);
-        var prefixLeft = innerLeft - _scroll.OffsetX;
+        // Marker and padding are part of the fixed left column and should not scroll horizontally.
+        var prefixLeft = innerLeft;
 
         var scrollOffset = itemHeight == 0 ? 0 : (_scroll.OffsetY / itemHeight);
 
