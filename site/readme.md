@@ -21,6 +21,9 @@ og_type: website
     <div class="mt-4 text-start mx-auto" style="max-width: 56rem;">
       <pre class="language-shell-session"><code>dotnet add package XenoAtom.Terminal.UI</code></pre>
     </div>
+
+![XenoAtom.Terminal.UI fullscreen video](img/xenoatom-fullscreen.webm){.terminal .terminal-hero}
+
   </div>
 </section>
 

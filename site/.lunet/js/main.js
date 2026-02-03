@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Only wrap elements that are rendered as a "terminal screenshot" in docs.
       const tagName = element.tagName?.toUpperCase();
-      if (tagName !== 'IMG' && tagName !== 'SVG' && tagName !== 'PRE') return;
+      if (tagName !== 'IMG' && tagName !== 'SVG' && tagName !== 'PRE' && tagName !== 'VIDEO') return;
 
       const titleText =
           element.getAttribute('data-terminal-title') ||
@@ -65,6 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const wrapper = document.createElement('figure');
       wrapper.className = 'terminal-window';
+      if (element.classList.contains('terminal-hero')) {
+          wrapper.classList.add('terminal-window--hero');
+      }
 
       const bar = document.createElement('div');
       bar.className = 'terminal-window__bar';

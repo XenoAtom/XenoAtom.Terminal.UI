@@ -338,6 +338,19 @@ button.copy-to-clipboard-button[data-copy-state="copy-error"] > span {
     height: auto;
 }
 
+// When embedding videos, lunet adds width/height attributes which can unintentionally shrink the player.
+// Force the video to fill the chrome frame width while preserving aspect ratio.
+.terminal-window__content > video.terminal {
+    width: 100%;
+}
+
+// Frontpage hero media: give it more presence without affecting regular screenshots.
+.terminal-window--hero {
+    display: block;
+    width: min(1200px, 100%);
+    margin: 1.25rem auto 1.5rem auto;
+}
+
 /**********************************************
  * alerts (NOTE, TIP, WARNING, CAUTION, IMPORTANT)
  **********************************************/
