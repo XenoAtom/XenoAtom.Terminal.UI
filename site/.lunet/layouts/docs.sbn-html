@@ -16,6 +16,9 @@ layout: base
       end
     end
     menu = site.menu[menu_key] ?? site.menu.doc
+    # The root docs menu is a flat list; avoid Bootstrap collapse so the sidebar never measures to 0 height.
+    # Nested menus (controls/specs) keep collapsible behavior.
+    menu_collapsible = menu_key != "doc"
   ~}}
   <div class="row">
       <!-- Left sidebar - responsive offcanvas (offcanvas on mobile, visible sidebar on md+) -->
@@ -25,7 +28,7 @@ layout: base
           <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#docs-sidebar-menu" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body">
-          {{ menu.render { kind: "menu",  collapsible: true } }}
+          {{ menu.render { kind: "menu",  collapsible: menu_collapsible } }}
         </div>
       </nav>
       <!-- Right sidebar (TOC) - collapsible on mobile, visible sidebar on xxl+ -->
