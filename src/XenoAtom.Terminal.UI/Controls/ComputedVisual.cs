@@ -81,6 +81,10 @@ public sealed partial class ComputedVisual : Visual
 
         if (desired is null)
         {
+            // When no visual is produced, this control should behave like it doesn't exist.
+            // In particular, it must not block hit-testing of visuals behind it (common for overlay scenarios).
+            IsHitTestVisible = false;
+
             // Bind wrapper layout/visibility properties to the computed child so the computed visual behaves like the child
             // in its container (alignment, min/max, margin, etc.).
             this.BindHorizontalAlignment(default);
@@ -95,6 +99,7 @@ public sealed partial class ComputedVisual : Visual
             return;
         }
 
+        IsHitTestVisible = true;
         _currentChild = desired;
         AttachChild(desired);
 
