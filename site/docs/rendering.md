@@ -202,6 +202,64 @@ You can reproduce it by running the ControlsDemo and opening the **Rendering →
 
 The rendering path reuses internal buffers where possible to minimize per-frame allocations.
 
+## Capturing SVG screenshots (CellBuffer → SVG)
+
+XenoAtom.Terminal.UI can export the rendered `CellBuffer` to **SVG** with high fidelity (glyphs + colors + text styles).
+This is useful for:
+
+- deterministic documentation screenshots,
+- golden-file tests,
+- embedding terminal UI snapshots in websites (exactly what this website does).
+
+> [!NOTE]
+> All SVG screenshots in these docs are **generated automatically** from the `ControlsDemo` using the same rendering
+> pipeline as a real app. They are not hand-made images.
+
+### TerminalApp.CaptureSvg
+
+When you run a fullscreen app (or any `TerminalApp`), you can capture the last rendered frame:
+
+```csharp
+// After the app has rendered at least one frame:
+var svg = app.CaptureSvg();
+File.WriteAllText("screenshot.svg", svg);
+```
+
+You can also capture a specific visual from the current frame buffer (cropped to its arranged bounds):
+
+```csharp
+var svg = app.CaptureSvg(myControl, padding: new Thickness(1));
+```
+
+### TerminalAppSnapshotRenderer (render without a real terminal)
+
+For automation (docs/tests), `TerminalAppSnapshotRenderer` renders a visual tree to an in-memory terminal backend and
+returns the resulting SVG:
+
+```csharp
+var svg = TerminalAppSnapshotRenderer.RenderSvg(
+    root,
+    width: 120,
+    height: 30,
+    theme: Theme.ElderberryDarkSoft);
+```
+
+### CellBufferSvgExporter
+
+At the lowest level, `CellBufferSvgExporter` converts any `CellBuffer` to SVG:
+
+```csharp
+var svg = CellBufferSvgExporter.Export(buffer, new CellBufferSvgExportOptions
+{
+    AutoCrop = true,
+    Padding = new Thickness(1),
+    FillBackground = true,
+});
+```
+
+`CellBufferSvgExportOptions` supports cropping, padding, background fill, and SVG sizing parameters so you can produce
+compact screenshots that still look great.
+
 ## Writing fast custom controls
 
 ### Implementing `RenderOverride`
