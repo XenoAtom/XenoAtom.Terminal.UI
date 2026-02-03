@@ -20,6 +20,7 @@ The project is in a pre-release state. Remove this line when the project reaches
 
 - To build the project, navigate to the `src` directory and run `dotnet build -c Release`.
 - To run the unit tests, navigate to the `src` directory and run `dotnet test -c Release`.
+- To regenerate the website control screenshots, run `dotnet run -c Release --project samples/ControlsDemo -- --export-screenshots` (outputs to `site/img/controls`).
 - To build the website, navigate to the `site` directory and run `lunet build`.
 - Ensure that all tests pass successfully before submitting any changes.
 - Ensure that user guide documentation (`site/docs/readme.md`) and top-level readme are updated to reflect any changes made to the library.
@@ -157,3 +158,4 @@ Before submitting changes, verify:
 - [ ] Changes are covered by unit tests.
 - [ ] No unintended files are included in the commit.
 - [ ] Documentation is updated if behavior changes.
+- [ ] Screenshots are up to date when changing control visuals (`dotnet run -c Release --project samples/ControlsDemo -- --export-screenshots`).

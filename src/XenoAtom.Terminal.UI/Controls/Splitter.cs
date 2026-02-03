@@ -265,7 +265,9 @@ public abstract partial class Splitter : Visual
         var focused = HasFocus;
 
         var barStyle = style.Resolve(theme, IsEnabled, focused, IsBarHovered, IsDragging);
-        var glyph = SplitOrientation == Orientation.Horizontal ? style.VerticalGlyph : style.HorizontalGlyph;
+        var glyph = SplitOrientation == Orientation.Horizontal
+            ? (IsBarHovered || IsDragging ? style.HoverVerticalGlyph : style.VerticalGlyph)
+            : (IsBarHovered || IsDragging ? style.HoverHorizontalGlyph : style.HorizontalGlyph);
 
         for (var y = _barRect.Y; y < _barRect.Y + _barRect.Height; y++)
         {

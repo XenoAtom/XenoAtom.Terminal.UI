@@ -665,7 +665,8 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             var indent = new string(' ', string.IsNullOrEmpty(ns) ? 0 : 4);
             var extensionClassName = GetExtensionClassName(containingType);
 
-            var receiverTypeXml = DocumentationCommentId.CreateDeclarationId(containingType);
+            string receiverTypeXml = DocumentationCommentId.CreateDeclarationId(containingType)
+                ?? containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
             sb.Append(indent).AppendLine("/// <summary>");
             sb.Append(indent).Append("/// Fluent extension methods for configuring instances of <see cref=\"")

@@ -25,12 +25,22 @@ public sealed record SplitterStyle : IStyle<SplitterStyle>
     /// <summary>
     /// Gets the glyph used for horizontal split bars.
     /// </summary>
-    public Rune HorizontalGlyph { get; init; } = new(0x2500); // ─
+    public Rune HorizontalGlyph { get; init; } = new(0x2504); // ┄
+
+    /// <summary>
+    /// Gets the glyph used for horizontal split bars when hovered.
+    /// </summary>
+    public Rune HoverHorizontalGlyph { get; init; } = new(0x2501); // ━
 
     /// <summary>
     /// Gets the glyph used for vertical split bars.
     /// </summary>
-    public Rune VerticalGlyph { get; init; } = new(0x2502); // │
+    public Rune VerticalGlyph { get; init; } = new(0x250A); // ┊
+
+    /// <summary>
+    /// Gets the glyph used for vertical split bars when hovered.
+    /// </summary>
+    public Rune HoverVerticalGlyph { get; init; } = new(0x2503); // ┃
 
     /// <summary>
     /// Gets the optional base bar style.
@@ -97,6 +107,7 @@ public sealed record SplitterStyle : IStyle<SplitterStyle>
             return FocusStyle ?? (theme.BorderStyle(focused: true));
         }
 
-        return BarStyle ?? theme.BorderStyle(focused: false);
+        // By default, make the separator line subtle so content remains the focus; hover/drag provides the strong affordance.
+        return BarStyle ?? (theme.BorderStyle(focused: false) | TextStyle.Dim);
     }
 }
