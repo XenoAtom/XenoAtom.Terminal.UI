@@ -12,7 +12,7 @@ It supports both:
 
 This guide documents the concepts, features, and controls of the library.
 
-![Fullscreen demo screenshot](../img/fullscreen.png)
+![Fullscreen demo screenshot](../img/fullscreen.png){.terminal}
 
 ## Quick start
 
