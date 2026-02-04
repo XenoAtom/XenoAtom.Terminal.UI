@@ -163,7 +163,7 @@ public interface IPromptEditorHighlighter
     void Highlight(in PromptEditorHighlightRequest request, List<StyledRun> runs);
 }
 
-public sealed partial class PromptEditor : TextEditorBase
+public partial class PromptEditor : TextEditorBase
 {
     // Prompt prefix
     [Bindable] public partial string? PromptMarkup { get; set; }
@@ -178,7 +178,7 @@ public sealed partial class PromptEditor : TextEditorBase
 
     // Completion + history
     [Bindable] public partial PromptEditorCompletionPresentation CompletionPresentation { get; set; } = PromptEditorCompletionPresentation.PopupList;
-    [Bindable] public partial Delegator<PromptEditorCompletionHandler?> CompletionHandler { get; set; }
+    [Bindable] public partial Delegator<PromptEditorCompletionHandler> CompletionHandler { get; set; }
 
     // Highlighting + word hints
     [Bindable] public partial bool EnableWordHints { get; set; }
