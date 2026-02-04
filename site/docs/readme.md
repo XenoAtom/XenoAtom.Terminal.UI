@@ -12,6 +12,8 @@ It supports both:
 
 This guide documents the concepts, features, and controls of the library.
 
+![Fullscreen demo screenshot](../img/fullscreen.png)
+
 ## Quick start
 
 - [Getting Started](getting-started.md)
