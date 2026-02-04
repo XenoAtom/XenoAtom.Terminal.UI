@@ -9,7 +9,7 @@ XenoAtom.Ansi is the low-level ANSI/VT library that powers markup and styling in
 It provides:
 
 - ANSI/VT sequence emission (SGR styles, some cursor/screen operations)
-- Lightweight markup rendering (Spectre.Console-like tags)
+- Lightweight markup rendering (Rich/Spectre.Console-like tags)
 - ANSI parsing/tokenization and styled runs
 - ANSI-aware text utilities (strip/measure/wrap/truncate)
 

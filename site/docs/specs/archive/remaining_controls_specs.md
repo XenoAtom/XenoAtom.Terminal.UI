@@ -507,7 +507,7 @@ default; it should look like a compact status line aligned with the input.
 
 ## Prompt (Inline Interactive Prompts)
 
-Goal: provide a high-level, Spectre-like prompt API for inline/live scenarios, built on top of the UI controls and
+Goal: provide a high-level, Rich/Spectre-like prompt API for inline/live scenarios, built on top of the UI controls and
 binding system (not a separate prompt engine).
 
 ### Scope

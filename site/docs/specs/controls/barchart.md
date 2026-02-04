@@ -103,7 +103,7 @@ There are two ways to display value text:
   - Percentages are computed from the normalized `t` and rendered as `NN%`.
   - When both are enabled, the default is `"<value>  <pct>"`.
 - **Custom value visual**: when `item.ValueLabel` is non-null.
-  - The value visual is arranged on the bar row near the end of the filled segment (similar to Spectre/Rich behavior).
+  - The value visual is arranged on the bar row near the end of the filled segment (similar to Rich/Spectre behavior).
 
 The default value text is written directly into the `CellBuffer` and is positioned near the bar’s filled end, clamped to remain within the bar rect.
 
