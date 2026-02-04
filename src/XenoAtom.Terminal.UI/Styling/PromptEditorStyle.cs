@@ -57,6 +57,21 @@ public sealed record PromptEditorStyle : IStyle<PromptEditorStyle>
     public Color? Background { get; init; }
 
     /// <summary>
+    /// Gets the optional background color for the prompt sidebar (left prompt column).
+    /// </summary>
+    public Color? PromptSidebarBackground { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether a vertical separator is rendered between the prompt sidebar and the editor.
+    /// </summary>
+    public bool ShowPromptSeparator { get; init; } = true;
+
+    /// <summary>
+    /// Gets the optional foreground color for the prompt separator.
+    /// </summary>
+    public Color? PromptSeparatorForeground { get; init; }
+
+    /// <summary>
     /// Resolves the background style for the provided <paramref name="theme"/>.
     /// </summary>
     /// <param name="theme">The current theme.</param>
@@ -68,6 +83,29 @@ public sealed record PromptEditorStyle : IStyle<PromptEditorStyle>
         var themeFill = focused ? (theme.InputFillFocused ?? theme.InputFill) : theme.InputFill;
         var bg = Background ?? themeFill ?? theme.SurfaceAlt ?? theme.Surface ?? theme.Background;
         if (bg is { } b) style = style.WithBackground(b);
+        return style;
+    }
+
+    /// <summary>
+    /// Resolves the background style for the prompt sidebar.
+    /// </summary>
+    public Style PromptSidebarBackgroundStyle(Theme theme, bool focused)
+    {
+        var style = BackgroundStyle(theme, focused);
+        var bg = PromptSidebarBackground ?? theme.SurfaceAlt ?? theme.Surface ?? theme.Background;
+        if (bg is { } b) style = style.WithBackground(b);
+        return style;
+    }
+
+    /// <summary>
+    /// Resolves the style used to render the prompt separator.
+    /// </summary>
+    public Style PromptSeparatorStyle(Theme theme, bool focused)
+    {
+        var style = PromptSidebarBackgroundStyle(theme, focused);
+        var fg = PromptSeparatorForeground ?? theme.Border ?? theme.Muted ?? theme.Foreground;
+        if (fg is { } c) style = style.WithForeground(c);
+        style |= TextStyle.Dim;
         return style;
     }
 
@@ -152,4 +190,3 @@ public sealed record PromptEditorStyle : IStyle<PromptEditorStyle>
         return style;
     }
 }
-

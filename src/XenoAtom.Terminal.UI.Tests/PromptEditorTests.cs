@@ -29,8 +29,20 @@ public sealed class PromptEditorTests
         screen.Apply(driver.Backend.GetOutText());
         var lines = screen.GetText().Split('\n');
 
-        Assert.IsTrue(lines.Any(l => l.Contains("> A", StringComparison.Ordinal)), "Expected the first line prompt to render.");
-        Assert.IsTrue(lines.Any(l => l.Contains("| B", StringComparison.Ordinal)), "Expected the continuation prompt to render.");
+        Assert.IsTrue(lines.Any(l => ContainsPromptThenText(l, "> ", "A")), "Expected the first line prompt to render.");
+        Assert.IsTrue(lines.Any(l => ContainsPromptThenText(l, "| ", "B")), "Expected the continuation prompt to render.");
+
+        static bool ContainsPromptThenText(string line, string prompt, string text)
+        {
+            var promptIndex = line.IndexOf(prompt, StringComparison.Ordinal);
+            if (promptIndex < 0)
+            {
+                return false;
+            }
+
+            var textIndex = line.IndexOf(text, StringComparison.Ordinal);
+            return textIndex > promptIndex;
+        }
     }
 
     [TestMethod]

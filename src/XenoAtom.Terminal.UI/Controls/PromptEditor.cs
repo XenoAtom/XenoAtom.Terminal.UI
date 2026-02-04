@@ -171,8 +171,11 @@ public partial class PromptEditor : TextEditorBase
     private StyledRun[] _cachedContinuationPromptRuns = Array.Empty<StyledRun>();
 
     private int _promptWidthCells;
+    private int _promptContentWidthCells;
+    private bool _showPromptSeparator;
     private Rectangle _contentRect;
     private Rectangle _promptRect;
+    private Rectangle _promptContentRect;
     private Rectangle _editorRect;
 
     private int _cachedTextVersion = -1;
@@ -895,21 +898,28 @@ public partial class PromptEditor : TextEditorBase
 
         EnsurePromptCache(theme);
 
-        if (_promptVisual is not null && _contentRect.Width > 0)
+        _showPromptSeparator = style.ShowPromptSeparator;
+        var separatorWidth = _showPromptSeparator ? 1 : 0;
+        var maxPromptWidth = Math.Max(0, _contentRect.Width - separatorWidth);
+
+        _promptContentWidthCells = Math.Clamp(_promptWidthCells, 0, maxPromptWidth);
+
+        if (_promptVisual is not null && maxPromptWidth > 0)
         {
-            _promptVisual.Measure(new LayoutConstraints(0, _contentRect.Width, 0, 1));
-            _promptWidthCells = Math.Max(_promptWidthCells, _promptVisual.DesiredSize.Width);
+            _promptVisual.Measure(new LayoutConstraints(0, maxPromptWidth, 0, 1));
+            _promptContentWidthCells = Math.Max(_promptContentWidthCells, _promptVisual.DesiredSize.Width);
         }
 
-        var promptWidth = Math.Clamp(_promptWidthCells, 0, _contentRect.Width);
+        var promptWidth = Math.Clamp(_promptContentWidthCells + separatorWidth, 0, _contentRect.Width);
         _promptRect = new Rectangle(_contentRect.X, _contentRect.Y, promptWidth, _contentRect.Height);
+        _promptContentRect = new Rectangle(_promptRect.X, _promptRect.Y, Math.Max(0, _promptRect.Width - separatorWidth), _promptRect.Height);
         _editorRect = new Rectangle(_contentRect.X + promptWidth, _contentRect.Y, Math.Max(0, _contentRect.Width - promptWidth), _contentRect.Height);
 
         UpdateEditorLayout(_editorRect);
 
-        if (_promptVisual is not null && promptWidth > 0)
+        if (_promptVisual is not null && _promptContentRect.Width > 0)
         {
-            _promptVisual.Arrange(new Rectangle(_promptRect.X, _promptRect.Y, promptWidth, 1));
+            _promptVisual.Arrange(new Rectangle(_promptContentRect.X, _promptContentRect.Y, _promptContentRect.Width, 1));
         }
     }
 
@@ -930,23 +940,35 @@ public partial class PromptEditor : TextEditorBase
         EnsureHighlightRuns(theme);
 
         var backgroundStyle = style.BackgroundStyle(theme, isFocused);
+        var promptSidebarBackgroundStyle = style.PromptSidebarBackgroundStyle(theme, isFocused);
         var selectionStyle = style.SelectionStyle(theme);
         var placeholderStyle = style.PlaceholderStyle(theme, isFocused);
 
-        if (_contentRect.Width > 0 && _contentRect.Height > 0)
+        if (_promptRect.Width > 0 && _promptRect.Height > 0)
         {
-            for (var y = _contentRect.Y; y < _contentRect.Y + _contentRect.Height; y++)
+            for (var y = _promptRect.Y; y < _promptRect.Y + _promptRect.Height; y++)
             {
-                for (var x = _contentRect.X; x < _contentRect.X + _contentRect.Width; x++)
+                for (var x = _promptRect.X; x < _promptRect.X + _promptRect.Width; x++)
+                {
+                    buffer.SetCell(x, y, new Rune(' '), promptSidebarBackgroundStyle);
+                }
+            }
+        }
+
+        if (_editorRect.Width > 0 && _editorRect.Height > 0)
+        {
+            for (var y = _editorRect.Y; y < _editorRect.Y + _editorRect.Height; y++)
+            {
+                for (var x = _editorRect.X; x < _editorRect.X + _editorRect.Width; x++)
                 {
                     buffer.SetCell(x, y, new Rune(' '), backgroundStyle);
                 }
             }
         }
 
-        if (_promptRect.Width > 0 && _promptRect.Height > 0)
+        if (_promptContentRect.Width > 0 && _promptContentRect.Height > 0)
         {
-            buffer.PushClip(_promptRect);
+            buffer.PushClip(_promptContentRect);
             try
             {
                 RenderPrompt(buffer, theme, style, isFocused);
@@ -954,6 +976,21 @@ public partial class PromptEditor : TextEditorBase
             finally
             {
                 buffer.PopClip();
+            }
+        }
+
+        if (_showPromptSeparator && _promptRect.Width > 0 && _promptRect.Height > 0 && _promptContentRect.Width < _promptRect.Width)
+        {
+            var separatorX = _promptContentRect.X + _promptContentRect.Width;
+            if (separatorX >= _promptRect.X && separatorX < _promptRect.Right)
+            {
+                var separatorStyle = style.PromptSeparatorStyle(theme, isFocused);
+                var separatorGlyph = theme.Lines.Vertical;
+
+                for (var y = _promptRect.Y; y < _promptRect.Bottom; y++)
+                {
+                    buffer.SetCell(separatorX, y, separatorGlyph, separatorStyle);
+                }
             }
         }
 
@@ -977,10 +1014,10 @@ public partial class PromptEditor : TextEditorBase
         var promptBaseStyle = style.PromptStyle(theme, focused);
         var continuationBaseStyle = style.ContinuationPromptStyle(theme, focused);
 
-        for (var row = 0; row < _promptRect.Height; row++)
+        for (var row = 0; row < _promptContentRect.Height; row++)
         {
             var visualRow = Scroll.OffsetY + row;
-            var y = _promptRect.Y + row;
+            var y = _promptContentRect.Y + row;
 
             if (visualRow == 0)
             {
@@ -989,11 +1026,11 @@ public partial class PromptEditor : TextEditorBase
                     continue;
                 }
 
-                WriteMarkup(buffer, _promptRect.X, y, _cachedPromptText, _cachedPromptRuns, promptBaseStyle);
+                WriteMarkup(buffer, _promptContentRect.X, y, _cachedPromptText, _cachedPromptRuns, promptBaseStyle, _promptContentRect.Width);
             }
             else if (!string.IsNullOrEmpty(_cachedContinuationPromptText))
             {
-                WriteMarkup(buffer, _promptRect.X, y, _cachedContinuationPromptText, _cachedContinuationPromptRuns, continuationBaseStyle);
+                WriteMarkup(buffer, _promptContentRect.X, y, _cachedContinuationPromptText, _cachedContinuationPromptRuns, continuationBaseStyle, _promptContentRect.Width);
             }
         }
     }
@@ -1190,7 +1227,7 @@ public partial class PromptEditor : TextEditorBase
         _highlightRuns.AddRange(normalized);
     }
 
-    private void WriteMarkup(CellBuffer buffer, int x, int y, string plainText, StyledRun[] runs, Style baseStyle)
+    private void WriteMarkup(CellBuffer buffer, int x, int y, string plainText, StyledRun[] runs, Style baseStyle, int maxWidthCells)
     {
         if (string.IsNullOrEmpty(plainText))
         {
@@ -1214,7 +1251,7 @@ public partial class PromptEditor : TextEditorBase
             var slice = plainText.AsSpan(run.Start, run.Length);
             buffer.WriteText(x + col, y, slice, baseStyle | run.Style);
             col += GetTextCells(slice, col, PromptTabSize);
-            if (col >= _promptRect.Width)
+            if (col >= maxWidthCells)
             {
                 break;
             }

@@ -29,7 +29,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
                                • Press [cyan]Enter[/] to accept; [cyan]Ctrl+J[/] inserts a newline; [cyan]Esc[/] cancels completion/prompt.
                               """);
 
-        var prompt = new Markup(() => $"[gray]{promptCounter.Value,3}[/] [primary]demo[/] [muted]>[/] ");
+        var prompt = new Markup(() => $"[gray]{promptCounter.Value,3}[/] [primary]demo[/] [muted]>[/]");
 
         var promptEditor = new PromptEditor()
             .Prompt(prompt)
@@ -71,7 +71,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
             var text = SnapshotToString(request.Snapshot);
             var caret = Math.Clamp(request.CaretIndex, 0, text.Length);
 
-            var start = TerminalTextUtility.GetWordStart(text.AsSpan(), caret);
+            var start = GetCommandWordStart(text.AsSpan(), caret);
             var prefix = text.AsSpan(start, caret - start).ToString();
 
             var commands = new[]
@@ -117,6 +117,25 @@ public sealed class PromptEditorDemo : ControlsDemoBase
                 ReplaceLength: caret - start,
                 SelectedIndex: 0,
                 GhostText: ghost);
+        }
+
+        static int GetCommandWordStart(ReadOnlySpan<char> text, int caret)
+        {
+            var start = TerminalTextUtility.GetWordStart(text, caret);
+
+            // Treat `/` as part of the current token so `/help`-style commands can be completed.
+            // TerminalTextUtility's word logic intentionally treats `/` as a word boundary.
+            if (start > 0 && text[start - 1] == '/')
+            {
+                return start - 1;
+            }
+
+            if (caret > 0 && text[caret - 1] == '/')
+            {
+                return caret - 1;
+            }
+
+            return start;
         }
 
         static string SnapshotToString(ITextSnapshot snapshot)
