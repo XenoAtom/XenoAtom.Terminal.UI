@@ -47,7 +47,7 @@ public sealed class WelcomeDemo : ControlsDemoBase
                         ctx.SetPixel(x, y, new Rune(' '), style);
                     }
                 }
-            }).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
+            }).Stretch();
 
         var banner = new TextFiglet("Welcome")
             .Font(FigletPredefinedFont.Slant)

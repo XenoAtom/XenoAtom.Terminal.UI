@@ -12,8 +12,8 @@ public sealed class SplitterLayoutTests
     [TestMethod]
     public void HSplitter_Allocates_Space_With_Bar()
     {
-        var first = new TextBlock("A").HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
-        var second = new TextBlock("B").HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
+        var first = new TextBlock("A").Stretch();
+        var second = new TextBlock("B").Stretch();
         var splitter = new HSplitter(first, second)
         {
             Ratio = 0.5,
@@ -35,8 +35,8 @@ public sealed class SplitterLayoutTests
     [TestMethod]
     public void VSplitter_Allocates_Space_With_Bar()
     {
-        var first = new TextBlock("A").HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
-        var second = new TextBlock("B").HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
+        var first = new TextBlock("A").Stretch();
+        var second = new TextBlock("B").Stretch();
         var splitter = new VSplitter(first, second)
         {
             Ratio = 0.5,

@@ -135,7 +135,7 @@ internal static class ControlsDemoApp
                     Theme = theme,
                     ToastHost = toastHost,
                 });
-        }).Pad(1).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
+        }).Pad(1).Stretch();
 
 
         layout.Content(new HSplitter(sidebar, page).Ratio(0.16))

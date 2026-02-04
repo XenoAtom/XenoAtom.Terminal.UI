@@ -552,7 +552,7 @@ Visual BuildDashboard()
                         new Rule().Style(RuleStyle.Default with { Glyphs = RuleGlyphs.Dotted }),
                         new VStack("Title:", validatedTitle).HorizontalAlignment(Align.Stretch))
                     .Spacing(1)
-                    .HorizontalAlignment(Align.Stretch)).VerticalAlignment(Align.Stretch).HorizontalAlignment(Align.Stretch),
+                    .HorizontalAlignment(Align.Stretch)).Stretch(),
             new Group()
                 .TopLeftText("Lists & selection")
                 .TopRightText("Wheel scroll")
@@ -570,7 +570,7 @@ Visual BuildDashboard()
                         new VStack("TreeView:", tree.MinHeight(6).MaxHeight(6)).Spacing(1).HorizontalAlignment(Align.Stretch))
                     .Spacing(1)
                     .VerticalAlignment(Align.Stretch)
-                    .HorizontalAlignment(Align.Stretch)).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch)).VerticalAlignment(Align.Stretch),
+                    .HorizontalAlignment(Align.Stretch)).Stretch()).VerticalAlignment(Align.Stretch),
         new VStack(
             new Group()
                 .TopLeftText("Buttons & toggles")
@@ -586,7 +586,7 @@ Visual BuildDashboard()
                             .HorizontalAlignment(Align.Stretch),
                         new HStack("Link:", link).Spacing(1))
                     .Spacing(1)
-                    .HorizontalAlignment(Align.Stretch)).VerticalAlignment(Align.Stretch).HorizontalAlignment(Align.Stretch),
+                    .HorizontalAlignment(Align.Stretch)).Stretch(),
             new Group()
                 .TopLeftText("Layout & scrolling")
                 .TopRightText("Wrap / Pad / ScrollBar")
@@ -619,7 +619,7 @@ Visual BuildDashboard()
                 barChart,
                 breakdown)
             .VerticalAlignment(Align.Stretch)
-            .HorizontalAlignment(Align.Stretch)).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
+            .HorizontalAlignment(Align.Stretch)).Stretch();
 
     var miniTable = new Table()
         .Headers("Task", "Status")
@@ -653,7 +653,7 @@ Visual BuildDashboard()
             .ShowPalette(true)
             .Value(pickedColor)
             .HorizontalAlignment(Align.Stretch)).HorizontalAlignment(Align.Stretch),
-        new Group().TopLeftText("ProgressTaskGroup").Padding(1).Content(tasks).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch)).HorizontalAlignment(Align.Stretch);
+        new Group().TopLeftText("ProgressTaskGroup").Padding(1).Content(tasks).Stretch()).HorizontalAlignment(Align.Stretch);
 
     var rightPane = new VStack(visualsPanel, colorPicker).Spacing(0)
         .HorizontalAlignment(Align.Stretch)
@@ -679,13 +679,13 @@ Visual BuildDashboard()
                         new Button("Clear").Click(() => notes.Value = string.Empty),
                         new Button("Focus").Click(() => toastHost.App?.Focus(textArea)))
                     .Spacing(2).VerticalAlignment(Align.End))
-            .Spacing(1)).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
+            .Spacing(1)).Stretch();
 
     var bottomCenter = new Group()
         .TopLeftText("LogControl")
         .TopRightText("Ctrl+F search • Ctrl+C copy")
         .Padding(1)
-        .Content(log.MinHeight(10).HorizontalAlignment(Align.Stretch)).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
+        .Content(log.MinHeight(10).HorizontalAlignment(Align.Stretch)).Stretch();
 
     var dataGrid = new DataGridControl
         {
@@ -759,7 +759,7 @@ Visual BuildDashboard()
                     .Padding(new Thickness(1, 0, 1, 0))
                     .HorizontalAlignment(Align.Stretch))
             .Spacing(1)
-            .HorizontalAlignment(Align.Stretch)).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
+            .HorizontalAlignment(Align.Stretch)).Stretch();
 
     //var bottomRight
 

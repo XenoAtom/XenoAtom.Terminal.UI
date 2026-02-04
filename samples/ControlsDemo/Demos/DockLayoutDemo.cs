@@ -17,7 +17,7 @@ public sealed class DockLayoutDemo : ControlsDemoBase
         var layout = new Border(new DockLayout()
             .Top(new Border("Top").HorizontalAlignment(Align.Stretch).Padding(1))
             .Bottom(new Border("Bottom").HorizontalAlignment(Align.Stretch).Padding(1))
-            .Content(new Border("Content").HorizontalAlignment(Align.Stretch).Padding(1))).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
+            .Content(new Border("Content").HorizontalAlignment(Align.Stretch).Padding(1))).Stretch();
 
         return new VStack(
                 DemoUi.Hint("DockLayout reserves space for Top and Bottom, and gives remaining space to Content."),

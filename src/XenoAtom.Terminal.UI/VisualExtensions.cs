@@ -24,6 +24,23 @@ public static partial class VisualExtensions
         ArgumentNullException.ThrowIfNull(visual);
         return new ScrollViewer(visual);
     }
+
+    /// <summary>
+    /// Sets both the horizontal and vertical alignment of the specified visual to stretch, and returns the modified
+    /// visual.
+    /// </summary>
+    /// <remarks>This method is intended for use with fluent configuration of visuals. The method modifies the
+    /// input visual in place and returns it for chaining.</remarks>
+    /// <typeparam name="T">The type of the visual to modify. Must inherit from Visual.</typeparam>
+    /// <param name="obj">The visual whose alignment will be set to stretch. Cannot be null.</param>
+    /// <returns>The same visual instance with its horizontal and vertical alignment set to stretch.</returns>
+    public static T Stretch<T>(this T obj) where T : Visual
+    {
+        ArgumentNullException.ThrowIfNull(obj);
+        obj.HorizontalAlignment = Align.Stretch;
+        obj.VerticalAlignment = Align.Stretch;
+        return obj;
+    }
     
     /// <summary>
     /// Registers a dynamic update callback for the visual and returns the same instance.

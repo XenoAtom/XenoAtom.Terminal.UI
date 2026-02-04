@@ -30,7 +30,7 @@ public sealed class SearchReplacePopupDemo : ControlsDemoBase
 
         var root = new VStack(
                 DemoUi.Hint("SearchReplacePopup is a reusable component hosted by controls like TextArea and LogControl."),
-                new Group("TextArea").Padding(1).Content(new Border(editor).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch))
+                new Group("TextArea").Padding(1).Content(new Border(editor).Stretch())
                     .HorizontalAlignment(Align.Stretch)
                     .VerticalAlignment(Align.Stretch))
             .Spacing(1)
