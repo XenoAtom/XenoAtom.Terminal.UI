@@ -45,6 +45,7 @@ fluent setters and binding helpers for them.
 |---|---|---|
 | `HorizontalAlignment` | `.HorizontalAlignment(Align.Stretch)` | `Start/Center/End/Stretch` |
 | `VerticalAlignment` | `.VerticalAlignment(Align.Stretch)` | `Start/Center/End/Stretch` |
+| Both alignments | `.Stretch()` | Convenience for `HorizontalAlignment(Stretch)` + `VerticalAlignment(Stretch)` |
 | `MinWidth` / `MinHeight` | `.MinWidth(10)` / `.MinHeight(3)` | In cells |
 | `MaxWidth` / `MaxHeight` | `.MaxWidth(40)` / `.MaxHeight(10)` | In cells |
 | `Margin` | `.Margin(new Thickness(1))` | Outer margin handled by the parent layout |
