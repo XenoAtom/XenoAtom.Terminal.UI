@@ -16,9 +16,10 @@ public sealed class PromptEditorDemo : ControlsDemoBase
     public override Visual Build(DemoContext context)
     {
         var lastAccepted = new State<string>("(none)");
+        var promptCounter = 1;
 
         var promptEditor = new PromptEditor()
-            .PromptMarkup("[primary]demo[/] [muted]>[/] ")
+            .PromptMarkup(GetPromptMarkup())
             .ContinuationPromptMarkup("[muted]·[/] ")
             .Placeholder("Type a command. Tab completes. Ctrl+J inserts a newline.")
             .EnableWordHints(false)
@@ -36,6 +37,9 @@ public sealed class PromptEditorDemo : ControlsDemoBase
             lastAccepted.Value = e.Text;
             context.Log($"Accepted: {e.Text}");
 
+            promptCounter++;
+            promptEditor.PromptMarkup(GetPromptMarkup());
+
             // Clear the prompt after accepting so it feels like a terminal prompt.
             promptEditor.Text = string.Empty;
         });
@@ -49,6 +53,9 @@ public sealed class PromptEditorDemo : ControlsDemoBase
                 new Rule(),
                 new CommandBar())
             .Spacing(1);
+
+        string GetPromptMarkup()
+            => $"[gray]{promptCounter,3}[/] [primary]demo[/] [muted]>[/] ";
 
         static PromptEditorCompletion Complete(in PromptEditorCompletionRequest request)
         {
