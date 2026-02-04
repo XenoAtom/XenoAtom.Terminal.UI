@@ -40,7 +40,7 @@ public sealed class ColorSchemeDemo : ControlsDemoBase
             .TextAlignment(TextAlignment.Left);
 
         var intro = new Markup("""
-            [bold]RootLoops[/] is the palette generator behind the built-in color schemes.
+            [bold]RootLoops[/] by Ham Vocke is the palette generator behind the built-in color schemes.
             Experiment with the parameters below to generate a new [bold]ColorScheme[/] and preview a local [bold]Theme[/].
             """).Wrap(true);
 
