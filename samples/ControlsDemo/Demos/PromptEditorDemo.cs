@@ -19,6 +19,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
     {
         var lastAccepted = new State<string>("(none)");
         var promptCounter = new State<int>(1);
+        var inputText = new State<string?>(string.Empty);
 
         var commands = new PromptCommand[]
         {
@@ -40,16 +41,17 @@ public sealed class PromptEditorDemo : ControlsDemoBase
                               [gray]Try:[/]
                                • Type [bold red]error[/], [bold yellow]warn[/], [bold green]info[/] to see syntax highlighting.
                                • The [underline]current word[/] is underlined (caret-aware highlight).
-                               • Type [muted]/[/] then press [cyan]Tab[/] to complete commands like [muted]/help[/], [muted]/clear[/], [muted]/exit[/].
+                               • Type [dim]/[/] then press [cyan]Tab[/] to complete commands like [dim]/help[/], [dim]/clear[/], [dim]/exit[/].
                                • Press [cyan]Alt+↑[/]/[cyan]Alt+↓[/] to navigate history.
                                • Press [cyan]Enter[/] to accept; [cyan]Ctrl+J[/] inserts a newline; [cyan]Esc[/] cancels completion/prompt.
                               """);
 
-        var prompt = new Markup(() => $"[gray]{promptCounter.Value,3}[/] [primary]demo[/] [muted]>[/]");
+        var prompt = new Markup(() => $"[gray]{promptCounter.Value,3}[/] [primary]demo[/] [dim]>[/]");
 
         var promptEditor = new PromptEditor()
             .Prompt(prompt)
-            .ContinuationPromptMarkup("[muted]·[/] ")
+            .ContinuationPromptMarkup("[dim]·[/] ")
+            .Text(inputText)
             .Placeholder("Type a command. Tab completes. Ctrl+J inserts a newline.")
             .EnableWordHints(false)
             .CompletionPresentation(PromptEditorCompletionPresentation.PopupList)
@@ -60,7 +62,8 @@ public sealed class PromptEditorDemo : ControlsDemoBase
             .MaxHeight(6);
 
         var editor = promptEditor.Scrollable();
-        var suggestionBar = new ComputedVisual(() => BuildCommandSuggestionBar(promptEditor, commands));
+        ComputedVisual? suggestionBar = null;
+        suggestionBar = new ComputedVisual(() => BuildCommandSuggestionBar(inputText.Value, commands, suggestionBar!.GetTheme()));
 
         promptEditor.Accepted((_, e) =>
         {
@@ -70,7 +73,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
             promptCounter.Value++;
 
             // Clear the prompt after accepting so it feels like a terminal prompt.
-            promptEditor.Text = string.Empty;
+            inputText.Value = string.Empty;
         });
 
         promptEditor.Canceled((_, _) => context.Log("Canceled."));
@@ -143,15 +146,16 @@ public sealed class PromptEditorDemo : ControlsDemoBase
             return start;
         }
 
-        static Visual? BuildCommandSuggestionBar(PromptEditor editor, IReadOnlyList<PromptCommand> commands)
+        static Visual? BuildCommandSuggestionBar(string? text, IReadOnlyList<PromptCommand> commands, Theme theme)
         {
-            var text = editor.Text;
             if (string.IsNullOrEmpty(text))
             {
                 return null;
             }
 
-            var caret = Math.Clamp(editor.CaretIndex, 0, text.Length);
+            // For the demo we assume the user is typing at the end. This makes the bar responsive without needing
+            // to bind internal caret movement (caret isn't a bindable property).
+            var caret = text.Length;
             var span = text.AsSpan();
 
             var start = GetCommandWordStart(span, caret);
@@ -186,17 +190,17 @@ public sealed class PromptEditorDemo : ControlsDemoBase
 
             if (matches.Count == 0)
             {
-                return new TextBlock("[muted]No matching commands. Try [/][cyan]/help[/][muted].[/]");
+                return new Markup("[dim]No matching commands. Try [/][cyan]/help[/][dim].[/]");
             }
 
-            var accent = editor.GetTheme().Accent ?? editor.GetTheme().Primary ?? editor.GetTheme().Foreground;
+            var accent = theme.Accent ?? theme.Primary ?? theme.Foreground;
             var chipBg = (accent ?? XenoAtom.Terminal.UI.Color.Default).WithAlpha(0x22);
             var chipBgActive = (accent ?? XenoAtom.Terminal.UI.Color.Default).WithAlpha(0x38);
 
             var prefixLen = prefixText.Length;
             var chipVisuals = new List<Visual>(Math.Min(matches.Count, 10) + 1)
             {
-                new TextBlock("[muted]Commands:[/]")
+                new Markup("[dim]Commands:[/]")
             };
 
             var shown = 0;
@@ -218,10 +222,10 @@ public sealed class PromptEditorDemo : ControlsDemoBase
                     }));
             }
 
-            var hint = matches.Count > 10 ? new TextBlock($"[muted]+{matches.Count - 10} more…[/]") : null;
+            var hint = matches.Count > 10 ? new Markup($"[dim]+{matches.Count - 10} more…[/]") : null;
             var details = matches.Count == 1
-                ? new Markup($"[muted]↳[/] [primary]{matches[0].Command}[/] [muted]— {EscapeMarkup(matches[0].Description)}[/]")
-                : new Markup($"[muted]↳ Press[/] [cyan]Tab[/] [muted]to complete. Prefix:[/] [primary]{EscapeMarkup(prefixText)}[/]");
+                ? new Markup($"[dim]↳[/] [primary]{matches[0].Command}[/] [dim]— {EscapeMarkup(matches[0].Description)}[/]")
+                : new Markup($"[dim]↳ Press[/] [cyan]Tab[/] [dim]to complete. Prefix:[/] [primary]{EscapeMarkup(prefixText)}[/]");
 
             var wrap = new WrapHStack(chipVisuals.ToArray()).Spacing(1).RunSpacing(0);
 
