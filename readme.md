@@ -32,8 +32,6 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
   - Built-in performance overlay (toggle with `F12`) to inspect frame timings, invalidation, and diff output
 - **Cross-platform + AOT-friendly**: `net10.0` and NativeAOT-oriented design (built on XenoAtom.Terminal)
 
-Screenshot placeholder (to be updated):
-
 ![XenoAtom.Terminal.UI Fullscreen Demo](https://raw.githubusercontent.com/XenoAtom/XenoAtom.Terminal.UI/main/site/theming.png)
 
 > [!NOTE]
@@ -48,7 +46,9 @@ using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 
-Terminal.Write(new Group("Welcome").Content(new VStack("Hello", "from", "Terminal.UI").Spacing(1)));
+Terminal.Write(new Group("Welcome")
+    .Content(new VStack("Hello", "from", "Terminal.UI").Spacing(1))
+);
 ```
 
 Inline “live” widget (updates without clearing your output):

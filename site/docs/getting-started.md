@@ -24,7 +24,9 @@ using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 
-Terminal.Write(new Group("Welcome").Content(new VStack("Hello", "from", "Terminal.UI").Spacing(1)));
+Terminal.Write(new Group("Welcome")
+    .Content(new VStack("Hello", "from", "Terminal.UI").Spacing(1))
+);
 ```
 
 ## Inline live widget
