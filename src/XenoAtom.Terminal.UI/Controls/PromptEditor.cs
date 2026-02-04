@@ -192,6 +192,8 @@ public partial class PromptEditor : TextEditorBase
     private IReadOnlyList<string>? _completionCandidates;
     private int _completionSelectedIndex;
     private string? _ghostText;
+    private int _ghostTextVersion = -1;
+    private int _ghostTextCaretIndex = -1;
     private Popup? _completionPopup;
 
     private int _historyIndex = -1;
@@ -561,14 +563,14 @@ public partial class PromptEditor : TextEditorBase
         if (!result.Handled || result.Candidates is not { Count: > 0 })
         {
             CancelCompletion();
-            _ghostText = result.Handled ? result.GhostText : null;
+            SetGhostText(result.Handled ? result.GhostText : null);
             return;
         }
 
         _completionCandidates = result.Candidates;
         _completionReplaceStart = Math.Clamp(result.ReplaceStart, 0, GetCachedText().Length);
         _completionReplaceLength = Math.Max(0, result.ReplaceLength);
-        _ghostText = result.GhostText;
+        SetGhostText(result.GhostText);
 
         var candidatesCount = result.Candidates.Count;
         var initialIndex = Math.Clamp(result.SelectedIndex, 0, candidatesCount - 1);
@@ -742,7 +744,7 @@ public partial class PromptEditor : TextEditorBase
         _completionSelectedIndex = 0;
         _completionReplaceStart = 0;
         _completionReplaceLength = 0;
-        _ghostText = null;
+        SetGhostText(null);
 
         if (_completionPopup is not null)
         {
@@ -954,6 +956,12 @@ public partial class PromptEditor : TextEditorBase
             return;
         }
 
+        // Ensure ghost text doesn't "stick" after edits or caret movement.
+        if (_ghostTextVersion != TextDocument.Version || _ghostTextCaretIndex != CaretIndex)
+        {
+            return;
+        }
+
         if (!TryGetCursorCell(out var caretX, out var caretY))
         {
             return;
@@ -961,6 +969,20 @@ public partial class PromptEditor : TextEditorBase
 
         var ghostStyle = style.GhostStyle(theme, focused);
         buffer.WriteText(caretX, caretY, ghostText.AsSpan(), ghostStyle);
+    }
+
+    private void SetGhostText(string? ghostText)
+    {
+        _ghostText = ghostText;
+        if (string.IsNullOrEmpty(ghostText))
+        {
+            _ghostTextVersion = -1;
+            _ghostTextCaretIndex = -1;
+            return;
+        }
+
+        _ghostTextVersion = TextDocument.Version;
+        _ghostTextCaretIndex = CaretIndex;
     }
 
     private void EnsureHighlightRuns(Theme theme)
