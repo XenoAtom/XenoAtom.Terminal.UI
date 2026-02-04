@@ -9,6 +9,8 @@ namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 [Demo("PromptEditor", "Input", Description = "Prompt-style editor with markup prompt, completion (Tab), and history (Alt+Up/Alt+Down).")]
 public sealed class PromptEditorDemo : ControlsDemoBase
 {
+    private readonly record struct PromptCommand(string Command, string Description);
+
     public PromptEditorDemo() : base(DemoSource.Get())
     {
     }
@@ -17,6 +19,20 @@ public sealed class PromptEditorDemo : ControlsDemoBase
     {
         var lastAccepted = new State<string>("(none)");
         var promptCounter = new State<int>(1);
+
+        var commands = new PromptCommand[]
+        {
+            new("/help", "Show help and available commands."),
+            new("/clear", "Clear the current input."),
+            new("/exit", "Exit the demo."),
+            new("/open", "Open something (demo command)."),
+            new("/theme", "Switch theme (demo command)."),
+            new("/build", "Run build (demo command)."),
+            new("/run", "Run a task (demo command)."),
+            new("/search", "Search in the current buffer."),
+            new("/grep", "Grep for a pattern (demo command)."),
+            new("/status", "Show status (demo command)."),
+        };
 
         var help = new Markup("""
                               [bold green]PromptEditor[/] — prompt-style editor demo
@@ -44,6 +60,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
             .MaxHeight(6);
 
         var editor = promptEditor.Scrollable();
+        var suggestionBar = new ComputedVisual(() => BuildCommandSuggestionBar(promptEditor, commands));
 
         promptEditor.Accepted((_, e) =>
         {
@@ -61,6 +78,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
         return new VStack(
                 help,
                 editor,
+                suggestionBar,
                 new TextBlock(() => $"Last accepted: {lastAccepted.Value}"),
                 new Rule(),
                 new CommandBar())
@@ -74,24 +92,11 @@ public sealed class PromptEditorDemo : ControlsDemoBase
             var start = GetCommandWordStart(text.AsSpan(), caret);
             var prefix = text.AsSpan(start, caret - start).ToString();
 
-            var commands = new[]
-            {
-                "/help",
-                "/clear",
-                "/exit",
-                "/open",
-                "/theme",
-                "/build",
-                "/run",
-                "/search",
-                "/grep",
-                "/status",
-            };
-
-            var candidates = new List<string>(commands.Length);
+            var commandList = new[] { "/help", "/clear", "/exit", "/open", "/theme", "/build", "/run", "/search", "/grep", "/status" };
+            var candidates = new List<string>(commandList.Length);
             if (prefix.StartsWith("/", StringComparison.Ordinal))
             {
-                foreach (var c in commands)
+                foreach (var c in commandList)
                 {
                     if (prefix.Length == 0 || c.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                     {
@@ -136,6 +141,110 @@ public sealed class PromptEditorDemo : ControlsDemoBase
             }
 
             return start;
+        }
+
+        static Visual? BuildCommandSuggestionBar(PromptEditor editor, IReadOnlyList<PromptCommand> commands)
+        {
+            var text = editor.Text;
+            if (string.IsNullOrEmpty(text))
+            {
+                return null;
+            }
+
+            var caret = Math.Clamp(editor.CaretIndex, 0, text.Length);
+            var span = text.AsSpan();
+
+            var start = GetCommandWordStart(span, caret);
+            var end = GetCommandWordEnd(span, caret, start);
+            if (end < start)
+            {
+                return null;
+            }
+
+            var prefix = span.Slice(start, caret - start);
+            if (prefix.Length == 0 || prefix[0] != '/')
+            {
+                return null;
+            }
+
+            // Limit suggestions to the current token only (avoid showing for "/help something" when caret is past the token).
+            if (caret > end)
+            {
+                return null;
+            }
+
+            var prefixText = prefix.ToString();
+            var matches = new List<PromptCommand>(commands.Count);
+            for (var i = 0; i < commands.Count; i++)
+            {
+                var cmd = commands[i];
+                if (cmd.Command.StartsWith(prefixText, StringComparison.OrdinalIgnoreCase))
+                {
+                    matches.Add(cmd);
+                }
+            }
+
+            if (matches.Count == 0)
+            {
+                return new TextBlock("[muted]No matching commands. Try [/][cyan]/help[/][muted].[/]");
+            }
+
+            var accent = editor.GetTheme().Accent ?? editor.GetTheme().Primary ?? editor.GetTheme().Foreground;
+            var chipBg = (accent ?? XenoAtom.Terminal.UI.Color.Default).WithAlpha(0x22);
+            var chipBgActive = (accent ?? XenoAtom.Terminal.UI.Color.Default).WithAlpha(0x38);
+
+            var prefixLen = prefixText.Length;
+            var chipVisuals = new List<Visual>(Math.Min(matches.Count, 10) + 1)
+            {
+                new TextBlock("[muted]Commands:[/]")
+            };
+
+            var shown = 0;
+            for (var i = 0; i < matches.Count && shown < 10; i++, shown++)
+            {
+                var cmd = matches[i];
+                var isBest = i == 0;
+                var bg = isBest ? chipBgActive : chipBg;
+                var title = cmd.Command;
+
+                // Use spaces as padding so we can keep this very lightweight (no extra layout controls).
+                var chipText = $" {title} ";
+                chipVisuals.Add(
+                    new TextBlock(chipText).Style(TextBlockStyle.Default with
+                    {
+                        Background = bg,
+                        FillBackground = true,
+                        TextStyle = isBest ? TextStyle.Bold : default,
+                    }));
+            }
+
+            var hint = matches.Count > 10 ? new TextBlock($"[muted]+{matches.Count - 10} more…[/]") : null;
+            var details = matches.Count == 1
+                ? new Markup($"[muted]↳[/] [primary]{matches[0].Command}[/] [muted]— {EscapeMarkup(matches[0].Description)}[/]")
+                : new Markup($"[muted]↳ Press[/] [cyan]Tab[/] [muted]to complete. Prefix:[/] [primary]{EscapeMarkup(prefixText)}[/]");
+
+            var wrap = new WrapHStack(chipVisuals.ToArray()).Spacing(1).RunSpacing(0);
+
+            return new VStack(
+                    wrap,
+                    hint is null ? details : new HStack(details, hint).Spacing(1))
+                .Spacing(0);
+
+            static string EscapeMarkup(string text) => text.Replace("[", "\\[").Replace("]", "\\]");
+        }
+
+        static int GetCommandWordEnd(ReadOnlySpan<char> text, int caret, int tokenStart)
+        {
+            caret = Math.Clamp(caret, 0, text.Length);
+            tokenStart = Math.Clamp(tokenStart, 0, text.Length);
+
+            if (tokenStart < text.Length && text[tokenStart] == '/')
+            {
+                var index = Math.Min(text.Length, tokenStart + 1);
+                return TerminalTextUtility.GetWordEnd(text, index);
+            }
+
+            return TerminalTextUtility.GetWordEnd(text, caret);
         }
 
         static string SnapshotToString(ITextSnapshot snapshot)
