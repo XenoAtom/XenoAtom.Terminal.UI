@@ -24,7 +24,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
                               [gray]Try:[/]
                                • Type [bold red]error[/], [bold yellow]warn[/], [bold green]info[/] to see syntax highlighting.
                                • The [underline]current word[/] is underlined (caret-aware highlight).
-                               • Press [cyan]Tab[/] to request completion (popup list) for commands like [muted]help[/], [muted]clear[/], [muted]exit[/].
+                               • Type [muted]/[/] then press [cyan]Tab[/] to complete commands like [muted]/help[/], [muted]/clear[/], [muted]/exit[/].
                                • Press [cyan]Alt+↑[/]/[cyan]Alt+↓[/] to navigate history.
                                • Press [cyan]Enter[/] to accept; [cyan]Ctrl+J[/] inserts a newline; [cyan]Esc[/] cancels completion/prompt.
                               """);
@@ -76,24 +76,27 @@ public sealed class PromptEditorDemo : ControlsDemoBase
 
             var commands = new[]
             {
-                "help",
-                "clear",
-                "exit",
-                "open",
-                "theme",
-                "build",
-                "run",
-                "search",
-                "grep",
-                "status",
+                "/help",
+                "/clear",
+                "/exit",
+                "/open",
+                "/theme",
+                "/build",
+                "/run",
+                "/search",
+                "/grep",
+                "/status",
             };
 
             var candidates = new List<string>(commands.Length);
-            foreach (var c in commands)
+            if (prefix.StartsWith("/", StringComparison.Ordinal))
             {
-                if (prefix.Length == 0 || c.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                foreach (var c in commands)
                 {
-                    candidates.Add(c);
+                    if (prefix.Length == 0 || c.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        candidates.Add(c);
+                    }
                 }
             }
 
