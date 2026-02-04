@@ -90,32 +90,23 @@ public sealed record PromptEditorStyle : IStyle<PromptEditorStyle>
     /// <summary>
     /// Resolves the background style for the prompt sidebar.
     /// </summary>
+    /// <remarks>
+    /// This style is intended to be applied as a subtle overlay on top of the editor background (using alpha blending),
+    /// so the sidebar remains close to the editor surface while still being visually distinct.
+    /// </remarks>
     public Style PromptSidebarBackgroundStyle(Theme theme, bool focused)
     {
-        var style = BackgroundStyle(theme, focused);
+        _ = focused;
 
-        // By default, keep the sidebar very close to the editor fill (so it doesn't look like a separate panel),
-        // but slightly tinted to read as a "prompt gutter". This avoids the strong gray block that can be visually
-        // misleading for multiline prompts.
         var bg = PromptSidebarBackground;
         if (bg is null)
         {
-            var baseBg = (Background ?? (focused ? (theme.InputFillFocused ?? theme.InputFill) : theme.InputFill) ?? theme.SurfaceAlt ?? theme.Surface ?? theme.Background)
-                ?? Color.Default;
-
-            var tint = theme.Accent ?? theme.Primary ?? theme.FocusBorder ?? theme.Selection ?? theme.Foreground;
-            if (tint is { } tintColor && baseBg.Kind != ColorKind.Default)
-            {
-                bg = Color.Mix(baseBg, tintColor, 0.10f, ColorMixSpace.Oklab);
-            }
-            else
-            {
-                bg = baseBg.Kind == ColorKind.Default ? theme.SurfaceAlt ?? theme.Surface ?? theme.Background : baseBg;
-            }
+            // Keep it intentionally low: it should read as a "gutter", not as a separate panel.
+            var tint = theme.Accent ?? theme.Primary ?? theme.FocusBorder ?? theme.Selection;
+            bg = tint?.WithAlpha(0x08);
         }
 
-        if (bg is { } b) style = style.WithBackground(b);
-        return style;
+        return bg is { } b ? Style.None.WithBackground(b) : Style.None;
     }
 
     /// <summary>
@@ -123,7 +114,8 @@ public sealed record PromptEditorStyle : IStyle<PromptEditorStyle>
     /// </summary>
     public Style PromptSeparatorStyle(Theme theme, bool focused)
     {
-        var style = PromptSidebarBackgroundStyle(theme, focused);
+        _ = focused;
+        var style = Style.None;
         var fg = PromptSeparatorForeground ?? theme.Border ?? theme.Muted ?? theme.Foreground;
         if (fg is { } c) style = style.WithForeground(c);
         style |= TextStyle.Dim;
@@ -165,7 +157,8 @@ public sealed record PromptEditorStyle : IStyle<PromptEditorStyle>
     /// <param name="focused">Whether the editor is focused.</param>
     public Style PromptStyle(Theme theme, bool focused)
     {
-        var style = BackgroundStyle(theme, focused);
+        _ = focused;
+        var style = Style.None;
         var fg = PromptForeground ?? theme.Accent ?? theme.Primary ?? theme.Foreground;
         if (fg is { } c) style = style.WithForeground(c);
         return style;
@@ -178,7 +171,8 @@ public sealed record PromptEditorStyle : IStyle<PromptEditorStyle>
     /// <param name="focused">Whether the editor is focused.</param>
     public Style ContinuationPromptStyle(Theme theme, bool focused)
     {
-        var style = BackgroundStyle(theme, focused);
+        _ = focused;
+        var style = Style.None;
         var fg = ContinuationPromptForeground ?? theme.Muted ?? theme.Foreground;
         if (fg is { } c) style = style.WithForeground(c);
         style |= TextStyle.Dim;

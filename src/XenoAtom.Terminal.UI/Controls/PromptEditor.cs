@@ -950,7 +950,19 @@ public partial class PromptEditor : TextEditorBase
             {
                 for (var x = _promptRect.X; x < _promptRect.X + _promptRect.Width; x++)
                 {
-                    buffer.SetCell(x, y, new Rune(' '), promptSidebarBackgroundStyle);
+                    buffer.SetCell(x, y, new Rune(' '), backgroundStyle);
+                }
+            }
+
+            // Apply a subtle sidebar tint on top of the editor background.
+            if (promptSidebarBackgroundStyle != Style.None)
+            {
+                for (var y = _promptRect.Y; y < _promptRect.Y + _promptRect.Height; y++)
+                {
+                    for (var x = _promptRect.X; x < _promptRect.X + _promptRect.Width; x++)
+                    {
+                        buffer.SetCell(x, y, new Rune(' '), promptSidebarBackgroundStyle);
+                    }
                 }
             }
         }
