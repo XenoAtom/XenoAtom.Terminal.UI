@@ -31,11 +31,11 @@ with cards
         enable = true
         card = "summary_large_image"
         user = "xoofx"
-        image = "/img/XenoAtom-Terminal-UI-Banner.png"
+        image = "/terminal/img/XenoAtom-Terminal-UI-Banner.png"
     end
     with og
         enable = true
-        image = "/img/XenoAtom-Terminal-UI-Banner.png"
+        image = "/terminal/img/XenoAtom-Terminal-UI-Banner.png"
     end
 end
 
