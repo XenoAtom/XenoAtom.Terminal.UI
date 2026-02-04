@@ -30,7 +30,7 @@ dotnet run -c Release --project samples/ControlsDemo
 dotnet run -c Release --project samples/ControlsDemo -- --export-screenshots
 ```
 
-**Install as a tool (planned)**
+**Install as a tool**
 
 ```shell
 dotnet tool install -g XenoAtom.Terminal.UI.ControlsDemo
@@ -54,7 +54,7 @@ The FullscreenDemo is a single-screen “dashboard”-style app:
 dotnet run -c Release --project samples/FullscreenDemo
 ```
 
-**Install as a tool (planned)**
+**Install as a tool**
 
 ```shell
 dotnet tool install -g XenoAtom.Terminal.UI.FullscreenDemo
@@ -78,7 +78,7 @@ The InlineLiveDemo demonstrates **inline** live regions:
 dotnet run -c Release --project samples/InlineLiveDemo
 ```
 
-**Install as a tool (planned)**
+**Install as a tool**
 
 ```shell
 dotnet tool install -g XenoAtom.Terminal.UI.InlineLiveDemo
