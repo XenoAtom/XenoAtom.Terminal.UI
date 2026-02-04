@@ -113,6 +113,7 @@ The `Toast` visual represents a single notification. It is typically created and
 
 #### Bindable properties
 
+{.table}
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `Title` | `Visual?` | `null` | Optional title/header visual |
@@ -173,6 +174,7 @@ Terminal.Run(root);
 
 #### Bindable properties
 
+{.table}
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `Position` | `ToastPosition` | `TopRight` | Where toasts appear |
@@ -451,6 +453,7 @@ public sealed record ToastStyle : IStyle<ToastStyle>
 
 ### Severity-based theming
 
+{.table}
 | Severity | Background | Border | Icon Color |
 |----------|------------|--------|------------|
 | Info | Surface | Border | Accent |

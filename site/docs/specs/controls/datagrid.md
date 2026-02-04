@@ -297,6 +297,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
 ### Bindable properties
 
+{.table}
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `Document` | `IDataGridDocument?` | `null` | Direct document binding (optional if `View` is set) |

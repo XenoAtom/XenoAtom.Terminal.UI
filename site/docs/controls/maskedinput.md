@@ -31,6 +31,7 @@ The `Template` is a string where:
 
 ### Token characters
 
+{.table}
 | Token | Allowed characters | Required |
 |------:|--------------------|:--------:|
 | `A` | `[A-Za-z]` | Yes |

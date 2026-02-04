@@ -40,6 +40,7 @@ new TextBox("Name").MinWidth(10)
 Many layout/visibility-related properties are defined on `Visual` itself and are bindable. The source generator produces
 fluent setters and binding helpers for them.
 
+{.table}
 | Property | Typical fluent usage | Notes |
 |---|---|---|
 | `HorizontalAlignment` | `.HorizontalAlignment(Align.Stretch)` | `Start/Center/End/Stretch` |
