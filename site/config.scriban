@@ -7,8 +7,10 @@ baseurl = baseurl ?? "https://xenoatom.github.io"
 if environment == "dev"
     basepath = ""
 else
-    # basepath = "/terminal" # this is not working
+    basepath = "/terminal"
 end
+
+# log.info $"Base URL: { baseurl }{ basepath } <- Environment: { environment }"
 
 # Use `base` as a default layout
 layout = "base"
