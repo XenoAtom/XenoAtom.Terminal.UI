@@ -204,12 +204,12 @@ button.copy-to-clipboard-button[data-copy-state="copy-error"] > span {
 
 .c64-text {
     background-image: linear-gradient(to right,
-        var(--xenoatom-color-red),
-        var(--xenoatom-color-yellow),
-        var(--xenoatom-color-green),
-        var(--xenoatom-color-cyan),
-        var(--xenoatom-color-blue),
-        var(--xenoatom-color-magenta));
+        var(--xenoatom-color-bright-red),
+        var(--xenoatom-color-bright-yellow),
+        var(--xenoatom-color-bright-green),
+        var(--xenoatom-color-bright-cyan),
+        var(--xenoatom-color-bright-blue),
+        var(--xenoatom-color-bright-magenta));
     background-clip: text;
     color: transparent;
 }
