@@ -18,6 +18,17 @@ public sealed class PromptEditorDemo : ControlsDemoBase
         var lastAccepted = new State<string>("(none)");
         var promptCounter = 1;
 
+        var help = new Markup("""
+                              [bold green]PromptEditor[/] — prompt-style editor demo
+
+                              [gray]Try:[/]
+                               • Type [bold red]error[/], [bold yellow]warn[/], [bold green]info[/] to see syntax highlighting.
+                               • The [underline]current word[/] is underlined (caret-aware highlight).
+                               • Press [cyan]Tab[/] to request completion (popup list) for commands like [muted]help[/], [muted]clear[/], [muted]exit[/].
+                               • Press [cyan]Alt+↑[/]/[cyan]Alt+↓[/] to navigate history.
+                               • Press [cyan]Enter[/] to accept; [cyan]Ctrl+J[/] inserts a newline; [cyan]Esc[/] cancels completion/prompt.
+                              """);
+
         var promptEditor = new PromptEditor()
             .PromptMarkup(GetPromptMarkup())
             .ContinuationPromptMarkup("[muted]·[/] ")
@@ -47,7 +58,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
         promptEditor.Canceled((_, _) => context.Log("Canceled."));
 
         return new VStack(
-                DemoUi.Hint("Enter accepts by default. Use Ctrl+J to insert a newline. Tab requests completion."),
+                help,
                 editor,
                 new TextBlock(() => $"Last accepted: {lastAccepted.Value}"),
                 new Rule(),
