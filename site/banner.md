@@ -105,14 +105,21 @@ sitemap: false
     margin: 0;
     line-height: 1.05;
     font-size: clamp(2.6rem, 4.8vw, 4.25rem);
-    text-shadow:
-      0 10px 34px rgba(0, 0, 0, 0.62),
-      0 2px 0 rgba(0, 0, 0, 0.30);
+    filter:
+      drop-shadow(0 18px 50px rgba(0, 0, 0, 0.70))
+      drop-shadow(0 3px 0 rgba(0, 0, 0, 0.35));
   }
 
   .banner-title .c64-text {
-    -webkit-text-fill-color: transparent;
-    -webkit-text-stroke: 1px rgba(0, 0, 0, 0.16);
+    /* Match the home page gradient but slightly more vivid for banner readability. */
+    background-image: linear-gradient(to right,
+      var(--xenoatom-color-bright-red),
+      var(--xenoatom-color-bright-yellow),
+      var(--xenoatom-color-bright-green),
+      var(--xenoatom-color-bright-cyan),
+      var(--xenoatom-color-bright-blue),
+      var(--xenoatom-color-bright-magenta));
+    filter: saturate(1.12) contrast(1.06);
   }
 
   .banner-subtitle {
