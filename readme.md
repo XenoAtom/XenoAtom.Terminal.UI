@@ -34,7 +34,7 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
 
 Screenshot placeholder (to be updated):
 
-![XenoAtom.Terminal.UI Fullscreen Demo](https://raw.githubusercontent.com/XenoAtom/XenoAtom.Terminal.UI/main/img/screenshots/fullscreen-demo.png)
+![XenoAtom.Terminal.UI Fullscreen Demo](https://raw.githubusercontent.com/XenoAtom/XenoAtom.Terminal.UI/main/site/theming.png)
 
 > [!NOTE]
 > XenoAtom.Terminal.UI depends on XenoAtom.Terminal. The two libraries are designed to be used together:
@@ -45,9 +45,10 @@ Screenshot placeholder (to be updated):
 
 ```csharp
 using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 
-Terminal.Write(new Group(new HStack("Hello", "from", "Terminal.UI").Spacing(1)).Title("Welcome"));
+Terminal.Write(new Group("Welcome").Content(new VStack("Hello", "from", "Terminal.UI").Spacing(1)));
 ```
 
 Inline “live” widget (updates without clearing your output):
@@ -57,14 +58,16 @@ using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 
-var progress = new State<double>(0);
+var work = new ProgressTask("Work");
 
 Terminal.Live(
-    new ProgressBar().Value(progress),
+    new ProgressTaskGroup().Tasks([work]),
     onUpdate: () =>
     {
-        progress.Value = Math.Min(1, progress.Value + 0.01);
-        return progress.Value < 1 ? TerminalLoopResult.Continue : TerminalLoopResult.StopAndKeepVisual;
+        work.Value = Math.Min(1, work.Value + 0.01);
+        return work.Value < 1
+            ? TerminalLoopResult.Continue
+            : TerminalLoopResult.StopAndKeepVisual;
     });
 ```
 
@@ -75,14 +78,19 @@ using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 
-var running = new State<bool>(true);
+State<string?> text = new("Type here");
+State<bool> exit = new(false);
 
 Terminal.Run(
     new VStack(
-        new TextBox("Type here…"),
-        new Button("Exit").Click(() => running.Value = false)
+        new TextBox(text),
+        new TextBlock(() => $"The text typed is: {text.Value}"),
+        new Button("Exit").Click(() => exit.Value = true)
     ),
-    onUpdate: () => running.Value ? TerminalLoopResult.Continue : TerminalLoopResult.Stop);
+    onUpdate: () => exit.Value
+        ? TerminalLoopResult.StopAndKeepVisual 
+        : TerminalLoopResult.Continue
+    );
 ```
 
 ## 🧩 Controls included
@@ -103,14 +111,13 @@ Highlights:
 
 ## 📖 User guide
 
-For details, see [User Guide](site/docs/readme.md).
+For details, see the dedicated [website](https://xenoatom.github.io/terminal).
 
 ## 🧪 Samples
 
-- `samples/Playground`: quick manual repros and experiments.
-- `samples/InlineLiveDemo`: inline/live demo (interactive).
-- `samples/FullscreenDemo`: fullscreen UI showcase.
 - `samples/ControlsDemo`: catalog-style demo of controls and styles.
+- `samples/FullscreenDemo`: fullscreen UI showcase.
+- `samples/InlineLiveDemo`: inline/live demo (interactive).
 
 ## 🪪 License
 

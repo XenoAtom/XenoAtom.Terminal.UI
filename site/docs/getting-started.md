@@ -71,7 +71,10 @@ Terminal.Run(
         new TextBlock(() => $"The text typed is: {text.Value}"),
         new Button("Exit").Click(() => exit.Value = true)
     ),
-    onUpdate: () => exit.Value ? TerminalLoopResult.StopAndKeepVisual : TerminalLoopResult.Continue);
+    onUpdate: () => exit.Value
+        ? TerminalLoopResult.StopAndKeepVisual 
+        : TerminalLoopResult.Continue
+    );
 ```
 
 See also:
