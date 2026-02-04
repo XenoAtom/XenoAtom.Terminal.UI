@@ -2,7 +2,7 @@
 
 The InlineLiveDemo demonstrates **inline live regions**: a UI “widget” that updates in-place while the terminal output continues to scroll normally.
 
-Video: `../../site/img/inline-live-demo.webm`
+![InlineLiveDemo](https://raw.githubusercontent.com/XenoAtom/XenoAtom.Terminal.UI/main/site/img/inline-live-demo.webm)
 
 ## Run from source
 

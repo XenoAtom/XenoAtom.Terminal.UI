@@ -2,7 +2,7 @@
 
 The FullscreenDemo is a single-screen “dashboard” style demo designed to exercise layout, focus navigation, and overall styling.
 
-![FullscreenDemo screenshot](../../site/img/fullscreen.png)
+![FullscreenDemo screenshot](https://raw.githubusercontent.com/XenoAtom/XenoAtom.Terminal.UI/main/site/img/fullscreen.png)
 
 ## Run from source
 

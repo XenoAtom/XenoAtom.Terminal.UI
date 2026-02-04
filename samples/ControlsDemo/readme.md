@@ -2,7 +2,7 @@
 
 The ControlsDemo is the interactive catalog for **XenoAtom.Terminal.UI**. It showcases controls, theming, and common interactions.
 
-![ControlsDemo welcome screen](../../site/img/controls/welcome.png)
+![ControlsDemo welcome screen](https://raw.githubusercontent.com/XenoAtom/XenoAtom.Terminal.UI/main/site/img/welcome.png)
 
 ## Run from source
 
