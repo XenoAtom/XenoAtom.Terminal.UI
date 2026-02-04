@@ -38,12 +38,6 @@ sitemap: false
     margin: 0 auto;
     border-radius: 18px;
 
-    background:
-      linear-gradient(180deg, rgba(10, 9, 12, 0.76) 0%, rgba(10, 9, 12, 0.90) 100%),
-      url('/img/theming.png');
-    background-size: cover;
-    background-position: center;
-
     box-shadow:
       0 24px 70px rgba(0, 0, 0, 0.55),
       0 2px 0 rgba(255, 255, 255, 0.06) inset;
@@ -51,6 +45,32 @@ sitemap: false
     overflow: hidden;
     display: grid;
     align-items: center;
+    position: relative;
+  }
+
+  .banner-canvas::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+
+    background-image: url('/img/theming.png');
+    background-size: cover;
+    background-position: center;
+
+    filter: saturate(1.25) contrast(1.05) brightness(1.02);
+    transform: scale(1.01);
+  }
+
+  .banner-canvas::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+
+    background:
+      radial-gradient(1200px 630px at 50% 45%, rgba(0, 0, 0, 0.22) 0%, rgba(0, 0, 0, 0.50) 70%, rgba(0, 0, 0, 0.62) 100%),
+      linear-gradient(180deg, rgba(10, 9, 12, 0.58) 0%, rgba(10, 9, 12, 0.74) 100%);
   }
 
   .banner-inner {
@@ -60,6 +80,7 @@ sitemap: false
     text-align: center;
     margin: 0 auto;
     max-width: 980px;
+    z-index: 2;
   }
 
   .banner-inner::before {
@@ -68,16 +89,16 @@ sitemap: false
     inset: -1rem -1.2rem;
     z-index: 0;
 
-    background: rgba(0, 0, 0, 0.22);
+    background: rgba(0, 0, 0, 0.14);
     border: 1px solid rgba(255, 255, 255, 0.09);
     border-radius: 18px;
 
     box-shadow:
-      0 18px 60px rgba(0, 0, 0, 0.55),
+      0 18px 60px rgba(0, 0, 0, 0.50),
       0 1px 0 rgba(255, 255, 255, 0.06) inset;
 
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(14px) saturate(1.15);
+    backdrop-filter: blur(14px) saturate(1.15);
   }
 
   .banner-inner > * {
@@ -157,19 +178,25 @@ sitemap: false
 
     padding: 0.6rem 0.8rem;
     border-radius: 12px;
-    background: rgba(0, 0, 0, 0.32);
+    background: rgba(0, 0, 0, 0.28);
     border: 1px solid rgba(255, 255, 255, 0.12);
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 0.95rem;
+    color: rgba(220, 216, 228, 0.94);
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55);
   }
 
   .banner-code kbd {
     font-family: inherit;
     font-size: inherit;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(220, 216, 228, 0.98);
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
     padding: 0.05rem 0.35rem;
     border-radius: 8px;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.10) inset,
+      0 10px 30px rgba(0, 0, 0, 0.25);
   }
 
   .banner-links {
