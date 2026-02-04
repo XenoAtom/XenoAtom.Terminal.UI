@@ -231,6 +231,12 @@ internal sealed partial class TextEditorCore
         IncrementVersion();
     }
 
+    public int SelectionStart
+        => HasSelection ? Math.Min(_selectionAnchor, _selectionEnd) : _caretIndex;
+
+    public int SelectionLength
+        => HasSelection ? Math.Abs(_selectionEnd - _selectionAnchor) : 0;
+
     public void OnDocumentChanged()
     {
         var textLength = GetText().Length;

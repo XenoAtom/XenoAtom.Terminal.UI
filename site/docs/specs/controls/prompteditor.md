@@ -153,15 +153,12 @@ public delegate PromptEditorCompletion PromptEditorCompletionHandler(in PromptEd
 
 public readonly record struct PromptEditorHighlightRequest(
     ITextSnapshot Snapshot,
-    Theme Theme);
+    Theme Theme,
+    int CaretIndex,
+    int SelectionStart,
+    int SelectionLength);
 
-public interface IPromptEditorHighlighter
-{
-    /// <summary>
-    /// Populates style runs for the snapshot. Runs are in UTF-16 indices relative to the snapshot text.
-    /// </summary>
-    void Highlight(in PromptEditorHighlightRequest request, List<StyledRun> runs);
-}
+public delegate void PromptEditorHighlighter(in PromptEditorHighlightRequest request, List<StyledRun> runs);
 
 public partial class PromptEditor : TextEditorBase
 {
@@ -182,7 +179,7 @@ public partial class PromptEditor : TextEditorBase
 
     // Highlighting + word hints
     [Bindable] public partial bool EnableWordHints { get; set; }
-    [Bindable] public partial IPromptEditorHighlighter? Highlighter { get; set; }
+    [Bindable] public partial Delegator<PromptEditorHighlighter> Highlighter { get; set; }
 
     // Events
     [RoutedEvent(RoutingStrategy.Bubble)]
@@ -199,7 +196,7 @@ Notes:
   (`primary`, `success`, etc.) like the rest of Terminal.UI.
 - For richer prompts (icons, dynamic widgets), PromptEditor MAY later add an alternative `Prompt` visual slot; v1 focuses on
   markup because it composes well with prompt usage and is allocation-friendly when paired with `MarkupTextParser`.
-- `Highlighter` is optional. When null, the editor renders with its default text style.
+- `Highlighter` is optional. When empty, the editor renders with its default text style.
 
 > [!IMPORTANT]
 > Delegate-valued bindables MUST use `Delegator<TDelegate>` for fluent support (see `Control Development Guide`).
@@ -258,7 +255,7 @@ If `Highlighter` is set:
 
 - PromptEditor requests runs for the current snapshot (prefer snapshot version-based caching).
 - Runs are applied on top of the default text style (like a paint layer).
-- Highlighter must be able to apply text decorations such as underline for “word hints” or detected tokens.
+- Highlighter must be able to apply text decorations such as underline for detected tokens.
 
 > [!NOTE]
 > `MarkupTextParser` can be used by implementers to easily produce style runs from markup without building visuals.
@@ -409,7 +406,7 @@ Add tests in `src/XenoAtom.Terminal.UI.Tests` (rendering-focused) to cover:
 - Completion:
   - applying a candidate replaces the expected range and updates ghost text.
 - Highlighting:
-  - a simple `IPromptEditorHighlighter` styles a token range (e.g. underline a word).
+  - a simple `PromptEditorHighlighter` styles a token range (e.g. underline a word).
 
 ---
 

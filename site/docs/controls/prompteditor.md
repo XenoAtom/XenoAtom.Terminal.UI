@@ -41,6 +41,19 @@ new PromptEditor()
     .EnterMode(PromptEditorEnterMode.EnterInsertsNewLine);
 ```
 
+## Syntax highlighting
+
+`PromptEditor` supports lightweight, pluggable syntax highlighting via a delegate that produces style runs:
+
+```csharp
+new PromptEditor()
+    .Highlighter((in PromptEditorHighlightRequest request, List<StyledRun> runs) =>
+    {
+        // Use request.Snapshot and add StyledRun(start, length, style) entries.
+        // request.CaretIndex / request.Selection* are provided for caret-aware highlighting.
+    });
+```
+
 ## Completion
 
 Completion is pluggable via `CompletionHandler`:

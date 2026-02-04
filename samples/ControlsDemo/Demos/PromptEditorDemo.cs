@@ -21,10 +21,10 @@ public sealed class PromptEditorDemo : ControlsDemoBase
             .PromptMarkup("[primary]demo[/] [muted]>[/] ")
             .ContinuationPromptMarkup("[muted]·[/] ")
             .Placeholder("Type a command. Tab completes. Ctrl+J inserts a newline.")
-            .EnableWordHints(true)
+            .EnableWordHints(false)
             .CompletionPresentation(PromptEditorCompletionPresentation.PopupList)
             .CompletionHandler(Complete)
-            .Highlighter(new DemoHighlighter())
+            .Highlighter(Highlight)
             .AutoFocus(true)
             .MinHeight(6)
             .MaxHeight(6);
@@ -109,11 +109,8 @@ public sealed class PromptEditorDemo : ControlsDemoBase
 
             return string.Create(snapshot.Length, snapshot, static (span, s) => s.CopyTo(0, span));
         }
-    }
 
-    private sealed class DemoHighlighter : IPromptEditorHighlighter
-    {
-        public void Highlight(in PromptEditorHighlightRequest request, List<StyledRun> runs)
+        static void Highlight(in PromptEditorHighlightRequest request, List<StyledRun> runs)
         {
             var snapshot = request.Snapshot;
             if (snapshot.Length == 0)
@@ -122,45 +119,77 @@ public sealed class PromptEditorDemo : ControlsDemoBase
             }
 
             var text = string.Create(snapshot.Length, snapshot, static (span, s) => s.CopyTo(0, span));
+            var spanText = text.AsSpan();
+            var theme = request.Theme;
 
-            // Highlight flags like --help.
-            for (var i = 0; i < text.Length - 1; i++)
+            // Underline the current word (matches the ReadLine sample behavior).
+            var caret = Math.Clamp(request.CaretIndex, 0, spanText.Length);
+            var wordStart = TerminalTextUtility.GetWordStart(spanText, caret);
+            var wordEnd = TerminalTextUtility.GetWordEnd(spanText, caret);
+            if (wordEnd > wordStart)
             {
-                if (text[i] == '-' && text[i + 1] == '-')
-                {
-                    var end = i + 2;
-                    while (end < text.Length && TerminalTextUtility.IsWordChar(text[end]))
-                    {
-                        end++;
-                    }
-
-                    var style = Style.None | TextStyle.Bold;
-                    if (request.Theme.Accent is { } accent)
-                    {
-                        style = style.WithForeground(accent);
-                    }
-
-                    runs.Add(new StyledRun(i, end - i, style));
-                    i = end;
-                }
+                runs.Add(new StyledRun(wordStart, wordEnd - wordStart, Style.None.WithTextStyle(TextStyle.Underline)));
             }
 
-            // Dim numbers (e.g. --count 10).
-            for (var i = 0; i < text.Length; i++)
+            // Keyword highlight (error/warn/info) similar to HelloReadLine.
+            for (var i = 0; i < spanText.Length; i++)
             {
-                if (!char.IsDigit(text[i]))
+                if (!TryMatchKeyword(spanText, i, out var length, out var style))
                 {
                     continue;
                 }
 
-                var end = i + 1;
-                while (end < text.Length && char.IsDigit(text[end]))
+                runs.Add(new StyledRun(i, length, style));
+                i += length - 1;
+            }
+
+            Style BuildStyle(Color? fg)
+            {
+                var s = Style.None.AddTextStyle(TextStyle.Bold);
+                return fg is { } c ? s.WithForeground(c) : s;
+            }
+
+            bool TryMatchKeyword(ReadOnlySpan<char> fullText, int index, out int length, out Style style)
+            {
+                length = 0;
+                style = Style.None;
+
+                if (!TerminalTextUtility.IsWordStart(fullText, index))
                 {
-                    end++;
+                    return false;
                 }
 
-                runs.Add(new StyledRun(i, end - i, Style.None | TextStyle.Dim));
-                i = end;
+                var remaining = fullText.Slice(index);
+
+                if (remaining.StartsWith("error", StringComparison.OrdinalIgnoreCase) && TerminalTextUtility.IsWordEnd(fullText, index + 5))
+                {
+                    length = 5;
+                    style = BuildStyle(theme.Error);
+                    return true;
+                }
+
+                if (remaining.StartsWith("warning", StringComparison.OrdinalIgnoreCase) && TerminalTextUtility.IsWordEnd(fullText, index + 7))
+                {
+                    length = 7;
+                    style = BuildStyle(theme.Warning);
+                    return true;
+                }
+
+                if (remaining.StartsWith("warn", StringComparison.OrdinalIgnoreCase) && TerminalTextUtility.IsWordEnd(fullText, index + 4))
+                {
+                    length = 4;
+                    style = BuildStyle(theme.Warning);
+                    return true;
+                }
+
+                if (remaining.StartsWith("info", StringComparison.OrdinalIgnoreCase) && TerminalTextUtility.IsWordEnd(fullText, index + 4))
+                {
+                    length = 4;
+                    style = BuildStyle(theme.Success);
+                    return true;
+                }
+
+                return false;
             }
         }
     }

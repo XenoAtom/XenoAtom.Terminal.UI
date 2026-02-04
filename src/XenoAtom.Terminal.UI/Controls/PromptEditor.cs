@@ -92,20 +92,17 @@ public delegate PromptEditorCompletion PromptEditorCompletionHandler(in PromptEd
 /// </summary>
 public readonly record struct PromptEditorHighlightRequest(
     ITextSnapshot Snapshot,
-    Theme Theme);
+    Theme Theme,
+    int CaretIndex,
+    int SelectionStart,
+    int SelectionLength);
 
 /// <summary>
-/// Provides syntax highlighting runs for a <see cref="PromptEditor"/>.
+/// Delegate used by <see cref="PromptEditor"/> to compute syntax highlighting style runs.
 /// </summary>
-public interface IPromptEditorHighlighter
-{
-    /// <summary>
-    /// Populates style runs for the snapshot. Runs use UTF-16 indices relative to the snapshot text.
-    /// </summary>
-    /// <param name="request">The highlighting request.</param>
-    /// <param name="runs">A list that receives styled runs.</param>
-    void Highlight(in PromptEditorHighlightRequest request, List<StyledRun> runs);
-}
+/// <param name="request">The highlighting request.</param>
+/// <param name="runs">A list that receives style runs. Runs use UTF-16 indices relative to the snapshot text.</param>
+public delegate void PromptEditorHighlighter(in PromptEditorHighlightRequest request, List<StyledRun> runs);
 
 /// <summary>
 /// Provides an in-memory history store for prompt inputs.
@@ -182,8 +179,11 @@ public partial class PromptEditor : TextEditorBase
 
     private int _cachedHighlightVersion = -1;
     private Theme? _cachedHighlightTheme;
-    private IPromptEditorHighlighter? _cachedHighlighter;
-    private bool _cachedWordHints;
+    private PromptEditorHighlighter? _cachedHighlighter;
+    private bool _cachedWordHintsEnabled;
+    private int _cachedHighlightCaretIndex;
+    private int _cachedHighlightSelectionStart;
+    private int _cachedHighlightSelectionLength;
     private readonly List<StyledRun> _highlightRuns = new(64);
 
     private bool _completionActive;
@@ -365,7 +365,7 @@ public partial class PromptEditor : TextEditorBase
     /// Gets or sets the optional syntax highlighter used to style the editor content.
     /// </summary>
     [Bindable]
-    public partial IPromptEditorHighlighter? Highlighter { get; set; }
+    public partial Delegator<PromptEditorHighlighter> Highlighter { get; set; }
 
     /// <summary>
     /// Gets or sets the history store used by this editor.
@@ -967,13 +967,19 @@ public partial class PromptEditor : TextEditorBase
     {
         var snapshot = TextDocument.CurrentSnapshot;
         var version = snapshot.Version;
-        var highlighter = Highlighter;
-        var enableWordHints = EnableWordHints;
+        var highlighter = (PromptEditorHighlighter?)Highlighter;
+        var wordHintsEnabled = EnableWordHints && HasFocus;
+        var caretIndex = CaretIndex;
+        var selectionStart = SelectionStart;
+        var selectionLength = SelectionLength;
 
         if (_cachedHighlightVersion == version &&
             ReferenceEquals(_cachedHighlightTheme, theme) &&
-            ReferenceEquals(_cachedHighlighter, highlighter) &&
-            _cachedWordHints == enableWordHints)
+            Equals(_cachedHighlighter, highlighter) &&
+            _cachedWordHintsEnabled == wordHintsEnabled &&
+            _cachedHighlightCaretIndex == caretIndex &&
+            _cachedHighlightSelectionStart == selectionStart &&
+            _cachedHighlightSelectionLength == selectionLength)
         {
             return;
         }
@@ -981,21 +987,24 @@ public partial class PromptEditor : TextEditorBase
         _cachedHighlightVersion = version;
         _cachedHighlightTheme = theme;
         _cachedHighlighter = highlighter;
-        _cachedWordHints = enableWordHints;
+        _cachedWordHintsEnabled = wordHintsEnabled;
+        _cachedHighlightCaretIndex = caretIndex;
+        _cachedHighlightSelectionStart = selectionStart;
+        _cachedHighlightSelectionLength = selectionLength;
 
         _highlightRuns.Clear();
 
         if (highlighter is not null)
         {
-            highlighter.Highlight(new PromptEditorHighlightRequest(snapshot, theme), _highlightRuns);
+            highlighter(new PromptEditorHighlightRequest(snapshot, theme, caretIndex, selectionStart, selectionLength), _highlightRuns);
         }
 
-        if (enableWordHints && HasFocus)
+        if (wordHintsEnabled)
         {
             var text = GetCachedText().AsSpan();
             if (!text.IsEmpty)
             {
-                var index = Math.Clamp(CaretIndex, 0, text.Length);
+                var index = Math.Clamp(caretIndex, 0, text.Length);
                 var start = TerminalTextUtility.GetWordStart(text, index);
                 var end = TerminalTextUtility.GetWordEnd(text, index);
                 if (end > start)
@@ -1005,7 +1014,97 @@ public partial class PromptEditor : TextEditorBase
             }
         }
 
-        _highlightRuns.Sort(static (a, b) => a.Start.CompareTo(b.Start));
+        NormalizeHighlightRuns(textLength: GetCachedText().Length);
+    }
+
+    private void NormalizeHighlightRuns(int textLength)
+    {
+        if (_highlightRuns.Count == 0 || textLength <= 0)
+        {
+            return;
+        }
+
+        // Normalize potentially overlapping runs into non-overlapping segments with combined styles.
+        // This allows, for example, "keyword color" + "current word underline" to apply simultaneously.
+        var boundaries = new List<int>(_highlightRuns.Count * 2 + 2) { 0, textLength };
+
+        for (var i = 0; i < _highlightRuns.Count; i++)
+        {
+            var run = _highlightRuns[i];
+            if (run.Length <= 0)
+            {
+                continue;
+            }
+
+            var start = Math.Clamp(run.Start, 0, textLength);
+            var end = Math.Clamp(run.Start + run.Length, 0, textLength);
+            if (end <= start)
+            {
+                continue;
+            }
+
+            boundaries.Add(start);
+            boundaries.Add(end);
+        }
+
+        boundaries.Sort();
+        for (var i = boundaries.Count - 2; i >= 0; i--)
+        {
+            if (boundaries[i] == boundaries[i + 1])
+            {
+                boundaries.RemoveAt(i + 1);
+            }
+        }
+
+        var normalized = new List<StyledRun>(boundaries.Count);
+
+        for (var i = 0; i + 1 < boundaries.Count; i++)
+        {
+            var start = boundaries[i];
+            var end = boundaries[i + 1];
+            if (end <= start)
+            {
+                continue;
+            }
+
+            var style = Style.None;
+            for (var j = 0; j < _highlightRuns.Count; j++)
+            {
+                var run = _highlightRuns[j];
+                if (run.Length <= 0)
+                {
+                    continue;
+                }
+
+                var runStart = run.Start;
+                var runEnd = run.Start + run.Length;
+
+                if (runStart <= start && runEnd >= end)
+                {
+                    style |= run.Style;
+                }
+            }
+
+            if (style == Style.None)
+            {
+                continue;
+            }
+
+            if (normalized.Count > 0)
+            {
+                var prev = normalized[^1];
+                if (prev.Start + prev.Length == start && prev.Style == style)
+                {
+                    normalized[^1] = new StyledRun(prev.Start, prev.Length + (end - start), style);
+                    continue;
+                }
+            }
+
+            normalized.Add(new StyledRun(start, end - start, style));
+        }
+
+        _highlightRuns.Clear();
+        _highlightRuns.AddRange(normalized);
     }
 
     private void WriteMarkup(CellBuffer buffer, int x, int y, string plainText, StyledRun[] runs, Style baseStyle)

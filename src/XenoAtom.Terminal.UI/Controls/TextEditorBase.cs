@@ -257,6 +257,19 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     protected bool IsFocused => HasFocus;
 
     /// <summary>
+    /// Gets the selection start index in the document.
+    /// </summary>
+    /// <remarks>
+    /// When there is no selection, this value is equal to <see cref="CaretIndex"/>.
+    /// </remarks>
+    protected int SelectionStart => _core.SelectionStart;
+
+    /// <summary>
+    /// Gets the selection length in the document.
+    /// </summary>
+    protected int SelectionLength => _core.SelectionLength;
+
+    /// <summary>
     /// Gets a value indicating whether this editor is single-line.
     /// </summary>
     protected abstract bool IsSingleLine { get; }
