@@ -58,7 +58,7 @@ sitemap: false
     background-size: cover;
     background-position: center;
 
-    filter: saturate(1.25) contrast(1.05) brightness(1.02);
+    filter: none;
     transform: scale(1.01);
   }
 
@@ -69,8 +69,8 @@ sitemap: false
     z-index: 1;
 
     background:
-      radial-gradient(1200px 630px at 50% 45%, rgba(0, 0, 0, 0.22) 0%, rgba(0, 0, 0, 0.50) 70%, rgba(0, 0, 0, 0.62) 100%),
-      linear-gradient(180deg, rgba(10, 9, 12, 0.58) 0%, rgba(10, 9, 12, 0.74) 100%);
+      radial-gradient(1200px 630px at 50% 45%, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.22) 70%, rgba(0, 0, 0, 0.34) 100%),
+      linear-gradient(180deg, rgba(10, 9, 12, 0.14) 0%, rgba(10, 9, 12, 0.24) 100%);
   }
 
   .banner-inner {
@@ -79,31 +79,24 @@ sitemap: false
     color: var(--xenoatom-color-foreground, #dcd8e4);
     text-align: center;
     margin: 0 auto;
-    max-width: 980px;
+    max-width: 920px;
     z-index: 2;
   }
 
-  .banner-inner::before {
-    content: "";
-    position: absolute;
-    inset: -1rem -1.2rem;
-    z-index: 0;
+  .banner-card {
+    padding: clamp(1.25rem, 3vw, 2.35rem);
+    border-radius: 20px;
 
-    background: rgba(0, 0, 0, 0.14);
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    border-radius: 18px;
+    /* Glass panel only behind the content (keep the screenshot full-color everywhere else). */
+    background: rgba(10, 9, 12, 0.46);
+    border: 1px solid rgba(255, 255, 255, 0.10);
 
     box-shadow:
-      0 18px 60px rgba(0, 0, 0, 0.50),
+      0 22px 70px rgba(0, 0, 0, 0.60),
       0 1px 0 rgba(255, 255, 255, 0.06) inset;
 
-    -webkit-backdrop-filter: blur(14px) saturate(1.15);
-    backdrop-filter: blur(14px) saturate(1.15);
-  }
-
-  .banner-inner > * {
-    position: relative;
-    z-index: 1;
+    -webkit-backdrop-filter: blur(14px) saturate(1.20) contrast(1.05);
+    backdrop-filter: blur(14px) saturate(1.20) contrast(1.05);
   }
 
   .banner-title {
@@ -113,8 +106,13 @@ sitemap: false
     line-height: 1.05;
     font-size: clamp(2.6rem, 4.8vw, 4.25rem);
     text-shadow:
-      0 2px 18px rgba(0, 0, 0, 0.75),
-      0 1px 0 rgba(0, 0, 0, 0.60);
+      0 10px 34px rgba(0, 0, 0, 0.62),
+      0 2px 0 rgba(0, 0, 0, 0.30);
+  }
+
+  .banner-title .c64-text {
+    -webkit-text-fill-color: transparent;
+    -webkit-text-stroke: 1px rgba(0, 0, 0, 0.16);
   }
 
   .banner-subtitle {
@@ -228,28 +226,30 @@ sitemap: false
 <div class="banner-root">
   <div class="banner-canvas" role="img" aria-label="XenoAtom.Terminal.UI branding banner">
     <div class="banner-inner">
-      <div class="banner-top">
-        <img class="banner-logo" src="/img/xenoatom-logo.png" alt="XenoAtom.Terminal.UI logo" width="96" height="96">
-        <div>
-          <h1 class="banner-title">XenoAtom.Terminal.UI</h1>
-          <p class="banner-subtitle">A modern, reactive retained-mode terminal UI framework for .NET.</p>
+      <div class="banner-card">
+        <div class="banner-top">
+          <img class="banner-logo" src="/img/xenoatom-logo.png" alt="XenoAtom.Terminal.UI logo" width="96" height="96">
+          <div>
+            <h1 class="banner-title"><span class="c64-text">XenoAtom.Terminal.UI</span></h1>
+            <p class="banner-subtitle">A modern, reactive retained-mode terminal UI framework for .NET.</p>
+          </div>
         </div>
-      </div>
-      <div class="banner-pill-row" aria-hidden="true">
-        <span class="banner-pill"><i class="bi bi-lightning-charge"></i>Reactive bindings</span>
-        <span class="banner-pill"><i class="bi bi-layout-text-window"></i>Retained-mode visuals</span>
-        <span class="banner-pill"><i class="bi bi-aspect-ratio"></i>Layout + rendering</span>
-        <span class="banner-pill"><i class="bi bi-mouse"></i>Mouse + keyboard input</span>
-        <span class="banner-pill"><i class="bi bi-palette"></i>Themes + alpha blending</span>
-      </div>
-      <div class="banner-code" aria-label="Install command">
-        <span>Install:</span>
-        <kbd>dotnet add package XenoAtom.Terminal.UI</kbd>
-      </div>
-      <div class="banner-links">
-        <a href="/docs/"><i class="bi bi-book"></i>Docs</a>
-        <a href="https://github.com/XenoAtom/XenoAtom.Terminal.UI"><i class="bi bi-github"></i>GitHub</a>
-        <a href="/docs/controls/"><i class="bi bi-grid-3x3-gap"></i>Controls</a>
+        <div class="banner-pill-row" aria-hidden="true">
+          <span class="banner-pill"><i class="bi bi-lightning-charge"></i>Reactive bindings</span>
+          <span class="banner-pill"><i class="bi bi-layout-text-window"></i>Retained-mode visuals</span>
+          <span class="banner-pill"><i class="bi bi-aspect-ratio"></i>Layout + rendering</span>
+          <span class="banner-pill"><i class="bi bi-mouse"></i>Mouse + keyboard input</span>
+          <span class="banner-pill"><i class="bi bi-palette"></i>Themes + alpha blending</span>
+        </div>
+        <div class="banner-code" aria-label="Install command">
+          <span>Install:</span>
+          <kbd>dotnet add package XenoAtom.Terminal.UI</kbd>
+        </div>
+        <div class="banner-links">
+          <a href="/docs/"><i class="bi bi-book"></i>Docs</a>
+          <a href="https://github.com/XenoAtom/XenoAtom.Terminal.UI"><i class="bi bi-github"></i>GitHub</a>
+          <a href="/docs/controls/"><i class="bi bi-grid-3x3-gap"></i>Controls</a>
+        </div>
       </div>
     </div>
   </div>
