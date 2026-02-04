@@ -16,6 +16,7 @@ They are useful when you want to understand *why* a feature behaves a certain wa
 ## How to navigate
 
 - [Control Specs](controls/readme.md) — one spec file per control
+- [PromptEditor](controls/prompteditor.md) — prompt-style text editor (planned control)
 - [Controls Roadmap](controls_todo.md) — what’s next / what’s missing
 - [Archive](archive/readme.md) — historical documents kept for context
 
