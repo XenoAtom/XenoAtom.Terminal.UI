@@ -1,7 +1,7 @@
 # Site Settings
 author = "Alexandre Mutel"
 title = "XenoAtom.Terminal.UI"
-description = "A modern retained-mode terminal UI framework for .NET."
+description = "A modern, reactive retained-mode terminal UI framework for .NET."
 
 baseurl = baseurl ?? "https://xenoatom.github.io"
 if environment == "dev"
@@ -33,11 +33,11 @@ with cards
         enable = true
         card = "summary_large_image"
         user = "xoofx"
-        image = "/terminal/img/XenoAtom-Terminal-UI-Banner.png"
+        image = "/img/XenoAtom-Terminal-UI-Banner.png"
     end
     with og
         enable = true
-        image = "/terminal/img/XenoAtom-Terminal-UI-Banner.png"
+        image = "/img/XenoAtom-Terminal-UI-Banner.png"
     end
 end
 

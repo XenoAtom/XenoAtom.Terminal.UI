@@ -3,7 +3,7 @@ layout: base
 ---
 <div class="container-xxl">
   {{~
-    url = page.url ?? ""
+    url = page.url_without_basepath ?? ""
     menu_key = "doc"
     if url | string.starts_with "/docs/controls"
       menu_key = "controls"

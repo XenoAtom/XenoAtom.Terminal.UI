@@ -13,7 +13,7 @@ layout: _default
     <div id="xenoatom" class="container">
       <nav class="navbar navbar-expand-md navbar-light {{ path0 == "home" ? "" : "sticky-top" }}">
         <a class="navbar-brand" href="/">
-          <img class="xenoatom-logo" src="/img/xenoatom-logo.png" alt="" width="96" height="96">
+          <img class="xenoatom-logo" src="{{site.basepath}}/img/xenoatom-logo.png" alt="" width="96" height="96">
           <span class="visually-hidden">Home</span>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse"

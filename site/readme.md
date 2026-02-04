@@ -14,14 +14,14 @@ og_type: website
       Compose visuals, bind to state, and let the framework handle layout + rendering efficiently.
     </p>
     <div class="d-flex justify-content-center gap-3 mt-4 flex-wrap">
-      <a href="/docs/getting-started/" class="btn btn-primary btn-lg"><i class="bi bi-rocket-takeoff"></i> Get started</a>
-      <a href="/docs/controls/" class="btn btn-outline-light btn-lg"><i class="bi bi-ui-checks-grid"></i> Browse controls</a>
+      <a href="{{site.basepath}}/docs/getting-started/" class="btn btn-primary btn-lg"><i class="bi bi-rocket-takeoff"></i> Get started</a>
+      <a href="{{site.basepath}}/docs/controls/" class="btn btn-outline-light btn-lg"><i class="bi bi-ui-checks-grid"></i> Browse controls</a>
       <a href="https://github.com/XenoAtom/XenoAtom.Terminal.UI/" class="btn btn-info btn-lg"><i class="bi bi-github"></i> GitHub</a>
     </div>
     <div class="mt-4 text-start mx-auto" style="max-width: 56rem;">
       <pre class="language-shell-session"><code>dotnet add package XenoAtom.Terminal.UI</code></pre>
     </div>
-    <video class="terminal terminal-hero img-fluid" width="500" height="281" controls="" autoplay loop muted playsinline><source type="video/webm" src="img/xenoatom-fullscreen.webm"></source></video>
+    <video class="terminal terminal-hero img-fluid" width="500" height="281" controls="" autoplay loop muted playsinline><source type="video/webm" src="{{site.basepath}}/img/xenoatom-fullscreen.webm"></source></video>
   </div>
 </section>
 
