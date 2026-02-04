@@ -462,13 +462,10 @@ public static class CellBufferSvgExporter
 
     private static string ToCssColor(Color color, CellBufferSvgExportOptions options)
     {
-        // In screenshots we want deterministic colors, so we downgrade palette colors to RGB when possible.
+        // In screenshots we want deterministic colors, so resolve palette colors to RGB using xterm palettes.
         if (color.Kind is ColorKind.Basic16 or ColorKind.Indexed256)
         {
-            if (color.TryDowngrade(AnsiColorLevel.TrueColor, out var rgb) && rgb.Kind == ColorKind.Rgb)
-            {
-                color = rgb;
-            }
+            color = color.ToRgb();
         }
 
         if (color.Kind == ColorKind.RgbA && color.A < 255)

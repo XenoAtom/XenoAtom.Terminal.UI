@@ -43,6 +43,23 @@ public sealed class CellBufferSvgExporterTests
         var cropped = CellBufferSvgExporter.Export(buffer, new CellBufferSvgExportOptions { AutoCrop = true, FillBackground = false });
 
         // Crude sanity check: cropped output should be smaller than the full output.
+        // NOTE: MSTest's Assert.IsLessThan signature is (upperBound, value) meaning `value < upperBound`.
         Assert.IsLessThan(full.Length, cropped.Length, $"Expected cropped SVG to be smaller. full={full.Length} cropped={cropped.Length}");
+    }
+
+    [TestMethod]
+    public void SvgExporter_Resolves_Basic16_Foreground_To_Rgb()
+    {
+        var buffer = new CellBuffer(3, 1);
+        buffer.Clear(Style.None);
+
+        var fg = Color.Basic16(9); // Bright red in the basic palette.
+        buffer.WriteText(0, 0, "X", Style.None.WithForeground(fg));
+
+        var svg = CellBufferSvgExporter.Export(buffer, new CellBufferSvgExportOptions { AutoCrop = true, FillBackground = false });
+
+        var rgb = fg.ToRgb();
+        var expected = $"fill=\"rgb({rgb.R},{rgb.G},{rgb.B})\"";
+        StringAssert.Contains(svg, expected, "Expected the SVG to include an RGB fill color for a Basic16 foreground.");
     }
 }
