@@ -22,7 +22,7 @@ with search
     enable = true
     # engine = "lunr"
     # worker = true
-    excludes.add ["404.md", "banner.md", "AGENTS.md"]
+    excludes.add ["/404.md", "/banner.md", "/AGENTS.md"]
 end
 
 # Configure OpenGraph and Twitter cards
