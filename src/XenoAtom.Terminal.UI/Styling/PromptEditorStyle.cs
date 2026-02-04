@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Geometry;
 
 namespace XenoAtom.Terminal.UI.Styling;
@@ -92,7 +93,27 @@ public sealed record PromptEditorStyle : IStyle<PromptEditorStyle>
     public Style PromptSidebarBackgroundStyle(Theme theme, bool focused)
     {
         var style = BackgroundStyle(theme, focused);
-        var bg = PromptSidebarBackground ?? theme.SurfaceAlt ?? theme.Surface ?? theme.Background;
+
+        // By default, keep the sidebar very close to the editor fill (so it doesn't look like a separate panel),
+        // but slightly tinted to read as a "prompt gutter". This avoids the strong gray block that can be visually
+        // misleading for multiline prompts.
+        var bg = PromptSidebarBackground;
+        if (bg is null)
+        {
+            var baseBg = (Background ?? (focused ? (theme.InputFillFocused ?? theme.InputFill) : theme.InputFill) ?? theme.SurfaceAlt ?? theme.Surface ?? theme.Background)
+                ?? Color.Default;
+
+            var tint = theme.Accent ?? theme.Primary ?? theme.FocusBorder ?? theme.Selection ?? theme.Foreground;
+            if (tint is { } tintColor && baseBg.Kind != ColorKind.Default)
+            {
+                bg = Color.Mix(baseBg, tintColor, 0.10f, ColorMixSpace.Oklab);
+            }
+            else
+            {
+                bg = baseBg.Kind == ColorKind.Default ? theme.SurfaceAlt ?? theme.Surface ?? theme.Background : baseBg;
+            }
+        }
+
         if (bg is { } b) style = style.WithBackground(b);
         return style;
     }
