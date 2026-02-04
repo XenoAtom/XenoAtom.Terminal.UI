@@ -163,6 +163,7 @@ public delegate void PromptEditorHighlighter(in PromptEditorHighlightRequest req
 public partial class PromptEditor : TextEditorBase
 {
     // Prompt prefix
+    [Bindable(NoVisualAttach = true)] public partial Visual? Prompt { get; set; }
     [Bindable] public partial string? PromptMarkup { get; set; }
     [Bindable] public partial string? ContinuationPromptMarkup { get; set; }
 
@@ -192,10 +193,9 @@ public partial class PromptEditor : TextEditorBase
 
 Notes:
 
+- `Prompt` is optional. When set, it takes precedence over `PromptMarkup` for the first visual row.
 - `PromptMarkup` uses markup syntax (same as `Markup` control / XenoAtom.Ansi) and SHOULD support theme custom tags
   (`primary`, `success`, etc.) like the rest of Terminal.UI.
-- For richer prompts (icons, dynamic widgets), PromptEditor MAY later add an alternative `Prompt` visual slot; v1 focuses on
-  markup because it composes well with prompt usage and is allocation-friendly when paired with `MarkupTextParser`.
 - `Highlighter` is optional. When empty, the editor renders with its default text style.
 
 > [!IMPORTANT]
@@ -217,7 +217,8 @@ PromptEditor layout is conceptually:
 - PromptEditor MUST measure the prompt prefix width in terminal cells:
   - Parse `PromptMarkup` into plain text + runs (via `MarkupTextParser`).
   - Compute cell width via `TerminalTextUtility.GetWidth`.
-- The prompt prefix is NOT a child visual; it’s rendered by PromptEditor itself (like TextBox renders its chrome).
+- When using `PromptMarkup`, the prompt prefix is rendered by PromptEditor itself (like TextBox renders its chrome).
+- When using `Prompt`, the prompt is a child visual arranged in the left prompt column (first visual row only).
 - The editable region width is `Bounds.Width - prefixWidth` (minus style padding).
 
 ### Arranging

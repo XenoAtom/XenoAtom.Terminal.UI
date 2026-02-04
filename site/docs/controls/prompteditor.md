@@ -87,6 +87,20 @@ Default behavior:
 
 If `ContinuationPromptMarkup` is empty, the control keeps the column width but does not draw text.
 
+### Prompt as a visual
+
+For richer prompts (icons, spinners, widgets…), you can provide a visual prompt:
+
+```csharp
+new PromptEditor()
+    .Prompt(new HStack(
+        new Spinner().MinWidth(1),
+        new Markup("[primary]demo[/] [muted]>[/] ")));
+```
+
+When `Prompt` is set, it takes precedence over `PromptMarkup` on the first visual row. Continuation rows still use
+`ContinuationPromptMarkup` (or indentation if empty).
+
 ## Commands (CommandBar)
 
 `PromptEditor` registers prompt-specific commands so a `CommandBar` can surface shortcuts:

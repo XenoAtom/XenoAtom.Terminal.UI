@@ -160,6 +160,7 @@ public partial class PromptEditor : TextEditorBase
     private const int PromptTabSize = 4;
 
     private readonly MarkupTextParser _markupParser;
+    private Visual? _promptVisual;
 
     private string? _cachedPromptMarkup;
     private string _cachedPromptText = string.Empty;
@@ -322,6 +323,22 @@ public partial class PromptEditor : TextEditorBase
     public partial string? Text { get; set; }
 
     /// <summary>
+    /// Gets or sets an optional prompt visual rendered in the left prompt column on the first visual row.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// When set, the prompt visual takes precedence over <see cref="PromptMarkup"/> for the first row. Continuation
+    /// rows still use <see cref="ContinuationPromptMarkup"/> (or indentation if empty).
+    /// </para>
+    /// <para>
+    /// This allows composing rich prompts (e.g. a spinner, icons, or additional visuals) while preserving the prompt
+    /// column layout.
+    /// </para>
+    /// </remarks>
+    [Bindable(NoVisualAttach = true)]
+    public partial Visual? Prompt { get; set; }
+
+    /// <summary>
     /// Gets or sets the prompt prefix markup displayed on the first visual line.
     /// </summary>
     [Bindable]
@@ -374,6 +391,34 @@ public partial class PromptEditor : TextEditorBase
     /// </summary>
     [Bindable]
     public partial PromptEditorHistory? History { get; set; }
+
+    /// <inheritdoc />
+    protected override int ChildrenCount => _promptVisual is null ? 0 : 1;
+
+    /// <inheritdoc />
+    protected override Visual GetChild(int index)
+        => index == 0 && _promptVisual is not null ? _promptVisual : throw new ArgumentOutOfRangeException(nameof(index));
+
+    /// <inheritdoc />
+    protected override void PrepareChildren()
+    {
+        base.PrepareChildren();
+
+        if (!ReferenceEquals(_promptVisual, Prompt))
+        {
+            if (_promptVisual is not null)
+            {
+                DetachChild(_promptVisual);
+            }
+
+            _promptVisual = Prompt;
+            if (_promptVisual is not null)
+            {
+                _promptVisual.IsHitTestVisible = false;
+                AttachChild(_promptVisual);
+            }
+        }
+    }
 
     /// <summary>
     /// Called when the prompt is accepted.
@@ -842,19 +887,30 @@ public partial class PromptEditor : TextEditorBase
         var style = GetStyle<PromptEditorStyle>();
         var padding = style.Padding;
 
-        EnsurePromptCache(theme);
-
         _contentRect = new Rectangle(
             finalRect.X + padding.Left,
             finalRect.Y + padding.Top,
             Math.Max(0, finalRect.Width - padding.Horizontal),
             Math.Max(0, finalRect.Height - padding.Vertical));
 
+        EnsurePromptCache(theme);
+
+        if (_promptVisual is not null && _contentRect.Width > 0)
+        {
+            _promptVisual.Measure(new LayoutConstraints(0, _contentRect.Width, 0, 1));
+            _promptWidthCells = Math.Max(_promptWidthCells, _promptVisual.DesiredSize.Width);
+        }
+
         var promptWidth = Math.Clamp(_promptWidthCells, 0, _contentRect.Width);
         _promptRect = new Rectangle(_contentRect.X, _contentRect.Y, promptWidth, _contentRect.Height);
         _editorRect = new Rectangle(_contentRect.X + promptWidth, _contentRect.Y, Math.Max(0, _contentRect.Width - promptWidth), _contentRect.Height);
 
         UpdateEditorLayout(_editorRect);
+
+        if (_promptVisual is not null && promptWidth > 0)
+        {
+            _promptVisual.Arrange(new Rectangle(_promptRect.X, _promptRect.Y, promptWidth, 1));
+        }
     }
 
     /// <inheritdoc />
@@ -928,6 +984,11 @@ public partial class PromptEditor : TextEditorBase
 
             if (visualRow == 0)
             {
+                if (_promptVisual is not null)
+                {
+                    continue;
+                }
+
                 WriteMarkup(buffer, _promptRect.X, y, _cachedPromptText, _cachedPromptRuns, promptBaseStyle);
             }
             else if (!string.IsNullOrEmpty(_cachedContinuationPromptText))

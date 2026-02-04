@@ -16,7 +16,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
     public override Visual Build(DemoContext context)
     {
         var lastAccepted = new State<string>("(none)");
-        var promptCounter = 1;
+        var promptCounter = new State<int>(1);
 
         var help = new Markup("""
                               [bold green]PromptEditor[/] — prompt-style editor demo
@@ -29,8 +29,10 @@ public sealed class PromptEditorDemo : ControlsDemoBase
                                • Press [cyan]Enter[/] to accept; [cyan]Ctrl+J[/] inserts a newline; [cyan]Esc[/] cancels completion/prompt.
                               """);
 
+        var prompt = new Markup(() => $"[gray]{promptCounter.Value,3}[/] [primary]demo[/] [muted]>[/] ");
+
         var promptEditor = new PromptEditor()
-            .PromptMarkup(GetPromptMarkup())
+            .Prompt(prompt)
             .ContinuationPromptMarkup("[muted]·[/] ")
             .Placeholder("Type a command. Tab completes. Ctrl+J inserts a newline.")
             .EnableWordHints(false)
@@ -48,8 +50,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
             lastAccepted.Value = e.Text;
             context.Log($"Accepted: {e.Text}");
 
-            promptCounter++;
-            promptEditor.PromptMarkup(GetPromptMarkup());
+            promptCounter.Value++;
 
             // Clear the prompt after accepting so it feels like a terminal prompt.
             promptEditor.Text = string.Empty;
@@ -64,9 +65,6 @@ public sealed class PromptEditorDemo : ControlsDemoBase
                 new Rule(),
                 new CommandBar())
             .Spacing(1);
-
-        string GetPromptMarkup()
-            => $"[gray]{promptCounter,3}[/] [primary]demo[/] [muted]>[/] ";
 
         static PromptEditorCompletion Complete(in PromptEditorCompletionRequest request)
         {
