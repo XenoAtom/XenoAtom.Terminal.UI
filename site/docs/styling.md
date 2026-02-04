@@ -6,7 +6,7 @@ title: "Styling & Themes"
 
 XenoAtom.Terminal.UI uses a theme/style model built on ANSI colors and cell styling.
 
-![Rootloops](../img/controls/rootloops.png){.terminal}
+![Theming](../img/theming.png){.terminal}
 
 ## Theme
 
@@ -67,9 +67,11 @@ Schemes can be:
 
 XenoAtom.Terminal.UI ships with a set of curated color schemes generated with **Root Loops**:
 
-- Website: `https://rootloops.sh`
+- Website: https://rootloops.sh by Ham Vocke
 - Generator code: `ColorScheme.Generate(...)`
 - Predefined schemes: `ColorScheme.GetPredefinedSchemes()`
+
+![Rootloops](../img/controls/rootloops.png){.terminal}
 
 `Theme.Default` and `Theme.DefaultLight` are built from:
 
