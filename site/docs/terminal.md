@@ -76,6 +76,10 @@ Terminal behavior depends on the host (Windows Console vs terminal emulator vs C
 Terminal.WriteLine($"Ansi={Terminal.Capabilities.AnsiEnabled}, Color={Terminal.Capabilities.ColorLevel}");
 ```
 
+For terminal emulator recommendations and color troubleshooting (truecolor, tmux/SSH, WSL), see:
+
+- [Terminal Support](terminal-support.md)
+
 > [!TIP]
 > If you need deterministic behavior (e.g. tests), initialize Terminal with an explicit backend.
 

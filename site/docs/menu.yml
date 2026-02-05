@@ -3,6 +3,7 @@ doc:
   - {path: getting-started.md, title: "<i class='bi bi-rocket-takeoff' aria-hidden='true'></i> Getting Started"}
   - {path: foundations.md, title: "<i class='bi bi-diagram-3' aria-hidden='true'></i> Ecosystem"}
   - {path: terminal.md, title: "<i class='bi bi-terminal' aria-hidden='true'></i> XenoAtom.Terminal"}
+  - {path: terminal-support.md, title: "<i class='bi bi-life-preserver' aria-hidden='true'></i> Terminal Support"}
   - {path: ansi.md, title: "<i class='bi bi-code-slash' aria-hidden='true'></i> XenoAtom.Ansi"}
   - {path: markup.md, title: "<i class='bi bi-code-square' aria-hidden='true'></i> Markup"}
   - {path: demos.md, title: "<i class='bi bi-play-circle' aria-hidden='true'></i> Demos"}
