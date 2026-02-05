@@ -12,7 +12,7 @@ title: Getting Started
 ## Install
 
 ```bash
-dotnet add package XenoAtom.Terminal.UI
+dotnet add package XenoAtom.Terminal.UI --prerelease
 ```
 
 ## Your first visual
