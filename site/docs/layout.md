@@ -131,7 +131,7 @@ This is the classic pattern used by `Padder`, `Border`, and many content control
 ```csharp
 public sealed class PaddedContent : ContentVisual
 {
-    public Thickness Padding { get; set; } = new(1);
+    [Bindable] public Thickness Padding { get; set; } = new(1);
 
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
