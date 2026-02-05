@@ -36,7 +36,7 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
   - Built-in performance overlay (toggle with `F12`) to inspect frame timings, invalidation, and diff output
 - **Cross-platform + AOT-friendly**: `net10.0` and NativeAOT-oriented design (built on XenoAtom.Terminal)
 
-![XenoAtom.Terminal.UI Fullscreen Demo](https://raw.githubusercontent.com/XenoAtom/XenoAtom.Terminal.UI/main/site/theming.png)
+![XenoAtom.Terminal.UI Fullscreen Demo](https://raw.githubusercontent.com/XenoAtom/XenoAtom.Terminal.UI/main/site/img/theming.png)
 
 > [!NOTE]
 > XenoAtom.Terminal.UI depends on XenoAtom.Terminal. The two libraries are designed to be used together:
