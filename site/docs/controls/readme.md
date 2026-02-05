@@ -6,7 +6,7 @@ title: Controls Reference
 
 This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 
-![Welcome](../../img/controls/welcome.png){.terminal}
+![Welcome](../../img/controls/controls-demo.svg){.terminal}
 
 > [!NOTE]
 > Most pages include an auto-generated screenshot from `samples/ControlsDemo`.
