@@ -1,4 +1,3 @@
-using System.Security.Cryptography.X509Certificates;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
@@ -51,6 +50,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
                                • Press [cyan]Enter[/] to accept; [cyan]Ctrl+J[/] inserts a newline; [cyan]Esc[/] cancels completion/prompt.
                               """);
 
+        // Build the visual tree.
         var promptMarkup = new TextBox(promptMarkupText);
         var prompt = new ComputedVisual(() =>
         {
@@ -100,6 +100,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
         var checkedVisualGutter = new CheckBox("Visual Gutter").IsChecked(visualGutter);
         var configLine = new HStack(checkedVisualGutter, checkedAutoPrompt, "Prompt Markup:", promptMarkup, "Continuation Markup:", continuationMarkup).Spacing(1);
         
+        // Callbacks (accept/cancel/completion/highlighting).
         promptEditor.Accepted((_, e) =>
         {
             lastAccepted.Value = e.Text;
@@ -123,7 +124,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
                 new CommandBar())
             .Spacing(1);
 
-        static PromptEditorCompletion Complete(in PromptEditorCompletionRequest request)
+        PromptEditorCompletion Complete(in PromptEditorCompletionRequest request)
         {
             var text = SnapshotToString(request.Snapshot);
             var caret = Math.Clamp(request.CaretIndex, 0, text.Length);
@@ -131,15 +132,14 @@ public sealed class PromptEditorDemo : ControlsDemoBase
             var start = GetCommandWordStart(text.AsSpan(), caret);
             var prefix = text.AsSpan(start, caret - start).ToString();
 
-            var commandList = new[] { "/help", "/clear", "/exit", "/open", "/theme", "/build", "/run", "/search", "/grep", "/status" };
-            var candidates = new List<string>(commandList.Length);
+            var candidates = new List<string>(commands.Length);
             if (prefix.StartsWith("/", StringComparison.Ordinal))
             {
-                foreach (var c in commandList)
+                foreach (var c in commands)
                 {
-                    if (prefix.Length == 0 || c.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    if (prefix.Length == 0 || c.Command.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                     {
-                        candidates.Add(c);
+                        candidates.Add(c.Command);
                     }
                 }
             }
@@ -233,7 +233,6 @@ public sealed class PromptEditorDemo : ControlsDemoBase
             var chipBg = (accent ?? XenoAtom.Terminal.UI.Color.Default).WithAlpha(0x22);
             var chipBgActive = (accent ?? XenoAtom.Terminal.UI.Color.Default).WithAlpha(0x38);
 
-            var prefixLen = prefixText.Length;
             var chipVisuals = new List<Visual>(Math.Min(matches.Count, 10) + 1)
             {
                 new Markup("[dim]Commands:[/]")
