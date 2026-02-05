@@ -23,6 +23,21 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
     private bool _touchedDuringInitialization;
 
     /// <summary>
+    /// Initializes a new instance of the BindableList class, optionally assigning a name to the list for identification
+    /// purposes.
+    /// </summary>
+    /// <remarks>The name parameter can be used to distinguish between multiple BindableList instances,
+    /// especially when binding or tracking lists in data-driven scenarios. If a name is not provided, a unique
+    /// identifier ensures that each list remains distinct.</remarks>
+    /// <param name="name">An optional name used to identify the list. If null, a unique identifier is generated automatically.</param>
+    public BindableList(string? name = null)
+    {
+        _owner = this;
+        _accessor = new ListBindingAccessor(string.Intern("$list$" + (name ?? Guid.NewGuid().ToString("N"))));
+        _items = new List<T>();
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="BindableList{T}"/> class.
     /// </summary>
     /// <param name="owner">The object that owns this list (used for dependency tracking).</param>
