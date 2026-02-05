@@ -781,6 +781,15 @@ li.toc-list-item {
     background-color: rgba(var(--xenoatom-color-foreground-rgb), 0.26);
 }
 
+.xenoatom-docs ol.breadcrumb :first-child a::before {
+    // This is a hack, ideally that should be part of the menu.yml
+    // but Home is special as it does not have a menu referencing it, so it cannot set itself an icon
+    // Solution will be to tag a particular item in menu.yml as the "home" or "self" of the menu
+    @extend .bi;
+    @extend .bi-house-door;
+    padding-right: 0.4em;
+}
+
 .xenoatom-docs .js-toc {
     //max-height: 50vh;
     // border-left-width: 1px;

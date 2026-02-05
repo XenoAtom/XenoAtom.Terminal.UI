@@ -1,5 +1,5 @@
 ---
-title: Website (lunet) Contribution Instructions
+discard: true # Disable this page for website generation
 ---
 
 # Website (lunet) Contribution Instructions
