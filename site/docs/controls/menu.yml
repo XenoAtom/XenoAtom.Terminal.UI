@@ -23,6 +23,7 @@ controls:
   - {path: selectionlist.md, title: SelectionList}
   - {path: select.md, title: Select}
   - {path: treeview.md, title: TreeView}
+  - {path: slider.md, title: Slider}
 
   - {title: "<i class='bi bi-layout-split xenoatom-icon xenoatom-icon--layout' aria-hidden='true'></i> Layout & containers", separator: true}
   - {path: vstack.md, title: VStack}

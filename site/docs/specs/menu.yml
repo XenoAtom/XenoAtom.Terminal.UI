@@ -1,6 +1,6 @@
 specs:
   - {path: readme.md, title: "<i class='bi bi-journal-code' aria-hidden='true'></i> Specs Index"}
-  - {path: controls/readme.md, title: "<i class='bi bi-ui-checks' aria-hidden='true'></i> Control Specs"}
+  - {path: controls/readme.md, title: "<i class='bi bi-ui-checks' aria-hidden='true'></i> Control Specs", folder: true}
   - {path: controls_todo.md, title: "<i class='bi bi-check2-square' aria-hidden='true'></i> Controls Roadmap"}
 
   - {path: binding_dirty_model_specs.md, title: "<i class='bi bi-link-45deg' aria-hidden='true'></i> Binding Dirty Model"}
@@ -12,4 +12,4 @@ specs:
   - {path: undo_redo_specs.md, title: "<i class='bi bi-arrow-counterclockwise' aria-hidden='true'></i> Undo/Redo"}
 
   - {path: controls_demo_specs.md, title: "<i class='bi bi-controller' aria-hidden='true'></i> Controls Demo"}
-  - {path: archive/readme.md, title: "<i class='bi bi-archive' aria-hidden='true'></i> Archive"}
+  - {path: archive/readme.md, title: "<i class='bi bi-archive' aria-hidden='true'></i> Archive", folder: true}

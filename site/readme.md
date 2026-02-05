@@ -119,17 +119,17 @@ og_type: website
       </p>
       <div class="d-flex flex-wrap align-items-center gap-4 mt-3 mb-3">
         <div class="d-flex align-items-center gap-2">
-          <img src="/img/xenoatom-terminal.svg" alt="XenoAtom.Terminal" width="56" height="56" loading="lazy">
+          <img src="{{site.basepath}}/img/xenoatom-terminal.svg" alt="XenoAtom.Terminal" width="56" height="56" loading="lazy">
           <span class="fw-semibold">XenoAtom.Terminal</span>
         </div>
         <i class="bi bi-plus text-secondary" aria-hidden="true"></i>
         <div class="d-flex align-items-center gap-2">
-          <img src="/img/xenoatom-logo.png" alt="XenoAtom.Terminal.UI" width="56" height="56" loading="lazy">
+          <img src="{{site.basepath}}/img/xenoatom-logo.png" alt="XenoAtom.Terminal.UI" width="56" height="56" loading="lazy">
           <span class="fw-semibold">XenoAtom.Terminal.UI</span>
         </div>
         <i class="bi bi-plus text-secondary" aria-hidden="true"></i>
         <div class="d-flex align-items-center gap-2">
-          <img src="/img/xenoatom-ansi.svg" alt="XenoAtom.Ansi" width="56" height="56" loading="lazy">
+          <img src="{{site.basepath}}/img/xenoatom-ansi.svg" alt="XenoAtom.Ansi" width="56" height="56" loading="lazy">
           <span class="fw-semibold">XenoAtom.Ansi</span>
         </div>
       </div>

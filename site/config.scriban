@@ -4,13 +4,9 @@ title = "XenoAtom.Terminal.UI"
 description = "A modern, reactive retained-mode terminal UI framework for .NET."
 
 baseurl = baseurl ?? "https://xenoatom.github.io"
-if environment == "dev"
-    basepath = ""
-else
-    basepath = "/terminal"
-end
+basepath = "/terminal"
 
-# log.info $"Base URL: { baseurl }{ basepath } <- Environment: { environment }"
+log.info $"Base URL: { baseurl }{ basepath } <- Environment: { environment }"
 
 # Use `base` as a default layout
 layout = "base"

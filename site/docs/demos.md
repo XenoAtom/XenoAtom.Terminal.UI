@@ -10,7 +10,7 @@ XenoAtom.Terminal.UI comes with a few runnable demos that showcase different par
 
 ## ControlsDemo
 
-![ControlsDemo (welcome screen)](../img/controls/welcome.png){.terminal}
+![ControlsDemo (welcome screen)](../img/controls/controls-demo.svg){.terminal}
 
 The ControlsDemo is the “living catalog” of the library:
 

@@ -22,5 +22,5 @@ doc:
   - {path: hosting.md, title: "<i class='bi bi-plug' aria-hidden='true'></i> Hosting"}
   - {path: prompts.md, title: "<i class='bi bi-chat-left-text' aria-hidden='true'></i> Prompts"}
   - {path: control-development.md, title: "<i class='bi bi-tools' aria-hidden='true'></i> Control Development"}
-  - {path: controls/readme.md, title: "<i class='bi bi-ui-checks-grid' aria-hidden='true'></i> Controls Reference"}
-  - {path: specs/readme.md, title: "<i class='bi bi-journal-code' aria-hidden='true'></i> Specs & Design Notes"}
+  #- {path: controls/readme.md, title: "<i class='bi bi-ui-checks-grid' aria-hidden='true'></i> Controls Reference"}
+  #- {path: specs/readme.md, title: "<i class='bi bi-journal-code' aria-hidden='true'></i> Specs & Design Notes", folder: true}

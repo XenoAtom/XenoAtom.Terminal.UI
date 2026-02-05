@@ -3,22 +3,10 @@ layout: base
 ---
 <div class="container-xxl">
   {{~
-    url = page.url_without_basepath ?? ""
-    menu_key = "doc"
-    if url | string.starts_with "/docs/controls"
-      menu_key = "controls"
-    else if url | string.starts_with "/docs/specs"
-      menu_key = "specs"
-      if url | string.starts_with "/docs/specs/controls"
-        menu_key = "specs_controls"
-      else if url | string.starts_with "/docs/specs/archive"
-        menu_key = "specs_archive"
-      end
+    menu = page.menu
+    if menu == null
+        log.error $"The page {page.path} is not part of a menu"
     end
-    menu = site.menu[menu_key] ?? site.menu.doc
-    # The root docs menu is a flat list; avoid Bootstrap collapse so the sidebar never measures to 0 height.
-    # Nested menus (controls/specs) keep collapsible behavior.
-    menu_collapsible = menu_key != "doc"
   ~}}
   <div class="row">
       <!-- Left sidebar - responsive offcanvas (offcanvas on mobile, visible sidebar on md+) -->
@@ -28,7 +16,7 @@ layout: base
           <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#docs-sidebar-menu" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body">
-          {{ menu.render { kind: "menu",  collapsible: menu_collapsible } }}
+          {{ if menu != null; menu.render { kind: "menu",  collapsible: true, depth: 2  }; end }}
         </div>
       </nav>
       <!-- Right sidebar (TOC) - collapsible on mobile, visible sidebar on xxl+ -->
@@ -38,18 +26,7 @@ layout: base
       </aside>
       <!-- Main content column -->
       <div class="col-12 col-md-9 col-xxl-8 order-2 order-md-1 js-toc-content">
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a class="breadcrumb-link" href="/">Home</a></li>
-          {{~ if url | string.starts_with "/docs" ~}}
-          <li class="breadcrumb-item"><a class="breadcrumb-link" href="/docs/">Docs</a></li>
-            {{~ if url | string.starts_with "/docs/controls" ~}}
-          <li class="breadcrumb-item"><a class="breadcrumb-link" href="/docs/controls/">Controls</a></li>
-            {{~ else if url | string.starts_with "/docs/specs" ~}}
-          <li class="breadcrumb-item"><a class="breadcrumb-link" href="/docs/specs/">Specs</a></li>
-            {{~ end ~}}
-          {{~ end ~}}
-          <li class="breadcrumb-item active">{{ page.title }}</li>
-        </ol>
+        {{ if menu != null; menu.breadcrumb; end }}
         <p id="lunet-results"></p>
         <!-- Toggle buttons visible only on small screens -->
         <div class="d-md-none mb-3">

@@ -89,7 +89,7 @@ $xenoatom-code-selection-bg: mix(#ffffff, $xenoatom-background, 20%);
 
 @font-face {
     font-family: 'Figtree';
-    src: url('/fonts/Figtree-VariableFont_wght.ttf') format('truetype');
+    src: url('../fonts/Figtree-VariableFont_wght.ttf') format('truetype');
 
     font-weight: 100 900;
     font-style: normal;
@@ -544,10 +544,10 @@ button.copy-to-clipboard-button[data-copy-state="copy-error"] > span {
     color: currentColor;
 }
 
-#xenoatom li.nav-item.active a.nav-link {
+#xenoatom li.nav-item.active {
     // use text-shadow instead of font-weight to avoid resize of container and shift of the following menu items
     //text-shadow: 0px 0px 1px $body-color-bold-shadow;
-    border-bottom-color: red;
+    border-bottom-color: var(--xenoatom-color-blue);
     border-bottom-style: solid;
 }
 
@@ -632,17 +632,13 @@ footer {
 }
 
 .xenoatom-docs a.menu-link-show::before {
-    content: '\276F';
-    display: inline-block;
-    transform: translateY(3px) rotate(90deg);
-    transition: transform 0.2s;
+    @extend .bi;
+    @extend .bi-chevron-right;
 }
 
 .xenoatom-docs a.menu-link-show.collapsed::before {
-    display: inline-block;
-    content: '\276F';
-    transform: translateY(2px) rotate(0deg);
-    transition: transform 0.2s;
+    @extend .bi;
+    @extend .bi-chevron-right;
 }
 
 .xenoatom-docs ol.menu ol.menu  {

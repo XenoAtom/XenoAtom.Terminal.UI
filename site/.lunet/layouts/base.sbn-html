@@ -2,7 +2,7 @@
 layout: _default
 ---
 {{~
-  path0 = (page.url | string.downcase | string.split '/')[0] ?? "home" ## first part of the url ##
+  path0 = (page.url_without_basepath | string.downcase | string.split '/')[0] ?? "home" ## first part of the url ##
   case path0
     when 'home', 'docs', 'banner'
       pathclass = 'xenoatom-' + path0
@@ -12,7 +12,7 @@ layout: _default
 ~}}
     <div id="xenoatom" class="container">
       <nav class="navbar navbar-expand-md navbar-light {{ path0 == "home" ? "" : "sticky-top" }}">
-        <a class="navbar-brand" href="/">
+        <a class="navbar-brand" href="{{site.basepath}}/">
           <img class="xenoatom-logo" src="{{site.basepath}}/img/xenoatom-logo.png" alt="" width="96" height="96">
           <span class="visually-hidden">Home</span>
         </a>
