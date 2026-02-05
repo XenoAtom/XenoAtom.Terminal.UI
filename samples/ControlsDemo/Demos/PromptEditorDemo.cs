@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
@@ -20,6 +21,10 @@ public sealed class PromptEditorDemo : ControlsDemoBase
         var lastAccepted = new State<string>("(none)");
         var promptCounter = new State<int>(1);
         var inputText = new State<string?>(string.Empty);
+        var promptMarkupText = new State<string?>(">");
+        var continuationMarkupText = new State<string?>("[dim].[/]");
+        var autoPrompt = new State<bool>(false);
+        var visualGutter = new State<bool>(false);
 
         var commands = new PromptCommand[]
         {
@@ -46,11 +51,23 @@ public sealed class PromptEditorDemo : ControlsDemoBase
                                • Press [cyan]Enter[/] to accept; [cyan]Ctrl+J[/] inserts a newline; [cyan]Esc[/] cancels completion/prompt.
                               """);
 
-        var prompt = new Markup(() => $"[gray]{promptCounter.Value,3}[/] [primary]demo[/] [dim]>[/]");
+        var promptMarkup = new TextBox(promptMarkupText);
+        var prompt = new ComputedVisual(() =>
+        {
+            promptMarkup.IsEnabled = !autoPrompt.Value;
+            if (autoPrompt.Value)
+            {
+                return new Markup(() => $"[gray]{promptCounter.Value,3}[/] [primary]demo[/] [dim]>[/]");
+            }
+            else
+            {
+                return new Markup(promptMarkupText.Value ?? string.Empty);
+            }
+        });
 
         var promptEditor = new PromptEditor()
             .Prompt(prompt)
-            .ContinuationPromptMarkup("[dim]·[/] ")
+            .ContinuationPromptMarkup(continuationMarkupText)
             .Text(inputText)
             .Placeholder("Type a command. Tab completes. Ctrl+J inserts a newline.")
             .EnableWordHints(false)
@@ -61,10 +78,28 @@ public sealed class PromptEditorDemo : ControlsDemoBase
             .MinHeight(6)
             .MaxHeight(6);
 
+        promptEditor.Update(_ =>
+            {
+                if (visualGutter.Value)
+                {
+                    promptEditor.Style(PromptEditorStyle.Default);
+                }
+                else
+                {
+                    promptEditor.Style(PromptEditorStyle.Default with { ShowPromptSeparator = false });
+                }
+            });
+
         var editor = promptEditor.Scrollable();
         ComputedVisual? suggestionBar = null;
         suggestionBar = new ComputedVisual(() => BuildCommandSuggestionBar(inputText.Value, commands, suggestionBar!.GetTheme()));
 
+
+        var checkedAutoPrompt = new CheckBox("Auto Prompt").IsChecked(autoPrompt);
+        var continuationMarkup = new TextBox(continuationMarkupText);
+        var checkedVisualGutter = new CheckBox("Visual Gutter").IsChecked(visualGutter);
+        var configLine = new HStack(checkedVisualGutter, checkedAutoPrompt, "Prompt Markup:", promptMarkup, "Continuation Markup:", continuationMarkup).Spacing(1);
+        
         promptEditor.Accepted((_, e) =>
         {
             lastAccepted.Value = e.Text;
@@ -82,6 +117,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
                 help,
                 editor,
                 suggestionBar,
+                configLine,
                 new TextBlock(() => $"Last accepted: {lastAccepted.Value}"),
                 new Rule(),
                 new CommandBar())
