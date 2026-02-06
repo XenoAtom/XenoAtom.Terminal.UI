@@ -40,6 +40,17 @@ public sealed class MenuBarDemo : ControlsDemoBase
         var file = new MenuItem("File")
             .Items(
                 new MenuItem("Open", openCommand),
+                new MenuItem("Recent")
+                    .Items(
+                        new MenuItem("Workspaces")
+                            .Items(
+                                new MenuItem("XenoAtom.Terminal.UI", () => status.Value = "open recent: ui"),
+                                new MenuItem("XenoAtom.Terminal", () => status.Value = "open recent: terminal"),
+                                new MenuItem("XenoAtom.Ansi", () => status.Value = "open recent: ansi")),
+                        new MenuItem("Demos")
+                            .Items(
+                                new MenuItem("ControlsDemo", () => status.Value = "open recent: controls demo"),
+                                new MenuItem("FullscreenDemo", () => status.Value = "open recent: fullscreen demo"))),
                 MenuItem.Separator(),
                 new MenuItem("Reset status", () => status.Value = "ready"));
 
@@ -50,7 +61,7 @@ public sealed class MenuBarDemo : ControlsDemoBase
 
         return new VStack(
                 DemoUi.Title("MenuBar"),
-                new TextBlock("Use Tab to focus the menu bar, then Enter/Down to open. Use arrow keys to navigate and Enter to activate.")
+                new TextBlock("Use Tab to focus the menu bar, then Enter/Down to open. Navigate nested menus with Right/Left arrows and activate with Enter.")
                     .Wrap(true),
                 new CheckBox("Open enabled").IsChecked(openEnabled),
                 menuBar,
