@@ -103,12 +103,21 @@ void ShowModalDialog()
         .Padding(1)
         .Width(64)
         .Content(content);
+    dialog.KeyDown((_, e) =>
+    {
+        if (e.Key == TerminalKey.Escape)
+        {
+            dialog.Close();
+            e.Handled = true;
+        }
+    });
 
     dialog.Show();
 }
 
 Popup? popup = null;
 Button? popupButton = null;
+Dialog? backdropDialog = null;
 
 void TogglePopup(Visual? anchor = null)
 {
@@ -140,6 +149,67 @@ void TogglePopup(Visual? anchor = null)
 
     popup.Closed((_, _) => popup = null);
     popup.Show();
+}
+
+void ShowBackdropDialog()
+{
+    if (backdropDialog is { App: not null })
+    {
+        return;
+    }
+
+    Dialog? dialog = null;
+    dialog = new Dialog
+    {
+        IsModal = true,
+        Width = 56,
+        Height = 8,
+        Title = new TextBlock("Backdrop"),
+        Content = new VStack(
+                new TextBlock("This is the Backdrop control (RGBA dim surface).").Wrap(true),
+                new TextBlock("Drag this dialog by its title bar.").Wrap(true),
+                new HStack(
+                        new Button("Close").Click(() => SetBackdropVisible(false)),
+                        new TextBlock("Use Esc or click to continue."))
+                    .Spacing(1))
+            .Spacing(1),
+    };
+    dialog.KeyDown((_, e) =>
+    {
+        if (e.Key == TerminalKey.Escape)
+        {
+            SetBackdropVisible(false);
+            e.Handled = true;
+        }
+    });
+
+    backdropDialog = dialog;
+    dialog.Show();
+}
+
+void SetBackdropVisible(bool isVisible)
+{
+    if (!isVisible)
+    {
+        showBackdrop.Value = false;
+        if (backdropDialog is not null)
+        {
+            var dialog = backdropDialog;
+            backdropDialog = null;
+            dialog.Close();
+        }
+        return;
+    }
+
+    showBackdrop.Value = true;
+    ShowBackdropDialog();
+}
+
+void ToggleBackdrop()
+{
+    var next = !showBackdrop.Value;
+    SetBackdropVisible(next);
+    PushStatus($"Backdrop: {(next ? "On" : "Off")}");
 }
 
 void ExportSvg()
@@ -208,11 +278,7 @@ Visual BuildDashboard()
         .Click(() => toastHost.Show(new Markup("[success]Hello from ToastHost[/]") { Wrap = false }, ToastSeverity.Success));
 
     var backdropButton = new Button("Backdrop")
-        .Click(() =>
-        {
-            showBackdrop.Value = !showBackdrop.Value;
-            PushStatus($"Backdrop: {(showBackdrop.Value ? "On" : "Off")}");
-        });
+        .Click(ToggleBackdrop);
 
     // TextArea + SearchReplacePopup (Find/Replace).
     var textArea = new TextArea()
@@ -529,7 +595,7 @@ Visual BuildDashboard()
                 new("Copy status", () => v.App?.Terminal.Clipboard.TrySetText(status.Value)) { Shortcut = "Ctrl+C" },
                 new("Toast: success", () => toastHost.Show(new Markup("[success]Success![/]") { Wrap = false }, ToastSeverity.Success)),
                 MenuItem.CreateSeparator(),
-                new("Toggle Backdrop", () => showBackdrop.Value = !showBackdrop.Value),
+                new("Toggle Backdrop", ToggleBackdrop),
             };
 
             _ = ContextMenuService.Show(v, items, e.UiX, e.UiY);
@@ -811,7 +877,7 @@ Visual BuildDashboard()
     menuFile.Items.Add(new MenuItem("Popup", () => TogglePopup(popupButton)));
     menuFile.Items.Add(new MenuItem("Export SVG", ExportSvg) { Shortcut = "F8" });
     menuFile.Items.Add(MenuItem.CreateSeparator());
-    menuFile.Items.Add(new MenuItem("Toggle Backdrop", () => showBackdrop.Value = !showBackdrop.Value));
+    menuFile.Items.Add(new MenuItem("Toggle Backdrop", ToggleBackdrop));
     menuFile.Items.Add(new MenuItem("Toast", () => toastHost.Show(new Markup("[success]Hello![/]") { Wrap = false }, ToastSeverity.Success)));
     menu.Items.Add(menuFile);
 
@@ -847,23 +913,7 @@ Visual BuildDashboard()
                     return null;
                 }
 
-                return new ZStack(
-                    new Backdrop().IsEnabled(false),
-                    new Dialog
-                    {
-                        IsModal = false,
-                        Width = 56,
-                        Height = 8,
-                        Title = new TextBlock("Backdrop"),
-                        Content = new VStack(
-                                new TextBlock("This is the Backdrop control (RGBA dim surface).").Wrap(true),
-                                new TextBlock("Drag this dialog by its title bar.").Wrap(true),
-                                new HStack(
-                                        new Button("Close").Click(() => showBackdrop.Value = false),
-                                        new TextBlock("Use Esc or click to continue."))
-                                    .Spacing(1))
-                            .Spacing(1),
-                    });
+                return new Backdrop().IsEnabled(false);
             })))
         .Bottom(new VStack(new CommandBar(), footer).Spacing(0));
 
@@ -921,7 +971,7 @@ toastHost.AddCommand(new Command
     DescriptionMarkup = "Show/hide the Backdrop overlay.",
     Importance = CommandImportance.Secondary,
     Presentation = CommandPresentation.CommandPalette,
-    Execute = _ => showBackdrop.Value = !showBackdrop.Value,
+    Execute = _ => ToggleBackdrop(),
 });
 
 toastHost.AddCommand(new Command
