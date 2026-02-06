@@ -27,11 +27,6 @@ public sealed record BackdropStyle : IStyle<BackdropStyle>
     public static StyleKey<BackdropStyle> Key { get; } = new("BackdropStyle", Default);
 
     /// <summary>
-    /// Gets the rune used to fill the backdrop.
-    /// </summary>
-    public Rune FillRune { get; init; } = new(' ');
-
-    /// <summary>
     /// Gets a value indicating whether the rendered fill uses a dim text attribute.
     /// </summary>
     /// <remarks>
@@ -43,8 +38,7 @@ public sealed record BackdropStyle : IStyle<BackdropStyle>
     /// Gets a value indicating whether the backdrop should use <see cref="Theme.Background"/> as fill background.
     /// </summary>
     /// <remarks>
-    /// When <see langword="false"/>, the default implementation uses <see cref="Theme.Disabled"/> as the backdrop background,
-    /// which is appropriate for dimming behind modal dialogs.
+    /// When <see langword="false"/>, the default implementation uses a very low-alpha dark tint to keep modal dimming subtle.
     /// </remarks>
     public bool UseThemeBackground { get; init; }
 
@@ -73,7 +67,15 @@ public sealed record BackdropStyle : IStyle<BackdropStyle>
         var bg = Background;
         if (bg is null)
         {
-            bg = UseThemeBackground ? theme.Background : theme.Disabled;
+            if (UseThemeBackground)
+            {
+                bg = theme.Background;
+            }
+            else
+            {
+                // Keep default dimming intentionally subtle and neutral.
+                bg = Color.RgbA(0, 0, 0, 0xa0);
+            }
         }
 
         if (bg is { } bgc)

@@ -47,13 +47,13 @@ public sealed partial class Backdrop : Visual
         var theme = GetTheme();
         var backdropStyle = GetStyle<BackdropStyle>();
         var style = backdropStyle.Resolve(theme);
-        var rune = backdropStyle.FillRune;
 
         for (var y = rect.Y; y < rect.Y + rect.Height; y++)
         {
             for (var x = rect.X; x < rect.X + rect.Width; x++)
             {
-                buffer.SetCell(x, y, rune, style);
+                // Backdrop intentionally preserves underlying glyphs and hyperlinks and only overlays style.
+                buffer.OverlayCellStyle(x, y, style);
             }
         }
     }

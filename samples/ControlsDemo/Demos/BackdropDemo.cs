@@ -1,5 +1,6 @@
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
@@ -14,26 +15,46 @@ public sealed class BackdropDemo : ControlsDemoBase
     {
         _ = context;
 
-        // Backdrop is usually placed behind a dialog/popup.
+        var actions = new OptionList<OptionListItem>().ActivateOnClick(true);
+        actions.Items.Add(new OptionListItem("Build", "Ctrl+B"));
+        actions.Items.Add(new OptionListItem("Run", "F5"));
+        actions.Items.Add(new OptionListItem("Test", "Ctrl+T"));
+        actions.Items.Add(new OptionListItem("Publish", "Ctrl+P"));
+
+        var backgroundContent = new Group("Behind")
+            .Content(new VStack(
+                "Background content (will be dimmed by Backdrop)",
+                new HStack(new Button("Success").Tone(ControlTone.Success), new Button("Secondary").Tone(ControlTone.Warning)).Spacing(1),
+                new TextBox().Text("Search + filters..."),
+                actions).Spacing(1))
+            .Padding(1).Stretch();
+
+        var dialog = new Dialog()
+            .Title("Foreground dialog")
+            .Content(new VStack(
+                    "This dialog is rendered above the Backdrop.",
+                    "The backdrop is only a subtle dim layer over background content.",
+                    new Button("Close"))
+                .Spacing(1));
+
+        var showBackdrop = new State<bool>(true);
+
+        var layeredScene = new Border(
+                new ZStack(
+                    backgroundContent,
+                    new Backdrop().IsVisible(showBackdrop),
+                    dialog)
+            )
+            .MinWidth(70)
+            .MaxWidth(70)
+            .MinHeight(20)
+            .MaxHeight(20);
+
+
+        // Layering: background content -> backdrop -> foreground dialog.
         return new VStack(
-                DemoUi.Hint("Backdrop fills the viewport with a dimmed style to separate overlays from background content."),
-                new Border(
-                        new ZStack(
-                                new Backdrop(),
-                                new Center()
-                                    .Content(
-                                        new Dialog()
-                                            .Title("Modal dialog")
-                                            .Content(new VStack(
-                                                    "This dialog is drawn above a Backdrop.",
-                                                    "Backdrop helps readability by dimming what's behind.",
-                                                    new Button("Close"))
-                                                .Spacing(1)))))
-                    .MinWidth(54)
-                    .MaxWidth(54)
-                    .MinHeight(12)
-                    .MaxHeight(12)
-                    .Padding(1))
-            .Spacing(1);
+            DemoUi.Hint("Backdrop renders between background content and foreground overlays to improve readability."),
+            new CheckBox().Text("Show Backdrop").IsChecked(showBackdrop),
+            layeredScene).Spacing(1);
     }
 }

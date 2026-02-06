@@ -246,6 +246,32 @@ public sealed class CellBuffer
         }
     }
 
+    /// <summary>
+    /// Overlays a style on an existing cell while preserving its glyph and hyperlink.
+    /// </summary>
+    /// <param name="x">The x coordinate (column).</param>
+    /// <param name="y">The y coordinate (row).</param>
+    /// <param name="style">The style to overlay.</param>
+    public void OverlayCellStyle(int x, int y, Style style)
+    {
+        if ((uint)x >= (uint)Width || (uint)y >= (uint)Height || !_clipRect.Contains(x, y))
+        {
+            return;
+        }
+
+        var index = (y * Width) + x;
+        var under = _cells[index];
+        var underNoContinuation = under.WithoutContinuation();
+        var overlayNoContinuation = style.WithoutContinuation();
+        var mergedStyle = ApplyAlphaBlending(overlayNoContinuation.MergeUnspecified(underNoContinuation), overlayNoContinuation, underNoContinuation);
+        if (under.IsContinuation)
+        {
+            mergedStyle = mergedStyle.WithContinuation();
+        }
+
+        _cells[index] = mergedStyle;
+    }
+
     internal bool TryGetTextElement(int token, out string text, out int width)
     {
         if (token >= 0 || _textElementTable is null || !_textElementTable.TryGetValue(token, out var entry))

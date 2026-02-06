@@ -69,5 +69,36 @@ public sealed class BackdropStyleTests
         Assert.IsTrue(cells[0].TryGetForeground(out var fg));
         Assert.AreNotEqual(red, fg);
     }
+
+    [TestMethod]
+    public void Backdrop_Default_Uses_Darker_Alpha_Background()
+    {
+        var theme = Theme.FromScheme(ColorScheme.RootLoopsDark with { Name = "Test" });
+        var style = BackdropStyle.Default.Resolve(theme);
+
+        Assert.IsTrue(style.TryGetBackground(out var background), "Backdrop should define a background color.");
+        Assert.AreEqual(ColorKind.RgbA, background.Kind, "Backdrop default background should use alpha.");
+        Assert.AreEqual(0xA0, background.A, "Backdrop default alpha should match the intended darker dimming.");
+    }
+
+    [TestMethod]
+    public void Backdrop_Preserves_Underlay_Glyph()
+    {
+        var theme = Theme.FromScheme(ColorScheme.RootLoopsDark with { Name = "Test" });
+        var buffer = new CellBuffer(1, 1);
+        buffer.Clear();
+        buffer.SetCell(0, 0, new Rune('X'), Style.None.WithForeground(Color.Basic16(2)));
+
+        var backdrop = new Backdrop()
+            .Style(theme)
+            .Style(BackdropStyle.Default);
+
+        backdrop.Measure(new Size(1, 1));
+        backdrop.Arrange(new Rectangle(0, 0, 1, 1));
+        typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(backdrop, new object[] { buffer });
+
+        var scalars = (int[])typeof(CellBuffer).GetField("_scalars", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
+        Assert.AreEqual('X', scalars[0], "Backdrop should preserve underlay glyphs.");
+    }
 }
 
