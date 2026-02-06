@@ -75,11 +75,13 @@ Most pointer events use `Preview | Bubble` so both patterns are possible.
 
 Routed event args derive from `RoutedEventArgs` and include:
 
-- `Handled`: when set, routing stops.
+- `Handled`: marks the event as consumed for regular handlers.
 - `OriginalSource`: the visual where the event started.
 - `Source`: the current visual during routing.
+- `RoutingPhase`: the current phase (`Direct`, `Preview`, `Bubble`).
 
 Containers should set `Handled = true` when they fully consume an input gesture.
+Regular routed handlers are skipped after an event is marked handled, but handlers registered with `handledEventsToo: true` still run.
 
 ### Where input is handled
 
@@ -94,6 +96,20 @@ Every `Visual` can participate in routed events by overriding the protected virt
 - `OnPointerWheel(PointerEventArgs e)`
 
 These methods are themselves routed-event dispatch points (they are annotated with `[RoutedEvent]` and wired by the source generator).
+
+For events declared as `Preview | Bubble`, each handler can check `e.RoutingPhase` to run logic only during the intended pass:
+
+```csharp
+protected override void OnPointerPressed(PointerEventArgs e)
+{
+    if (e.RoutingPhase != RoutingPhase.Bubble)
+    {
+        return;
+    }
+
+    // Bubble-only behavior here.
+}
+```
 
 ### Disabled visuals and routing
 
@@ -165,6 +181,12 @@ public sealed partial class FancyButton : ContentVisual
 
 > [!IMPORTANT]
 > The routed event system is also used for framework events like `Visual.PointerPressedEvent`. Overriding the virtual method is often the simplest way to handle input inside a control.
+
+If you need to observe an event even after descendants mark it handled, register directly with:
+
+```csharp
+AddHandler(PointerWheelEvent, OnWheelObserved, handledEventsToo: true);
+```
 
 ## Hit testing and pointer coordinates
 

@@ -31,6 +31,7 @@ namespace XenoAtom.Terminal.UI;
 public abstract partial class Visual : DispatcherObject, IVisualElement
 {
     private Dictionary<object, Delegate?>? _handlers;
+    private Dictionary<object, Delegate?>? _handledEventHandlers;
     private BindableList<Command>? _commands;
     internal Dictionary<object, object?>? StyleEnvironment;
     private List<Action<Visual>>? _dynamicUpdates;
@@ -1461,19 +1462,32 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// <param name="handler">The handler to add.</param>
     protected void AddHandler<TArgs>(RoutedEvent<TArgs> routedEvent, EventHandler<TArgs> handler)
         where TArgs : EventArgs
+        => AddHandler(routedEvent, handler, handledEventsToo: false);
+
+    /// <summary>
+    /// Registers a handler for a routed event on this visual.
+    /// </summary>
+    /// <typeparam name="TArgs">The routed event args type.</typeparam>
+    /// <param name="routedEvent">The routed event identifier.</param>
+    /// <param name="handler">The handler to add.</param>
+    /// <param name="handledEventsToo">When <see langword="true"/>, invokes the handler even after the event has been marked handled.</param>
+    protected void AddHandler<TArgs>(RoutedEvent<TArgs> routedEvent, EventHandler<TArgs> handler, bool handledEventsToo)
+        where TArgs : EventArgs
     {
         ArgumentNullException.ThrowIfNull(routedEvent);
         ArgumentNullException.ThrowIfNull(handler);
 
-        _handlers ??= new Dictionary<object, Delegate?>();
+        var handlers = handledEventsToo
+            ? _handledEventHandlers ??= new Dictionary<object, Delegate?>()
+            : _handlers ??= new Dictionary<object, Delegate?>();
 
-        if (_handlers.TryGetValue(routedEvent, out var existing))
+        if (handlers.TryGetValue(routedEvent, out var existing))
         {
-            _handlers[routedEvent] = Delegate.Combine(existing, handler);
+            handlers[routedEvent] = Delegate.Combine(existing, handler);
         }
         else
         {
-            _handlers.Add(routedEvent, handler);
+            handlers.Add(routedEvent, handler);
         }
     }
 
@@ -1485,16 +1499,28 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// <param name="handler">The handler to remove.</param>
     protected void RemoveHandler<TArgs>(RoutedEvent<TArgs> routedEvent, EventHandler<TArgs> handler)
         where TArgs : EventArgs
+        => RemoveHandler(routedEvent, handler, handledEventsToo: false);
+
+    /// <summary>
+    /// Unregisters a handler for a routed event on this visual.
+    /// </summary>
+    /// <typeparam name="TArgs">The routed event args type.</typeparam>
+    /// <param name="routedEvent">The routed event identifier.</param>
+    /// <param name="handler">The handler to remove.</param>
+    /// <param name="handledEventsToo">When <see langword="true"/>, removes from the handled-events-too handler list.</param>
+    protected void RemoveHandler<TArgs>(RoutedEvent<TArgs> routedEvent, EventHandler<TArgs> handler, bool handledEventsToo)
+        where TArgs : EventArgs
     {
         ArgumentNullException.ThrowIfNull(routedEvent);
         ArgumentNullException.ThrowIfNull(handler);
 
-        if (_handlers is null)
+        var handlers = handledEventsToo ? _handledEventHandlers : _handlers;
+        if (handlers is null)
         {
             return;
         }
 
-        if (!_handlers.TryGetValue(routedEvent, out var existing))
+        if (!handlers.TryGetValue(routedEvent, out var existing))
         {
             return;
         }
@@ -1502,11 +1528,11 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         var updated = Delegate.Remove(existing, handler);
         if (updated is null)
         {
-            _handlers.Remove(routedEvent);
+            handlers.Remove(routedEvent);
         }
         else
         {
-            _handlers[routedEvent] = updated;
+            handlers[routedEvent] = updated;
         }
     }
 
@@ -1525,6 +1551,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         if (args is RoutedEventArgs routedArgs)
         {
             routedArgs.OriginalSource ??= this;
+            routedArgs.RoutingPhase = RoutingPhase.None;
         }
 
         var chain = new List<Visual>();
@@ -1538,7 +1565,16 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         var strategy = routedEvent.RoutingStrategy;
         if (strategy == RoutingStrategy.Direct)
         {
-            InvokeHandlers(routedEvent, args);
+            if (args is RoutedEventArgs directArgs)
+            {
+                directArgs.RoutingPhase = RoutingPhase.Direct;
+            }
+
+            InvokeHandlers(
+                routedEvent,
+                args,
+                invokeRegular: args is not RoutedEventArgs { Handled: true },
+                invokeHandledToo: true);
             return;
         }
 
@@ -1546,11 +1582,16 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         {
             foreach (var v in chain)
             {
-                v.InvokeHandlers(routedEvent, args);
-                if (args is RoutedEventArgs { Handled: true })
+                if (args is RoutedEventArgs previewArgs)
                 {
-                    return;
+                    previewArgs.RoutingPhase = RoutingPhase.Preview;
                 }
+
+                v.InvokeHandlers(
+                    routedEvent,
+                    args,
+                    invokeRegular: args is not RoutedEventArgs { Handled: true },
+                    invokeHandledToo: true);
             }
         }
 
@@ -1558,16 +1599,21 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         {
             for (var i = chain.Count - 1; i >= 0; i--)
             {
-                chain[i].InvokeHandlers(routedEvent, args);
-                if (args is RoutedEventArgs { Handled: true })
+                if (args is RoutedEventArgs bubbleArgs)
                 {
-                    return;
+                    bubbleArgs.RoutingPhase = RoutingPhase.Bubble;
                 }
+
+                chain[i].InvokeHandlers(
+                    routedEvent,
+                    args,
+                    invokeRegular: args is not RoutedEventArgs { Handled: true },
+                    invokeHandledToo: true);
             }
         }
     }
 
-    private void InvokeHandlers<TArgs>(RoutedEvent<TArgs> routedEvent, TArgs args)
+    private void InvokeHandlers<TArgs>(RoutedEvent<TArgs> routedEvent, TArgs args, bool invokeRegular, bool invokeHandledToo)
         where TArgs : EventArgs
     {
         // Disabled visuals do not participate in input routing. We still allow routing to proceed through
@@ -1583,11 +1629,19 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             routedArgs.Source = this;
         }
 
-        routedEvent.Dispatch(this, args);
-
-        if (_handlers is not null && _handlers.TryGetValue(routedEvent, out var existing) && existing is EventHandler<TArgs> handler)
+        if (invokeRegular)
         {
-            handler(this, args);
+            routedEvent.Dispatch(this, args);
+
+            if (_handlers is not null && _handlers.TryGetValue(routedEvent, out var existing) && existing is EventHandler<TArgs> handler)
+            {
+                handler(this, args);
+            }
+        }
+
+        if (invokeHandledToo && _handledEventHandlers is not null && _handledEventHandlers.TryGetValue(routedEvent, out var handledExisting) && handledExisting is EventHandler<TArgs> handledHandler)
+        {
+            handledHandler(this, args);
         }
     }
 

@@ -22,6 +22,7 @@ public sealed partial class WindowLayer : Visual
         this.HorizontalAlignment(Align.Stretch);
         this.VerticalAlignment(Align.Stretch);
         _windows = new VisualList<Visual>(this, "Windows");
+        AddHandler(PointerPressedEvent, OnPointerPressedHandledToo, handledEventsToo: true);
     }
 
     /// <summary>
@@ -52,8 +53,13 @@ public sealed partial class WindowLayer : Visual
     }
 
     /// <inheritdoc />
-    protected override void OnPointerPressed(PointerEventArgs e)
+    private void OnPointerPressedHandledToo(object? sender, PointerEventArgs e)
     {
+        if (!ReferenceEquals(sender, this) || e.RoutingPhase != RoutingPhase.Bubble)
+        {
+            return;
+        }
+
         if (e.Button != TerminalMouseButton.Left)
         {
             return;

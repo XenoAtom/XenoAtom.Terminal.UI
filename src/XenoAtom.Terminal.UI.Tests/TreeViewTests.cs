@@ -151,4 +151,32 @@ public sealed class TreeViewTests
         Assert.IsFalse(rendered.Contains("Node 00", StringComparison.Ordinal), "Expected the viewport to scroll past the first node.");
         StringAssert.Contains(rendered, "Node 03", "Expected the selected node to be visible after scrolling.");
     }
+
+    [TestMethod]
+    public void TreeView_Allows_Clicking_Interactive_Header_Controls()
+    {
+        var stateA = new State<bool>(false);
+        var stateB = new State<bool>(false);
+        var childACheckBox = new CheckBox().Text("Child A").IsChecked(stateA);
+        var childBCheckBox = new CheckBox().Text("Child B").IsChecked(stateB);
+        var rootNode = new TreeNode("Root") { IsExpanded = true };
+        rootNode.Children.Add(new TreeNode(childACheckBox));
+        rootNode.Children.Add(new TreeNode(childBCheckBox));
+
+        var tree = new TreeView();
+        tree.Roots.Add(rootNode);
+
+        using var driver = new TerminalAppTestDriver(tree, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        var clickX = childACheckBox.Bounds.X + 1;
+        var clickY = childACheckBox.Bounds.Y;
+        Assert.IsTrue(childACheckBox.Bounds.Contains(clickX, clickY), "Expected click point to be inside the checkbox bounds.");
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = clickX, Y = clickY });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = clickX, Y = clickY });
+        driver.Tick();
+
+        Assert.IsTrue(stateA.Value, "Clicking the check box header should toggle state.");
+    }
 }

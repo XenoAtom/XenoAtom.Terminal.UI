@@ -150,6 +150,12 @@ When the routed event is raised via `RaiseEvent(...)`, the routing system:
 2. Invokes any handlers registered via `...Routed`
 3. Routes according to the `RoutingStrategy` (Preview then Bubble)
 
+Advanced routing notes:
+- `RoutedEventArgs.RoutingPhase` indicates the current phase (`Direct`, `Preview`, `Bubble`).
+- `Handled` suppresses regular handlers for subsequent routing nodes.
+- Controls can opt in to observe handled events by registering handlers with `handledEventsToo: true`:
+  - `AddHandler(SomeEvent, OnSomeEvent, handledEventsToo: true)`.
+
 ### Ctrl keys and gestures
 - Use `TerminalChar.*` constants for control characters (e.g., `TerminalChar.CtrlC`).
 - Prefer `KeyGesture` parsing/printing helpers when dealing with configurable shortcuts.

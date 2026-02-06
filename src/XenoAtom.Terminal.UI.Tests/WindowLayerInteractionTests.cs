@@ -74,6 +74,63 @@ public sealed class WindowLayerInteractionTests
     }
 
     [TestMethod]
+    public void WindowLayer_Brings_Back_Window_To_Front_When_Child_Handles_Click()
+    {
+        var aButton = new Button("A Button");
+        aButton.Click(() => { });
+        var bButton = new Button("B Button");
+        bButton.Click(() => { });
+
+        var layer = new WindowLayer();
+        var a = new Dialog
+        {
+            Title = "A",
+            Width = 20,
+            Height = 6,
+            Left = 1,
+            Top = 1,
+            Content = aButton,
+        };
+        var b = new Dialog
+        {
+            Title = "B",
+            Width = 20,
+            Height = 6,
+            Left = 4,
+            Top = 2,
+            Content = bButton,
+        };
+
+        layer.AddWindow(a);
+        layer.AddWindow(b);
+
+        using var driver = new TerminalAppTestDriver(layer, TerminalHostKind.Fullscreen, new TerminalSize(40, 12));
+        driver.Tick();
+
+        static Visual GetRootChild(WindowLayer layer, Visual visual)
+        {
+            var rootChild = visual;
+            while (rootChild.Parent is not null && !ReferenceEquals(rootChild.Parent, layer))
+            {
+                rootChild = rootChild.Parent;
+            }
+
+            return rootChild;
+        }
+
+        // Click on A's button area (covered by A window, not by B window).
+        var clickX = aButton.Bounds.X + 1;
+        var clickY = aButton.Bounds.Y;
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = clickX, Y = clickY });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = clickX, Y = clickY });
+        driver.Tick();
+
+        var hit = layer.HitTest(5, 3);
+        Assert.IsNotNull(hit);
+        Assert.AreSame(a, GetRootChild(layer, hit), "Expected window A to move to front after clicking its handled child.");
+    }
+
+    [TestMethod]
     public void ModalDialog_Blocks_Clicks_Behind()
     {
         var clicked = false;

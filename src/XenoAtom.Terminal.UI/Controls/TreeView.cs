@@ -461,6 +461,11 @@ public sealed partial class TreeView : Visual, IScrollable
             return;
         }
 
+        if (e.RoutingPhase != RoutingPhase.Bubble)
+        {
+            return;
+        }
+
         var style = GetStyle<TreeViewStyle>();
 
         var innerY = e.UiY - Bounds.Y;

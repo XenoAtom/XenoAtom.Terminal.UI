@@ -612,6 +612,11 @@ public sealed partial class ScrollViewer : Visual
     /// <inheritdoc/>
     protected override void OnPointerWheel(PointerEventArgs e)
     {
+        if (e.RoutingPhase != RoutingPhase.Bubble)
+        {
+            return;
+        }
+
         if (e.WheelDelta == 0)
         {
             return;
