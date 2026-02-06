@@ -11,11 +11,11 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Description>A modern .NET UI stack for console applications</Description>
+    <Description>A modern, reactive retained-mode terminal UI framework for .NET</Description>
     <Copyright>Alexandre Mutel</Copyright>
     <NeutralLanguage>en-US</NeutralLanguage>
     <Authors>Alexandre Mutel</Authors>
-    <PackageTags>tag1;tag2;tag3</PackageTags>
+    <PackageTags>terminal;console;tui;ui;dotnet;csharp;reactive;bindings;layout;rendering;ansi;cross-platform</PackageTags>
     <PackageProjectUrl>https://github.com/XenoAtom/XenoAtom.Terminal.UI</PackageProjectUrl>
     <PackageLicenseExpression>BSD-2-Clause</PackageLicenseExpression>
     <PackageReadmeFile>readme.md</PackageReadmeFile>
