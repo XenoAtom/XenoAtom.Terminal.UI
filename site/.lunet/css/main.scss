@@ -223,8 +223,27 @@ button.copy-to-clipboard-button[data-copy-state="copy-error"] > span {
         0 0 18px rgba(255,255,255,0.6);
 }
 
-.hero-text span.c64-number, .hero-text span.c64-text {
-    font-size: 1.5em;
+.hero-text h1 {
+    line-height: 1.08;
+}
+
+.hero-text span.c64-number,
+.hero-text span.c64-text {
+    // Scale down on narrow screens while keeping the desktop presence.
+    font-size: clamp(2rem, 9vw, 3.75rem);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+@media screen and (max-width: 768px) {
+    .hero-text span.c64-number,
+    .hero-text span.c64-text {
+        // Keep the product name on one line on phones.
+        font-size: clamp(1.45rem, 7vw, 3rem);
+        white-space: nowrap;
+        overflow-wrap: normal;
+        word-break: normal;
+    }
 }
 
 /* Round the video container and clip overflow */
@@ -815,7 +834,29 @@ li.toc-list-item {
 
     .menu-sidebar {
         top: auto!important;
-        max-height: none;
+        max-height: 100dvh;
+        overflow-y: hidden;
+    }
+
+    // On mobile, let the offcanvas body be the only scroll container.
+    #docs-sidebar-menu {
+        top: 0 !important;
+        bottom: 0;
+    }
+
+    #docs-sidebar-menu .offcanvas-header {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background-color: inherit;
+    }
+
+    #docs-sidebar-menu .offcanvas-body {
+        max-height: calc(100dvh - 3.5rem);
+        overflow-y: auto !important;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
     }
 }
 
