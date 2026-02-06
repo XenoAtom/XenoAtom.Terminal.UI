@@ -18,7 +18,7 @@ public sealed record MenuListStyle : IStyle<MenuListStyle>
     /// </summary>
     public static MenuListStyle Default { get; } = new()
     {
-        PopupTemplateFactory = visual => new Group { Content = visual }.Stretch(),
+        PopupTemplateFactory = visual => new Group { Content = visual },
     };
 
     /// <summary>

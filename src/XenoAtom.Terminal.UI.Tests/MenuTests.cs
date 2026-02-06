@@ -122,4 +122,54 @@ public sealed class MenuTests
 
         Assert.IsFalse(globalInvoked);
     }
+
+    [TestMethod]
+    public void MenuBar_OutsideClick_Closes_All_Open_Submenus()
+    {
+        var file = new MenuItem("File");
+        var recent = new MenuItem("Recent");
+        recent.Items.Add(new MenuItem("Entry 1"));
+        file.Items.Add(recent);
+
+        var bar = new MenuBar();
+        bar.Items.Add(file);
+
+        var root = new VStack { bar, new TextBlock("Outside Area") };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 14));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter }); // open root menu
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right }); // open submenu
+        driver.Tick();
+
+        var withSubmenu = driver.Backend.GetOutText();
+        var screen = new AnsiTestScreen(60, 14);
+        screen.Apply(withSubmenu);
+        var rendered = screen.GetText();
+        StringAssert.Contains(rendered, "Entry 1");
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Down,
+            Button = TerminalMouseButton.Left,
+            X = 0,
+            Y = 13,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Up,
+            Button = TerminalMouseButton.Left,
+            X = 0,
+            Y = 13,
+        });
+        driver.Tick();
+
+        var withoutMenus = driver.Backend.GetOutText();
+        var screen2 = new AnsiTestScreen(60, 14);
+        screen2.Apply(withoutMenus);
+        var rendered2 = screen2.GetText();
+        Assert.IsFalse(rendered2.Contains("Entry 1", StringComparison.Ordinal), "Outside click should close the entire submenu chain.");
+        var remainingPopups = driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Count();
+        Assert.AreEqual(0, remainingPopups, "Outside click should close the top-level menu popup as well.");
+    }
 }

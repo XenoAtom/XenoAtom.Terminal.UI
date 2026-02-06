@@ -23,6 +23,7 @@ public sealed partial class MenuBar : Visual
 
     private MenuItem[]? _presenterItems;
     private readonly List<Popup> _openPopups = new();
+    private bool _closingAllMenus;
 
     private int _openIndex = -1;
     private int _selectedIndex;
@@ -206,13 +207,13 @@ public sealed partial class MenuBar : Visual
             MatchAnchorWidth = false,
             Placement = PopupPlacement.Below,
         }.Style(PopupStyle.Default with { Padding = Thickness.Zero });
-
         RegisterPopup(popup);
 
         popup.Closed((_, _) =>
         {
             list.ReleaseVisuals();
             UnregisterPopup(popup);
+
             _openIndex = -1;
             App?.Focus(this);
         });
@@ -222,19 +223,32 @@ public sealed partial class MenuBar : Visual
 
     internal void CloseAllMenus()
     {
+        if (_closingAllMenus)
+        {
+            return;
+        }
+
         if (_openPopups.Count == 0)
         {
             _openIndex = -1;
             return;
         }
 
-        var copy = _openPopups.ToArray();
-        for (var i = copy.Length - 1; i >= 0; i--)
+        _closingAllMenus = true;
+        try
         {
-            copy[i].Close();
-        }
+            var copy = _openPopups.ToArray();
+            for (var i = copy.Length - 1; i >= 0; i--)
+            {
+                copy[i].Close();
+            }
 
-        _openIndex = -1;
+            _openIndex = -1;
+        }
+        finally
+        {
+            _closingAllMenus = false;
+        }
     }
 
     internal void RegisterPopup(Popup popup)
@@ -505,6 +519,7 @@ public sealed partial class MenuBar : Visual
         private readonly Visual _target;
 
         private Popup? _submenuPopup;
+        private bool _programmaticSubmenuClose;
 
         [Bindable]
         private partial int SelectedIndex { get; set; }
@@ -872,7 +887,6 @@ public sealed partial class MenuBar : Visual
                 MatchAnchorWidth = false,
                 Placement = PopupPlacement.Right,
             }.Style(PopupStyle.Default with { Padding = Thickness.Zero });
-
             _owner.RegisterPopup(popup);
 
             popup.Closed((_, _) =>
@@ -880,6 +894,10 @@ public sealed partial class MenuBar : Visual
                 list.ReleaseVisuals();
                 _submenuPopup = null;
                 _owner.UnregisterPopup(popup);
+                if (!_programmaticSubmenuClose && !_owner._closingAllMenus)
+                {
+                    _owner.CloseAllMenus();
+                }
             });
 
             _submenuPopup = popup;
@@ -893,8 +911,16 @@ public sealed partial class MenuBar : Visual
                 return;
             }
 
-            _submenuPopup.Close();
-            _submenuPopup = null;
+            _programmaticSubmenuClose = true;
+            try
+            {
+                _submenuPopup.Close();
+                _submenuPopup = null;
+            }
+            finally
+            {
+                _programmaticSubmenuClose = false;
+            }
         }
 
         private void CloseSelf()
@@ -902,8 +928,16 @@ public sealed partial class MenuBar : Visual
             var popup = FindPopupAncestor();
             if (popup is not null)
             {
-                popup.Close();
-                _owner.App?.Focus(_parent);
+                _programmaticSubmenuClose = true;
+                try
+                {
+                    popup.Close();
+                    _owner.App?.Focus(_parent);
+                }
+                finally
+                {
+                    _programmaticSubmenuClose = false;
+                }
             }
         }
 
