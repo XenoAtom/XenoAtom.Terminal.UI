@@ -51,6 +51,7 @@ public sealed partial class Popup : Visual, IModalVisual
     private int _dragStartUiY;
     private int _dragStartOffsetX;
     private int _dragStartOffsetY;
+    private PopupClosedEventArgs? _pendingCloseArgs;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Popup"/> class.
@@ -251,9 +252,12 @@ public sealed partial class Popup : Visual, IModalVisual
             return;
         }
 
+        var closeArgs = _pendingCloseArgs ?? new PopupClosedEventArgs();
+        _pendingCloseArgs = null;
+
         _isOpen = false;
         app.CloseWindow(this);
-        RaiseEvent(ClosedEvent, new PopupClosedEventArgs());
+        RaiseEvent(ClosedEvent, closeArgs);
     }
 
     /// <inheritdoc/>
@@ -502,6 +506,10 @@ public sealed partial class Popup : Visual, IModalVisual
         // Close on clicks outside the popup content area.
         if (!_popupRect.Contains(e.UiX, e.UiY))
         {
+            _pendingCloseArgs = new PopupClosedEventArgs(
+                PopupCloseReason.OutsidePointerPress,
+                outsidePointerX: e.UiX,
+                outsidePointerY: e.UiY);
             Close();
             e.Handled = true;
         }

@@ -889,11 +889,24 @@ public sealed partial class MenuBar : Visual
             }.Style(PopupStyle.Default with { Padding = Thickness.Zero });
             _owner.RegisterPopup(popup);
 
-            popup.Closed((_, _) =>
+            popup.Closed((_, closeArgs) =>
             {
                 list.ReleaseVisuals();
                 _submenuPopup = null;
                 _owner.UnregisterPopup(popup);
+
+                // If the submenu was dismissed by an outside click that still lands inside
+                // this parent menu list, keep the parent menu open so users can step back.
+                if (!_programmaticSubmenuClose
+                    && !_owner._closingAllMenus
+                    && closeArgs.Reason == PopupCloseReason.OutsidePointerPress
+                    && closeArgs.OutsidePointerX is int outsideX
+                    && closeArgs.OutsidePointerY is int outsideY
+                    && Bounds.Contains(outsideX, outsideY))
+                {
+                    return;
+                }
+
                 if (!_programmaticSubmenuClose && !_owner._closingAllMenus)
                 {
                     _owner.CloseAllMenus();
@@ -929,6 +942,14 @@ public sealed partial class MenuBar : Visual
             if (popup is not null)
             {
                 _programmaticSubmenuClose = true;
+                var parentProgrammaticClose = false;
+                if (_parent is not null)
+                {
+                    // Mark the parent close path as programmatic as well so closing a deep
+                    // submenu via Left only collapses one level instead of the whole chain.
+                    _parent._programmaticSubmenuClose = true;
+                    parentProgrammaticClose = true;
+                }
                 try
                 {
                     popup.Close();
@@ -936,6 +957,11 @@ public sealed partial class MenuBar : Visual
                 }
                 finally
                 {
+                    if (parentProgrammaticClose && _parent is not null)
+                    {
+                        _parent._programmaticSubmenuClose = false;
+                    }
+
                     _programmaticSubmenuClose = false;
                 }
             }
