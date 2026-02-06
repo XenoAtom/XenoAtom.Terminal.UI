@@ -208,4 +208,55 @@ public static partial class VisualExtensions
         obj.SetStyle(style);
         return obj;
     }
+
+    /// <summary>
+    /// Applies a style factory to a visual by storing it in the visual environment and returns the same instance.
+    /// </summary>
+    /// <typeparam name="T">The visual type.</typeparam>
+    /// <typeparam name="TStyle">The style type.</typeparam>
+    /// <param name="obj">The visual to style.</param>
+    /// <param name="style">The style factory.</param>
+    /// <returns>The same instance for chaining.</returns>
+    public static T Style<T, TStyle>(this T obj, Func<TStyle> style) where T : Visual where TStyle : IStyle<TStyle>
+    {
+        ArgumentNullException.ThrowIfNull(obj);
+        ArgumentNullException.ThrowIfNull(style);
+        obj.VerifyAccess();
+        obj.SetStyle(style);
+        return obj;
+    }
+
+    /// <summary>
+    /// Applies a style binding to a visual by storing it in the visual environment and returns the same instance.
+    /// </summary>
+    /// <typeparam name="T">The visual type.</typeparam>
+    /// <typeparam name="TStyle">The style type.</typeparam>
+    /// <param name="obj">The visual to style.</param>
+    /// <param name="style">The style binding.</param>
+    /// <returns>The same instance for chaining.</returns>
+    public static T Style<T, TStyle>(this T obj, Binding<TStyle> style) where T : Visual where TStyle : IStyle<TStyle>
+    {
+        ArgumentNullException.ThrowIfNull(obj);
+        if (style.IsEmpty)
+        {
+            throw new ArgumentException("The style binding cannot be empty.", nameof(style));
+        }
+        obj.VerifyAccess();
+        obj.SetStyle(style);
+        return obj;
+    }
+
+    /// <summary>
+    /// Applies a style state to a visual by storing it in the visual environment and returns the same instance.
+    /// </summary>
+    /// <typeparam name="T">The visual type.</typeparam>
+    /// <typeparam name="TStyle">The style type.</typeparam>
+    /// <param name="obj">The visual to style.</param>
+    /// <param name="style">The state that provides style values.</param>
+    /// <returns>The same instance for chaining.</returns>
+    public static T Style<T, TStyle>(this T obj, State<TStyle> style) where T : Visual where TStyle : IStyle<TStyle>
+    {
+        ArgumentNullException.ThrowIfNull(style);
+        return obj.Style((Binding<TStyle>)style);
+    }
 }

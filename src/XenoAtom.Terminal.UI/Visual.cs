@@ -435,6 +435,20 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     public void SetStyle<T>(T value) where T : IStyle<T> => SetStyle(T.Key, value);
 
     /// <summary>
+    /// Sets a style value factory in the environment of this visual and returns it by type.
+    /// </summary>
+    /// <typeparam name="T">The style type.</typeparam>
+    /// <param name="value">The factory used to resolve the style value.</param>
+    public void SetStyle<T>(Func<T> value) where T : IStyle<T> => SetStyle(T.Key, value);
+
+    /// <summary>
+    /// Sets a style binding in the environment of this visual and returns it by type.
+    /// </summary>
+    /// <typeparam name="T">The style type.</typeparam>
+    /// <param name="value">The binding used to resolve the style value.</param>
+    public void SetStyle<T>(Binding<T> value) where T : IStyle<T> => SetStyle(T.Key, value);
+
+    /// <summary>
     /// Sets a style value in the environment of this visual.
     /// </summary>
     /// <typeparam name="T">The style type.</typeparam>
@@ -444,9 +458,51 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     {
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(key);
+
+        var oldSource = ResolveStyleSourceBeforeSet(key);
+
         StyleEnvironment ??= new Dictionary<object, object?>();
         StyleEnvironment[key] = value;
-        BindingManager.Current.NotifyValueChanged(this, key.BindingAccessor);
+
+        NotifyStyleSourceChange(key, oldSource);
+    }
+
+    /// <summary>
+    /// Sets a style value factory in the environment of this visual.
+    /// </summary>
+    /// <typeparam name="T">The style type.</typeparam>
+    /// <param name="key">The style key.</param>
+    /// <param name="value">The factory used to resolve the style value.</param>
+    public void SetStyle<T>(StyleKey<T> key, Func<T> value)
+    {
+        VerifyAccess();
+        ArgumentNullException.ThrowIfNull(key);
+        ArgumentNullException.ThrowIfNull(value);
+
+        var oldSource = ResolveStyleSourceBeforeSet(key);
+
+        StyleEnvironment ??= new Dictionary<object, object?>();
+        StyleEnvironment[key] = value;
+
+        NotifyStyleSourceChange(key, oldSource);
+    }
+
+    /// <summary>
+    /// Sets a style binding in the environment of this visual.
+    /// </summary>
+    /// <typeparam name="T">The style type.</typeparam>
+    /// <param name="key">The style key.</param>
+    /// <param name="value">The binding used to resolve the style value.</param>
+    public void SetStyle<T>(StyleKey<T> key, Binding<T> value)
+    {
+        VerifyAccess();
+        ArgumentNullException.ThrowIfNull(key);
+        if (value.IsEmpty)
+        {
+            throw new ArgumentException("The binding cannot be empty.", nameof(value));
+        }
+
+        SetStyle(key, value.GetValue);
     }
 
     /// <summary>
@@ -475,7 +531,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             if (v.StyleEnvironment is not null && v.StyleEnvironment.TryGetValue(key, out var boxed))
             {
                 BindingManager.Current.RegisterRead(v, key.BindingAccessor);
-                return boxed is T typed ? typed : key.DefaultValue;
+                return ResolveStyleValue(key, boxed);
             }
         }
 
@@ -500,6 +556,47 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// Gets the current theme resolved from the environment.
     /// </summary>
     public Theme GetTheme() => GetStyle<Theme>();
+
+    private void NotifyStyleSourceChange<T>(StyleKey<T> key, Visual oldSource)
+    {
+        if (!ReferenceEquals(oldSource, this))
+        {
+            BindingManager.Current.NotifyValueChanged(oldSource, key.BindingAccessor);
+        }
+
+        BindingManager.Current.NotifyValueChanged(this, key.BindingAccessor);
+    }
+
+    private Visual ResolveStyleSourceBeforeSet<T>(StyleKey<T> key)
+    {
+        Visual? root = null;
+        for (var v = this; v is not null; v = v.Parent)
+        {
+            root = v;
+            if (v.StyleEnvironment is not null && v.StyleEnvironment.ContainsKey(key))
+            {
+                return v;
+            }
+        }
+
+        return root ?? this;
+    }
+
+    private static T ResolveStyleValue<T>(StyleKey<T> key, object? boxed)
+    {
+        if (boxed is T typed)
+        {
+            return typed;
+        }
+
+        if (boxed is Func<T> factory)
+        {
+            var resolved = factory();
+            return resolved is null ? key.DefaultValue : resolved;
+        }
+
+        return key.DefaultValue;
+    }
 
     /// <summary>
     /// Gets the absolute bounds of this visual in the coordinate space of the visual tree root.

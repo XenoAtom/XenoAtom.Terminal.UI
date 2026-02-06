@@ -49,6 +49,29 @@ Controls obtain their styles from the environment:
 new Button("OK").Style(new ButtonStyle { Tone = ControlTone.Primary })
 ```
 
+Styles can also be resolved dynamically from a factory (dependency-tracked):
+
+```csharp
+var danger = new State<bool>(false);
+
+new Button("Deploy")
+    .Style(() => danger.Value
+        ? (ButtonStyle.Default with { ShowBorder = true })
+        : ButtonStyle.Default);
+```
+
+And styles can come from a binding:
+
+```csharp
+var buttonStyle = new State<ButtonStyle>(ButtonStyle.Default);
+
+new Button("Apply").Style(buttonStyle);
+```
+
+> [!NOTE]
+> Style resolution follows normal environment lookup rules: nearest visual with a local value wins.
+> Values set by `Style(...)`, `SetStyle(...)`, factories, and bindings all participate in this lookup.
+
 Styles are records, so variations can be created with `with`:
 
 ```csharp

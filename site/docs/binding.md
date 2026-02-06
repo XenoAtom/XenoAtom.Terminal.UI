@@ -139,6 +139,17 @@ Use `Func<T>` to compute a value on demand, while still being dependency-tracked
 new TextBlock(() => $"Tick: {tick.Value}")
 ```
 
+The same pattern applies to styles:
+
+```csharp
+new Button("Save")
+    .Style(() => isDanger.Value
+        ? (ButtonStyle.Default with { ShowBorder = true })
+        : ButtonStyle.Default);
+```
+
+For style-specific guidance, see [Styling](styling.md).
+
 ## Two-way binding
 
 Some controls (TextBox/TextArea) can bind their value to a `State<string>` by providing a document wrapper that reads/writes the bound value.
