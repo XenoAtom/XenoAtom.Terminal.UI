@@ -21,11 +21,6 @@ namespace XenoAtom.Terminal.UI;
 public sealed partial class FuncState<T>
 {
     private readonly Func<T> _valueFactory;
-    private readonly Action<Binding> _onDependencyChanged;
-    private HashSet<Binding>? _dependencies;
-    private bool _dirty = true;
-    private bool _hasCachedValue;
-    private T _cachedValue = default!;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FuncState{T}"/> class.
@@ -34,16 +29,14 @@ public sealed partial class FuncState<T>
     public FuncState(Func<T> valueFactory)
     {
         _valueFactory = valueFactory ?? throw new ArgumentNullException(nameof(valueFactory));
-        _onDependencyChanged = OnDependencyChanged;
-        BindingManager.Current.ValueChanged += _onDependencyChanged;
     }
 
     /// <summary>
     /// Gets or sets the current value.
     /// </summary>
     /// <remarks>
-    /// The getter evaluates the factory delegate on demand and caches the result until one of the bindable
-    /// dependencies read during evaluation changes. The setter is not supported.
+    /// The getter evaluates the factory delegate on demand. Any bindable reads performed by the delegate are
+    /// tracked by the current binding context. The setter is not supported.
     /// </remarks>
     /// <exception cref="InvalidOperationException">Thrown when attempting to set the value.</exception>
     [Bindable]
@@ -51,59 +44,11 @@ public sealed partial class FuncState<T>
     {
         get
         {
+            VerifyAccess();
             BindingManager.Current.RegisterRead(this, __Value__BindingAccessor.Instance);
-            if (_dirty)
-            {
-                Recompute();
-            }
-
-            return _cachedValue;
+            return _valueFactory();
         }
         set => throw new InvalidOperationException($"{nameof(FuncState<T>)} is read-only and cannot be assigned.");
-    }
-
-    private void Recompute()
-    {
-        VerifyAccess();
-
-        using var session = BindingManager.Current.StartTracking();
-        _cachedValue = _valueFactory();
-        _hasCachedValue = true;
-
-        if (_dependencies is null)
-        {
-            _dependencies = new HashSet<Binding>(BindingReferenceComparer.Instance);
-        }
-        else
-        {
-            _dependencies.Clear();
-        }
-
-        foreach (var dep in session.Reads)
-        {
-            _dependencies.Add(dep);
-        }
-
-        _dirty = false;
-    }
-
-    private void OnDependencyChanged(Binding binding)
-    {
-        if (ReferenceEquals(binding.Owner, this))
-        {
-            return;
-        }
-
-        if (!_dirty && _dependencies is not null && _dependencies.Contains(binding))
-        {
-            _dirty = true;
-            // Preserve the previous cached value until the next read triggers a recomputation.
-            // This keeps reads deterministic and avoids expensive recomputation when the value is not observed.
-            if (_hasCachedValue)
-            {
-                BindingManager.Current.NotifyValueChanged(this, __Value__BindingAccessor.Instance);
-            }
-        }
     }
 
     private void VerifyAccess()
