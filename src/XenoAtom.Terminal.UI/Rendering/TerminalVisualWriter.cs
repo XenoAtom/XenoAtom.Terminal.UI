@@ -24,7 +24,7 @@ internal static class TerminalVisualWriter
 
         ThemedHost? themedHost = null;
         var root = visual;
-        if (!visual.HasLocal(Theme.Key))
+        if (!visual.HasLocalStyle(Theme.Key))
         {
             themedHost = new ThemedHost(visual, Theme.Terminal);
             root = themedHost;

@@ -2224,7 +2224,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
             return;
         }
 
-        if (!editor.HasLocal(TextBoxStyle.Key))
+        if (!editor.HasLocalStyle(TextBoxStyle.Key))
         {
             editor.SetStyle(TextBoxStyle.Key, CreateCellEditorTextBoxStyle());
         }

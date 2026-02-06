@@ -216,12 +216,12 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             Root = root;
         }
 
-        if (_options.HostKind == TerminalHostKind.Inline && !Root.HasLocal(Theme.Key))
+        if (_options.HostKind == TerminalHostKind.Inline && !Root.HasLocalStyle(Theme.Key))
         {
             Root.Style(Theme.Terminal);
         }
 
-        if (!Root.HasLocal(CultureStyle.Key))
+        if (!Root.HasLocalStyle(CultureStyle.Key))
         {
             Root.Style(CultureStyle.Default with { Culture = _options.Culture });
         }
@@ -407,7 +407,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
         ThemedHost? themedHost = null;
         var renderRoot = block;
-        if (_options.HostKind == TerminalHostKind.Inline && !block.HasLocal(Theme.Key))
+        if (_options.HostKind == TerminalHostKind.Inline && !block.HasLocalStyle(Theme.Key))
         {
             themedHost = new ThemedHost(block, Theme.Terminal);
             renderRoot = themedHost;

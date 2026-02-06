@@ -56,7 +56,7 @@ public static class TerminalAppSnapshotRenderer
         };
 
         // If the caller didn't set a theme in the tree, apply the provided one so base clears and styles are stable.
-        if (theme is not null && !root.HasLocal(Theme.Key))
+        if (theme is not null && !root.HasLocalStyle(Theme.Key))
         {
             root.Style(theme);
         }

@@ -31,7 +31,7 @@ public static class VisualSnapshotRenderer
             throw new InvalidOperationException("The visual is already attached to a visual tree.");
         }
 
-        var hasTheme = visual.HasLocal(Theme.Key);
+        var hasTheme = visual.HasLocalStyle(Theme.Key);
         if (!hasTheme && theme is not null)
         {
             visual.SetStyle(Theme.Key, theme);

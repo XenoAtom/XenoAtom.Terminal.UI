@@ -483,7 +483,13 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         return key.DefaultValue;
     }
 
-    internal bool HasLocal<T>(StyleKey<T> key)
+    /// <summary>
+    /// Determines whether a local value is set for the specified style key.
+    /// </summary>
+    /// <typeparam name="T">The type of the value associated with the style key.</typeparam>
+    /// <param name="key">The style key to check for a locally set value. Cannot be null.</param>
+    /// <returns>true if a local value is set for the specified key; otherwise, false.</returns>
+    public bool HasLocalStyle<T>(StyleKey<T> key)
     {
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(key);
