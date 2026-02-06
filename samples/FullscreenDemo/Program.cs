@@ -849,14 +849,21 @@ Visual BuildDashboard()
 
                 return new ZStack(
                     new Backdrop().IsEnabled(false),
-                    new Center().Content(
-                        new Group()
-                            .TopLeftText("Backdrop")
-                            .Padding(1)
-                            .Content(new VStack(
-                                    new TextBlock("This is the Backdrop control (RGBA dim surface).").Wrap(true),
-                                    new Button("Close").Click(() => showBackdrop.Value = false))
-                                .Spacing(1))));
+                    new Dialog
+                    {
+                        IsModal = false,
+                        Width = 56,
+                        Height = 8,
+                        Title = new TextBlock("Backdrop"),
+                        Content = new VStack(
+                                new TextBlock("This is the Backdrop control (RGBA dim surface).").Wrap(true),
+                                new TextBlock("Drag this dialog by its title bar.").Wrap(true),
+                                new HStack(
+                                        new Button("Close").Click(() => showBackdrop.Value = false),
+                                        new TextBlock("Use Esc or click to continue."))
+                                    .Spacing(1))
+                            .Spacing(1),
+                    });
             })))
         .Bottom(new VStack(new CommandBar(), footer).Spacing(0));
 
