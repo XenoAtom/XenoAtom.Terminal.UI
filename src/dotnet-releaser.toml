@@ -6,3 +6,5 @@ project = "XenoAtom.Terminal.UI.slnx"
 [github]
 user = "XenoAtom"
 repo = "XenoAtom.Terminal.UI"
+[changelog]
+owners = ["xoofx"] # To avoid to be mentioned in the changelog
