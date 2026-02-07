@@ -5,6 +5,7 @@
 using System.Linq;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Hosting;
 
 namespace XenoAtom.Terminal.UI.Tests;
@@ -113,5 +114,35 @@ public sealed class TextAreaTests
         driver.Tick();
 
         Assert.AreEqual(3, textArea.Scroll.OffsetY);
+    }
+
+    [TestMethod]
+    public void TextArea_Tab_Insertion_Uses_Logical_Tab_Width_For_Rendering()
+    {
+        var textArea = new TextArea("abQw") { CaretIndex = 2 };
+        var root = new VStack
+        {
+            new Padder(textArea).Padding(new Thickness(Left: 2, Top: 0, Right: 0, Bottom: 0)),
+        }.Spacing(0);
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 6));
+        driver.Tick();
+
+        driver.App.Focus(textArea);
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
+        driver.TickUntil(() => textArea.Text == "ab\tQw");
+
+        Assert.AreEqual(3, textArea.CaretIndex);
+        Assert.IsTrue(textArea.TryGetCursorCell(out var caretX, out var caretY), "Expected caret to be visible.");
+
+        var screen = new AnsiTestScreen(30, 6);
+        screen.Apply(driver.Backend.GetOutText());
+        var lines = screen.GetText().Split('\n');
+        Assert.IsTrue((uint)caretY < (uint)lines.Length, $"Caret row {caretY} is outside rendered lines.");
+
+        var line = lines[caretY];
+        var textStart = line.IndexOf("Qw", StringComparison.Ordinal);
+        Assert.IsTrue(textStart >= 0, $"Expected 'Qw' to be visible on caret row. Row: `{line}`");
+        Assert.AreEqual(textStart, caretX, "Rendered text is not aligned with the caret after inserting a tab.");
     }
 }

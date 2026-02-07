@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Text;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Geometry;
@@ -300,10 +301,58 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     /// <remarks>
     /// Derived controls can override this to customize how characters are rendered (e.g. masking).
     /// </remarks>
-    protected virtual void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, Style style, bool isPlaceholder, int textIndexStart)
+    protected virtual void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, Style style, bool isPlaceholder, int textIndexStart, int startColumn)
     {
         _ = textIndexStart;
-        buffer.WriteText(x, y, text, style);
+        if (text.IsEmpty)
+        {
+            return;
+        }
+
+        if (text.IndexOf('\t') < 0)
+        {
+            buffer.WriteText(x, y, text, style);
+            return;
+        }
+
+        var column = Math.Max(0, startColumn);
+        var cellX = x;
+        var index = 0;
+        var tabSize = Math.Max(1, TabSize);
+        while (index < text.Length)
+        {
+            var tabOffset = text[index..].IndexOf('\t');
+            if (tabOffset < 0)
+            {
+                var slice = text[index..];
+                buffer.WriteText(cellX, y, slice, style);
+                var width = Math.Max(0, TerminalTextUtility.GetWidth(slice));
+                column += width;
+                cellX += width;
+                break;
+            }
+
+            if (tabOffset > 0)
+            {
+                var slice = text.Slice(index, tabOffset);
+                buffer.WriteText(cellX, y, slice, style);
+                var width = Math.Max(0, TerminalTextUtility.GetWidth(slice));
+                column += width;
+                cellX += width;
+                index += tabOffset;
+            }
+
+            var tabWidth = tabSize - (column % tabSize);
+            tabWidth = Math.Max(1, tabWidth);
+            for (var i = 0; i < tabWidth; i++)
+            {
+                buffer.SetCell(cellX + i, y, new Rune(' '), style);
+            }
+
+            column += tabWidth;
+            cellX += tabWidth;
+            index++;
+        }
     }
 
     private TextEditorOptions BuildEditorOptions()

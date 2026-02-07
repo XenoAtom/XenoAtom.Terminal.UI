@@ -1271,11 +1271,11 @@ public partial class PromptEditor : TextEditorBase
     }
 
     /// <inheritdoc />
-    protected override void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, Style style, bool isPlaceholder, int textIndexStart)
+    protected override void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, Style style, bool isPlaceholder, int textIndexStart, int startColumn)
     {
         if (isPlaceholder || _highlightRuns.Count == 0 || textIndexStart < 0)
         {
-            base.WriteTextSegment(buffer, x, y, text, style, isPlaceholder, textIndexStart);
+            base.WriteTextSegment(buffer, x, y, text, style, isPlaceholder, textIndexStart, startColumn);
             return;
         }
 
@@ -1284,14 +1284,15 @@ public partial class PromptEditor : TextEditorBase
 
         var runIndex = FindFirstRunIndex(segmentStart);
         var localIndex = 0;
-        var col = 0;
+        var col = startColumn;
+        var cellX = x;
 
         while (localIndex < text.Length)
         {
             if (runIndex >= _highlightRuns.Count)
             {
                 var rest = text.Slice(localIndex);
-                base.WriteTextSegment(buffer, x + col, y, rest, style, isPlaceholder, segmentStart + localIndex);
+                base.WriteTextSegment(buffer, cellX, y, rest, style, isPlaceholder, segmentStart + localIndex, col);
                 return;
             }
 
@@ -1309,8 +1310,10 @@ public partial class PromptEditor : TextEditorBase
             {
                 var len = Math.Min(text.Length - localIndex, runStart - (segmentStart + localIndex));
                 var slice = text.Slice(localIndex, len);
-                base.WriteTextSegment(buffer, x + col, y, slice, style, isPlaceholder, segmentStart + localIndex);
-                col += GetTextCells(slice, col, TabSize);
+                base.WriteTextSegment(buffer, cellX, y, slice, style, isPlaceholder, segmentStart + localIndex, col);
+                var width = GetTextCells(slice, col, TabSize);
+                col += width;
+                cellX += width;
                 localIndex += len;
                 continue;
             }
@@ -1324,8 +1327,10 @@ public partial class PromptEditor : TextEditorBase
             }
 
             var slice2 = text.Slice(localIndex, len2);
-            base.WriteTextSegment(buffer, x + col, y, slice2, style | run.Style, isPlaceholder, segmentStart + localIndex);
-            col += GetTextCells(slice2, col, TabSize);
+            base.WriteTextSegment(buffer, cellX, y, slice2, style | run.Style, isPlaceholder, segmentStart + localIndex, col);
+            var width2 = GetTextCells(slice2, col, TabSize);
+            col += width2;
+            cellX += width2;
             localIndex += len2;
 
             if (runEnd <= overlapEnd)

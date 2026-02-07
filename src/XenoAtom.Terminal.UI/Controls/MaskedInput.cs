@@ -302,11 +302,11 @@ public sealed partial class MaskedInput : TextEditorBase
     }
 
     /// <inheritdoc />
-    protected override void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, Style style, bool isPlaceholder, int textIndexStart)
+    protected override void WriteTextSegment(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, Style style, bool isPlaceholder, int textIndexStart, int startColumn)
     {
         if (isPlaceholder || !_renderStateValid || _tokens.Length == 0 || textIndexStart < 0)
         {
-            base.WriteTextSegment(buffer, x, y, text, style, isPlaceholder, textIndexStart);
+            base.WriteTextSegment(buffer, x, y, text, style, isPlaceholder, textIndexStart, startColumn);
             return;
         }
 
