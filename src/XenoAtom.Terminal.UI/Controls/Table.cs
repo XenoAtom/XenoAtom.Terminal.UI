@@ -32,6 +32,39 @@ public sealed partial class Table : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="Table"/> class with header cells.
+    /// </summary>
+    /// <param name="headerCells">The header cells.</param>
+    public Table(IEnumerable<Visual> headerCells) : this()
+    {
+        ArgumentNullException.ThrowIfNull(headerCells);
+        foreach (var cell in headerCells)
+        {
+            HeaderCells.Add(cell);
+        }
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Table"/> class with header and row cells.
+    /// </summary>
+    /// <param name="headerCells">The header cells.</param>
+    /// <param name="rowCells">The table rows.</param>
+    public Table(IEnumerable<Visual> headerCells, IEnumerable<IEnumerable<Visual>> rowCells) : this(headerCells)
+    {
+        ArgumentNullException.ThrowIfNull(rowCells);
+        foreach (var row in rowCells)
+        {
+            ArgumentNullException.ThrowIfNull(row);
+            var tableRow = new VisualList<Visual>(this, "Table.Row");
+            foreach (var cell in row)
+            {
+                tableRow.Add(cell);
+            }
+            RowCells.Add(tableRow);
+        }
+    }
+
+    /// <summary>
     /// Gets the header cells collection.
     /// </summary>
     [Bindable]

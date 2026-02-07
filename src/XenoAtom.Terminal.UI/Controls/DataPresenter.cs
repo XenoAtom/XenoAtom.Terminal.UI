@@ -34,6 +34,33 @@ public sealed partial class DataPresenter<T> : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="DataPresenter{T}"/> class with an initial value.
+    /// </summary>
+    /// <param name="value">The initial value to present.</param>
+    public DataPresenter(T value) : this()
+    {
+        this.Value(value);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataPresenter{T}"/> class with a dynamic value provider.
+    /// </summary>
+    /// <param name="value">A delegate that provides the value to present.</param>
+    public DataPresenter(Func<T> value) : this()
+    {
+        this.Value(value);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataPresenter{T}"/> class bound to a value binding.
+    /// </summary>
+    /// <param name="value">The binding that provides the value to present.</param>
+    public DataPresenter(Binding<T> value) : this()
+    {
+        this.BindValue(value);
+    }
+
+    /// <summary>
     /// Gets or sets the value presented by this control.
     /// </summary>
     [Bindable]

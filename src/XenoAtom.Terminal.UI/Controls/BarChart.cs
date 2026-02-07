@@ -52,6 +52,19 @@ public sealed partial class BarChart : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="BarChart"/> class with items.
+    /// </summary>
+    /// <param name="items">The chart items.</param>
+    public BarChart(IEnumerable<BarChartItem> items) : this()
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        foreach (var item in items)
+        {
+            Items.Add(item);
+        }
+    }
+
+    /// <summary>
     /// Gets the chart items.
     /// </summary>
     [Bindable]

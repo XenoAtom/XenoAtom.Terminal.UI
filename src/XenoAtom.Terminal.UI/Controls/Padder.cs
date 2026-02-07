@@ -45,6 +45,16 @@ public partial class Padder : ContentVisual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="Padder"/> control with bound content.
+    /// </summary>
+    /// <param name="content">A binding that supplies the padder content visual.</param>
+    public Padder(Binding<Visual?> content)
+        : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
     /// Gets or sets the padding applied around the content.
     /// </summary>
     [Bindable]

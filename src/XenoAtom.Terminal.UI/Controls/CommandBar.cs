@@ -42,6 +42,15 @@ public sealed partial class CommandBar : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="CommandBar"/> class with presentation flags.
+    /// </summary>
+    /// <param name="presentation">The command presentation flags used when collecting commands.</param>
+    public CommandBar(CommandPresentation presentation) : this()
+    {
+        this.Presentation(presentation);
+    }
+
+    /// <summary>
     /// Gets or sets the presentation flags used when collecting commands.
     /// </summary>
     [Bindable]

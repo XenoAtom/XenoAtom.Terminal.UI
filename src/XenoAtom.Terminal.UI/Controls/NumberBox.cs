@@ -76,6 +76,15 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="NumberBox{T}"/> class bound to a value binding.
+    /// </summary>
+    /// <param name="value">A binding that supplies the numeric value.</param>
+    public NumberBox(Binding<T> value) : this()
+    {
+        this.BindValue(value);
+    }
+
+    /// <summary>
     /// Gets or sets the current numeric value.
     /// </summary>
     [Bindable]

@@ -47,6 +47,19 @@ public sealed partial class BreakdownChart : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="BreakdownChart"/> class with segments.
+    /// </summary>
+    /// <param name="segments">The chart segments.</param>
+    public BreakdownChart(IEnumerable<BreakdownSegment> segments) : this()
+    {
+        ArgumentNullException.ThrowIfNull(segments);
+        foreach (var segment in segments)
+        {
+            Segments.Add(segment);
+        }
+    }
+
+    /// <summary>
     /// Gets the segment collection.
     /// </summary>
     [Bindable]

@@ -46,6 +46,18 @@ public partial class ProgressTask : DispatcherObject, IVisualElement
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ProgressTask"/> class.
+    /// </summary>
+    /// <param name="label">A binding that supplies the task label visual.</param>
+    public ProgressTask(Binding<Visual> label)
+    {
+        _label = new ComputedVisual(() => label.GetValue());
+        _cellCustomizations = new BindableList<ProgressTaskCellCustomization>(this, $"{nameof(ProgressTask)}.CellCustomizations");
+
+        Maximum = 1.0;
+    }
+
+    /// <summary>
     /// Gets the task label visual.
     /// </summary>
     public Visual Label => _label;

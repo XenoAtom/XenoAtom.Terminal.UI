@@ -99,6 +99,43 @@ public partial class Toast : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="Toast"/> class with content.
+    /// </summary>
+    /// <param name="content">The main content visual.</param>
+    public Toast(Visual content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Toast"/> class with dynamic content.
+    /// </summary>
+    /// <param name="content">A delegate that supplies the main content visual.</param>
+    public Toast(Func<Visual> content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Toast"/> class with bound content.
+    /// </summary>
+    /// <param name="content">A binding that supplies the main content visual.</param>
+    public Toast(Binding<Visual?> content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Toast"/> class with content and severity.
+    /// </summary>
+    /// <param name="content">The main content visual.</param>
+    /// <param name="severity">The toast severity.</param>
+    public Toast(Visual content, ToastSeverity severity) : this(content)
+    {
+        this.Severity(severity);
+    }
+
+    /// <summary>
     /// Gets or sets the optional title visual.
     /// </summary>
     [Bindable(NoVisualAttach = true)]

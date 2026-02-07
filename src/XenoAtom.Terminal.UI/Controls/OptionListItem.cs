@@ -38,6 +38,17 @@ public sealed partial class OptionListItem : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="OptionListItem"/> class with content, shortcut, and description.
+    /// </summary>
+    /// <param name="content">The main content.</param>
+    /// <param name="shortcut">The optional shortcut visual.</param>
+    /// <param name="description">The optional description visual.</param>
+    public OptionListItem(Visual content, Visual? shortcut, Visual? description) : this(content, shortcut)
+    {
+        this.Description(description);
+    }
+
+    /// <summary>
     /// Gets or sets the main content visual.
     /// </summary>
     [Bindable]

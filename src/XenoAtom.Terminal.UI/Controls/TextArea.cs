@@ -74,6 +74,24 @@ public sealed partial class TextArea : TextEditorBase
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="TextArea"/> class with dynamic text.
+    /// </summary>
+    /// <param name="text">A delegate that supplies the text content.</param>
+    public TextArea(Func<string?> text) : this()
+    {
+        this.Text(text);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TextArea"/> class with bound text.
+    /// </summary>
+    /// <param name="text">A binding that supplies the text content.</param>
+    public TextArea(Binding<string?> text) : this()
+    {
+        this.BindText(text);
+    }
+
+    /// <summary>
     /// Gets or sets the text content.
     /// </summary>
     [Bindable]

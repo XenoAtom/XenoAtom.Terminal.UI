@@ -37,6 +37,24 @@ public sealed partial class ProgressBar : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ProgressBar"/> class with an initial value.
+    /// </summary>
+    /// <param name="value">The progress value in the range [0..1].</param>
+    public ProgressBar(double value) : this()
+    {
+        this.Value(value);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProgressBar"/> class bound to a progress value binding.
+    /// </summary>
+    /// <param name="value">A binding that supplies the progress value in the range [0..1].</param>
+    public ProgressBar(Binding<double> value) : this()
+    {
+        this.BindValue(value);
+    }
+
+    /// <summary>
     /// Gets or sets the progress value in the range [0..1].
     /// </summary>
     [Bindable]

@@ -53,6 +53,15 @@ public sealed partial class TextFiglet : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="TextFiglet"/> class with bound text.
+    /// </summary>
+    /// <param name="text">A binding that supplies the text to render.</param>
+    public TextFiglet(Binding<string?> text) : this()
+    {
+        this.Text(text);
+    }
+
+    /// <summary>
     /// Gets or sets the text to render.
     /// </summary>
     [Bindable]

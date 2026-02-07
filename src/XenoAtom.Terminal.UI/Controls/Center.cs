@@ -44,6 +44,15 @@ public sealed partial class Center : ContentVisual
     {
         Content = new ComputedVisual(content);
     }
+
+    /// <summary>
+    /// Initializes a new instance of the Center class with bound content.
+    /// </summary>
+    /// <param name="content">A binding that supplies the content visual.</param>
+    public Center(Binding<Visual?> content) : this()
+    {
+        this.Content(content);
+    }
     
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)

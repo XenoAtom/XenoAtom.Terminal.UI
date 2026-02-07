@@ -63,6 +63,16 @@ public sealed partial class ToastHost : ContentVisual, IAnimatedVisual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ToastHost"/> class with bound content.
+    /// </summary>
+    /// <param name="content">A binding that supplies the wrapped content visual.</param>
+    public ToastHost(Binding<Visual?> content)
+        : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
     /// Gets or sets the toast placement within the viewport.
     /// </summary>
     [Bindable]

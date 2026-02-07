@@ -57,6 +57,29 @@ public sealed partial class OptionList<T> : Visual, IScrollable
         HoveredIndex = -1;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OptionList{T}"/> control with items.
+    /// </summary>
+    /// <param name="items">The items displayed by the list.</param>
+    public OptionList(IEnumerable<T> items) : this()
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        foreach (var item in items)
+        {
+            Items.Add(item);
+        }
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OptionList{T}"/> control with items and selected index.
+    /// </summary>
+    /// <param name="items">The items displayed by the list.</param>
+    /// <param name="selectedIndex">The selected item index.</param>
+    public OptionList(IEnumerable<T> items, int selectedIndex) : this(items)
+    {
+        this.SelectedIndex(selectedIndex);
+    }
+
     [Bindable]
     internal partial int HoveredIndex { get; set; }
 

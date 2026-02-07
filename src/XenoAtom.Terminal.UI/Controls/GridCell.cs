@@ -21,6 +21,33 @@ public sealed partial class GridCell : ContentVisual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="GridCell"/> class with content.
+    /// </summary>
+    /// <param name="content">The cell content.</param>
+    public GridCell(Visual content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GridCell"/> class with computed content.
+    /// </summary>
+    /// <param name="contentFactory">A factory that provides the cell content.</param>
+    public GridCell(Func<Visual> contentFactory) : this()
+    {
+        this.Content(contentFactory);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GridCell"/> class with bound content.
+    /// </summary>
+    /// <param name="content">A binding that supplies the cell content.</param>
+    public GridCell(Binding<Visual?> content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
     /// Gets or sets the row index.
     /// </summary>
     [Bindable]

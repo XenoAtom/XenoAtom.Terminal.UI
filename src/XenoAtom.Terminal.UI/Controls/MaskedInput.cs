@@ -94,6 +94,24 @@ public sealed partial class MaskedInput : TextEditorBase
         this.Template(template);
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MaskedInput"/> class with a dynamic template.
+    /// </summary>
+    /// <param name="template">A delegate that supplies the template mask.</param>
+    public MaskedInput(Func<string?> template) : this()
+    {
+        this.Template(template);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MaskedInput"/> class with a bound template.
+    /// </summary>
+    /// <param name="template">A binding that supplies the template mask.</param>
+    public MaskedInput(Binding<string?> template) : this()
+    {
+        this.Template(template);
+    }
+
     /// <inheritdoc />
     protected override void PrepareChildren()
     {

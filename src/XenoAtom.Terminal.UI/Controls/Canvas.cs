@@ -36,6 +36,15 @@ public sealed partial class Canvas : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="Canvas"/> class with a drawing callback.
+    /// </summary>
+    /// <param name="painter">The drawing callback executed during render.</param>
+    public Canvas(Action<CanvasContext> painter) : this()
+    {
+        this.Painter(painter);
+    }
+
+    /// <summary>
     /// Gets or sets the drawing callback executed during render.
     /// </summary>
     /// <remarks>

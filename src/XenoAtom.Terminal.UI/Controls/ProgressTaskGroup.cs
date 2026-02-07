@@ -36,6 +36,33 @@ public sealed partial class ProgressTaskGroup : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ProgressTaskGroup"/> class with tasks.
+    /// </summary>
+    /// <param name="tasks">The tasks displayed by this group.</param>
+    public ProgressTaskGroup(IEnumerable<ProgressTask> tasks) : this()
+    {
+        ArgumentNullException.ThrowIfNull(tasks);
+        foreach (var task in tasks)
+        {
+            Tasks.Add(task);
+        }
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProgressTaskGroup"/> class with tasks and columns.
+    /// </summary>
+    /// <param name="tasks">The tasks displayed by this group.</param>
+    /// <param name="columns">The column definitions used to render each task.</param>
+    public ProgressTaskGroup(IEnumerable<ProgressTask> tasks, IEnumerable<ProgressTaskColumn> columns) : this(tasks)
+    {
+        ArgumentNullException.ThrowIfNull(columns);
+        foreach (var column in columns)
+        {
+            Columns.Add(column);
+        }
+    }
+
+    /// <summary>
     /// Gets the tasks displayed by this group.
     /// </summary>
     [Bindable]

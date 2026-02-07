@@ -320,6 +320,33 @@ public partial class PromptEditor : TextEditorBase
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="PromptEditor"/> class with initial text.
+    /// </summary>
+    /// <param name="text">The initial text.</param>
+    public PromptEditor(string? text) : this()
+    {
+        this.Text(text);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PromptEditor"/> class with dynamic text.
+    /// </summary>
+    /// <param name="text">A delegate that supplies the text content.</param>
+    public PromptEditor(Func<string?> text) : this()
+    {
+        this.Text(text);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PromptEditor"/> class with bound text.
+    /// </summary>
+    /// <param name="text">A binding that supplies the text content.</param>
+    public PromptEditor(Binding<string?> text) : this()
+    {
+        this.BindText(text);
+    }
+
+    /// <summary>
     /// Gets or sets the editor text content.
     /// </summary>
     [Bindable]

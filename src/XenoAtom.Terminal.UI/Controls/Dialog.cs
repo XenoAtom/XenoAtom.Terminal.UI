@@ -34,6 +34,43 @@ public sealed partial class Dialog : Visual, IModalVisual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="Dialog"/> class with content.
+    /// </summary>
+    /// <param name="content">The dialog content.</param>
+    public Dialog(Visual content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Dialog"/> class with dynamic content.
+    /// </summary>
+    /// <param name="content">A delegate that supplies the dialog content.</param>
+    public Dialog(Func<Visual> content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Dialog"/> class with bound content.
+    /// </summary>
+    /// <param name="content">A binding that supplies the dialog content.</param>
+    public Dialog(Binding<Visual?> content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Dialog"/> class with title and content.
+    /// </summary>
+    /// <param name="title">The dialog title visual.</param>
+    /// <param name="content">The dialog content.</param>
+    public Dialog(Visual title, Visual content) : this(content)
+    {
+        this.Title(title);
+    }
+
+    /// <summary>
     /// Shows the dialog by adding it to the current fullscreen <see cref="TerminalApp"/>.
     /// </summary>
     /// <exception cref="InvalidOperationException">Thrown when called while no terminal app is running.</exception>

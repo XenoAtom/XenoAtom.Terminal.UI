@@ -24,6 +24,17 @@ public sealed partial class StatusBar : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="StatusBar"/> class with left and right content.
+    /// </summary>
+    /// <param name="leftText">The left-aligned content.</param>
+    /// <param name="rightText">The right-aligned content, or <see langword="null"/>.</param>
+    public StatusBar(Visual leftText, Visual? rightText = null) : this()
+    {
+        this.LeftText(leftText);
+        this.RightText(rightText);
+    }
+
+    /// <summary>
     /// Gets or sets the left-aligned content.
     /// </summary>
     [Bindable]

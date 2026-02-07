@@ -24,6 +24,19 @@ public sealed partial class Footer : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="Footer"/> class with left, center, and right content.
+    /// </summary>
+    /// <param name="left">The left-aligned content.</param>
+    /// <param name="center">The centered content, or <see langword="null"/>.</param>
+    /// <param name="right">The right-aligned content, or <see langword="null"/>.</param>
+    public Footer(Visual left, Visual? center = null, Visual? right = null) : this()
+    {
+        this.Left(left);
+        this.Center(center);
+        this.Right(right);
+    }
+
+    /// <summary>
     /// Gets or sets the left-aligned content.
     /// </summary>
     [Bindable]

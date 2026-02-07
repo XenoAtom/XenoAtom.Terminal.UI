@@ -52,6 +52,29 @@ public sealed partial class RadioButtonList<T> : Visual, IScrollable
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="RadioButtonList{T}"/> class with items.
+    /// </summary>
+    /// <param name="items">The items displayed by the list.</param>
+    public RadioButtonList(IEnumerable<T> items) : this()
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        foreach (var item in items)
+        {
+            Items.Add(item);
+        }
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RadioButtonList{T}"/> class with items and selected index.
+    /// </summary>
+    /// <param name="items">The items displayed by the list.</param>
+    /// <param name="selectedIndex">The selected item index.</param>
+    public RadioButtonList(IEnumerable<T> items, int selectedIndex) : this(items)
+    {
+        this.SelectedIndex(selectedIndex);
+    }
+
+    /// <summary>
     /// Gets the scroll model for this list.
     /// </summary>
     public ScrollModel Scroll => _scroll;

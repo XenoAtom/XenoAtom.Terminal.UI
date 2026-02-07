@@ -40,6 +40,32 @@ public sealed partial class RadioButton : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="RadioButton"/> class with label and group.
+    /// </summary>
+    /// <param name="text">The label visual.</param>
+    /// <param name="groupBy">The group identifier.</param>
+    /// <param name="isChecked">The initial checked state.</param>
+    public RadioButton(Visual text, object? groupBy = null, bool isChecked = false) : this()
+    {
+        Text = text;
+        GroupBy = groupBy;
+        IsChecked = isChecked;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RadioButton"/> class bound to its checked state.
+    /// </summary>
+    /// <param name="text">The label visual.</param>
+    /// <param name="groupBy">The group identifier.</param>
+    /// <param name="isChecked">A binding that supplies the checked state.</param>
+    public RadioButton(Visual text, object? groupBy, Binding<bool> isChecked) : this()
+    {
+        Text = text;
+        GroupBy = groupBy;
+        this.BindIsChecked(isChecked);
+    }
+
+    /// <summary>
     /// Gets or sets the label visual.
     /// </summary>
     [Bindable]

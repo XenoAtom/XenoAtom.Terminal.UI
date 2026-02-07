@@ -116,6 +116,15 @@ public sealed partial class ScrollViewer : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ScrollViewer"/> with bound content.
+    /// </summary>
+    /// <param name="content">A binding that supplies the content visual.</param>
+    public ScrollViewer(Binding<Visual?> content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ScrollViewer"/> with dynamic content.
     /// </summary>
     /// <param name="contentFactory">A factory that produces the content visual.</param>
@@ -123,6 +132,16 @@ public sealed partial class ScrollViewer : Visual
     public ScrollViewer(Func<Visual?> contentFactory, bool focusable) : this(focusable)
     {
         this.Content(contentFactory);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ScrollViewer"/> with bound content.
+    /// </summary>
+    /// <param name="content">A binding that supplies the content visual.</param>
+    /// <param name="focusable">Whether the control can receive focus.</param>
+    public ScrollViewer(Binding<Visual?> content, bool focusable) : this(focusable)
+    {
+        this.Content(content);
     }
 
     /// <inheritdoc/>

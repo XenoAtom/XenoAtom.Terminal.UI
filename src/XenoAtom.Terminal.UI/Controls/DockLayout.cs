@@ -2,11 +2,6 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-
-// Copyright (c) Alexandre Mutel. All rights reserved.
-// Licensed under the BSD-Clause 2 license.
-// See license.txt file in the project root for full license information.
-
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Layout;
 
@@ -24,6 +19,46 @@ public sealed partial class DockLayout : Visual
     {
         HorizontalAlignment = Align.Stretch;
         VerticalAlignment = Align.Stretch;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DockLayout"/> class with main content.
+    /// </summary>
+    /// <param name="content">The main content region.</param>
+    public DockLayout(Visual content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DockLayout"/> class with dynamic main content.
+    /// </summary>
+    /// <param name="content">A delegate that supplies the main content region.</param>
+    public DockLayout(Func<Visual> content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DockLayout"/> class with bound main content.
+    /// </summary>
+    /// <param name="content">A binding that supplies the main content region.</param>
+    public DockLayout(Binding<Visual?> content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DockLayout"/> class with top, content, and bottom regions.
+    /// </summary>
+    /// <param name="top">The top region content, or <see langword="null"/>.</param>
+    /// <param name="content">The main content region, or <see langword="null"/>.</param>
+    /// <param name="bottom">The bottom region content, or <see langword="null"/>.</param>
+    public DockLayout(Visual? top, Visual? content, Visual? bottom) : this()
+    {
+        this.Top(top);
+        this.Content(content);
+        this.Bottom(bottom);
     }
 
     /// <summary>

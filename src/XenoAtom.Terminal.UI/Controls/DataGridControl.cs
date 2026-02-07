@@ -345,6 +345,43 @@ public sealed partial class DataGridControl : Visual, IScrollable
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="DataGridControl"/> class with a document.
+    /// </summary>
+    /// <param name="document">The data grid document.</param>
+    public DataGridControl(IDataGridDocument document) : this()
+    {
+        this.Document(document);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataGridControl"/> class with a dynamic document.
+    /// </summary>
+    /// <param name="document">A delegate that supplies the data grid document.</param>
+    public DataGridControl(Func<IDataGridDocument?> document) : this()
+    {
+        this.Document(document);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataGridControl"/> class with a bound document.
+    /// </summary>
+    /// <param name="document">A binding that supplies the data grid document.</param>
+    public DataGridControl(Binding<IDataGridDocument?> document) : this()
+    {
+        this.Document(document);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataGridControl"/> class with a document and view.
+    /// </summary>
+    /// <param name="document">The data grid document.</param>
+    /// <param name="view">The optional projected view.</param>
+    public DataGridControl(IDataGridDocument document, IDataGridView? view) : this(document)
+    {
+        this.View(view);
+    }
+
+    /// <summary>
     /// Gets the scroll model for the grid.
     /// </summary>
     public ScrollModel Scroll => _scroll;

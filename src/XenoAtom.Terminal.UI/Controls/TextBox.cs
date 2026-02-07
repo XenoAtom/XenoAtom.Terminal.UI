@@ -83,6 +83,15 @@ public partial class TextBox : TextEditorBase
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="TextBox"/> class with dynamic text.
+    /// </summary>
+    /// <param name="text">A delegate that supplies the text content.</param>
+    public TextBox(Func<string?> text) : this()
+    {
+        this.Text(text);
+    }
+
+    /// <summary>
     /// Initializes a new instance of the TextBox class and binds its text content to the specified binding.
     /// </summary>
     /// <remarks>Changes to the bound value are automatically reflected in the TextBox, and updates to the
@@ -91,18 +100,6 @@ public partial class TextBox : TextEditorBase
     /// <param name="text">A binding that provides the text value for the TextBox. The binding may be updated to reflect changes in the
     /// TextBox or its source.</param>
     public TextBox(Binding<string?> text) : this()
-    {
-        this.BindText(text);
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the TextBox class and binds its text content to the specified state object.
-    /// </summary>
-    /// <remarks>Use this constructor to create a TextBox that automatically synchronizes its displayed text
-    /// with the provided state. This enables two-way data binding between the TextBox and the state object.</remarks>
-    /// <param name="text">The state object representing the text value to bind to the TextBox. Changes to this state will update the
-    /// TextBox content, and vice versa.</param>
-    public TextBox(State<string?> text) : this()
     {
         this.BindText(text);
     }

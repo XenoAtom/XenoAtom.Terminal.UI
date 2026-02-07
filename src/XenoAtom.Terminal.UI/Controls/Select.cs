@@ -44,6 +44,29 @@ public partial class Select<T> : ContentVisual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="Select{T}"/> class with items.
+    /// </summary>
+    /// <param name="items">The items available for selection.</param>
+    public Select(IEnumerable<T> items) : this()
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        foreach (var item in items)
+        {
+            Items.Add(item);
+        }
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Select{T}"/> class with items and selected index.
+    /// </summary>
+    /// <param name="items">The items available for selection.</param>
+    /// <param name="selectedIndex">The selected item index.</param>
+    public Select(IEnumerable<T> items, int selectedIndex) : this(items)
+    {
+        this.SelectedIndex(selectedIndex);
+    }
+
+    /// <summary>
     /// Gets the items available for selection.
     /// </summary>
     [Bindable]

@@ -47,6 +47,24 @@ public sealed partial class EnumSelect<[DynamicallyAccessedMembers(DynamicallyAc
         }
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EnumSelect{TEnum}"/> class with an initial value.
+    /// </summary>
+    /// <param name="value">The initial enum value.</param>
+    public EnumSelect(TEnum value) : this()
+    {
+        this.Value(value);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EnumSelect{TEnum}"/> class bound to a value binding.
+    /// </summary>
+    /// <param name="value">A binding that supplies the selected enum value.</param>
+    public EnumSelect(Binding<TEnum> value) : this()
+    {
+        this.BindValue(value);
+    }
+
     /// <inheritdoc />
     protected override Layout.SizeHints MeasureCore(in Layout.LayoutConstraints constraints)
     {

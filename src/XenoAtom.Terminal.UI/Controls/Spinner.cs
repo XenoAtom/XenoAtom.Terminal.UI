@@ -42,6 +42,33 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="Spinner"/> class with label content.
+    /// </summary>
+    /// <param name="label">The label visual.</param>
+    public Spinner(Visual label) : this()
+    {
+        Label = label;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Spinner"/> class with dynamic label content.
+    /// </summary>
+    /// <param name="label">A delegate that supplies the label visual.</param>
+    public Spinner(Func<Visual> label) : this()
+    {
+        this.Label(label);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Spinner"/> class with bound label content.
+    /// </summary>
+    /// <param name="label">A binding that supplies the label visual.</param>
+    public Spinner(Binding<Visual?> label) : this()
+    {
+        this.Label(label);
+    }
+
+    /// <summary>
     /// Gets or sets the label visual.
     /// </summary>
     [Bindable]

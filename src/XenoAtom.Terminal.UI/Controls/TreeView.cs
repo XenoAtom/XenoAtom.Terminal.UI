@@ -46,6 +46,19 @@ public sealed partial class TreeView : Visual, IScrollable
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="TreeView"/> class with root nodes.
+    /// </summary>
+    /// <param name="roots">The root nodes.</param>
+    public TreeView(IEnumerable<TreeNode> roots) : this()
+    {
+        ArgumentNullException.ThrowIfNull(roots);
+        foreach (var root in roots)
+        {
+            Roots.Add(root);
+        }
+    }
+
+    /// <summary>
     /// Gets the collection of root nodes.
     /// </summary>
     [Bindable]

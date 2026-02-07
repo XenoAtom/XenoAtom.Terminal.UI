@@ -32,6 +32,34 @@ public sealed partial class Group : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="Group"/> class with dynamic top-left label.
+    /// </summary>
+    /// <param name="topLeftText">A delegate that supplies the top-left label visual.</param>
+    public Group(Func<Visual> topLeftText) : this()
+    {
+        this.TopLeftText(topLeftText);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Group"/> class with bound top-left label.
+    /// </summary>
+    /// <param name="topLeftText">A binding that supplies the top-left label visual.</param>
+    public Group(Binding<Visual?> topLeftText) : this()
+    {
+        this.TopLeftText(topLeftText);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Group"/> class with top-left label and content.
+    /// </summary>
+    /// <param name="topLeftText">The top-left label visual.</param>
+    /// <param name="content">The group content visual.</param>
+    public Group(Visual topLeftText, Visual content) : this(topLeftText)
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
     /// Gets or sets the content padding inside the group border.
     /// </summary>
     [Bindable]

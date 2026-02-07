@@ -25,6 +25,19 @@ public sealed partial class ContentSwitcher : Panel
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ContentSwitcher"/> class with children.
+    /// </summary>
+    /// <param name="children">The child visuals to switch between.</param>
+    public ContentSwitcher(params Visual[] children) : this()
+    {
+        ArgumentNullException.ThrowIfNull(children);
+        for (var i = 0; i < children.Length; i++)
+        {
+            Children.Add(children[i]);
+        }
+    }
+
+    /// <summary>
     /// Gets or sets the index of the active child.
     /// </summary>
     [Bindable]

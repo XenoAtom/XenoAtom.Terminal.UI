@@ -71,6 +71,33 @@ public sealed partial class Popup : Visual, IModalVisual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="Popup"/> class with content.
+    /// </summary>
+    /// <param name="content">The popup content.</param>
+    public Popup(Visual content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Popup"/> class with computed content.
+    /// </summary>
+    /// <param name="contentFactory">A factory that provides the popup content.</param>
+    public Popup(Func<Visual> contentFactory) : this()
+    {
+        this.Content(contentFactory);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Popup"/> class with bound content.
+    /// </summary>
+    /// <param name="content">A binding that supplies the popup content.</param>
+    public Popup(Binding<Visual?> content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
     /// Gets or sets the popup content.
     /// </summary>
     /// <remarks>

@@ -37,6 +37,24 @@ public sealed partial class Switch : ContentVisual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="Switch"/> class with computed content.
+    /// </summary>
+    /// <param name="contentFactory">A factory that provides the content displayed next to the switch.</param>
+    public Switch(Func<Visual> contentFactory) : this()
+    {
+        this.Content(contentFactory);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Switch"/> class with bound content.
+    /// </summary>
+    /// <param name="content">A binding that supplies the content displayed next to the switch.</param>
+    public Switch(Binding<Visual?> content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the switch is on.
     /// </summary>
     [Bindable]

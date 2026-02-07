@@ -36,6 +36,36 @@ public sealed partial class Slider<T> : Visual where T: struct, INumber<T>
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="Slider{T}"/> class with an initial value.
+    /// </summary>
+    /// <param name="value">The initial value.</param>
+    public Slider(T value) : this()
+    {
+        this.Value(value);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Slider{T}"/> class with range and initial value.
+    /// </summary>
+    /// <param name="minimum">The minimum value.</param>
+    /// <param name="maximum">The maximum value.</param>
+    /// <param name="value">The initial value.</param>
+    public Slider(T minimum, T maximum, T value) : this(value)
+    {
+        this.Minimum(minimum);
+        this.Maximum(maximum);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Slider{T}"/> class bound to a value binding.
+    /// </summary>
+    /// <param name="value">A binding that supplies the current value.</param>
+    public Slider(Binding<T> value) : this()
+    {
+        this.BindValue(value);
+    }
+
+    /// <summary>
     /// Gets or sets the orientation of the slider.
     /// </summary>
     [Bindable]

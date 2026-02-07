@@ -35,6 +35,24 @@ public partial class Button : ContentVisual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="Button"/> class with computed content.
+    /// </summary>
+    /// <param name="contentFactory">A factory that provides the button content.</param>
+    public Button(Func<Visual> contentFactory) : this()
+    {
+        this.Content(contentFactory);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Button"/> class with bound content.
+    /// </summary>
+    /// <param name="content">A binding that supplies the button content.</param>
+    public Button(Binding<Visual?> content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
     /// Gets or sets the semantic tone of the button.
     /// </summary>
     [Bindable]

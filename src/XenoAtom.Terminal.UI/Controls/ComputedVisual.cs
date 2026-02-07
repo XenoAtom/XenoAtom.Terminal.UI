@@ -31,11 +31,11 @@ public sealed partial class ComputedVisual : Visual
     /// <summary>
     /// Initializes a new instance of the <see cref="ComputedVisual"/> class.
     /// </summary>
-    /// <param name="state">The state that provides the child visual.</param>
-    public ComputedVisual(State<Visual?> state)
+    /// <param name="binding">A binding that provides the child visual.</param>
+    public ComputedVisual(Binding<Visual?> binding)
     {
-        ArgumentNullException.ThrowIfNull(state);
-        DynamicVisual = (Func<Visual?>)(() => state.Value);
+        if (binding.IsEmpty) throw new ArgumentException("Binding cannot be empty.", nameof(binding));
+        DynamicVisual = (Func<Visual?>)(() => binding.GetValue());
     }
 
     /// <summary>

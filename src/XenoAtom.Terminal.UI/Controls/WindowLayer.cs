@@ -26,6 +26,33 @@ public sealed partial class WindowLayer : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="WindowLayer"/> class with background content.
+    /// </summary>
+    /// <param name="content">The background content displayed behind windows.</param>
+    public WindowLayer(Visual content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WindowLayer"/> class with computed background content.
+    /// </summary>
+    /// <param name="contentFactory">A factory that provides the background content displayed behind windows.</param>
+    public WindowLayer(Func<Visual> contentFactory) : this()
+    {
+        this.Content(contentFactory);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WindowLayer"/> class with bound background content.
+    /// </summary>
+    /// <param name="content">A binding that supplies the background content displayed behind windows.</param>
+    public WindowLayer(Binding<Visual?> content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
     /// Gets or sets the background content behind all windows.
     /// </summary>
     [Bindable]

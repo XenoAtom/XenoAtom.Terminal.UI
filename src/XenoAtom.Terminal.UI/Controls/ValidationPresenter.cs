@@ -74,6 +74,33 @@ public sealed partial class ValidationPresenter : ContentVisual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ValidationPresenter"/> class with wrapped content.
+    /// </summary>
+    /// <param name="content">The wrapped content visual.</param>
+    public ValidationPresenter(Visual content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ValidationPresenter"/> class with computed wrapped content.
+    /// </summary>
+    /// <param name="contentFactory">A factory that provides the wrapped content visual.</param>
+    public ValidationPresenter(Func<Visual> contentFactory) : this()
+    {
+        this.Content(contentFactory);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ValidationPresenter"/> class with bound wrapped content.
+    /// </summary>
+    /// <param name="content">A binding that supplies the wrapped content visual.</param>
+    public ValidationPresenter(Binding<Visual?> content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
     /// Gets or sets the message displayed by the presenter, or <see langword="null"/> to hide it.
     /// </summary>
     [Bindable]

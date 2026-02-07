@@ -40,6 +40,15 @@ public sealed partial class Border : Padder
         this.Content(contentFactory);
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Border"/> control with bound content.
+    /// </summary>
+    /// <param name="content">A binding that supplies the border content visual.</param>
+    public Border(Binding<Visual?> content)
+    {
+        this.Content(content);
+    }
+
     /// <inheritdoc />
     protected override Thickness Inset => new(1);
 

@@ -24,6 +24,19 @@ public sealed partial class LineChart : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="LineChart"/> class with values.
+    /// </summary>
+    /// <param name="values">The values to render.</param>
+    public LineChart(IEnumerable<double> values) : this()
+    {
+        ArgumentNullException.ThrowIfNull(values);
+        foreach (var value in values)
+        {
+            Values.Add(value);
+        }
+    }
+
+    /// <summary>
     /// Gets the data values to render.
     /// </summary>
     [Bindable]

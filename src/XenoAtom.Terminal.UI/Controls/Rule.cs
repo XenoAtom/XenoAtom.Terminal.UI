@@ -24,6 +24,19 @@ public sealed partial class Rule : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="Rule"/> class with start, center, and end labels.
+    /// </summary>
+    /// <param name="startLabel">The start label visual.</param>
+    /// <param name="centerLabel">The center label visual, or <see langword="null"/>.</param>
+    /// <param name="endLabel">The end label visual, or <see langword="null"/>.</param>
+    public Rule(Visual startLabel, Visual? centerLabel = null, Visual? endLabel = null) : this()
+    {
+        this.StartLabel(startLabel);
+        this.CenterLabel(centerLabel);
+        this.EndLabel(endLabel);
+    }
+
+    /// <summary>
     /// Gets or sets the start label visual.
     /// </summary>
     [Bindable]

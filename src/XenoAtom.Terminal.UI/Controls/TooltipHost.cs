@@ -56,6 +56,15 @@ public sealed partial class TooltipHost : ContentVisual, IAnimatedVisual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="TooltipHost"/> class with bound content.
+    /// </summary>
+    /// <param name="content">A binding that supplies the content to wrap.</param>
+    public TooltipHost(Binding<Visual?> content) : this()
+    {
+        this.Content(content);
+    }
+
+    /// <summary>
     /// Gets or sets the tooltip content.
     /// </summary>
     [Bindable]

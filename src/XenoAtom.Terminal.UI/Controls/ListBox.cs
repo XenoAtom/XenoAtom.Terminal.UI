@@ -55,6 +55,29 @@ public sealed partial class ListBox<T> : Visual, IScrollable
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ListBox{T}"/> class with items.
+    /// </summary>
+    /// <param name="items">The items displayed by the list box.</param>
+    public ListBox(IEnumerable<T> items) : this()
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        foreach (var item in items)
+        {
+            Items.Add(item);
+        }
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ListBox{T}"/> class with items and selected index.
+    /// </summary>
+    /// <param name="items">The items displayed by the list box.</param>
+    /// <param name="selectedIndex">The selected item index.</param>
+    public ListBox(IEnumerable<T> items, int selectedIndex) : this(items)
+    {
+        this.SelectedIndex(selectedIndex);
+    }
+
+    /// <summary>
     /// Gets the scroll model for this list.
     /// </summary>
     public ScrollModel Scroll => _scroll;

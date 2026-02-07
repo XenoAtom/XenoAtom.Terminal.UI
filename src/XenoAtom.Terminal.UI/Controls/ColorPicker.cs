@@ -115,6 +115,24 @@ public sealed partial class ColorPicker : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ColorPicker"/> class with an initial value.
+    /// </summary>
+    /// <param name="value">The initial color value.</param>
+    public ColorPicker(Color value) : this()
+    {
+        this.Value(value);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ColorPicker"/> class bound to a color binding.
+    /// </summary>
+    /// <param name="value">A binding that supplies the selected color value.</param>
+    public ColorPicker(Binding<Color> value) : this()
+    {
+        this.BindValue(value);
+    }
+
+    /// <summary>
     /// Gets or sets the selected color value.
     /// </summary>
     [Bindable]

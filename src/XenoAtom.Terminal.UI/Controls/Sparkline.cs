@@ -24,6 +24,19 @@ public sealed partial class Sparkline : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="Sparkline"/> class with values.
+    /// </summary>
+    /// <param name="values">The values to render.</param>
+    public Sparkline(IEnumerable<double> values) : this()
+    {
+        ArgumentNullException.ThrowIfNull(values);
+        foreach (var value in values)
+        {
+            Values.Add(value);
+        }
+    }
+
+    /// <summary>
     /// Gets the values to render.
     /// </summary>
     [Bindable]
