@@ -9,9 +9,6 @@ Wrap stacks arrange children in a **flow layout**: items are placed along a main
 - `WrapHStack` considers **width** the main axis and wraps into **rows**.
 - `WrapVStack` considers **height** the main axis and wraps into **columns**.
 
-Screenshot: `img/controls/wrapstack.png` (placeholder)
-
-
 ![WrapStack (WrapHStack / WrapVStack)](../../img/controls/wrapstack.svg){.terminal}
 
 ## Key properties

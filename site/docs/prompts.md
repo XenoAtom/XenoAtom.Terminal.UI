@@ -10,8 +10,6 @@ infrastructure (`Terminal.Live`).
 Prompts are intended for *inline* scenarios (live regions). For fullscreen applications, prefer dialogs/popups inside
 `Terminal.Run`.
 
-> Screenshots: `docs/images/prompts/text.png` (placeholder)
-
 ## Basic usage
 
 ```csharp
