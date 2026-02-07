@@ -9,9 +9,7 @@ namespace XenoAtom.Terminal.UI.Text;
 /// </summary>
 public sealed class TextDocument : ITextDocument
 {
-    private readonly List<int> _lineStarts = new(capacity: 32);
-    private readonly List<byte> _lineBreakLengths = new(capacity: 32);
-    private string _text;
+    private readonly TextPieceTable _table;
     private int _version;
     private TextSnapshot _snapshot;
 
@@ -23,9 +21,8 @@ public sealed class TextDocument : ITextDocument
     /// <param name="text">The initial text.</param>
     public TextDocument(string? text = null)
     {
-        _text = text ?? string.Empty;
-        RebuildLineStarts();
-        _snapshot = new TextSnapshot(_version, _text, _lineStarts, _lineBreakLengths);
+        _table = new TextPieceTable(text ?? string.Empty);
+        _snapshot = _table.CreateSnapshot(_version);
     }
 
     /// <inheritdoc />
@@ -59,12 +56,12 @@ public sealed class TextDocument : ITextDocument
     /// <inheritdoc />
     public void Replace(int position, int length, ReadOnlySpan<char> text)
     {
-        if (position < 0 || position > _text.Length)
+        if (position < 0 || position > _table.Length)
         {
             throw new ArgumentOutOfRangeException(nameof(position));
         }
 
-        if (length < 0 || position + length > _text.Length)
+        if (length < 0 || position + length > _table.Length)
         {
             throw new ArgumentOutOfRangeException(nameof(length));
         }
@@ -76,12 +73,11 @@ public sealed class TextDocument : ITextDocument
         }
 
         var oldVersion = _version;
-        var oldLineCount = _lineStarts.Count;
+        var oldLineCount = _snapshot.LineCount;
 
-        _text = string.Concat(_text.AsSpan(0, position), inserted.AsSpan(), _text.AsSpan(position + length));
+        _table.Replace(position, length, text);
         _version++;
-        RebuildLineStarts();
-        _snapshot = new TextSnapshot(_version, _text, _lineStarts, _lineBreakLengths);
+        _snapshot = _table.CreateSnapshot(_version);
 
         RaiseChanged(new TextDocumentChangedEventArgs
         {
@@ -91,17 +87,17 @@ public sealed class TextDocument : ITextDocument
             RemovedLength = length,
             InsertedLength = inserted.Length,
             OldLineCount = oldLineCount,
-            NewLineCount = _lineStarts.Count,
+            NewLineCount = _snapshot.LineCount,
             InsertedTextHint = inserted.Length == 0 ? null : inserted,
         });
     }
 
     internal void SetText(string text)
     {
-        Replace(0, _text.Length, text.AsSpan());
+        Replace(0, _table.Length, text.AsSpan());
     }
 
-    internal string GetText() => _text;
+    internal string GetText() => _table.GetText();
 
     private void RaiseChanged(TextDocumentChangedEventArgs args)
     {
@@ -111,42 +107,6 @@ public sealed class TextDocument : ITextDocument
         }
 
         Changed?.Invoke(this, args);
-    }
-
-    private void RebuildLineStarts()
-    {
-        _lineStarts.Clear();
-        _lineStarts.Add(0);
-        _lineBreakLengths.Clear();
-        _lineBreakLengths.Add(0);
-
-        for (var i = 0; i < _text.Length; i++)
-        {
-            var ch = _text[i];
-            if (ch == '\r')
-            {
-                _lineBreakLengths[^1] = (byte)(i + 1 < _text.Length && _text[i + 1] == '\n' ? 2 : 1);
-                if (i + 1 < _text.Length && _text[i + 1] == '\n')
-                {
-                    i++;
-                }
-
-                _lineStarts.Add(i + 1);
-                _lineBreakLengths.Add(0);
-            }
-            else if (ch == '\n')
-            {
-                _lineBreakLengths[^1] = 1;
-                _lineStarts.Add(i + 1);
-                _lineBreakLengths.Add(0);
-            }
-        }
-
-        if (_lineStarts.Count == 0)
-        {
-            _lineStarts.Add(0);
-            _lineBreakLengths.Add(0);
-        }
     }
 
     private sealed class UpdateScope : IDisposable

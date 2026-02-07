@@ -10,9 +10,8 @@ namespace XenoAtom.Terminal.UI.Tests;
 [TestClass]
 public sealed class TextEditorDocumentTests
 {
-    private static string ReadText(ITextDocument document)
+    private static string ReadText(ITextSnapshot snapshot)
     {
-        var snapshot = document.CurrentSnapshot;
         if (snapshot.Length == 0)
         {
             return string.Empty;
@@ -21,6 +20,11 @@ public sealed class TextEditorDocumentTests
         var buffer = new char[snapshot.Length];
         snapshot.CopyTo(0, buffer);
         return new string(buffer);
+    }
+
+    private static string ReadText(ITextDocument document)
+    {
+        return ReadText(document.CurrentSnapshot);
     }
 
     [TestMethod]
@@ -72,5 +76,71 @@ public sealed class TextEditorDocumentTests
 
         textArea.TextDocument.Insert(0, "A".AsSpan());
         Assert.AreEqual("ALine1\r\nLine2", state.Value);
+    }
+
+    [TestMethod]
+    public void TextDocument_Snapshot_Remains_Stable_After_Mutations()
+    {
+        var doc = new TextDocument("abc");
+        var snapshotBefore = doc.CurrentSnapshot;
+
+        doc.Replace(1, 1, "X".AsSpan());
+        doc.Insert(3, "Z".AsSpan());
+
+        Assert.AreEqual("abc", ReadText(snapshotBefore));
+        Assert.AreEqual("aXcZ", ReadText(doc));
+    }
+
+    [TestMethod]
+    public void TextDocument_Handles_Insert_Remove_Replace_Composition()
+    {
+        var doc = new TextDocument("Hello World");
+
+        doc.Remove(5, 1);
+        doc.Insert(5, ", ".AsSpan());
+        doc.Replace(7, 5, "Terminal".AsSpan());
+
+        Assert.AreEqual("Hello, Terminal", ReadText(doc));
+        Assert.AreEqual(1, doc.CurrentSnapshot.LineCount);
+    }
+
+    [TestMethod]
+    public void DynamicTextDocument_Uses_Internal_Edits_When_Setter_Echoes_Value()
+    {
+        var backing = "abc";
+        var document = new DynamicTextDocument(
+            getter: () => backing,
+            setter: value => backing = value);
+
+        var snapshotBefore = document.CurrentSnapshot;
+        document.Replace(1, 1, "X".AsSpan());
+
+        Assert.AreEqual("aXc", backing);
+        Assert.AreEqual("abc", ReadText(snapshotBefore));
+        Assert.AreEqual("aXc", ReadText(document));
+    }
+
+    [TestMethod]
+    public void DynamicTextDocument_Reconciles_When_Setter_Transforms_Value()
+    {
+        var backing = "abc";
+        var document = new DynamicTextDocument(
+            getter: () => backing,
+            setter: value => backing = value.ToUpperInvariant());
+
+        document.Insert(1, "z".AsSpan());
+
+        Assert.AreEqual("AZBC", backing);
+        Assert.AreEqual("AZBC", ReadText(document));
+    }
+
+    [TestMethod]
+    public void TextDocument_Tracks_Crlf_Across_Separate_Inserts()
+    {
+        var doc = new TextDocument("A\rB");
+        doc.Insert(2, "\n".AsSpan());
+
+        Assert.AreEqual("A\r\nB", ReadText(doc));
+        Assert.AreEqual(2, doc.CurrentSnapshot.LineCount);
     }
 }

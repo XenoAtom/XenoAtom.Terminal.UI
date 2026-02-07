@@ -14,11 +14,10 @@ internal sealed class DynamicTextDocument : ITextDocument
     private readonly Action<string> _setter;
 
     private bool _initialized;
-    private string _text = string.Empty;
+    private string _sourceText = string.Empty;
+    private TextPieceTable _table = new(string.Empty);
     private int _version;
-    private TextSnapshot _snapshot = new(version: 0, text: string.Empty, lineStarts: [0], lineBreakLengths: [0]);
-    private readonly List<int> _lineStarts = new(capacity: 32);
-    private readonly List<byte> _lineBreakLengths = new(capacity: 32);
+    private TextSnapshot _snapshot;
 
     private int _updateDepth;
 
@@ -28,6 +27,7 @@ internal sealed class DynamicTextDocument : ITextDocument
         ArgumentNullException.ThrowIfNull(setter);
         _getter = getter;
         _setter = setter;
+        _snapshot = _table.CreateSnapshot(version: 0);
     }
 
     public ITextSnapshot CurrentSnapshot
@@ -66,12 +66,12 @@ internal sealed class DynamicTextDocument : ITextDocument
     {
         EnsureFresh();
 
-        if (position < 0 || position > _text.Length)
+        if (position < 0 || position > _table.Length)
         {
             throw new ArgumentOutOfRangeException(nameof(position));
         }
 
-        if (length < 0 || position + length > _text.Length)
+        if (length < 0 || position + length > _table.Length)
         {
             throw new ArgumentOutOfRangeException(nameof(length));
         }
@@ -82,16 +82,27 @@ internal sealed class DynamicTextDocument : ITextDocument
             return;
         }
 
-        var oldText = _text;
         var oldVersion = _version;
-        var oldLineCount = _lineStarts.Count;
+        var oldLineCount = _snapshot.LineCount;
 
-        var updated = string.Concat(oldText.AsSpan(0, position), inserted.AsSpan(), oldText.AsSpan(position + length));
+        _table.Replace(position, length, text);
+        var updated = _table.GetText();
+        _sourceText = updated;
+
         _setter(updated);
 
         // Read back through the getter to support bindings/state-based setters.
-        updated = _getter();
-        SetTextInternal(updated, incrementVersion: true);
+        var received = _getter();
+        if (string.Equals(received, updated, StringComparison.Ordinal))
+        {
+            _sourceText = received;
+            _version++;
+            _snapshot = _table.CreateSnapshot(_version);
+        }
+        else
+        {
+            SetTextInternal(received, incrementVersion: true);
+        }
 
         RaiseChanged(new TextDocumentChangedEventArgs
         {
@@ -101,7 +112,7 @@ internal sealed class DynamicTextDocument : ITextDocument
             RemovedLength = length,
             InsertedLength = inserted.Length,
             OldLineCount = oldLineCount,
-            NewLineCount = _lineStarts.Count,
+            NewLineCount = _snapshot.LineCount,
             InsertedTextHint = inserted.Length == 0 ? null : inserted,
         });
     }
@@ -116,7 +127,7 @@ internal sealed class DynamicTextDocument : ITextDocument
             return;
         }
 
-        if (string.Equals(text, _text, StringComparison.Ordinal))
+        if (string.Equals(text, _sourceText, StringComparison.Ordinal))
         {
             return;
         }
@@ -126,50 +137,14 @@ internal sealed class DynamicTextDocument : ITextDocument
 
     private void SetTextInternal(string text, bool incrementVersion)
     {
-        _text = text;
+        _sourceText = text;
+        _table = new TextPieceTable(text);
         if (incrementVersion)
         {
             _version++;
         }
 
-        RebuildLineStarts();
-        _snapshot = new TextSnapshot(_version, _text, _lineStarts, _lineBreakLengths);
-    }
-
-    private void RebuildLineStarts()
-    {
-        _lineStarts.Clear();
-        _lineStarts.Add(0);
-        _lineBreakLengths.Clear();
-        _lineBreakLengths.Add(0);
-
-        for (var i = 0; i < _text.Length; i++)
-        {
-            var ch = _text[i];
-            if (ch == '\r')
-            {
-                _lineBreakLengths[^1] = (byte)(i + 1 < _text.Length && _text[i + 1] == '\n' ? 2 : 1);
-                if (i + 1 < _text.Length && _text[i + 1] == '\n')
-                {
-                    i++;
-                }
-
-                _lineStarts.Add(i + 1);
-                _lineBreakLengths.Add(0);
-            }
-            else if (ch == '\n')
-            {
-                _lineBreakLengths[^1] = 1;
-                _lineStarts.Add(i + 1);
-                _lineBreakLengths.Add(0);
-            }
-        }
-
-        if (_lineStarts.Count == 0)
-        {
-            _lineStarts.Add(0);
-            _lineBreakLengths.Add(0);
-        }
+        _snapshot = _table.CreateSnapshot(_version);
     }
 
     private void RaiseChanged(TextDocumentChangedEventArgs args)
