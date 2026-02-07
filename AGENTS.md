@@ -1,163 +1,79 @@
-# XenoAtom.Terminal.UI Code Contribution Instructions
+# XenoAtom.Terminal.UI — Agent Instructions
 
 XenoAtom.Terminal.UI is a modern, reactive retained-mode terminal UI framework for .NET.
 
-The project is still in a pre-release state. Remove this line when the project reaches a stable release.
+Pre-release project. Remove this line at stable release.
 
-## Overview
+Paths/commands below are relative to this directory (repo root).
 
-- In the `readme.md` file, you will find general information about the XenoAtom.Terminal.UI project.
-- In the `site/docs/readme.md` file you will find the user guide documentation for the XenoAtom.Terminal.UI library.
-- For control/framework implementation guidelines, you must follow `site/docs/control-development.md`.
+## Orientation
 
-## Project Structure
+- Library: `src/XenoAtom.Terminal.UI/`
+- Source generator: `src/XenoAtom.Terminal.UI.SourceGen/`
+- Tests (MSTest): `src/XenoAtom.Terminal.UI.Tests/`
+- Samples: `samples/`
+- Docs/site: `site/` (user docs: `site/docs/`, specs: `site/docs/specs/`)
+- Must-read dev docs: `site/docs/readme.md`, `site/docs/control-development.md`
 
-- In the `src/XenoAtom.Terminal.UI` folder you will find the code for the main XenoAtom.Terminal.UI library.
-- In the `src/XenoAtom.Terminal.UI.SourceGen` folder you will find the Roslyn source generator used by the library.
-- In the `src/XenoAtom.Terminal.UI.Tests` folder you will find the unit tests for the library.
-- In the `samples` folder you will find sample applications demonstrating the usage of XenoAtom.Terminal.UI.
-- In the `site` folder you will find the website and documentation; user docs are in `site/docs` and specs are in `site/docs/specs`.
+## Build & Test
 
-## Building and Testing
+```sh
+cd src
+dotnet build -c Release
+dotnet test -c Release
+```
 
-- To build the project, navigate to the `src` directory and run `dotnet build -c Release`.
-- To run the unit tests, navigate to the `src` directory and run `dotnet test -c Release`.
-- To regenerate the website control screenshots, run `dotnet run -c Release --project samples/ControlsDemo -- --export-screenshots` (outputs to `site/img/controls`).
-- To build the website, navigate to the `site` directory and run `lunet build`.
-- Ensure that all tests pass successfully before submitting any changes.
-- Ensure that user guide documentation (`site/docs/readme.md`) and top-level readme are updated to reflect any changes made to the library.
-- Ensure that the website builds successfully (`lunet build` from the `site` directory) when changing `site/**`.
+Website (only if touching `site/**`):
 
-## General Coding Instructions
+```sh
+cd site
+lunet build
+```
 
-- Follow the coding style and conventions used in the existing code base.
-- Write clear and concise inline comments to explain the purpose and functionality of your code. This is about the "why" more than the "what".
-- All public APIs must have XML documentation comments to avoid CS1591 warnings.
-- Ensure that your code is well-structured and modular to facilitate maintenance and future enhancements.
-- Adhere to best practices for error handling and input validation.
-- Write unit tests for any new functionality you add to ensure code quality and reliability.
-  - When fixing a bug, add a unit test that reproduces the bug before implementing the fix.
-- Use meaningful variable and method names that accurately reflect their purpose.
-- Avoid code duplication by reusing existing methods and classes whenever possible.
+Screenshots (only if control visuals changed):
 
-## C# Coding Conventions
+```sh
+dotnet run -c Release --project samples/ControlsDemo -- --export-screenshots
+# outputs to site/img/controls
+```
 
-### Naming Conventions
+## Rules (Do/Don't)
 
-- Use `PascalCase` for public members, types, and namespaces.
-- Use `camelCase` for local variables and parameters.
-- Use `_camelCase` (with underscore prefix) for private fields.
-- Prefix interfaces with `I` (e.g., `IMyInterface`).
-- Use descriptive names; avoid abbreviations unless widely understood (e.g., `Id`, `Url`).
+- Keep diffs focused; avoid drive-by refactors/formatting and unnecessary dependencies.
+- Follow existing patterns/naming; add comments only for non-obvious "why".
+- New/changed behavior requires tests; bug fix = regression test first, then fix.
+- Public APIs require XML docs (avoid CS1591) and should document thrown exceptions.
+- If behavior changes, update docs: `readme.md` and `site/docs/**` (especially `site/docs/readme.md`).
 
-### Code Style
+## C# Defaults
 
-- Use file-scoped namespaces (e.g., `namespace XenoAtom.Terminal.UI;`) unless the file requires multiple namespaces.
-- Use `var` when the type is obvious from the right-hand side; otherwise, use explicit types.
-- Prefer expression-bodied members for single-line implementations.
-- Use pattern matching and switch expressions where they improve readability.
-- Place `using` directives outside the namespace, sorted alphabetically with `System` namespaces first.
+- Naming: `PascalCase` public/types/namespaces, `camelCase` locals/params, `_camelCase` private fields, `I*` interfaces.
+- Style: file-scoped namespaces; `using` outside namespace (`System` first); `var` when type is obvious.
+- Nullability: enabled; respect annotations; prefer `is null`/`is not null`; no warning suppressions without a brief justification comment.
+- Validation: use `ArgumentNullException.ThrowIfNull()`/`ArgumentException.ThrowIfNullOrEmpty()`; throw specific exceptions with helpful messages.
+- Async: `Async` suffix; no `async void` (except event handlers); `ConfigureAwait(false)` in library code; consider `ValueTask<T>` on hot paths.
 
-### Nullable Reference Types
+## Perf / AOT / Trimming
 
-- This project uses nullable reference types. Respect nullability annotations.
-- Never suppress nullable warnings (`#pragma warning disable`) without a comment explaining why.
-- Use `ArgumentNullException.ThrowIfNull()` for null checks on parameters.
-- Prefer `is null` and `is not null` over `== null` and `!= null`.
+- Minimize allocations (`Span<T>`, `ArrayPool<T>`, `StringBuilder` in loops).
+- Keep code AOT/trimmer-friendly: avoid reflection; prefer source generators; use `[DynamicallyAccessedMembers]` when reflection is required.
+- Use `sealed` for non-inheritable classes.
 
-### Error Handling
+## API Design
 
-- Throw `ArgumentException` or `ArgumentNullException` for invalid arguments.
-- Use specific exception types rather than generic `Exception`.
-- Include meaningful error messages that help diagnose the issue.
-- Document exceptions in XML comments using `<exception cref="...">`.
+- Prefer overloads over optional params (binary compatibility); consider `Try*` alongside throwing APIs.
+- Obsolete before removal once stable (`[Obsolete("...", error: false)]`).
 
-### Async/Await
+## Related Repos
 
-- Suffix async methods with `Async` (e.g., `RunAsync`).
-- Use `ConfigureAwait(false)` in library code unless context capture is required.
-- Prefer `ValueTask<T>` over `Task<T>` for hot paths that often complete synchronously.
-- Never use `async void` except for event handlers.
+These repos are optional local checkouts and may not exist in the current workspace. If present, consult their `AGENTS.md`
+for cross-repo changes; otherwise treat them as external dependencies (typically consumed via NuGet).
 
-## Performance Considerations
+- `XenoAtom.Ansi`: `../XenoAtom.Ansi` (if checked out)
+- `XenoAtom.Terminal`: `../XenoAtom.Terminal` (if checked out)
 
-- Ensure that the code is optimized for performance without sacrificing readability.
-- Ensure that the code minimizes GC allocations where possible.
-  - Use `Span<T>`/`ReadOnlySpan<T>` where appropriate to reduce memory allocations.
-  - Use `stackalloc` for small, fixed-size buffers in performance-critical paths.
-  - Prefer `StringBuilder` for string concatenation in loops.
-  - Use `ArrayPool<T>` for temporary arrays that would otherwise cause allocations.
-- Ensure generated code is AOT-compatible and trimmer-friendly.
-  - Avoid reflection where possible; prefer source generators.
-  - Use `[DynamicallyAccessedMembers]` attributes when reflection is necessary.
-- Use `sealed` on classes that are not designed for inheritance to enable devirtualization.
-- Prefer `ReadOnlySpan<char>` over `string` for parsing and substring operations.
+## Git / Pre-submit
 
-## Testing Guidelines
-
-### Test Organization
-
-- Name test classes as `{ClassName}Tests` (e.g., `ParserTests`).
-- Name test methods descriptively: `{MethodName}_{Scenario}_{ExpectedResult}` or use plain English.
-- Group related tests using `#region` or nested classes if the test file is large.
-
-### Test Quality
-
-- Each test should verify one specific behavior (single assertion concept).
-- Use the Arrange-Act-Assert (AAA) pattern.
-- Include edge cases: null inputs, empty collections, boundary values, and error conditions.
-- Avoid test interdependencies; each test must be able to run in isolation.
-
-### Test Coverage
-
-- Aim for high coverage of public APIs and critical code paths.
-- Prioritize testing complex logic, error handling, and edge cases over trivial code.
-- When fixing a bug, first write a test that reproduces the bug, then fix it.
-
-## API Design Guidelines
-
-- Follow .NET API design guidelines for consistency with the ecosystem.
-- Don't over engineer APIs; keep them simple and focused.
-- Don't introduce unnecessary interface abstractions; prefer concrete types unless specific extensibility is required and preferred through an interface.
-- Use immutable types where possible to enhance thread safety and predictability.
-- Allow mutable types when necessary for performance or usability.
-- Make APIs hard to misuse: validate inputs early, use strong types.
-- Prefer method overloads over optional parameters for binary compatibility.
-- Use `params ReadOnlySpan<T>` for variadic methods (C# 13+) when targeting modern runtimes.
-- Consider adding `Try*` pattern methods (returning `bool`) alongside throwing versions.
-- Mark obsolete APIs with `[Obsolete("message", error: false)]` before removal.
-  - Unless this file is stating that the project is still in a pre-release state.
-
-## Git Commit Instructions
-
-- Write a concise and descriptive commit message that summarizes the changes made.
-- Start the commit message with a verb in imperative mood (e.g., "Add", "Fix", "Update", "Remove").
-- Keep the first line under 72 characters; add details in the body if needed.
-- Create a commit for each logical change or feature added to facilitate easier code review and tracking of changes.
-- Reference related issues in commit messages when applicable (e.g., "Fix #123").
-- DO NOT remove files that was added/changed locally but is not part of your intended changes.
-
-## Resources
-
-The following libraries and resources are relevant to help specify this project:
-
-- `XenoAtom.Ansi` library: `C:\code\XenoAtom\XenoAtom.Ansi`, the library has guidance at `C:\code\XenoAtom\XenoAtom.Ansi\AGENTS.md`.
-- `XenoAtom.Terminal` library: `C:\code\XenoAtom\XenoAtom.Terminal`, the library has guidance at `C:\code\XenoAtom\XenoAtom.Terminal\AGENTS.md`.
-  - This library depends on `XenoAtom.Ansi`.
-- `XenoAtom.Collections` library: `C:\code\XenoAtom\XenoAtom.Collections`, used for internal collections handling that are faster than standard .NET collections.
-  - It has `UnsafeDictionary` and `UnsafeList` that can be used for internal data structures.
-  - These are structs that can be stored as non-readonly fields in other structs/classes.
-
-The NuGet packages of these libraries are used by XenoAtom.Terminal.UI.
-
-## Pre-Submission Checklist
-
-Before submitting changes, verify:
-
-- [ ] Code builds without errors or warnings (`dotnet build -c Release`).
-- [ ] All tests pass (`dotnet test -c Release`).
-- [ ] New public APIs have XML documentation comments.
-- [ ] Changes are covered by unit tests.
-- [ ] No unintended files are included in the commit.
-- [ ] Documentation is updated if behavior changes.
-- [ ] Screenshots are up to date when changing control visuals (`dotnet run -c Release --project samples/ControlsDemo -- --export-screenshots`).
+- Commits: one logical change per commit unless the user asks for a single commit; imperative subject, < 72 chars.
+- Pre-submit: `dotnet build -c Release` + `dotnet test -c Release`; `lunet build` when touching `site/**`; refresh screenshots when control visuals change.
+- Do not delete unrelated local files.
