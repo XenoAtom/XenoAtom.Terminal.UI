@@ -189,6 +189,8 @@ public partial class PromptEditor : TextEditorBase
     private int _cachedHighlightSelectionStart;
     private int _cachedHighlightSelectionLength;
     private readonly List<StyledRun> _highlightRuns = new(64);
+    private readonly List<int> _highlightBoundaryPoints = new(128);
+    private readonly List<StyledRun> _normalizedHighlightRuns = new(64);
 
     private bool _completionActive;
     private int _completionReplaceStart;
@@ -1185,7 +1187,11 @@ public partial class PromptEditor : TextEditorBase
 
         // Normalize potentially overlapping runs into non-overlapping segments with combined styles.
         // This allows, for example, "keyword color" + "current word underline" to apply simultaneously.
-        var boundaries = new List<int>(_highlightRuns.Count * 2 + 2) { 0, textLength };
+        var boundaries = _highlightBoundaryPoints;
+        boundaries.Clear();
+        boundaries.EnsureCapacity(_highlightRuns.Count * 2 + 2);
+        boundaries.Add(0);
+        boundaries.Add(textLength);
 
         for (var i = 0; i < _highlightRuns.Count; i++)
         {
@@ -1215,7 +1221,9 @@ public partial class PromptEditor : TextEditorBase
             }
         }
 
-        var normalized = new List<StyledRun>(boundaries.Count);
+        var normalized = _normalizedHighlightRuns;
+        normalized.Clear();
+        normalized.EnsureCapacity(boundaries.Count);
 
         for (var i = 0; i + 1 < boundaries.Count; i++)
         {
