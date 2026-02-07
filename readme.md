@@ -26,6 +26,7 @@ separate `XenoAtom.Terminal` package.
   - Buttons, toggles, lists, tables, tabs, menus, dialogs/popups, **toasts**, charts, progress, spinners, tooltips…
   - Text editing: **TextBox**, **TextArea**, **MaskedInput**, **NumberBox** (undo/redo: `Ctrl+Z` / `Ctrl+R`)
   - Advanced widgets: **LogControl**, **CommandPalette**, **BreakdownChart**, **ColorPicker**
+  - Mockup/empty-state widget: **Placeholder** (text + background surfaces, gradients)
 - **Binding-first UI**:
   - Bindable properties, `State<T>`, automatic dependency tracking, minimal boilerplate
 - **Layout system**: consistent measure/arrange protocol (integer cell UI), panels and containers
@@ -134,7 +135,7 @@ Highlights:
 - Layout: `VStack`, `HStack`, `Grid`, `DockLayout`, `Splitters`, `Border`, `Group`, `Padder`
 - Overlays: `Popup`, `Dialog`, `TooltipHost`, `Backdrop`
 - Toasts: `Toast`, `ToastHost` (overlay notifications)
-- Visualization: `BarChart`, `LineChart`, `Sparkline`, `Canvas`, `BreakdownChart`, `TextFiglet`
+- Visualization: `BarChart`, `LineChart`, `Sparkline`, `Canvas`, `BreakdownChart`, `TextFiglet`, `Placeholder`
 - Progress: `ProgressBar`, `ProgressTaskGroup`, `Spinner`
 
 

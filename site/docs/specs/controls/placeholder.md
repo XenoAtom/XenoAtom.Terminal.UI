@@ -4,14 +4,11 @@ title: Placeholder Specs
 
 # Placeholder Specs
 
-This document captures the design proposal for a new `Placeholder` control.
-
-> [!NOTE]
-> This is a planned control spec (not implemented yet).
+This document captures the design and implementation of the `Placeholder` control.
 
 ## Overview
 
-- **Status**: Planned
+- **Status**: Implemented
 - **Purpose**: A simple visual block used for mockups, empty states, and layout placeholders.
 - **Primary goals**:
   - extremely easy to configure (`new Placeholder()`, optional text)
@@ -37,7 +34,7 @@ This document captures the design proposal for a new `Placeholder` control.
 - Not a data visualization control.
 - No interaction model beyond standard visual behavior (no built-in input/events needed).
 
-## Public API (proposed)
+## Public API
 
 ### Type
 
@@ -78,7 +75,7 @@ Use a dedicated `PlaceholderStyle` (environment style):
 - `BackgroundBrush` overrides `Background` for filled background cells.
 - If a brush/color is not specified, values fall back to inherited/theme-resolved style.
 
-## Layout behavior (proposed)
+## Layout behavior
 
 - If `Text` is null/empty:
   - measure to at least `1x1` so the control remains visible when explicitly sized by container.
@@ -86,7 +83,7 @@ Use a dedicated `PlaceholderStyle` (environment style):
   - measurement follows `TextBlock`-like width/height computation (Unicode width aware).
 - Wrapping and trimming behavior align with existing `TextBlock` semantics.
 
-## Rendering behavior (proposed)
+## Rendering behavior
 
 1. Resolve `PlaceholderStyle` + theme.
 2. If `FillBackground` is true and either background color or background brush is set:
@@ -134,7 +131,7 @@ new Placeholder()
   - no temporary collections for line layout when avoidable
 - Use existing text measurement/wrap primitives already optimized in current controls.
 
-## Planned implementation files
+## Implementation files
 
 - `src/XenoAtom.Terminal.UI/Controls/Placeholder.cs`
 - `src/XenoAtom.Terminal.UI/Styling/PlaceholderStyle.cs`
@@ -142,23 +139,18 @@ new Placeholder()
 - `samples/ControlsDemo/Demos/PlaceholderDemo.cs`
 - `site/docs/controls/placeholder.md`
 
-## Planned tests
+## Tests
 
 - Background-only placeholder fills bounds.
 - Text-only placeholder renders aligned text.
 - Foreground gradient changes text cell colors.
 - Background gradient changes background cell colors.
-- Wrapped multiline text uses deterministic alignment/line behavior.
+- Vertical alignment behavior is verified (`Center` and `End`).
+- `FillBackground = false` keeps non-text cells unchanged.
 - Empty text does not throw and still renders background when configured.
 
-## Open decisions
+## Notes
 
-- Whether `VerticalTextAlignment` should be in v1 or deferred.
-- Whether default `FillBackground` should be `true` (recommended) or `false`.
-- Whether to include a built-in helper mode for automatic dimension labels (e.g. `40 x 6`) used in mockups.
-
-## Recommendation
-
-Implement `Placeholder` as a thin composition over proven text rendering logic (`TextBlock`-style behavior) and
-the new brush infrastructure. This keeps behavior consistent, reduces implementation risk, and gives immediate value
-for demos/mockups.
+- `VerticalTextAlignment` is part of v1 and normalizes `Align.Stretch` to `Align.Center`.
+- `FillBackground` defaults to `true`.
+- The control intentionally stays simple and does not include built-in auto-dimension labels.

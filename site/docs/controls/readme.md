@@ -79,6 +79,7 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 - [Table](table.md)
 - [DataGridControl](datagrid.md)
 - [TextBlock](textblock.md)
+- [Placeholder](placeholder.md)
 - [Markup](markup.md)
 - [Rule](rule.md)
 - [Link](link.md)

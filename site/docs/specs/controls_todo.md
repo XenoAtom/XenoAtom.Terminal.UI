@@ -27,7 +27,6 @@ For detailed design notes, each control has a dedicated spec under:
 | ⬜ | Structured text viewer (JSON / syntax) | Content | Inspect configs/data with highlighting |
 | ⬜ | DockWorkspace (dockable panes) | Layout / windowing | Rearrangeable panes + floating windows |
 | ⬜ | Digits / KPI big-number | Visualization | Dashboard counters |
-| ⬜ | Placeholder / empty-state widget | UX | No-results/loading/empty states. Spec: [controls/placeholder.md](controls/placeholder.md) |
 
 ## Add-on libraries (separate packages)
 

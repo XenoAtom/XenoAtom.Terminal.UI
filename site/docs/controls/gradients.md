@@ -13,6 +13,7 @@ Current controls with direct brush support:
 - `TextBlock` (`TextBlockStyle.ForegroundBrush`, `TextBlockStyle.BackgroundBrush`)
 - `TextFiglet` (`TextFigletStyle.ForegroundBrush`, `TextFigletStyle.BackgroundBrush`)
 - `TextBox` (`TextBoxStyle.ForegroundBrush`, `TextBoxStyle.BackgroundBrush`)
+- `Placeholder` (`PlaceholderStyle.ForegroundBrush`, `PlaceholderStyle.BackgroundBrush`)
 
 ## TextBox gradient example
 
