@@ -22,7 +22,7 @@ separate `XenoAtom.Terminal` package.
 - **Two hosting models**:
   - **Inline** widgets via `Terminal.Write(...)` and `Terminal.Live(...)`
   - **Fullscreen** apps via `Terminal.Run(...)` (alternate screen + input loop)
-- **Modern control library** (50+ built-in controls):
+- **Modern control library** (60+ built-in controls):
   - Buttons, toggles, lists, tables, tabs, menus, dialogs/popups, **toasts**, charts, progress, spinners, tooltips…
   - Text editing: **TextBox**, **TextArea**, **MaskedInput**, **NumberBox** (undo/redo: `Ctrl+Z` / `Ctrl+R`)
   - Advanced widgets: **LogControl**, **CommandPalette**, **BreakdownChart**, **ColorPicker**
