@@ -9,6 +9,9 @@ title: Getting Started
 - .NET `net10.0` (C# 14) project.
 - Reference `XenoAtom.Terminal.UI` (it pulls `XenoAtom.Terminal` as a dependency).
 
+Rationale: Terminal.UI integrates into `XenoAtom.Terminal` via **C# 14 extension members**, so the hosting APIs are
+available directly as `Terminal.Write(...)`, `Terminal.Live(...)`, and `Terminal.Run(...)`.
+
 ## Install
 
 ```bash

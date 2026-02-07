@@ -14,6 +14,14 @@ This guide documents the concepts, features, and controls of the library.
 
 ![Fullscreen demo screenshot](../img/fullscreen.png){.terminal}
 
+## Requirements (.NET 10 / C# 14)
+
+XenoAtom.Terminal.UI targets `net10.0` and requires the .NET 10 SDK (C# 14).
+
+Rationale: the library integrates into `XenoAtom.Terminal` using **C# 14 extension members**, so the hosting APIs are
+available as `Terminal.Write(...)`, `Terminal.Live(...)`, and `Terminal.Run(...)` on the `Terminal` type coming from
+the `XenoAtom.Terminal` package.
+
 ## Quick start
 
 - [Getting Started](getting-started.md)

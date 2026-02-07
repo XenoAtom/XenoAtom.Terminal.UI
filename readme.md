@@ -9,6 +9,14 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
 > This library is in early 1.0 preview. The API is mostly stable but may still see breaking changes before the final 1.0 release.
 > Feedback welcome!
 
+## Requirements (.NET 10 / C# 14)
+
+XenoAtom.Terminal.UI targets `net10.0` and requires the .NET 10 SDK (C# 14).
+
+Rationale: the library integrates into `XenoAtom.Terminal` using **C# 14 extension members**, so you can write
+`Terminal.Write(...)`, `Terminal.Live(...)`, and `Terminal.Run(...)` even though `Terminal` is defined in the
+separate `XenoAtom.Terminal` package.
+
 ## ✨ Features
 
 - **Two hosting models**:
