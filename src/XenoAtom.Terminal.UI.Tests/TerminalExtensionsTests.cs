@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Diagnostics;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI.Controls;
@@ -140,5 +141,59 @@ public sealed class TerminalExtensionsTests
         screen.Apply(outText);
         StringAssert.Contains(screen.GetText(), "Count: 3");
         StringAssert.Contains(screen.GetText(), "Done");
+    }
+
+    [TestMethod]
+    public void Live_Options_UpdateWaitDuration_IsApplied()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(30, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var tickCount = 0;
+        var wait = TimeSpan.FromMilliseconds(35);
+        var stopwatch = Stopwatch.StartNew();
+
+        session.Instance.Live(
+            new TextBlock("Wait test"),
+            _ =>
+            {
+                tickCount++;
+                return tickCount >= 2 ? TerminalLoopResult.Stop : TerminalLoopResult.Continue;
+            },
+            new TerminalLiveOptions { UpdateWaitDuration = wait });
+
+        stopwatch.Stop();
+
+        Assert.AreEqual(2, tickCount);
+        Assert.IsTrue(
+            stopwatch.Elapsed >= TimeSpan.FromMilliseconds(50),
+            $"Expected configured wait duration to slow down loop ticks. Elapsed: {stopwatch.Elapsed}.");
+    }
+
+    [TestMethod]
+    public void Run_Options_UpdateWaitDuration_IsApplied()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(30, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var tickCount = 0;
+        var wait = TimeSpan.FromMilliseconds(35);
+        var stopwatch = Stopwatch.StartNew();
+
+        session.Instance.Run(
+            new TextBlock("Wait test"),
+            _ =>
+            {
+                tickCount++;
+                return tickCount >= 2 ? TerminalLoopResult.Stop : TerminalLoopResult.Continue;
+            },
+            new TerminalRunOptions { UpdateWaitDuration = wait });
+
+        stopwatch.Stop();
+
+        Assert.AreEqual(2, tickCount);
+        Assert.IsTrue(
+            stopwatch.Elapsed >= TimeSpan.FromMilliseconds(50),
+            $"Expected configured wait duration to slow down loop ticks. Elapsed: {stopwatch.Elapsed}.");
     }
 }

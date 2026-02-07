@@ -77,6 +77,15 @@ public sealed class TerminalAppOptions
     /// by setting <see cref="Styling.CultureStyle.Key"/>.
     /// </remarks>
     public CultureInfo Culture { get; init; } = CultureInfo.InvariantCulture;
+
+    /// <summary>
+    /// Gets the wait duration between host loop ticks.
+    /// </summary>
+    /// <remarks>
+    /// The default is 1ms to keep animation updates responsive while yielding the CPU.
+    /// Increase this value to reduce CPU usage when frequent updates are not required.
+    /// </remarks>
+    public global::System.TimeSpan UpdateWaitDuration { get; init; } = global::System.TimeSpan.FromMilliseconds(1);
 }
 
 /// <summary>

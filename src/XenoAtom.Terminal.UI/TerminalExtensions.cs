@@ -162,7 +162,7 @@ public static partial class TerminalExtensions
         /// Runs a fullscreen terminal UI application on the default terminal instance with an asynchronous update callback.
         /// </summary>
         public static ValueTask<TerminalInstance> RunAsync(Visual visual, Func<ValueTask<TerminalLoopResult>> onUpdate, CancellationToken cancellationToken = default)
-            => XenoAtom.Terminal.Terminal.Instance.RunAsync(visual, _ => onUpdate(), options: default, cancellationToken);
+            => XenoAtom.Terminal.Terminal.Instance.RunAsync(visual, _ => onUpdate(), options: new(), cancellationToken);
 
         /// <summary>
         /// Runs a fullscreen terminal UI application on the default terminal instance.
@@ -351,6 +351,7 @@ public static partial class TerminalExtensions
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
                 EnableMouse = options.EnableMouse,
                 MouseMode = options.MouseMode,
+                UpdateWaitDuration = options.UpdateWaitDuration,
             };
             RunHostedAsync(instance, visual, appOptions, onUpdate, CancellationToken.None)
                 .AsTask()
@@ -418,6 +419,7 @@ public static partial class TerminalExtensions
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
                 EnableMouse = options.EnableMouse,
                 MouseMode = options.MouseMode,
+                UpdateWaitDuration = options.UpdateWaitDuration,
             };
             await RunHostedAsync(instance, visual, appOptions, onUpdate, cancellationToken).ConfigureAwait(false);
 
@@ -436,6 +438,7 @@ public static partial class TerminalExtensions
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
                 EnableMouse = options.EnableMouse,
                 MouseMode = options.MouseMode,
+                UpdateWaitDuration = options.UpdateWaitDuration,
             };
             await RunHostedAsync(instance, visual, appOptions, onUpdate, cancellationToken).ConfigureAwait(false);
 
@@ -446,7 +449,7 @@ public static partial class TerminalExtensions
         /// Runs a fullscreen terminal UI application on this terminal instance.
         /// </summary>
         public TerminalInstance Run(Visual visual, Func<TerminalLoopResult> onUpdate)
-            => Run(visual, _ => onUpdate(), options: default);
+            => Run(visual, _ => onUpdate(), options: new());
 
         /// <summary>
         /// Runs a fullscreen terminal UI application on this terminal instance.
@@ -459,6 +462,7 @@ public static partial class TerminalExtensions
                 HostKind = TerminalHostKind.Fullscreen,
                 ExitGesture = options.ExitGesture,
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
+                UpdateWaitDuration = options.UpdateWaitDuration,
             };
             RunHostedAsync(instance, visual, appOptions, onUpdate, CancellationToken.None)
                 .AsTask()
@@ -472,7 +476,7 @@ public static partial class TerminalExtensions
         /// Runs a fullscreen terminal UI application on this terminal instance.
         /// </summary>
         public async ValueTask<TerminalInstance> RunAsync(Visual visual, Func<TerminalLoopResult> onUpdate, CancellationToken cancellationToken = default)
-            => await RunAsync(visual, _ => onUpdate(), options: default, cancellationToken).ConfigureAwait(false);
+            => await RunAsync(visual, _ => onUpdate(), options: new(), cancellationToken).ConfigureAwait(false);
 
         /// <summary>
         /// Runs a fullscreen terminal UI application on this terminal instance.
@@ -485,6 +489,7 @@ public static partial class TerminalExtensions
                 HostKind = TerminalHostKind.Fullscreen,
                 ExitGesture = options.ExitGesture,
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
+                UpdateWaitDuration = options.UpdateWaitDuration,
             };
             await RunHostedAsync(instance, visual, appOptions, onUpdate, cancellationToken).ConfigureAwait(false);
 
@@ -495,7 +500,7 @@ public static partial class TerminalExtensions
         /// Runs a fullscreen terminal UI application on this terminal instance with an asynchronous update callback.
         /// </summary>
         public async ValueTask<TerminalInstance> RunAsync(Visual visual, Func<ValueTask<TerminalLoopResult>> onUpdate, CancellationToken cancellationToken = default)
-            => await RunAsync(visual, _ => onUpdate(), options: default, cancellationToken).ConfigureAwait(false);
+            => await RunAsync(visual, _ => onUpdate(), options: new(), cancellationToken).ConfigureAwait(false);
 
         /// <summary>
         /// Runs a fullscreen terminal UI application on this terminal instance with an asynchronous update callback.
@@ -508,6 +513,7 @@ public static partial class TerminalExtensions
                 HostKind = TerminalHostKind.Fullscreen,
                 ExitGesture = options.ExitGesture,
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
+                UpdateWaitDuration = options.UpdateWaitDuration,
             };
             await RunHostedAsync(instance, visual, appOptions, onUpdate, cancellationToken).ConfigureAwait(false);
 

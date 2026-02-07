@@ -8,7 +8,7 @@ namespace XenoAtom.Terminal.UI;
 /// Provides options for fullscreen hosting via
 /// <see cref="TerminalExtensions.Run(Visual, System.Func{TerminalRunningContext, TerminalLoopResult}, TerminalRunOptions)"/>.
 /// </summary>
-public readonly record struct TerminalRunOptions
+public readonly record struct TerminalRunOptions()
 {
     /// <summary>
     /// Gets the culture used for formatting values (for example when converting numbers to strings).
@@ -25,4 +25,12 @@ public readonly record struct TerminalRunOptions
     /// When <see langword="null"/>, the default gesture is used (<c>Ctrl+Q</c>).
     /// </remarks>
     public global::XenoAtom.Terminal.UI.Input.KeyGesture? ExitGesture { get; init; }
+
+    /// <summary>
+    /// Gets the wait duration between update ticks.
+    /// </summary>
+    /// <remarks>
+    /// The default is 1ms. Increase this value to reduce update frequency and CPU usage.
+    /// </remarks>
+    public global::System.TimeSpan UpdateWaitDuration { get; init; } = global::System.TimeSpan.FromMilliseconds(1);
 }

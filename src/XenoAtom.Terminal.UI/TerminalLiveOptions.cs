@@ -33,4 +33,12 @@ public readonly record struct TerminalLiveOptions()
     /// Gets the mouse reporting mode used when <see cref="EnableMouse"/> is <see langword="true"/>.
     /// </summary>
     public TerminalMouseMode MouseMode { get; init; } = TerminalMouseMode.Move;
+
+    /// <summary>
+    /// Gets the wait duration between update ticks.
+    /// </summary>
+    /// <remarks>
+    /// The default is 1ms. Increase this value to reduce update frequency and CPU usage.
+    /// </remarks>
+    public global::System.TimeSpan UpdateWaitDuration { get; init; } = global::System.TimeSpan.FromMilliseconds(1);
 }

@@ -194,6 +194,10 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         ArgumentNullException.ThrowIfNull(root);
         _terminal = terminal ?? global::XenoAtom.Terminal.Terminal.Instance;
         _options = options ?? new TerminalAppOptions();
+        if (_options.UpdateWaitDuration < TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(options), "The update wait duration cannot be negative.");
+        }
 
         ContentRoot = root;
         if (_options.HostKind == TerminalHostKind.Fullscreen)
@@ -651,7 +655,11 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             while (!token.IsCancellationRequested)
             {
                 Tick();
-                Thread.Sleep(1);
+                var updateWaitDuration = _options.UpdateWaitDuration;
+                if (updateWaitDuration > TimeSpan.Zero)
+                {
+                    Thread.Sleep(updateWaitDuration);
+                }
             }
         }
         finally

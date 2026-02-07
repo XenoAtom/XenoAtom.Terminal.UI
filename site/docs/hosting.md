@@ -56,6 +56,25 @@ Terminal.Live(
     options: new TerminalLiveOptions { EnableMouse = true, MouseMode = TerminalMouseMode.Move });
 ```
 
+### Update tick wait (default: 1ms)
+
+`Terminal.Live(...)` and `Terminal.Run(...)` use a 1ms wait between loop ticks by default.
+You can increase this wait if you want to reduce update frequency and CPU usage:
+
+```csharp
+Terminal.Live(
+    visual,
+    onUpdate: () => TerminalLoopResult.Continue,
+    options: new TerminalLiveOptions { UpdateWaitDuration = TimeSpan.FromMilliseconds(20) });
+
+Terminal.Run(
+    visual,
+    onUpdate: () => TerminalLoopResult.Continue,
+    options: new TerminalRunOptions { UpdateWaitDuration = TimeSpan.FromMilliseconds(20) });
+```
+
+Larger values can make animations (for example spinners) update less smoothly.
+
 ### Filling the viewport height
 
 Inline live regions measure with an "infinite" height by default, so a simple visual like a `VStack("Hello")` will
