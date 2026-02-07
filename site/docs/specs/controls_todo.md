@@ -27,7 +27,7 @@ For detailed design notes, each control has a dedicated spec under:
 | ⬜ | Structured text viewer (JSON / syntax) | Content | Inspect configs/data with highlighting |
 | ⬜ | DockWorkspace (dockable panes) | Layout / windowing | Rearrangeable panes + floating windows |
 | ⬜ | Digits / KPI big-number | Visualization | Dashboard counters |
-| ⬜ | Placeholder / empty-state widget | UX | No-results/loading/empty states |
+| ⬜ | Placeholder / empty-state widget | UX | No-results/loading/empty states. Spec: [controls/placeholder.md](controls/placeholder.md) |
 
 ## Add-on libraries (separate packages)
 
@@ -36,4 +36,3 @@ Some controls are intentionally left out of the core to keep dependencies minima
 | Status | Component | Depends on | Notes |
 | --- | --- | --- | --- |
 | ⬜ | MarkdownViewer | Markdig (or similar) | Keep core dependency-free; integrate via rich text spans |
-

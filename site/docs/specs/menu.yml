@@ -1,6 +1,7 @@
 specs:
   - {path: readme.md, title: "<i class='bi bi-journal-code' aria-hidden='true'></i> Specs Index"}
   - {path: controls/readme.md, title: "<i class='bi bi-ui-checks' aria-hidden='true'></i> Control Specs", folder: true}
+  - {path: controls/placeholder.md, title: "<i class='bi bi-grid-1x2' aria-hidden='true'></i> Placeholder (Planned)"}
   - {path: controls_todo.md, title: "<i class='bi bi-check2-square' aria-hidden='true'></i> Controls Roadmap"}
 
   - {path: binding_dirty_model_specs.md, title: "<i class='bi bi-link-45deg' aria-hidden='true'></i> Binding Dirty Model"}
