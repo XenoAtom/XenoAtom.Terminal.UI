@@ -25,6 +25,9 @@ public partial class Select<T> : ContentVisual
     private int _contentIndex = -1;
     private int _selectionChangedIndex = -1;
     private DataTemplate<T> _lastResolvedTemplate;
+    private Rune _cachedArrowGlyph;
+    private string _cachedArrowText = string.Empty;
+    private int _cachedArrowWidth;
 
     /// <summary>
     /// Called when <see cref="SelectedIndex"/> changes.
@@ -116,8 +119,9 @@ public partial class Select<T> : ContentVisual
         UpdateSelectedContent();
 
         var style = GetStyle<SelectStyle>();
+        EnsureArrowGlyphCache(style);
         var padding = style.Padding;
-        var arrowWidth = TerminalTextUtility.GetWidth(style.ArrowGlyph.ToString().AsSpan());
+        var arrowWidth = _cachedArrowWidth;
 
         var innerMaxW = constraints.MaxWidth == LayoutConstants.Infinite
             ? LayoutConstants.Infinite
@@ -166,8 +170,9 @@ public partial class Select<T> : ContentVisual
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         var style = GetStyle<SelectStyle>();
+        EnsureArrowGlyphCache(style);
         var padding = style.Padding;
-        var arrowWidth = TerminalTextUtility.GetWidth(style.ArrowGlyph.ToString().AsSpan());
+        var arrowWidth = _cachedArrowWidth;
 
         var inner = new Rectangle(
             finalRect.X + padding.Left,
@@ -199,6 +204,7 @@ public partial class Select<T> : ContentVisual
 
         var theme = GetTheme();
         var style = GetStyle<SelectStyle>();
+        EnsureArrowGlyphCache(style);
         var isFocused = HasFocus;
         var resolved = style.ResolveStyle(theme, IsEnabled, isFocused, IsHovered);
 
@@ -212,10 +218,10 @@ public partial class Select<T> : ContentVisual
         }
 
         // Render arrow on the right.
-        var arrowText = style.ArrowGlyph.ToString();
-        var arrowCells = TerminalTextUtility.GetWidth(arrowText.AsSpan());
+        var arrowText = _cachedArrowText.AsSpan();
+        var arrowCells = _cachedArrowWidth;
         var arrowX = rect.X + Math.Max(0, rect.Width - arrowCells - 1);
-        buffer.WriteText(arrowX, rect.Y, arrowText.AsSpan(), resolved | TextStyle.Dim);
+        buffer.WriteText(arrowX, rect.Y, arrowText, resolved | TextStyle.Dim);
     }
 
     /// <inheritdoc/>
@@ -406,6 +412,18 @@ public partial class Select<T> : ContentVisual
         }
 
         return false;
+    }
+
+    private void EnsureArrowGlyphCache(SelectStyle style)
+    {
+        if (_cachedArrowText.Length != 0 && _cachedArrowGlyph == style.ArrowGlyph)
+        {
+            return;
+        }
+
+        _cachedArrowGlyph = style.ArrowGlyph;
+        _cachedArrowText = style.ArrowGlyph.ToString();
+        _cachedArrowWidth = TerminalTextUtility.GetWidth(_cachedArrowText.AsSpan());
     }
 
     private void ClosePopup()

@@ -27,6 +27,8 @@ public sealed partial class CommandBar : Visual
     private readonly List<(Command Command, Visual Target, bool IsEnabled)> _localCommands;
     private readonly List<(Command Command, Visual Target, bool IsEnabled)> _globalCommands;
     private readonly HashSet<string> _dedup;
+    private readonly Dictionary<KeyGesture, string> _gestureTextCache;
+    private readonly Dictionary<KeySequence, string> _sequenceTextCache;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CommandBar"/> class.
@@ -39,6 +41,8 @@ public sealed partial class CommandBar : Visual
         _localCommands = new List<(Command, Visual, bool)>(16);
         _globalCommands = new List<(Command, Visual, bool)>(8);
         _dedup = new HashSet<string>(StringComparer.Ordinal);
+        _gestureTextCache = new Dictionary<KeyGesture, string>();
+        _sequenceTextCache = new Dictionary<KeySequence, string>();
     }
 
     /// <summary>
@@ -200,20 +204,12 @@ public sealed partial class CommandBar : Visual
         for (var i = 0; i < commands.Count; i++)
         {
             var (cmd, _, _) = commands[i];
-
-            ReadOnlySpan<char> keyText;
-            if (cmd.Sequence is { } seq)
-            {
-                keyText = seq.ToString().AsSpan();
-            }
-            else if (cmd.Gesture is { } g)
-            {
-                keyText = g.ToString().AsSpan();
-            }
-            else
+            var keyTextString = GetKeyText(in cmd);
+            if (keyTextString.Length == 0)
             {
                 continue;
             }
+            var keyText = keyTextString.AsSpan();
 
             if (hasEntry)
             {
@@ -320,24 +316,12 @@ public sealed partial class CommandBar : Visual
         for (var i = 0; i < commands.Count; i++)
         {
             var (cmd, _, enabled) = commands[i];
-
-            ReadOnlySpan<char> keyText;
-            if (cmd.Sequence is { } seq)
-            {
-                keyText = seq.ToString().AsSpan();
-            }
-            else if (cmd.Gesture is { } g)
-            {
-                keyText = g.ToString().AsSpan();
-            }
-            else
-            {
-                keyText = ReadOnlySpan<char>.Empty;
-            }
-            if (keyText.IsEmpty)
+            var keyTextString = GetKeyText(in cmd);
+            if (keyTextString.Length == 0)
             {
                 continue;
             }
+            var keyText = keyTextString.AsSpan();
 
             if (hasEntry && !separator.IsEmpty)
             {
@@ -362,6 +346,35 @@ public sealed partial class CommandBar : Visual
         }
 
         return x;
+    }
+
+    private string GetKeyText(in Command command)
+    {
+        if (command.Sequence is { } sequence)
+        {
+            if (_sequenceTextCache.TryGetValue(sequence, out var sequenceText))
+            {
+                return sequenceText;
+            }
+
+            sequenceText = sequence.ToString();
+            _sequenceTextCache[sequence] = sequenceText;
+            return sequenceText;
+        }
+
+        if (command.Gesture is { } gesture)
+        {
+            if (_gestureTextCache.TryGetValue(gesture, out var gestureText))
+            {
+                return gestureText;
+            }
+
+            gestureText = gesture.ToString();
+            _gestureTextCache[gesture] = gestureText;
+            return gestureText;
+        }
+
+        return string.Empty;
     }
 
     private static int WriteKeycap(CellBuffer buffer, Rectangle rect, int x, ReadOnlySpan<char> keyText, CommandBarResolvedStyle styles, CommandBarStyle commandBarStyle)
