@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Buffers;
 using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Layout;
@@ -103,113 +104,138 @@ public sealed partial class Grid : Visual
         var colDefs = GetEffectiveColumnDefinitions(cols);
         var rowDefs = GetEffectiveRowDefinitions(rows);
 
-        var colMin = new int[cols];
-        var colNat = new int[cols];
-        var colMax = new int[cols];
-        var colGrow = new int[cols];
-        var colShrink = new int[cols];
+        var scratchLength = (cols * 6) + (rows * 5);
+        int[]? rentedScratch = null;
+        var scratch = scratchLength <= (11 * 128)
+            ? stackalloc int[scratchLength]
+            : (rentedScratch = ArrayPool<int>.Shared.Rent(scratchLength));
 
-        var rowMin = new int[rows];
-        var rowNat = new int[rows];
-        var rowMax = new int[rows];
-        var rowGrow = new int[rows];
-        var rowShrink = new int[rows];
+        var offset = 0;
+        var colMin = scratch.Slice(offset, cols);
+        offset += cols;
+        var colNat = scratch.Slice(offset, cols);
+        offset += cols;
+        var colMax = scratch.Slice(offset, cols);
+        offset += cols;
+        var colGrow = scratch.Slice(offset, cols);
+        offset += cols;
+        var colShrink = scratch.Slice(offset, cols);
+        offset += cols;
 
-        InitTracks(colDefs, colMin, colNat, colMax, colGrow, colShrink);
-        InitTracks(rowDefs, rowMin, rowNat, rowMax, rowGrow, rowShrink);
+        var rowMin = scratch.Slice(offset, rows);
+        offset += rows;
+        var rowNat = scratch.Slice(offset, rows);
+        offset += rows;
+        var rowMax = scratch.Slice(offset, rows);
+        offset += rows;
+        var rowGrow = scratch.Slice(offset, rows);
+        offset += rows;
+        var rowShrink = scratch.Slice(offset, rows);
+        offset += rows;
+        var allocatedColWidths = scratch.Slice(offset, cols);
 
-        // Initial measure pass to establish intrinsic track sizes (Min/Natural), based on child hints.
-        for (var i = 0; i < _cells.Count; i++)
+        try
         {
-            var cell = _cells[i];
-            cell.Measure(new LayoutConstraints(0, innerAvailW, 0, innerAvailH));
+            InitTracks(colDefs, colMin, colNat, colMax, colGrow, colShrink);
+            InitTracks(rowDefs, rowMin, rowNat, rowMax, rowGrow, rowShrink);
 
-            var placement = GetPlacementForLayout(cell, rows, cols);
-            var hints = cell.MeasureHints;
-
-            if (placement.ColumnSpan == 1)
+            // Initial measure pass to establish intrinsic track sizes (Min/Natural), based on child hints.
+            for (var i = 0; i < _cells.Count; i++)
             {
-                var col = placement.Column;
-                var type = colDefs[col].Width.Type;
-                if (type != GridUnitType.Fixed)
+                var cell = _cells[i];
+                cell.Measure(new LayoutConstraints(0, innerAvailW, 0, innerAvailH));
+
+                var placement = GetPlacementForLayout(cell, rows, cols);
+                var hints = cell.MeasureHints;
+
+                if (placement.ColumnSpan == 1)
                 {
-                    colMin[col] = Math.Max(colMin[col], hints.Min.Width);
-                    colNat[col] = Math.Max(colNat[col], hints.Natural.Width);
+                    var col = placement.Column;
+                    var type = colDefs[col].Width.Type;
+                    if (type != GridUnitType.Fixed)
+                    {
+                        colMin[col] = Math.Max(colMin[col], hints.Min.Width);
+                        colNat[col] = Math.Max(colNat[col], hints.Natural.Width);
+                    }
+                }
+
+                if (placement.RowSpan == 1)
+                {
+                    var row = placement.Row;
+                    var type = rowDefs[row].Height.Type;
+                    if (type != GridUnitType.Fixed)
+                    {
+                        rowMin[row] = Math.Max(rowMin[row], hints.Min.Height);
+                        rowNat[row] = Math.Max(rowNat[row], hints.Natural.Height);
+                    }
                 }
             }
 
-            if (placement.RowSpan == 1)
+            NormalizeTracks(colDefs, colMin, colNat, colMax);
+            NormalizeTracks(rowDefs, rowMin, rowNat, rowMax);
+
+            // Allocate column widths (for measuring width-dependent heights), without changing intrinsic Natural sizes.
+            var availableForColumns = innerAvailW == LayoutConstants.Infinite
+                ? Sum(colNat)
+                : innerAvailW;
+            FlexAllocator.Allocate(availableForColumns, colMin, colNat, colMax, colGrow, colShrink, allocatedColWidths);
+
+            // Re-measure for row heights using allocated column widths (wrapping, etc.).
+            for (var i = 0; i < _cells.Count; i++)
             {
-                var row = placement.Row;
-                var type = rowDefs[row].Height.Type;
-                if (type != GridUnitType.Fixed)
+                var cell = _cells[i];
+                var placement = GetPlacementForLayout(cell, rows, cols);
+
+                var cellW = GetSpanSize(allocatedColWidths, placement.Column, placement.ColumnSpan, colGap);
+                cell.Measure(new LayoutConstraints(0, cellW, 0, innerAvailH));
+
+                if (placement.RowSpan == 1)
                 {
-                    rowMin[row] = Math.Max(rowMin[row], hints.Min.Height);
-                    rowNat[row] = Math.Max(rowNat[row], hints.Natural.Height);
+                    var row = placement.Row;
+                    var type = rowDefs[row].Height.Type;
+                    if (type != GridUnitType.Fixed)
+                    {
+                        var hints = cell.MeasureHints;
+                        rowMin[row] = Math.Max(rowMin[row], hints.Min.Height);
+                        rowNat[row] = Math.Max(rowNat[row], hints.Natural.Height);
+                    }
                 }
+            }
+
+            NormalizeTracks(rowDefs, rowMin, rowNat, rowMax);
+
+            var padH = Math.Max(0, padding.Horizontal);
+            var padV = Math.Max(0, padding.Vertical);
+
+            var gridMinW = padH + totalColGaps + Sum(colMin);
+            var gridNatW = padH + totalColGaps + Sum(colNat);
+            var gridMaxW = HasInfinite(colMax) ? LayoutConstants.Infinite : padH + totalColGaps + Sum(colMax);
+
+            var gridMinH = padV + totalRowGaps + Sum(rowMin);
+            var gridNatH = padV + totalRowGaps + Sum(rowNat);
+            var gridMaxH = HasInfinite(rowMax) ? LayoutConstants.Infinite : padV + totalRowGaps + Sum(rowMax);
+
+            var minSize = new Size(LayoutConstants.ClampFinite(gridMinW), LayoutConstants.ClampFinite(gridMinH));
+            var naturalSize = new Size(LayoutConstants.ClampFinite(gridNatW), LayoutConstants.ClampFinite(gridNatH));
+            var maxSize = new Size(
+                gridMaxW == LayoutConstants.Infinite ? LayoutConstants.Infinite : LayoutConstants.ClampFinite(gridMaxW),
+                gridMaxH == LayoutConstants.Infinite ? LayoutConstants.Infinite : LayoutConstants.ClampFinite(gridMaxH));
+
+            var growX = Sum(colGrow);
+            var growY = Sum(rowGrow);
+
+            var shrinkX = naturalSize.Width > minSize.Width ? Sum(colShrink) : 0;
+            var shrinkY = naturalSize.Height > minSize.Height ? Sum(rowShrink) : 0;
+
+            return SizeHints.Flex(minSize, naturalSize, maxSize, growX: growX, growY: growY, shrinkX: shrinkX, shrinkY: shrinkY).Normalize();
+        }
+        finally
+        {
+            if (rentedScratch is not null)
+            {
+                ArrayPool<int>.Shared.Return(rentedScratch);
             }
         }
-
-        NormalizeTracks(colDefs, colMin, colNat, colMax);
-        NormalizeTracks(rowDefs, rowMin, rowNat, rowMax);
-
-        // Allocate column widths (for measuring width-dependent heights), without changing intrinsic Natural sizes.
-        var allocatedColWidths = new int[cols];
-        var availableForColumns = innerAvailW == LayoutConstants.Infinite
-            ? Sum(colNat)
-            : innerAvailW;
-        FlexAllocator.Allocate(availableForColumns, colMin, colNat, colMax, colGrow, colShrink, allocatedColWidths);
-
-        // Re-measure for row heights using allocated column widths (wrapping, etc.).
-        for (var i = 0; i < _cells.Count; i++)
-        {
-            var cell = _cells[i];
-            var placement = GetPlacementForLayout(cell, rows, cols);
-
-            var cellW = GetSpanSize(allocatedColWidths, placement.Column, placement.ColumnSpan, colGap);
-            cell.Measure(new LayoutConstraints(0, cellW, 0, innerAvailH));
-
-            if (placement.RowSpan == 1)
-            {
-                var row = placement.Row;
-                var type = rowDefs[row].Height.Type;
-                if (type != GridUnitType.Fixed)
-                {
-                    var hints = cell.MeasureHints;
-                    rowMin[row] = Math.Max(rowMin[row], hints.Min.Height);
-                    rowNat[row] = Math.Max(rowNat[row], hints.Natural.Height);
-                }
-            }
-        }
-
-        NormalizeTracks(rowDefs, rowMin, rowNat, rowMax);
-
-        int gridMinW, gridNatW, gridMaxW;
-        int gridMinH, gridNatH, gridMaxH;
-        var padH = Math.Max(0, padding.Horizontal);
-        var padV = Math.Max(0, padding.Vertical);
-
-        gridMinW = padH + totalColGaps + Sum(colMin);
-        gridNatW = padH + totalColGaps + Sum(colNat);
-        gridMaxW = HasInfinite(colMax) ? LayoutConstants.Infinite : padH + totalColGaps + Sum(colMax);
-
-        gridMinH = padV + totalRowGaps + Sum(rowMin);
-        gridNatH = padV + totalRowGaps + Sum(rowNat);
-        gridMaxH = HasInfinite(rowMax) ? LayoutConstants.Infinite : padV + totalRowGaps + Sum(rowMax);
-
-        var minSize = new Size(LayoutConstants.ClampFinite(gridMinW), LayoutConstants.ClampFinite(gridMinH));
-        var naturalSize = new Size(LayoutConstants.ClampFinite(gridNatW), LayoutConstants.ClampFinite(gridNatH));
-        var maxSize = new Size(
-            gridMaxW == LayoutConstants.Infinite ? LayoutConstants.Infinite : LayoutConstants.ClampFinite(gridMaxW),
-            gridMaxH == LayoutConstants.Infinite ? LayoutConstants.Infinite : LayoutConstants.ClampFinite(gridMaxH));
-
-        var growX = Sum(colGrow);
-        var growY = Sum(rowGrow);
-
-        var shrinkX = naturalSize.Width > minSize.Width ? Sum(colShrink) : 0;
-        var shrinkY = naturalSize.Height > minSize.Height ? Sum(rowShrink) : 0;
-
-        return SizeHints.Flex(minSize, naturalSize, maxSize, growX: growX, growY: growY, shrinkX: shrinkX, shrinkY: shrinkY).Normalize();
     }
 
     /// <inheritdoc />
@@ -229,115 +255,144 @@ public sealed partial class Grid : Visual
         var colDefs = GetEffectiveColumnDefinitions(cols);
         var rowDefs = GetEffectiveRowDefinitions(rows);
 
-        var colMin = new int[cols];
-        var colNat = new int[cols];
-        var colMax = new int[cols];
-        var colGrow = new int[cols];
-        var colShrink = new int[cols];
+        var scratchLength = (cols * 7) + (rows * 7);
+        int[]? rentedScratch = null;
+        var scratch = scratchLength <= (14 * 128)
+            ? stackalloc int[scratchLength]
+            : (rentedScratch = ArrayPool<int>.Shared.Rent(scratchLength));
 
-        var rowMin = new int[rows];
-        var rowNat = new int[rows];
-        var rowMax = new int[rows];
-        var rowGrow = new int[rows];
-        var rowShrink = new int[rows];
+        var offset = 0;
+        var colMin = scratch.Slice(offset, cols);
+        offset += cols;
+        var colNat = scratch.Slice(offset, cols);
+        offset += cols;
+        var colMax = scratch.Slice(offset, cols);
+        offset += cols;
+        var colGrow = scratch.Slice(offset, cols);
+        offset += cols;
+        var colShrink = scratch.Slice(offset, cols);
+        offset += cols;
+        var colWidths = scratch.Slice(offset, cols);
+        offset += cols;
+        var colOffsets = scratch.Slice(offset, cols);
+        offset += cols;
 
-        InitTracks(colDefs, colMin, colNat, colMax, colGrow, colShrink);
-        InitTracks(rowDefs, rowMin, rowNat, rowMax, rowGrow, rowShrink);
+        var rowMin = scratch.Slice(offset, rows);
+        offset += rows;
+        var rowNat = scratch.Slice(offset, rows);
+        offset += rows;
+        var rowMax = scratch.Slice(offset, rows);
+        offset += rows;
+        var rowGrow = scratch.Slice(offset, rows);
+        offset += rows;
+        var rowShrink = scratch.Slice(offset, rows);
+        offset += rows;
+        var rowHeights = scratch.Slice(offset, rows);
+        offset += rows;
+        var rowOffsets = scratch.Slice(offset, rows);
 
-        // Measure cells against the available inner rect to establish track requirements.
-        for (var i = 0; i < _cells.Count; i++)
+        try
         {
-            var cell = _cells[i];
-            cell.Measure(new LayoutConstraints(0, innerW, 0, innerH));
+            InitTracks(colDefs, colMin, colNat, colMax, colGrow, colShrink);
+            InitTracks(rowDefs, rowMin, rowNat, rowMax, rowGrow, rowShrink);
 
-            var placement = GetPlacementForLayout(cell, rows, cols);
-            var hints = cell.MeasureHints;
-
-            if (placement.ColumnSpan == 1)
+            // Measure cells against the available inner rect to establish track requirements.
+            for (var i = 0; i < _cells.Count; i++)
             {
-                var col = placement.Column;
-                if (colDefs[col].Width.Type != GridUnitType.Fixed)
+                var cell = _cells[i];
+                cell.Measure(new LayoutConstraints(0, innerW, 0, innerH));
+
+                var placement = GetPlacementForLayout(cell, rows, cols);
+                var hints = cell.MeasureHints;
+
+                if (placement.ColumnSpan == 1)
                 {
-                    colMin[col] = Math.Max(colMin[col], hints.Min.Width);
-                    colNat[col] = Math.Max(colNat[col], hints.Natural.Width);
+                    var col = placement.Column;
+                    if (colDefs[col].Width.Type != GridUnitType.Fixed)
+                    {
+                        colMin[col] = Math.Max(colMin[col], hints.Min.Width);
+                        colNat[col] = Math.Max(colNat[col], hints.Natural.Width);
+                    }
+                }
+
+                if (placement.RowSpan == 1)
+                {
+                    var row = placement.Row;
+                    if (rowDefs[row].Height.Type != GridUnitType.Fixed)
+                    {
+                        rowMin[row] = Math.Max(rowMin[row], hints.Min.Height);
+                        rowNat[row] = Math.Max(rowNat[row], hints.Natural.Height);
+                    }
                 }
             }
 
-            if (placement.RowSpan == 1)
+            NormalizeTracks(colDefs, colMin, colNat, colMax);
+            NormalizeTracks(rowDefs, rowMin, rowNat, rowMax);
+
+            // Allocate widths first so we can re-measure for row heights (wrapping).
+            FlexAllocator.Allocate(innerW, colMin, colNat, colMax, colGrow, colShrink, colWidths);
+
+            // Re-measure for row heights using allocated widths.
+            for (var i = 0; i < _cells.Count; i++)
             {
-                var row = placement.Row;
-                if (rowDefs[row].Height.Type != GridUnitType.Fixed)
+                var cell = _cells[i];
+                var placement = GetPlacementForLayout(cell, rows, cols);
+
+                var cellW = GetSpanSize(colWidths, placement.Column, placement.ColumnSpan, colGap);
+                cell.Measure(new LayoutConstraints(0, cellW, 0, innerH));
+
+                if (placement.RowSpan == 1)
                 {
-                    rowMin[row] = Math.Max(rowMin[row], hints.Min.Height);
-                    rowNat[row] = Math.Max(rowNat[row], hints.Natural.Height);
+                    var row = placement.Row;
+                    if (rowDefs[row].Height.Type != GridUnitType.Fixed)
+                    {
+                        var hints = cell.MeasureHints;
+                        rowMin[row] = Math.Max(rowMin[row], hints.Min.Height);
+                        rowNat[row] = Math.Max(rowNat[row], hints.Natural.Height);
+                    }
                 }
             }
-        }
 
-        NormalizeTracks(colDefs, colMin, colNat, colMax);
-        NormalizeTracks(rowDefs, rowMin, rowNat, rowMax);
+            NormalizeTracks(rowDefs, rowMin, rowNat, rowMax);
 
-        // Allocate widths first so we can re-measure for row heights (wrapping).
-        var colWidths = new int[cols];
-        FlexAllocator.Allocate(innerW, colMin, colNat, colMax, colGrow, colShrink, colWidths);
+            FlexAllocator.Allocate(innerH, rowMin, rowNat, rowMax, rowGrow, rowShrink, rowHeights);
 
-        // Re-measure for row heights using allocated widths.
-        for (var i = 0; i < _cells.Count; i++)
-        {
-            var cell = _cells[i];
-            var placement = GetPlacementForLayout(cell, rows, cols);
+            var x0 = finalRect.X + padding.Left;
+            var y0 = finalRect.Y + padding.Top;
 
-            var cellW = GetSpanSize(colWidths, placement.Column, placement.ColumnSpan, colGap);
-            cell.Measure(new LayoutConstraints(0, cellW, 0, innerH));
-
-            if (placement.RowSpan == 1)
+            var x = x0;
+            for (var c = 0; c < cols; c++)
             {
-                var row = placement.Row;
-                if (rowDefs[row].Height.Type != GridUnitType.Fixed)
-                {
-                    var hints = cell.MeasureHints;
-                    rowMin[row] = Math.Max(rowMin[row], hints.Min.Height);
-                    rowNat[row] = Math.Max(rowNat[row], hints.Natural.Height);
-                }
+                colOffsets[c] = x;
+                x += colWidths[c] + colGap;
+            }
+
+            var y = y0;
+            for (var r = 0; r < rows; r++)
+            {
+                rowOffsets[r] = y;
+                y += rowHeights[r] + rowGap;
+            }
+
+            for (var i = 0; i < _cells.Count; i++)
+            {
+                var cell = _cells[i];
+                var p = GetPlacementForLayout(cell, rows, cols);
+
+                var cellX = colOffsets[p.Column];
+                var cellY = rowOffsets[p.Row];
+                var cellW = GetSpanSize(colWidths, p.Column, p.ColumnSpan, colGap);
+                var cellH = GetSpanSize(rowHeights, p.Row, p.RowSpan, rowGap);
+
+                cell.Arrange(new Rectangle(cellX, cellY, cellW, cellH));
             }
         }
-
-        NormalizeTracks(rowDefs, rowMin, rowNat, rowMax);
-
-        var rowHeights = new int[rows];
-        FlexAllocator.Allocate(innerH, rowMin, rowNat, rowMax, rowGrow, rowShrink, rowHeights);
-
-        var x0 = finalRect.X + padding.Left;
-        var y0 = finalRect.Y + padding.Top;
-
-        Span<int> colOffsets = cols <= 64 ? stackalloc int[cols] : new int[cols];
-        Span<int> rowOffsets = rows <= 64 ? stackalloc int[rows] : new int[rows];
-
-        var x = x0;
-        for (var c = 0; c < cols; c++)
+        finally
         {
-            colOffsets[c] = x;
-            x += colWidths[c] + colGap;
-        }
-
-        var y = y0;
-        for (var r = 0; r < rows; r++)
-        {
-            rowOffsets[r] = y;
-            y += rowHeights[r] + rowGap;
-        }
-
-        for (var i = 0; i < _cells.Count; i++)
-        {
-            var cell = _cells[i];
-            var p = GetPlacementForLayout(cell, rows, cols);
-
-            var cellX = colOffsets[p.Column];
-            var cellY = rowOffsets[p.Row];
-            var cellW = GetSpanSize(colWidths, p.Column, p.ColumnSpan, colGap);
-            var cellH = GetSpanSize(rowHeights, p.Row, p.RowSpan, rowGap);
-
-            cell.Arrange(new Rectangle(cellX, cellY, cellW, cellH));
+            if (rentedScratch is not null)
+            {
+                ArrayPool<int>.Shared.Return(rentedScratch);
+            }
         }
     }
 
@@ -456,7 +511,7 @@ public sealed partial class Grid : Visual
         return expanded;
     }
 
-    private static void InitTracks(ColumnDefinition[] defs, int[] min, int[] natural, int[] max, int[] grow, int[] shrink)
+    private static void InitTracks(ColumnDefinition[] defs, Span<int> min, Span<int> natural, Span<int> max, Span<int> grow, Span<int> shrink)
     {
         for (var i = 0; i < defs.Length; i++)
         {
@@ -488,7 +543,7 @@ public sealed partial class Grid : Visual
         }
     }
 
-    private static void InitTracks(RowDefinition[] defs, int[] min, int[] natural, int[] max, int[] grow, int[] shrink)
+    private static void InitTracks(RowDefinition[] defs, Span<int> min, Span<int> natural, Span<int> max, Span<int> grow, Span<int> shrink)
     {
         for (var i = 0; i < defs.Length; i++)
         {
@@ -519,7 +574,7 @@ public sealed partial class Grid : Visual
         }
     }
 
-    private static void NormalizeTracks(ColumnDefinition[] defs, int[] min, int[] natural, int[] max)
+    private static void NormalizeTracks(ColumnDefinition[] defs, Span<int> min, Span<int> natural, Span<int> max)
     {
         for (var i = 0; i < defs.Length; i++)
         {
@@ -548,7 +603,7 @@ public sealed partial class Grid : Visual
         }
     }
 
-    private static void NormalizeTracks(RowDefinition[] defs, int[] min, int[] natural, int[] max)
+    private static void NormalizeTracks(RowDefinition[] defs, Span<int> min, Span<int> natural, Span<int> max)
     {
         for (var i = 0; i < defs.Length; i++)
         {
@@ -577,7 +632,7 @@ public sealed partial class Grid : Visual
         }
     }
 
-    private static int Sum(int[] sizes)
+    private static int Sum(ReadOnlySpan<int> sizes)
     {
         var sum = 0;
         for (var i = 0; i < sizes.Length; i++)
@@ -588,7 +643,7 @@ public sealed partial class Grid : Visual
         return sum;
     }
 
-    private static bool HasInfinite(int[] values)
+    private static bool HasInfinite(ReadOnlySpan<int> values)
     {
         for (var i = 0; i < values.Length; i++)
         {
@@ -612,7 +667,7 @@ public sealed partial class Grid : Visual
         return w <= 0 ? 1 : w;
     }
 
-    private static int GetSpanSize(int[] sizes, int start, int span, int gap)
+    private static int GetSpanSize(ReadOnlySpan<int> sizes, int start, int span, int gap)
     {
         var sum = 0;
         for (var i = 0; i < span; i++)

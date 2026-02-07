@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Buffers;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Layout;
 
@@ -120,31 +121,47 @@ public sealed partial class HStack : Panel
         var totalSpacing = spacing * Math.Max(0, childCount - 1);
         var available = Math.Max(0, finalRect.Width - totalSpacing);
 
-        var mins = new int[childCount];
-        var nats = new int[childCount];
-        var maxs = new int[childCount];
-        var grows = new int[childCount];
-        var shrinks = new int[childCount];
-        var widths = new int[childCount];
+        var scratchLength = childCount * 6;
+        int[]? rentedScratch = null;
+        var scratch = scratchLength <= 6 * 128
+            ? stackalloc int[scratchLength]
+            : (rentedScratch = ArrayPool<int>.Shared.Rent(scratchLength));
 
-        for (var i = 0; i < childCount; i++)
+        var mins = scratch[..childCount];
+        var nats = scratch.Slice(childCount, childCount);
+        var maxs = scratch.Slice(2 * childCount, childCount);
+        var grows = scratch.Slice(3 * childCount, childCount);
+        var shrinks = scratch.Slice(4 * childCount, childCount);
+        var widths = scratch.Slice(5 * childCount, childCount);
+
+        try
         {
-            var hints = Children[i].MeasureHints;
-            mins[i] = hints.Min.Width;
-            nats[i] = hints.Natural.Width;
-            maxs[i] = hints.Max.Width;
-            grows[i] = hints.FlexGrowX;
-            shrinks[i] = hints.FlexShrinkX;
+            for (var i = 0; i < childCount; i++)
+            {
+                var hints = Children[i].MeasureHints;
+                mins[i] = hints.Min.Width;
+                nats[i] = hints.Natural.Width;
+                maxs[i] = hints.Max.Width;
+                grows[i] = hints.FlexGrowX;
+                shrinks[i] = hints.FlexShrinkX;
+            }
+
+            FlexAllocator.Allocate(available, mins, nats, maxs, grows, shrinks, widths);
+
+            var x = finalRect.X;
+            for (var i = 0; i < childCount; i++)
+            {
+                var w = widths[i];
+                Children[i].Arrange(new Rectangle(x, finalRect.Y, w, finalRect.Height));
+                x += w + spacing;
+            }
         }
-
-        FlexAllocator.Allocate(available, mins, nats, maxs, grows, shrinks, widths);
-
-        var x = finalRect.X;
-        for (var i = 0; i < childCount; i++)
+        finally
         {
-            var w = widths[i];
-            Children[i].Arrange(new Rectangle(x, finalRect.Y, w, finalRect.Height));
-            x += w + spacing;
+            if (rentedScratch is not null)
+            {
+                ArrayPool<int>.Shared.Return(rentedScratch);
+            }
         }
     }
 }

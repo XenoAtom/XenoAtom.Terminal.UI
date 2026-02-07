@@ -135,7 +135,11 @@ public sealed partial class Table : Visual
             return SizeHints.Fixed(default);
         }
 
-        var widths = new int[columns];
+        var widths = EnsureLength(_columnWidths, columns);
+        if (ReferenceEquals(widths, _columnWidths))
+        {
+            Array.Clear(widths, 0, widths.Length);
+        }
 
         for (var c = 0; c < columns; c++)
         {
@@ -560,7 +564,12 @@ public sealed partial class Table : Visual
             return;
         }
 
-        var rowHeights = new int[RowCells.Count];
+        var rowHeights = EnsureLength(_rowHeights, RowCells.Count);
+        if (ReferenceEquals(rowHeights, _rowHeights))
+        {
+            Array.Clear(rowHeights, 0, rowHeights.Length);
+        }
+
         for (var r = 0; r < RowCells.Count; r++)
         {
             var row = RowCells[r];
@@ -577,6 +586,16 @@ public sealed partial class Table : Visual
         }
 
         _rowHeights = rowHeights;
+    }
+
+    private static int[] EnsureLength(int[]? source, int length)
+    {
+        if (source is null || source.Length != length)
+        {
+            return new int[length];
+        }
+
+        return source;
     }
 
     private static void FitColumnWidthsToWidth(int[] widths, int availableWidth, int paddingHorizontal, bool showOuterBorder, bool showVerticalLines, bool expandToAvailable)

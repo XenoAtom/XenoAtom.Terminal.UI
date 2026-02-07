@@ -209,12 +209,12 @@ public sealed partial class ValidationPresenter : ContentVisual
         var gapHeight = hasMessage ? gap : 0;
 
         var items = content is null ? 1 : 2;
-        var mins = new int[items];
-        var nats = new int[items];
-        var maxs = new int[items];
-        var grows = new int[items];
-        var shrinks = new int[items];
-        var heights = new int[items];
+        Span<int> mins = stackalloc int[2];
+        Span<int> nats = stackalloc int[2];
+        Span<int> maxs = stackalloc int[2];
+        Span<int> grows = stackalloc int[2];
+        Span<int> shrinks = stackalloc int[2];
+        Span<int> heights = stackalloc int[2];
 
         if (content is null)
         {
@@ -257,7 +257,7 @@ public sealed partial class ValidationPresenter : ContentVisual
             }
         }
 
-        FlexAllocator.Allocate(finalRect.Height, mins, nats, maxs, grows, shrinks, heights);
+        FlexAllocator.Allocate(finalRect.Height, mins[..items], nats[..items], maxs[..items], grows[..items], shrinks[..items], heights[..items]);
 
         _contentRect = default;
         _messageRect = default;
