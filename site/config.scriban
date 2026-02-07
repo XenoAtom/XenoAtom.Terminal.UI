@@ -107,3 +107,4 @@ end
 # Configure some HTML defaults
 html.head.title = do; ret (page.title == "Home" ? site.title : page.title + " | " + site.title); end
 html.attributes = 'data-bs-theme="dark" lang="en" itemscope itemtype="http://schema.org/WebPage"'
+html.head.metas.add $"<link rel='icon' href='{basepath}/favicon.ico' sizes='32x32'>"
