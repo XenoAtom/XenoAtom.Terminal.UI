@@ -2,9 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using System.Buffers;
 using System.Text;
-using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
@@ -40,6 +38,16 @@ public sealed partial class TextBlock : Visual
     /// </summary>
     /// <param name="text">The text provider.</param>
     public TextBlock(Func<string> text) : this()
+    {
+        this.Text(text);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the TextBlock class and binds its text content to the specified string value.
+    /// </summary>
+    /// <param name="text">A binding that supplies the text content to display. The binding may provide a null value, in which case the
+    /// TextBlock will display nothing.</param>
+    public TextBlock(Binding<string?> text) : this()
     {
         this.Text(text);
     }

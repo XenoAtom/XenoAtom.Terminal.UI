@@ -73,6 +73,18 @@ public sealed partial class Markup : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the Markup class and binds its text content to the specified markup value.
+    /// </summary>
+    /// <remarks>Use this constructor to create a Markup element whose text content updates automatically when
+    /// the bound value changes.</remarks>
+    /// <param name="markup">A binding that supplies the markup text to be displayed. The binding may provide a null value, which results in
+    /// no content being shown.</param>
+    public Markup(Binding<string?> markup) : this()
+    {
+        this.Text(markup);
+    }
+
+    /// <summary>
     /// Gets or sets the markup text.
     /// </summary>
     [Bindable]
