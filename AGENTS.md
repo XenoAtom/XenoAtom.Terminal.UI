@@ -1,6 +1,8 @@
 # XenoAtom.Terminal.UI Code Contribution Instructions
 
-The project is in a pre-release state. Remove this line when the project reaches a stable release.
+XenoAtom.Terminal.UI is a modern, reactive retained-mode terminal UI framework for .NET.
+
+The project is still in a pre-release state. Remove this line when the project reaches a stable release.
 
 ## Overview
 
