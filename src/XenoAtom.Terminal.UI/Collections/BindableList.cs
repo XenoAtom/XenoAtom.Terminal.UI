@@ -33,7 +33,9 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
     public BindableList(string? name = null)
     {
         _owner = this;
-        _accessor = new ListBindingAccessor(string.Intern("$list$" + (name ?? Guid.NewGuid().ToString("N"))));
+        _accessor = new ListBindingAccessor(name is null
+            ? "$list$" + Guid.NewGuid().ToString("N")
+            : string.Intern("$list$" + name));
         _items = new List<T>();
     }
 
