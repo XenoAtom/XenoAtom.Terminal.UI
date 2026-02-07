@@ -6,6 +6,7 @@ specs:
   - {path: binding_dirty_model_specs.md, title: "<i class='bi bi-link-45deg' aria-hidden='true'></i> Binding Dirty Model"}
   - {path: layout_protocol_specs.md, title: "<i class='bi bi-bounding-box' aria-hidden='true'></i> Layout Protocol"}
   - {path: dirty_rendering_specs.md, title: "<i class='bi bi-brush' aria-hidden='true'></i> Dirty Rendering"}
+  - {path: brushes_and_gradients_specs.md, title: "<i class='bi bi-palette' aria-hidden='true'></i> Brushes & Gradients"}
   - {path: command_specs.md, title: "<i class='bi bi-terminal' aria-hidden='true'></i> Commands"}
   - {path: data_template_specs.md, title: "<i class='bi bi-puzzle' aria-hidden='true'></i> Data Templates"}
   - {path: text_editor_specs.md, title: "<i class='bi bi-pencil-square' aria-hidden='true'></i> Text Editor"}

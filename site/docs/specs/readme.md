@@ -25,6 +25,7 @@ They are useful when you want to understand *why* a feature behaves a certain wa
 - [Binding Dirty Model](binding_dirty_model_specs.md)
 - [Layout Protocol](layout_protocol_specs.md)
 - [Dirty Rendering](dirty_rendering_specs.md)
+- [Brushes & Gradients](brushes_and_gradients_specs.md)
 - [Commands](command_specs.md)
 - [Data Templates](data_template_specs.md)
 - [Text Editor](text_editor_specs.md)
