@@ -59,7 +59,7 @@ Most public control properties are `[Bindable]` and participate in dependency tr
 The source generator emits:
 
 - property accessors wired into the binding hub
-- fluent extension methods for `T`, `Func<T>`, and `State<T>` overloads
+- fluent extension methods for `T`, `Func<T>`, and `Binding<T>` overloads
 
 ## Bindable models (your own data types)
 
