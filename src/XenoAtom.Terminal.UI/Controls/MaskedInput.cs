@@ -363,7 +363,7 @@ public sealed partial class MaskedInput : TextEditorBase
         base.OnTextInput(e);
         if (!string.IsNullOrEmpty(e.Text) && e.Handled)
         {
-            SnapCaretToNextEmptySlot();
+            SnapCaretToNextEmptySlot(moveToEndWhenFull: e.Text.Length > 1);
         }
     }
 
@@ -373,7 +373,7 @@ public sealed partial class MaskedInput : TextEditorBase
         base.OnPaste(e);
         if (!string.IsNullOrEmpty(e.Text) && e.Handled)
         {
-            SnapCaretToNextEmptySlot();
+            SnapCaretToNextEmptySlot(moveToEndWhenFull: e.Text.Length > 1);
         }
     }
 
@@ -536,7 +536,7 @@ public sealed partial class MaskedInput : TextEditorBase
         return last < 0 ? string.Empty : new string(chars, 0, last + 1);
     }
 
-    private void SnapCaretToNextEmptySlot()
+    private void SnapCaretToNextEmptySlot(bool moveToEndWhenFull = false)
     {
         EnsureTemplateParsed();
 
@@ -563,7 +563,12 @@ public sealed partial class MaskedInput : TextEditorBase
             }
         }
 
-        CaretIndex = _tokens.Length;
+        if (moveToEndWhenFull)
+        {
+            CaretIndex = _tokens.Length;
+        }
+        // Otherwise keep the current caret position so users can continue overwriting
+        // characters sequentially in a full mask instead of jumping to the end.
     }
 
     private char GetPlaceholderChar(MaskedInputStyle style, TemplateToken token)

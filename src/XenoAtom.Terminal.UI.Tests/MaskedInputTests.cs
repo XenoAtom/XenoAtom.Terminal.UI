@@ -123,4 +123,36 @@ public sealed class MaskedInputTests
 
         StringAssert.Contains(rendered, "**-**");
     }
+
+    [TestMethod]
+    public void MaskedInput_When_Full_Can_Overwrite_Sequentially_From_Caret()
+    {
+        var input = new MaskedInput("9999-9999;_") { Value = "12345678" };
+        var root = new VStack { input };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 4));
+        driver.Tick();
+
+        input.CaretIndex = 0;
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "9" });
+        driver.Tick();
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "8" });
+        driver.Tick();
+
+        Assert.AreEqual("98345678", input.Value);
+    }
+
+    [TestMethod]
+    public void MaskedInput_When_Full_Does_Not_Jump_Caret_To_End_After_Overwrite()
+    {
+        var input = new MaskedInput("9999-9999;_") { Value = "12345678" };
+        var root = new VStack { input };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 4));
+        driver.Tick();
+
+        input.CaretIndex = 0;
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "9" });
+        driver.Tick();
+
+        Assert.IsTrue(input.CaretIndex < 8, $"Expected caret to stay in overwrite flow, but was {input.CaretIndex}.");
+    }
 }
