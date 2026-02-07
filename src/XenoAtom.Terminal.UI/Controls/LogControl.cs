@@ -40,6 +40,9 @@ public sealed partial class LogControl : Visual
     private List<LogMatch>?[]? _matchesByEntry;
     private int _activeMatchIndex;
     private string? _searchError;
+    private Regex? _cachedSearchRegex;
+    private string? _cachedSearchRegexPattern;
+    private RegexOptions _cachedSearchRegexOptions;
 
     private LogTextPosition? _selectionAnchor;
     private LogTextPosition? _selectionActive;
@@ -791,14 +794,7 @@ public sealed partial class LogControl : Visual
 
         if (SearchRegex)
         {
-            var pattern = SearchWholeWord ? $"\\b(?:{query})\\b" : query;
-            var options = RegexOptions.CultureInvariant;
-            if (!SearchCaseSensitive)
-            {
-                options |= RegexOptions.IgnoreCase;
-            }
-
-            var regex = new Regex(pattern, options);
+            var regex = GetOrCreateSearchRegex(query);
             for (var entryIndex = 0; entryIndex < _entries.Count; entryIndex++)
             {
                 var text = _entries[entryIndex].Text;
@@ -859,6 +855,29 @@ public sealed partial class LogControl : Visual
         }
 
         _matchesByEntry = byEntry;
+    }
+
+    private Regex GetOrCreateSearchRegex(string query)
+    {
+        var pattern = SearchWholeWord ? $"\\b(?:{query})\\b" : query;
+        var options = RegexOptions.CultureInvariant;
+        if (!SearchCaseSensitive)
+        {
+            options |= RegexOptions.IgnoreCase;
+        }
+
+        if (_cachedSearchRegex is not null &&
+            _cachedSearchRegexOptions == options &&
+            string.Equals(_cachedSearchRegexPattern, pattern, StringComparison.Ordinal))
+        {
+            return _cachedSearchRegex;
+        }
+
+        var regex = new Regex(pattern, options);
+        _cachedSearchRegex = regex;
+        _cachedSearchRegexPattern = pattern;
+        _cachedSearchRegexOptions = options;
+        return regex;
     }
 
     private static bool IsWordBoundary(string text, int start, int length)

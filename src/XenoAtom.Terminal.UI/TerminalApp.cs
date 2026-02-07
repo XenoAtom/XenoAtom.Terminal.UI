@@ -39,6 +39,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private bool _renderRequested = true;
     private Visual? _pointerCapture;
     private Visual? _hoveredElement;
+    private readonly List<Visual> _focusablesScratch = new(16);
     private List<Visual>? _hoveredPath;
     private List<Visual>? _hoveredPathScratch;
     private int? _inlineLiveRegionTopRow;
@@ -1920,42 +1921,44 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private void FocusNext()
     {
         var scope = GetFocusScopeRoot();
-        var focusables = EnumerateFocusables(scope).ToList();
-        if (focusables.Count == 0)
+        _focusablesScratch.Clear();
+        CollectFocusables(scope, _focusablesScratch);
+        if (_focusablesScratch.Count == 0)
         {
             return;
         }
 
-        if (FocusedElement is null || !focusables.Contains(FocusedElement))
+        if (FocusedElement is null || !_focusablesScratch.Contains(FocusedElement))
         {
-            FocusedElement = focusables[0];
+            FocusedElement = _focusablesScratch[0];
             RequestRender();
             return;
         }
 
-        var index = focusables.IndexOf(FocusedElement);
-        FocusedElement = focusables[(index + 1) % focusables.Count];
+        var index = _focusablesScratch.IndexOf(FocusedElement);
+        FocusedElement = _focusablesScratch[(index + 1) % _focusablesScratch.Count];
         RequestRender();
     }
 
     private void FocusPrevious()
     {
         var scope = GetFocusScopeRoot();
-        var focusables = EnumerateFocusables(scope).ToList();
-        if (focusables.Count == 0)
+        _focusablesScratch.Clear();
+        CollectFocusables(scope, _focusablesScratch);
+        if (_focusablesScratch.Count == 0)
         {
             return;
         }
 
-        if (FocusedElement is null || !focusables.Contains(FocusedElement))
+        if (FocusedElement is null || !_focusablesScratch.Contains(FocusedElement))
         {
-            FocusedElement = focusables[^1];
+            FocusedElement = _focusablesScratch[^1];
             RequestRender();
             return;
         }
 
-        var index = focusables.IndexOf(FocusedElement);
-        FocusedElement = focusables[(index - 1 + focusables.Count) % focusables.Count];
+        var index = _focusablesScratch.IndexOf(FocusedElement);
+        FocusedElement = _focusablesScratch[(index - 1 + _focusablesScratch.Count) % _focusablesScratch.Count];
         RequestRender();
     }
 
@@ -2387,10 +2390,26 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 return;
             }
 
+            _focusablesScratch.Clear();
+            CollectFocusables(scopeRoot, _focusablesScratch);
+            if (_focusablesScratch.Count == 0)
+            {
+                return;
+            }
+
             // Prefer a visual explicitly marked for initial focus. This allows apps to define their
             // focus target declaratively (e.g. focus a sidebar list instead of a search box).
-            FocusedElement = EnumerateFocusables(scopeRoot).FirstOrDefault(v => v.AutoFocus)
-                ?? EnumerateFocusables(scopeRoot).FirstOrDefault();
+            var focused = _focusablesScratch[0];
+            for (var i = 0; i < _focusablesScratch.Count; i++)
+            {
+                if (_focusablesScratch[i].AutoFocus)
+                {
+                    focused = _focusablesScratch[i];
+                    break;
+                }
+            }
+
+            FocusedElement = focused;
             if (FocusedElement is not null)
             {
                 RequestRender();
@@ -2398,7 +2417,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
     }
 
-    private static IEnumerable<Visual> EnumerateFocusables(Visual root)
+    private static void CollectFocusables(Visual root, List<Visual> focusables)
     {
         // Prefer focusing leaf controls over container controls (e.g. focus a TreeView inside a ScrollViewer rather
         // than the ScrollViewer itself). Containers remain reachable via Tab because we still yield them after their
@@ -2406,15 +2425,12 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         for (var i = 0; i < root.GetChildrenCount(); i++)
         {
             var child = root.GetChildUnsafe(i);
-            foreach (var nested in EnumerateFocusables(child))
-            {
-                yield return nested;
-            }
+            CollectFocusables(child, focusables);
         }
 
         if (root.Focusable && root.IsVisible && root.IsEnabled)
         {
-            yield return root;
+            focusables.Add(root);
         }
     }
 

@@ -25,7 +25,7 @@ public sealed class TextDocument : ITextDocument
     {
         _text = text ?? string.Empty;
         RebuildLineStarts();
-        _snapshot = new TextSnapshot(_version, _text, new List<int>(_lineStarts), new List<byte>(_lineBreakLengths));
+        _snapshot = new TextSnapshot(_version, _text, _lineStarts, _lineBreakLengths);
     }
 
     /// <inheritdoc />
@@ -81,7 +81,7 @@ public sealed class TextDocument : ITextDocument
         _text = string.Concat(_text.AsSpan(0, position), inserted.AsSpan(), _text.AsSpan(position + length));
         _version++;
         RebuildLineStarts();
-        _snapshot = new TextSnapshot(_version, _text, new List<int>(_lineStarts), new List<byte>(_lineBreakLengths));
+        _snapshot = new TextSnapshot(_version, _text, _lineStarts, _lineBreakLengths);
 
         RaiseChanged(new TextDocumentChangedEventArgs
         {

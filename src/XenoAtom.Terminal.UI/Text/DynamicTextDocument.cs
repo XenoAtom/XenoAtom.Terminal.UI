@@ -133,7 +133,7 @@ internal sealed class DynamicTextDocument : ITextDocument
         }
 
         RebuildLineStarts();
-        _snapshot = new TextSnapshot(_version, _text, new List<int>(_lineStarts), new List<byte>(_lineBreakLengths));
+        _snapshot = new TextSnapshot(_version, _text, _lineStarts, _lineBreakLengths);
     }
 
     private void RebuildLineStarts()
