@@ -8,8 +8,6 @@ XenoAtom.Terminal.UI provides a lightweight **command system** to make keyboard 
 
 Commands are **retained-mode**, registered on visuals (local) or on the `TerminalApp` (global), and routed using the same focus → parent traversal as other keyboard handling.
 
-> Screenshot placeholders will be added later.
-
 ## What is a command?
 
 A `Command` is an action with:
