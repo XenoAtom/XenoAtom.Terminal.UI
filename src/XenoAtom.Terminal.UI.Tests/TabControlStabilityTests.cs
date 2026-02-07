@@ -11,7 +11,6 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class TabControlStabilityTests
 {
     [TestMethod]
-    [Ignore("Invalid for now for TabControl")]
     public void TabControl_DoesNotDuplicateTabs_When_SelectedIndex_Changes()
     {
         var tabControl = new TabControl()
