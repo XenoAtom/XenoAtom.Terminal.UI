@@ -26,7 +26,7 @@ namespace XenoAtom.Terminal.UI;
 /// </summary>
 public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IVisualElement
 {
-    private readonly System.Collections.Concurrent.ConcurrentQueue<Action> _pendingActions = new();
+    private readonly System.Collections.Concurrent.ConcurrentQueue<PendingAction> _pendingActions = new();
     private readonly TerminalInstance _terminal;
     private readonly TerminalAppOptions _options;
     private readonly WindowLayer? _windowLayer;
@@ -48,7 +48,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private Task? _runTask;
     private CellBuffer? _renderBuffer;
     private Visual? _focusedElement;
-    private Func<TerminalRunningContext, TerminalLoopResult>? _onUpdate;
+    private Func<TerminalRunningContext, ValueTask<TerminalLoopResult>>? _onUpdate;
     private TerminalRunningContext? _updateContext;
     private readonly AnsiBuilder _updateOutputBuilder = new(initialCapacity: 4096);
     private global::XenoAtom.Terminal.UI.Input.KeyGesture _exitGesture;
@@ -77,6 +77,12 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
     private int _lastRenderWidth;
     private int _lastRenderHeight;
+
+    private static readonly AsyncLocal<int> UpdateCallbackDepth = new();
+
+    private Task<TerminalLoopResult>? _pendingUpdateTask;
+
+    private readonly record struct PendingAction(Action Action, bool CaptureFlowOutput);
 
     internal enum DependencyKind
     {
@@ -267,6 +273,12 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     internal void SetUpdateCallback(Func<TerminalRunningContext, TerminalLoopResult> onUpdate)
     {
         ArgumentNullException.ThrowIfNull(onUpdate);
+        _onUpdate = ctx => new ValueTask<TerminalLoopResult>(onUpdate(ctx));
+    }
+
+    internal void SetUpdateCallback(Func<TerminalRunningContext, ValueTask<TerminalLoopResult>> onUpdate)
+    {
+        ArgumentNullException.ThrowIfNull(onUpdate);
         _onUpdate = onUpdate;
     }
 
@@ -329,7 +341,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     public void Post(Action action)
     {
         ArgumentNullException.ThrowIfNull(action);
-        _pendingActions.Enqueue(action);
+        _pendingActions.Enqueue(new PendingAction(action, CaptureFlowOutput: UpdateCallbackDepth.Value > 0));
         _wakeUp.Set();
     }
 
@@ -491,10 +503,19 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
         CancelPendingSequenceIfTimedOut(_lastTickTimestamp);
 
-        while (_pendingActions.TryDequeue(out var action))
+        while (_pendingActions.TryDequeue(out var pending))
         {
-            action();
+            if (pending.CaptureFlowOutput)
+            {
+                ExecuteCapturedFlowOutput(pending.Action);
+            }
+            else
+            {
+                pending.Action();
+            }
         }
+
+        FlushCapturedFlowOutputIfNeeded();
 
         while (_terminal.TryReadEvent(out var ev))
         {
@@ -506,27 +527,52 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         long userUpdateTicks = 0;
         if (_onUpdate is not null && !_cts.IsCancellationRequested)
         {
+            var hasResult = false;
             var result = TerminalLoopResult.Continue;
-            using (_terminal.CaptureOutput(_updateOutputBuilder))
+
+            if (_pendingUpdateTask is null)
             {
                 var updateStart = metrics is null ? 0 : Stopwatch.GetTimestamp();
                 _updateContext!.Timestamp = timestamp ?? Stopwatch.GetTimestamp();
-                result = _onUpdate(_updateContext);
+
+                var previousDepth = UpdateCallbackDepth.Value;
+                UpdateCallbackDepth.Value = previousDepth + 1;
+                try
+                {
+                    using (_terminal.CaptureOutput(_updateOutputBuilder))
+                    {
+                        var resultTask = _onUpdate(_updateContext);
+                        if (resultTask.IsCompletedSuccessfully)
+                        {
+                            result = resultTask.GetAwaiter().GetResult();
+                            hasResult = true;
+                        }
+                        else
+                        {
+                            _pendingUpdateTask = resultTask.AsTask();
+                        }
+                    }
+                }
+                finally
+                {
+                    UpdateCallbackDepth.Value = previousDepth;
+                }
+
                 if (metrics is not null)
                 {
                     userUpdateTicks = Math.Max(0, Stopwatch.GetTimestamp() - updateStart);
                 }
-            }
 
-            if (_updateOutputBuilder.Length > 0 && _options.HostKind == TerminalHostKind.Inline)
+                FlushCapturedFlowOutputIfNeeded();
+            }
+            else if (_pendingUpdateTask.IsCompleted)
             {
-                _inlineHost?.PrepareForUserUpdate();
-                _terminal.WriteAtomic((TextWriter w) => w.Write(_updateOutputBuilder.UnsafeAsSpan()));
-                _updateOutputBuilder.Clear();
-                _renderRequested = true;
+                result = _pendingUpdateTask.GetAwaiter().GetResult();
+                _pendingUpdateTask = null;
+                hasResult = true;
             }
 
-            if (result != TerminalLoopResult.Continue)
+            if (hasResult && result != TerminalLoopResult.Continue)
             {
                 if (_options.HostKind == TerminalHostKind.Inline)
                 {
@@ -628,6 +674,8 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         BindingManager.Current.ValueChanged += OnValueChanged;
         _updateContext = new TerminalRunningContext(this, _terminal, _options.HostKind);
         _inlineRemoveOnEnd = false;
+        _pendingUpdateTask = null;
+        _updateOutputBuilder.Clear();
 
         if (!_terminal.IsInputRunning)
         {
@@ -665,6 +713,9 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     {
         try
         {
+            _pendingUpdateTask = null;
+            _updateOutputBuilder.Clear();
+
             _terminal.MarkupStyles = _previousMarkupStyles;
             _previousMarkupStyles = null;
 
@@ -689,6 +740,31 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         {
             Dispatcher.DetachFromThread(this);
         }
+    }
+
+    private void ExecuteCapturedFlowOutput(Action action)
+    {
+        using (_terminal.CaptureOutput(_updateOutputBuilder))
+        {
+            action();
+        }
+    }
+
+    private void FlushCapturedFlowOutputIfNeeded()
+    {
+        if (_updateOutputBuilder.Length == 0)
+        {
+            return;
+        }
+
+        if (_options.HostKind == TerminalHostKind.Inline)
+        {
+            _inlineHost?.PrepareForUserUpdate();
+            _terminal.WriteAtomic((TextWriter w) => w.Write(_updateOutputBuilder.UnsafeAsSpan()));
+            _renderRequested = true;
+        }
+
+        _updateOutputBuilder.Clear();
     }
 
     internal void RequestRender()

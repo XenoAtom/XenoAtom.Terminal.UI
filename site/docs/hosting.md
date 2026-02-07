@@ -79,6 +79,49 @@ Terminal.Live(
 During `onUpdate`, you can write regular output via `Terminal.WriteLine(...)` / `Terminal.Write(...)`.
 That output is placed above the live region. The live region is then re-rendered below.
 
+## Async hosting and async updates
+
+Terminal UI provides `LiveAsync` / `RunAsync` overloads that accept an **asynchronous update callback**.
+
+Important behavioral notes:
+
+- The app remains **single-threaded** (UI thread). There is no extra UI thread created by Terminal.UI.
+- `LiveAsync` / `RunAsync` still **run the UI loop on the calling thread**; the async aspect is the update callback and the ability to `await` it naturally.
+- Only the **hosting update callback** (`onUpdate`) is async. Routed event handlers remain synchronous (`OnKeyDown`, `OnPointer*`, etc.).
+- The async update callback is executed **cooperatively**: if it awaits, Terminal.UI continues to tick input/animations/rendering and resumes the callback later on the UI thread.
+
+### When to use an async update callback
+
+Use async updates when you need to integrate with asynchronous APIs (I/O, timers, subprocesses) without blocking the UI loop.
+
+Example: await a timer-like operation and then stop:
+
+```csharp
+using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI;
+using XenoAtom.Terminal.UI.Controls;
+
+var progress = new State<double>(0);
+
+await Terminal.LiveAsync(
+    new ProgressBar().Value(progress),
+    async _ =>
+    {
+        await Task.Delay(50);
+        progress.Value = Math.Min(1.0, progress.Value + 0.05);
+        return progress.Value >= 1.0
+            ? TerminalLoopResult.StopAndKeepVisual
+            : TerminalLoopResult.Continue;
+    });
+```
+
+### Guidance (keep the UI responsive)
+
+- Avoid long-running work directly on the UI thread.
+  - Prefer starting background work and then updating bindable state when results arrive.
+- If you do use `await`, avoid `ConfigureAwait(false)` in the update callback unless you explicitly marshal back to the UI thread.
+  - Use `context.App.Dispatcher.InvokeAsync(...)` to update UI state from a background continuation.
+
 ## Fullscreen: `Terminal.Run`
 
 Fullscreen runs a UI loop on the main thread:

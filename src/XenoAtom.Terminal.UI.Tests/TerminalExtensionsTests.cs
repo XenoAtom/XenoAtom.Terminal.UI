@@ -107,4 +107,38 @@ public sealed class TerminalExtensionsTests
         Assert.AreEqual(topLine + 1, afterLine, "Expected output after Live(Stop) to continue where Live started.");
         Assert.IsFalse(screen.GetText().Contains("abc", StringComparison.Ordinal), "Expected the live region to be removed.");
     }
+
+    [TestMethod]
+    public async Task LiveAsync_Supports_Async_Update_Callback()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(30, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var counter = new State<int>(0);
+        var root = new VStack(
+            new TextBlock().Text(() => $"Count: {counter.Value}"),
+            new ProgressBar().Value(() => counter.Value / 3.0));
+
+        await session.Instance.LiveAsync(root, async _ =>
+        {
+            await Task.Yield();
+
+            counter.Value++;
+            if (counter.Value >= 3)
+            {
+                session.Instance.WriteMarkupLine("[green]Done[/]");
+                return TerminalLoopResult.StopAndKeepVisual;
+            }
+
+            return TerminalLoopResult.Continue;
+        });
+
+        var outText = backend.GetOutText();
+        StringAssert.Contains(outText, "Done");
+
+        var screen = new AnsiTestScreen(30, 10);
+        screen.Apply(outText);
+        StringAssert.Contains(screen.GetText(), "Count: 3");
+        StringAssert.Contains(screen.GetText(), "Done");
+    }
 }
