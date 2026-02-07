@@ -78,6 +78,36 @@ Styles are records, so variations can be created with `with`:
 var danger = ButtonStyle.Default with { Tone = ControlTone.Error };
 ```
 
+## Brushes and gradients
+
+Brushes provide per-cell gradient colors while keeping the core `Style` representation compact.
+
+Supported brush kinds:
+
+- `Brush.Solid(...)`
+- `Brush.LinearGradient(...)`
+
+Controls with direct brush support:
+
+- `TextBlockStyle.ForegroundBrush` / `TextBlockStyle.BackgroundBrush`
+- `TextFigletStyle.ForegroundBrush` / `TextFigletStyle.BackgroundBrush`
+- `TextBoxStyle.ForegroundBrush` / `TextBoxStyle.BackgroundBrush`
+
+Example:
+
+```csharp
+var brush = Brush.LinearGradient(
+    new GradientPoint(0f, 0f),
+    new GradientPoint(1f, 0f),
+    [new GradientStop(0f, Colors.DeepSkyBlue), new GradientStop(1f, Colors.White)]);
+
+new TextBlock("Gradient text")
+    .Style(TextBlockStyle.Default with { ForegroundBrush = brush });
+```
+
+The default interpolation space comes from `Theme.GradientMixSpace` (default `ColorMixSpace.Oklab`).
+Set `mixSpaceOverride` on a brush when a specific interpolation mode is required.
+
 ## Color schemes
 
 `ColorScheme` represents a 16-color scheme.
@@ -126,4 +156,5 @@ See also:
 
 - [Button](controls/button.md)
 - [Border](controls/border.md)
+- [Gradients](controls/gradients.md)
 - [Rendering](rendering.md)

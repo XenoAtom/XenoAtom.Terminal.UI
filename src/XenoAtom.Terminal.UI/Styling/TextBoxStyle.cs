@@ -72,6 +72,10 @@ public record TextBoxStyle : IStyle<TextBoxStyle>
     public Color? Selection { get; init; }
     /// <summary>Gets an optional background color override for the text region.</summary>
     public Color? Background { get; init; }
+    /// <summary>Gets an optional foreground brush override for rendered text.</summary>
+    public Brush? ForegroundBrush { get; init; }
+    /// <summary>Gets an optional background brush override for the text region.</summary>
+    public Brush? BackgroundBrush { get; init; }
     /// <summary>Gets an optional placeholder foreground color override.</summary>
     public Color? Placeholder { get; init; }
 

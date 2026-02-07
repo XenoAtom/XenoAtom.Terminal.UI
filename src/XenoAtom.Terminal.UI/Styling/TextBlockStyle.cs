@@ -33,6 +33,16 @@ public sealed record TextBlockStyle : IStyle<TextBlockStyle>
     public Color? Background { get; init; }
 
     /// <summary>
+    /// Gets an optional foreground brush override.
+    /// </summary>
+    public Brush? ForegroundBrush { get; init; }
+
+    /// <summary>
+    /// Gets an optional background brush override.
+    /// </summary>
+    public Brush? BackgroundBrush { get; init; }
+
+    /// <summary>
     /// Gets optional text decorations applied to the rendered text.
     /// </summary>
     public TextStyle TextStyle { get; init; }

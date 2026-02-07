@@ -58,6 +58,10 @@ public partial class TextBox : TextEditorBase
     private Rectangle _editorRect;
     private bool _showOverflowIndicatorLeft;
     private bool _showOverflowIndicatorRight;
+    private Rectangle _renderBrushRect;
+    private Brush? _renderForegroundBrush;
+    private ColorMixSpace _renderDefaultMixSpace;
+    private bool _renderBrushesActive;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TextBox"/> class.
@@ -157,7 +161,25 @@ public partial class TextBox : TextEditorBase
     {
         if (isPlaceholder || !IsPassword || ShouldRevealPassword())
         {
-            base.WriteTextSegment(buffer, x, y, text, style, isPlaceholder, textIndexStart, startColumn);
+            if (_renderBrushesActive)
+            {
+                buffer.WriteTextWithBrush(
+                    x,
+                    y,
+                    text,
+                    style,
+                    in _renderBrushRect,
+                    _renderForegroundBrush,
+                    backgroundBrush: null,
+                    _renderDefaultMixSpace,
+                    tabSize: TabSize,
+                    startColumn: startColumn);
+            }
+            else
+            {
+                base.WriteTextSegment(buffer, x, y, text, style, isPlaceholder, textIndexStart, startColumn);
+            }
+
             return;
         }
 
@@ -172,7 +194,10 @@ public partial class TextBox : TextEditorBase
         var totalCells = TerminalTextUtility.GetWidth(text);
         for (var i = 0; i < totalCells; i++)
         {
-            buffer.SetCell(x + i, y, rune, style);
+            var cellStyle = _renderBrushesActive
+                ? CellBufferBrushExtensions.ApplyBrushes(style, x + i, y, in _renderBrushRect, _renderForegroundBrush, backgroundBrush: null, _renderDefaultMixSpace)
+                : style;
+            buffer.SetCell(x + i, y, rune, cellStyle);
         }
     }
 
@@ -236,6 +261,7 @@ public partial class TextBox : TextEditorBase
         var selectionStyle = textBoxStyle.SelectionStyle(theme);
         var backgroundStyle = textBoxStyle.BackgroundStyle(theme, isFocused);
         var placeholderStyle = textBoxStyle.PlaceholderStyle(theme, isFocused);
+        var backgroundBrush = textBoxStyle.BackgroundBrush;
         var padding = textBoxStyle.Padding;
 
         var innerLeft = rect.X;
@@ -251,17 +277,30 @@ public partial class TextBox : TextEditorBase
 
         if (baseRect.Width > 0 && baseRect.Height > 0)
         {
-            for (var y = baseRect.Y; y < baseRect.Y + baseRect.Height; y++)
+            if (backgroundBrush is { } brush)
             {
-                for (var x = baseRect.X; x < baseRect.X + baseRect.Width; x++)
+                buffer.FillRectWithBrush(baseRect, backgroundStyle, foregroundBrush: null, backgroundBrush: brush, theme.GradientMixSpace);
+            }
+            else
+            {
+                for (var y = baseRect.Y; y < baseRect.Y + baseRect.Height; y++)
                 {
-                    buffer.SetCell(x, y, new Rune(' '), backgroundStyle);
+                    for (var x = baseRect.X; x < baseRect.X + baseRect.Width; x++)
+                    {
+                        buffer.SetCell(x, y, new Rune(' '), backgroundStyle);
+                    }
                 }
             }
         }
 
         var editorRect = _editorRect.Width <= 0 || _editorRect.Height <= 0 ? baseRect : _editorRect;
+        _renderBrushRect = editorRect;
+        _renderForegroundBrush = textBoxStyle.ForegroundBrush;
+        _renderDefaultMixSpace = theme.GradientMixSpace;
+        _renderBrushesActive = _renderForegroundBrush is not null;
         RenderEditor(buffer, editorRect, backgroundStyle, selectionStyle, placeholderStyle);
+        _renderBrushesActive = false;
+        _renderForegroundBrush = null;
 
         if (editorRect.Width > 0 && editorRect.Height > 0)
         {

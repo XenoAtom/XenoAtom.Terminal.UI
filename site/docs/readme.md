@@ -51,7 +51,7 @@ See also:
 - [Layout](layout.md) (layout protocol, alignment, margin/padding)
 - [Input](input.md) (keyboard/mouse, focus, routed events, capture)
 - [Commands](commands.md) (commands, key sequences, key hints with CommandBar)
-- [Styling](styling.md) (Theme, styles, environment)
+- [Styling](styling.md) (Theme, styles, environment, brushes/gradients)
 - [Rendering](rendering.md) (cell buffer, diff renderer, performance)
 - [Scrolling](scrolling.md) (ScrollViewer, scroll models, scrollbars)
 - [Text Editing](text-editing.md) (TextBox/TextArea/MaskedInput and the text subsystem)

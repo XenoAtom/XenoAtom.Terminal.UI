@@ -86,6 +86,25 @@ new TextBlock("Banner")
     });
 ```
 
+To use gradients, set `ForegroundBrush` and/or `BackgroundBrush`:
+
+```csharp
+new TextBlock("Gradient title")
+    .HorizontalAlignment(Align.Stretch)
+    .Style(TextBlockStyle.Default with
+    {
+        ForegroundBrush = Brush.LinearGradient(
+            new GradientPoint(0f, 0f),
+            new GradientPoint(1f, 0f),
+            [new GradientStop(0f, Colors.DeepSkyBlue), new GradientStop(1f, Colors.White)]),
+        BackgroundBrush = Brush.LinearGradient(
+            new GradientPoint(0f, 0f),
+            new GradientPoint(1f, 0f),
+            [new GradientStop(0f, Color.Rgb(0x1D, 0x3F, 0x62)), new GradientStop(1f, Color.Rgb(0x12, 0x20, 0x33))]),
+        FillBackground = true,
+    });
+```
+
 ## Related
 
 - [Binding](../binding.md)

@@ -30,6 +30,7 @@ internal static class ScreenshotExport
         ["DockLayoutDemo"] = "docklayout",
         ["FooterDemo"] = "footer",
         ["GridDemo"] = "grid",
+        ["GradientsDemo"] = "gradients",
         ["GroupDemo"] = "group",
         ["HeaderDemo"] = "header",
         ["HStackDemo"] = "hstack",

@@ -66,6 +66,7 @@ controls:
   - {path: linechart.md, title: LineChart}
   - {path: sparkline.md, title: Sparkline}
   - {path: canvas.md, title: Canvas}
+  - {path: gradients.md, title: Gradients}
   - {path: textfiglet.md, title: TextFiglet}
 
   - {title: "<i class='bi bi-layers xenoatom-icon xenoatom-icon--overlays' aria-hidden='true'></i> Overlays", separator: true}

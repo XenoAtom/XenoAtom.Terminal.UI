@@ -91,6 +91,7 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 - [LineChart](linechart.md)
 - [Sparkline](sparkline.md)
 - [Canvas](canvas.md)
+- [Gradients](gradients.md)
 - [TextFiglet](textfiglet.md)
 
 ## <i class="bi bi-layers xenoatom-icon xenoatom-icon--overlays" aria-hidden="true"></i> Overlays

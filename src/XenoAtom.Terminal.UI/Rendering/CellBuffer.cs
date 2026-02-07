@@ -400,7 +400,7 @@ public sealed class CellBuffer
         return false;
     }
 
-    private static int GetTextElementWidth(ReadOnlySpan<char> element)
+    internal static int GetTextElementWidth(ReadOnlySpan<char> element)
     {
         if (element.IsEmpty)
         {

@@ -106,22 +106,32 @@ public sealed partial class TextBlock : Visual
         var theme = GetTheme();
         var textBlockStyle = GetStyle<TextBlockStyle>();
         var style = textBlockStyle.ResolveTextStyle(theme);
+        var foregroundBrush = textBlockStyle.ForegroundBrush;
+        var backgroundBrush = textBlockStyle.BackgroundBrush;
+        var defaultMixSpace = theme.GradientMixSpace;
 
-        if (textBlockStyle.FillBackground && textBlockStyle.Background is not null)
+        if (textBlockStyle.FillBackground && (textBlockStyle.Background is not null || backgroundBrush is not null))
         {
             var fill = textBlockStyle.ResolveFillStyle(theme);
-            for (var y = rect.Y; y < rect.Y + rect.Height; y++)
+            if (backgroundBrush is { } brush)
             {
-                for (var x = rect.X; x < rect.X + rect.Width; x++)
+                buffer.FillRectWithBrush(rect, fill, foregroundBrush: null, backgroundBrush: brush, defaultMixSpace);
+            }
+            else
+            {
+                for (var y = rect.Y; y < rect.Y + rect.Height; y++)
                 {
-                    buffer.SetCell(x, y, new Rune(' '), fill);
+                    for (var x = rect.X; x < rect.X + rect.Width; x++)
+                    {
+                        buffer.SetCell(x, y, new Rune(' '), fill);
+                    }
                 }
             }
         }
 
         if (!Wrap || rect.Height == 1)
         {
-            WriteSingleLine(buffer, rect, text.AsSpan(), style);
+            WriteSingleLine(buffer, rect, text.AsSpan(), style, in rect, foregroundBrush, backgroundBrush, defaultMixSpace);
             return;
         }
 
@@ -138,13 +148,23 @@ public sealed partial class TextBlock : Visual
             }
 
             var slice = span.Slice(start, Math.Max(0, endExclusive - start));
-            WriteAlignedLine(buffer, rect, rect.Y + lineIndex, slice, style, isLastLine: nextStart >= span.Length);
+            var lineY = rect.Y + lineIndex;
+            var lineBrushRect = new Rectangle(rect.X, lineY, rect.Width, 1);
+            WriteAlignedLine(buffer, rect, lineY, slice, style, in lineBrushRect, foregroundBrush, backgroundBrush, defaultMixSpace, isLastLine: nextStart >= span.Length);
             lineIndex++;
             start = nextStart;
         }
     }
 
-    private void WriteSingleLine(CellBuffer buffer, Rectangle rect, ReadOnlySpan<char> text, Style style)
+    private void WriteSingleLine(
+        CellBuffer buffer,
+        Rectangle rect,
+        ReadOnlySpan<char> text,
+        Style style,
+        in Rectangle brushRect,
+        Brush? foregroundBrush,
+        Brush? backgroundBrush,
+        ColorMixSpace defaultMixSpace)
     {
         var maxWidth = rect.Width;
         if (maxWidth <= 0)
@@ -160,7 +180,7 @@ public sealed partial class TextBlock : Visual
             var span = Clip(text, maxWidth);
             var cells = TerminalTextUtility.GetWidth(span);
             var x = AlignX(rect, alignment, maxWidth, cells);
-            buffer.WriteText(x, rect.Y, span, style);
+            buffer.WriteTextWithBrush(x, rect.Y, span, style, in brushRect, foregroundBrush, backgroundBrush, defaultMixSpace);
             return;
         }
 
@@ -168,13 +188,14 @@ public sealed partial class TextBlock : Visual
         if (fullWidth <= maxWidth)
         {
             var x = AlignX(rect, alignment, maxWidth, fullWidth);
-            buffer.WriteText(x, rect.Y, text, style);
+            buffer.WriteTextWithBrush(x, rect.Y, text, style, in brushRect, foregroundBrush, backgroundBrush, defaultMixSpace);
             return;
         }
 
         if (maxWidth == 1)
         {
-            buffer.SetCell(rect.X, rect.Y, Ellipsis, style);
+            var ellipsisStyle = CellBufferBrushExtensions.ApplyBrushes(style, rect.X, rect.Y, in brushRect, foregroundBrush, backgroundBrush, defaultMixSpace);
+            buffer.SetCell(rect.X, rect.Y, Ellipsis, ellipsisStyle);
             return;
         }
 
@@ -183,8 +204,9 @@ public sealed partial class TextBlock : Visual
         {
             var span = Clip(text, bodyWidth);
             var x = AlignX(rect, alignment, maxWidth, maxWidth);
-            buffer.WriteText(x, rect.Y, span, style);
-            buffer.SetCell(x + bodyWidth, rect.Y, Ellipsis, style);
+            buffer.WriteTextWithBrush(x, rect.Y, span, style, in brushRect, foregroundBrush, backgroundBrush, defaultMixSpace);
+            var ellipsisStyle = CellBufferBrushExtensions.ApplyBrushes(style, x + bodyWidth, rect.Y, in brushRect, foregroundBrush, backgroundBrush, defaultMixSpace);
+            buffer.SetCell(x + bodyWidth, rect.Y, Ellipsis, ellipsisStyle);
             return;
         }
 
@@ -193,18 +215,29 @@ public sealed partial class TextBlock : Visual
             var startIndex = GetStartIndexForSuffix(text, bodyWidth);
             var suffix = text[startIndex..];
             var x = AlignX(rect, alignment, maxWidth, maxWidth);
-            buffer.SetCell(x, rect.Y, Ellipsis, style);
-            buffer.WriteText(x + 1, rect.Y, suffix, style);
+            var ellipsisStyle = CellBufferBrushExtensions.ApplyBrushes(style, x, rect.Y, in brushRect, foregroundBrush, backgroundBrush, defaultMixSpace);
+            buffer.SetCell(x, rect.Y, Ellipsis, ellipsisStyle);
+            buffer.WriteTextWithBrush(x + 1, rect.Y, suffix, style, in brushRect, foregroundBrush, backgroundBrush, defaultMixSpace);
             return;
         }
 
         var clipped = Clip(text, maxWidth);
         var clippedWidth = TerminalTextUtility.GetWidth(clipped);
         var defaultX = AlignX(rect, alignment, maxWidth, clippedWidth);
-        buffer.WriteText(defaultX, rect.Y, clipped, style);
+        buffer.WriteTextWithBrush(defaultX, rect.Y, clipped, style, in brushRect, foregroundBrush, backgroundBrush, defaultMixSpace);
     }
 
-    private void WriteAlignedLine(CellBuffer buffer, Rectangle rect, int y, ReadOnlySpan<char> text, Style style, bool isLastLine)
+    private void WriteAlignedLine(
+        CellBuffer buffer,
+        Rectangle rect,
+        int y,
+        ReadOnlySpan<char> text,
+        Style style,
+        in Rectangle brushRect,
+        Brush? foregroundBrush,
+        Brush? backgroundBrush,
+        ColorMixSpace defaultMixSpace,
+        bool isLastLine)
     {
         var width = rect.Width;
         if (width <= 0)
@@ -215,7 +248,7 @@ public sealed partial class TextBlock : Visual
         var alignment = TextAlignment;
         if (alignment == TextAlignment.Justify && !isLastLine)
         {
-            if (TryWriteJustified(buffer, rect.X, y, width, text, style))
+            if (TryWriteJustified(buffer, rect.X, y, width, text, style, in brushRect, foregroundBrush, backgroundBrush, defaultMixSpace))
             {
                 return;
             }
@@ -224,7 +257,7 @@ public sealed partial class TextBlock : Visual
         var clipped = Clip(text, width);
         var cells = TerminalTextUtility.GetWidth(clipped);
         var x = AlignX(rect, alignment, width, cells);
-        buffer.WriteText(x, y, clipped, style);
+        buffer.WriteTextWithBrush(x, y, clipped, style, in brushRect, foregroundBrush, backgroundBrush, defaultMixSpace);
     }
 
     private static int AlignX(Rectangle rect, TextAlignment alignment, int availableWidth, int contentWidth)
@@ -282,7 +315,17 @@ public sealed partial class TextBlock : Visual
         return index;
     }
 
-    private static bool TryWriteJustified(CellBuffer buffer, int x, int y, int width, ReadOnlySpan<char> text, Style style)
+    private static bool TryWriteJustified(
+        CellBuffer buffer,
+        int x,
+        int y,
+        int width,
+        ReadOnlySpan<char> text,
+        Style style,
+        in Rectangle brushRect,
+        Brush? foregroundBrush,
+        Brush? backgroundBrush,
+        ColorMixSpace defaultMixSpace)
     {
         Span<(int Start, int Length)> words = stackalloc (int, int)[32];
         var wordCount = 0;
@@ -342,7 +385,7 @@ public sealed partial class TextBlock : Visual
         for (var w = 0; w < wordCount; w++)
         {
             var slice = text.Slice(words[w].Start, words[w].Length);
-            buffer.WriteText(posX, y, slice, style);
+            buffer.WriteTextWithBrush(posX, y, slice, style, in brushRect, foregroundBrush, backgroundBrush, defaultMixSpace);
             posX += TerminalTextUtility.GetWidth(slice);
 
             if (w + 1 < wordCount)
@@ -350,7 +393,8 @@ public sealed partial class TextBlock : Visual
                 var spaces = 1 + extraPerGap + (w < remainder ? 1 : 0);
                 for (var s = 0; s < spaces; s++)
                 {
-                    buffer.SetCell(posX++, y, new Rune(' '), style);
+                    var spacedStyle = CellBufferBrushExtensions.ApplyBrushes(style, posX, y, in brushRect, foregroundBrush, backgroundBrush, defaultMixSpace);
+                    buffer.SetCell(posX++, y, new Rune(' '), spacedStyle);
                 }
             }
         }

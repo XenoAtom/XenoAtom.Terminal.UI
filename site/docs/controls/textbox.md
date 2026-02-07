@@ -73,6 +73,23 @@ When content is wider than the viewport, the TextBox can show start/end indicato
 ## Styling
 TextBox uses background on the text region while keeping borders visually compatible with the terminal background.
 
+`TextBoxStyle` also supports brush-based gradients:
+
+```csharp
+new TextBox("Gradient-enabled")
+    .Style(TextBoxStyle.Default with
+    {
+        BackgroundBrush = Brush.LinearGradient(
+            new GradientPoint(0f, 0f),
+            new GradientPoint(1f, 0f),
+            [new GradientStop(0f, Color.Rgb(0x11, 0x25, 0x3D)), new GradientStop(1f, Color.Rgb(0x12, 0x20, 0x33))]),
+        ForegroundBrush = Brush.LinearGradient(
+            new GradientPoint(0f, 0f),
+            new GradientPoint(1f, 0f),
+            [new GradientStop(0f, Colors.White), new GradientStop(1f, Colors.DeepSkyBlue)]),
+    });
+```
+
 See also:
 
 - [Text Editing](../text-editing.md)

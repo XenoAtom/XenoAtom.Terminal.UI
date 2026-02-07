@@ -31,6 +31,7 @@ separate `XenoAtom.Terminal` package.
 - **Layout system**: consistent measure/arrange protocol (integer cell UI), panels and containers
 - **Styling, themes, and color schemes**:
   - Theme + per-control styles, `ColorScheme` palettes (terminal-native and RGB themes)
+  - Brush gradients for controls such as `TextBlock`, `TextBox`, and `TextFiglet`
   - RootLoops-powered color scheme generator (https://rootloops.sh) with many built-in schemes
 - **Input**:
   - Keyboard, mouse, resize events; focus navigation; routed events where appropriate
@@ -103,6 +104,22 @@ Terminal.Run(
         ? TerminalLoopResult.StopAndKeepVisual 
         : TerminalLoopResult.Continue
     );
+```
+
+Brush gradient example:
+
+```csharp
+using XenoAtom.Terminal.UI.Styling;
+
+var brush = Brush.LinearGradient(
+    new GradientPoint(0f, 0f),
+    new GradientPoint(1f, 0f),
+    [new GradientStop(0f, Colors.DeepSkyBlue), new GradientStop(1f, Colors.White)]);
+
+Terminal.Write(
+    new TextBlock("Gradient title")
+        .Style(TextBlockStyle.Default with { ForegroundBrush = brush })
+);
 ```
 
 ## 🧩 Controls included

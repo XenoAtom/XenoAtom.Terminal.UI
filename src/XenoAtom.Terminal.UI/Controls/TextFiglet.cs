@@ -156,7 +156,12 @@ public sealed partial class TextFiglet : Visual
             return;
         }
 
-        var style = GetStyle<TextFigletStyle>().ResolveTextStyle(GetTheme());
+        var theme = GetTheme();
+        var figletStyle = GetStyle<TextFigletStyle>();
+        var style = figletStyle.ResolveTextStyle(theme);
+        var foregroundBrush = figletStyle.ForegroundBrush;
+        var backgroundBrush = figletStyle.BackgroundBrush;
+        var defaultMixSpace = theme.GradientMixSpace;
         var alignment = TextAlignment;
 
         var maxLines = Math.Min(rect.Height, _cachedLines.Length);
@@ -177,7 +182,7 @@ public sealed partial class TextFiglet : Visual
                 };
             }
 
-            buffer.WriteText(x, rect.Y + i, span, style);
+            buffer.WriteTextWithBrush(x, rect.Y + i, span, style, in rect, foregroundBrush, backgroundBrush, defaultMixSpace);
         }
     }
 }

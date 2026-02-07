@@ -28,6 +28,16 @@ public sealed record TextFigletStyle : IStyle<TextFigletStyle>
     public Style? TextStyle { get; init; }
 
     /// <summary>
+    /// Gets an optional foreground brush override.
+    /// </summary>
+    public Brush? ForegroundBrush { get; init; }
+
+    /// <summary>
+    /// Gets an optional background brush override.
+    /// </summary>
+    public Brush? BackgroundBrush { get; init; }
+
+    /// <summary>
     /// Resolves the FIGlet text style for the specified theme.
     /// </summary>
     public Style ResolveTextStyle(Theme theme)

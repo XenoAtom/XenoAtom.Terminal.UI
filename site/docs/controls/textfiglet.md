@@ -38,6 +38,23 @@ new TextFiglet("XenoAtom")
     .Style(TextFigletStyle.Default with { TextStyle = CellStyle.None | TextStyle.Bold });
 ```
 
+Use brushes for gradients:
+
+```csharp
+new TextFiglet("XenoAtom")
+    .Style(TextFigletStyle.Default with
+    {
+        ForegroundBrush = Brush.LinearGradient(
+            new GradientPoint(0f, 0f),
+            new GradientPoint(1f, 1f),
+            [
+                new GradientStop(0f, Colors.DeepSkyBlue),
+                new GradientStop(0.5f, Colors.White),
+                new GradientStop(1f, Colors.MediumPurple),
+            ]),
+    });
+```
+
 ## Related
 
 - [TextFiglet Specs](../specs/controls/textfiglet.md)

@@ -343,6 +343,11 @@ public sealed class Theme : IStyle<Theme>
     public Color? Muted { get; init; }
 
     /// <summary>
+    /// Gets the default color interpolation space used by gradient brushes.
+    /// </summary>
+    public ColorMixSpace GradientMixSpace { get; init; } = ColorMixSpace.Oklab;
+
+    /// <summary>
     /// Gets the glyph set used for line borders and separators.
     /// </summary>
     public LineGlyphs Lines { get; init; } = LineGlyphs.Single;
