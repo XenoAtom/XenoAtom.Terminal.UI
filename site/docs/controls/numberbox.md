@@ -6,9 +6,6 @@ title: NumberBox
 
 `NumberBox<T>` is a single-line numeric editor built on the `TextEditorCore` infrastructure. It provides caret/selection/clipboard support like `TextBox`, while keeping a bindable numeric `Value`.
 
-> Screenshots: `docs/images/numberbox-basic.png` (placeholder)
-
-
 ![NumberBox](../../img/controls/numberbox.svg){.terminal}
 
 ## Basic usage
