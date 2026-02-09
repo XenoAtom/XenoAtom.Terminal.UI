@@ -14,6 +14,7 @@ doc:
   - {path: input.md, title: "<i class='bi bi-keyboard' aria-hidden='true'></i> Input"}
   - {path: commands.md, title: "<i class='bi bi-terminal' aria-hidden='true'></i> Commands"}
   - {path: styling.md, title: "<i class='bi bi-palette2' aria-hidden='true'></i> Styling & Themes"}
+  - {path: logging.md, title: "<i class='bi bi-journal-text' aria-hidden='true'></i> Logging"}
   - {path: rendering.md, title: "<i class='bi bi-display' aria-hidden='true'></i> Rendering"}
   - {path: scrolling.md, title: "<i class='bi bi-arrows-move' aria-hidden='true'></i> Scrolling"}
   - {path: text-editing.md, title: "<i class='bi bi-pencil-square' aria-hidden='true'></i> Text Editing"}

@@ -76,6 +76,29 @@ XenoAtom.Terminal.UI is built on a small stack of focused libraries. Together th
       </div>
     </div>
   </div>
+
+  <div class="col-12">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-2">
+          <img src="../../img/xenoatom-logging.png" width="56" height="56" alt="XenoAtom.Logging">
+          <div>
+            <div class="h5 mb-0">XenoAtom.Logging</div>
+            <div class="text-muted small">High-performance logging + LogControl sink</div>
+          </div>
+        </div>
+        <div class="small">
+          Structured logging runtime with a Terminal.UI integration that can write directly into <code>LogControl</code>
+          (including markup and rich formatting support).
+        </div>
+        <div class="mt-2 small">
+          <a href="../logging/"><i class="bi bi-book" aria-hidden="true"></i> Docs</a>
+          <span class="mx-2 text-muted">|</span>
+          <a href="https://github.com/XenoAtom/XenoAtom.Logging"><i class="bi bi-github" aria-hidden="true"></i> GitHub</a>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 ## Dependency chain (simplified)
@@ -106,3 +129,4 @@ In other words:
 - [XenoAtom.Terminal](terminal.md) - the hosting and I/O foundation underneath Terminal.UI
 - [XenoAtom.Ansi](ansi.md) - markup syntax and ANSI primitives used by Terminal.UI (including the `Markup` control)
 - [Markup](markup.md) - markup syntax reference and Terminal.UI semantic markup tokens
+- [Logging](logging.md) - integrate XenoAtom.Logging with LogControl for fullscreen log-viewer apps
