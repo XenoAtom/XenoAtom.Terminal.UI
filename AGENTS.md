@@ -2,8 +2,6 @@
 
 XenoAtom.Terminal.UI is a modern, reactive retained-mode terminal UI framework for .NET.
 
-Pre-release project. Remove this line at stable release.
-
 Paths/commands below are relative to this directory (repo root).
 
 ## Orientation

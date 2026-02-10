@@ -19,7 +19,7 @@ og_type: website
       <a href="https://github.com/XenoAtom/XenoAtom.Terminal.UI/" class="btn btn-info btn-lg"><i class="bi bi-github"></i> GitHub</a>
     </div>
     <div class="mt-4 text-start mx-auto" style="max-width: 56rem;">
-      <pre class="language-shell-session"><code>dotnet add package XenoAtom.Terminal.UI --prerelease</code></pre>
+      <pre class="language-shell-session"><code>dotnet add package XenoAtom.Terminal.UI</code></pre>
     </div>
     <video class="terminal terminal-hero img-fluid" width="500" height="281" controls="" autoplay loop muted playsinline><source type="video/webm" src="{{site.basepath}}/img/xenoatom-fullscreen.webm"></source></video>
   </div>
