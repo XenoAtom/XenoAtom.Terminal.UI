@@ -5,18 +5,6 @@
 XenoAtom.Terminal.UI is a modern, reactive retained-mode terminal UI framework for .NET, built on top of [XenoAtom.Terminal](https://github.com/XenoAtom/XenoAtom.Terminal).
 It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…), a consistent layout system, a styling/theming model, and a binding system designed for smooth live UIs.
 
-> [!NOTE]
-> This library is in early 1.0 preview. The API is mostly stable but may still see breaking changes before the final 1.0 release.
-> Feedback welcome!
-
-## Requirements (.NET 10 / C# 14)
-
-XenoAtom.Terminal.UI targets `net10.0` and requires the .NET 10 SDK (C# 14).
-
-Rationale: the library integrates into `XenoAtom.Terminal` using **C# 14 extension members**, so you can write
-`Terminal.Write(...)`, `Terminal.Live(...)`, and `Terminal.Run(...)` even though `Terminal` is defined in the
-separate `XenoAtom.Terminal` package.
-
 ## ✨ Features
 
 - **Two hosting models**:
@@ -52,6 +40,13 @@ separate `XenoAtom.Terminal` package.
 > XenoAtom.Terminal.UI depends on XenoAtom.Terminal. The two libraries are designed to be used together:
 > Terminal handles safe ANSI/markup output and unified input events; Terminal.UI builds a widget/layout system on top.
 
+## Requirements (.NET 10 / C# 14)
+
+XenoAtom.Terminal.UI targets `net10.0` and requires the .NET 10 SDK (C# 14).
+
+Rationale: the library integrates into `XenoAtom.Terminal` using **C# 14 extension members**, so you can write
+`Terminal.Write(...)`, `Terminal.Live(...)`, and `Terminal.Run(...)` even though `Terminal` is defined in the
+separate `XenoAtom.Terminal` package.
 
 ## 🚀 Quick start
 

@@ -15,7 +15,7 @@ available directly as `Terminal.Write(...)`, `Terminal.Live(...)`, and `Terminal
 ## Install
 
 ```bash
-dotnet add package XenoAtom.Terminal.UI --prerelease
+dotnet add package XenoAtom.Terminal.UI
 ```
 
 ## Your first visual
