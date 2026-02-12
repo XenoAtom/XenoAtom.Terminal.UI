@@ -1,16 +1,21 @@
 
 // Ensure copy-to-clipboard buttons get Bootstrap tooltips
 document.addEventListener('DOMContentLoaded', () => {
+  const copyTooltipScope = document.querySelector('section[data-copy-tooltip]');
+  const copyTooltipText = copyTooltipScope?.dataset.copyTooltip || 'Copy to Clipboard.';
+  const copyTooltipSuccessText = copyTooltipScope?.dataset.copyTooltipSuccess || 'Copied!';
+  const copyTooltipErrorText = copyTooltipScope?.dataset.copyTooltipError || 'Failed to copy!';
+
   const copyBtns = document.querySelectorAll('button.copy-to-clipboard-button');
 
   copyBtns.forEach(btn => {
     // Ensure tooltip attributes exist
     if (!btn.hasAttribute('data-bs-toggle')) btn.setAttribute('data-bs-toggle', 'tooltip');
     if (!btn.hasAttribute('data-bs-placement')) btn.setAttribute('data-bs-placement', 'left');
-    if (!btn.hasAttribute('data-bs-title')) btn.setAttribute('data-bs-title', 'Copy to Clipboard.');
+    if (!btn.hasAttribute('data-bs-title')) btn.setAttribute('data-bs-title', copyTooltipText);
 
     const tt = bootstrap.Tooltip.getOrCreateInstance(btn);
-    const original = btn.getAttribute('data-bs-title') || 'Copy to Clipboard.';
+    const original = btn.getAttribute('data-bs-title') || copyTooltipText;
 
     // Hide tooltip on click (if visible from hover)
     //btn.addEventListener('click', () => tt.hide());
@@ -22,8 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
           const state = btn.getAttribute('data-copy-state');
 
           if (state === 'copy-success') {
-            if (typeof tt.setContent === 'function') tt.setContent({ '.tooltip-inner': 'Copied!' });
-            else btn.setAttribute('data-bs-title', 'Copied!');
+            if (typeof tt.setContent === 'function') tt.setContent({ '.tooltip-inner': copyTooltipSuccessText });
+            else btn.setAttribute('data-bs-title', copyTooltipSuccessText);
             tt.show();
             // Drop focus so the button doesn’t stay highlighted
             btn.blur();
@@ -33,8 +38,8 @@ document.addEventListener('DOMContentLoaded', () => {
               tt.hide();
             }, 1200);
           } else if (state === 'copy-error') {
-            if (typeof tt.setContent === 'function') tt.setContent({ '.tooltip-inner': 'Failed to copy!' });
-            else btn.setAttribute('data-bs-title', 'Failed to copy!');
+            if (typeof tt.setContent === 'function') tt.setContent({ '.tooltip-inner': copyTooltipErrorText });
+            else btn.setAttribute('data-bs-title', copyTooltipErrorText);
             tt.show();
             // Drop focus so the button doesn’t stay highlighted
             btn.blur();
@@ -146,6 +151,9 @@ if (jstoc.length > 0)
 var searchInput = document.getElementById("search-input");
 var searchMenu = document.getElementById("search-results");
 if (searchInput && searchMenu) {
+    const emptySearchMessage = searchInput.dataset.searchEmptyMessage || 'Enter words to search...';
+    const noSearchResultsMessage = searchInput.dataset.searchNoResultsMessage || 'No results found.';
+
     // Enable deep-link anchors only when search is present
     anchors.add(".xenoatom-docs h2");
 
@@ -209,7 +217,7 @@ if (searchInput && searchMenu) {
     function renderRows(rows) {
         clearMenu();
         if (!rows || rows.length === 0) {
-            renderMessage('No results found.');
+            renderMessage(noSearchResultsMessage);
             return;
         }
         const frag = document.createDocumentFragment();
@@ -233,7 +241,7 @@ if (searchInput && searchMenu) {
         const q = (term || '').trim();
         if (!q) {
             clearMenu();
-            renderMessage('Enter words to search...');
+            renderMessage(emptySearchMessage);
             return;
         }
         DefaultLunetSearch.query(q).then(rows => {
@@ -241,7 +249,7 @@ if (searchInput && searchMenu) {
             renderRows(rows);
         }).catch(() => {
             if (queryId !== lastQueryId) return;
-            renderMessage('No results found.');
+            renderMessage(noSearchResultsMessage);
         });
     }
 
@@ -279,7 +287,7 @@ if (searchInput && searchMenu) {
 
     // Show helper on focus
     searchInput.addEventListener('focus', () => {
-        if (!searchInput.value) renderMessage('Enter words to search...');
+        if (!searchInput.value) renderMessage(emptySearchMessage);
         else showMenu();
     });
 

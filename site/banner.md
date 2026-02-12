@@ -54,7 +54,7 @@ sitemap: false
     inset: 0;
     z-index: 0;
 
-    background-image: url('/img/theming.png');
+    background-image: url('{{site.basepath}}{{site.project_banner_background_path}}');
     background-size: cover;
     background-position: center;
 
@@ -231,14 +231,14 @@ sitemap: false
 </style>
 
 <div class="banner-root">
-  <div class="banner-canvas" role="img" aria-label="XenoAtom.Terminal.UI branding banner">
+  <div class="banner-canvas" role="img" aria-label="{{site.project_name}} branding banner">
     <div class="banner-inner">
       <div class="banner-card">
         <div class="banner-top">
-          <img class="banner-logo" src="/img/xenoatom-logo.png" alt="XenoAtom.Terminal.UI logo" width="96" height="96">
+          <img class="banner-logo" src="{{site.basepath}}{{site.project_logo_path}}" alt="{{site.project_name}} logo" width="96" height="96">
           <div>
-            <h1 class="banner-title"><span class="c64-text">XenoAtom.Terminal.UI</span></h1>
-            <p class="banner-subtitle">A modern, reactive retained-mode terminal UI framework for .NET.</p>
+            <h1 class="banner-title"><span class="c64-text">{{site.project_name}}</span></h1>
+            <p class="banner-subtitle">{{site.description}}</p>
           </div>
         </div>
         <div class="banner-pill-row" aria-hidden="true">
@@ -250,12 +250,12 @@ sitemap: false
         </div>
         <div class="banner-code" aria-label="Install command">
           <span>Install:</span>
-          <kbd>dotnet add package XenoAtom.Terminal.UI</kbd>
+          <kbd>dotnet add package {{site.project_package_id}}</kbd>
         </div>
         <div class="banner-links">
-          <a href="/docs/"><i class="bi bi-book"></i>Docs</a>
-          <a href="https://github.com/XenoAtom/XenoAtom.Terminal.UI"><i class="bi bi-github"></i>GitHub</a>
-          <a href="/docs/controls/"><i class="bi bi-grid-3x3-gap"></i>Controls</a>
+          <a href="{{site.basepath}}/docs/"><i class="bi bi-book"></i>Docs</a>
+          <a href="{{site.github_repo_url}}"><i class="bi bi-github"></i>GitHub</a>
+          <a href="{{site.basepath}}/docs/controls/"><i class="bi bi-grid-3x3-gap"></i>Controls</a>
         </div>
       </div>
     </div>

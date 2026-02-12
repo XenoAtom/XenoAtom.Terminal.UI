@@ -1,19 +1,95 @@
-# Site Settings
-author = "Alexandre Mutel"
-title = "XenoAtom.Terminal.UI"
-description = "A modern, reactive retained-mode terminal UI framework for .NET."
+# -----------------------------------------------------------------------------
+# TEMPLATE SECTION (shared across projects)
+# -----------------------------------------------------------------------------
+# Keep this section reusable. Site-specific values are intentionally placed at
+# the end of this file.
 
-baseurl = baseurl ?? "https://xenoatom.github.io"
-basepath = "/terminal"
+# Template UI defaults
+template_css_prefix = "xenoatom"
+template_docs_menu_label = "Menu"
+template_docs_toc_label = "On this page"
+template_search_placeholder = "Search... (Alt+s)"
+template_search_empty_message = "Enter words to search..."
+template_search_no_results_message = "No results found."
+template_copy_tooltip = "Copy to Clipboard."
+template_copy_success_tooltip = "Copied!"
+template_copy_error_tooltip = "Failed to copy!"
+template_footer_site_generator_name = "lunet"
+template_footer_site_generator_url = "https://github.com/lunet-io/lunet"
+template_footer_hosting_name = "GitHub Pages"
+template_footer_hosting_url = "https://pages.github.com/"
 
-# log.info $"Base URL: { baseurl }{ basepath } <- Environment: { environment }"
+# Shared defaults for all XenoAtom project sites
+template_baseurl = "https://xenoatom.github.io"
+template_basepath = "/"
+template_project_favicon_path = "/favicon.ico"
+template_project_github_user = "XenoAtom"
+template_project_owner_name = "Alexandre Mutel"
+template_project_owner_alias = "xoofx"
+template_project_owner_url = "https://xoofx.github.io"
+template_project_content_license_name = "CC BY 2.5"
+template_project_content_license_url = "http://creativecommons.org/licenses/by/2.5/"
+template_project_twitter_user = "xoofx"
+
+# Initializes all resolved site values from `site_project_*`.
+func site_project_init
+    project_name = site_project_name ?? "ProjectName"
+    project_description = site_project_description ?? "Project description."
+    project_logo_path = site_project_logo_path ?? "/img/project-logo.png"
+    project_social_banner_path = site_project_social_banner_path ?? "/img/project-banner.png"
+    project_banner_background_path = site_project_banner_background_path ?? "/img/project-banner-background.png"
+    project_package_id = site_project_package_id ?? "Project.Package"
+    project_github_repo = site_project_github_repo ?? "Project.Repository"
+
+    project_favicon_path = template_project_favicon_path
+    project_github_user = template_project_github_user
+    project_github_repo_url = $"https://github.com/{project_github_user}/{project_github_repo}/"
+    project_owner_name = template_project_owner_name
+    project_owner_alias = template_project_owner_alias
+    project_owner_url = template_project_owner_url
+    project_content_license_name = template_project_content_license_name
+    project_content_license_url = template_project_content_license_url
+    project_twitter_user = template_project_twitter_user
+
+    # Shared URL is template-owned.
+    baseurl = baseurl ?? template_baseurl
+    basepath = site_project_basepath ?? template_basepath
+
+    author = project_owner_name
+    title = project_name
+    description = project_description
+    github_user = project_github_user
+    github_repo_url = project_github_repo_url
+    docs_menu_label = template_docs_menu_label
+    docs_toc_label = template_docs_toc_label
+    search_placeholder = template_search_placeholder
+    search_empty_message = template_search_empty_message
+    search_no_results_message = template_search_no_results_message
+    copy_tooltip = template_copy_tooltip
+    copy_success_tooltip = template_copy_success_tooltip
+    copy_error_tooltip = template_copy_error_tooltip
+    css_prefix = template_css_prefix
+
+    with cards
+        with twitter
+            enable = true
+            card = "summary_large_image"
+            user = project_twitter_user
+            image = project_social_banner_path
+        end
+        with og
+            enable = true
+            image = project_social_banner_path
+        end
+    end
+
+    html.head.title = do; ret (page.title == "Home" ? site.title : page.title + " | " + site.title); end
+    html.attributes = 'data-bs-theme="dark" lang="en" itemscope itemtype="http://schema.org/WebPage"'
+    html.head.metas.add $"<link rel='icon' href='{basepath}{project_favicon_path}' sizes='32x32'>"
+end
 
 # Use `base` as a default layout
 layout = "base"
-
-# Github repository
-github_user = "XenoAtom"
-github_repo_url = "https://github.com/XenoAtom/XenoAtom.Terminal.UI/"
 
 # Enable search indexing
 with search
@@ -21,20 +97,6 @@ with search
     # engine = "lunr"
     # worker = true
     excludes.add ["/404.md", "/banner.md", "/AGENTS.md"]
-end
-
-# Configure OpenGraph and Twitter cards
-with cards
-    with twitter
-        enable = true
-        card = "summary_large_image"
-        user = "xoofx"
-        image = "/img/XenoAtom-Terminal-UI-Banner.png"
-    end
-    with og
-        enable = true
-        image = "/img/XenoAtom-Terminal-UI-Banner.png"
-    end
 end
 
 # Resources bundle
@@ -45,14 +107,13 @@ with bundle
     anchorjs = resource "npm:anchor-js" "5.0.0"
     prismjs = resource "npm:prismjs" "1.30.0"
 
-    #mermaid = resource "npm:mermaid" "11.12.1"
+    # mermaid = resource "npm:mermaid" "11.12.1"
     scss.includes.add bootstrap.path + "/scss"
     scss.includes.add bootstrap_icons.path + "/font"
 
     # css files
     css tocbot "/dist/tocbot.css"
     css "/css/prism.css"
-    #css bootstrap_icons "/font/bootstrap-icons.min.css"
     css "/css/main.scss"
 
     # js files
@@ -69,7 +130,7 @@ with bundle
     js prismjs "/components/prism-json.min.js"
     js prismjs "/plugins/toolbar/prism-toolbar.min.js"
     js prismjs "/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"
-    #js mermaid "/dist/mermaid.min.js"
+    # js mermaid "/dist/mermaid.min.js"
     js "/js/main.js"
 
     # copy font files
@@ -104,7 +165,17 @@ with markdown
     options.css_img_attr = "img-fluid"
 end
 
-# Configure some HTML defaults
-html.head.title = do; ret (page.title == "Home" ? site.title : page.title + " | " + site.title); end
-html.attributes = 'data-bs-theme="dark" lang="en" itemscope itemtype="http://schema.org/WebPage"'
-html.head.metas.add $"<link rel='icon' href='{basepath}/favicon.ico' sizes='32x32'>"
+# -----------------------------------------------------------------------------
+# SITE SECTION (project-specific values, keep this block minimal)
+# -----------------------------------------------------------------------------
+
+site_project_name = "XenoAtom.Terminal.UI"
+site_project_description = "A modern, reactive retained-mode terminal UI framework for .NET."
+site_project_logo_path = "/img/xenoatom-logo.png"
+site_project_social_banner_path = "/img/XenoAtom-Terminal-UI-Banner.png"
+site_project_banner_background_path = "/img/theming.png"
+site_project_package_id = "XenoAtom.Terminal.UI"
+site_project_github_repo = "XenoAtom.Terminal.UI"
+site_project_basepath = "/terminal"
+
+site_project_init
