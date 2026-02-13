@@ -92,7 +92,7 @@ XenoAtom.Terminal.UI is built on a small stack of focused libraries. Together th
           (including markup and rich formatting support).
         </div>
         <div class="mt-2 small">
-          <a href="../logging/"><i class="bi bi-book" aria-hidden="true"></i> Docs</a>
+          <a href="https://xenoatom.github.io/logging/docs/"><i class="bi bi-book" aria-hidden="true"></i> Docs</a>
           <span class="mx-2 text-muted">|</span>
           <a href="https://github.com/XenoAtom/XenoAtom.Logging"><i class="bi bi-github" aria-hidden="true"></i> GitHub</a>
         </div>
@@ -160,5 +160,6 @@ and for CLI visual help integration:
 - [XenoAtom.Terminal](terminal.md) - the hosting and I/O foundation underneath Terminal.UI
 - [XenoAtom.Ansi](ansi.md) - markup syntax and ANSI primitives used by Terminal.UI (including the `Markup` control)
 - [Markup](markup.md) - markup syntax reference and Terminal.UI semantic markup tokens
-- [Logging](logging.md) - integrate XenoAtom.Logging with LogControl for fullscreen log-viewer apps
+- [Logging Integration](logging.md) - integrate XenoAtom.Logging with LogControl for fullscreen log-viewer apps
+- [XenoAtom.Logging Docs](https://xenoatom.github.io/logging/docs/) - full logging framework documentation
 - [CommandLine](commandline.md) - integrate XenoAtom.CommandLine.Terminal for rich help visuals and CLI UX

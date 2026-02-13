@@ -68,5 +68,7 @@ LogManager.Shutdown();
 
 ## Links
 
+- XenoAtom.Logging website: <https://xenoatom.github.io/logging/>
+- XenoAtom.Logging documentation: <https://xenoatom.github.io/logging/docs/>
 - XenoAtom.Logging repository: <https://github.com/XenoAtom/XenoAtom.Logging>
 - HelloLogControl sample: <https://github.com/XenoAtom/XenoAtom.Logging/tree/main/samples/HelloLogControl>
