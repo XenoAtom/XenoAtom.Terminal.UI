@@ -32,6 +32,10 @@ This document captures design and implementation notes for `Table`.
   - a list of rows; each row is a `VisualList<Visual>` owned by the table
 - `ShowHeaderSeparator : bool`
   - additional toggle layered on top of `TableStyle.ShowHeaderSeparator`
+- `LastRowIsFooter : bool`
+  - when `true`, the last body row is treated as a footer row
+- `ShowFooterSeparator : bool`
+  - when `true` and `LastRowIsFooter` is enabled, draws a separator before the footer row when regular row separators are disabled
 
 ### Fluent helpers
 
@@ -80,6 +84,7 @@ Cells are then arranged in row order:
 - each cell is given a `Rectangle` that is the column content width and row content height (after padding)
 - if vertical separators are enabled, an extra 1-cell column is reserved between columns
 - if row separators are enabled, an extra 1-cell row is reserved between rows
+- if `LastRowIsFooter && ShowFooterSeparator` and regular row separators are disabled, a single extra 1-cell separator row is reserved before the last row
 
 ### Render
 
@@ -98,6 +103,7 @@ Render order:
 2) header row area fill (optional)
 3) header separator line (optional)
 4) each row area fill + row separators (optional)
+   - when footer mode is enabled, a footer separator is drawn before the last row when regular row separators are disabled
 5) outer border bottom line (optional)
 
 ## Validation & safety

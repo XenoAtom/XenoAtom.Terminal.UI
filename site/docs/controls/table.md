@@ -25,6 +25,22 @@ new Table()
 ## Styling
 `TableStyle` controls border glyphs, header style, separators, and line visibility.
 
+## Footer row
+
+You can mark the last row as a footer:
+
+```csharp
+new Table()
+    .Headers("Item", "Amount")
+    .AddRow("Subtotal", "$10.00")
+    .AddRow("Total", "$10.00")
+    .LastRowIsFooter(true)
+    .ShowFooterSeparator(true);
+```
+
+- `LastRowIsFooter` treats the final body row as a footer row.
+- `ShowFooterSeparator` inserts a separator before the footer row when row separators are not already enabled.
+
 ## Notes
 
 - `Table` is best for relatively small datasets where you want rich per-cell visuals.

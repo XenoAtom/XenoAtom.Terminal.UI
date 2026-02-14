@@ -26,6 +26,7 @@ public sealed partial class Table : Visual
     public Table()
     {
         this.ShowHeaderSeparator(true);
+        this.ShowFooterSeparator(true);
 
         HeaderCells = new VisualList<Visual>(this, "Table.HeaderCells");
         RowCells = new BindableList<VisualList<Visual>>(this, "Table.RowCells", onAdding: ValidateRowOwner, onRemoving: DetachRow);
@@ -81,6 +82,26 @@ public sealed partial class Table : Visual
     /// </summary>
     [Bindable]
     public partial bool ShowHeaderSeparator { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the last body row should be treated as a footer row.
+    /// </summary>
+    /// <remarks>
+    /// When enabled, the last row in <see cref="RowCells"/> can be visually separated from the preceding rows by
+    /// enabling <see cref="ShowFooterSeparator"/>.
+    /// </remarks>
+    [Bindable]
+    public partial bool LastRowIsFooter { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a separator should be rendered before the footer row.
+    /// </summary>
+    /// <remarks>
+    /// This separator is only applied when <see cref="LastRowIsFooter"/> is enabled and there are at least two body rows.
+    /// If row separators are already enabled by style, this flag has no additional visual effect.
+    /// </remarks>
+    [Bindable]
+    public partial bool ShowFooterSeparator { get; set; }
 
     /// <inheritdoc />
     protected override int ChildrenCount
@@ -168,7 +189,7 @@ public sealed partial class Table : Visual
         }
 
         var tableStyle = GetStyle<TableStyle>();
-        var (showOuterBorder, showVerticalLines, showRowSeparators, showHeaderSeparator, padding) = ResolveOptions(tableStyle);
+        var (showOuterBorder, showVerticalLines, showRowSeparators, showHeaderSeparator, showFooterSeparator, padding) = ResolveOptions(tableStyle);
 
         FitColumnWidthsToWidth(widths, constraints.MaxWidth, padding.Horizontal, showOuterBorder, showVerticalLines, expandToAvailable: false);
 
@@ -177,7 +198,14 @@ public sealed partial class Table : Visual
         var desiredWidth = ComputeRequiredWidth(widths, padding.Horizontal, showOuterBorder, showVerticalLines);
 
         ComputeRowHeights(widths, padding);
-        var desiredHeight = ComputeRequiredHeight(_headerRowHeight, _rowHeights, showOuterBorder, showHeaderSeparator, showRowSeparators);
+        var desiredHeight = ComputeRequiredHeight(
+            _headerRowHeight,
+            _rowHeights,
+            showOuterBorder,
+            showHeaderSeparator,
+            showRowSeparators,
+            LastRowIsFooter,
+            showFooterSeparator);
 
         return SizeHints.Fixed(constraints.Clamp(new Size(desiredWidth, desiredHeight)));
     }
@@ -192,7 +220,7 @@ public sealed partial class Table : Visual
         }
 
         var tableStyle = GetStyle<TableStyle>();
-        var (showOuterBorder, showVerticalLines, showRowSeparators, showHeaderSeparator, padding) = ResolveOptions(tableStyle);
+        var (showOuterBorder, showVerticalLines, showRowSeparators, showHeaderSeparator, showFooterSeparator, padding) = ResolveOptions(tableStyle);
 
         FitColumnWidthsToWidth(widths, finalRect.Width, padding.Horizontal, showOuterBorder, showVerticalLines, expandToAvailable: true);
 
@@ -220,7 +248,7 @@ public sealed partial class Table : Visual
             ArrangeRow(xStart, y, rowHeight, widths, padding, showVerticalLines, RowCells[r]);
             y += rowHeight;
 
-            if (showRowSeparators && r + 1 < RowCells.Count)
+            if (ShouldDrawSeparatorAfterRow(r, RowCells.Count, showRowSeparators, LastRowIsFooter, showFooterSeparator))
             {
                 y += 1;
             }
@@ -243,7 +271,7 @@ public sealed partial class Table : Visual
         }
 
         var tableStyle = GetStyle<TableStyle>();
-        var (showOuterBorder, showVerticalLines, showRowSeparators, showHeaderSeparator, padding) = ResolveOptions(tableStyle);
+        var (showOuterBorder, showVerticalLines, showRowSeparators, showHeaderSeparator, showFooterSeparator, padding) = ResolveOptions(tableStyle);
 
         var theme = GetTheme();
         var glyphs = tableStyle.Glyphs ?? theme.Lines;
@@ -283,7 +311,7 @@ public sealed partial class Table : Visual
             RenderRowArea(buffer, rect, rowTop, rowHeight, widths, padding, showOuterBorder, showVerticalLines, glyphs, cellStyle, borderStyle);
             rowTop += rowHeight;
 
-            if (showRowSeparators && r + 1 < RowCells.Count && rowTop < rect.Y + rect.Height)
+            if (ShouldDrawSeparatorAfterRow(r, RowCells.Count, showRowSeparators, LastRowIsFooter, showFooterSeparator) && rowTop < rect.Y + rect.Height)
             {
                 DrawSeparatorLine(buffer, rect, rowTop, widths, padding, showOuterBorder, showVerticalLines, glyphs, borderStyle);
                 rowTop += 1;
@@ -499,7 +527,14 @@ public sealed partial class Table : Visual
         return LayoutConstants.ClampFinite(total);
     }
 
-    private static int ComputeRequiredHeight(int headerRowHeight, int[]? rowHeights, bool showOuterBorder, bool showHeaderSeparator, bool showRowSeparators)
+    private static int ComputeRequiredHeight(
+        int headerRowHeight,
+        int[]? rowHeights,
+        bool showOuterBorder,
+        bool showHeaderSeparator,
+        bool showRowSeparators,
+        bool lastRowIsFooter,
+        bool showFooterSeparator)
     {
         var height = 0;
         if (showOuterBorder)
@@ -525,10 +560,7 @@ public sealed partial class Table : Visual
             }
         }
 
-        if (showRowSeparators && rowCount > 1)
-        {
-            height += rowCount - 1;
-        }
+        height += GetBodySeparatorCount(rowCount, showRowSeparators, lastRowIsFooter, showFooterSeparator);
 
         return Math.Max(0, height);
     }
@@ -655,14 +687,45 @@ public sealed partial class Table : Visual
         return columns;
     }
 
-    private (bool showOuterBorder, bool showVerticalLines, bool showRowSeparators, bool showHeaderSeparator, Thickness padding) ResolveOptions(TableStyle tableStyle)
+    private static bool ShouldDrawSeparatorAfterRow(int rowIndex, int rowCount, bool showRowSeparators, bool lastRowIsFooter, bool showFooterSeparator)
+    {
+        if (rowCount <= 1 || rowIndex < 0 || rowIndex >= rowCount - 1)
+        {
+            return false;
+        }
+
+        if (showRowSeparators)
+        {
+            return true;
+        }
+
+        return lastRowIsFooter && showFooterSeparator && rowIndex == rowCount - 2;
+    }
+
+    private static int GetBodySeparatorCount(int rowCount, bool showRowSeparators, bool lastRowIsFooter, bool showFooterSeparator)
+    {
+        if (rowCount <= 1)
+        {
+            return 0;
+        }
+
+        if (showRowSeparators)
+        {
+            return rowCount - 1;
+        }
+
+        return lastRowIsFooter && showFooterSeparator ? 1 : 0;
+    }
+
+    private (bool showOuterBorder, bool showVerticalLines, bool showRowSeparators, bool showHeaderSeparator, bool showFooterSeparator, Thickness padding) ResolveOptions(TableStyle tableStyle)
     {
         var showOuterBorder = tableStyle.ShowOuterBorder;
         var showVerticalLines = tableStyle.ShowVerticalLines;
         var showRowSeparators = tableStyle.ShowRowSeparators;
         var showHeaderSeparator = ShowHeaderSeparator && tableStyle.ShowHeaderSeparator;
+        var showFooterSeparator = ShowFooterSeparator;
         var padding = tableStyle.CellPadding;
-        return (showOuterBorder, showVerticalLines, showRowSeparators, showHeaderSeparator, padding);
+        return (showOuterBorder, showVerticalLines, showRowSeparators, showHeaderSeparator, showFooterSeparator, padding);
     }
 
     private void ValidateRowOwner(VisualList<Visual> row)
