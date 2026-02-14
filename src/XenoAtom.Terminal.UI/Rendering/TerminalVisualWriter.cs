@@ -42,7 +42,7 @@ internal static class TerminalVisualWriter
             buffer.Clear(root.GetTheme().BaseTextStyle());
             root.RenderTree(buffer);
 
-            var caps = CreateAnsiCapabilities(terminal.Capabilities);
+            var caps = AnsiCapabilitiesFactory.Create(terminal.Capabilities);
             using var builder = new AnsiBuilder(initialCapacity: (width * height) + 128);
             var writer = new AnsiWriter(builder, caps);
 
@@ -179,24 +179,4 @@ internal static class TerminalVisualWriter
         };
     }
 
-    private static AnsiCapabilities CreateAnsiCapabilities(TerminalCapabilities caps)
-    {
-        var colorLevel = caps.ColorLevel switch
-        {
-            TerminalColorLevel.None => AnsiColorLevel.None,
-            TerminalColorLevel.Color16 => AnsiColorLevel.Colors16,
-            TerminalColorLevel.Color256 => AnsiColorLevel.Colors256,
-            _ => AnsiColorLevel.TrueColor,
-        };
-
-        return new AnsiCapabilities
-        {
-            AnsiEnabled = caps.AnsiEnabled,
-            ColorLevel = colorLevel,
-            SupportsOsc8 = caps.SupportsOsc8Links,
-            Prefer7BitC1 = true,
-            SafeMode = false,
-            OscTermination = AnsiOscTermination.StringTerminator,
-        };
-    }
 }

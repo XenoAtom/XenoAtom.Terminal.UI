@@ -314,7 +314,7 @@ public sealed class InlineInteractiveHost : IDisposable
 
                 if (!viewportChanged && _hasSavedCursorPosition)
                 {
-                    var capsLocal = CreateAnsiCapabilities(_terminal.Capabilities);
+                    var capsLocal = AnsiCapabilitiesFactory.Create(_terminal.Capabilities);
                     _builder.Clear();
                     var writerLocal = new AnsiWriter(_builder, capsLocal);
 
@@ -357,7 +357,7 @@ public sealed class InlineInteractiveHost : IDisposable
             }
         }
 
-        var caps = CreateAnsiCapabilities(_terminal.Capabilities);
+        var caps = AnsiCapabilitiesFactory.Create(_terminal.Capabilities);
         _builder.Clear();
         var writer = new AnsiWriter(_builder, caps);
 
@@ -696,7 +696,7 @@ public sealed class InlineInteractiveHost : IDisposable
         }
 
         var width = Math.Max(1, _terminal.Size.Columns);
-        var caps = CreateAnsiCapabilities(_terminal.Capabilities);
+        var caps = AnsiCapabilitiesFactory.Create(_terminal.Capabilities);
 
         _builder.Clear();
         var writer = new AnsiWriter(_builder, caps);
@@ -778,7 +778,7 @@ public sealed class InlineInteractiveHost : IDisposable
 
     private void WritePlainFlowLines(IReadOnlyList<string> markupLines)
     {
-        var caps = CreateAnsiCapabilities(_terminal.Capabilities);
+        var caps = AnsiCapabilitiesFactory.Create(_terminal.Capabilities);
         _builder.Clear();
         var writer = new AnsiWriter(_builder, caps);
         var formatter = new AnsiMarkup(writer);
@@ -999,24 +999,4 @@ public sealed class InlineInteractiveHost : IDisposable
         };
     }
 
-    private static AnsiCapabilities CreateAnsiCapabilities(TerminalCapabilities caps)
-    {
-        var colorLevel = caps.ColorLevel switch
-        {
-            TerminalColorLevel.None => AnsiColorLevel.None,
-            TerminalColorLevel.Color16 => AnsiColorLevel.Colors16,
-            TerminalColorLevel.Color256 => AnsiColorLevel.Colors256,
-            _ => AnsiColorLevel.TrueColor,
-        };
-
-        return new AnsiCapabilities
-        {
-            AnsiEnabled = caps.AnsiEnabled,
-            ColorLevel = colorLevel,
-            SupportsOsc8 = caps.SupportsOsc8Links,
-            Prefer7BitC1 = true,
-            SafeMode = false,
-            OscTermination = AnsiOscTermination.StringTerminator,
-        };
-    }
 }

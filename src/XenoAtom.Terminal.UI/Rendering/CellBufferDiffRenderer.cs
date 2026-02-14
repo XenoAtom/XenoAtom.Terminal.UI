@@ -77,7 +77,7 @@ public sealed class CellBufferDiffRenderer : IDisposable
             cursorChanged = true;
         }
 
-        var caps = CreateAnsiCapabilities(terminal.Capabilities);
+        var caps = AnsiCapabilitiesFactory.Create(terminal.Capabilities);
 
         _builder.Clear();
         var writer = new AnsiWriter(_builder, caps);
@@ -375,24 +375,4 @@ public sealed class CellBufferDiffRenderer : IDisposable
         };
     }
 
-    private static AnsiCapabilities CreateAnsiCapabilities(TerminalCapabilities caps)
-    {
-        var colorLevel = caps.ColorLevel switch
-        {
-            TerminalColorLevel.None => AnsiColorLevel.None,
-            TerminalColorLevel.Color16 => AnsiColorLevel.Colors16,
-            TerminalColorLevel.Color256 => AnsiColorLevel.Colors256,
-            _ => AnsiColorLevel.TrueColor,
-        };
-
-        return new AnsiCapabilities
-        {
-            AnsiEnabled = caps.AnsiEnabled,
-            ColorLevel = colorLevel,
-            SupportsOsc8 = caps.SupportsOsc8Links,
-            Prefer7BitC1 = true,
-            SafeMode = false,
-            OscTermination = AnsiOscTermination.StringTerminator,
-        };
-    }
 }
