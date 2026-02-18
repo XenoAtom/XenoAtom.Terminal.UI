@@ -29,7 +29,7 @@ og_type: website
   <div class="row row-cols-1 row-cols-lg-2 gx-5 gy-5">
     <div class="col">
       <div class="card h-100">
-        <div class="card-header display-6"><i class="bi bi-link-45deg xenoatom-feature-icon xenoatom-icon--binding"></i> Binding-first UI</div>
+        <div class="card-header display-6"><i class="bi bi-link-45deg lunet-feature-icon lunet-icon--binding"></i> Binding-first UI</div>
         <div class="card-body">
           <p class="card-text">
             Bindable properties are tracked during update/layout/render. Change state and only the affected visuals are invalidated.
@@ -42,7 +42,7 @@ og_type: website
     </div>
     <div class="col">
       <div class="card h-100">
-        <div class="card-header display-6"><i class="bi bi-ui-checks-grid xenoatom-feature-icon xenoatom-icon--controls"></i> Composable controls</div>
+        <div class="card-header display-6"><i class="bi bi-ui-checks-grid lunet-feature-icon lunet-icon--controls"></i> Composable controls</div>
         <div class="card-body">
           <p class="card-text">
             Inputs, layout containers, menus, overlays, charts, and more — all composable and styleable.
@@ -55,7 +55,7 @@ og_type: website
     </div>
     <div class="col">
       <div class="card h-100">
-        <div class="card-header display-6"><i class="bi bi-pencil-square xenoatom-feature-icon xenoatom-icon--editing"></i> Text editing</div>
+        <div class="card-header display-6"><i class="bi bi-pencil-square lunet-feature-icon lunet-icon--editing"></i> Text editing</div>
         <div class="card-body">
           <p class="card-text">
             TextBox/TextArea with selection, scrolling, clipboard, and Find/Replace — powered by a shared text subsystem.
@@ -68,7 +68,7 @@ og_type: website
     </div>
     <div class="col">
       <div class="card h-100">
-        <div class="card-header display-6"><i class="bi bi-table xenoatom-feature-icon xenoatom-icon--data"></i> DataGridControl</div>
+        <div class="card-header display-6"><i class="bi bi-table lunet-feature-icon lunet-icon--data"></i> DataGridControl</div>
         <div class="card-body">
           <p class="card-text">
             A virtualized data grid with selection, filtering, search, and in-place editing.
@@ -81,7 +81,7 @@ og_type: website
     </div>
     <div class="col">
       <div class="card h-100">
-        <div class="card-header display-6"><i class="bi bi-palette2 xenoatom-feature-icon xenoatom-icon--themes"></i> Themes &amp; alpha blending</div>
+        <div class="card-header display-6"><i class="bi bi-palette2 lunet-feature-icon lunet-icon--themes"></i> Themes &amp; alpha blending</div>
         <div class="card-body">
           <p class="card-text">
             Themes are derived from palettes and color schemes, with built-in alpha blending for subtle, layered UIs.
@@ -94,7 +94,7 @@ og_type: website
     </div>
     <div class="col">
       <div class="card h-100">
-        <div class="card-header display-6"><i class="bi bi-bug xenoatom-feature-icon xenoatom-icon--debug"></i> Debug overlay</div>
+        <div class="card-header display-6"><i class="bi bi-bug lunet-feature-icon lunet-icon--debug"></i> Debug overlay</div>
         <div class="card-body">
           <p class="card-text">
             Press <kbd>F12</kbd> in fullscreen apps to inspect FPS, dirty regions, diff stats, and per-pass timings.
@@ -111,7 +111,7 @@ og_type: website
 <section class="container my-5">
   <div class="card">
     <div class="card-header display-6">
-      <i class="bi bi-diagram-3 xenoatom-feature-icon xenoatom-icon--data"></i> Built on a small stack
+      <i class="bi bi-diagram-3 lunet-feature-icon lunet-icon--data"></i> Built on a small stack
     </div>
     <div class="card-body">
       <p class="card-text">

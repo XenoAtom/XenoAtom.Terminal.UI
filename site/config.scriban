@@ -1,5 +1,5 @@
 # Use the Lunet template as the base for this documentation site
-extend "XenoAtom/lunet_template@1.0.0"
+extend "lunet-io/templates"
 
 # -----------------------------------------------------------------------------
 # SITE SECTION (project-specific values only)
@@ -11,7 +11,16 @@ site_project_logo_path = "/img/xenoatom-logo.png"
 site_project_social_banner_path = "/img/XenoAtom-Terminal-UI-Banner.png"
 site_project_banner_background_path = "/img/theming.png"
 site_project_package_id = "XenoAtom.Terminal.UI"
+site_project_github_user = "XenoAtom"
 site_project_github_repo = "XenoAtom.Terminal.UI"
 site_project_basepath = "/terminal"
+site_project_owner_name = "Alexandre Mutel"
+site_project_owner_alias = "xoofx"
+site_project_owner_url = "https://xoofx.github.io"
+site_project_content_license_name = "CC BY 4.0"
+site_project_content_license_url = "https://creativecommons.org/licenses/by/4.0/"
+
+template_footer_organization_name = "XenoAtom"
+template_footer_organization_url = "https://github.com/XenoAtom"
 
 site_project_init
