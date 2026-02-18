@@ -24,3 +24,23 @@ template_footer_organization_name = "XenoAtom"
 template_footer_organization_url = "https://github.com/XenoAtom"
 
 site_project_init
+
+# -----------------------------------------------------------------------------
+# API reference (.NET)
+# -----------------------------------------------------------------------------
+with api.dotnet
+    title = "XenoAtom.Terminal.UI .NET API Reference"
+    path = "/api"
+    menu_name = "api"
+    menu_title = "API Reference"
+    properties = {
+        TargetFramework: "net10.0"
+    }
+    projects = [
+        {
+            name: "XenoAtom.Terminal.UI",
+            path: "../src/XenoAtom.Terminal.UI/XenoAtom.Terminal.UI.csproj",
+            references: ["XenoAtom.Ansi", "XenoAtom.Terminal"]
+        }
+    ]
+end
