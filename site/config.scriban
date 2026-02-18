@@ -1,5 +1,5 @@
-# Use the Lunet template as the base for this documentation site
-extend "lunet-io/templates"
+# Use the XenoAtom template (which itself extends lunet-io/templates)
+extend "XenoAtom/lunet_template"
 
 # -----------------------------------------------------------------------------
 # SITE SECTION (project-specific values only)
