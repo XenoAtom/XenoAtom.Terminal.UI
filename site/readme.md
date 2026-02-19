@@ -4,7 +4,7 @@ layout: simple
 og_type: website
 ---
 
-<section class="text-center py-5 text-white hero-text">
+<section class="text-center py-5">
   <div class="container">
     <h1 class="fw-bold display-6">
       <span class="c64-text">XenoAtom.Terminal.UI</span>
