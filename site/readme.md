@@ -15,7 +15,7 @@ og_type: website
     </p>
     <div class="d-flex justify-content-center gap-3 mt-4 flex-wrap">
       <a href="{{site.basepath}}/docs/getting-started/" class="btn btn-primary btn-lg"><i class="bi bi-rocket-takeoff"></i> Get started</a>
-      <a href="{{site.basepath}}/docs/controls/" class="btn btn-outline-light btn-lg"><i class="bi bi-ui-checks-grid"></i> Browse controls</a>
+      <a href="{{site.basepath}}/docs/controls/" class="btn btn-outline-secondary btn-lg"><i class="bi bi-ui-checks-grid"></i> Browse controls</a>
       <a href="https://github.com/XenoAtom/XenoAtom.Terminal.UI/" class="btn btn-info btn-lg"><i class="bi bi-github"></i> GitHub</a>
     </div>
     <div class="mt-4 text-start mx-auto" style="max-width: 56rem;">
