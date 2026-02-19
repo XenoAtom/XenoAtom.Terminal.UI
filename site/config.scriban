@@ -20,9 +20,6 @@ site_project_owner_url = "https://xoofx.github.io"
 site_project_content_license_name = "CC BY 4.0"
 site_project_content_license_url = "https://creativecommons.org/licenses/by/4.0/"
 
-template_footer_organization_name = "XenoAtom"
-template_footer_organization_url = "https://github.com/XenoAtom"
-
 site_project_init
 
 # -----------------------------------------------------------------------------
