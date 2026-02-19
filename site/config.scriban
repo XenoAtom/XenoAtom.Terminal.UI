@@ -26,7 +26,7 @@ site_project_init
 # API reference (.NET)
 # -----------------------------------------------------------------------------
 with api.dotnet
-    title = "XenoAtom.Terminal.UI .NET API Reference"
+    title = "XenoAtom Terminal Stack .NET API Reference"
     path = "/api"
     menu_name = "api"
     menu_title = "API Reference"
@@ -37,7 +37,7 @@ with api.dotnet
         {
             name: "XenoAtom.Terminal.UI",
             path: "../src/XenoAtom.Terminal.UI/XenoAtom.Terminal.UI.csproj",
-            references: ["XenoAtom.Ansi", "XenoAtom.Terminal"]
+            references: ["XenoAtom.Terminal", "XenoAtom.Ansi"]
         }
     ]
 end
