@@ -76,6 +76,7 @@ Each control page in the user documentation links to its corresponding spec file
 - [Table](table.md)
 - [DataGridControl](datagrid.md)
 - [TextBlock](textblock.md)
+- [Paragraph](paragraph.md)
 - [Placeholder](placeholder.md)
 - [Markup](markup.md)
 - [Rule](rule.md)

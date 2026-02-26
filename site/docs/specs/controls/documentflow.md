@@ -321,7 +321,7 @@ small visuals that cover the common Markdown building blocks.
 - **plain text + style runs** (no markup parsing at render time),
 - plus common document layout behaviors (indentation, hanging indent, list prefixes).
 
-Introduce a reusable `Paragraph` control that renders:
+Introduce a reusable `Paragraph` control that renders (see [Paragraph Specs](paragraph.md)):
 
 - `string Text` (plain text)
 - `StyledRun[] Runs` (optional)
