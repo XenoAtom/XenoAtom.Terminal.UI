@@ -224,35 +224,51 @@ Notes:
 - The core library MAY ship a simple concrete implementation (e.g. `FlowDocument : IDocumentFlowContent`) that wraps an
   array/list of blocks.
 
+#### Ergonomics: `FlowDocument` and common block types
+
+`DocumentFlow` should be usable without forcing users to implement custom block classes for common scenarios.
+
+Recommended approach:
+
+- Ship a minimal `FlowDocument` implementation (`IDocumentFlowContent`) that stores blocks in a `List<DocumentFlowBlock>`.
+- Provide helper block types and/or builder methods such as:
+  - `AddParagraph(string text)` / `AddParagraph(string text, StyledRun[] runs, HyperlinkRun[] links)`
+  - `Add(Visual visual)` (wrap into a visual-backed block)
+  - `AddTable(Action<Table> build)` or `Add(Table table)`
+  - `AddRule(...)`
+
+This keeps the “happy path” simple (build a document from blocks) while preserving an extensible model for advanced/custom
+blocks.
+
 ### Block contract: `DocumentFlowBlock`
 
 Blocks are the units that `DocumentFlow` measures and renders.
 
-There are two supported rendering strategies:
+The core design goal is to **avoid reimplementing existing controls** (tables, rules, rich text) while still keeping
+excellent performance.
 
-1) **Native blocks** (fast path): block is stored as data and rendered directly into the `CellBuffer`.
-2) **Visual blocks** (interop path): block is rendered by hosting an existing `Visual` (e.g. `Table`, `Rule`, custom
-   composed visuals). This avoids reimplementing complex controls, at the cost of more overhead per block.
+The primary strategy is therefore:
 
-The block base type should be a small polymorphic surface:
+- Represent each block as a **recyclable `Visual`** (e.g. `Paragraph`, `Table`, `Rule`, a composed `VStack`).
+- `DocumentFlow` **virtualizes by blocks**: it only attaches/measures/arranges/renders visuals that intersect the viewport.
+- Offscreen block visuals are detached and returned to a small recycle pool (similar to `ListBox<T>` recycling).
+
+This yields a “best of both worlds” approach:
+
+- Reuse existing visual implementations (no duplicated layout/render logic).
+- Keep high throughput by ensuring the visual tree stays small (only visible blocks are attached).
+
+#### Proposed `DocumentFlowBlock` contract
+
+Blocks are *descriptors* that know how to create/update/release their visual representation:
 
 ```csharp
 namespace XenoAtom.Terminal.UI.Controls;
 
-public enum DocumentFlowBlockKind
-{
-    ParagraphText,
-    PreformattedText,
-    Rule,
-    Visual,
-}
-
 public abstract class DocumentFlowBlock
 {
-    public abstract DocumentFlowBlockKind Kind { get; }
-
     /// <summary>
-    /// Gets a monotonically increasing version for this block.
+    /// Gets a monotonically increasing version for this block. Increment when the block's content changes.
     /// </summary>
     public virtual int Version => 0;
 
@@ -261,6 +277,23 @@ public abstract class DocumentFlowBlock
     /// </summary>
     public virtual int MarginTop => 0;
     public virtual int MarginBottom => 0;
+
+    /// <summary>
+    /// Gets a reuse key for recycling. Blocks with the same key can reuse visuals.
+    /// </summary>
+    public virtual object? ReuseKey => GetType();
+
+    /// <summary>Create a visual instance for this block.</summary>
+    public abstract Visual CreateVisual();
+
+    /// <summary>
+    /// Try to update a recycled visual instance to represent this block.
+    /// Return <c>true</c> if the visual was updated successfully; otherwise <c>false</c>.
+    /// </summary>
+    public virtual bool TryUpdate(Visual visual) => false;
+
+    /// <summary>Called when a visual instance is being returned to a recycle pool.</summary>
+    public virtual void Release(Visual visual) { }
 }
 ```
 
@@ -270,114 +303,101 @@ public abstract class DocumentFlowBlock
 - block identity (document index + block index),
 - and the block’s `Version` (when non-zero).
 
-### Native text blocks
+> [!NOTE]
+> This contract deliberately avoids a fixed `DocumentFlowBlockKind` enum. `DocumentFlow` can special-case known visual
+> types for optional fast paths, but the public content model stays open-ended and extension-friendly.
 
-Native text blocks are the **primary performance mechanism** for Markdown paragraphs and most inline-heavy content.
-They are deliberately similar to `TextBlock` / `Markup` behavior, but they avoid any parsing step by consuming plain text
-plus style runs.
+---
 
-#### `DocumentFlowTextBlock` (paragraph-like)
+## Reusable block visuals
 
-Represents a paragraph/heading/list item line flow.
+To avoid reimplementing text/table rendering logic inside `DocumentFlow`, the core library should provide (or reuse)
+small visuals that cover the common Markdown building blocks.
 
-Inputs:
+### `Paragraph` (new control; reusable outside DocumentFlow)
 
-- `string Text` (plain text; UTF-16)
-- `StyledRun[] Runs` (optional; spans into `Text`)
-- optional hyperlink spans (URI ranges; see below)
-- wrapping + alignment settings (defaults should match `TextBlock`/`Markup` semantics)
-- indentation and prefix metadata for lists/quotes
+`TextBlock` is plain text; `Markup` is markup parsing. Markdown rendering needs a third option:
 
-Layout behavior should match existing controls:
+- **plain text + style runs** (no markup parsing at render time),
+- plus common document layout behaviors (indentation, hanging indent, list prefixes).
 
-- **Wrapping**: whitespace-based, “paragraph-like” wrapping (same rules as `TextBlock` wrapping; see [TextBlock Specs](textblock.md)).
-- **Trimming**: optional, for single-line blocks; multi-line blocks clip per line.
-- **Unicode correctness**: width and slicing based on `TerminalTextUtility` (no splitting of wide runes/graphemes).
+Introduce a reusable `Paragraph` control that renders:
 
-To support lists and quotes without introducing nested block trees in v1, the text block supports:
+- `string Text` (plain text)
+- `StyledRun[] Runs` (optional)
+- optional hyperlink spans (URI ranges)
+- `Wrap`, `Trimming`, `TextAlignment` (similar semantics to `TextBlock`/`Markup`)
+- indentation/prefix:
+  - `Indent` (left padding in cells)
+  - `HangingIndent` (extra indent for wrapped continuation lines)
+  - `LinePrefix` (first line only, e.g. `• ` or `1. `)
+  - `ContinuationPrefix` (wrapped lines, e.g. spaces aligning after the bullet)
 
-- `Indent` (left padding in cells),
-- `HangingIndent` (extra indent applied to wrapped continuation lines),
-- `LinePrefix` (rendered at the start of the first line only; e.g. bullet `• `),
-- `ContinuationPrefix` (rendered at the start of wrapped lines; e.g. spaces aligning to the text after the bullet),
-- optional “quote bars” can be expressed as a prefix repeated per line (e.g. `│ `) plus an indent.
-
-This keeps the virtualization model simple (document → flat list of blocks), while still covering Markdown structures.
-
-#### `DocumentFlowPreformattedTextBlock` (code blocks)
-
-Code blocks and other “pre” content require different rules than `TextBlock`:
-
-- preserve whitespace and indentation,
-- do not skip leading whitespace on wrapped lines,
-- typically do **not** wrap (clip instead), though wrapping could be an option.
-
-This block kind should:
-
-- treat newlines as hard line breaks,
-- render each line clipped to the available width,
-- support a distinct background style (often a subtle fill).
-
-#### Inline styles and hyperlinks
-
-Style runs:
-
-- Use `StyledRun` from `XenoAtom.Terminal.UI.Text` (`Start`, `Length`, `Style`).
-- Runs are applied during rendering by writing text segments with their associated `Style`.
-- Block-level base style (e.g. paragraph default style, heading style) is applied under runs using the normal style
-  composition rules (`Style.MergeUnspecified` / `Style | Style` behavior).
+This allows Markdown paragraphs, headings, list items, and blockquotes to be represented as a single cheap visual.
 
 Hyperlinks:
 
-- Markdown links should be expressed as spans similar to `StyledRun`, but carrying a URI string.
-- During rendering, the renderer registers URIs via `CellBuffer.RegisterHyperlink(uri)` and writes the hyperlink token
-  into the buffer for the covered cells.
+- Links are expressed as spans similar to `StyledRun`, but carrying a URI string.
+- During rendering, the visual registers URIs via `CellBuffer.RegisterHyperlink(uri)` and writes hyperlink tokens into
+  the buffer for the covered cells.
 
-The exact hyperlink span type is TBD, but it should be a small value type:
+Suggested span type:
 
 ```csharp
 public readonly record struct HyperlinkRun(int Start, int Length, string Uri);
 ```
 
-### Visual blocks (interop with existing controls)
+Performance intent:
 
-Some blocks are best expressed by reusing an existing control rather than implementing a dedicated renderer.
-This is especially true for **tables**, where the library already has a flexible `Table` control.
+- `Paragraph` should follow the same allocation-conscious philosophy as `TextBlock`/`Markup`
+  (cache wrapping state by width, avoid per-render string allocations).
 
-`DocumentFlow` therefore supports a `Visual` block kind that hosts a child visual **only when needed**.
+### Preformatted/code blocks: reuse `LogControl` (with optional height limiting)
 
-#### `DocumentFlowVisualBlock`
+Markdown code blocks can be very large. Reusing `LogControl` is attractive because it already provides:
 
-Proposed contract:
+- fast append-only storage,
+- line virtualization (render only visible rows),
+- markup parsing support when needed (syntax highlighting can be expressed as markup or style runs).
 
-```csharp
-public abstract class DocumentFlowVisualBlock : DocumentFlowBlock
-{
-    public sealed override DocumentFlowBlockKind Kind => DocumentFlowBlockKind.Visual;
+In a document feed, code blocks should typically be **read-only** and optionally **height-limited**:
 
-    /// <summary>Create a visual instance for this block.</summary>
-    public abstract Visual CreateVisual();
+- small blocks: render at natural height.
+- large blocks: clamp to a maximum height (e.g. `MaxHeight`) and show an expandable footer (e.g. “Show more…”).
 
-    /// <summary>
-    /// Try to update a recycled visual instance to represent this block.
-    /// Return false to request recreation.
-    /// </summary>
-    public virtual bool TryUpdate(Visual visual) => true;
+This can be done without adding a new core control by composing existing visuals inside a `DocumentFlowBlock`:
 
-    /// <summary>Called when a visual instance is being returned to a recycle pool.</summary>
-    public virtual void Release(Visual visual) { }
-}
-```
+- `Border`/`Group` for chrome
+- a `LogControl` configured for code display (`WrapText` often `false`, monospace theme style, no follow-tail)
+- an optional `Link`/`Button` line to expand/collapse
 
-Hosting rules:
+This avoids nested scrolling in v1: expanding increases the block height, and the outer `DocumentFlow` scroll handles the
+navigation.
 
-- `DocumentFlow` attaches visuals for visible visual-blocks as children of its internal content visual.
-- Offscreen visual-block visuals are detached and returned to a small recycle pool (similar in spirit to `ListBox<T>`
-  recycling).
-- Measurement and rendering are performed by the normal layout pipeline (`Measure`/`Arrange`/`RenderTree`), and clipping
-  ensures that offscreen parts do not write into the `CellBuffer`.
+### Tables and other complex blocks: host existing controls
 
-This design keeps `DocumentFlow` fast for text-heavy feeds while still allowing “escape hatches” for complex blocks.
+Blocks like tables should be implemented by hosting existing visuals (e.g. `Table`, `Rule`), not by reimplementing them.
+`DocumentFlow` stays responsible for block virtualization; the hosted control stays responsible for its own layout/render.
+
+---
+
+## Collapsible blocks and sections
+
+Collapsing is valuable for large documents and Markdown outlines (headers).
+
+Recommended v1 approach (keeps `DocumentFlow` generic and append-only optimized):
+
+- Collapsing is a **content concern**:
+  - a header block visual toggles a state in the content model,
+  - the content model updates its block list (or block visibility) and increments `IDocumentFlowContent.Version`,
+  - `DocumentFlow` re-layouts that document and updates prefix sums.
+
+This makes headers and other blocks collapsible without requiring `DocumentFlow` to understand Markdown structure.
+
+Future enhancement (optional):
+
+- Provide a helper content implementation (e.g. `FlowDocumentOutline`) that understands heading levels and can hide/show
+  blocks between headings efficiently, while still exposing a flat block list to `DocumentFlow`.
 
 ---
 
@@ -389,25 +409,26 @@ simple.
 
 Suggested mapping (v1):
 
-- Paragraph → `DocumentFlowTextBlock` (wrap enabled).
-- Headings (`#`, `##`, …) → `DocumentFlowTextBlock` with:
+- Paragraph → `Paragraph` visual (wrap enabled).
+- Headings (`#`, `##`, …) → `Paragraph` visual with:
   - distinct base style (bold/underline or theme-derived),
-  - `MarginTop/MarginBottom` to match Markdown spacing.
-- Thematic break (`---`) → `DocumentFlowVisualBlock` hosting `Rule` (or a dedicated `Rule`-kind native block).
-- Lists (ordered/bulleted) → multiple `DocumentFlowTextBlock` blocks with:
+  - `MarginTop/MarginBottom` to match Markdown spacing,
+  - optional “collapsible section” toggle behavior (see previous section).
+- Thematic break (`---`) → host the existing `Rule` control.
+- Lists (ordered/bulleted) → multiple `Paragraph` visuals with:
   - `LinePrefix` = bullet/number prefix on the first line,
   - `ContinuationPrefix`/`HangingIndent` so wrapped lines align correctly,
   - nested lists increase indentation.
-- Blockquotes (`>`) → text blocks with a quote prefix (`│ `) and indentation.
-- Code blocks → `DocumentFlowPreformattedTextBlock` (clip; optional wrap).
-- Tables → `DocumentFlowVisualBlock` hosting the existing `Table` control (details below).
+- Blockquotes (`>`) → `Paragraph` visuals with a quote prefix (`│ `) and indentation.
+- Code blocks → a `LogControl`-based block (optionally height-limited with expand/collapse chrome).
+- Tables → host the existing `Table` control (details below).
 
-Inline formatting (emphasis/strong/inline code) maps to `StyledRun[]` on the relevant text block.
+Inline formatting (emphasis/strong/inline code) maps to `StyledRun[]` on the relevant `Paragraph`.
 Links map to hyperlink runs.
 
 ### Tables: reuse `Table` (no reimplementation)
 
-Markdown tables should be rendered by **hosting the existing `Table` control** as a `DocumentFlowVisualBlock`.
+Markdown tables should be rendered by **hosting the existing `Table` control**.
 `DocumentFlow` is responsible for virtualization; `Table` is responsible for table layout and rendering.
 
 Why this works well:
@@ -421,9 +442,9 @@ Why this works well:
 Suggested Markdown→`Table` mapping (v1):
 
 - Markdown table header → `Table.HeaderCells`
-  - use `TextBlock` (or a future `StyledTextBlock`) with bold style (theme-derived).
+  - use `Paragraph` (single-line) or `TextBlock` with bold style (theme-derived).
 - Markdown table rows → `Table.RowCells`
-  - use `TextBlock` with `Wrap = false` and `Trimming = EndEllipsis` by default to keep tables readable in a feed.
+  - use `Paragraph` (single-line) or `TextBlock` with `Wrap = false` and `Trimming = EndEllipsis` by default to keep tables readable in a feed.
   - allow a “wrap cells” option for users who prefer multi-line table rows (trades height for completeness).
 - Table style defaults (reasonable for chat bubbles):
   - `TableStyle.Minimal` or `TableStyle.Grid` depending on how “structured” the feed should look.
@@ -431,11 +452,10 @@ Suggested Markdown→`Table` mapping (v1):
 
 Inline formatting inside table cells:
 
-- If the Markdown extension can easily produce ANSI markup strings, it can use the existing `Markup` control inside each
-  cell (simple, but allocates markup strings and requires parsing).
-- Preferred long-term approach: use a small visual (or shared renderer) that renders **plain text + `StyledRun[]`**
-  directly (same data model as the `DocumentFlow` native text blocks). This avoids re-parsing and keeps inline rendering
-  consistent across paragraphs and table cells.
+- Preferred approach: use `Paragraph` inside each cell so the extension can pass **plain text + `StyledRun[]`** without
+  allocating markup strings or parsing markup in the control.
+- If the extension already has markup strings readily available, it can use `Markup` inside cells (simple but less
+  efficient due to parsing).
 
 Non-goal note:
 
@@ -504,12 +524,20 @@ produce:
 
 While the optimized path is append-only and mostly static, the design should accommodate occasional updates:
 
-- `DocumentFlowItem.Content` MAY expose a `Version` (or `Changed` event) so the control can re-layout only the affected
-  document when content changes.
+- `IDocumentFlowContent.Version` enables re-layout of only the affected document when its blocks change.
+- `DocumentFlowBlock.Version` enables re-measurement of only the affected blocks when their content changes.
+- **Dynamic visuals** are supported:
+  - blocks can host visuals that update via bindings (e.g. the last “streaming” block containing a spinner),
+  - `DocumentFlow` should not recreate those visuals; it should only update cached heights when the measured height
+    actually changes.
+- Collapsing/expanding sections is treated as a normal content update:
+  - toggling increments content version and changes `BlockCount` / `GetBlock` results,
+  - `DocumentFlow` recomputes prefix sums for that document.
 - When a document’s height changes while the user is not in follow-tail mode, the control SHOULD preserve the viewport
   stable (similar to `LogControl` trimming logic).
 
-This keeps streaming scenarios feasible (e.g. a message being updated while it is still “in flight”).
+This keeps streaming scenarios feasible (e.g. a message being updated while it is still “in flight”), and optimizes for
+the common case where only the tail block changes frequently.
 
 ---
 
