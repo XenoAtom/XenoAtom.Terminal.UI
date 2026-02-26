@@ -21,6 +21,39 @@ public sealed class DocumentFlowDemo : ControlsDemoBase
             .ItemSpacing(1)
             .MaxCapacity(200);
 
+        if (context.IsScreenshot)
+        {
+            PopulateScreenshotItems(flow);
+            return new VStack(
+                    DemoUi.Hint("DocumentFlow composes existing controls and keeps scrolling smooth with block virtualization."),
+                    flow)
+                .Spacing(1);
+        }
+
+        PopulateInteractiveItems(flow, context);
+
+        var appendCounter = new State<int>(1);
+        var appendButton = new Button("Append message")
+            .Click(() =>
+            {
+                var index = appendCounter.Value;
+                appendCounter.Value = index + 1;
+                flow.Items.Add(CreateRightMessage(
+                    new FlowDocument().AddParagraph($"Appended conversation item #{index}."),
+                    maxWidth: 44,
+                    background: Style.None.WithBackground(Colors.Purple)));
+                flow.ScrollToTail();
+            });
+
+        return new VStack(
+                DemoUi.Hint("DocumentFlow composes existing controls and keeps scrolling smooth with block virtualization."),
+                appendButton,
+                flow)
+            .Spacing(1);
+    }
+
+    private static void PopulateScreenshotItems(DocumentFlow flow)
+    {
         flow.Items.Add(CreateLeftMessage(
             new FlowDocument()
                 .AddParagraph("DocumentFlow virtualizes by block, so only visible document blocks are attached and arranged.")
@@ -62,6 +95,11 @@ public sealed class DocumentFlowDemo : ControlsDemoBase
             new FlowDocument().Add(codeLog),
             maxWidth: 58,
             background: Style.None.WithBackground(Colors.SlateGray)));
+    }
+
+    private static void PopulateInteractiveItems(DocumentFlow flow, DemoContext context)
+    {
+        PopulateScreenshotItems(flow);
 
         var collapsible = new Collapsible(
             new TextBlock("## Collapsible details"),
@@ -86,25 +124,6 @@ public sealed class DocumentFlowDemo : ControlsDemoBase
             new FlowDocument().Add(streamingVisual),
             maxWidth: 60,
             background: Style.None.WithBackground(Colors.DarkOliveGreen)));
-
-        var appendCounter = new State<int>(1);
-        var appendButton = new Button("Append message")
-            .Click(() =>
-            {
-                var index = appendCounter.Value;
-                appendCounter.Value = index + 1;
-                flow.Items.Add(CreateRightMessage(
-                    new FlowDocument().AddParagraph($"Appended conversation item #{index}."),
-                    maxWidth: 44,
-                    background: Style.None.WithBackground(Colors.Purple)));
-                flow.ScrollToTail();
-            });
-
-        return new VStack(
-                DemoUi.Hint("DocumentFlow composes existing controls and keeps scrolling smooth with block virtualization."),
-                appendButton,
-                flow)
-            .Spacing(1);
     }
 
     private static DocumentFlowItem CreateLeftMessage(FlowDocument content, int maxWidth, Style background)
