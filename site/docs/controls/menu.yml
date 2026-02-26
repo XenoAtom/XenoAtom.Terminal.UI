@@ -60,6 +60,7 @@ controls:
   - {path: rule.md, title: Rule}
   - {path: logcontrol.md, title: LogControl}
   - {path: documentflow.md, title: DocumentFlow}
+  - {path: markdowncontrol.md, title: MarkdownControl}
   - {path: progressbar.md, title: ProgressBar}
   - {path: progresstaskgroup.md, title: ProgressTaskGroup}
   - {path: spinner.md, title: Spinner}

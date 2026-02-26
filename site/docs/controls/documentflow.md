@@ -69,6 +69,7 @@ Use `MaxCapacity` to keep memory bounded for long-running sessions.
 
 ## Related
 
+- [MarkdownControl](markdowncontrol.md)
 - [Paragraph](paragraph.md)
 - [Table](table.md)
 - [LogControl](logcontrol.md)

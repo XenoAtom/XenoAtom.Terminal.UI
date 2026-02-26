@@ -15,6 +15,7 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
   - Text editing: **TextBox**, **TextArea**, **MaskedInput**, **NumberBox** (undo/redo: `Ctrl+Z` / `Ctrl+R`)
   - Advanced widgets: **LogControl**, **CommandPalette**, **BreakdownChart**, **ColorPicker**
   - Mockup/empty-state widget: **Placeholder** (text + background surfaces, gradients)
+  - Companion extension package: **XenoAtom.Terminal.UI.Extensions.Markdown** (`MarkdownControl` based on Markdig)
 - **Binding-first UI**:
   - Bindable properties, `State<T>`, automatic dependency tracking, minimal boilerplate
 - **Layout system**: consistent measure/arrange protocol (integer cell UI), panels and containers
