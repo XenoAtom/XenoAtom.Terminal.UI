@@ -85,6 +85,7 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 - [Rule](rule.md)
 - [Link](link.md)
 - [LogControl](logcontrol.md)
+- [DocumentFlow](documentflow.md)
 - [ProgressBar](progressbar.md)
 - [ProgressTaskGroup](progresstaskgroup.md)
 - [Spinner](spinner.md)

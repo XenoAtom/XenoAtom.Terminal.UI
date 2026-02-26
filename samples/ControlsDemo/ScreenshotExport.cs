@@ -26,6 +26,7 @@ internal static class ScreenshotExport
         ["CommandPaletteDemo"] = "commandpalette",
         ["ContextMenuDemo"] = "contextmenu",
         ["DataGridDemo"] = "datagrid",
+        ["DocumentFlowDemo"] = "documentflow",
         ["DialogDemo"] = "dialog",
         ["DockLayoutDemo"] = "docklayout",
         ["FooterDemo"] = "footer",
