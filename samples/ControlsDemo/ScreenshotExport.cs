@@ -44,6 +44,7 @@ internal static class ScreenshotExport
         ["NumberBoxDemo"] = "numberbox",
         ["OptionListDemo"] = "optionlist",
         ["PadderDemo"] = "padder",
+        ["ParagraphDemo"] = "paragraph",
         ["PlaceholderDemo"] = "placeholder",
         ["PopupDemo"] = "popup",
         ["ProgressBarDemo"] = "progressbar",
