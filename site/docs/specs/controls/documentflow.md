@@ -21,6 +21,10 @@ Primary motivation:
 > [!NOTE]
 > This is a contributor-facing spec. An end-user page (under `site/docs/controls`) will be added once the control exists.
 
+## Related specifications
+
+- [MarkdownControl Specs](markdowncontrol.md) (Markdig-based extension package)
+
 ---
 
 ## Goals

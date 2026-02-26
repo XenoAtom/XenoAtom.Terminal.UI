@@ -82,6 +82,7 @@ Each control page in the user documentation links to its corresponding spec file
 - [Rule](rule.md)
 - [LogControl](logcontrol.md)
 - [DocumentFlow](documentflow.md)
+- [MarkdownControl](markdowncontrol.md)
 - [ProgressBar](progressbar.md)
 - [ProgressTaskGroup](progresstaskgroup.md)
 - [Spinner](spinner.md)
