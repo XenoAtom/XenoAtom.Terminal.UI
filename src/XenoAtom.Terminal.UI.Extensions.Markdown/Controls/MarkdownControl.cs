@@ -33,6 +33,7 @@ public sealed partial class MarkdownControl : Visual, IScrollable
             ItemPadding = new Thickness(0),
             ItemSpacing = 0,
         };
+        AttachChild(_flow);
 
         Options = MarkdownRenderOptions.Default;
         RebuildContent();

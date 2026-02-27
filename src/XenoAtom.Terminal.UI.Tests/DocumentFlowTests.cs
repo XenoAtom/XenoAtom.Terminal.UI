@@ -266,6 +266,48 @@ public sealed class DocumentFlowTests
     }
 
     [TestMethod]
+    public void DocumentFlow_Scroll_Updates_Block_Visual_Arrangement()
+    {
+        var flow = new DocumentFlow
+        {
+            ItemPadding = Thickness.Zero,
+            ItemSpacing = 0,
+        };
+
+        flow.Items.Add(new DocumentFlowItem
+        {
+            Content = new FlowDocument().Add(new FixedHeightBlock("Scrolling block", 10)),
+            Alignment = DocumentFlowAlignment.Left,
+            MaxWidth = 30,
+            Padding = Thickness.Zero,
+        });
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Home });
+        driver.Tick();
+        Assert.AreEqual(0, flow.Scroll.OffsetY);
+
+        var probe = flow.EnumerateVisualsDepthFirst().OfType<ProbeVisual>().Single();
+        var yBefore = probe.Bounds.Y;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Wheel,
+            Button = TerminalMouseButton.Wheel,
+            WheelDelta = -1,
+            X = 2,
+            Y = 2,
+        });
+        driver.Tick();
+
+        Assert.AreEqual(1, flow.Scroll.OffsetY, "Expected scroll offset to advance.");
+        var yAfter = probe.Bounds.Y;
+        Assert.AreEqual(yBefore - 1, yAfter, "Expected arranged text visual to move with the scroll offset.");
+    }
+
+    [TestMethod]
     public void DocumentFlow_Updates_Extent_When_Content_Collapses()
     {
         var content = new ToggleContent(

@@ -273,6 +273,44 @@ public sealed class MarkdownControlTests
     }
 
     [TestMethod]
+    public void MarkdownControl_Scroll_Moves_Rendered_Text()
+    {
+        var markdown = string.Join("\n\n", Enumerable.Range(0, 80).Select(static i => $"Paragraph {i:00}"));
+        var control = new MarkdownControl(markdown);
+
+        using var driver = new TerminalAppTestDriver(control, TerminalHostKind.Fullscreen, new TerminalSize(80, 10));
+        driver.Tick();
+
+        var before = new AnsiTestScreen(80, 10);
+        before.Apply(driver.Backend.GetOutText());
+        var textBefore = before.GetText();
+        StringAssert.Contains(textBefore, "Paragraph 00");
+
+        for (var i = 0; i < 25; i++)
+        {
+            driver.Backend.PushEvent(new TerminalMouseEvent
+            {
+                Kind = TerminalMouseKind.Wheel,
+                Button = TerminalMouseButton.Wheel,
+                WheelDelta = -1,
+                X = 2,
+                Y = 2,
+            });
+            driver.Tick();
+        }
+
+        var flow = GetFlow(control);
+        Assert.IsTrue(flow.Scroll.OffsetY > 0, "Expected markdown flow offset to increase after scrolling.");
+
+        var after = new AnsiTestScreen(80, 10);
+        after.Apply(driver.Backend.GetOutText());
+        var textAfter = after.GetText();
+        Assert.IsFalse(
+            textAfter.Contains("Paragraph 00", StringComparison.Ordinal),
+            "Expected the initial paragraph to scroll out of the viewport.");
+    }
+
+    [TestMethod]
     public void MarkdownControl_ArrowKeys_Scroll_After_Clicking_Content()
     {
         var markdown = string.Join("\n\n", Enumerable.Range(0, 40).Select(static i => $"Paragraph {i:00}"));

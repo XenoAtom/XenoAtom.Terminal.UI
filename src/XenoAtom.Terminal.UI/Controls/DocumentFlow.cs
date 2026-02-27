@@ -274,7 +274,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
         }
     }
 
-    private sealed class DocumentFlowContentVisual : Visual, IScrollable
+    private sealed partial class DocumentFlowContentVisual : Visual, IScrollable
     {
         private static readonly object DefaultReuseKey = new();
 
@@ -313,9 +313,17 @@ public sealed partial class DocumentFlow : Visual, IScrollable
 
         public int ExtentHeight => _extentHeight;
 
+        [Bindable]
+        private partial int ScrollVersion { get; set; }
+
         protected override int ChildrenCount => _activeChildren.Count;
 
         protected override Visual GetChild(int index) => _activeChildren[index];
+
+        protected override void PrepareChildren()
+        {
+            ScrollVersion = _scroll.Version;
+        }
 
         public int GetHeadHeight(int itemCount)
         {
@@ -359,6 +367,8 @@ public sealed partial class DocumentFlow : Visual, IScrollable
 
         protected override void ArrangeCore(in Rectangle finalRect)
         {
+            _ = ScrollVersion;
+
             if (finalRect.Width <= 0 || finalRect.Height <= 0)
             {
                 _scroll.SetViewport(0, 0);
@@ -377,6 +387,8 @@ public sealed partial class DocumentFlow : Visual, IScrollable
 
         protected override void RenderOverride(CellBuffer buffer)
         {
+            _ = ScrollVersion;
+
             var rect = Bounds;
             if (rect.Width <= 0 || rect.Height <= 0)
             {
