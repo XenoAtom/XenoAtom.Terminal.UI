@@ -100,6 +100,35 @@ public sealed class MarkdownControlTests
     }
 
     [TestMethod]
+    public void MarkdownControl_Table_UsesMarkdownColumns_AndDoesNotStretch()
+    {
+        var markdown = """
+            | Feature | Status | Notes |
+            |:--------|:------:|------:|
+            | Headings | Done | 100 |
+            | Alerts | Done | 85 |
+            """;
+
+        var control = new MarkdownControl(markdown)
+        {
+            HorizontalAlignment = Align.Stretch,
+            VerticalAlignment = Align.Stretch,
+        };
+
+        using var driver = new TerminalAppTestDriver(control, TerminalHostKind.Fullscreen, new TerminalSize(100, 20));
+        driver.Tick();
+
+        var table = control.EnumerateVisualsDepthFirst().OfType<Table>().FirstOrDefault();
+        Assert.IsNotNull(table);
+
+        Assert.AreEqual(3, table.HeaderCells.Count);
+        Assert.AreEqual(2, table.RowCells.Count);
+        Assert.AreEqual(3, table.RowCells[0].Count);
+        Assert.AreEqual(3, table.RowCells[1].Count);
+        Assert.IsTrue(table.Bounds.Width < 100, $"Expected markdown table to keep natural width. Actual width: {table.Bounds.Width}");
+    }
+
+    [TestMethod]
     public void MarkdownControl_Renders_Alert_Extension()
     {
         var markdown = """

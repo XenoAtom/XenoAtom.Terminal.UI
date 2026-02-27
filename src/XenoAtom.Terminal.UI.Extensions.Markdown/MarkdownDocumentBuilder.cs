@@ -79,7 +79,7 @@ internal sealed class MarkdownDocumentBuilder
                 return;
 
             case Markdig.Extensions.Tables.Table table:
-                AddVisualBlock(CreateTableVisual(table), indent, quotePrefix, marginTop: 0, marginBottom: 1);
+                AddVisualBlock(CreateTableVisual(table), indent, quotePrefix, marginTop: 0, marginBottom: 1, forceStretch: false);
                 return;
 
             case FencedCodeBlock fencedCode:
@@ -295,12 +295,15 @@ internal sealed class MarkdownDocumentBuilder
         _blocks.Add(paragraphBlock);
     }
 
-    private void AddVisualBlock(Visual visual, int indent, string? quotePrefix, int marginTop, int marginBottom)
+    private void AddVisualBlock(Visual visual, int indent, string? quotePrefix, int marginTop, int marginBottom, bool forceStretch = true)
     {
         ArgumentNullException.ThrowIfNull(visual);
 
         var leftPadding = Math.Max(0, indent + GetTextWidth(quotePrefix));
-        visual.HorizontalAlignment = Align.Stretch;
+        if (forceStretch)
+        {
+            visual.HorizontalAlignment = Align.Stretch;
+        }
 
         Visual effectiveVisual = visual;
         if (leftPadding > 0)
@@ -392,11 +395,11 @@ internal sealed class MarkdownDocumentBuilder
     {
         var uiTable = new Table
         {
-            HorizontalAlignment = Align.Stretch,
+            HorizontalAlignment = Align.Start,
         };
         uiTable.SetStyle(_options.TableStyle);
 
-        var columnCount = table.ColumnDefinitions.Count;
+        var columnCount = ResolveTableColumnCount(table);
         foreach (var rowBlock in table)
         {
             if (rowBlock is not TableRow row)
@@ -404,9 +407,8 @@ internal sealed class MarkdownDocumentBuilder
                 continue;
             }
 
-            var rowCount = Math.Max(columnCount, row.Count);
-            var visuals = new Visual[rowCount];
-            for (var columnIndex = 0; columnIndex < rowCount; columnIndex++)
+            var visuals = new Visual[columnCount];
+            for (var columnIndex = 0; columnIndex < columnCount; columnIndex++)
             {
                 var alignment = ResolveColumnAlignment(table, columnIndex);
                 var cell = columnIndex < row.Count ? row[columnIndex] as TableCell : null;
@@ -433,6 +435,25 @@ internal sealed class MarkdownDocumentBuilder
         }
 
         return uiTable;
+    }
+
+    private static int ResolveTableColumnCount(Markdig.Extensions.Tables.Table table)
+    {
+        var maxRowCount = 0;
+        foreach (var rowBlock in table)
+        {
+            if (rowBlock is TableRow row)
+            {
+                maxRowCount = Math.Max(maxRowCount, row.Count);
+            }
+        }
+
+        if (maxRowCount > 0)
+        {
+            return maxRowCount;
+        }
+
+        return Math.Max(0, table.ColumnDefinitions.Count);
     }
 
     private Visual CreateTableCellVisual(TableCell? cell, TextAlignment alignment)
