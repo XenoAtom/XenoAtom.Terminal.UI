@@ -102,6 +102,77 @@ public sealed class DocumentFlowTests
     }
 
     [TestMethod]
+    public void DocumentFlow_ScrollToItem_Jumps_To_Item_Top_And_Disables_FollowTail()
+    {
+        var flow = new DocumentFlow
+        {
+            ItemPadding = Thickness.Zero,
+            ItemSpacing = 1,
+        };
+
+        for (var i = 0; i < 30; i++)
+        {
+            flow.Items.Add(new DocumentFlowItem
+            {
+                Content = new FlowDocument().Add(new FixedHeightBlock($"Item {i}", 1)),
+                Alignment = DocumentFlowAlignment.Left,
+                MaxWidth = 24,
+                Padding = Thickness.Zero,
+            });
+        }
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(40, 8));
+        driver.Tick();
+
+        flow.ScrollToItem(5);
+        driver.Tick();
+
+        Assert.AreEqual(10, flow.Scroll.OffsetY, "Expected index 5 to align to the viewport top when each item takes two rows.");
+        Assert.IsFalse(flow.FollowTail, "Programmatic item navigation should detach follow-tail.");
+    }
+
+    [TestMethod]
+    public void DocumentFlow_ScrollToItem_Clamps_To_Max_Offset_Near_Tail()
+    {
+        var flow = new DocumentFlow
+        {
+            ItemPadding = Thickness.Zero,
+            ItemSpacing = 1,
+        };
+
+        for (var i = 0; i < 30; i++)
+        {
+            flow.Items.Add(new DocumentFlowItem
+            {
+                Content = new FlowDocument().Add(new FixedHeightBlock($"Item {i}", 1)),
+                Alignment = DocumentFlowAlignment.Left,
+                MaxWidth = 24,
+                Padding = Thickness.Zero,
+            });
+        }
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(40, 8));
+        driver.Tick();
+
+        flow.ScrollToItem(29);
+        driver.Tick();
+
+        var maxOffset = Math.Max(0, flow.Scroll.ExtentHeight - flow.Scroll.ViewportHeight);
+        Assert.AreEqual(maxOffset, flow.Scroll.OffsetY, "Scrolling to the last item should clamp to the maximum offset.");
+    }
+
+    [TestMethod]
+    public void DocumentFlow_TryScrollToItem_Validates_Index_Range()
+    {
+        var flow = new DocumentFlow();
+        flow.Items.Add(CreateItem("Item 0"));
+
+        Assert.IsFalse(flow.TryScrollToItem(-1));
+        Assert.IsFalse(flow.TryScrollToItem(1));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => flow.ScrollToItem(1));
+    }
+
+    [TestMethod]
     public void DocumentFlow_MaxCapacity_Trimming_Preserves_Viewport_When_Not_Pinned()
     {
         var flow = new DocumentFlow().MaxCapacity(0);

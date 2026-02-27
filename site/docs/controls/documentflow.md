@@ -69,6 +69,21 @@ flow.ScrollToTail();       // enable follow-tail and jump to the end
 flow.ScrollToTail(false);  // disable follow-tail (keeps current viewport)
 ```
 
+## Scroll to a specific item
+
+Use item indexes to jump to a specific `DocumentFlowItem`.
+
+```csharp
+flow.ScrollToItem(42);       // throws if the index is invalid
+
+if (!flow.TryScrollToItem(99))
+{
+    // index not found
+}
+```
+
+`ScrollToItem` disables follow-tail mode, so subsequent appends do not force scrolling.
+
 Use `MaxCapacity` to keep memory bounded for long-running sessions.
 
 ## Related

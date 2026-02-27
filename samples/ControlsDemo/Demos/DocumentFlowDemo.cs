@@ -21,6 +21,7 @@ public sealed class DocumentFlowDemo : ControlsDemoBase
         var maxCapacity = new State<int>(200);
         var alternateSides = new State<bool>(true);
         var appendBatchCount = new State<int>(3);
+        var goToItemIndex = new State<int>(0);
         var flow = new DocumentFlow()
             .HorizontalAlignment(Align.Stretch)
             .VerticalAlignment(Align.Stretch)
@@ -90,9 +91,24 @@ public sealed class DocumentFlowDemo : ControlsDemoBase
             {
                 flow.Items.Clear();
                 appendCounter.Value = 1;
+                goToItemIndex.Value = 0;
                 nextRight = true;
                 PopulateInteractiveItems(flow, context);
                 flow.ScrollToTail();
+            });
+
+        var goToItemButton = new Button("Go to item")
+            .Click(() =>
+            {
+                var itemCount = flow.Items.Count;
+                if (itemCount == 0)
+                {
+                    return;
+                }
+
+                var itemIndex = Math.Clamp(goToItemIndex.Value, 0, itemCount - 1);
+                goToItemIndex.Value = itemIndex;
+                flow.ScrollToItem(itemIndex);
             });
 
         var status = new TextBlock(() =>
@@ -121,6 +137,11 @@ public sealed class DocumentFlowDemo : ControlsDemoBase
                         appendBatchButton,
                         new Button("Scroll to tail").Click(flow.ScrollToTail),
                         resetButton)
+                    .Spacing(1),
+                new HStack(
+                        "Go to item:",
+                        new NumberBox<int>().Value(goToItemIndex).ValueValidator(value => value >= 0 ? null : "Use >= 0"),
+                        goToItemButton)
                     .Spacing(1),
                 settings,
                 new Markup("[dim]Try: mouse wheel over content, Up/Down/Home/End keys, and toggle Auto tail.[/]"),

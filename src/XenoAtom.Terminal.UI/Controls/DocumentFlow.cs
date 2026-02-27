@@ -25,6 +25,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     private int _lastItemsVersion = -1;
     private int _lastItemCount;
     private bool _pendingFollowTailScroll;
+    private int _pendingScrollToItemIndex = -1;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DocumentFlow"/> class.
@@ -103,6 +104,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     {
         VerifyAccess();
 
+        _pendingScrollToItemIndex = -1;
         FollowTail = followTail;
         if (!followTail)
         {
@@ -112,6 +114,35 @@ public sealed partial class DocumentFlow : Visual, IScrollable
 
         _pendingFollowTailScroll = true;
         ApplyFollowTailIfNeeded();
+    }
+
+    /// <summary>
+    /// Scrolls to a specific item by index.
+    /// </summary>
+    /// <param name="itemIndex">The zero-based index of the item to scroll to.</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="itemIndex"/> is outside the bounds of <see cref="Items"/>.
+    /// </exception>
+    public void ScrollToItem(int itemIndex)
+    {
+        VerifyAccess();
+        if (!TryScrollToItemCore(itemIndex))
+        {
+            throw new ArgumentOutOfRangeException(nameof(itemIndex), itemIndex, "The item index must refer to an existing item.");
+        }
+    }
+
+    /// <summary>
+    /// Tries to scroll to a specific item by index.
+    /// </summary>
+    /// <param name="itemIndex">The zero-based index of the item to scroll to.</param>
+    /// <returns>
+    /// <see langword="true"/> if the item exists and a scroll request was scheduled; otherwise, <see langword="false"/>.
+    /// </returns>
+    public bool TryScrollToItem(int itemIndex)
+    {
+        VerifyAccess();
+        return TryScrollToItemCore(itemIndex);
     }
 
     partial void OnMaxCapacityChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
@@ -161,7 +192,18 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         _scrollViewer.Arrange(finalRect);
+        var requiresRearrange = false;
         if (ApplyFollowTailIfNeeded())
+        {
+            requiresRearrange = true;
+        }
+
+        if (ApplyPendingScrollToItemIfNeeded())
+        {
+            requiresRearrange = true;
+        }
+
+        if (requiresRearrange)
         {
             _scrollViewer.Arrange(finalRect);
         }
@@ -258,6 +300,55 @@ public sealed partial class DocumentFlow : Visual, IScrollable
         _scrollViewer.VerticalOffset = target;
         _pendingFollowTailScroll = false;
         return true;
+    }
+
+    private bool TryScrollToItemCore(int itemIndex)
+    {
+        if ((uint)itemIndex >= (uint)_items.Count)
+        {
+            return false;
+        }
+
+        FollowTail = false;
+        _pendingFollowTailScroll = false;
+        _pendingScrollToItemIndex = itemIndex;
+        ApplyPendingScrollToItemIfNeeded();
+        return true;
+    }
+
+    private bool ApplyPendingScrollToItemIfNeeded()
+    {
+        if (_pendingScrollToItemIndex < 0)
+        {
+            return false;
+        }
+
+        var itemIndex = _pendingScrollToItemIndex;
+        if ((uint)itemIndex >= (uint)_items.Count)
+        {
+            _pendingScrollToItemIndex = -1;
+            return false;
+        }
+
+        var viewportWidth = _scrollViewer.ViewportWidth;
+        var viewportHeight = _scrollViewer.ViewportHeight;
+        if (viewportWidth <= 0 || viewportHeight <= 0)
+        {
+            return false;
+        }
+
+        if (!_content.TryGetItemRange(itemIndex, viewportWidth, out var itemTop, out _))
+        {
+            _pendingScrollToItemIndex = -1;
+            return false;
+        }
+
+        var maxVerticalOffset = Math.Max(0, _content.ExtentHeight - viewportHeight);
+        var target = Math.Clamp(itemTop, 0, maxVerticalOffset);
+        var changed = _scrollViewer.VerticalOffset != target;
+        _scrollViewer.VerticalOffset = target;
+        _pendingScrollToItemIndex = -1;
+        return changed;
     }
 
     private void UpdateFollowTailState()
@@ -363,6 +454,27 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             }
 
             return Math.Max(0, height);
+        }
+
+        public bool TryGetItemRange(int itemIndex, int viewportWidth, out int top, out int bottom)
+        {
+            top = 0;
+            bottom = 0;
+
+            if ((uint)itemIndex >= (uint)_owner._items.Count || viewportWidth <= 0)
+            {
+                return false;
+            }
+
+            EnsureLayouts(Math.Max(1, viewportWidth));
+            if ((uint)itemIndex >= (uint)_documentLayouts.Count || itemIndex + 1 >= _documentOffsets.Length)
+            {
+                return false;
+            }
+
+            top = _documentOffsets[itemIndex];
+            bottom = _documentOffsets[itemIndex + 1];
+            return true;
         }
 
         protected override SizeHints MeasureCore(in LayoutConstraints constraints)
