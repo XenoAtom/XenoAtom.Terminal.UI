@@ -627,6 +627,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
                         continue;
                     }
 
+                    var requiresMeasure = false;
                     var key = MakeBlockKey(docIndex, blockIndex);
                     if (!_activeBlocks.TryGetValue(key, out var active) || !ReferenceEquals(active.Block, blockLayout.Block))
                     {
@@ -640,6 +641,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
                         active = new ActiveBlockVisual(visual, blockLayout.Block, reuseKey, blockLayout.Version);
                         _activeBlocks[key] = active;
                         _activeChildren.Add(visual);
+                        requiresMeasure = true;
                     }
                     else if (active.BlockVersion != blockLayout.Version)
                     {
@@ -652,11 +654,18 @@ public sealed partial class DocumentFlow : Visual, IScrollable
                             active = new ActiveBlockVisual(visual, blockLayout.Block, reuseKey, blockLayout.Version);
                             _activeBlocks[key] = active;
                             _activeChildren.Add(visual);
+                            requiresMeasure = true;
                         }
                         else
                         {
                             active.BlockVersion = blockLayout.Version;
+                            requiresMeasure = true;
                         }
+                    }
+
+                    if (requiresMeasure)
+                    {
+                        active.Visual.Measure(new LayoutConstraints(0, blockRect.Width, 0, LayoutConstants.Infinite));
                     }
 
                     active.Generation = _arrangeGeneration;

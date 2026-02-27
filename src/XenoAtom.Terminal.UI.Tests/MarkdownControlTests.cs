@@ -191,6 +191,35 @@ public sealed class MarkdownControlTests
         Assert.AreEqual("https://example.com/image.png", paragraph.Hyperlinks[0].Uri);
     }
 
+    [TestMethod]
+    public void MarkdownControl_Renders_Paragraph_Text_On_First_Frame()
+    {
+        var markdown = """
+            # Title
+
+            First paragraph line.
+
+            Second paragraph line.
+            """;
+
+        var control = new MarkdownControl(markdown)
+        {
+            HorizontalAlignment = Align.Stretch,
+            VerticalAlignment = Align.Stretch,
+        };
+
+        using var driver = new TerminalAppTestDriver(control, TerminalHostKind.Fullscreen, new TerminalSize(80, 12));
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(80, 12);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText();
+
+        StringAssert.Contains(rendered, "Title");
+        StringAssert.Contains(rendered, "First paragraph line.");
+        StringAssert.Contains(rendered, "Second paragraph line.");
+    }
+
     private static DocumentFlow GetFlow(MarkdownControl control)
     {
         var flow = control.EnumerateVisualsDepthFirst().OfType<DocumentFlow>().FirstOrDefault();
