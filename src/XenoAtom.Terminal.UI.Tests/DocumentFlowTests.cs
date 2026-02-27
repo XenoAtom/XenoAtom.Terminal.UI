@@ -169,6 +169,64 @@ public sealed class DocumentFlowTests
     }
 
     [TestMethod]
+    public void DocumentFlow_Keyboard_Scrolls_With_Arrow_Home_End()
+    {
+        var flow = new DocumentFlow();
+        for (var i = 0; i < 80; i++)
+        {
+            flow.Items.Add(CreateItem($"Item {i}"));
+        }
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(40, 8));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Home });
+        driver.Tick();
+        Assert.AreEqual(0, flow.Scroll.OffsetY);
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
+        driver.Tick();
+        Assert.IsTrue(flow.Scroll.OffsetY > 0, "Down key should scroll document flow.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.End });
+        driver.Tick();
+        var endOffset = flow.Scroll.OffsetY;
+        Assert.IsTrue(endOffset > 0, "End key should jump to the tail.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Home });
+        driver.Tick();
+        Assert.AreEqual(0, flow.Scroll.OffsetY, "Home key should jump back to top.");
+    }
+
+    [TestMethod]
+    public void DocumentFlow_MouseWheel_Scrolls_On_Content()
+    {
+        var flow = new DocumentFlow();
+        for (var i = 0; i < 80; i++)
+        {
+            flow.Items.Add(CreateItem($"Item {i}"));
+        }
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(40, 8));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Home });
+        driver.Tick();
+        Assert.AreEqual(0, flow.Scroll.OffsetY);
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Wheel,
+            Button = TerminalMouseButton.Wheel,
+            WheelDelta = -1,
+            X = 2,
+            Y = 2,
+        });
+        driver.Tick();
+
+        Assert.IsTrue(flow.Scroll.OffsetY > 0, "Mouse wheel on document content should scroll.");
+    }
+
+    [TestMethod]
     public void DocumentFlow_Updates_Extent_When_Content_Collapses()
     {
         var content = new ToggleContent(

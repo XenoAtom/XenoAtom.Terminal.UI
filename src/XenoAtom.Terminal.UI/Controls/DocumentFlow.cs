@@ -197,10 +197,31 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     /// <inheritdoc />
     protected override void OnPointerWheel(PointerEventArgs e)
     {
-        if (e.Kind == TerminalMouseKind.Wheel && e.WheelDelta != 0)
+        if (e.RoutingPhase != RoutingPhase.Bubble || e.Kind != TerminalMouseKind.Wheel || e.WheelDelta == 0)
         {
-            FollowTail = false;
+            return;
         }
+
+        var viewportHeight = Math.Max(1, _scrollViewer.ViewportHeight);
+        var maxVerticalOffset = Math.Max(0, _content.ExtentHeight - viewportHeight);
+        if (maxVerticalOffset == 0)
+        {
+            return;
+        }
+
+        var step = Math.Max(1, Math.Abs(e.WheelDelta));
+        var nextOffset = e.WheelDelta > 0
+            ? Math.Max(0, _scrollViewer.VerticalOffset - step)
+            : Math.Min(maxVerticalOffset, _scrollViewer.VerticalOffset + step);
+
+        if (nextOffset == _scrollViewer.VerticalOffset)
+        {
+            return;
+        }
+
+        _scrollViewer.VerticalOffset = nextOffset;
+        FollowTail = nextOffset >= maxVerticalOffset;
+        e.Handled = true;
     }
 
     private bool ApplyFollowTailIfNeeded()

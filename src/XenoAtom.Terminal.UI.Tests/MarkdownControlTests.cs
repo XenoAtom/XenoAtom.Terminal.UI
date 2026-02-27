@@ -249,6 +249,59 @@ public sealed class MarkdownControlTests
         StringAssert.Contains(rendered, "Second paragraph line.");
     }
 
+    [TestMethod]
+    public void MarkdownControl_MouseWheel_Scrolls_DocumentFlow_Content()
+    {
+        var markdown = string.Join("\n\n", Enumerable.Range(0, 40).Select(static i => $"Paragraph {i:00}"));
+        var control = new MarkdownControl(markdown);
+
+        using var driver = new TerminalAppTestDriver(control, TerminalHostKind.Fullscreen, new TerminalSize(80, 12));
+        driver.Tick();
+
+        var flow = GetFlow(control);
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Wheel,
+            Button = TerminalMouseButton.Wheel,
+            WheelDelta = -1,
+            X = 2,
+            Y = 2,
+        });
+        driver.Tick();
+
+        Assert.IsTrue(flow.Scroll.OffsetY > 0, "Mouse wheel over markdown content should scroll.");
+    }
+
+    [TestMethod]
+    public void MarkdownControl_ArrowKeys_Scroll_After_Clicking_Content()
+    {
+        var markdown = string.Join("\n\n", Enumerable.Range(0, 40).Select(static i => $"Paragraph {i:00}"));
+        var control = new MarkdownControl(markdown);
+
+        using var driver = new TerminalAppTestDriver(control, TerminalHostKind.Fullscreen, new TerminalSize(80, 12));
+        driver.Tick();
+
+        var flow = GetFlow(control);
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Down,
+            Button = TerminalMouseButton.Left,
+            X = 2,
+            Y = 2,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Up,
+            Button = TerminalMouseButton.Left,
+            X = 2,
+            Y = 2,
+        });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
+        driver.Tick();
+
+        Assert.IsTrue(flow.Scroll.OffsetY > 0, "Down arrow should scroll markdown flow when content is focused.");
+    }
+
     private static DocumentFlow GetFlow(MarkdownControl control)
     {
         var flow = control.EnumerateVisualsDepthFirst().OfType<DocumentFlow>().FirstOrDefault();
