@@ -53,6 +53,59 @@ When a tracked value changes, the framework re-runs only the relevant passes for
 > [!IMPORTANT]
 > For tracking to work, always read bindable state through the **property**, not a private backing field.
 
+## Selective dependency tracking (advanced)
+
+Sometimes you want to read or write bindable state **without** recording it as a dependency of the current tracking context.
+This is most common inside a `ComputedVisual` factory:
+
+- A *tracked* state should rebuild the computed subtree.
+- A *non-tracked* state is only used for side effects or snapshots and should **not** cause rebuilds.
+
+This matters because `ComputedVisual` runs its factory during `PrepareChildren`, which is a tracking context. Any bindable
+state you read while constructing the subtree is recorded as a dependency of that `ComputedVisual`. If you later *write*
+to that same state as part of normal UI operations, it will trigger the `ComputedVisual` to rebuild, re-running the
+factory and potentially reinitializing the subtree (often resulting in surprising “reset” behavior).
+
+To support this, `BindingManager` exposes two scoped suppression helpers:
+
+- `BindingManager.Current.SuppressReadTracking()` — disables dependency recording for bindable reads in the scope.
+- `BindingManager.Current.SuppressWriteTracking()` — suppresses write notifications (`ValueChanged`) in the scope.
+
+> [!IMPORTANT]
+> Suppression affects **all** bindable reads/writes within the scope. Keep the scope small and always use `using` so tracking is restored.
+
+### Example: a `ComputedVisual` with tracked and untracked state
+
+In this example, `mode` is tracked (changes should rebuild), while `telemetry` is read and updated without becoming a dependency:
+
+```csharp
+var mode = new State<int>(0);
+var telemetry = new State<int>(0);
+
+var view = new ComputedVisual(() =>
+{
+    // Tracked dependency: changing mode rebuilds the subtree.
+    var currentMode = mode.Value;
+
+    // Untracked: reading/updating telemetry should not rebuild this ComputedVisual.
+    int snapshot;
+    using (BindingManager.Current.SuppressReadTracking())
+    using (BindingManager.Current.SuppressWriteTracking())
+    {
+        snapshot = telemetry.Value;
+        telemetry.Value = snapshot + 1;
+    }
+
+    return new TextBlock($"Mode: {currentMode} (telemetry={snapshot})");
+});
+```
+
+Notes:
+
+- `SuppressReadTracking` is useful for reading state that you intentionally do not want to become a dependency.
+- `SuppressWriteTracking` is for *internal bookkeeping* updates where you do not want to trigger invalidation.
+  Avoid suppressing writes for user-visible state that other visuals should react to.
+
 ## Bindable properties
 
 Most public control properties are `[Bindable]` and participate in dependency tracking.
