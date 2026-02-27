@@ -4,6 +4,7 @@
 
 using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -36,10 +37,8 @@ public sealed class BindingManager
     private TrackingContext? _tracking;
     private TrackingContext? _freeList;
 
-    private bool _disableReadTracking;
-
-    [ThreadStatic]
-    private static int _suppressNotifications;
+    private int _suppressReadTrackingCount;
+    private int _suppressWriteTrackingCount;
 
     /// <summary>
     /// Gets the current value of a bindable property.
@@ -85,7 +84,7 @@ public sealed class BindingManager
             return true;
         }
 
-        if (_suppressNotifications == 0)
+        if (Volatile.Read(ref _suppressWriteTrackingCount) == 0)
         {
             if (_tracking is null || _tracking.RegisterWrite(owner, accessor))
             {
@@ -139,28 +138,98 @@ public sealed class BindingManager
     }
 
     /// <summary>
-    /// Disables dependency read tracking for the duration of the returned session.
+    /// Suppresses dependency read tracking for the duration of the session.
     /// </summary>
-    /// <returns>A disposable session that restores the previous tracking context on dispose.</returns>
+    /// <returns>A disposable session that restores read tracking on dispose.</returns>
+    public SuppressReadTrackingSession SuppressReadTracking()
+    {
+        Interlocked.Increment(ref _suppressReadTrackingCount);
+        return new SuppressReadTrackingSession(this);
+    }
+
+    /// <summary>
+    /// Enables or disables dependency read tracking.
+    /// </summary>
+    /// <param name="readTracking"><see langword="true"/> to enable read tracking; <see langword="false"/> to disable it.</param>
+    /// <remarks>
+    /// Use <see cref="SuppressReadTracking"/> for scoped suppression.
+    /// </remarks>
+    [Obsolete("Use SuppressReadTracking() in a using scope instead.", error: false)]
     public void SetReadTracking(bool readTracking)
     {
-        _disableReadTracking = !readTracking;
+        if (readTracking)
+        {
+            ReleaseSuppression(ref _suppressReadTrackingCount);
+        }
+        else
+        {
+            Interlocked.Increment(ref _suppressReadTrackingCount);
+        }
     }
 
-    internal NotificationSuppressionSession SuppressNotifications()
+    /// <summary>
+    /// Suppresses write tracking notifications for the duration of the session.
+    /// </summary>
+    /// <remarks>This method increments the internal counter for suppressed notifications. It is important to
+    /// ensure that the corresponding session is disposed of to re-enable notifications.</remarks>
+    /// <returns>A new instance of <see cref="SuppressWriteTrackingSession"/> that manages the suppression of write tracking
+    /// notifications.</returns>
+    public SuppressWriteTrackingSession SuppressWriteTracking()
     {
-        _suppressNotifications++;
-        return new NotificationSuppressionSession();
+        Interlocked.Increment(ref _suppressWriteTrackingCount);
+        return new SuppressWriteTrackingSession(this);
     }
 
-    internal readonly struct NotificationSuppressionSession : IDisposable
+    /// <summary>
+    /// Represents a session that suppresses dependency read tracking until disposed.
+    /// </summary>
+    public readonly struct SuppressReadTrackingSession : IDisposable
     {
+        private readonly BindingManager? _manager;
+
+        internal SuppressReadTrackingSession(BindingManager manager)
+        {
+            _manager = manager;
+        }
+
+        /// <inheritdoc/>
         public void Dispose()
         {
-            if (_suppressNotifications > 0)
+            if (_manager is null)
             {
-                _suppressNotifications--;
+                return;
             }
+
+            ReleaseSuppression(ref _manager._suppressReadTrackingCount);
+        }
+    }
+
+    /// <summary>
+    /// Represents a session that temporarily suppresses write tracking notifications, allowing batch updates or changes
+    /// to occur without triggering notification events until the session is disposed.
+    /// </summary>
+    /// <remarks>This struct implements IDisposable. To ensure that write tracking notifications are properly
+    /// managed, use SuppressWriteTrackingSession within a using statement or explicitly call Dispose when the session
+    /// is complete. Failing to dispose the session may result in notifications remaining suppressed longer than
+    /// intended.</remarks>
+    public readonly struct SuppressWriteTrackingSession : IDisposable
+    {
+        private readonly BindingManager? _manager;
+
+        internal SuppressWriteTrackingSession(BindingManager manager)
+        {
+            _manager = manager;
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            if (_manager is null)
+            {
+                return;
+            }
+
+            ReleaseSuppression(ref _manager._suppressWriteTrackingCount);
         }
     }
 
@@ -177,7 +246,10 @@ public sealed class BindingManager
             dispatcherObject.VerifyAccess();
         }
 
-        if (_disableReadTracking) return;
+        if (Volatile.Read(ref _suppressReadTrackingCount) > 0)
+        {
+            return;
+        }
 
         // Ensure the visual element is loaded to avoid tracking reads on unloaded elements
         if (owner is IVisualElement { App: null })
@@ -201,9 +273,26 @@ public sealed class BindingManager
             dispatcherObject.VerifyAccess();
         }
 
-        if (_suppressNotifications == 0)
+        if (Volatile.Read(ref _suppressWriteTrackingCount) == 0)
         {
             ValueChanged?.Invoke(new Binding(owner, accessor));
+        }
+    }
+
+    private static void ReleaseSuppression(ref int counter)
+    {
+        while (true)
+        {
+            var current = Volatile.Read(ref counter);
+            if (current <= 0)
+            {
+                return;
+            }
+
+            if (Interlocked.CompareExchange(ref counter, current - 1, current) == current)
+            {
+                return;
+            }
         }
     }
 

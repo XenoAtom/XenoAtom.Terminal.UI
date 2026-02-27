@@ -641,8 +641,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
     internal void AttachToApp(TerminalApp app)
     {
-        BindingManager.Current.SetReadTracking(false);
-        try
+        using (BindingManager.Current.SuppressReadTracking())
         {
             App = app;
 
@@ -675,16 +674,11 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
                 }
             }
         }
-        finally
-        {
-            BindingManager.Current.SetReadTracking(true);
-        }
     }
 
     internal void DetachFromApp()
     {
-        BindingManager.Current.SetReadTracking(false);
-        try
+        using (BindingManager.Current.SuppressReadTracking())
         {
             var app = App;
             if (app is null)
@@ -727,10 +721,6 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
             App = null;
             OnDetachedFromApp(app);
-        }
-        finally
-        {
-            BindingManager.Current.SetReadTracking(true);
         }
     }
 

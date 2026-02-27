@@ -1880,7 +1880,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
         // SetFilters triggers a view rebuild which raises a view-changed event synchronously, updating SourceVersion.
         // PrepareChildren reads SourceVersion for dependency tracking; suppressing notifications avoids a read->write
         // loop exception in the same tracking context, while still letting this render pass use the updated snapshot.
-        using (BindingManager.Current.SuppressNotifications())
+        using (BindingManager.Current.SuppressWriteTracking())
         {
             filterable.SetFilters(filters);
         }

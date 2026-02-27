@@ -47,4 +47,58 @@ public sealed class StateTests
 
         Assert.AreEqual(1, notified);
     }
+
+    [TestMethod]
+    public void State_SuppressReadTracking_Skips_Tracked_Reads()
+    {
+        var state = new State<int>(123);
+        var expected = (Binding)state;
+
+        using var session = BindingManager.Current.StartTracking();
+        using (BindingManager.Current.SuppressReadTracking())
+        {
+            _ = state.Value;
+        }
+
+        Assert.IsFalse(session.Reads.Contains(expected), "Expected suppressed read tracking to ignore State.Value reads.");
+    }
+
+    [TestMethod]
+    public void State_SuppressWriteTracking_Nested_Suppresses_Notifications()
+    {
+        var state = new State<int>(0);
+        var expected = (Binding)state;
+        var notified = 0;
+
+        void Handler(Binding binding)
+        {
+            if (binding.Equals(expected))
+            {
+                notified++;
+            }
+        }
+
+        BindingManager.Current.ValueChanged += Handler;
+        try
+        {
+            using (BindingManager.Current.SuppressWriteTracking())
+            {
+                state.Value = 1;
+                using (BindingManager.Current.SuppressWriteTracking())
+                {
+                    state.Value = 2;
+                }
+
+                state.Value = 3;
+            }
+
+            state.Value = 4;
+        }
+        finally
+        {
+            BindingManager.Current.ValueChanged -= Handler;
+        }
+
+        Assert.AreEqual(1, notified, "Only the write outside suppression should raise notifications.");
+    }
 }
