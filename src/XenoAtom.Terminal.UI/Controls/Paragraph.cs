@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Buffers;
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
@@ -37,6 +38,7 @@ public sealed partial class Paragraph : Visual
     private int _selectionAnchor = -1;
     private int _selectionActive = -1;
     private bool _isSelecting;
+    private int _interactionVersionCounter;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Paragraph"/> class.
@@ -48,6 +50,7 @@ public sealed partial class Paragraph : Visual
         Trimming = TextTrimming.Clip;
         Runs = Array.Empty<StyledRun>();
         Hyperlinks = Array.Empty<HyperlinkRun>();
+        RegisterDynamicUpdate(static visual => ((Paragraph)visual).SynchronizeInteractionState());
     }
 
     /// <summary>
@@ -451,16 +454,24 @@ public sealed partial class Paragraph : Visual
 
         var text = Text ?? string.Empty;
         var index = GetTextIndexFromPosition(text, e.LocalX, e.LocalY);
-        if ((e.Modifiers & TerminalModifiers.Shift) != 0 && _selectionAnchor >= 0)
+        var isDoubleClick = e.ClickCount >= 2 || e.Kind == TerminalMouseKind.DoubleClick;
+        if (isDoubleClick)
+        {
+            var (start, end) = GetWordSelection(text.AsSpan(), index);
+            SetSelection(start, end);
+            _isSelecting = false;
+        }
+        else if ((e.Modifiers & TerminalModifiers.Shift) != 0 && _selectionAnchor >= 0)
         {
             SetSelection(_selectionAnchor, index);
+            _isSelecting = true;
         }
         else
         {
             SetSelection(index, index);
+            _isSelecting = true;
         }
 
-        _isSelecting = true;
         if (App is { } app && !ReferenceEquals(app.FocusedElement, this))
         {
             app.FocusedElement = this;
@@ -1133,6 +1144,97 @@ public sealed partial class Paragraph : Visual
         return Math.Max(1, TerminalTextUtility.GetWidth(element));
     }
 
+    private static (int Start, int End) GetWordSelection(ReadOnlySpan<char> text, int index)
+    {
+        if (text.IsEmpty)
+        {
+            return (0, 0);
+        }
+
+        var length = text.Length;
+        var cursor = Math.Clamp(index, 0, length);
+        if (cursor >= length)
+        {
+            cursor = TerminalTextUtility.GetPreviousTextElementIndex(text, length);
+        }
+
+        var category = GetTextElementCategory(text, cursor);
+        var start = cursor;
+        while (start > 0)
+        {
+            var previous = TerminalTextUtility.GetPreviousTextElementIndex(text, start);
+            if (GetTextElementCategory(text, previous) != category)
+            {
+                break;
+            }
+
+            start = previous;
+        }
+
+        var end = TerminalTextUtility.GetNextTextElementIndex(text, cursor);
+        if (end <= cursor)
+        {
+            end = Math.Min(length, cursor + 1);
+        }
+
+        while (end < length)
+        {
+            if (GetTextElementCategory(text, end) != category)
+            {
+                break;
+            }
+
+            var next = TerminalTextUtility.GetNextTextElementIndex(text, end);
+            if (next <= end)
+            {
+                end = Math.Min(length, end + 1);
+                break;
+            }
+
+            end = next;
+        }
+
+        return (start, end);
+    }
+
+    private static TextElementCategory GetTextElementCategory(ReadOnlySpan<char> text, int index)
+    {
+        var next = TerminalTextUtility.GetNextTextElementIndex(text, index);
+        if (next <= index)
+        {
+            return TextElementCategory.Other;
+        }
+
+        var element = text[index..next];
+        if (Rune.DecodeFromUtf16(element, out var rune, out var consumed) != OperationStatus.Done || consumed <= 0)
+        {
+            return TextElementCategory.Other;
+        }
+
+        if (Rune.IsWhiteSpace(rune))
+        {
+            return TextElementCategory.Whitespace;
+        }
+
+        if (IsWordRune(rune))
+        {
+            return TextElementCategory.Word;
+        }
+
+        return TextElementCategory.Other;
+    }
+
+    private static bool IsWordRune(Rune rune)
+    {
+        if (rune.Value is < 128)
+        {
+            var ch = (char)rune.Value;
+            return char.IsLetterOrDigit(ch) || ch == '_';
+        }
+
+        return Rune.IsLetterOrDigit(rune) || rune.Value == '_';
+    }
+
     private bool TryGetOrderedSelection(int textLength, out int start, out int end)
     {
         if (_selectionAnchor < 0 || _selectionActive < 0)
@@ -1169,6 +1271,15 @@ public sealed partial class Paragraph : Visual
         return selectedText.Length > 0;
     }
 
+    private void SynchronizeInteractionState()
+    {
+        _ = HasFocus;
+        if (!HasFocus)
+        {
+            ClearSelection();
+        }
+    }
+
     private void SetSelection(int anchor, int active)
     {
         var textLength = (Text ?? string.Empty).Length;
@@ -1181,7 +1292,7 @@ public sealed partial class Paragraph : Visual
 
         _selectionAnchor = normalizedAnchor;
         _selectionActive = normalizedActive;
-        InteractionVersion++;
+        IncrementInteractionVersion();
     }
 
     private void ClearSelection()
@@ -1194,7 +1305,13 @@ public sealed partial class Paragraph : Visual
 
         _selectionAnchor = -1;
         _selectionActive = -1;
-        InteractionVersion++;
+        IncrementInteractionVersion();
+    }
+
+    private void IncrementInteractionVersion()
+    {
+        _interactionVersionCounter++;
+        InteractionVersion = _interactionVersionCounter;
     }
 
     private int GetIndent(bool isFirstLine)
@@ -1463,6 +1580,13 @@ public sealed partial class Paragraph : Visual
         int PrefixWidth,
         bool IsFirstLine,
         bool IsLastInHardLine);
+
+    private enum TextElementCategory
+    {
+        Whitespace,
+        Word,
+        Other,
+    }
 
     private sealed class StyledRunStartComparer : IComparer<StyledRun>
     {

@@ -156,6 +156,101 @@ public sealed class ParagraphTests
         Assert.AreEqual("world", driver.Terminal.Clipboard.Text);
     }
 
+    [TestMethod]
+    public void Paragraph_DoubleClick_SelectsWord_And_CtrlC_Copies()
+    {
+        var paragraph = new Paragraph("hello world").HorizontalAlignment(Align.Stretch);
+
+        using var driver = new TerminalAppTestDriver(paragraph, TerminalHostKind.Fullscreen, new TerminalSize(30, 4));
+        driver.Tick();
+
+        var y = paragraph.Bounds.Y;
+        var x = paragraph.Bounds.X + 7;
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.DoubleClick,
+            Button = TerminalMouseButton.Left,
+            X = x,
+            Y = y,
+        });
+        driver.Backend.PushEvent(new TerminalKeyEvent
+        {
+            Key = TerminalKey.Unknown,
+            Char = TerminalChar.CtrlC,
+            Modifiers = TerminalModifiers.Ctrl,
+        });
+
+        driver.Tick();
+
+        Assert.AreEqual("world", driver.Terminal.Clipboard.Text);
+    }
+
+    [TestMethod]
+    public void Paragraph_Selection_Clears_When_Clicking_Outside()
+    {
+        var paragraph = new Paragraph("hello world").HorizontalAlignment(Align.Stretch);
+        var outsideButton = new Button("Outside");
+        var root = new VStack(paragraph, outsideButton).Spacing(1);
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 8));
+        driver.Tick();
+
+        var y = paragraph.Bounds.Y;
+        var startX = paragraph.Bounds.X + 6;
+        var endX = paragraph.Bounds.X + 11;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Down,
+            Button = TerminalMouseButton.Left,
+            X = startX,
+            Y = y,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Drag,
+            Button = TerminalMouseButton.Left,
+            X = endX,
+            Y = y,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Up,
+            Button = TerminalMouseButton.Left,
+            X = endX,
+            Y = y,
+        });
+
+        driver.Terminal.Clipboard.Text = "seed";
+
+        var outsideX = outsideButton.Bounds.X + 1;
+        var outsideY = outsideButton.Bounds.Y;
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Down,
+            Button = TerminalMouseButton.Left,
+            X = outsideX,
+            Y = outsideY,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Up,
+            Button = TerminalMouseButton.Left,
+            X = outsideX,
+            Y = outsideY,
+        });
+        driver.Backend.PushEvent(new TerminalKeyEvent
+        {
+            Key = TerminalKey.Unknown,
+            Char = TerminalChar.CtrlC,
+            Modifiers = TerminalModifiers.Ctrl,
+        });
+
+        driver.Tick();
+
+        Assert.AreEqual("seed", driver.Terminal.Clipboard.Text);
+    }
+
     private static string GetRowText(CellBuffer buffer, int row)
     {
         var width = buffer.Width;
