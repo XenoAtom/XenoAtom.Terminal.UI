@@ -35,9 +35,12 @@ with api.dotnet
     }
     projects = [
         {
-            name: "XenoAtom.Terminal.UI",
-            path: "../src/XenoAtom.Terminal.UI/XenoAtom.Terminal.UI.csproj",
-            references: ["XenoAtom.Terminal", "XenoAtom.Ansi"]
+            name: "XenoAtom.Terminal.UI.Extensions.Markdown",
+            path: "../src/XenoAtom.Terminal.UI.Extensions.Markdown/XenoAtom.Terminal.UI.Extensions.Markdown.csproj",
+            references: ["XenoAtom.Terminal.UI", "XenoAtom.Terminal", "XenoAtom.Ansi"]
         }
+    ]
+    external_apis = [
+        { assembly: "Markdig", url: "https://xoofx.github.io/markdig/api" },
     ]
 end
