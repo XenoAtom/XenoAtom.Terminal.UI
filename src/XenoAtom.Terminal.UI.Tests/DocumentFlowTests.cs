@@ -169,6 +169,45 @@ public sealed class DocumentFlowTests
     }
 
     [TestMethod]
+    public void DocumentFlow_MaxWidthPercent_Limits_Bubble_Width()
+    {
+        var flow = new DocumentFlow();
+        flow.Items.Add(new DocumentFlowItem
+        {
+            Content = new FlowDocument().Add(new StretchProbeBlock()),
+            Alignment = DocumentFlowAlignment.Left,
+            MaxWidthPercent = 50,
+            Padding = Thickness.Zero,
+        });
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(80, 6));
+        driver.Tick();
+
+        var width = flow.EnumerateVisualsDepthFirst().OfType<StretchProbeVisual>().Single().Bounds.Width;
+        Assert.AreEqual(40, width);
+    }
+
+    [TestMethod]
+    public void DocumentFlow_MaxWidth_And_MaxWidthPercent_Use_Most_Restrictive_Constraint()
+    {
+        var flow = new DocumentFlow();
+        flow.Items.Add(new DocumentFlowItem
+        {
+            Content = new FlowDocument().Add(new StretchProbeBlock()),
+            Alignment = DocumentFlowAlignment.Left,
+            MaxWidth = 24,
+            MaxWidthPercent = 80,
+            Padding = Thickness.Zero,
+        });
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(80, 6));
+        driver.Tick();
+
+        var width = flow.EnumerateVisualsDepthFirst().OfType<StretchProbeVisual>().Single().Bounds.Width;
+        Assert.AreEqual(24, width);
+    }
+
+    [TestMethod]
     public void DocumentFlow_Keyboard_Scrolls_With_Arrow_Home_End()
     {
         var flow = new DocumentFlow();
@@ -325,6 +364,20 @@ public sealed class DocumentFlowTests
         }
 
         public override Visual CreateVisual() => new ProbeVisual(_text, _height);
+    }
+
+    private sealed class StretchProbeBlock : DocumentFlowBlock
+    {
+        public override Visual CreateVisual() => new StretchProbeVisual();
+    }
+
+    private sealed class StretchProbeVisual : Visual
+    {
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+        {
+            var width = constraints.MaxWidth == LayoutConstants.Infinite ? 1 : Math.Max(1, constraints.MaxWidth);
+            return SizeHints.Fixed(new Size(width, 1));
+        }
     }
 
     private sealed class ToggleContent : IDocumentFlowContent

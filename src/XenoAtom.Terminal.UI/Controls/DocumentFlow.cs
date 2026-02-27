@@ -805,13 +805,39 @@ public sealed partial class DocumentFlow : Visual, IScrollable
                 return viewportWidth;
             }
 
-            var maxWidth = item.MaxWidth.GetValueOrDefault(viewportWidth);
-            if (maxWidth <= 0)
+            var maxWidth = viewportWidth;
+            if (TryResolveWidthFromPercent(item.MaxWidthPercent, viewportWidth, out var percentWidth))
             {
-                maxWidth = viewportWidth;
+                maxWidth = Math.Min(maxWidth, percentWidth);
+            }
+
+            var absoluteMaxWidth = item.MaxWidth.GetValueOrDefault(viewportWidth);
+            if (absoluteMaxWidth > 0)
+            {
+                maxWidth = Math.Min(maxWidth, absoluteMaxWidth);
             }
 
             return Math.Clamp(maxWidth, 1, viewportWidth);
+        }
+
+        private static bool TryResolveWidthFromPercent(double? maxWidthPercent, int viewportWidth, out int width)
+        {
+            width = viewportWidth;
+            if (!maxWidthPercent.HasValue)
+            {
+                return false;
+            }
+
+            var percent = maxWidthPercent.Value;
+            if (double.IsNaN(percent) || double.IsInfinity(percent) || percent <= 0d)
+            {
+                return false;
+            }
+
+            var clampedPercent = Math.Min(100d, percent);
+            width = (int)Math.Floor(viewportWidth * (clampedPercent / 100d));
+            width = Math.Clamp(width, 1, viewportWidth);
+            return true;
         }
 
         private static Rectangle ResolveBubbleRect(in Rectangle viewportRect, DocumentFlowItem item, int bubbleWidth, int bubbleHeight, int y)

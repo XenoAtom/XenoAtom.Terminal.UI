@@ -19,9 +19,12 @@ flow.Items.Add(new DocumentFlowItem
     Content = new FlowDocument()
         .AddParagraph("Hello from DocumentFlow"),
     Alignment = DocumentFlowAlignment.Left,
-    MaxWidth = 48,
+    MaxWidthPercent = 60,
 });
 ```
+
+`MaxWidthPercent` is evaluated from the available viewport width.
+If both `MaxWidth` and `MaxWidthPercent` are provided, the most restrictive width is used.
 
 ## Conversation-style alignment
 
@@ -30,14 +33,14 @@ flow.Items.Add(new DocumentFlowItem
 {
     Content = new FlowDocument().AddParagraph("Left bubble"),
     Alignment = DocumentFlowAlignment.Left,
-    MaxWidth = 48,
+    MaxWidthPercent = 65,
 });
 
 flow.Items.Add(new DocumentFlowItem
 {
     Content = new FlowDocument().AddParagraph("Right bubble"),
     Alignment = DocumentFlowAlignment.Right,
-    MaxWidth = 48,
+    MaxWidthPercent = 65,
 });
 ```
 

@@ -107,7 +107,7 @@ Each item represents a “document” in the feed (e.g. a message).
 Required metadata per item:
 
 - `Alignment` (Left/Right/Center/Stretch)
-- `MaxWidth` behavior (optional; to get chat-like bubbles)
+- `MaxWidth` / `MaxWidthPercent` behavior (optional; to get chat-like bubbles)
 - `Padding` + background/border styling (bubble chrome)
 - `Content` as a **flow of blocks**
 
@@ -167,11 +167,20 @@ public readonly record struct DocumentFlowItem
     public required IDocumentFlowContent Content { get; init; }
     public DocumentFlowAlignment Alignment { get; init; }
     public int? MaxWidth { get; init; } // optional bubble max width in cells
+    public double? MaxWidthPercent { get; init; } // optional bubble max width in percent of viewport width
     public Thickness? Padding { get; init; } // per-item chrome override
     public Style? BackgroundStyle { get; init; } // supports colors/gradients via brushes
     public Style? BorderStyle { get; init; }
 }
 ```
+
+Width rule:
+
+- `Stretch` alignment always uses the full available width.
+- otherwise, bubble width starts from viewport width and is reduced by:
+  - `MaxWidthPercent` (when in `(0, 100]`),
+  - `MaxWidth` (when `> 0`),
+  - with the **most restrictive** value winning.
 
 `IDocumentFlowContent` is the Markdig-independent content contract consumed by `DocumentFlow`.
 It is expected to be produced by a future Markdown extension package, but it is also usable for non-Markdown rich feeds.

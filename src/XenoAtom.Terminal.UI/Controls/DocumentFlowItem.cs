@@ -27,6 +27,15 @@ public readonly record struct DocumentFlowItem
     public int? MaxWidth { get; init; }
 
     /// <summary>
+    /// Gets an optional maximum bubble width as a percentage of the available viewport width.
+    /// </summary>
+    /// <remarks>
+    /// Values are expressed in the [0, 100] range. Non-positive, <see cref="double.NaN"/>, and infinite values are ignored.
+    /// When both <see cref="MaxWidth"/> and <see cref="MaxWidthPercent"/> are set, the most restrictive value is applied.
+    /// </remarks>
+    public double? MaxWidthPercent { get; init; }
+
+    /// <summary>
     /// Gets optional per-item padding. When null, <see cref="DocumentFlow.ItemPadding"/> is used.
     /// </summary>
     public Thickness? Padding { get; init; }
