@@ -45,6 +45,10 @@ new Paragraph(text)
 };
 ```
 
+## Mouse selection and copy
+
+`Paragraph` supports mouse drag selection. After selecting text with the left mouse button, press `Ctrl+C` to copy the selected text to the clipboard.
+
 ## Behavior defaults
 
 - `Wrap = true`

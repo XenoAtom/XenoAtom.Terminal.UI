@@ -2,6 +2,10 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Hosting;
+
 namespace XenoAtom.Terminal.UI.Tests;
 
 [TestClass]
@@ -105,6 +109,51 @@ public sealed class ParagraphTests
         paragraph.RenderTree(buffer);
 
         Assert.AreEqual('B', buffer.UnsafeScalars[4]);
+    }
+
+    [TestMethod]
+    public void Paragraph_MouseDragSelection_CtrlC_CopiesSelectedText()
+    {
+        var paragraph = new Paragraph("hello world").HorizontalAlignment(Align.Stretch);
+
+        using var driver = new TerminalAppTestDriver(paragraph, TerminalHostKind.Fullscreen, new TerminalSize(30, 4));
+        driver.Tick();
+
+        var y = paragraph.Bounds.Y;
+        var startX = paragraph.Bounds.X + 6;
+        var endX = paragraph.Bounds.X + 11;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Down,
+            Button = TerminalMouseButton.Left,
+            X = startX,
+            Y = y,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Drag,
+            Button = TerminalMouseButton.Left,
+            X = endX,
+            Y = y,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Up,
+            Button = TerminalMouseButton.Left,
+            X = endX,
+            Y = y,
+        });
+        driver.Backend.PushEvent(new TerminalKeyEvent
+        {
+            Key = TerminalKey.Unknown,
+            Char = TerminalChar.CtrlC,
+            Modifiers = TerminalModifiers.Ctrl,
+        });
+
+        driver.Tick();
+
+        Assert.AreEqual("world", driver.Terminal.Clipboard.Text);
     }
 
     private static string GetRowText(CellBuffer buffer, int row)

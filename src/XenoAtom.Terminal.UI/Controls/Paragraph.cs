@@ -4,6 +4,7 @@
 
 using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
@@ -33,6 +34,9 @@ public sealed partial class Paragraph : Visual
     private bool _spansDirty = true;
     private int _spansTextLength = -1;
     private Dictionary<string, ulong>? _hyperlinkTokenCache;
+    private int _selectionAnchor = -1;
+    private int _selectionActive = -1;
+    private bool _isSelecting;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Paragraph"/> class.
@@ -139,11 +143,15 @@ public sealed partial class Paragraph : Visual
     [Bindable]
     public partial Style PrefixStyle { get; set; }
 
+    [Bindable]
+    internal partial int InteractionVersion { get; set; }
+
     partial void OnTextChanged(string? value)
     {
         _ = value;
         InvalidateLayoutCache();
         InvalidateSpanCache();
+        ClearSelection();
     }
 
     partial void OnWrapChanged(bool value)
@@ -238,14 +246,18 @@ public sealed partial class Paragraph : Visual
             return;
         }
 
+        _ = InteractionVersion;
+
         var text = Text ?? string.Empty;
         EnsureSpanCache(text.Length);
+        var hasSelection = TryGetOrderedSelection(text.Length, out var selectionStart, out var selectionEnd);
+        var selectionStyle = hasSelection ? GetTheme().SelectionStyle() : Style.None;
 
         _hyperlinkTokenCache?.Clear();
 
         if (!Wrap)
         {
-            RenderSingleLine(buffer, rect, text);
+            RenderSingleLine(buffer, rect, text, hasSelection, selectionStart, selectionEnd, selectionStyle);
             return;
         }
 
@@ -270,11 +282,11 @@ public sealed partial class Paragraph : Visual
             var renderedWidth = Math.Min(textWidth, line.TextWidth);
             var alignedX = AlignX(textX, textWidth, renderedWidth, alignment);
 
-            WriteStyledSpan(buffer, alignedX, y, textSpan, line.Start, line.Start + line.Length);
+            WriteStyledSpan(buffer, alignedX, y, textSpan, line.Start, line.Start + line.Length, hasSelection, selectionStart, selectionEnd, selectionStyle);
         }
     }
 
-    private void RenderSingleLine(CellBuffer buffer, in Rectangle rect, string text)
+    private void RenderSingleLine(CellBuffer buffer, in Rectangle rect, string text, bool hasSelection, int selectionStart, int selectionEnd, Style selectionStyle)
     {
         var firstLine = GetFirstHardLine(text.AsSpan());
         var line = new LayoutLine(
@@ -307,7 +319,7 @@ public sealed partial class Paragraph : Visual
             var visibleEnd = textStart + visibleLength;
             var visibleWidth = TerminalTextUtility.GetWidth(firstLine[..visibleLength]);
             var alignedX = AlignX(textX, availableTextWidth, visibleWidth, alignment);
-            WriteStyledSpan(buffer, alignedX, rect.Y, span, textStart, visibleEnd);
+            WriteStyledSpan(buffer, alignedX, rect.Y, span, textStart, visibleEnd, hasSelection, selectionStart, selectionEnd, selectionStyle);
             return;
         }
 
@@ -315,7 +327,7 @@ public sealed partial class Paragraph : Visual
         if (fullWidth <= availableTextWidth)
         {
             var alignedX = AlignX(textX, availableTextWidth, fullWidth, alignment);
-            WriteStyledSpan(buffer, alignedX, rect.Y, span, textStart, textEnd);
+            WriteStyledSpan(buffer, alignedX, rect.Y, span, textStart, textEnd, hasSelection, selectionStart, selectionEnd, selectionStyle);
             return;
         }
 
@@ -332,17 +344,27 @@ public sealed partial class Paragraph : Visual
         {
             var visibleLength = GetEndIndexAtCell(firstLine, bodyWidth);
             var visibleEnd = textStart + visibleLength;
-            WriteStyledSpan(buffer, fullAlignedX, rect.Y, span, textStart, visibleEnd);
+            WriteStyledSpan(buffer, fullAlignedX, rect.Y, span, textStart, visibleEnd, hasSelection, selectionStart, selectionEnd, selectionStyle);
             buffer.SetCell(fullAlignedX + bodyWidth, rect.Y, Ellipsis, Style.None);
             return;
         }
 
         var suffixStart = textStart + GetStartIndexForSuffix(firstLine, bodyWidth);
         buffer.SetCell(fullAlignedX, rect.Y, Ellipsis, Style.None);
-        WriteStyledSpan(buffer, fullAlignedX + 1, rect.Y, span, suffixStart, textEnd);
+        WriteStyledSpan(buffer, fullAlignedX + 1, rect.Y, span, suffixStart, textEnd, hasSelection, selectionStart, selectionEnd, selectionStyle);
     }
 
-    private void WriteStyledSpan(CellBuffer buffer, int x, int y, ReadOnlySpan<char> text, int start, int endExclusive)
+    private void WriteStyledSpan(
+        CellBuffer buffer,
+        int x,
+        int y,
+        ReadOnlySpan<char> text,
+        int start,
+        int endExclusive,
+        bool hasSelection,
+        int selectionStart,
+        int selectionEnd,
+        Style selectionStyle)
     {
         if (start >= endExclusive)
         {
@@ -352,7 +374,7 @@ public sealed partial class Paragraph : Visual
         var runs = _normalizedRuns;
         var hyperlinks = _normalizedHyperlinks;
 
-        if (runs.Length == 0 && hyperlinks.Length == 0)
+        if (runs.Length == 0 && hyperlinks.Length == 0 && !hasSelection)
         {
             buffer.WriteText(x, y, text.Slice(start, endExclusive - start), Style.None);
             return;
@@ -389,15 +411,127 @@ public sealed partial class Paragraph : Visual
                 nextBoundary = Math.Min(nextBoundary, hyperlinks[hyperlinkIndex].Start);
             }
 
+            if (hasSelection)
+            {
+                if (position < selectionStart)
+                {
+                    nextBoundary = Math.Min(nextBoundary, selectionStart);
+                }
+                else if (position < selectionEnd)
+                {
+                    nextBoundary = Math.Min(nextBoundary, selectionEnd);
+                }
+            }
+
             if (nextBoundary <= position)
             {
                 nextBoundary = Math.Min(endExclusive, position + 1);
             }
 
             var segment = text.Slice(position, nextBoundary - position);
-            buffer.WriteText(posX, y, segment, runStyle, hyperlinkToken);
-            posX += TerminalTextUtility.GetWidth(segment);
+            var effectiveStyle = runStyle;
+            if (hasSelection && position >= selectionStart && position < selectionEnd)
+            {
+                effectiveStyle |= selectionStyle;
+            }
+
+            buffer.WriteText(posX, y, segment, effectiveStyle, hyperlinkToken);
+            posX += GetRenderedCellWidth(segment, posX);
             position = nextBoundary;
+        }
+    }
+
+    /// <inheritdoc />
+    protected override void OnPointerPressed(PointerEventArgs e)
+    {
+        if (!IsEnabled || e.Button != TerminalMouseButton.Left)
+        {
+            return;
+        }
+
+        var text = Text ?? string.Empty;
+        var index = GetTextIndexFromPosition(text, e.LocalX, e.LocalY);
+        if ((e.Modifiers & TerminalModifiers.Shift) != 0 && _selectionAnchor >= 0)
+        {
+            SetSelection(_selectionAnchor, index);
+        }
+        else
+        {
+            SetSelection(index, index);
+        }
+
+        _isSelecting = true;
+        if (App is { } app && !ReferenceEquals(app.FocusedElement, this))
+        {
+            app.FocusedElement = this;
+        }
+
+        e.Handled = true;
+    }
+
+    /// <inheritdoc />
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        if (!_isSelecting || e.Kind != TerminalMouseKind.Drag)
+        {
+            return;
+        }
+
+        var text = Text ?? string.Empty;
+        var index = GetTextIndexFromPosition(text, e.LocalX, e.LocalY);
+        if (_selectionAnchor < 0)
+        {
+            SetSelection(index, index);
+        }
+        else
+        {
+            SetSelection(_selectionAnchor, index);
+        }
+
+        e.Handled = true;
+    }
+
+    /// <inheritdoc />
+    protected override void OnPointerReleased(PointerEventArgs e)
+    {
+        if (e.Button != TerminalMouseButton.Left)
+        {
+            return;
+        }
+
+        if (_isSelecting)
+        {
+            var text = Text ?? string.Empty;
+            var index = GetTextIndexFromPosition(text, e.LocalX, e.LocalY);
+            if (_selectionAnchor < 0)
+            {
+                SetSelection(index, index);
+            }
+            else
+            {
+                SetSelection(_selectionAnchor, index);
+            }
+        }
+
+        _isSelecting = false;
+        e.Handled = true;
+    }
+
+    /// <inheritdoc />
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (!IsEnabled)
+        {
+            return;
+        }
+
+        if ((e.Modifiers & TerminalModifiers.Ctrl) != 0 && e.Char is TerminalChar.CtrlC)
+        {
+            if (TryGetSelectedText(out var selectedText))
+            {
+                App?.Terminal.Clipboard.TrySetText(selectedText);
+                e.Handled = true;
+            }
         }
     }
 
@@ -782,6 +916,285 @@ public sealed partial class Paragraph : Visual
     private int GetTextAvailableWidth(int totalWidth, bool isFirstLine)
     {
         return Math.Max(0, totalWidth - GetIndent(isFirstLine) - GetPrefixWidth(isFirstLine));
+    }
+
+    private int GetTextIndexFromPosition(string text, int localX, int localY)
+    {
+        if (text.Length == 0)
+        {
+            return 0;
+        }
+
+        var rect = Bounds;
+        if (rect.Width <= 0)
+        {
+            return localY <= 0 ? 0 : text.Length;
+        }
+
+        if (!Wrap)
+        {
+            return GetSingleLineTextIndexFromPosition(text.AsSpan(), localX, localY);
+        }
+
+        EnsureWrappedLayout(rect.Width, text);
+        if (_layoutLineCount <= 0)
+        {
+            return localY <= 0 ? 0 : text.Length;
+        }
+
+        if (localY < 0)
+        {
+            return 0;
+        }
+
+        if (localY >= _layoutLineCount)
+        {
+            return text.Length;
+        }
+
+        return GetWrappedLineTextIndex(text.AsSpan(), _layoutLines[localY], localX);
+    }
+
+    private int GetSingleLineTextIndexFromPosition(ReadOnlySpan<char> text, int localX, int localY)
+    {
+        if (localY < 0)
+        {
+            return 0;
+        }
+
+        var firstLine = GetFirstHardLine(text);
+        if (localY > 0)
+        {
+            return firstLine.Length;
+        }
+
+        var line = new LayoutLine(
+            Start: 0,
+            Length: firstLine.Length,
+            TextWidth: firstLine.Length == 0 ? 0 : TerminalTextUtility.GetWidth(firstLine),
+            Indent: GetIndent(isFirstLine: true),
+            PrefixWidth: GetPrefixWidth(isFirstLine: true),
+            IsFirstLine: true,
+            IsLastInHardLine: true);
+
+        var textX = line.Indent + line.PrefixWidth;
+        var availableTextWidth = Math.Max(0, Bounds.Width - line.Indent - line.PrefixWidth);
+        if (availableTextWidth <= 0 || firstLine.Length == 0)
+        {
+            return 0;
+        }
+
+        var alignment = TextAlignment == TextAlignment.Justify ? TextAlignment.Left : TextAlignment;
+        var trimming = Trimming;
+
+        if (trimming == TextTrimming.Clip)
+        {
+            var visibleLength = GetEndIndexAtCell(firstLine, availableTextWidth);
+            var visibleWidth = TerminalTextUtility.GetWidth(firstLine[..visibleLength]);
+            var alignedX = AlignX(textX, availableTextWidth, visibleWidth, alignment);
+            return GetSegmentIndexFromPosition(firstLine, localX, alignedX, visibleLength, Bounds.X + alignedX);
+        }
+
+        var fullWidth = TerminalTextUtility.GetWidth(firstLine);
+        if (fullWidth <= availableTextWidth)
+        {
+            var alignedX = AlignX(textX, availableTextWidth, fullWidth, alignment);
+            return GetSegmentIndexFromPosition(firstLine, localX, alignedX, firstLine.Length, Bounds.X + alignedX);
+        }
+
+        if (availableTextWidth == 1)
+        {
+            var alignedX = AlignX(textX, availableTextWidth, availableTextWidth, alignment);
+            return localX <= alignedX ? 0 : firstLine.Length;
+        }
+
+        var bodyWidth = availableTextWidth - 1;
+        var fullAlignedX = AlignX(textX, availableTextWidth, availableTextWidth, alignment);
+
+        if (trimming == TextTrimming.EndEllipsis)
+        {
+            var visibleLength = GetEndIndexAtCell(firstLine, bodyWidth);
+            return GetSegmentIndexFromPosition(firstLine, localX, fullAlignedX, visibleLength, Bounds.X + fullAlignedX);
+        }
+
+        var suffixStart = GetStartIndexForSuffix(firstLine, bodyWidth);
+        if (localX <= fullAlignedX)
+        {
+            return suffixStart;
+        }
+
+        var suffix = firstLine[suffixStart..];
+        return suffixStart + GetSegmentIndexFromPosition(suffix, localX, fullAlignedX + 1, suffix.Length, Bounds.X + fullAlignedX + 1);
+    }
+
+    private int GetWrappedLineTextIndex(ReadOnlySpan<char> text, in LayoutLine line, int localX)
+    {
+        if (line.Length <= 0)
+        {
+            return line.Start;
+        }
+
+        var textX = line.Indent + line.PrefixWidth;
+        var textWidth = Math.Max(0, Bounds.Width - line.Indent - line.PrefixWidth);
+        if (textWidth <= 0)
+        {
+            return line.Start;
+        }
+
+        var alignment = TextAlignment == TextAlignment.Justify ? TextAlignment.Left : TextAlignment;
+        var renderedWidth = Math.Min(textWidth, line.TextWidth);
+        var alignedX = AlignX(textX, textWidth, renderedWidth, alignment);
+        var slice = text.Slice(line.Start, line.Length);
+        return line.Start + GetSegmentIndexFromPosition(slice, localX, alignedX, line.Length, Bounds.X + alignedX);
+    }
+
+    private static int GetSegmentIndexFromPosition(ReadOnlySpan<char> segment, int localX, int segmentX, int segmentLength, int absoluteSegmentX)
+    {
+        if (segmentLength <= 0)
+        {
+            return 0;
+        }
+
+        var effectiveLength = Math.Min(segmentLength, segment.Length);
+        if (localX <= segmentX)
+        {
+            return 0;
+        }
+
+        var renderedWidth = GetRenderedCellWidth(segment[..effectiveLength], absoluteSegmentX);
+        if (localX >= segmentX + renderedWidth)
+        {
+            return effectiveLength;
+        }
+
+        var targetCell = localX - segmentX;
+        return GetTextIndexAtCell(segment[..effectiveLength], targetCell, absoluteSegmentX);
+    }
+
+    private static int GetRenderedCellWidth(ReadOnlySpan<char> text, int absoluteStartColumn)
+    {
+        var column = 0;
+        var index = 0;
+        while (index < text.Length)
+        {
+            var next = TerminalTextUtility.GetNextTextElementIndex(text, index);
+            if (next <= index)
+            {
+                break;
+            }
+
+            var element = text.Slice(index, next - index);
+            column += GetTextElementCellWidth(element, absoluteStartColumn + column);
+            index = next;
+        }
+
+        return column;
+    }
+
+    private static int GetTextIndexAtCell(ReadOnlySpan<char> text, int targetCell, int absoluteStartColumn)
+    {
+        if (targetCell <= 0 || text.IsEmpty)
+        {
+            return 0;
+        }
+
+        var column = 0;
+        var index = 0;
+        while (index < text.Length)
+        {
+            var next = TerminalTextUtility.GetNextTextElementIndex(text, index);
+            if (next <= index)
+            {
+                break;
+            }
+
+            var element = text.Slice(index, next - index);
+            var width = GetTextElementCellWidth(element, absoluteStartColumn + column);
+            if (column + width > targetCell)
+            {
+                return index;
+            }
+
+            column += width;
+            index = next;
+        }
+
+        return text.Length;
+    }
+
+    private static int GetTextElementCellWidth(ReadOnlySpan<char> element, int absoluteColumn)
+    {
+        if (element.Length == 1 && element[0] == '\t')
+        {
+            var tabWidth = Math.Max(1, TerminalTextUtility.DefaultTabWidth);
+            return tabWidth - (absoluteColumn % tabWidth);
+        }
+
+        return Math.Max(1, TerminalTextUtility.GetWidth(element));
+    }
+
+    private bool TryGetOrderedSelection(int textLength, out int start, out int end)
+    {
+        if (_selectionAnchor < 0 || _selectionActive < 0)
+        {
+            start = 0;
+            end = 0;
+            return false;
+        }
+
+        var anchor = Math.Clamp(_selectionAnchor, 0, textLength);
+        var active = Math.Clamp(_selectionActive, 0, textLength);
+        if (anchor == active)
+        {
+            start = 0;
+            end = 0;
+            return false;
+        }
+
+        start = Math.Min(anchor, active);
+        end = Math.Max(anchor, active);
+        return true;
+    }
+
+    private bool TryGetSelectedText(out string selectedText)
+    {
+        var text = Text ?? string.Empty;
+        if (!TryGetOrderedSelection(text.Length, out var start, out var end))
+        {
+            selectedText = string.Empty;
+            return false;
+        }
+
+        selectedText = text[start..end];
+        return selectedText.Length > 0;
+    }
+
+    private void SetSelection(int anchor, int active)
+    {
+        var textLength = (Text ?? string.Empty).Length;
+        var normalizedAnchor = Math.Clamp(anchor, 0, textLength);
+        var normalizedActive = Math.Clamp(active, 0, textLength);
+        if (_selectionAnchor == normalizedAnchor && _selectionActive == normalizedActive)
+        {
+            return;
+        }
+
+        _selectionAnchor = normalizedAnchor;
+        _selectionActive = normalizedActive;
+        InteractionVersion++;
+    }
+
+    private void ClearSelection()
+    {
+        _isSelecting = false;
+        if (_selectionAnchor < 0 && _selectionActive < 0)
+        {
+            return;
+        }
+
+        _selectionAnchor = -1;
+        _selectionActive = -1;
+        InteractionVersion++;
     }
 
     private int GetIndent(bool isFirstLine)
