@@ -15,7 +15,7 @@ XenoAtom.Terminal.UI is built on a small stack of focused libraries. Together th
     <div class="card h-100">
       <div class="card-body">
         <div class="d-flex align-items-center gap-3 mb-2">
-          <img src="../../img/xenoatom-logo.png" width="56" height="56" alt="XenoAtom.Terminal.UI">
+          <img src="../../img/xenoatom-terminal-ui-logo.png" width="56" height="56" alt="XenoAtom.Terminal.UI">
           <div>
             <div class="h5 mb-0">XenoAtom.Terminal.UI</div>
             <div class="text-muted small">Widgets, layout, rendering, and app model</div>

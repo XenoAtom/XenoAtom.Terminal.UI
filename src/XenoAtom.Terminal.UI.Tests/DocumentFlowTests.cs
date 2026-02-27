@@ -196,6 +196,70 @@ public sealed class DocumentFlowTests
     }
 
     [TestMethod]
+    public void DocumentFlow_Rebuilds_Layouts_When_ItemSpacing_Changes()
+    {
+        var flow = new DocumentFlow
+        {
+            ItemPadding = Thickness.Zero,
+            ItemSpacing = 0,
+        };
+
+        for (var i = 0; i < 3; i++)
+        {
+            flow.Items.Add(new DocumentFlowItem
+            {
+                Content = new FlowDocument().Add(new FixedHeightBlock($"Item {i}", 1)),
+                Alignment = DocumentFlowAlignment.Left,
+                MaxWidth = 24,
+            });
+        }
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(30, 8));
+        driver.Tick();
+
+        var extentWithNoSpacing = flow.Scroll.ExtentHeight;
+        Assert.AreEqual(3, extentWithNoSpacing);
+
+        flow.ItemSpacing = 2;
+        driver.Tick();
+
+        var extentWithSpacing = flow.Scroll.ExtentHeight;
+        Assert.AreEqual(7, extentWithSpacing, "Expected spacing changes to invalidate cached document layouts.");
+    }
+
+    [TestMethod]
+    public void DocumentFlow_Rebuilds_Layouts_When_Default_ItemPadding_Changes()
+    {
+        var flow = new DocumentFlow
+        {
+            ItemPadding = Thickness.Zero,
+            ItemSpacing = 0,
+        };
+
+        for (var i = 0; i < 2; i++)
+        {
+            flow.Items.Add(new DocumentFlowItem
+            {
+                Content = new FlowDocument().Add(new FixedHeightBlock($"Item {i}", 1)),
+                Alignment = DocumentFlowAlignment.Left,
+                MaxWidth = 24,
+            });
+        }
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(30, 8));
+        driver.Tick();
+
+        var extentWithoutPadding = flow.Scroll.ExtentHeight;
+        Assert.AreEqual(2, extentWithoutPadding);
+
+        flow.ItemPadding = new Thickness(0, 1, 0, 2);
+        driver.Tick();
+
+        var extentWithPadding = flow.Scroll.ExtentHeight;
+        Assert.AreEqual(8, extentWithPadding, "Expected default item padding changes to invalidate cached document layouts.");
+    }
+
+    [TestMethod]
     public void DocumentFlow_MaxWidthPercent_Limits_Bubble_Width()
     {
         var flow = new DocumentFlow();
@@ -363,6 +427,46 @@ public sealed class DocumentFlowTests
         Assert.IsTrue(collapsedExtent <= expandedExtent);
     }
 
+    [TestMethod]
+    public void DocumentFlow_Selection_IsExclusive_Across_Paragraph_Blocks()
+    {
+        var flow = new DocumentFlow
+        {
+            ItemPadding = Thickness.Zero,
+            ItemSpacing = 1,
+        };
+
+        flow.Items.Add(new DocumentFlowItem
+        {
+            Content = new FlowDocument().AddParagraph("first paragraph world"),
+            Alignment = DocumentFlowAlignment.Left,
+            MaxWidth = 40,
+            Padding = Thickness.Zero,
+        });
+        flow.Items.Add(new DocumentFlowItem
+        {
+            Content = new FlowDocument().AddParagraph("second paragraph value"),
+            Alignment = DocumentFlowAlignment.Left,
+            MaxWidth = 40,
+            Padding = Thickness.Zero,
+        });
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(50, 8));
+        driver.Tick();
+
+        var firstParagraph = FindRenderedParagraph(flow, "first paragraph world");
+        var secondParagraph = FindRenderedParagraph(flow, "second paragraph value");
+
+        DragSelectToken(driver, firstParagraph, "world");
+        Assert.IsTrue(HasSelection(firstParagraph));
+
+        DragSelectToken(driver, secondParagraph, "value");
+        var firstAfter = FindRenderedParagraph(flow, "first paragraph world");
+        var secondAfter = FindRenderedParagraph(flow, "second paragraph value");
+        Assert.IsFalse(HasSelection(firstAfter), "Selecting text in a different document flow paragraph should clear previous selections.");
+        Assert.IsTrue(HasSelection(secondAfter));
+    }
+
     private static DocumentFlowItem CreateItem(string text)
         => new()
         {
@@ -370,6 +474,64 @@ public sealed class DocumentFlowTests
             Alignment = DocumentFlowAlignment.Left,
             MaxWidth = 34,
         };
+
+    private static Paragraph FindRenderedParagraph(DocumentFlow flow, string text)
+    {
+        foreach (var paragraph in flow.EnumerateVisualsDepthFirst().OfType<Paragraph>())
+        {
+            if (string.Equals(paragraph.Text, text, StringComparison.Ordinal))
+            {
+                return paragraph;
+            }
+        }
+
+        Assert.Fail($"Could not find rendered paragraph `{text}`.");
+        return null!;
+    }
+
+    private static void DragSelectToken(TerminalAppTestDriver driver, Paragraph paragraph, string token)
+    {
+        var text = paragraph.Text ?? string.Empty;
+        var start = text.IndexOf(token, StringComparison.Ordinal);
+        Assert.IsTrue(start >= 0, $"Token `{token}` was not found in paragraph text.");
+
+        var bounds = paragraph.GetAbsoluteBounds();
+        var y = bounds.Y;
+        var startX = bounds.X + start;
+        var endX = startX + token.Length;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Down,
+            Button = TerminalMouseButton.Left,
+            X = startX,
+            Y = y,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Drag,
+            Button = TerminalMouseButton.Left,
+            X = endX,
+            Y = y,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Up,
+            Button = TerminalMouseButton.Left,
+            X = endX,
+            Y = y,
+        });
+        driver.Tick();
+    }
+
+    private static bool HasSelection(Paragraph paragraph)
+    {
+        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var type = typeof(Paragraph);
+        var anchor = (int)(type.GetField("_selectionAnchor", flags)?.GetValue(paragraph) ?? -1);
+        var active = (int)(type.GetField("_selectionActive", flags)?.GetValue(paragraph) ?? -1);
+        return anchor >= 0 && active >= 0 && anchor != active;
+    }
 
     private sealed class ProbeBlock : DocumentFlowBlock
     {

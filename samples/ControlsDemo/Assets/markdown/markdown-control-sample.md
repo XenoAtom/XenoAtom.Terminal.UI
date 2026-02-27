@@ -1,36 +1,17 @@
 # MarkdownControl Demo Document
 
 This document is intentionally long and feature-dense so the demo can validate CommonMark rendering plus selected extensions.
+It starts with a quick tour so the first viewport shows mixed content instead of heading-only blocks.
 
-## 1. Headings
-
-# Heading Level 1
-## Heading Level 2
-### Heading Level 3
-#### Heading Level 4
-##### Heading Level 5
-###### Heading Level 6
-
-Setext Heading Level 1
-======================
-
-Setext Heading Level 2
-----------------------
-
----
-
-## 2. Paragraph Features
+## 1. Quick Feature Tour
 
 This paragraph includes *emphasis*, **strong emphasis**, and ***combined emphasis*** in one sentence.
-
 Inline code appears as `Console.WriteLine("Hello")` and links appear as [project repository](https://github.com/XenoAtom/XenoAtom.Terminal.UI).
 
 Reference style links are also covered: [Terminal UI Docs][docs-link] and [Markdown Guide][guide-link].
-
-Here is an automatic URL that should still be readable: <https://xenoatom.github.io/terminal/docs/>.
+Automatic URL support should remain readable: <https://xenoatom.github.io/terminal/docs/>.
 
 Escaped characters: \*not italic\*, \_not emphasis\_, and a literal bracket \[value\].
-
 Entity support: ampersand is &amp; and angle brackets are &lt;tag&gt;.
 
 Hard line break with two trailing spaces.  
@@ -39,44 +20,58 @@ This line should start immediately below.
 Soft line break
 continues as a normal space in the same paragraph.
 
-An inline HTML span follows: <kbd>Ctrl</kbd> + <kbd>K</kbd>.
-
----
-
-## 3. Quotes
-
-> A simple block quote.
+> A simple quote with **strong text** and a [quoted link](https://example.com/quoted).
 >
-> A second quoted paragraph with **strong text** and a [quoted link](https://example.com/quoted).
->
-> > A nested quote level with `inline code`.
-> >
-> > - Nested list item one
-> > - Nested list item two
-
----
-
-## 4. Lists
+> > Nested quote with `inline code`.
 
 - Unordered item one
-- Unordered item two with a nested list:
-  - Nested bullet A
-  - Nested bullet B with `code`
-  - Nested bullet C with [a link](https://example.com/nested)
-- Unordered item three
+- Unordered item two with `code`
+- Unordered item three with a [nested link](https://example.com/nested)
 
 1. Ordered item one
 2. Ordered item two
-3. Ordered item three with nested ordered list
-   1. Nested ordered one
-   2. Nested ordered two
-4. Ordered item four
-
-- Mixed list item with paragraph text that is long enough to wrap and demonstrate hanging indentation in the paragraph renderer. This line should visibly continue on following rows when the viewport is narrow.
+3. Ordered item three
 
 ---
 
-## 5. Code Blocks
+## 2. Tables Extension
+
+| Feature | Status | Notes |
+|:--------|:------:|------:|
+| Headings | Done | 100 |
+| Lists | Done | 95 |
+| Tables | Done | 90 |
+| Alerts | Done | 85 |
+
+| Escaped Pipe | Value |
+|--------------|-------|
+| `a \| b` | Literal pipe in code span |
+
+---
+
+## 3. Alert Blocks Extension
+
+> [!NOTE]
+> Note alert content with **bold** text and a [link](https://example.com/note).
+
+> [!TIP]
+> Tip alert content with `inline code`.
+>
+> - Alert list item one
+> - Alert list item two
+
+> [!IMPORTANT]
+> Important alert paragraph with additional context.
+
+> [!WARNING]
+> Warning alert with cautionary details.
+
+> [!CAUTION]
+> Caution alert with potential risk description.
+
+---
+
+## 4. Code Blocks
 
 ```csharp
 public static class DemoProgram
@@ -109,6 +104,17 @@ Indented code block:
 
 ---
 
+## 5. Heading Reference
+
+# Primary Heading Example
+
+## Secondary Heading Example
+
+Setext Secondary Heading
+------------------------
+
+---
+
 ## 6. HTML Blocks
 
 <div class="callout">
@@ -131,44 +137,7 @@ Image with title:
 
 ---
 
-## 8. Tables Extension
-
-| Feature | Status | Notes |
-|:--------|:------:|------:|
-| Headings | Done | 100 |
-| Lists | Done | 95 |
-| Tables | Done | 90 |
-| Alerts | Done | 85 |
-
-| Escaped Pipe | Value |
-|--------------|-------|
-| `a \| b` | Literal pipe in code span |
-
----
-
-## 9. Alert Blocks Extension
-
-> [!NOTE]
-> Note alert content with **bold** text and a [link](https://example.com/note).
-
-> [!TIP]
-> Tip alert content with `inline code`.
->
-> - Alert list item one
-> - Alert list item two
-
-> [!IMPORTANT]
-> Important alert paragraph with additional context.
-
-> [!WARNING]
-> Warning alert with cautionary details.
-
-> [!CAUTION]
-> Caution alert with potential risk description.
-
----
-
-## 10. Long Scrolling Section
+## 8. Long Scrolling Section
 
 Paragraph 01: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere feugiat sem, at cursus lectus viverra et.
 
@@ -214,4 +183,3 @@ Paragraph 20: End of long scrolling section.
 
 [docs-link]: https://xenoatom.github.io/terminal/docs/
 [guide-link]: https://commonmark.org/help/
-

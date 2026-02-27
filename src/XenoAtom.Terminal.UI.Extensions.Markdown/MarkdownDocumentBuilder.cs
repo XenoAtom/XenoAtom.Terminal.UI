@@ -24,6 +24,12 @@ internal sealed class MarkdownDocumentBuilder
     private readonly MarkdownRenderOptions _options;
     private readonly Uri? _baseUri;
     private readonly List<DocumentFlowBlock> _blocks;
+    private readonly int _headingSpacingBefore;
+    private readonly int _headingSpacingAfter;
+    private readonly int _paragraphSpacing;
+    private readonly int _blockSpacing;
+    private readonly int _quoteSpacingAfter;
+    private readonly int _listSpacingAfter;
 
     public MarkdownDocumentBuilder(MarkdownStyle style, MarkdownRenderOptions options, Uri? baseUri)
     {
@@ -31,24 +37,30 @@ internal sealed class MarkdownDocumentBuilder
         _options = options;
         _baseUri = baseUri;
         _blocks = new List<DocumentFlowBlock>(64);
+        _headingSpacingBefore = Math.Max(0, _options.HeadingSpacingBefore);
+        _headingSpacingAfter = Math.Max(0, _options.HeadingSpacingAfter);
+        _paragraphSpacing = Math.Max(0, _options.ParagraphSpacing);
+        _blockSpacing = Math.Max(0, _options.BlockSpacing);
+        _quoteSpacingAfter = Math.Max(0, _options.QuoteSpacingAfter);
+        _listSpacingAfter = Math.Max(0, _options.ListSpacingAfter);
     }
 
     public DocumentFlowBlock[] Build(MarkdownDocument document)
     {
         ArgumentNullException.ThrowIfNull(document);
-        RenderBlocks(document, indent: 0, quotePrefix: null);
+        RenderBlocks(document, indent: 0, quotePrefix: null, quoteDepth: 0, listDepth: 0);
         return _blocks.Count == 0 ? Array.Empty<DocumentFlowBlock>() : _blocks.ToArray();
     }
 
-    private void RenderBlocks(ContainerBlock container, int indent, string? quotePrefix)
+    private void RenderBlocks(ContainerBlock container, int indent, string? quotePrefix, int quoteDepth, int listDepth)
     {
         foreach (var block in container)
         {
-            RenderBlock(block, indent, quotePrefix);
+            RenderBlock(block, indent, quotePrefix, quoteDepth, listDepth);
         }
     }
 
-    private void RenderBlock(Block block, int indent, string? quotePrefix)
+    private void RenderBlock(Block block, int indent, string? quotePrefix, int quoteDepth, int listDepth)
     {
         switch (block)
         {
@@ -62,51 +74,73 @@ internal sealed class MarkdownDocumentBuilder
                     _style.ResolveHeadingStyle(heading.Level),
                     indent,
                     quotePrefix,
-                    marginTop: _blocks.Count == 0 ? 0 : 1,
-                    marginBottom: 1);
+                    marginTop: _blocks.Count == 0 ? 0 : _headingSpacingBefore,
+                    marginBottom: quoteDepth > 0 ? 0 : _headingSpacingAfter);
                 return;
 
             case ParagraphBlock paragraph:
-                AddLeafParagraphBlock(paragraph, _style.ParagraphStyle, indent, quotePrefix, marginTop: 0, marginBottom: 1);
+                AddLeafParagraphBlock(
+                    paragraph,
+                    _style.ParagraphStyle,
+                    indent,
+                    quotePrefix,
+                    marginTop: 0,
+                    marginBottom: quoteDepth > 0 ? 0 : _paragraphSpacing);
                 return;
 
             case ListBlock list:
-                RenderList(list, indent, quotePrefix);
+            {
+                var start = _blocks.Count;
+                RenderList(list, indent, quotePrefix, quoteDepth, listDepth + 1);
+                if (quoteDepth == 0 && listDepth == 0)
+                {
+                    EnsureMarginBottomOnLastEmittedBlock(start, _listSpacingAfter);
+                }
+
                 return;
+            }
 
             case QuoteBlock quote:
-                RenderBlocks(quote, indent, AppendPrefix(quotePrefix, _style.QuotePrefix));
+            {
+                var start = _blocks.Count;
+                RenderBlocks(quote, indent, AppendPrefix(quotePrefix, _style.QuotePrefix), quoteDepth + 1, listDepth);
+                if (quoteDepth == 0 && listDepth == 0)
+                {
+                    EnsureMarginBottomOnLastEmittedBlock(start, _quoteSpacingAfter);
+                }
+
                 return;
+            }
 
             case Markdig.Extensions.Tables.Table table:
-                AddVisualBlock(CreateTableVisual(table), indent, quotePrefix, marginTop: 0, marginBottom: 1, forceStretch: false);
+                AddVisualBlock(CreateTableVisual(table), indent, quotePrefix, marginTop: 0, marginBottom: _blockSpacing, forceStretch: false);
                 return;
 
             case FencedCodeBlock fencedCode:
-                AddVisualBlock(CreateCodeVisual(fencedCode), indent, quotePrefix, marginTop: 0, marginBottom: 1);
+                AddVisualBlock(CreateCodeVisual(fencedCode), indent, quotePrefix, marginTop: 0, marginBottom: _blockSpacing);
                 return;
 
             case CodeBlock codeBlock:
-                AddVisualBlock(CreateCodeVisual(codeBlock), indent, quotePrefix, marginTop: 0, marginBottom: 1);
+                AddVisualBlock(CreateCodeVisual(codeBlock), indent, quotePrefix, marginTop: 0, marginBottom: _blockSpacing);
                 return;
 
             case ThematicBreakBlock:
-                AddVisualBlock(new Rule(), indent, quotePrefix, marginTop: 0, marginBottom: 1);
+                AddVisualBlock(new Rule(), indent, quotePrefix, marginTop: 0, marginBottom: _blockSpacing);
                 return;
 
             case HtmlBlock htmlBlock when _options.RenderHtmlBlocksAsText:
-                AddLeafParagraphBlock(htmlBlock, _style.HtmlStyle, indent, quotePrefix, marginTop: 0, marginBottom: 1);
+                AddLeafParagraphBlock(htmlBlock, _style.HtmlStyle, indent, quotePrefix, marginTop: 0, marginBottom: _paragraphSpacing);
                 return;
 
             case HtmlBlock:
                 return;
 
             case LeafBlock leaf:
-                AddLeafParagraphBlock(leaf, _style.ParagraphStyle, indent, quotePrefix, marginTop: 0, marginBottom: 1);
+                AddLeafParagraphBlock(leaf, _style.ParagraphStyle, indent, quotePrefix, marginTop: 0, marginBottom: _paragraphSpacing);
                 return;
 
             case ContainerBlock nested:
-                RenderBlocks(nested, indent, quotePrefix);
+                RenderBlocks(nested, indent, quotePrefix, quoteDepth, listDepth);
                 return;
 
             default:
@@ -114,7 +148,7 @@ internal sealed class MarkdownDocumentBuilder
         }
     }
 
-    private void RenderList(ListBlock list, int indent, string? quotePrefix)
+    private void RenderList(ListBlock list, int indent, string? quotePrefix, int quoteDepth, int listDepth)
     {
         var ordered = TryParseInt(list.OrderedStart, out var startValue) ? startValue : 1;
         var orderedDelimiter = list.OrderedDelimiter == default ? '.' : list.OrderedDelimiter;
@@ -135,11 +169,11 @@ internal sealed class MarkdownDocumentBuilder
                 ordered++;
             }
 
-            RenderListItem(item, indent, quotePrefix, bullet);
+            RenderListItem(item, indent, quotePrefix, bullet, quoteDepth, listDepth);
         }
     }
 
-    private void RenderListItem(ListItemBlock item, int indent, string? quotePrefix, string bullet)
+    private void RenderListItem(ListItemBlock item, int indent, string? quotePrefix, string bullet, int quoteDepth, int listDepth)
     {
         var bulletPrefix = string.Concat(bullet, " ");
         var bulletWidth = Math.Max(1, GetTextWidth(bulletPrefix));
@@ -173,7 +207,7 @@ internal sealed class MarkdownDocumentBuilder
                 }
 
                 case ListBlock nestedList:
-                    RenderList(nestedList, indent + bulletWidth, quotePrefix);
+                    RenderList(nestedList, indent + bulletWidth, quotePrefix, quoteDepth, listDepth + 1);
                     consumedMarker = true;
                     emittedAny = true;
                     break;
@@ -223,6 +257,23 @@ internal sealed class MarkdownDocumentBuilder
         }
     }
 
+    private void EnsureMarginBottomOnLastEmittedBlock(int startIndex, int minMarginBottom)
+    {
+        if (minMarginBottom <= 0 || _blocks.Count <= startIndex)
+        {
+            return;
+        }
+
+        var lastIndex = _blocks.Count - 1;
+        var last = _blocks[lastIndex];
+        if (last.MarginBottom >= minMarginBottom)
+        {
+            return;
+        }
+
+        _blocks[lastIndex] = new MarginOverrideBlock(last, last.MarginTop, minMarginBottom);
+    }
+
     private void RenderAlert(AlertBlock alert, int indent, string? quotePrefix)
     {
         var kind = alert.Kind.ToString().ToUpperInvariant();
@@ -252,7 +303,7 @@ internal sealed class MarkdownDocumentBuilder
             BackgroundStyle = alertStyle.BackgroundStyle,
         });
 
-        AddVisualBlock(group, indent, quotePrefix, marginTop: 0, marginBottom: 1);
+        AddVisualBlock(group, indent, quotePrefix, marginTop: 0, marginBottom: _blockSpacing);
     }
 
     private void AddLeafParagraphBlock(LeafBlock leaf, Style style, int indent, string? quotePrefix, int marginTop, int marginBottom)
@@ -929,5 +980,33 @@ internal sealed class MarkdownDocumentBuilder
         public override Visual CreateVisual() => _visual;
 
         public override bool TryUpdate(Visual visual) => ReferenceEquals(visual, _visual);
+    }
+
+    private sealed class MarginOverrideBlock : DocumentFlowBlock
+    {
+        private readonly DocumentFlowBlock _inner;
+        private readonly int _marginTop;
+        private readonly int _marginBottom;
+
+        public MarginOverrideBlock(DocumentFlowBlock inner, int marginTop, int marginBottom)
+        {
+            _inner = inner;
+            _marginTop = Math.Max(0, marginTop);
+            _marginBottom = Math.Max(0, marginBottom);
+        }
+
+        public override int Version => _inner.Version;
+
+        public override int MarginTop => _marginTop;
+
+        public override int MarginBottom => _marginBottom;
+
+        public override object? ReuseKey => _inner.ReuseKey;
+
+        public override Visual CreateVisual() => _inner.CreateVisual();
+
+        public override bool TryUpdate(Visual visual) => _inner.TryUpdate(visual);
+
+        public override void Release(Visual visual) => _inner.Release(visual);
     }
 }

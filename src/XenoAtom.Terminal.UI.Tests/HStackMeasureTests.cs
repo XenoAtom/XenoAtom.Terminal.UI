@@ -12,6 +12,20 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class HStackMeasureTests
 {
     [TestMethod]
+    public void HStack_Defaults_To_Vertical_Stretch()
+    {
+        var stack = new HStack();
+        Assert.AreEqual(Align.Start, stack.HorizontalAlignment);
+        Assert.AreEqual(Align.Stretch, stack.VerticalAlignment);
+
+        var root = new DockLayout().Content(stack);
+        root.Measure(new Size(20, 5));
+        root.Arrange(new Rectangle(0, 0, 20, 5));
+
+        Assert.AreEqual(5, stack.Bounds.Height);
+    }
+
+    [TestMethod]
     public void HStack_Distributes_Width_To_Stretch_Children_During_Arrange()
     {
         var a = new ProbeVisual { HorizontalAlignment = Align.Stretch };

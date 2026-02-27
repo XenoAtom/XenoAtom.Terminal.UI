@@ -7,7 +7,7 @@ extend "XenoAtom/lunet_template"
 
 site_project_name = "XenoAtom.Terminal.UI"
 site_project_description = "A modern, reactive retained-mode terminal UI framework for .NET."
-site_project_logo_path = "/img/xenoatom-logo.png"
+site_project_logo_path = "/img/xenoatom-terminal-ui-logo.png"
 site_project_social_banner_path = "/img/XenoAtom-Terminal-UI-Banner.png"
 site_project_banner_background_path = "/img/theming.png"
 site_project_package_id = "XenoAtom.Terminal.UI"

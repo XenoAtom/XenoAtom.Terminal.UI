@@ -25,7 +25,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// </list>
 /// Derived controls typically override editor options (single-line vs multi-line, wrapping, alignment) and style rendering.
 /// </remarks>
-public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrollable, ITextEditorHost
+public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrollable, ITextEditorHost, ISelectionOwner
 {
     private ITextDocument _document;
     private readonly ScrollModel _scroll;
@@ -41,6 +41,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     protected TextEditorBase()
     {
         Focusable = true;
+        IsSelectable = true;
         _document = new TextDocument();
         _scroll = new ScrollModel(this);
         _undoRedo = new TextUndoRedoManager();
@@ -237,6 +238,12 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     [Bindable]
     public partial bool WordWrap { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the editor participates in selection ownership.
+    /// </summary>
+    [Bindable]
+    public partial bool IsSelectable { get; set; }
+
     // NOTE: Text document replacement is handled by PrepareChildren() to avoid ad-hoc invalidation.
 
     /// <summary>
@@ -269,6 +276,18 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     /// Gets the selection length in the document.
     /// </summary>
     protected int SelectionLength => _core.SelectionLength;
+
+    /// <inheritdoc />
+    public bool HasSelection => _core.HasSelectionForSelectionOwner;
+
+    void ISelectionOwner.ClearSelection()
+    {
+        _core.ClearSelectionForSelectionOwner();
+        App?.RequestRender();
+    }
+
+    /// <inheritdoc />
+    public bool TryCopySelection(out string text) => _core.TryGetSelectionText(out text);
 
     /// <summary>
     /// Gets a value indicating whether this editor is single-line.

@@ -8,6 +8,10 @@ State<bool> exit = new(false);
 Terminal.Run(
     new VStack(
         new TextBox(text),
+        new HStack(
+            "Hello this is a long element Hello this is a long element Hello this is a long element Hello this is a long element Hello this is a long element",
+            "This is another line"
+        ),
         new TextBlock(() => $"The text typed is: {text.Value}"),
         new Button("Exit").Click(() => exit.Value = true)
     ),

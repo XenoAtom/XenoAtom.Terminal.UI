@@ -28,6 +28,16 @@ See [Markup](../markup.md) for the full markup syntax reference (tags, colors, e
 
 - Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
 
+## Selection and copy
+
+`Markup` supports mouse selection over the rendered plain text:
+
+- drag with the left mouse button to select a range
+- double-click to select a word
+- `Ctrl+C` copies the active selection
+
+Selection is enabled by default. Set `IsSelectable = false` to opt out.
+
 ## Related
 - [Markup](../markup.md)
 - [XenoAtom.Ansi](../ansi.md)

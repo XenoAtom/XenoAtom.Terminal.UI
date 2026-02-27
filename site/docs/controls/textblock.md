@@ -50,6 +50,16 @@ new TextBlock("Centered")
 
 - Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
 
+## Selection and copy
+
+`TextBlock` supports mouse selection:
+
+- drag with the left mouse button to select a range
+- double-click to select a word
+- `Ctrl+C` copies the active selection
+
+Selection is enabled by default. Set `IsSelectable = false` to opt out.
+
 ## Styling
 Use `TextBlockStyle` to override colors and decorations for a subtree (or for a single `TextBlock`):
 

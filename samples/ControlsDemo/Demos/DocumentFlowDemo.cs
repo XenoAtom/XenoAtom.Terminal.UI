@@ -19,7 +19,6 @@ public sealed class DocumentFlowDemo : ControlsDemoBase
         var itemSpacing = new State<int>(1);
         var itemPadding = new State<int>(1);
         var maxCapacity = new State<int>(200);
-        var autoTail = new State<bool>(true);
         var alternateSides = new State<bool>(true);
         var appendBatchCount = new State<int>(3);
         var flow = new DocumentFlow()
@@ -33,7 +32,6 @@ public sealed class DocumentFlowDemo : ControlsDemoBase
         if (context.IsScreenshot)
         {
             PopulateScreenshotItems(flow);
-            flow.ScrollToTail();
             return new VStack(
                     DemoUi.Hint("DocumentFlow composes existing controls and keeps scrolling smooth with block virtualization."),
                     flow)
@@ -41,7 +39,6 @@ public sealed class DocumentFlowDemo : ControlsDemoBase
         }
 
         PopulateInteractiveItems(flow, context);
-        flow.ScrollToTail();
 
         var appendCounter = new State<int>(1);
         var nextRight = true;
@@ -60,11 +57,6 @@ public sealed class DocumentFlowDemo : ControlsDemoBase
                     maxWidth: 52,
                     background: Style.None.WithBackground(Colors.DarkSlateBlue));
             flow.Items.Add(message);
-
-            if (autoTail.Value)
-            {
-                flow.ScrollToTail();
-            }
         }
 
         var appendButton = new Button("Append message")
@@ -100,10 +92,7 @@ public sealed class DocumentFlowDemo : ControlsDemoBase
                 appendCounter.Value = 1;
                 nextRight = true;
                 PopulateInteractiveItems(flow, context);
-                if (autoTail.Value)
-                {
-                    flow.ScrollToTail();
-                }
+                flow.ScrollToTail();
             });
 
         var status = new TextBlock(() =>
@@ -113,7 +102,7 @@ public sealed class DocumentFlowDemo : ControlsDemoBase
         });
 
         var settings = new HStack(
-                new Switch("Auto tail").IsOn(autoTail),
+                new CheckBox("Auto tail").IsChecked(() => flow.FollowTail).IsEnabled(false),
                 new Switch("Alternate sides").IsOn(alternateSides),
                 "Item spacing:",
                 new NumberBox<int>().Value(itemSpacing).ValueValidator(value => value is >= 0 and <= 6 ? null : "Use [0..6]"),

@@ -25,6 +25,7 @@ public sealed class CellBuffer
     private readonly ulong[] _hyperlinks;
     private Dictionary<ulong, string>? _hyperlinkTable;
     private Dictionary<int, TextElementEntry>? _textElementTable;
+    private Color _defaultBackground;
 
     private Rectangle _clipRect;
     private Rectangle[]? _clipStack;
@@ -82,6 +83,7 @@ public sealed class CellBuffer
         Array.Fill(_scalars, ' ');
         Array.Fill(_cells, Style.None);
         Array.Fill(_hyperlinks, 0ul);
+        _defaultBackground = Color.Default;
         _hyperlinkTable?.Clear();
         _textElementTable?.Clear();
     }
@@ -95,6 +97,7 @@ public sealed class CellBuffer
         Array.Fill(_scalars, ' ');
         Array.Fill(_cells, style);
         Array.Fill(_hyperlinks, 0ul);
+        _defaultBackground = style.GetBackgroundOrDefault();
         _hyperlinkTable?.Clear();
         _textElementTable?.Clear();
     }
@@ -120,6 +123,11 @@ public sealed class CellBuffer
         var top = Math.Max(0, clip.Y);
         var right = Math.Min(Width, clip.Right);
         var bottom = Math.Min(Height, clip.Bottom);
+
+        if (style.TryGetBackground(out var clearBackground) && clearBackground.Kind != ColorKind.Default)
+        {
+            _defaultBackground = clearBackground;
+        }
 
         for (var y = top; y < bottom; y++)
         {
@@ -757,32 +765,34 @@ public sealed class CellBuffer
         return "#000000";
     }
 
-    private static Style ApplyAlphaBlending(Style merged, Style overlay, Style under)
+    private Style ApplyAlphaBlending(Style merged, Style overlay, Style under)
     {
         // Only apply blending when the overlay contains explicit RGBA colors.
         // Indexed colors (Default/Basic16/Indexed256) are treated as opaque and never blended.
         if (overlay.TryGetBackground(out var overlayBg) && overlayBg.Kind == ColorKind.RgbA)
         {
-            var bg = ApplyAlphaToBackground(overlayBg, under.GetBackgroundOrDefault());
+            var bg = ApplyAlphaToBackground(overlayBg, under.GetBackgroundOrDefault(), _defaultBackground);
             merged = merged.WithBackground(bg);
         }
 
         if (overlay.TryGetForeground(out var overlayFg) && overlayFg.Kind == ColorKind.RgbA)
         {
             var bgForFg = merged.GetBackgroundOrDefault();
-            var fg = ApplyAlphaToForeground(overlayFg, bgForFg);
+            var fg = ApplyAlphaToForeground(overlayFg, bgForFg, _defaultBackground);
             merged = merged.WithForeground(fg);
         }
 
         return merged;
     }
 
-    private static Color ApplyAlphaToBackground(Color overlayBg, Color underBg)
+    private static Color ApplyAlphaToBackground(Color overlayBg, Color underBg, Color fallbackBackground)
     {
-        // If the destination background is not RGB, we cannot blend. Treat the alpha channel as ignored.
-        if (underBg.Kind is not ColorKind.Rgb and not ColorKind.RgbA)
+        if (!TryResolveBlendDestination(underBg, fallbackBackground, out var destination))
         {
-            return Color.Rgb(overlayBg.R, overlayBg.G, overlayBg.B);
+            // Unknown destination (e.g. terminal default). Keep it transparent rather than forcing an opaque color.
+            return overlayBg.A >= byte.MaxValue
+                ? Color.Rgb(overlayBg.R, overlayBg.G, overlayBg.B)
+                : Color.Default;
         }
 
         if (overlayBg.A >= byte.MaxValue)
@@ -792,17 +802,17 @@ public sealed class CellBuffer
 
         if (overlayBg.A == 0)
         {
-            return Color.Rgb(underBg.R, underBg.G, underBg.B);
+            return destination;
         }
 
-        return BlendRgbAOverRgb(overlayBg, underBg);
+        return BlendRgbAOverRgb(overlayBg, destination);
     }
 
-    private static Color ApplyAlphaToForeground(Color overlayFg, Color background)
+    private static Color ApplyAlphaToForeground(Color overlayFg, Color background, Color fallbackBackground)
     {
         // Foreground is drawn "over" the resolved background, so the background is the destination for blending.
-        // If the background is not RGB, we cannot blend. Treat alpha as ignored.
-        if (background.Kind is not ColorKind.Rgb and not ColorKind.RgbA)
+        // If the background cannot be resolved to RGB, treat alpha as ignored.
+        if (!TryResolveBlendDestination(background, fallbackBackground, out var destination))
         {
             return Color.Rgb(overlayFg.R, overlayFg.G, overlayFg.B);
         }
@@ -814,10 +824,54 @@ public sealed class CellBuffer
 
         if (overlayFg.A == 0)
         {
-            return Color.Rgb(background.R, background.G, background.B);
+            return destination;
         }
 
-        return BlendRgbAOverRgb(overlayFg, background);
+        return BlendRgbAOverRgb(overlayFg, destination);
+    }
+
+    private static bool TryResolveBlendDestination(Color background, Color fallbackBackground, out Color resolved)
+    {
+        switch (background.Kind)
+        {
+            case ColorKind.Rgb:
+                resolved = background;
+                return true;
+            case ColorKind.RgbA:
+            {
+                if (background.A >= byte.MaxValue)
+                {
+                    resolved = Color.Rgb(background.R, background.G, background.B);
+                    return true;
+                }
+
+                if (TryResolveBlendDestination(fallbackBackground, Color.Default, out var fallback))
+                {
+                    resolved = background.A == 0
+                        ? fallback
+                        : BlendRgbAOverRgb(background, fallback);
+                    return true;
+                }
+
+                resolved = Color.Rgb(background.R, background.G, background.B);
+                return true;
+            }
+            case ColorKind.Basic16:
+            case ColorKind.Indexed256:
+                resolved = background.ToRgb();
+                return true;
+            case ColorKind.Default:
+                if (fallbackBackground.Kind == ColorKind.Default)
+                {
+                    resolved = Color.Default;
+                    return false;
+                }
+
+                return TryResolveBlendDestination(fallbackBackground, Color.Default, out resolved);
+            default:
+                resolved = Color.Default;
+                return false;
+        }
     }
 
     private static Color BlendRgbAOverRgb(Color src, Color dst)

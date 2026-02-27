@@ -691,6 +691,11 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             {
                 app.FocusedElement = null;
             }
+
+            if (ReferenceEquals(app.SelectionOwnerElement, this))
+            {
+                app.ClearSelectionOwnerIfMatches(this);
+            }
             
             for (var i = 0; i < ChildrenCount; i++)
             {

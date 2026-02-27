@@ -8,6 +8,7 @@ using XenoAtom.Terminal.UI.Extensions.Markdown.Styling;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Scrolling;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -17,6 +18,8 @@ namespace XenoAtom.Terminal.UI.Controls;
 public sealed partial class MarkdownControl : Visual, IScrollable
 {
     private readonly DocumentFlow _flow;
+    private Theme? _lastResolvedTheme;
+    private MarkdownStyle? _lastResolvedSourceStyle;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MarkdownControl"/> class.
@@ -108,6 +111,18 @@ public sealed partial class MarkdownControl : Visual, IScrollable
     protected override Visual GetChild(int index) => index == 0 ? _flow : throw new ArgumentOutOfRangeException(nameof(index));
 
     /// <inheritdoc />
+    protected override void PrepareChildren()
+    {
+        var sourceStyle = RenderStyle ?? GetStyle<MarkdownStyle>();
+        var theme = GetTheme();
+
+        if (!ReferenceEquals(theme, _lastResolvedTheme) || !Equals(sourceStyle, _lastResolvedSourceStyle))
+        {
+            RebuildContent(sourceStyle, theme);
+        }
+    }
+
+    /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         _flow.Measure(constraints);
@@ -161,8 +176,16 @@ public sealed partial class MarkdownControl : Visual, IScrollable
     private void RebuildContent()
     {
         VerifyAccess();
+        var sourceStyle = RenderStyle ?? GetStyle<MarkdownStyle>();
+        var theme = GetTheme();
+        RebuildContent(sourceStyle, theme);
+    }
 
-        var style = RenderStyle ?? GetStyle<MarkdownStyle>();
+    private void RebuildContent(MarkdownStyle sourceStyle, Theme theme)
+    {
+        VerifyAccess();
+
+        var style = MarkdownDefaults.ResolveStyle(theme, sourceStyle);
         var content = new MarkdownDocumentContent(
             Markdown ?? string.Empty,
             Pipeline,
@@ -185,5 +208,8 @@ public sealed partial class MarkdownControl : Visual, IScrollable
         {
             _flow.Items[0] = item;
         }
+
+        _lastResolvedTheme = theme;
+        _lastResolvedSourceStyle = sourceStyle;
     }
 }

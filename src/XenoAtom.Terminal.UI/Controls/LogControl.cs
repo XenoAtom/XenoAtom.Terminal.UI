@@ -28,7 +28,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// Built-in search is available via Ctrl+F, and can be driven programmatically via <see cref="Search(string)"/>.
 /// </para>
 /// </remarks>
-public sealed partial class LogControl : Visual
+public sealed partial class LogControl : Visual, ISelectionOwner
 {
     private readonly ScrollViewer _scrollViewer;
     private readonly LogContentVisual _content;
@@ -57,6 +57,7 @@ public sealed partial class LogControl : Visual
         Focusable = true;
         HorizontalAlignment = Align.Stretch;
         VerticalAlignment = Align.Stretch;
+        IsSelectable = true;
 
         _markupParser = new MarkupTextParser();
         _entries = new BindableList<LogEntry>(this, "LogControl.Entries");
@@ -117,6 +118,12 @@ public sealed partial class LogControl : Visual
     /// </remarks>
     [Bindable]
     public partial int MaxCapacity { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the control participates in selection ownership.
+    /// </summary>
+    [Bindable]
+    public partial bool IsSelectable { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether long lines wrap to the viewport width.
@@ -222,6 +229,12 @@ public sealed partial class LogControl : Visual
     /// Gets a value indicating whether a selection is active.
     /// </summary>
     public bool HasSelection => _selectionAnchor is not null && _selectionActive is not null && _selectionAnchor.Value != _selectionActive.Value;
+
+    /// <inheritdoc />
+    void ISelectionOwner.ClearSelection() => ClearSelection();
+
+    /// <inheritdoc />
+    public bool TryCopySelection(out string text) => TryGetSelectionText(out text);
 
     /// <summary>
     /// Gets a bindable version number used to invalidate rendering when selection or search state changes.
@@ -941,21 +954,30 @@ public sealed partial class LogControl : Visual
 
     private void CopySelectionToClipboard()
     {
+        if (TryGetSelectionText(out var text))
+        {
+            App?.Terminal.Clipboard.TrySetText(text);
+        }
+    }
+
+    private bool TryGetSelectionText(out string text)
+    {
         if (!HasSelection)
         {
-            return;
+            text = string.Empty;
+            return false;
         }
 
         var (start, end) = GetOrderedSelection();
         var sb = new StringBuilder();
         for (var entryIndex = start.EntryIndex; entryIndex <= end.EntryIndex; entryIndex++)
         {
-            var text = _entries[entryIndex].Text;
-            var from = entryIndex == start.EntryIndex ? Math.Clamp(start.TextIndex, 0, text.Length) : 0;
-            var to = entryIndex == end.EntryIndex ? Math.Clamp(end.TextIndex, 0, text.Length) : text.Length;
+            var entryText = _entries[entryIndex].Text;
+            var from = entryIndex == start.EntryIndex ? Math.Clamp(start.TextIndex, 0, entryText.Length) : 0;
+            var to = entryIndex == end.EntryIndex ? Math.Clamp(end.TextIndex, 0, entryText.Length) : entryText.Length;
             if (to > from)
             {
-                sb.Append(text.AsSpan(from, to - from));
+                sb.Append(entryText.AsSpan(from, to - from));
             }
 
             if (entryIndex != end.EntryIndex)
@@ -964,10 +986,14 @@ public sealed partial class LogControl : Visual
             }
         }
 
-        if (sb.Length > 0)
+        if (sb.Length == 0)
         {
-            App?.Terminal.Clipboard.TrySetText(sb.ToString());
+            text = string.Empty;
+            return false;
         }
+
+        text = sb.ToString();
+        return true;
     }
 
     private (LogTextPosition Start, LogTextPosition End) GetOrderedSelection()

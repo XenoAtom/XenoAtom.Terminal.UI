@@ -49,6 +49,8 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private Task? _runTask;
     private CellBuffer? _renderBuffer;
     private Visual? _focusedElement;
+    private Visual? _selectionOwnerElement;
+    private ISelectionOwner? _selectionOwner;
     private Func<TerminalRunningContext, ValueTask<TerminalLoopResult>>? _onUpdate;
     private TerminalRunningContext? _updateContext;
     private readonly AnsiBuilder _updateOutputBuilder = new(initialCapacity: 4096);
@@ -310,6 +312,13 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 _focusedElement = value;
                 AttachFocus(value);
                 BindingManager.Current.NotifyValueChanged(this, __FocusedElement__BindingAccessor.Instance);
+
+                if (_selectionOwnerElement is not null && value is not null
+                    && !IsInScope(value, _selectionOwnerElement)
+                    && !IsInScope(_selectionOwnerElement, value))
+                {
+                    ClearSelectionOwner();
+                }
             }
         }
     }
@@ -348,6 +357,89 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         ArgumentNullException.ThrowIfNull(action);
         _pendingActions.Enqueue(new PendingAction(action, CaptureFlowOutput: UpdateCallbackDepth.Value > 0));
         _wakeUp.Set();
+    }
+
+    internal Visual? SelectionOwnerElement => _selectionOwnerElement;
+
+    internal void ClearSelectionOwnerIfMatches(Visual visual)
+    {
+        if (ReferenceEquals(_selectionOwnerElement, visual))
+        {
+            ClearSelectionOwner();
+        }
+    }
+
+    private bool TryCopyActiveSelection()
+    {
+        if (_selectionOwner is null || !_selectionOwner.HasSelection)
+        {
+            return false;
+        }
+
+        if (!_selectionOwner.TryCopySelection(out var text) || string.IsNullOrEmpty(text))
+        {
+            return false;
+        }
+
+        Terminal.Clipboard.TrySetText(text);
+        return true;
+    }
+
+    private void ClearSelectionOwner()
+    {
+        if (_selectionOwner is null)
+        {
+            _selectionOwnerElement = null;
+            return;
+        }
+
+        _selectionOwner.ClearSelection();
+        _selectionOwner = null;
+        _selectionOwnerElement = null;
+        RequestRender();
+    }
+
+    private void SetSelectionOwner(Visual? element, ISelectionOwner? owner)
+    {
+        if (owner is not null && !owner.IsSelectable)
+        {
+            owner = null;
+            element = null;
+        }
+
+        if (ReferenceEquals(_selectionOwnerElement, element))
+        {
+            return;
+        }
+
+        if (_selectionOwner is not null)
+        {
+            _selectionOwner.ClearSelection();
+        }
+
+        _selectionOwnerElement = element;
+        _selectionOwner = owner;
+        RequestRender();
+    }
+
+    private void UpdateSelectionOwnerFromPointer(Visual? target)
+    {
+        if (target is null)
+        {
+            ClearSelectionOwner();
+            return;
+        }
+
+        for (var v = target; v is not null; v = v.Parent)
+        {
+            if (v is ISelectionOwner owner && owner.IsSelectable && v.IsVisible && v.IsEnabled)
+            {
+                SetSelectionOwner(v, owner);
+                return;
+            }
+        }
+
+        ClearSelectionOwner();
     }
 
     /// <summary>
@@ -1492,6 +1584,14 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
         var args = new KeyEventArgs { RawEvent = keyEvent };
 
+        if ((keyEvent.Modifiers & TerminalModifiers.Ctrl) != 0 && keyEvent.Char is TerminalChar.CtrlC)
+        {
+            if (TryCopyActiveSelection())
+            {
+                return true;
+            }
+        }
+
         if (routeCommands && TryHandleCommandShortcut(args))
         {
             return true;
@@ -2185,6 +2285,11 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 FocusedElement = focusTarget;
                 RequestRender();
             }
+        }
+
+        if (mouseEvent.Kind is TerminalMouseKind.Down or TerminalMouseKind.DoubleClick && mouseEvent.Button == TerminalMouseButton.Left)
+        {
+            UpdateSelectionOwnerFromPointer(target);
         }
 
         var args = new PointerEventArgs

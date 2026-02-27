@@ -57,6 +57,7 @@ controls:
   - {path: paragraph.md, title: Paragraph}
   - {path: placeholder.md, title: Placeholder}
   - {path: markup.md, title: Markup}
+  - {path: markdownmarkupconverter.md, title: MarkdownMarkupConverter}
   - {path: rule.md, title: Rule}
   - {path: logcontrol.md, title: LogControl}
   - {path: documentflow.md, title: DocumentFlow}

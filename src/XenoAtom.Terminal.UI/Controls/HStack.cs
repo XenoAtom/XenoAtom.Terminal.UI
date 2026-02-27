@@ -19,6 +19,7 @@ public sealed partial class HStack : Panel
     public HStack()
     {
         HorizontalAlignment = Align.Start;
+        VerticalAlignment = Align.Stretch;
     }
 
     /// <summary>
@@ -28,6 +29,7 @@ public sealed partial class HStack : Panel
     public HStack(params Visual[] children)
     {
         HorizontalAlignment = Align.Start;
+        VerticalAlignment = Align.Stretch;
         AddRange(children);
     }
 

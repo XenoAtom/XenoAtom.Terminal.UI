@@ -84,7 +84,8 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     /// <summary>
     /// Gets a value indicating whether the view follows the tail when new items are appended.
     /// </summary>
-    public bool FollowTail { get; private set; }
+    [Bindable]
+    public partial bool FollowTail { get; private set; }
 
     /// <summary>
     /// Scrolls to the tail and enables follow-tail mode.
@@ -305,6 +306,8 @@ public sealed partial class DocumentFlow : Visual, IScrollable
         private int[] _documentOffsets = Array.Empty<int>();
         private int _layoutWidth = -1;
         private int _layoutItemsVersion = -1;
+        private int _layoutItemSpacing = -1;
+        private Thickness _layoutDefaultPadding;
         private bool _layoutCacheValid;
         private int _arrangeGeneration;
         private int _extentHeight;
@@ -459,10 +462,14 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             viewportWidth = Math.Max(1, viewportWidth);
             var items = _owner._items;
             var itemsVersion = items.Version;
+            var itemSpacing = _owner.ItemSpacing;
+            var defaultPadding = _owner.ItemPadding;
 
             if (_layoutCacheValid &&
                 _layoutWidth == viewportWidth &&
                 _layoutItemsVersion == itemsVersion &&
+                _layoutItemSpacing == itemSpacing &&
+                _layoutDefaultPadding == defaultPadding &&
                 _documentLayouts.Count == items.Count &&
                 !HasDocumentVersionChanges(items, viewportWidth))
             {
@@ -471,7 +478,9 @@ public sealed partial class DocumentFlow : Visual, IScrollable
 
             _layoutWidth = viewportWidth;
             _layoutItemsVersion = itemsVersion;
-            RebuildLayouts(items, viewportWidth);
+            _layoutItemSpacing = itemSpacing;
+            _layoutDefaultPadding = defaultPadding;
+            RebuildLayouts(items, viewportWidth, itemSpacing, defaultPadding);
             _layoutCacheValid = true;
         }
 
@@ -515,7 +524,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             return false;
         }
 
-        private void RebuildLayouts(BindableList<DocumentFlowItem> items, int viewportWidth)
+        private void RebuildLayouts(BindableList<DocumentFlowItem> items, int viewportWidth, int itemSpacing, Thickness defaultPadding)
         {
             _documentLayouts.Clear();
             if (items.Count == 0)
@@ -531,7 +540,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
                 _documentOffsets = new int[items.Count + 1];
             }
 
-            var spacing = Math.Max(0, _owner.ItemSpacing);
+            var spacing = Math.Max(0, itemSpacing);
             _documentOffsets[0] = 0;
 
             var runningOffset = 0;
@@ -543,7 +552,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
                     throw new InvalidOperationException("DocumentFlowItem.Content cannot be null.");
                 }
 
-                var layout = BuildDocumentLayout(item, docIndex, viewportWidth);
+                var layout = BuildDocumentLayout(item, docIndex, viewportWidth, defaultPadding);
                 _documentLayouts.Add(layout);
 
                 runningOffset += layout.TotalHeight;
@@ -558,11 +567,11 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             _extentHeight = Math.Max(0, runningOffset);
         }
 
-        private DocumentLayout BuildDocumentLayout(DocumentFlowItem item, int docIndex, int viewportWidth)
+        private DocumentLayout BuildDocumentLayout(DocumentFlowItem item, int docIndex, int viewportWidth, Thickness defaultPadding)
         {
             var content = item.Content;
             var bubbleWidth = ResolveBubbleWidth(item, viewportWidth);
-            var padding = item.Padding ?? _owner.ItemPadding;
+            var padding = item.Padding ?? defaultPadding;
             var innerWidth = Math.Max(1, bubbleWidth - padding.Horizontal);
             var blockCount = content.BlockCount;
             var blocks = blockCount == 0 ? Array.Empty<BlockLayout>() : new BlockLayout[blockCount];

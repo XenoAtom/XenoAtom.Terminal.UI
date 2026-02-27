@@ -2,8 +2,6 @@ using System.Text;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Extensions.Markdown;
-using XenoAtom.Terminal.UI.Extensions.Markdown.Styling;
-using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
@@ -28,27 +26,6 @@ public sealed class MarkdownControlDemo : ControlsDemoBase
             {
                 MaxCodeBlockHeight = context.IsScreenshot ? 8 : 14,
                 WrapCodeBlocks = false,
-            },
-            RenderStyle = MarkdownStyle.Default with
-            {
-                LinkStyle = Style.None | TextStyle.Bold | TextStyle.Underline,
-                InlineCodeStyle = Style.None | TextStyle.Bold,
-                NoteAlert = MarkdownAlertStyle.Default with
-                {
-                    BorderStyle = Style.None | TextStyle.Bold,
-                },
-                TipAlert = MarkdownAlertStyle.Default with
-                {
-                    BorderStyle = Style.None | TextStyle.Bold,
-                },
-                WarningAlert = MarkdownAlertStyle.Default with
-                {
-                    BorderStyle = Style.None | TextStyle.Bold,
-                },
-                CautionAlert = MarkdownAlertStyle.Default with
-                {
-                    BorderStyle = Style.None | TextStyle.Bold,
-                },
             },
         };
 

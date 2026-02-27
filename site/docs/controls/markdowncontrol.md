@@ -53,9 +53,20 @@ var control = new MarkdownControl(markdown)
     {
         WrapCodeBlocks = false,
         MaxCodeBlockHeight = 14,
+        HeadingSpacingBefore = 0,
+        HeadingSpacingAfter = 1,
+        ParagraphSpacing = 1,
+        BlockSpacing = 1,
     }
 };
 ```
+
+Spacing defaults are intentionally compact for terminal density:
+
+- heading spacing before: `0`
+- heading spacing after: `1`
+- paragraph spacing: `1`
+- block spacing (tables/code/rules/alerts): `1`
 
 ## Styling markdown
 
@@ -74,8 +85,17 @@ var control = new MarkdownControl(markdown)
 };
 ```
 
+By default, `MarkdownControl` applies a theme-aware style profile:
+
+- headings use a warning/gold-like tone for better visual hierarchy
+- headings use bright yellow for better hierarchy
+- strong text uses the theme accent color
+- inline code uses bright red text with an adaptive tinted background
+- alert blocks (`NOTE/TIP/IMPORTANT/WARNING/CAUTION`) map to semantic theme tones (primary/success/accent/warning/error)
+
 ## Related
 
 - [DocumentFlow](documentflow.md)
 - [Paragraph](paragraph.md)
+- [MarkdownMarkupConverter](markdownmarkupconverter.md)
 - [MarkdownControl Specs](../specs/controls/markdowncontrol.md)

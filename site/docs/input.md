@@ -57,6 +57,18 @@ Controls opt in to focus by setting `Focusable = true`.
 
 If you implement a focusable control, use `HasFocus` / `HasFocusWithin` to render focus cues and to decide what keyboard behavior to enable.
 
+## Selection ownership (copy/paste UX)
+
+Several controls support text selection and copy (for example `TextBlock`, `Paragraph`, `LogControl`, and text editors).
+To keep copy behavior predictable, `TerminalApp` tracks a single **active selection owner**:
+
+- When you start a selection in a different control, the previous selection owner is asked to clear its selection.
+- Clicking a non-selectable surface clears the current selection.
+- `Ctrl+C` copies the active selection even if that control is not focused (useful for read-only visuals).
+
+Controls participate in this mechanism by implementing `ISelectionOwner` (see `src/XenoAtom.Terminal.UI/Input/ISelectionOwner.cs`).
+If a control should not participate, set its `IsSelectable` property to `false`.
+
 ## Routed events
 
 Terminal UI uses routed events so that containers can intercept input (preview) or react to child interactions (bubble).

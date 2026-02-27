@@ -16,7 +16,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// <summary>
 /// Represents a display-only paragraph control supporting style runs and hyperlink runs.
 /// </summary>
-public sealed partial class Paragraph : Visual
+public sealed partial class Paragraph : Visual, ISelectionOwner
 {
     private static readonly Rune Ellipsis = new(0x2026);
 
@@ -50,7 +50,7 @@ public sealed partial class Paragraph : Visual
         Trimming = TextTrimming.Clip;
         Runs = Array.Empty<StyledRun>();
         Hyperlinks = Array.Empty<HyperlinkRun>();
-        RegisterDynamicUpdate(static visual => ((Paragraph)visual).SynchronizeInteractionState());
+        IsSelectable = true;
     }
 
     /// <summary>
@@ -145,6 +145,12 @@ public sealed partial class Paragraph : Visual
     /// </summary>
     [Bindable]
     public partial Style PrefixStyle { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the paragraph participates in selection ownership.
+    /// </summary>
+    [Bindable]
+    public partial bool IsSelectable { get; set; }
 
     [Bindable]
     internal partial int InteractionVersion { get; set; }
@@ -472,11 +478,6 @@ public sealed partial class Paragraph : Visual
             _isSelecting = true;
         }
 
-        if (App is { } app && !ReferenceEquals(app.FocusedElement, this))
-        {
-            app.FocusedElement = this;
-        }
-
         e.Handled = true;
     }
 
@@ -526,24 +527,6 @@ public sealed partial class Paragraph : Visual
 
         _isSelecting = false;
         e.Handled = true;
-    }
-
-    /// <inheritdoc />
-    protected override void OnKeyDown(KeyEventArgs e)
-    {
-        if (!IsEnabled)
-        {
-            return;
-        }
-
-        if ((e.Modifiers & TerminalModifiers.Ctrl) != 0 && e.Char is TerminalChar.CtrlC)
-        {
-            if (TryGetSelectedText(out var selectedText))
-            {
-                App?.Terminal.Clipboard.TrySetText(selectedText);
-                e.Handled = true;
-            }
-        }
     }
 
     private ulong GetHyperlinkToken(CellBuffer buffer, string uri)
@@ -614,7 +597,8 @@ public sealed partial class Paragraph : Visual
 
         var firstPhysicalLine = true;
         var hardLineStart = 0;
-        while (hardLineStart <= span.Length)
+        var endsWithHardLineBreak = EndsWithHardLineBreak(span);
+        while (hardLineStart < span.Length)
         {
             if (!TryGetNextHardLine(span, hardLineStart, out var hardLineEnd, out var nextHardLineStart))
             {
@@ -679,6 +663,11 @@ public sealed partial class Paragraph : Visual
             }
 
             hardLineStart = nextHardLineStart;
+        }
+
+        if (endsWithHardLineBreak)
+        {
+            AppendLayoutLine(span.Length, 0, firstPhysicalLine, isLastInHardLine: true, width);
         }
 
         if (_layoutLineCount == 0)
@@ -757,6 +746,9 @@ public sealed partial class Paragraph : Visual
 
         return true;
     }
+
+    private static bool EndsWithHardLineBreak(ReadOnlySpan<char> text)
+        => !text.IsEmpty && (text[^1] == '\n' || text[^1] == '\r');
 
     private static bool TryGetNextWrapSlice(ReadOnlySpan<char> text, int start, int width, out int endExclusive, out int nextStart)
     {
@@ -1271,14 +1263,14 @@ public sealed partial class Paragraph : Visual
         return selectedText.Length > 0;
     }
 
-    private void SynchronizeInteractionState()
-    {
-        _ = HasFocus;
-        if (!HasFocus)
-        {
-            ClearSelection();
-        }
-    }
+    /// <inheritdoc />
+    public bool HasSelection => _selectionAnchor >= 0 && _selectionActive >= 0 && _selectionAnchor != _selectionActive;
+
+    /// <inheritdoc />
+    void ISelectionOwner.ClearSelection() => ClearSelection();
+
+    /// <inheritdoc />
+    public bool TryCopySelection(out string text) => TryGetSelectedText(out text);
 
     private void SetSelection(int anchor, int active)
     {
@@ -1292,6 +1284,7 @@ public sealed partial class Paragraph : Visual
 
         _selectionAnchor = normalizedAnchor;
         _selectionActive = normalizedActive;
+
         IncrementInteractionVersion();
     }
 
@@ -1305,6 +1298,7 @@ public sealed partial class Paragraph : Visual
 
         _selectionAnchor = -1;
         _selectionActive = -1;
+
         IncrementInteractionVersion();
     }
 

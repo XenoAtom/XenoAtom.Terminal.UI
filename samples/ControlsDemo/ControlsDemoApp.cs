@@ -124,17 +124,23 @@ internal static class ControlsDemoApp
             var colorScheme = colorSchemes.Items[colorSchemes.SelectedIndex];
             var theme = Theme.FromScheme(colorScheme);
 
-            return demo is null
-                ? new Center().Content("No demos found.")
-                : DemoPage.Build(demo, new DemoContext
-                {
-                    IsScreenshot = false,
-                    NavigateToDemoId = NavigateToId,
-                    Log = _ => { },
-                    Runtime = runtime,
-                    Theme = theme,
-                    ToastHost = toastHost,
-                });
+            using (BindingManager.Current.SuppressReadTracking())
+            using (BindingManager.Current.SuppressWriteTracking())
+            {
+                var visual = demo is null
+                    ? new Center().Content("No demos found.")
+                    : DemoPage.Build(demo, new DemoContext
+                    {
+                        IsScreenshot = false,
+                        NavigateToDemoId = NavigateToId,
+                        Log = _ => { },
+                        Runtime = runtime,
+                        Theme = theme,
+                        ToastHost = toastHost,
+                    });
+
+                return visual;
+            }
         }).Pad(1).Stretch();
 
 

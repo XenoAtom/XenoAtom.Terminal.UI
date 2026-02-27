@@ -125,11 +125,9 @@ public abstract partial class Splitter : Visual
             }
             else
             {
-                var w = Math.Max(0, maxW - bar);
-                var w1 = w / 2;
-                var w2 = w - w1;
-                first?.Measure(new LayoutConstraints(0, w1, constraints.MinHeight, maxH));
-                second?.Measure(new LayoutConstraints(0, w2, constraints.MinHeight, maxH));
+                var (firstSize, secondSize) = ComputeSplitSizes(maxW);
+                first?.Measure(new LayoutConstraints(0, firstSize, constraints.MinHeight, maxH));
+                second?.Measure(new LayoutConstraints(0, secondSize, constraints.MinHeight, maxH));
             }
 
             var desiredW = (first?.DesiredSize.Width ?? 0) + (second?.DesiredSize.Width ?? 0) + bar;
@@ -155,11 +153,9 @@ public abstract partial class Splitter : Visual
             }
             else
             {
-                var h = Math.Max(0, maxH - bar);
-                var h1 = h / 2;
-                var h2 = h - h1;
-                first?.Measure(new LayoutConstraints(constraints.MinWidth, maxW, 0, h1));
-                second?.Measure(new LayoutConstraints(constraints.MinWidth, maxW, 0, h2));
+                var (firstSize, secondSize) = ComputeSplitSizes(maxH);
+                first?.Measure(new LayoutConstraints(constraints.MinWidth, maxW, 0, firstSize));
+                second?.Measure(new LayoutConstraints(constraints.MinWidth, maxW, 0, secondSize));
             }
 
             var desiredW = Math.Max(first?.DesiredSize.Width ?? 0, second?.DesiredSize.Width ?? 0);
@@ -204,22 +200,9 @@ public abstract partial class Splitter : Visual
         }
 
         var bar = Math.Max(1, BarSize);
-        var ratio = Ratio;
-        if (!double.IsFinite(ratio))
-        {
-            ratio = 0.5;
-        }
-        ratio = Math.Clamp(ratio, 0.0, 1.0);
-
         if (SplitOrientation == Orientation.Horizontal)
         {
-            var available = Math.Max(0, finalRect.Width - bar);
-            var minFirst = Math.Clamp(MinFirst, 0, available);
-            var minSecond = Math.Clamp(MinSecond, 0, available);
-
-            var firstSize = (int)Math.Round(available * ratio);
-            firstSize = Math.Clamp(firstSize, minFirst, Math.Max(minFirst, available - minSecond));
-            var secondSize = Math.Max(0, available - firstSize);
+            var (firstSize, secondSize) = ComputeSplitSizes(finalRect.Width);
 
             var x = finalRect.X;
             first?.Arrange(new Rectangle(x, finalRect.Y, firstSize, finalRect.Height));
@@ -233,13 +216,7 @@ public abstract partial class Splitter : Visual
         }
 
         {
-            var available = Math.Max(0, finalRect.Height - bar);
-            var minFirst = Math.Clamp(MinFirst, 0, available);
-            var minSecond = Math.Clamp(MinSecond, 0, available);
-
-            var firstSize = (int)Math.Round(available * ratio);
-            firstSize = Math.Clamp(firstSize, minFirst, Math.Max(minFirst, available - minSecond));
-            var secondSize = Math.Max(0, available - firstSize);
+            var (firstSize, secondSize) = ComputeSplitSizes(finalRect.Height);
 
             var y = finalRect.Y;
             first?.Arrange(new Rectangle(finalRect.X, y, finalRect.Width, firstSize));
@@ -250,6 +227,27 @@ public abstract partial class Splitter : Visual
 
             second?.Arrange(new Rectangle(finalRect.X, y, finalRect.Width, secondSize));
         }
+    }
+
+    private (int First, int Second) ComputeSplitSizes(int totalSize)
+    {
+        var bar = Math.Max(1, BarSize);
+        var ratio = Ratio;
+        if (!double.IsFinite(ratio))
+        {
+            ratio = 0.5;
+        }
+
+        ratio = Math.Clamp(ratio, 0.0, 1.0);
+
+        var available = Math.Max(0, totalSize - bar);
+        var minFirst = Math.Clamp(MinFirst, 0, available);
+        var minSecond = Math.Clamp(MinSecond, 0, available);
+
+        var firstSize = (int)Math.Round(available * ratio);
+        firstSize = Math.Clamp(firstSize, minFirst, Math.Max(minFirst, available - minSecond));
+        var secondSize = Math.Max(0, available - firstSize);
+        return (firstSize, secondSize);
     }
 
     /// <inheritdoc/>

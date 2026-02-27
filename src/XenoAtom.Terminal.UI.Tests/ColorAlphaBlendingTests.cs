@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Reflection;
+using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Rendering;
 
 namespace XenoAtom.Terminal.UI.Tests;
@@ -56,6 +57,53 @@ public sealed class ColorAlphaBlendingTests
         AssertClose(expected.R, fg.R);
         AssertClose(expected.G, fg.G);
         AssertClose(expected.B, fg.B);
+    }
+
+    [TestMethod]
+    public void CellBuffer_Blends_Rgba_Background_Using_Clear_Background_When_Cell_Background_Is_Default()
+    {
+        var buffer = new CellBuffer(1, 1);
+        var clearBackground = Color.Rgb(25, 32, 54);
+        buffer.Clear(Style.None.WithBackground(clearBackground));
+
+        // Simulate a cell whose style lost an explicit background (e.g. default style in a subtree).
+        buffer.PushClip(new Rectangle(0, 0, 1, 1));
+        buffer.ClearCurrentClip(Style.None);
+        buffer.PopClip();
+
+        var overlay = Color.RgbA(255, 255, 255, 4);
+        buffer.SetCell(0, 0, new Rune('X'), Style.None.WithBackground(overlay));
+
+        var cells = (Style[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
+        Assert.IsTrue(cells[0].TryGetBackground(out var bg));
+        Assert.AreEqual(ColorKind.Rgb, bg.Kind);
+
+        var expected = BlendLinear(overlay, clearBackground);
+        AssertClose(expected.R, bg.R);
+        AssertClose(expected.G, bg.G);
+        AssertClose(expected.B, bg.B);
+    }
+
+    [TestMethod]
+    public void CellBuffer_Blends_Rgba_Background_Over_Basic16_Background()
+    {
+        var buffer = new CellBuffer(1, 1);
+        buffer.Clear();
+
+        var baseBackground = Color.Basic16(4);
+        buffer.SetCell(0, 0, new Rune('X'), Style.None.WithBackground(baseBackground));
+
+        var overlay = Color.RgbA(255, 255, 255, 64);
+        buffer.SetCell(0, 0, new Rune('X'), Style.None.WithBackground(overlay));
+
+        var cells = (Style[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
+        Assert.IsTrue(cells[0].TryGetBackground(out var bg));
+        Assert.AreEqual(ColorKind.Rgb, bg.Kind);
+
+        var expected = BlendLinear(overlay, baseBackground.ToRgb());
+        AssertClose(expected.R, bg.R);
+        AssertClose(expected.G, bg.G);
+        AssertClose(expected.B, bg.B);
     }
 
     private static void AssertClose(byte expected, byte actual)

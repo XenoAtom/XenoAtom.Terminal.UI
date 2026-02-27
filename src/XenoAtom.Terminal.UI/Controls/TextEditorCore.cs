@@ -145,6 +145,32 @@ internal sealed partial class TextEditorCore
 
     private bool HasSelection => _selectionAnchor >= 0 && _selectionEnd >= 0 && _selectionAnchor != _selectionEnd;
 
+    internal bool HasSelectionForSelectionOwner => HasSelection;
+
+    internal void ClearSelectionForSelectionOwner()
+    {
+        if (!HasSelection)
+        {
+            return;
+        }
+
+        ClearSelection();
+        IncrementVersion();
+    }
+
+    internal bool TryGetSelectionText(out string text)
+    {
+        var span = GetSelectedTextSpan(GetText().AsSpan());
+        if (span.IsEmpty)
+        {
+            text = string.Empty;
+            return false;
+        }
+
+        text = span.ToString();
+        return true;
+    }
+
     public bool UpdateViewport(Rectangle contentRect)
     {
         var width = Math.Max(0, contentRect.Width);

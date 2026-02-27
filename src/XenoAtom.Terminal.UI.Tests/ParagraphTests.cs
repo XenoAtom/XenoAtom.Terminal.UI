@@ -112,6 +112,28 @@ public sealed class ParagraphTests
     }
 
     [TestMethod]
+    public void Paragraph_Wrap_DoesNotAppend_Implicit_Trailing_Blank_Line()
+    {
+        var paragraph = new Paragraph("single line")
+            .Wrap(true)
+            .HorizontalAlignment(Align.Stretch);
+
+        paragraph.Measure(new LayoutConstraints(0, 40, 0, LayoutConstants.Infinite));
+        Assert.AreEqual(1, paragraph.DesiredSize.Height);
+    }
+
+    [TestMethod]
+    public void Paragraph_Wrap_Preserves_Explicit_Trailing_NewLine()
+    {
+        var paragraph = new Paragraph("single line\n")
+            .Wrap(true)
+            .HorizontalAlignment(Align.Stretch);
+
+        paragraph.Measure(new LayoutConstraints(0, 40, 0, LayoutConstants.Infinite));
+        Assert.AreEqual(2, paragraph.DesiredSize.Height);
+    }
+
+    [TestMethod]
     public void Paragraph_MouseDragSelection_CtrlC_CopiesSelectedText()
     {
         var paragraph = new Paragraph("hello world").HorizontalAlignment(Align.Stretch);
@@ -251,6 +273,24 @@ public sealed class ParagraphTests
         Assert.AreEqual("seed", driver.Terminal.Clipboard.Text);
     }
 
+    [TestMethod]
+    public void Paragraph_Selection_IsExclusive_Across_Paragraphs()
+    {
+        var first = new Paragraph("first paragraph world").HorizontalAlignment(Align.Stretch);
+        var second = new Paragraph("second paragraph value").HorizontalAlignment(Align.Stretch);
+        var root = new VStack(first, second).Spacing(1).HorizontalAlignment(Align.Stretch);
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 8));
+        driver.Tick();
+
+        DragSelectToken(driver, first, "world");
+        Assert.IsTrue(HasSelection(first));
+
+        DragSelectToken(driver, second, "value");
+        Assert.IsFalse(HasSelection(first), "Selecting text in a different paragraph should clear previous selections.");
+        Assert.IsTrue(HasSelection(second));
+    }
+
     private static string GetRowText(CellBuffer buffer, int row)
     {
         var width = buffer.Width;
@@ -274,5 +314,48 @@ public sealed class ParagraphTests
         }
 
         return sb.ToString();
+    }
+
+    private static void DragSelectToken(TerminalAppTestDriver driver, Paragraph paragraph, string token)
+    {
+        var text = paragraph.Text ?? string.Empty;
+        var start = text.IndexOf(token, StringComparison.Ordinal);
+        Assert.IsTrue(start >= 0, $"Token `{token}` was not found in paragraph text.");
+
+        var y = paragraph.Bounds.Y;
+        var startX = paragraph.Bounds.X + start;
+        var endX = startX + token.Length;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Down,
+            Button = TerminalMouseButton.Left,
+            X = startX,
+            Y = y,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Drag,
+            Button = TerminalMouseButton.Left,
+            X = endX,
+            Y = y,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Up,
+            Button = TerminalMouseButton.Left,
+            X = endX,
+            Y = y,
+        });
+        driver.Tick();
+    }
+
+    private static bool HasSelection(Paragraph paragraph)
+    {
+        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var type = typeof(Paragraph);
+        var anchor = (int)(type.GetField("_selectionAnchor", flags)?.GetValue(paragraph) ?? -1);
+        var active = (int)(type.GetField("_selectionActive", flags)?.GetValue(paragraph) ?? -1);
+        return anchor >= 0 && active >= 0 && anchor != active;
     }
 }

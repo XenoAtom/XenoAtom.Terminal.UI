@@ -76,7 +76,7 @@ public enum DataGridEditMode
 /// <summary>
 /// A high-performance, scrollable, virtualized, data-bound grid control.
 /// </summary>
-public sealed partial class DataGridControl : Visual, IScrollable
+public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwner
 {
     private const int AutoSizeSampleRowCount = 64;
 
@@ -153,6 +153,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
         Focusable = true;
         HorizontalAlignment = Align.Stretch;
         VerticalAlignment = Align.Stretch;
+        IsSelectable = true;
 
         _scroll = new ScrollModel(this);
         _columns = new BindableList<DataGridColumn>(
@@ -444,6 +445,12 @@ public sealed partial class DataGridControl : Visual, IScrollable
     public partial DataGridSelectionMode SelectionMode { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the grid participates in selection ownership.
+    /// </summary>
+    [Bindable]
+    public partial bool IsSelectable { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the grid is read-only (disables editing).
     /// </summary>
     [Bindable]
@@ -460,6 +467,44 @@ public sealed partial class DataGridControl : Visual, IScrollable
     /// </summary>
     [Bindable]
     public partial int SelectedRow { get; set; }
+
+    /// <inheritdoc />
+    public bool HasSelection => IsTableSelected || SelectedRow >= 0;
+
+    void ISelectionOwner.ClearSelection()
+    {
+        VerifyAccess();
+
+        if (!HasSelection)
+        {
+            return;
+        }
+
+        IsTableSelected = false;
+        SelectedRow = -1;
+        App?.RequestRender();
+    }
+
+    /// <inheritdoc />
+    public bool TryCopySelection(out string text)
+    {
+        VerifyAccess();
+
+        if (!HasSelection)
+        {
+            text = string.Empty;
+            return false;
+        }
+
+        var snapshot = GetSnapshot();
+        if (snapshot is null)
+        {
+            text = string.Empty;
+            return false;
+        }
+
+        return TryGetSelectionText(snapshot, out text);
+    }
 
     /// <summary>
     /// Gets or sets the edit mode.
@@ -3152,10 +3197,19 @@ public sealed partial class DataGridControl : Visual, IScrollable
 
     private void CopySelectionToClipboard(IDataGridViewSnapshot snapshot)
     {
+        if (TryGetSelectionText(snapshot, out var text))
+        {
+            App?.Terminal.Clipboard.TrySetText(text);
+        }
+    }
+
+    private bool TryGetSelectionText(IDataGridViewSnapshot snapshot, out string text)
+    {
         var cols = EnsureResolvedColumns(snapshot, GetVisibleColumnCount(snapshot));
         if (cols.Count == 0 || snapshot.RowCount <= 0)
         {
-            return;
+            text = string.Empty;
+            return false;
         }
 
         var culture = GetCulture();
@@ -3181,7 +3235,8 @@ public sealed partial class DataGridControl : Visual, IScrollable
             var rowIndex = SelectedRow >= 0 ? SelectedRow : CurrentCell.Row;
             if ((uint)rowIndex >= (uint)snapshot.RowCount)
             {
-                return;
+                text = string.Empty;
+                return false;
             }
 
             var rowModel = snapshot.GetRowModel(rowIndex);
@@ -3192,23 +3247,26 @@ public sealed partial class DataGridControl : Visual, IScrollable
             var cell = CurrentCell;
             if (cell == DataGridCell.None || (uint)cell.Row >= (uint)snapshot.RowCount || (uint)cell.Column >= (uint)cols.Count)
             {
-                return;
+                text = string.Empty;
+                return false;
             }
 
             var rowModel = snapshot.GetRowModel(cell.Row);
             var c = cols[cell.Column];
-            var text = c.Column is not null
+            var cellText = c.Column is not null
                 ? c.Column.FormatValue(this, rowModel, culture)
                 : ValueStringFormatter.ToString(c.SchemaAccessor.GetValueAsObject(rowModel), culture);
-            sb.Append(text);
+            sb.Append(cellText);
         }
 
         if (sb.Length == 0)
         {
-            return;
+            text = string.Empty;
+            return false;
         }
 
-        App?.Terminal.Clipboard.TrySetText(sb.ToString());
+        text = sb.ToString();
+        return true;
     }
 
     private void AppendRow(List<ResolvedColumn> cols, object? rowModel, CultureInfo culture, StringBuilder sb, bool isHeader)

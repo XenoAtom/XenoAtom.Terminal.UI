@@ -5,6 +5,7 @@
 using Markdig;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Extensions.Markdown.Styling;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Extensions.Markdown;
 
@@ -32,7 +33,8 @@ public sealed class MarkdownDocumentContent : IDocumentFlowContent
         markdown ??= string.Empty;
         var effectivePipeline = pipeline ?? MarkdownDefaults.Pipeline;
         var effectiveOptions = options ?? MarkdownRenderOptions.Default;
-        var effectiveStyle = style ?? MarkdownStyle.Default;
+        var effectiveSourceStyle = style ?? MarkdownStyle.Default;
+        var effectiveStyle = MarkdownDefaults.ResolveStyle(Theme.Default, effectiveSourceStyle);
 
         var document = Markdig.Markdown.Parse(markdown, effectivePipeline);
         var builder = new MarkdownDocumentBuilder(effectiveStyle, effectiveOptions, baseUri);
@@ -48,4 +50,3 @@ public sealed class MarkdownDocumentContent : IDocumentFlowContent
     /// <inheritdoc />
     public DocumentFlowBlock GetBlock(int index) => _blocks[index];
 }
-

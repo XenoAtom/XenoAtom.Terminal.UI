@@ -41,6 +41,7 @@ internal static class ScreenshotExport
         ["LogControlDemo"] = "logcontrol",
         ["MarkupDemo"] = "markup",
         ["MarkdownControlDemo"] = "markdowncontrol",
+        ["MarkdownMarkupConverterDemo"] = "markdownmarkupconverter",
         ["MaskedInputDemo"] = "maskedinput",
         ["MenuBarDemo"] = "menubar",
         ["NumberBoxDemo"] = "numberbox",

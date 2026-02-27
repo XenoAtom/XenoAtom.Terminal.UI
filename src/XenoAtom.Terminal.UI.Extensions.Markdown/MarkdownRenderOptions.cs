@@ -50,5 +50,34 @@ public sealed record MarkdownRenderOptions
     /// Gets the default table style for Markdown tables.
     /// </summary>
     public TableStyle TableStyle { get; init; } = TableStyle.RoundedGrid;
-}
 
+    /// <summary>
+    /// Gets the number of blank rows inserted before non-initial headings.
+    /// </summary>
+    public int HeadingSpacingBefore { get; init; }
+
+    /// <summary>
+    /// Gets the number of blank rows inserted after headings.
+    /// </summary>
+    public int HeadingSpacingAfter { get; init; } = 1;
+
+    /// <summary>
+    /// Gets the number of blank rows inserted after paragraphs.
+    /// </summary>
+    public int ParagraphSpacing { get; init; } = 1;
+
+    /// <summary>
+    /// Gets the number of blank rows inserted after non-paragraph block elements (tables, code blocks, rules, alerts).
+    /// </summary>
+    public int BlockSpacing { get; init; } = 1;
+
+    /// <summary>
+    /// Gets the number of blank rows inserted after top-level block quotes.
+    /// </summary>
+    public int QuoteSpacingAfter { get; init; } = 1;
+
+    /// <summary>
+    /// Gets the number of blank rows inserted after top-level lists.
+    /// </summary>
+    public int ListSpacingAfter { get; init; } = 1;
+}
