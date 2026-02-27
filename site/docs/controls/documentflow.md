@@ -65,7 +65,8 @@ var document = new FlowDocument()
 `DocumentFlow` follows the tail by default for append-heavy feeds.
 
 ```csharp
-flow.ScrollToTail();
+flow.ScrollToTail();       // enable follow-tail and jump to the end
+flow.ScrollToTail(false);  // disable follow-tail (keeps current viewport)
 ```
 
 Use `MaxCapacity` to keep memory bounded for long-running sessions.

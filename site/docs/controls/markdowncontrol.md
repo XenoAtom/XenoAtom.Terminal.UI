@@ -29,6 +29,8 @@ Paragraph with **strong** text and a [link](https://example.com).
 var control = new MarkdownControl(markdown);
 ```
 
+`MarkdownControl` disables `DocumentFlow` follow-tail by default so documents open from the top.
+
 ## Pipeline and rendering options
 
 `MarkdownControl` uses a default pipeline supporting CommonMark plus tables and alert blocks.
@@ -77,4 +79,3 @@ var control = new MarkdownControl(markdown)
 - [DocumentFlow](documentflow.md)
 - [Paragraph](paragraph.md)
 - [MarkdownControl Specs](../specs/controls/markdowncontrol.md)
-

@@ -89,10 +89,26 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     /// <summary>
     /// Scrolls to the tail and enables follow-tail mode.
     /// </summary>
-    public void ScrollToTail()
+    public void ScrollToTail() => ScrollToTail(followTail: true);
+
+    /// <summary>
+    /// Enables or disables follow-tail mode.
+    /// </summary>
+    /// <param name="followTail">
+    /// <see langword="true"/> to scroll to the tail and keep following appended items;
+    /// <see langword="false"/> to disable follow-tail mode.
+    /// </param>
+    public void ScrollToTail(bool followTail)
     {
         VerifyAccess();
-        FollowTail = true;
+
+        FollowTail = followTail;
+        if (!followTail)
+        {
+            _pendingFollowTailScroll = false;
+            return;
+        }
+
         _pendingFollowTailScroll = true;
         ApplyFollowTailIfNeeded();
     }

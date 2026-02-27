@@ -153,6 +153,7 @@ public sealed class DocumentFlow : Visual, IScrollable
     // Live feed behavior.
     public bool FollowTail { get; }
     public void ScrollToTail();
+    public void ScrollToTail(bool followTail);
 
     // Capacity (optional, similar to LogControl).
     public int MaxCapacity { get; set; } // 0 disables trimming.

@@ -250,6 +250,20 @@ public sealed class MarkdownControlTests
     }
 
     [TestMethod]
+    public void MarkdownControl_DoesNotFollowTail_ByDefault()
+    {
+        var markdown = string.Join("\n\n", Enumerable.Range(0, 80).Select(static i => $"Paragraph {i:00}"));
+        var control = new MarkdownControl(markdown);
+
+        using var driver = new TerminalAppTestDriver(control, TerminalHostKind.Fullscreen, new TerminalSize(80, 10));
+        driver.Tick();
+
+        var flow = GetFlow(control);
+        Assert.IsFalse(flow.FollowTail);
+        Assert.AreEqual(0, flow.Scroll.OffsetY, "Markdown should open at the top by default.");
+    }
+
+    [TestMethod]
     public void MarkdownControl_MouseWheel_Scrolls_DocumentFlow_Content()
     {
         var markdown = string.Join("\n\n", Enumerable.Range(0, 40).Select(static i => $"Paragraph {i:00}"));

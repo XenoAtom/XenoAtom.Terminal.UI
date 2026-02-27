@@ -75,6 +75,33 @@ public sealed class DocumentFlowTests
     }
 
     [TestMethod]
+    public void DocumentFlow_ScrollToTail_False_Disables_FollowTail_Without_Scrolling()
+    {
+        var flow = new DocumentFlow();
+        for (var i = 0; i < 40; i++)
+        {
+            flow.Items.Add(CreateItem($"Item {i}"));
+        }
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(40, 8));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Home });
+        driver.Tick();
+        Assert.AreEqual(0, flow.Scroll.OffsetY);
+
+        flow.ScrollToTail(false);
+        driver.Tick();
+        Assert.IsFalse(flow.FollowTail);
+        Assert.AreEqual(0, flow.Scroll.OffsetY, "Disabling follow-tail should not force scrolling to the end.");
+
+        flow.Items.Add(CreateItem("Item 40"));
+        driver.Tick();
+        Assert.AreEqual(0, flow.Scroll.OffsetY, "Appending while follow-tail is disabled should keep the viewport position.");
+        Assert.IsFalse(flow.FollowTail);
+    }
+
+    [TestMethod]
     public void DocumentFlow_MaxCapacity_Trimming_Preserves_Viewport_When_Not_Pinned()
     {
         var flow = new DocumentFlow().MaxCapacity(0);
