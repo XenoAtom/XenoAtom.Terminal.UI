@@ -17,7 +17,7 @@ public sealed class DataGridDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
-        _ = context;
+        context.AllowPageScrollViewer = false;
 
         var showHeader = new State<bool>(true);
         var showRowAnchor = new State<bool>(true);

@@ -14,6 +14,8 @@ public sealed class DocumentFlowDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
+        context.AllowPageScrollViewer = false;
+
         var itemSpacing = new State<int>(1);
         var itemPadding = new State<int>(1);
         var maxCapacity = new State<int>(200);

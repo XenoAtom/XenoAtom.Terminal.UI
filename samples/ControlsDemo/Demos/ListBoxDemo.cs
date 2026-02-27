@@ -12,6 +12,8 @@ public sealed class ListBoxDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
+        context.AllowPageScrollViewer = false;
+
         var selected = new State<int>(1);
 
         var list = new ListBox<string>().SelectedIndex(selected);

@@ -15,6 +15,14 @@ public sealed class DemoContext
     /// </remarks>
     public bool IsScreenshot { get; init; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the demo page host should wrap this demo in a page-level <see cref="ScrollViewer"/>.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to <see langword="false"/> to avoid nested-scroll conflicts with controls that already handle scrolling.
+    /// </remarks>
+    public bool AllowPageScrollViewer { get; set; }
+
     public required Action<string> Log { get; init; }
 
     public required Action<string> NavigateToDemoId { get; init; }

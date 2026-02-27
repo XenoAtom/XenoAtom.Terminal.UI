@@ -33,7 +33,7 @@ internal static class DemoPage
             logControl.AppendMarkupLine(prefix + message);
         }
 
-        var content = demo.Build(new DemoContext
+        var demoContext = new DemoContext
         {
             IsScreenshot = context.IsScreenshot,
             Log = AppendLog,
@@ -41,21 +41,9 @@ internal static class DemoPage
             Runtime = context.Runtime,
             Theme = context.Theme,
             ToastHost = context.ToastHost
-        });
+        };
 
-        var link = BuildSourceLink(meta);
-        var toggleLog = new Button("Logs")
-            .Click(() => showLog.Value = !showLog.Value);
-
-        var header = new Header()
-            .Left(meta.Name)
-            .Right(new HStack(link, toggleLog).Spacing(1));
-
-        // Keep horizontal scrolling disabled for the overall demo page so that text controls can reflow (wrap)
-        // as the terminal is resized. Individual demos can still opt into horizontal scrolling by using their own
-        // ScrollViewer instances.
-        var demoContent = new ScrollViewer(content)
-            .HorizontalScrollEnabled(false);
+        var content = demo.Build(demoContext);
 
         Visual? logPanel = null;
         var logRegion = new ComputedVisual(() =>
@@ -68,6 +56,20 @@ internal static class DemoPage
             logPanel ??= BuildLogPanel(logControl);
             return logPanel;
         });
+
+        var link = BuildSourceLink(meta);
+        var toggleLog = new Button("Logs")
+            .Click(() => showLog.Value = !showLog.Value);
+
+        var header = new Header()
+            .Left(meta.Name)
+            .Right(new HStack(link, toggleLog).Spacing(1));
+
+        // Page-level scrolling is opt-in per demo to avoid nested-scroll conflicts with controls that already
+        // provide their own scrolling behavior (e.g. DocumentFlow, LogControl, MarkdownControl, ScrollViewer).
+        var demoContent = demoContext.AllowPageScrollViewer
+            ? new ScrollViewer(content).HorizontalScrollEnabled(false)
+            : content;
 
         return new DockLayout()
             .Top(new VStack(header, new Rule()).Spacing(0))

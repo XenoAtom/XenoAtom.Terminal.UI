@@ -16,7 +16,7 @@ public sealed class WelcomeDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
-        _ = context;
+        context.AllowPageScrollViewer = true;
 
         var theme = context.Theme;
 

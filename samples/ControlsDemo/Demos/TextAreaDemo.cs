@@ -12,6 +12,8 @@ public sealed class TextAreaDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
+        context.AllowPageScrollViewer = false;
+
         var text = new State<string?>("Line 1\nLine 2\nLine 3");
 
         return new VStack(

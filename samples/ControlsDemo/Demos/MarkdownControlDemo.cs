@@ -16,6 +16,8 @@ public sealed class MarkdownControlDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
+        context.AllowPageScrollViewer = false;
+
         var markdown = LoadMarkdownSample();
 
         var control = new MarkdownControl(markdown)
@@ -88,4 +90,3 @@ public sealed class MarkdownControlDemo : ControlsDemoBase
         return File.Exists(repoPath) ? repoPath : null;
     }
 }
-

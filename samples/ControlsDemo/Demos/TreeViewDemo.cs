@@ -13,6 +13,8 @@ public sealed class TreeViewDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
+        context.AllowPageScrollViewer = false;
+
         static TreeView CreateTree()
         {
             var tree = new TreeView().MinHeight(12);

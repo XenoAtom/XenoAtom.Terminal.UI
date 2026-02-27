@@ -14,6 +14,8 @@ public sealed class LogControlDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
+        context.AllowPageScrollViewer = false;
+
         var nextId = new State<int>(1);
         var wrap = new State<bool>(true);
         var lineToAdd = new State<int>(5);

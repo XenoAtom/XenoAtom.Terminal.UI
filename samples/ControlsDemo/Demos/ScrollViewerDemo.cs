@@ -12,6 +12,8 @@ public sealed class ScrollViewerDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
+        context.AllowPageScrollViewer = false;
+
         var content = new VStack().Spacing(0);
         for (var i = 0; i < 100; i++)
         {

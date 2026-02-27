@@ -13,6 +13,8 @@ public sealed class SelectionListDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
+        context.AllowPageScrollViewer = false;
+
         var list = new SelectionList<string>()
             .AddItem("Alpha")
             .AddItem("Beta")

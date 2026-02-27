@@ -12,6 +12,8 @@ public sealed class RadioButtonDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
+        context.AllowPageScrollViewer = false;
+
         // For list-like scenarios, RadioButtonList provides arrow-key navigation and ScrollViewer integration.
         var selected = new State<int>(0);
         var list = new RadioButtonList<string>().SelectedIndex(selected);

@@ -12,6 +12,8 @@ public sealed class OptionListDemo : ControlsDemoBase
 
     public override Visual Build(DemoContext context)
     {
+        context.AllowPageScrollViewer = false;
+
         var selected = new State<int>(0);
 
         var list = new OptionList<OptionListItem>()
