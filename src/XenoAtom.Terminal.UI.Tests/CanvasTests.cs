@@ -42,6 +42,34 @@ public sealed class CanvasTests
     }
 
     [TestMethod]
+    public void Canvas_FinePixels_Renders_DotPatterns_For_DefaultRune_Lines()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(20, 6));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var canvas = new Canvas()
+            .UseFinePixels(true)
+            .MinWidth(20)
+            .MaxWidth(20)
+            .MinHeight(6)
+            .MaxHeight(6)
+            .Painter(ctx =>
+            {
+                ctx.Clear(new Rune(' '), Style.None);
+                ctx.DrawLine(1, 1, 18, 4, Style.None);
+            })
+            .Style(CanvasStyle.Default with { DefaultRune = new Rune('█') });
+
+        session.Instance.Write(canvas);
+
+        var screen = new AnsiTestScreen(20, 6);
+        screen.Apply(backend.GetOutText());
+        var rendered = screen.GetText();
+
+        Assert.IsTrue(rendered.Any(c => c >= 0x2800 && c <= 0x28FF), "Expected Unicode dot-pattern glyphs in fine pixel mode.");
+    }
+
+    [TestMethod]
     public void Canvas_Renders_Circle()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(11, 7));

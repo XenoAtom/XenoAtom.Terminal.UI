@@ -26,6 +26,10 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// </remarks>
 public sealed partial class Canvas : Visual
 {
+    private byte[]? _finePixelMask;
+    private int _finePixelMaskWidth;
+    private int _finePixelMaskHeight;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="Canvas"/> class.
     /// </summary>
@@ -53,6 +57,19 @@ public sealed partial class Canvas : Visual
     /// </remarks>
     [Bindable]
     public partial Delegator<Action<CanvasContext>> Painter { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether canvas primitives should render using a fine (sub-cell) dot grid.
+    /// </summary>
+    /// <remarks>
+    /// When enabled, primitives that use the default rune (e.g. line/circle overloads without an explicit rune) are
+    /// rasterized using a 2×4 dot grid per cell and emitted as Unicode dot-pattern glyphs.
+    /// Cell-based operations such as <see cref="CanvasContext.FillRect(int,int,int,int,Rune,Style)"/> and
+    /// <see cref="CanvasContext.WriteText(int,int,ReadOnlySpan{char},Style)"/>
+    /// remain cell-based.
+    /// </remarks>
+    [Bindable]
+    public partial bool UseFinePixels { get; set; }
 
     /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
@@ -82,8 +99,30 @@ public sealed partial class Canvas : Visual
 
         var theme = GetTheme();
         var style = GetStyle<CanvasStyle>();
-        var ctx = new CanvasContext(buffer, rect, style.ResolveDefaultStyle(theme), style.DefaultRune);
+        var useFinePixels = UseFinePixels;
+        byte[]? finePixelMask = null;
+        if (useFinePixels)
+        {
+            finePixelMask = EnsureFinePixelMask(rect.Width, rect.Height);
+            Array.Clear(finePixelMask);
+        }
+
+        var ctx = new CanvasContext(buffer, rect, style.ResolveDefaultStyle(theme), style.DefaultRune, finePixelMask);
         painter(ctx);
+    }
+
+    private byte[] EnsureFinePixelMask(int width, int height)
+    {
+        width = Math.Max(0, width);
+        height = Math.Max(0, height);
+        if (_finePixelMask is null || _finePixelMaskWidth != width || _finePixelMaskHeight != height)
+        {
+            _finePixelMask = width <= 0 || height <= 0 ? Array.Empty<byte>() : new byte[width * height];
+            _finePixelMaskWidth = width;
+            _finePixelMaskHeight = height;
+        }
+
+        return _finePixelMask;
     }
 }
 
@@ -96,13 +135,15 @@ public readonly struct CanvasContext
     private readonly Rectangle _bounds;
     private readonly Style _defaultStyle;
     private readonly Rune _defaultRune;
+    private readonly byte[]? _finePixelMask;
 
-    internal CanvasContext(CellBuffer buffer, Rectangle bounds, Style defaultStyle, Rune defaultRune)
+    internal CanvasContext(CellBuffer buffer, Rectangle bounds, Style defaultStyle, Rune defaultRune, byte[]? finePixelMask)
     {
         _buffer = buffer;
         _bounds = bounds;
         _defaultStyle = defaultStyle;
         _defaultRune = defaultRune;
+        _finePixelMask = finePixelMask;
     }
 
     /// <summary>
@@ -143,6 +184,13 @@ public readonly struct CanvasContext
             return;
         }
 
+        if (IsFineRasterCandidate(rune))
+        {
+            SetFinePixelCenter(x, y, style);
+            return;
+        }
+
+        ClearFineCell(x, y);
         _buffer.SetCell(_bounds.X + x, _bounds.Y + y, rune, style);
     }
 
@@ -174,6 +222,12 @@ public readonly struct CanvasContext
             return;
         }
 
+        if (IsFineRasterCandidate(rune))
+        {
+            DrawFineLine(x, y, x + length - 1, y, style);
+            return;
+        }
+
         for (var i = 0; i < length; i++)
         {
             SetPixel(x + i, y, rune, style);
@@ -200,6 +254,12 @@ public readonly struct CanvasContext
             return;
         }
 
+        if (IsFineRasterCandidate(rune))
+        {
+            DrawFineLine(x, y, x, y + length - 1, style);
+            return;
+        }
+
         for (var i = 0; i < length; i++)
         {
             SetPixel(x, y + i, rune, style);
@@ -221,6 +281,12 @@ public readonly struct CanvasContext
     /// </summary>
     public void DrawLine(int x0, int y0, int x1, int y1, Rune rune, Style style)
     {
+        if (IsFineRasterCandidate(rune))
+        {
+            DrawFineLine(x0, y0, x1, y1, style);
+            return;
+        }
+
         var dx = Math.Abs(x1 - x0);
         var sx = x0 < x1 ? 1 : -1;
         var dy = -Math.Abs(y1 - y0);
@@ -368,7 +434,15 @@ public readonly struct CanvasContext
         {
             for (var xx = 0; xx < width; xx++)
             {
-                SetPixel(x + xx, y + yy, rune, style);
+                var px = x + xx;
+                var py = y + yy;
+                if ((uint)px >= (uint)_bounds.Width || (uint)py >= (uint)_bounds.Height)
+                {
+                    continue;
+                }
+
+                ClearFineCell(px, py);
+                _buffer.SetCell(_bounds.X + px, _bounds.Y + py, rune, style);
             }
         }
     }
@@ -390,6 +464,12 @@ public readonly struct CanvasContext
     {
         if (radius < 0)
         {
+            return;
+        }
+
+        if (IsFineRasterCandidate(rune))
+        {
+            DrawFineCircle(centerX, centerY, radius, style);
             return;
         }
 
@@ -446,6 +526,7 @@ public readonly struct CanvasContext
             slice = slice[..maxWidth];
         }
 
+        ClearFineSpan(x, y, GetCellWidth(slice, maxWidth));
         _buffer.WriteText(_bounds.X + x, _bounds.Y + y, slice, style);
     }
 
@@ -466,5 +547,237 @@ public readonly struct CanvasContext
         SetPixel(cx - y, cy - x, rune, style);
         SetPixel(cx + y, cy - x, rune, style);
         SetPixel(cx + x, cy - y, rune, style);
+    }
+
+    private bool IsFineRasterCandidate(Rune rune)
+        => _finePixelMask is not null && rune.Value == _defaultRune.Value;
+
+    private void ClearFineCell(int x, int y)
+    {
+        var mask = _finePixelMask;
+        if (mask is null)
+        {
+            return;
+        }
+
+        var index = y * _bounds.Width + x;
+        if ((uint)index >= (uint)mask.Length)
+        {
+            return;
+        }
+
+        mask[index] = 0;
+    }
+
+    private void ClearFineSpan(int x, int y, int length)
+    {
+        var mask = _finePixelMask;
+        if (mask is null || length <= 0 || (uint)y >= (uint)_bounds.Height)
+        {
+            return;
+        }
+
+        var start = Math.Clamp(x, 0, _bounds.Width - 1);
+        var endExclusive = Math.Clamp(x + length, 0, _bounds.Width);
+        var count = endExclusive - start;
+        if (count <= 0)
+        {
+            return;
+        }
+
+        Array.Clear(mask, y * _bounds.Width + start, count);
+    }
+
+    private void SetFinePixelCenter(int x, int y, Style style)
+        => SetFineDot(x * 2 + 1, y * 4 + 2, style);
+
+    private void SetFineDot(int dotX, int dotY, Style style)
+    {
+        var mask = _finePixelMask;
+        if (mask is null)
+        {
+            return;
+        }
+
+        var width = _bounds.Width;
+        var height = _bounds.Height;
+        if (width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        var maxDotX = width * 2;
+        var maxDotY = height * 4;
+        if ((uint)dotX >= (uint)maxDotX || (uint)dotY >= (uint)maxDotY)
+        {
+            return;
+        }
+
+        var cellX = dotX >> 1;
+        var cellY = dotY >> 2;
+        if ((uint)cellX >= (uint)width || (uint)cellY >= (uint)height)
+        {
+            return;
+        }
+
+        var localX = dotX & 1;
+        var localY = dotY & 3;
+        var bit = GetDotBit(localX, localY);
+
+        var index = cellY * width + cellX;
+        var next = (byte)(mask[index] | bit);
+        if (next == mask[index])
+        {
+            return;
+        }
+
+        mask[index] = next;
+        _buffer.SetCell(_bounds.X + cellX, _bounds.Y + cellY, new Rune(0x2800 + next), style);
+    }
+
+    private static byte GetDotBit(int localX, int localY)
+    {
+        // Dot mapping for Unicode 8-dot patterns (2×4 grid):
+        // left column:  y=0..3 => 1,2,3,7
+        // right column: y=0..3 => 4,5,6,8
+        return (localX, localY) switch
+        {
+            (0, 0) => 0b0000_0001,
+            (0, 1) => 0b0000_0010,
+            (0, 2) => 0b0000_0100,
+            (0, 3) => 0b0100_0000,
+            (1, 0) => 0b0000_1000,
+            (1, 1) => 0b0001_0000,
+            (1, 2) => 0b0010_0000,
+            (1, 3) => 0b1000_0000,
+            _ => 0,
+        };
+    }
+
+    private void DrawFineLine(int x0, int y0, int x1, int y1, Style style)
+    {
+        var dx0 = x0 * 2 + 1;
+        var dy0 = y0 * 4 + 2;
+        var dx1 = x1 * 2 + 1;
+        var dy1 = y1 * 4 + 2;
+
+        var dx = Math.Abs(dx1 - dx0);
+        var sx = dx0 < dx1 ? 1 : -1;
+        var dy = -Math.Abs(dy1 - dy0);
+        var sy = dy0 < dy1 ? 1 : -1;
+        var err = dx + dy;
+
+        while (true)
+        {
+            SetFineDot(dx0, dy0, style);
+            if (dx0 == dx1 && dy0 == dy1)
+            {
+                break;
+            }
+
+            var e2 = 2 * err;
+            if (e2 >= dy)
+            {
+                err += dy;
+                dx0 += sx;
+            }
+            if (e2 <= dx)
+            {
+                err += dx;
+                dy0 += sy;
+            }
+        }
+    }
+
+    private void DrawFineCircle(int centerX, int centerY, int radius, Style style)
+    {
+        if (radius == 0)
+        {
+            SetFinePixelCenter(centerX, centerY, style);
+            return;
+        }
+
+        var cx = centerX * 2 + 1;
+        var cy = centerY * 4 + 2;
+        var rx = radius * 2;
+        var ry = radius * 4;
+        if (rx <= 0 || ry <= 0)
+        {
+            return;
+        }
+
+        var rxSq = (double)rx * rx;
+        var rySq = (double)ry * ry;
+        var twoRxSq = 2.0 * rxSq;
+        var twoRySq = 2.0 * rySq;
+
+        var x = 0;
+        var y = ry;
+        var dx = 0.0;
+        var dy = twoRxSq * y;
+        var d1 = rySq - (rxSq * ry) + (0.25 * rxSq);
+
+        while (dx < dy)
+        {
+            PlotEllipse4(cx, cy, x, y, style);
+            if (d1 < 0)
+            {
+                x++;
+                dx += twoRySq;
+                d1 += dx + rySq;
+            }
+            else
+            {
+                x++;
+                y--;
+                dx += twoRySq;
+                dy -= twoRxSq;
+                d1 += dx - dy + rySq;
+            }
+        }
+
+        var d2 = (rySq * Math.Pow(x + 0.5, 2)) + (rxSq * Math.Pow(y - 1, 2)) - (rxSq * rySq);
+        while (y >= 0)
+        {
+            PlotEllipse4(cx, cy, x, y, style);
+            if (d2 > 0)
+            {
+                y--;
+                dy -= twoRxSq;
+                d2 += rxSq - dy;
+            }
+            else
+            {
+                y--;
+                x++;
+                dx += twoRySq;
+                dy -= twoRxSq;
+                d2 += dx - dy + rxSq;
+            }
+        }
+    }
+
+    private void PlotEllipse4(int cx, int cy, int x, int y, Style style)
+    {
+        SetFineDot(cx + x, cy + y, style);
+        SetFineDot(cx - x, cy + y, style);
+        SetFineDot(cx + x, cy - y, style);
+        SetFineDot(cx - x, cy - y, style);
+    }
+
+    private static int GetCellWidth(ReadOnlySpan<char> text, int maxWidth)
+    {
+        if (text.IsEmpty)
+        {
+            return 0;
+        }
+
+        var width = TerminalTextUtility.GetWidth(text);
+        if (width <= 0)
+        {
+            return 0;
+        }
+
+        return Math.Min(maxWidth, width);
     }
 }

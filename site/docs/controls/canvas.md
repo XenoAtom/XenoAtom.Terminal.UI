@@ -38,6 +38,24 @@ new Canvas()
 - `DrawCircle`
 - `WriteText`
 
+## Fine pixels (thin drawing)
+
+Set `UseFinePixels` to render default-rune primitives (e.g. `DrawLine(..., style)` / `DrawCircle(..., style)`) using a
+sub-cell dot grid for thinner strokes:
+
+```csharp
+new Canvas()
+    .UseFinePixels(true)
+    .Painter(ctx =>
+    {
+        ctx.Clear();
+        ctx.DrawLine(1, 1, 30, 8, Style.None);
+        ctx.DrawCircle(20, 6, 4, Style.None);
+    });
+```
+
+Cell-based operations like `FillRect` and `WriteText` remain cell-based.
+
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch` 
