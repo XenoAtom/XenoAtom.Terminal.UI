@@ -99,6 +99,23 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
     /// <inheritdoc />
     bool IAnimatedVisual.AdvanceAnimation(long timestamp) => AdvanceAnimation(timestamp);
 
+    partial void OnIsActiveChanged(bool value)
+    {
+        if (!value)
+        {
+            _nextTick = long.MaxValue;
+            return;
+        }
+
+        _nextTick = 0;
+        var app = App;
+        if (app is not null)
+        {
+            app.RegisterAnimatedVisual(this);
+            app.RequestAnimation();
+        }
+    }
+
     private bool AdvanceAnimation(long timestamp)
     {
         if (App is null || !IsActive || !IsVisible)

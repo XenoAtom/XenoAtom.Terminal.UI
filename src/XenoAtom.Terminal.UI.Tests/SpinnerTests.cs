@@ -31,6 +31,32 @@ public sealed class SpinnerTests
     }
 
     [TestMethod]
+    public void Spinner_Bound_IsActive_Starts_Animating_When_Switched_To_True()
+    {
+        var isActive = new State<bool>(false);
+        var spinner = new Spinner()
+            .IsActive(isActive);
+        spinner.Style(new SpinnerStyle("Test", TimeSpan.FromMilliseconds(10), "a", "b")
+        {
+            TextStyle = TextStyle.None,
+        });
+
+        using var driver = new TerminalAppTestDriver(spinner, TerminalHostKind.Fullscreen, new TerminalSize(10, 3));
+        driver.Tick(20);
+
+        var before = driver.Backend.GetOutText();
+        StringAssert.Contains(before, "a");
+        Assert.IsFalse(before.Contains("b", StringComparison.Ordinal), "Inactive spinner should stay on the first frame.");
+
+        isActive.Value = true;
+        driver.Tick(40);
+
+        var after = driver.Backend.GetOutText();
+        StringAssert.Contains(after, "a");
+        StringAssert.Contains(after, "b");
+    }
+
+    [TestMethod]
     public void SpinnerStyle_Rejects_Different_FrameWidths()
     {
         try
