@@ -44,6 +44,7 @@ internal static class ScreenshotExport
         ["MarkdownMarkupConverterDemo"] = "markdownmarkupconverter",
         ["MaskedInputDemo"] = "maskedinput",
         ["MenuBarDemo"] = "menubar",
+        ["NerdFontDemo"] = "nerdfont",
         ["NumberBoxDemo"] = "numberbox",
         ["OptionListDemo"] = "optionlist",
         ["PadderDemo"] = "padder",

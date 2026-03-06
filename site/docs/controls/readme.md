@@ -82,6 +82,7 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 - [Paragraph](paragraph.md)
 - [Placeholder](placeholder.md)
 - [Markup](markup.md)
+- [NerdFont](nerdfont.md)
 - [MarkdownMarkupConverter](markdownmarkupconverter.md)
 - [Rule](rule.md)
 - [Link](link.md)
