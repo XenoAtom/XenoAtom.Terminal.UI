@@ -10,7 +10,7 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class NerdFontWidthTests
 {
     [TestMethod]
-    public void CellBuffer_DefaultResolver_Treats_NerdFont_Glyph_As_Wide()
+    public void CellBuffer_DefaultResolver_Leaves_NerdFont_Glyph_Narrow()
     {
         var buffer = new CellBuffer(4, 1);
         buffer.WriteText(0, 0, $"{NerdFont.CodAccount}A".AsSpan(), Style.None);
@@ -19,18 +19,14 @@ public sealed class NerdFontWidthTests
         var cells = buffer.UnsafeCells;
 
         Assert.AreEqual(NerdFont.CodAccount.Value, scalars[0]);
-        Assert.IsTrue(cells[1].IsContinuation);
-        Assert.AreEqual('A', scalars[2]);
+        Assert.IsFalse(cells[1].IsContinuation);
+        Assert.AreEqual('A', scalars[1]);
     }
 
     [TestMethod]
-    public void CellBuffer_Captures_Current_WideRuneResolver()
+    public void CellBuffer_NerdFontDoubleWidth_Uses_Continuation_Cell()
     {
-        CellBuffer buffer;
-        using (TerminalTextUtility.PushWideRuneResolver(TerminalWideRuneResolvers.NerdFontMono))
-        {
-            buffer = new CellBuffer(4, 1);
-        }
+        var buffer = new CellBuffer(4, 1, TerminalWideRuneResolvers.NerdFontDoubleWidth);
 
         buffer.WriteText(0, 0, $"{NerdFont.CodAccount}A".AsSpan(), Style.None);
 
@@ -38,8 +34,8 @@ public sealed class NerdFontWidthTests
         var cells = buffer.UnsafeCells;
 
         Assert.AreEqual(NerdFont.CodAccount.Value, scalars[0]);
-        Assert.IsFalse(cells[1].IsContinuation);
-        Assert.AreEqual('A', scalars[1]);
+        Assert.IsTrue(cells[1].IsContinuation);
+        Assert.AreEqual('A', scalars[2]);
     }
 
     [TestMethod]
@@ -52,29 +48,31 @@ public sealed class NerdFontWidthTests
         {
             defaultDriver.Tick();
         }
-        Assert.AreEqual(3, defaultBlock.DesiredSize.Width);
+        Assert.AreEqual(2, defaultBlock.DesiredSize.Width);
 
-        var monoBlock = new TextBlock(text);
-        using (var monoDriver = new TerminalAppTestDriver(
-                   monoBlock,
+        var wideBlock = new TextBlock(text);
+        using (var wideDriver = new TerminalAppTestDriver(
+                   wideBlock,
                    TerminalHostKind.Fullscreen,
                    new TerminalSize(10, 3),
                    new TerminalAppOptions
                    {
-                       WideRuneResolver = TerminalWideRuneResolvers.NerdFontMono,
+                       WideRuneResolver = TerminalWideRuneResolvers.NerdFontDoubleWidth,
                    }))
         {
-            monoDriver.Tick();
+            wideDriver.Tick();
         }
-        Assert.AreEqual(2, monoBlock.DesiredSize.Width);
+        Assert.AreEqual(3, wideBlock.DesiredSize.Width);
     }
 
     [TestMethod]
     public void TerminalWideRuneResolvers_Expose_NerdFont_Modes()
     {
-        Assert.IsTrue(TerminalWideRuneResolvers.Default(NerdFont.CodAccount));
+        Assert.IsFalse(TerminalWideRuneResolvers.Default(NerdFont.CodAccount));
+        Assert.IsFalse(TerminalWideRuneResolvers.EmojiOnly(NerdFont.CodAccount));
         Assert.IsTrue(TerminalWideRuneResolvers.NerdFontDoubleWidth(NerdFont.CodAccount));
         Assert.IsFalse(TerminalWideRuneResolvers.NerdFontMono(NerdFont.CodAccount));
+        Assert.IsTrue(TerminalWideRuneResolvers.Default(new Rune(0x1F603)));
         Assert.IsTrue(TerminalWideRuneResolvers.NerdFontMono(new Rune(0x1F603)));
     }
 }

@@ -18,7 +18,7 @@ public sealed class NerdFontDemo : ControlsDemoBase
         return new VStack(
                 DemoUi.Hint("NerdFont exposes generated Rune properties sourced from the official Nerd Fonts glyph list. Use them directly in TextBlock, Markup, and interpolated strings."),
                 new Group(new TextBlock("TextBlock interpolation"),
-                        new TextBlock($"{NerdFont.CodAccount}  Account    {NerdFont.DevDotnet}  .NET    {NerdFont.FaGithub}  GitHub    {NerdFont.WeatherDaySunny}  Sunny"))
+                        new TextBlock($"{NerdFont.CodAccount} Account    {NerdFont.DevDotnet} .NET    {NerdFont.FaGithub} GitHub    {NerdFont.WeatherDaySunny} Sunny"))
                     .Padding(new Thickness(1)),
                 new Group(new TextBlock("Markup colors"),
                         new Markup($"[primary]{NerdFont.MdHome}[/] [bold]Dashboard[/]    [accent]{NerdFont.PlBranch}[/] main    [success]{NerdFont.WeatherDaySunny}[/] clear sky    [warning]{NerdFont.OctAlert}[/] alerts")

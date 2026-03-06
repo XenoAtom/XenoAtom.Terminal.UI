@@ -70,8 +70,9 @@ public sealed class SpinnerTests
     {
         var style = new SpinnerStyle("Hearts", TimeSpan.FromMilliseconds(10), "♡", "♥");
 
-        Assert.AreEqual(2, style.FrameWidth);
-        Assert.AreEqual(2, style.GetFrameWidth(TerminalWideRuneResolvers.Default));
+        Assert.AreEqual(1, style.FrameWidth);
+        Assert.AreEqual(1, style.GetFrameWidth(TerminalWideRuneResolvers.Default));
+        Assert.AreEqual(2, style.GetFrameWidth(TerminalWideRuneResolvers.NerdFontDoubleWidth));
         Assert.AreEqual(1, style.GetFrameWidth(TerminalWideRuneResolvers.NerdFontMono));
     }
 }

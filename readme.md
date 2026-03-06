@@ -129,8 +129,9 @@ Terminal.Write(
 );
 ```
 
-If your terminal uses Nerd Font Mono, set `WideRuneResolver = TerminalWideRuneResolvers.NerdFontMono` on
-`TerminalRunOptions`, `TerminalLiveOptions`, or `TerminalAppOptions`.
+If your terminal/font combination renders Nerd Font glyphs as double-width, set
+`WideRuneResolver = TerminalWideRuneResolvers.NerdFontDoubleWidth` on `TerminalRunOptions`,
+`TerminalLiveOptions`, or `TerminalAppOptions`.
 
 ## 🧩 Controls included
 

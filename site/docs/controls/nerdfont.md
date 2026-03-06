@@ -38,11 +38,11 @@ var status = new Markup(
 
 ## Width profiles
 
-Terminal.UI widens Nerd Font glyphs by default through `TerminalWideRuneResolvers.Default`, which matches the common
-`NF` installation where Nerd Font symbols render as double-width.
+Terminal.UI does **not** widen Nerd Font glyphs by default. The default resolver only widens emoji-like scalars, because
+most terminals still measure private-use Nerd Font glyphs as single-cell even when a standard Nerd Font is installed.
 
-If your terminal uses **Nerd Font Mono** (`NFM`), switch the app to `TerminalWideRuneResolvers.NerdFontMono` so the
-generated icon runes stay single-width:
+If your terminal/font combination actually renders Nerd Font glyphs as double-width, opt into
+`TerminalWideRuneResolvers.NerdFontDoubleWidth`:
 
 ```csharp
 Terminal.Run(
@@ -50,9 +50,12 @@ Terminal.Run(
     onUpdate,
     new TerminalRunOptions
     {
-        WideRuneResolver = TerminalWideRuneResolvers.NerdFontMono,
+        WideRuneResolver = TerminalWideRuneResolvers.NerdFontDoubleWidth,
     });
 ```
+
+If you use **Nerd Font Mono** (`NFM`), or if your terminal already treats Nerd Font glyphs as single-cell, keep the
+default resolver or use `TerminalWideRuneResolvers.NerdFontMono`.
 
 For inline/live hosting, use the same property on `TerminalLiveOptions`.
 
