@@ -57,16 +57,21 @@ public sealed class SpinnerTests
     }
 
     [TestMethod]
-    public void SpinnerStyle_Rejects_Different_FrameWidths()
+    public void SpinnerStyle_Computes_MaxWidth_For_Different_FrameWidths()
     {
-        try
-        {
-            _ = new SpinnerStyle("Bad", TimeSpan.FromMilliseconds(10), "a", "ab");
-            Assert.Fail("Expected an ArgumentException.");
-        }
-        catch (ArgumentException)
-        {
-            // Expected.
-        }
+        var style = new SpinnerStyle("Bad", TimeSpan.FromMilliseconds(10), "a", "ab");
+
+        Assert.AreEqual(2, style.FrameWidth);
+        Assert.AreEqual(2, style.GetFrameWidth(TerminalWideRuneResolvers.Default));
+    }
+
+    [TestMethod]
+    public void SpinnerStyle_Uses_MaxFrameWidth_For_WideRuneProfiles()
+    {
+        var style = new SpinnerStyle("Hearts", TimeSpan.FromMilliseconds(10), "♡", "♥");
+
+        Assert.AreEqual(2, style.FrameWidth);
+        Assert.AreEqual(2, style.GetFrameWidth(TerminalWideRuneResolvers.Default));
+        Assert.AreEqual(1, style.GetFrameWidth(TerminalWideRuneResolvers.NerdFontMono));
     }
 }

@@ -36,6 +36,30 @@ var status = new Markup(
     $"[success]{NerdFont.WeatherDaySunny}[/] Ready");
 ```
 
+## Width profiles
+
+Terminal.UI widens Nerd Font glyphs by default through `TerminalWideRuneResolvers.Default`, which matches the common
+`NF` installation where Nerd Font symbols render as double-width.
+
+If your terminal uses **Nerd Font Mono** (`NFM`), switch the app to `TerminalWideRuneResolvers.NerdFontMono` so the
+generated icon runes stay single-width:
+
+```csharp
+Terminal.Run(
+    root,
+    onUpdate,
+    new TerminalRunOptions
+    {
+        WideRuneResolver = TerminalWideRuneResolvers.NerdFontMono,
+    });
+```
+
+For inline/live hosting, use the same property on `TerminalLiveOptions`.
+
+> [!NOTE]
+> Proportional Nerd Font setups (`NFP`) are not supported by Terminal.UI layout, because the framework assumes a
+> fixed cell grid.
+
 ## Naming
 
 Property names follow the family prefix from the official Nerd Fonts metadata:

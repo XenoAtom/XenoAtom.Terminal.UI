@@ -2,6 +2,8 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Text;
+
 namespace XenoAtom.Terminal.UI;
 
 /// <summary>
@@ -33,4 +35,12 @@ public readonly record struct TerminalRunOptions()
     /// The default is 1ms. Increase this value to reduce update frequency and CPU usage.
     /// </remarks>
     public global::System.TimeSpan UpdateWaitDuration { get; init; } = global::System.TimeSpan.FromMilliseconds(1);
+
+    /// <summary>
+    /// Gets the predicate used to widen additional runes to two terminal cells.
+    /// </summary>
+    /// <remarks>
+    /// When <see langword="null"/>, <see cref="TerminalWideRuneResolvers.Default"/> is used.
+    /// </remarks>
+    public Func<Rune, bool>? WideRuneResolver { get; init; }
 }

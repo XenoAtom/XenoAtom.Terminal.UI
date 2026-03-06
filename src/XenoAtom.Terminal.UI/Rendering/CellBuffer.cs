@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using XenoAtom.Terminal;
 using XenoAtom.Ansi;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Styling;
@@ -42,13 +43,15 @@ public sealed class CellBuffer
     /// </summary>
     /// <param name="width">The buffer width in cells.</param>
     /// <param name="height">The buffer height in cells.</param>
-    public CellBuffer(int width, int height)
+    /// <param name="wideRuneResolver">An optional predicate used to widen additional runes to two cells.</param>
+    public CellBuffer(int width, int height, Func<Rune, bool>? wideRuneResolver = null)
     {
         if (width < 0) throw new ArgumentOutOfRangeException(nameof(width));
         if (height < 0) throw new ArgumentOutOfRangeException(nameof(height));
 
         Width = width;
         Height = height;
+        WideRuneResolver = TerminalTextUtility.ResolveWideRuneResolver(wideRuneResolver);
 
         _scalars = new int[width * height];
         _cells = new Style[width * height];
@@ -66,6 +69,8 @@ public sealed class CellBuffer
     /// Gets the buffer height in cells.
     /// </summary>
     public int Height { get; }
+
+    internal Func<Rune, bool> WideRuneResolver { get; }
 
     internal Rectangle CurrentClipRect => _clipRect;
 
@@ -228,7 +233,7 @@ public sealed class CellBuffer
             return;
         }
 
-        var width = TerminalTextUtility.GetRuneWidth(rune);
+        var width = GetRuneWidth(rune);
         if (width <= 0)
         {
             return;
@@ -361,7 +366,7 @@ public sealed class CellBuffer
             if (elementSpan.Length == 1 && elementSpan[0] == '\t')
             {
                 // Expand tab using a deterministic tab stop so that cell-buffer rendering remains consistent.
-                var tabWidth = TerminalTextUtility.DefaultTabWidth;
+                var tabWidth = global::XenoAtom.Terminal.TerminalTextUtility.DefaultTabWidth;
                 var spaces = tabWidth - (posX % tabWidth);
                 spaces = Math.Max(1, spaces);
                 for (var s = 0; s < spaces && posX < Width; s++)
@@ -408,7 +413,13 @@ public sealed class CellBuffer
         return false;
     }
 
-    internal static int GetTextElementWidth(ReadOnlySpan<char> element)
+    internal int GetRuneWidth(Rune rune, int tabWidth = global::XenoAtom.Terminal.TerminalTextUtility.DefaultTabWidth)
+        => global::XenoAtom.Terminal.TerminalTextUtility.GetRuneWidth(rune, WideRuneResolver, tabWidth);
+
+    internal int GetTextWidth(ReadOnlySpan<char> text, int tabWidth = global::XenoAtom.Terminal.TerminalTextUtility.DefaultTabWidth)
+        => global::XenoAtom.Terminal.TerminalTextUtility.GetWidth(text, WideRuneResolver, tabWidth);
+
+    internal int GetTextElementWidth(ReadOnlySpan<char> element)
     {
         if (element.IsEmpty)
         {
@@ -434,32 +445,32 @@ public sealed class CellBuffer
         // Text editors generally expand tabs themselves; this is a safe fallback.
         if (element.Length == 1 && element[0] == '\t')
         {
-            return TerminalTextUtility.DefaultTabWidth;
+            return global::XenoAtom.Terminal.TerminalTextUtility.DefaultTabWidth;
         }
 
         if (Rune.DecodeFromUtf16(element, out var rune, out var consumed) != OperationStatus.Done || consumed <= 0)
         {
-            return Math.Max(1, TerminalTextUtility.GetRuneWidth(Rune.ReplacementChar));
+            return Math.Max(1, GetRuneWidth(Rune.ReplacementChar));
         }
 
         if (element.Length == consumed)
         {
-            var width = Math.Max(1, TerminalTextUtility.GetRuneWidth(rune));
+            var width = Math.Max(1, GetRuneWidth(rune));
             return forceDoubleWidth ? Math.Max(2, width) : width;
         }
 
-        var maxWidth = Math.Max(0, TerminalTextUtility.GetRuneWidth(rune));
+        var maxWidth = Math.Max(0, GetRuneWidth(rune));
         var i = consumed;
         while (i < element.Length)
         {
             if (Rune.DecodeFromUtf16(element[i..], out var next, out var c) != OperationStatus.Done || c <= 0)
             {
-                maxWidth = Math.Max(maxWidth, TerminalTextUtility.GetRuneWidth(Rune.ReplacementChar));
+                maxWidth = Math.Max(maxWidth, GetRuneWidth(Rune.ReplacementChar));
                 i++;
                 continue;
             }
 
-            maxWidth = Math.Max(maxWidth, TerminalTextUtility.GetRuneWidth(next));
+            maxWidth = Math.Max(maxWidth, GetRuneWidth(next));
             i += c;
         }
 

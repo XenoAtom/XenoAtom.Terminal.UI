@@ -29,6 +29,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private readonly System.Collections.Concurrent.ConcurrentQueue<PendingAction> _pendingActions = new();
     private readonly TerminalInstance _terminal;
     private readonly TerminalAppOptions _options;
+    private readonly Func<Rune, bool> _wideRuneResolver;
     private readonly WindowLayer? _windowLayer;
     private Visual? _activeTooltipWindow;
     private readonly InlineInteractiveHost? _inlineHost;
@@ -84,6 +85,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private static readonly AsyncLocal<int> UpdateCallbackDepth = new();
 
     private Task<TerminalLoopResult>? _pendingUpdateTask;
+    private IDisposable? _wideRuneResolverScope;
 
     private readonly record struct PendingAction(Action Action, bool CaptureFlowOutput);
 
@@ -104,6 +106,11 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
     TerminalApp? IVisualElement.App => this;
     internal DebugOverlayMetrics? DebugOverlayMetrics => _debugOverlayMetrics;
+
+    /// <summary>
+    /// Gets the predicate used to widen additional runes to two terminal cells for this app.
+    /// </summary>
+    public Func<Rune, bool> WideRuneResolver => _wideRuneResolver;
 
     /// <summary>
     /// Gets the global commands registered on this application.
@@ -197,6 +204,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         ArgumentNullException.ThrowIfNull(root);
         _terminal = terminal ?? global::XenoAtom.Terminal.Terminal.Instance;
         _options = options ?? new TerminalAppOptions();
+        _wideRuneResolver = _options.WideRuneResolver ?? TerminalWideRuneResolvers.Default;
         if (_options.UpdateWaitDuration < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(options), "The update wait duration cannot be negative.");
@@ -529,7 +537,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             renderRoot.Arrange(new Rectangle(0, 0, width, renderRoot.DesiredSize.Height));
 
             // Flow output can allocate (it's not per-frame). Keep it simple for now.
-            var buffer = new CellBuffer(width, Math.Max(1, renderRoot.DesiredSize.Height));
+            var buffer = new CellBuffer(width, Math.Max(1, renderRoot.DesiredSize.Height), _wideRuneResolver);
             buffer.Clear(renderRoot.GetTheme().BaseTextStyle());
             renderRoot.RenderTree(buffer);
             _inlineHost.WriteMarkupLines(buffer.ToMarkupLines());
@@ -770,6 +778,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         // Restore in EndRunCore to avoid leaking theme state to other terminal usages.
         _previousMarkupStyles = _terminal.MarkupStyles;
         _terminal.MarkupStyles = Root.GetTheme().GetMarkupStyles();
+        _wideRuneResolverScope = TerminalTextUtility.PushWideRuneResolver(_wideRuneResolver);
 
         Root.AttachToApp(this);
         BindingManager.Current.ValueChanged += OnValueChanged;
@@ -819,6 +828,9 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
             _terminal.MarkupStyles = _previousMarkupStyles;
             _previousMarkupStyles = null;
+
+            _wideRuneResolverScope?.Dispose();
+            _wideRuneResolverScope = null;
 
             _pasteScope.Dispose();
             _mouseScope.Dispose();
@@ -1466,7 +1478,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             return existing;
         }
 
-        _renderBuffer = new CellBuffer(width, height);
+        _renderBuffer = new CellBuffer(width, height, _wideRuneResolver);
         return _renderBuffer;
     }
 

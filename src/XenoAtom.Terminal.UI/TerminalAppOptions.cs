@@ -2,9 +2,10 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Globalization;
+using System.Text;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Hosting;
-using System.Globalization;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -86,6 +87,16 @@ public sealed class TerminalAppOptions
     /// Increase this value to reduce CPU usage when frequent updates are not required.
     /// </remarks>
     public global::System.TimeSpan UpdateWaitDuration { get; init; } = global::System.TimeSpan.FromMilliseconds(1);
+
+    /// <summary>
+    /// Gets the predicate used to widen additional runes to two terminal cells.
+    /// </summary>
+    /// <remarks>
+    /// The default value is <see cref="TerminalWideRuneResolvers.Default"/>, which widens emoji-like scalars and
+    /// standard Nerd Font glyphs. Use <see cref="TerminalWideRuneResolvers.NerdFontMono"/> when your terminal uses
+    /// Nerd Font Mono, where Nerd Font glyphs remain single-width.
+    /// </remarks>
+    public Func<Rune, bool>? WideRuneResolver { get; init; } = TerminalWideRuneResolvers.Default;
 }
 
 /// <summary>

@@ -158,7 +158,7 @@ public static class CellBufferBrushExtensions
                 continue;
             }
 
-            var width = CellBuffer.GetTextElementWidth(elementSpan);
+            var width = buffer.GetTextElementWidth(elementSpan);
             if (width > 0)
             {
                 if (posX + width > buffer.Width)

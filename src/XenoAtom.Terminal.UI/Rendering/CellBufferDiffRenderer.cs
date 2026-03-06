@@ -229,7 +229,7 @@ public sealed class CellBufferDiffRenderer : IDisposable
                 var written = rune.EncodeToUtf16(runeBuffer);
                 writer.Write(runeBuffer[..written]);
 
-                var runeWidth = TerminalTextUtility.GetRuneWidth(rune);
+                var runeWidth = buffer.GetRuneWidth(rune);
                 xPos += Math.Max(1, runeWidth);
             }
         }
@@ -336,7 +336,7 @@ public sealed class CellBufferDiffRenderer : IDisposable
             return Math.Min(width - 1, x + 1);
         }
 
-        if (scalar > 0 && TerminalTextUtility.GetRuneWidth(new Rune(scalar)) > 1)
+        if (scalar > 0 && buffer.GetRuneWidth(new Rune(scalar)) > 1)
         {
             return Math.Min(width - 1, x + 1);
         }

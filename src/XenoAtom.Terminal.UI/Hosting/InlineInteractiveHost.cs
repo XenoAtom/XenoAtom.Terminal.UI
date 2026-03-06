@@ -4,6 +4,7 @@
 
 using System.Runtime.CompilerServices;
 using System.Text;
+using XenoAtom.Terminal;
 using XenoAtom.Ansi;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Rendering;
@@ -25,6 +26,7 @@ public sealed class InlineInteractiveHost : IDisposable
     private ulong[]? _lastHyperlinks;
     private Dictionary<ulong, string>? _lastHyperlinkTable;
     private Dictionary<int, string>? _lastTextElementTable;
+    private Func<Rune, bool>? _lastWideRuneResolver;
     private int _lastWidth;
     private int _lastHeight;
     private int _lastViewportWidth;
@@ -69,6 +71,7 @@ public sealed class InlineInteractiveHost : IDisposable
         _lastHyperlinks = null;
         _lastHyperlinkTable = null;
         _lastTextElementTable = null;
+        _lastWideRuneResolver = null;
     }
 
     internal void PrepareForUserUpdate()
@@ -466,7 +469,7 @@ public sealed class InlineInteractiveHost : IDisposable
                     var written = rune.EncodeToUtf16(runeBuffer);
                     writer.Write(runeBuffer[..written]);
 
-                    var runeWidth = TerminalTextUtility.GetRuneWidth(rune);
+                    var runeWidth = buffer.GetRuneWidth(rune);
                     xPos += Math.Max(1, runeWidth);
                 }
 
@@ -585,7 +588,7 @@ public sealed class InlineInteractiveHost : IDisposable
                     var written = rune.EncodeToUtf16(runeBuffer);
                     writer.Write(runeBuffer[..written]);
 
-                    var runeWidth = TerminalTextUtility.GetRuneWidth(rune);
+                    var runeWidth = buffer.GetRuneWidth(rune);
                     xPos += Math.Max(1, runeWidth);
                 }
 
@@ -661,6 +664,7 @@ public sealed class InlineInteractiveHost : IDisposable
         buffer.CopyHyperlinkTableTo(_lastHyperlinkTable);
         _lastTextElementTable ??= new Dictionary<int, string>();
         buffer.CopyTextElementTableTo(_lastTextElementTable);
+        _lastWideRuneResolver = buffer.WideRuneResolver;
         _reservedHeight = height;
         _liveRegionTopRow = Math.Min(_liveRegionTopRow.GetValueOrDefault(), visibleHeight - height);
         _lastWidth = width;
@@ -879,7 +883,7 @@ public sealed class InlineInteractiveHost : IDisposable
                 if (scalar < 0 && textElementTable is not null && textElementTable.TryGetValue(scalar, out var textElement))
                 {
                     writer.Write(textElement);
-                    xPos += Math.Max(1, TerminalTextUtility.GetWidth(textElement.AsSpan()));
+                    xPos += Math.Max(1, global::XenoAtom.Terminal.TerminalTextUtility.GetWidth(textElement.AsSpan(), _lastWideRuneResolver));
                     continue;
                 }
 
@@ -887,7 +891,7 @@ public sealed class InlineInteractiveHost : IDisposable
                 var written = rune.EncodeToUtf16(runeBuffer);
                 writer.Write(runeBuffer[..written]);
 
-                var runeWidth = TerminalTextUtility.GetRuneWidth(rune);
+                var runeWidth = global::XenoAtom.Terminal.TerminalTextUtility.GetRuneWidth(rune, _lastWideRuneResolver);
                 xPos += Math.Max(1, runeWidth);
             }
 
@@ -960,7 +964,7 @@ public sealed class InlineInteractiveHost : IDisposable
             return Math.Min(width - 1, x + 1);
         }
 
-        if (scalar > 0 && TerminalTextUtility.GetRuneWidth(new Rune(scalar)) > 1)
+        if (scalar > 0 && buffer.GetRuneWidth(new Rune(scalar)) > 1)
         {
             return Math.Min(width - 1, x + 1);
         }

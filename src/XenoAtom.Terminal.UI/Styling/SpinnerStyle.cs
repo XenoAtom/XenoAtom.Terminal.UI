@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Text;
 using XenoAtom.Ansi;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Rendering;
@@ -30,7 +31,7 @@ public sealed record SpinnerStyle : IStyle<SpinnerStyle>
     /// </summary>
     /// <param name="name">The style name.</param>
     /// <param name="interval">The frame interval.</param>
-    /// <param name="frames">The frames. All frames must have the same cell width.</param>
+    /// <param name="frames">The frames.</param>
     public SpinnerStyle(string name, TimeSpan interval, params string[] frames)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
@@ -49,21 +50,7 @@ public sealed record SpinnerStyle : IStyle<SpinnerStyle>
         Name = name;
         Interval = interval;
 
-        var width = TerminalTextUtility.GetWidth(frames[0].AsSpan());
-        if (width <= 0)
-        {
-            throw new ArgumentException("Spinner frames must have a width > 0.", nameof(frames));
-        }
-
-        for (var i = 1; i < frames.Length; i++)
-        {
-            if (TerminalTextUtility.GetWidth(frames[i].AsSpan()) != width)
-            {
-                throw new ArgumentException("All spinner frames must have the same cell width.", nameof(frames));
-            }
-        }
-
-        FrameWidth = width;
+        FrameWidth = GetMaxFrameWidth(frames, TerminalWideRuneResolvers.Default);
     }
 
     /// <summary>
@@ -77,7 +64,7 @@ public sealed record SpinnerStyle : IStyle<SpinnerStyle>
     public TimeSpan Interval { get; }
 
     /// <summary>
-    /// Gets the cell width of each frame.
+    /// Gets the maximum cell width of the frames under the default wide-rune resolver.
     /// </summary>
     public int FrameWidth { get; }
 
@@ -120,6 +107,13 @@ public sealed record SpinnerStyle : IStyle<SpinnerStyle>
     }
 
     /// <summary>
+    /// Gets the maximum cell width of the frames for the specified wide-rune resolver.
+    /// </summary>
+    /// <param name="wideRuneResolver">The predicate used to widen additional runes.</param>
+    public int GetFrameWidth(Func<Rune, bool>? wideRuneResolver = null)
+        => GetMaxFrameWidth(_frames, wideRuneResolver ?? TerminalWideRuneResolvers.Default);
+
+    /// <summary>
     /// Resolves the <see cref="Style"/> to use for rendering a spinner.
     /// </summary>
     /// <param name="theme">The current theme.</param>
@@ -149,5 +143,21 @@ public sealed record SpinnerStyle : IStyle<SpinnerStyle>
 
         style |= TextStyle;
         return style;
+    }
+
+    private static int GetMaxFrameWidth(IReadOnlyList<string> frames, Func<Rune, bool> wideRuneResolver)
+    {
+        var width = 0;
+        for (var i = 0; i < frames.Count; i++)
+        {
+            width = Math.Max(width, global::XenoAtom.Terminal.TerminalTextUtility.GetWidth(frames[i].AsSpan(), wideRuneResolver));
+        }
+
+        if (width <= 0)
+        {
+            throw new ArgumentException("Spinner frames must have a width > 0.", nameof(frames));
+        }
+
+        return width;
     }
 }

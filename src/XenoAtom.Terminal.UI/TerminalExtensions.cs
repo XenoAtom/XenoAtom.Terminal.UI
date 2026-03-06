@@ -330,6 +330,7 @@ public static partial class TerminalExtensions
                 HostKind = TerminalHostKind.Inline,
                 Culture = CultureInfo.InvariantCulture,
                 EnableMouse = false,
+                WideRuneResolver = TerminalWideRuneResolvers.Default,
             };
             RunHostedAsync(instance, visual, appOptions, onUpdate, CancellationToken.None)
                 .AsTask()
@@ -352,6 +353,7 @@ public static partial class TerminalExtensions
                 EnableMouse = options.EnableMouse,
                 MouseMode = options.MouseMode,
                 UpdateWaitDuration = options.UpdateWaitDuration,
+                WideRuneResolver = options.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
             };
             RunHostedAsync(instance, visual, appOptions, onUpdate, CancellationToken.None)
                 .AsTask()
@@ -378,6 +380,7 @@ public static partial class TerminalExtensions
                 HostKind = TerminalHostKind.Inline,
                 Culture = CultureInfo.InvariantCulture,
                 EnableMouse = false,
+                WideRuneResolver = TerminalWideRuneResolvers.Default,
             };
             await RunHostedAsync(instance, visual, appOptions, onUpdate, cancellationToken).ConfigureAwait(false);
 
@@ -401,6 +404,7 @@ public static partial class TerminalExtensions
                 HostKind = TerminalHostKind.Inline,
                 Culture = CultureInfo.InvariantCulture,
                 EnableMouse = false,
+                WideRuneResolver = TerminalWideRuneResolvers.Default,
             };
             await RunHostedAsync(instance, visual, appOptions, onUpdate, cancellationToken).ConfigureAwait(false);
 
@@ -420,6 +424,7 @@ public static partial class TerminalExtensions
                 EnableMouse = options.EnableMouse,
                 MouseMode = options.MouseMode,
                 UpdateWaitDuration = options.UpdateWaitDuration,
+                WideRuneResolver = options.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
             };
             await RunHostedAsync(instance, visual, appOptions, onUpdate, cancellationToken).ConfigureAwait(false);
 
@@ -439,6 +444,7 @@ public static partial class TerminalExtensions
                 EnableMouse = options.EnableMouse,
                 MouseMode = options.MouseMode,
                 UpdateWaitDuration = options.UpdateWaitDuration,
+                WideRuneResolver = options.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
             };
             await RunHostedAsync(instance, visual, appOptions, onUpdate, cancellationToken).ConfigureAwait(false);
 
@@ -463,6 +469,7 @@ public static partial class TerminalExtensions
                 ExitGesture = options.ExitGesture,
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
                 UpdateWaitDuration = options.UpdateWaitDuration,
+                WideRuneResolver = options.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
             };
             RunHostedAsync(instance, visual, appOptions, onUpdate, CancellationToken.None)
                 .AsTask()
@@ -490,6 +497,7 @@ public static partial class TerminalExtensions
                 ExitGesture = options.ExitGesture,
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
                 UpdateWaitDuration = options.UpdateWaitDuration,
+                WideRuneResolver = options.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
             };
             await RunHostedAsync(instance, visual, appOptions, onUpdate, cancellationToken).ConfigureAwait(false);
 
@@ -514,6 +522,7 @@ public static partial class TerminalExtensions
                 ExitGesture = options.ExitGesture,
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
                 UpdateWaitDuration = options.UpdateWaitDuration,
+                WideRuneResolver = options.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
             };
             await RunHostedAsync(instance, visual, appOptions, onUpdate, cancellationToken).ConfigureAwait(false);
 

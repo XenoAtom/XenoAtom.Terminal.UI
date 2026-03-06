@@ -112,7 +112,7 @@ internal static class TerminalVisualWriter
                     var written = rune.EncodeToUtf16(runeBuffer);
                     writer.Write(runeBuffer[..written]);
 
-                    var runeWidth = TerminalTextUtility.GetRuneWidth(rune);
+                    var runeWidth = buffer.GetRuneWidth(rune);
                     xPos += Math.Max(1, runeWidth);
                 }
 

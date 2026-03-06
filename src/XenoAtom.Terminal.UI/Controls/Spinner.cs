@@ -161,7 +161,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = GetStyle<SpinnerStyle>();
-        var frameWidth = Math.Max(1, style.FrameWidth);
+        var frameWidth = Math.Max(1, style.GetFrameWidth(App?.WideRuneResolver));
 
         var label = Label;
         if (label is null)
@@ -184,7 +184,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
         }
 
         var style = GetStyle<SpinnerStyle>();
-        var frameWidth = Math.Max(1, style.FrameWidth);
+        var frameWidth = Math.Max(1, style.GetFrameWidth(App?.WideRuneResolver));
         var labelX = finalRect.X + frameWidth + 1;
         if (labelX >= finalRect.Right)
         {
@@ -215,7 +215,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
             labelStyle |= TextStyle.Dim;
         }
 
-        var frameWidth = Math.Max(1, style.FrameWidth);
+        var frameWidth = Math.Max(1, style.GetFrameWidth(App?.WideRuneResolver));
         var frameText = IsActive ? style.GetFrame(_frameIndex) : style.GetFrame(0);
         var span = frameText.AsSpan();
         if (TerminalTextUtility.TryGetIndexAtCell(span, Math.Min(frameWidth, rect.Width), out var frameEndIndex))

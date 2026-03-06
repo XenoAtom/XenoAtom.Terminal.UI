@@ -131,7 +131,7 @@ public static class CellBufferSvgExporter
                     var rune = new Rune(value);
                     var written = rune.EncodeToUtf16(runeBuffer);
                     text = new string(runeBuffer[..written]);
-                    w = Math.Max(1, TerminalTextUtility.GetRuneWidth(rune));
+                    w = Math.Max(1, buffer.GetRuneWidth(rune));
                     hasInk = value != ' ';
                 }
 
@@ -178,7 +178,7 @@ public static class CellBufferSvgExporter
                     var written = nextRune.EncodeToUtf16(runeBuffer);
                     runText.Append(runeBuffer[..written]);
 
-                    var nextW = Math.Max(1, TerminalTextUtility.GetRuneWidth(nextRune));
+                    var nextW = Math.Max(1, buffer.GetRuneWidth(nextRune));
                     runWidth += nextW;
                     nextCol += nextW;
                     hasInk |= nextValue != ' ';

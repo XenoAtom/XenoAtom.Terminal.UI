@@ -129,6 +129,9 @@ Terminal.Write(
 );
 ```
 
+If your terminal uses Nerd Font Mono, set `WideRuneResolver = TerminalWideRuneResolvers.NerdFontMono` on
+`TerminalRunOptions`, `TerminalLiveOptions`, or `TerminalAppOptions`.
+
 ## 🧩 Controls included
 
 The library ships with a large set of built-in controls. See [Controls Reference](site/docs/controls/readme.md) for the full reference.
