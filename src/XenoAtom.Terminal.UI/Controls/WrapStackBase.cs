@@ -20,8 +20,10 @@ namespace XenoAtom.Terminal.UI.Controls;
 public abstract partial class WrapStackBase : Panel
 {
     private readonly List<Run> _runs = new();
+    private readonly List<int> _visibleIndices = new();
     private int _lastRunMain = -1;
     private int _lastChildrenVersion = -1;
+    private int _lastVisibilityHash;
     private int _lastSpacing = -1;
     private int _lastRunSpacing = -1;
     private WrapJustify _lastJustify;
@@ -256,7 +258,7 @@ public abstract partial class WrapStackBase : Panel
 
             for (var i = 0; i < count; i++)
             {
-                var hints = Children[run.Start + i].MeasureHints;
+                var hints = Children[_visibleIndices[run.Start + i]].MeasureHints;
                 mins[i] = hints.Min.Width;
                 nats[i] = hints.Natural.Width;
                 maxs[i] = hints.Max.Width;
@@ -281,7 +283,7 @@ public abstract partial class WrapStackBase : Panel
             for (var i = 0; i < count; i++)
             {
                 var w = widths[i];
-                Children[run.Start + i].Arrange(new Rectangle(x, y, w, runCross));
+                Children[_visibleIndices[run.Start + i]].Arrange(new Rectangle(x, y, w, runCross));
                 x += w;
 
                 if (i + 1 < count)
@@ -328,7 +330,7 @@ public abstract partial class WrapStackBase : Panel
 
             for (var i = 0; i < count; i++)
             {
-                var hints = Children[run.Start + i].MeasureHints;
+                var hints = Children[_visibleIndices[run.Start + i]].MeasureHints;
                 mins[i] = hints.Min.Height;
                 nats[i] = hints.Natural.Height;
                 maxs[i] = hints.Max.Height;
@@ -353,7 +355,7 @@ public abstract partial class WrapStackBase : Panel
             for (var i = 0; i < count; i++)
             {
                 var h = heights[i];
-                Children[run.Start + i].Arrange(new Rectangle(x, y, runCross, h));
+                Children[_visibleIndices[run.Start + i]].Arrange(new Rectangle(x, y, runCross, h));
                 y += h;
 
                 if (i + 1 < count)
@@ -377,12 +379,18 @@ public abstract partial class WrapStackBase : Panel
     private void BuildRuns(int main, int spacing)
     {
         var version = Children.Version;
+        var visibilityHash = 17;
+        for (var i = 0; i < Children.Count; i++)
+        {
+            visibilityHash = unchecked((visibilityHash * 31) + (Children[i].IsVisible ? 1 : 0));
+        }
         var justify = Justify;
         var measureMode = MeasureMode;
         var runSpacing = Math.Max(0, RunSpacing);
 
         if (main == _lastRunMain
             && version == _lastChildrenVersion
+            && visibilityHash == _lastVisibilityHash
             && spacing == _lastSpacing
             && runSpacing == _lastRunSpacing
             && justify == _lastJustify
@@ -393,14 +401,30 @@ public abstract partial class WrapStackBase : Panel
 
         _lastRunMain = main;
         _lastChildrenVersion = version;
+        _lastVisibilityHash = visibilityHash;
         _lastSpacing = spacing;
         _lastRunSpacing = runSpacing;
         _lastJustify = justify;
         _lastMeasureMode = measureMode;
 
         _runs.Clear();
+        _visibleIndices.Clear();
 
         var childCount = Children.Count;
+        if (childCount == 0)
+        {
+            return;
+        }
+
+        for (var i = 0; i < childCount; i++)
+        {
+            if (Children[i].IsVisible)
+            {
+                _visibleIndices.Add(i);
+            }
+        }
+
+        childCount = _visibleIndices.Count;
         if (childCount == 0)
         {
             return;
@@ -428,7 +452,7 @@ public abstract partial class WrapStackBase : Panel
 
         for (var i = 0; i < childCount; i++)
         {
-            var child = Children[i];
+            var child = Children[_visibleIndices[i]];
             var childMain = IsHorizontal ? child.MeasureHints.Natural.Width : child.MeasureHints.Natural.Height;
 
             var next = count == 0 ? childMain : runMain + spacing + childMain;
@@ -466,7 +490,7 @@ public abstract partial class WrapStackBase : Panel
 
         for (var i = 0; i < count; i++)
         {
-            var hints = Children[start + i].MeasureHints;
+            var hints = Children[_visibleIndices[start + i]].MeasureHints;
 
             if (IsHorizontal)
             {

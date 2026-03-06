@@ -90,6 +90,16 @@ Margin is a `Visual` property. You usually do not need to handle it inside a cus
 
 This means containers can generally use `child.DesiredSize` / `child.MeasureHints` directly and margins “just work”.
 
+### `IsVisible` collapses layout
+
+`Visual.IsVisible` is a **collapsed** visibility flag:
+
+- `IsVisible = true`: the visual participates in layout, rendering, and input (subject to `IsEnabled`)
+- `IsVisible = false`: the visual measures as `(0,0)`, arranges to an empty rect, does not render, and does not receive hit testing/input
+
+This means hidden visuals do not reserve space in `HStack`, `VStack`, `WrapStack`, or other containers unless a control
+explicitly models a separate “hidden but keeps layout slot” concept.
+
 ### Alignment is self-alignment
 
 Alignment (`Align.Start/Center/End/Stretch`) is applied **by the child** when it is arranged into a slot.
@@ -229,6 +239,7 @@ predictably.
 
 - Make sure state that affects layout is **bindable** and is read during `MeasureCore` or `ArrangeCore`.
 - Don’t read private fields; read bindable properties so the framework can track dependencies.
+- `IsVisible` participates in layout dependency tracking, so toggling it invalidates parent layout automatically.
 
 ### “Cannot read then write within the same tracking context”
 

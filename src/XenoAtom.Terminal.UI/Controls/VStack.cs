@@ -49,17 +49,17 @@ public sealed partial class VStack : Panel
             return SizeHints.Fixed(Size.Zero);
         }
 
-        var totalSpacing = spacing * Math.Max(0, childCount - 1);
         var childConstraints = new LayoutConstraints(constraints.MinWidth, constraints.MaxWidth, 0, constraints.MaxHeight);
+        var visibleCount = 0;
 
         var minW = 0;
         var natW = 0;
         var maxW = 0;
         var maxWInf = false;
 
-        var minH = totalSpacing;
-        var natH = totalSpacing;
-        var maxH = totalSpacing;
+        var minH = 0;
+        var natH = 0;
+        var maxH = 0;
 
         var growY = 0;
         var shrinkY = 0;
@@ -68,6 +68,22 @@ public sealed partial class VStack : Panel
         {
             var child = Children[i];
             var hints = child.Measure(childConstraints);
+            if (!child.IsVisible)
+            {
+                continue;
+            }
+
+            if (visibleCount > 0)
+            {
+                minH += spacing;
+                natH += spacing;
+                if (maxH != LayoutConstants.Infinite)
+                {
+                    maxH += spacing;
+                }
+            }
+
+            visibleCount++;
 
             minW = Math.Max(minW, hints.Min.Width);
             natW = Math.Max(natW, hints.Natural.Width);
@@ -120,7 +136,16 @@ public sealed partial class VStack : Panel
             return;
         }
 
-        var totalSpacing = spacing * Math.Max(0, childCount - 1);
+        var visibleCount = 0;
+        for (var i = 0; i < childCount; i++)
+        {
+            if (Children[i].IsVisible)
+            {
+                visibleCount++;
+            }
+        }
+
+        var totalSpacing = spacing * Math.Max(0, visibleCount - 1);
         var available = Math.Max(0, finalRect.Height - totalSpacing);
 
         var scratchLength = childCount * 6;
@@ -141,11 +166,22 @@ public sealed partial class VStack : Panel
             for (var i = 0; i < childCount; i++)
             {
                 var hints = Children[i].MeasureHints;
-                mins[i] = hints.Min.Height;
-                nats[i] = hints.Natural.Height;
-                maxs[i] = hints.Max.Height;
-                grows[i] = hints.FlexGrowY;
-                shrinks[i] = hints.FlexShrinkY;
+                if (Children[i].IsVisible)
+                {
+                    mins[i] = hints.Min.Height;
+                    nats[i] = hints.Natural.Height;
+                    maxs[i] = hints.Max.Height;
+                    grows[i] = hints.FlexGrowY;
+                    shrinks[i] = hints.FlexShrinkY;
+                }
+                else
+                {
+                    mins[i] = 0;
+                    nats[i] = 0;
+                    maxs[i] = 0;
+                    grows[i] = 0;
+                    shrinks[i] = 0;
+                }
             }
 
             FlexAllocator.Allocate(available, mins, nats, maxs, grows, shrinks, heights);
@@ -155,7 +191,10 @@ public sealed partial class VStack : Panel
             {
                 var h = heights[i];
                 Children[i].Arrange(new Rectangle(finalRect.X, y, finalRect.Width, h));
-                y += h + spacing;
+                if (Children[i].IsVisible)
+                {
+                    y += h + spacing;
+                }
             }
         }
         finally

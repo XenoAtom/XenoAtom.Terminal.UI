@@ -826,21 +826,31 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         SizeHints measureHints;
         using (var session = BindingManager.Current.StartTracking())
         {
-            var margin = Margin;
-            var innerConstraints = ApplyMeasureConstraints(Deflate(constraints, margin));
+            if (!IsVisible)
+            {
+                _lastDesiredSizeWithoutMargin = Size.Zero;
+                measureHints = SizeHints.Fixed(Size.Zero);
+                MeasureHints = measureHints;
+                DesiredSize = Size.Zero;
+            }
+            else
+            {
+                var margin = Margin;
+                var innerConstraints = ApplyMeasureConstraints(Deflate(constraints, margin));
 
-            var hints = MeasureCore(innerConstraints).Normalize();
-            hints = ClampHintsToConstraints(hints, innerConstraints);
+                var hints = MeasureCore(innerConstraints).Normalize();
+                hints = ClampHintsToConstraints(hints, innerConstraints);
 
-            _lastDesiredSizeWithoutMargin = hints.Natural;
+                _lastDesiredSizeWithoutMargin = hints.Natural;
 
-            // Inflate hints by margin for the parent's perspective.
-            var inflatedHints = Inflate(hints, margin).Normalize();
-            inflatedHints = ClampHintsToConstraints(inflatedHints, constraints);
+                // Inflate hints by margin for the parent's perspective.
+                var inflatedHints = Inflate(hints, margin).Normalize();
+                inflatedHints = ClampHintsToConstraints(inflatedHints, constraints);
 
-            measureHints = inflatedHints;
-            MeasureHints = measureHints;
-            DesiredSize = inflatedHints.Natural;
+                measureHints = inflatedHints;
+                MeasureHints = measureHints;
+                DesiredSize = inflatedHints.Natural;
+            }
 
             if (!previousDesiredWithoutMargin.Equals(_lastDesiredSizeWithoutMargin))
             {
@@ -886,12 +896,19 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
 
         using (var session = BindingManager.Current.StartTracking())
         {
-            var margin = Margin;
-            var innerSlot = Deflate(finalRect, margin);
-            var arrangedRect = ApplyArrangeConstraints(innerSlot);
-            arrangedRect = PrepareArrangeBounds(arrangedRect);
-            Bounds = arrangedRect;
-            ArrangeCore(arrangedRect);
+            if (!IsVisible)
+            {
+                Bounds = new Rectangle(finalRect.X, finalRect.Y, 0, 0);
+            }
+            else
+            {
+                var margin = Margin;
+                var innerSlot = Deflate(finalRect, margin);
+                var arrangedRect = ApplyArrangeConstraints(innerSlot);
+                arrangedRect = PrepareArrangeBounds(arrangedRect);
+                Bounds = arrangedRect;
+                ArrangeCore(arrangedRect);
+            }
             if (UnionDependencies(ref _arrangeDeps, session.Reads) && App is not null)
             {
                 App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.Arrange, _arrangeDeps!);

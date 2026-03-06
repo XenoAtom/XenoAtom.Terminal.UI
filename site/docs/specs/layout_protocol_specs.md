@@ -176,6 +176,11 @@ When `Measure(constraints)` is called, a node:
 1. MUST return `SizeHints` satisfying invariants.
 2. MUST NOT set `Natural` (or `Min`) to `int.MaxValue`.
 3. MUST treat unbounded max as **"no upper limit"**, not "be infinite".
+4. If `IsVisible == false`, MUST behave as collapsed for layout:
+
+   * `Measure(...)` returns zero size hints
+   * the visual does not contribute spacing or size in parent containers
+   * margins are ignored while collapsed
 
 **Critical rule (prevents your bug):**
 
@@ -191,6 +196,9 @@ When `Arrange(finalRect)` is called, a node:
 * Receives a finite rectangle with Width/Height >= 0
 * Must layout itself and its children inside that rectangle
 * Must not trigger upward layout invalidation during the same Arrange pass
+
+If `IsVisible == false`, the node MUST arrange to an empty rectangle and MUST NOT arrange visible content into the
+provided slot.
 
 Nodes MAY re-measure children during Arrange **only** for dependency resolution (e.g., text wrapping based on final width). Such internal re-measure must not cause recursive relayout of ancestors.
 
