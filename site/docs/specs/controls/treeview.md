@@ -53,6 +53,8 @@ Properties:
   - Owned by the TreeView and uses `onAdding`/`onRemoving` hooks to attach/detach nodes.
 - `SelectedIndex : int` (bindable)
   - Index into the current "visible row" list.
+  - This is a projection index over the flattened visible tree, not a root index and not a child index relative to any parent node.
+  - The meaning of a given index can change when expansion/collapse changes the visible-row projection.
   - Coerced to `-1` when the tree has no visible rows, otherwise clamped to `[0 .. VisibleCount - 1]`.
 - `SelectedNode : TreeNode?` (bindable, read-only)
   - Direct reference to the selected visible node.
@@ -98,6 +100,11 @@ Node headers are attached once and reused:
 The visible row list is recomputed during `PrepareChildren`:
 - it traverses `Roots` recursively and includes children only when `IsExpanded` is true
 - it also computes hierarchy line metadata (continuation mask and last-sibling flag)
+
+Example:
+- if the visible rows are `[Root, ChildA, ChildB, Other]`, then `SelectedIndex = 2` means `ChildB`
+- if `Root` collapses, the visible rows become `[Root, Other]`
+- TreeView then preserves selection by node when possible; otherwise selection clamps to the nearest visible ancestor/index
 
 To avoid allocating temporary sets when toggling visibility, `PrepareChildren`:
 - sets all headers `IsVisible = false`
