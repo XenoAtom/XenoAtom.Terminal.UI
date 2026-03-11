@@ -4,6 +4,6 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <IsPackable>true</IsPackable>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 </Project>
