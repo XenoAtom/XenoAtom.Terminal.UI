@@ -409,7 +409,7 @@ public sealed partial class TreeView : Visual, IScrollable
             var icon = style.ResolveIcon(node.Data, node.Icon);
             if (xCursor < innerLeft + innerWidth)
             {
-                buffer.SetCell(xCursor, y, icon, rowStyle);
+                buffer.SetCell(xCursor, y, icon, style.ResolveIconStyle(rowStyle, node.IconStyle));
             }
             xCursor += Math.Max(1, TerminalTextUtility.GetRuneWidth(icon));
 

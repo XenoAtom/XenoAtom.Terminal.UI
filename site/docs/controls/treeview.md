@@ -74,10 +74,20 @@ Each node is represented by a `TreeNode`:
 - `Header` is a `Visual` (anything can be used: text, markup, composed layouts).
 - `Children` is a bindable list of nodes.
 - `IsExpanded` controls whether children are visible.
+- `Icon` controls the glyph rendered before the header.
+- `IconStyle` lets you style that icon directly (for example with a custom foreground color).
+
+```csharp
+var logs = new TreeNode("Logs")
+{
+    Icon = TreeNodeIcons.FolderGlyph,
+    IconStyle = Style.None.WithForeground(Colors.Goldenrod),
+};
+```
 
 ## Styling
 
-`TreeViewStyle` controls indentation, glyphs, spacing, and selection colors.
+`TreeViewStyle` controls indentation, glyphs, spacing, selection colors, and a default `IconStyle`.
 
 ## Related
 

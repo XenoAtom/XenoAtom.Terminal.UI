@@ -67,6 +67,21 @@ public sealed class TreeViewDemo : ControlsDemoBase
             return (tree, nestedNode);
         }
 
+        static TreeView CreateStyledIconTree()
+        {
+            var tree = new TreeView().MinHeight(8);
+
+            var services = Node("Services", NerdFont.CodFolder, isExpanded: true)
+                .StyleIcon(Colors.DodgerBlue);
+            services.Children.Add(Node("API", NerdFont.CodFileCode).StyleIcon(Colors.MediumSeaGreen));
+            services.Children.Add(Node("Worker", NerdFont.CodFile).StyleIcon(Colors.Goldenrod));
+            services.Children.Add(Node("Alerts", NerdFont.OctAlert).StyleIcon(Colors.OrangeRed));
+
+            tree.Roots.Add(services);
+            tree.Roots.Add(Node("Archive", NerdFont.OctArchive).StyleIcon(Colors.MediumPurple));
+            return tree;
+        }
+
         static TreeView CreateLongTree()
         {
             var tree = new TreeView();
@@ -93,6 +108,7 @@ public sealed class TreeViewDemo : ControlsDemoBase
         noLinesTree.Style(TreeViewStyle.NoLines);
         var (heavyLinesTree, _) = CreateTree();
         heavyLinesTree.Style(TreeViewStyle.HeavyLines);
+        var styledIconTree = CreateStyledIconTree();
         var longTree = CreateLongTree();
 
         return new VStack(
@@ -106,12 +122,22 @@ public sealed class TreeViewDemo : ControlsDemoBase
                 new HStack(
                         new Group().TopLeftText("Default").Content(defaultTree),
                         new Group().TopLeftText("No lines").Content(noLinesTree),
-                        new Group().TopLeftText("Heavy").Content(heavyLinesTree)
+                        new Group().TopLeftText("Heavy").Content(heavyLinesTree),
+                        new Group().TopLeftText("Styled icons").Content(styledIconTree)
                     )
                     .Spacing(2),
                 DemoUi.Hint("Large trees can be hosted in a ScrollViewer."),
                 new Border(new ScrollViewer(longTree)).MinHeight(12).MaxHeight(12)
             )
             .Spacing(1);
+    }
+}
+
+file static class TreeNodeDemoExtensions
+{
+    public static TreeNode StyleIcon(this TreeNode node, Color color)
+    {
+        node.IconStyle = Style.None.WithForeground(color);
+        return node;
     }
 }

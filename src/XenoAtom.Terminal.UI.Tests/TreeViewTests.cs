@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Linq;
+using System.Reflection;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Styling;
@@ -95,6 +96,25 @@ public sealed class TreeViewTests
         Assert.AreSame(childNode, tree.SelectedNode);
         Assert.IsFalse(tree.TrySelectNode(hiddenChild));
         Assert.AreSame(childNode, tree.SelectedNode);
+    }
+
+    [TestMethod]
+    public void TreeView_Applies_Node_IconStyle()
+    {
+        var iconColor = Color.Rgb(0x33, 0xCC, 0x66);
+        var tree = new TreeView();
+        tree.Roots.Add(new TreeNode("Styled")
+        {
+            Icon = new Rune('◆'),
+            IconStyle = Style.None.WithForeground(iconColor),
+        });
+
+        using var driver = new TerminalAppTestDriver(tree, TerminalHostKind.Fullscreen, new TerminalSize(30, 6));
+        driver.Tick();
+
+        var (cell, _) = FindRenderedRune(driver.App, new Rune('◆'));
+        Assert.IsTrue(cell.TryGetForeground(out var foreground), "Expected the icon to render with an explicit foreground.");
+        Assert.AreEqual(iconColor, foreground);
     }
 
     [TestMethod]
@@ -239,5 +259,32 @@ public sealed class TreeViewTests
         driver.Tick();
 
         Assert.IsTrue(stateA.Value, "Clicking the check box header should toggle state.");
+    }
+
+    private static (Style Style, int Index) FindRenderedRune(TerminalApp app, Rune rune)
+    {
+        var renderBufferField = typeof(TerminalApp).GetField("_renderBuffer", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.IsNotNull(renderBufferField, "Expected TerminalApp to expose the render buffer field for tests.");
+
+        var buffer = renderBufferField.GetValue(app);
+        Assert.IsNotNull(buffer, "Expected the render buffer to be initialized.");
+
+        var scalarsField = buffer.GetType().GetField("_scalars", BindingFlags.Instance | BindingFlags.NonPublic);
+        var cellsField = buffer.GetType().GetField("_cells", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.IsNotNull(scalarsField);
+        Assert.IsNotNull(cellsField);
+
+        var scalars = (int[])scalarsField.GetValue(buffer)!;
+        var cells = (Style[])cellsField.GetValue(buffer)!;
+        for (var i = 0; i < scalars.Length; i++)
+        {
+            if (scalars[i] == rune.Value)
+            {
+                return (cells[i], i);
+            }
+        }
+
+        Assert.Fail($"Expected to find rune `{rune}` in the render buffer.");
+        return default;
     }
 }

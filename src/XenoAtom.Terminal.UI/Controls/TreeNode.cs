@@ -72,6 +72,12 @@ public sealed partial class TreeNode: IVisualElement
     public partial Rune? Icon { get; set; }
 
     /// <summary>
+    /// Gets or sets the optional style applied to the node icon.
+    /// </summary>
+    [Bindable]
+    public partial Style? IconStyle { get; set; }
+
+    /// <summary>
     /// Gets or sets arbitrary data associated with the node.
     /// </summary>
     [Bindable]

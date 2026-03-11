@@ -104,6 +104,11 @@ public sealed record TreeViewStyle : IStyle<TreeViewStyle>
     public Func<object?, Rune?, Rune>? IconResolver { get; init; }
 
     /// <summary>
+    /// Gets the optional style applied to node icons.
+    /// </summary>
+    public Style? IconStyle { get; init; }
+
+    /// <summary>
     /// Gets the optional style used for a normal item.
     /// </summary>
     public Style? Item { get; init; }
@@ -132,6 +137,17 @@ public sealed record TreeViewStyle : IStyle<TreeViewStyle>
     public Rune ResolveIcon(object? dataContext, Rune? nodeIcon)
     {
         return IconResolver?.Invoke(dataContext, nodeIcon) ?? (nodeIcon ?? TreeNodeIcons.DocumentGlyph);
+    }
+
+    /// <summary>
+    /// Resolves the style used to draw a node icon.
+    /// </summary>
+    /// <param name="rowStyle">The row style for the current node.</param>
+    /// <param name="nodeIconStyle">An optional node-provided icon style.</param>
+    /// <returns>The resolved icon style.</returns>
+    public Style ResolveIconStyle(Style rowStyle, Style? nodeIconStyle)
+    {
+        return rowStyle | (IconStyle ?? Style.None) | (nodeIconStyle ?? Style.None);
     }
 
     /// <summary>

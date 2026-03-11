@@ -80,6 +80,9 @@ Properties:
 - `IsExpanded : bool` (bindable)
 - `Icon : Rune?` (bindable)
   - Optional node-provided icon. The final icon is resolved by `TreeViewStyle.ResolveIcon(...)`.
+- `IconStyle : Style?` (bindable)
+  - Optional node-provided style for the icon glyph.
+  - Merged over the row style so node-specific foreground/background can customize the icon without affecting the header.
 - `Data : object?` (bindable)
   - Optional data context used by `TreeViewStyle.IconResolver`.
 
@@ -249,8 +252,10 @@ TreeViewStyle controls:
   - `FocusMarkerGlyph` (non-ASCII default; this is the selection marker)
 - icons:
   - `IconResolver : Func<object?, Rune?, Rune>?`
+  - `IconStyle : Style?`
   - node icon fallback uses `TreeNodeIcons.DocumentGlyph`
     - defaults are emoji glyphs (e.g. folder/file/document); see `TreeNodeIcons` for the code points
+  - per-node `TreeNode.IconStyle` overrides can further customize the rendered icon
 - row styles:
   - `Item`, `SelectedFocused`, `SelectedUnfocused`, `Disabled`
   - `ResolveItemStyle(theme, enabled, selected, focused)` provides theme-driven defaults when overrides are not set.
