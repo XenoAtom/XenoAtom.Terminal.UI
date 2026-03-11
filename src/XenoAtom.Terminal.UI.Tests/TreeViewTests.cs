@@ -37,6 +37,67 @@ public sealed class TreeViewTests
     }
 
     [TestMethod]
+    public void TreeView_Exposes_SelectedNode_For_SelectedIndex()
+    {
+        var tree = new TreeView();
+        var rootNode = new TreeNode("Root") { Icon = TreeNodeIcons.FolderGlyph, IsExpanded = true };
+        var childNode = new TreeNode("Child") { Icon = TreeNodeIcons.FileGlyph };
+        rootNode.Children.Add(childNode);
+        tree.Roots.Add(rootNode);
+
+        using var driver = new TerminalAppTestDriver(tree, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        tree.SelectedIndex = 1;
+
+        Assert.AreSame(childNode, tree.SelectedNode);
+        Assert.AreEqual(1, tree.IndexOfVisibleNode(childNode));
+    }
+
+    [TestMethod]
+    public void TreeView_Collapsing_Selected_Child_Selects_Visible_Ancestor()
+    {
+        var tree = new TreeView();
+        var rootNode = new TreeNode("Root") { Icon = TreeNodeIcons.FolderGlyph, IsExpanded = true };
+        var childNode = new TreeNode("Child") { Icon = TreeNodeIcons.FileGlyph };
+        rootNode.Children.Add(childNode);
+        tree.Roots.Add(rootNode);
+
+        using var driver = new TerminalAppTestDriver(tree, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        tree.SelectedIndex = 1;
+        rootNode.IsExpanded = false;
+        driver.Tick();
+
+        Assert.AreEqual(0, tree.SelectedIndex);
+        Assert.AreSame(rootNode, tree.SelectedNode);
+        Assert.AreEqual(-1, tree.IndexOfVisibleNode(childNode));
+    }
+
+    [TestMethod]
+    public void TreeView_Can_Select_A_Visible_Node_By_Reference()
+    {
+        var tree = new TreeView();
+        var rootNode = new TreeNode("Root") { Icon = TreeNodeIcons.FolderGlyph, IsExpanded = true };
+        var childNode = new TreeNode("Child") { Icon = TreeNodeIcons.FileGlyph };
+        var hiddenParent = new TreeNode("Hidden Parent") { Icon = TreeNodeIcons.FolderGlyph };
+        var hiddenChild = new TreeNode("Hidden Child") { Icon = TreeNodeIcons.FileGlyph };
+        hiddenParent.Children.Add(hiddenChild);
+        rootNode.Children.Add(childNode);
+        rootNode.Children.Add(hiddenParent);
+        tree.Roots.Add(rootNode);
+
+        using var driver = new TerminalAppTestDriver(tree, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        Assert.IsTrue(tree.TrySelectNode(childNode));
+        Assert.AreSame(childNode, tree.SelectedNode);
+        Assert.IsFalse(tree.TrySelectNode(hiddenChild));
+        Assert.AreSame(childNode, tree.SelectedNode);
+    }
+
+    [TestMethod]
     public void TreeView_Renders_Hierarchy_Lines_By_Default()
     {
         var tree = new TreeView();

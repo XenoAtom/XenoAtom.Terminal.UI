@@ -54,8 +54,17 @@ Properties:
 - `SelectedIndex : int` (bindable)
   - Index into the current "visible row" list.
   - Coerced to `-1` when the tree has no visible rows, otherwise clamped to `[0 .. VisibleCount - 1]`.
+- `SelectedNode : TreeNode?` (bindable, read-only)
+  - Direct reference to the selected visible node.
+  - Updated whenever `SelectedIndex` changes or the visible-row projection changes.
 - `Scroll : ScrollModel` (non-bindable property from `IScrollable`)
   - Exposes scroll state for `ScrollViewer` integration.
+
+Methods:
+- `TrySelectNode(TreeNode node) : bool`
+  - Selects a currently visible node by reference.
+- `IndexOfVisibleNode(TreeNode node) : int`
+  - Returns the current visible-row index for a node, or `-1` when the node is not visible.
 
 ### TreeNode
 
@@ -113,6 +122,8 @@ Selection and scroll:
 - when `SelectedIndex` changes, TreeView schedules "ensure selected visible"
 - if a viewport is already known (`Scroll.ViewportHeight > 0`), it updates the scroll offset immediately
 - otherwise it performs the ensure-visible step during the next arrange
+- `SelectedNode` is synchronized from the selected visible row so code can react directly to the selected `TreeNode`
+- when the selected node becomes hidden because an ancestor collapses, TreeView moves selection to the nearest visible ancestor
 
 Integration with ScrollViewer:
 - ScrollViewer can drive the offsets by setting its own offsets; TreeView reflects those through its scroll model.
@@ -250,6 +261,7 @@ TreeViewStyle controls:
   - horizontal extent reporting for long content (horizontal scrolling)
 - ControlsDemo shows:
   - style variants for hierarchy lines
+  - `SelectedNode` / `TrySelectNode(...)` usage
   - a larger tree hosted in a ScrollViewer
 
 ## Future / v2 ideas

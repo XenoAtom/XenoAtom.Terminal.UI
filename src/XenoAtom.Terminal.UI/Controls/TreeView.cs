@@ -24,6 +24,7 @@ public sealed partial class TreeView : Visual, IScrollable
     private readonly ScrollModel _scroll;
     private readonly List<VisibleRow> _visible = new(64);
     private bool _ensureSelectedVisible;
+    private TreeNode? _selectedNodeCache;
 
     private readonly record struct VisibleRow(TreeNode Node, int Depth, ulong ContinuationMask, bool IsLastSibling);
 
@@ -70,6 +71,12 @@ public sealed partial class TreeView : Visual, IScrollable
     [Bindable]
     public partial int SelectedIndex { get; set; }
 
+    /// <summary>
+    /// Gets the currently selected visible node.
+    /// </summary>
+    [Bindable]
+    public partial TreeNode? SelectedNode { get; private set; }
+
     partial void OnSelectedIndexChanging(ref int value)
     {
         var count = _visible.Count;
@@ -78,6 +85,7 @@ public sealed partial class TreeView : Visual, IScrollable
 
     partial void OnSelectedIndexChanged(int value)
     {
+        UpdateSelectedNodeFromSelectedIndex(value);
         _ensureSelectedVisible = true;
 
         // If we already have a viewport (i.e. the control was arranged at least once), update the scroll model
@@ -111,6 +119,8 @@ public sealed partial class TreeView : Visual, IScrollable
     {
         ScrollVersion = _scroll.Version;
 
+        var previouslySelectedNode = _selectedNodeCache;
+
         _visible.Clear();
         for (var i = 0; i < _roots.Count; i++)
         {
@@ -128,6 +138,8 @@ public sealed partial class TreeView : Visual, IScrollable
         {
             _visible[i].Node.Header.IsVisible = true;
         }
+
+        SynchronizeSelection(previouslySelectedNode);
     }
 
     /// <summary>
@@ -546,6 +558,38 @@ public sealed partial class TreeView : Visual, IScrollable
     }
 
     /// <summary>
+    /// Attempts to select a currently visible node.
+    /// </summary>
+    /// <param name="node">The node to select.</param>
+    /// <returns><see langword="true"/> if the node is currently visible and was selected; otherwise <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="node"/> is <see langword="null"/>.</exception>
+    public bool TrySelectNode(TreeNode node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+
+        var visibleIndex = FindVisibleIndex(node);
+        if (visibleIndex < 0)
+        {
+            return false;
+        }
+
+        SelectedIndex = visibleIndex;
+        return true;
+    }
+
+    /// <summary>
+    /// Gets the visible-row index for a node.
+    /// </summary>
+    /// <param name="node">The node to locate.</param>
+    /// <returns>The visible-row index, or <c>-1</c> when the node is not currently visible.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="node"/> is <see langword="null"/>.</exception>
+    public int IndexOfVisibleNode(TreeNode node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        return FindVisibleIndex(node);
+    }
+
+    /// <summary>
     /// Toggles expansion for a visible node index.
     /// </summary>
     private void ToggleExpand(int visibleIndex, bool? expand)
@@ -568,5 +612,57 @@ public sealed partial class TreeView : Visual, IScrollable
         }
 
         node.IsExpanded = newValue;
+    }
+
+    private void SynchronizeSelection(TreeNode? preferredNode)
+    {
+        if (_visible.Count == 0)
+        {
+            _selectedNodeCache = null;
+            SelectedIndex = -1;
+            SelectedNode = null;
+            return;
+        }
+
+        var selectedIndex = ResolveSelectionIndex(preferredNode);
+        SelectedIndex = selectedIndex;
+        UpdateSelectedNodeFromSelectedIndex(selectedIndex);
+    }
+
+    private int ResolveSelectionIndex(TreeNode? preferredNode)
+    {
+        var candidate = preferredNode;
+        while (candidate is not null)
+        {
+            var visibleIndex = FindVisibleIndex(candidate);
+            if (visibleIndex >= 0)
+            {
+                return visibleIndex;
+            }
+
+            candidate = candidate.Parent;
+        }
+
+        return Math.Clamp(SelectedIndex, 0, _visible.Count - 1);
+    }
+
+    private void UpdateSelectedNodeFromSelectedIndex(int selectedIndex)
+    {
+        var node = (uint)selectedIndex < (uint)_visible.Count ? _visible[selectedIndex].Node : null;
+        _selectedNodeCache = node;
+        SelectedNode = node;
+    }
+
+    private int FindVisibleIndex(TreeNode node)
+    {
+        for (var i = 0; i < _visible.Count; i++)
+        {
+            if (ReferenceEquals(_visible[i].Node, node))
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 }

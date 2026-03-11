@@ -24,6 +24,23 @@ new TreeView()
 
 - Arrow keys move selection and expand/collapse nodes (when supported by the current node).
 - Mouse click selects a row; glyph areas allow expanding/collapsing.
+- `SelectedIndex` is the index in the current flattened list of visible rows.
+- `SelectedNode` exposes the selected `TreeNode` directly, so application code does not need to map the index back to a node.
+- `TrySelectNode(node)` selects a visible node by reference.
+
+## Selection example
+
+```csharp
+var root = new TreeNode("Root") { IsExpanded = true, Data = "Root" };
+var child = new TreeNode("Child") { Data = "Child" };
+root.Children.Add(child);
+
+var tree = new TreeView([root]);
+
+tree.TrySelectNode(child);
+var selectedNode = tree.SelectedNode;
+var selectedLabel = selectedNode?.Data as string;
+```
 
 ## Defaults
 
