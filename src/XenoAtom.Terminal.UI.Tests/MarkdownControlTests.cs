@@ -361,6 +361,16 @@ public sealed class MarkdownControlTests
     }
 
     [TestMethod]
+    public void MarkdownControl_DoesNot_Add_Trailing_Blank_Line_For_Last_Block()
+    {
+        var control = new MarkdownControl("Hello");
+        var content = GetFlow(control).Items[0].Content;
+
+        Assert.AreEqual(1, content.BlockCount);
+        Assert.AreEqual(0, content.GetBlock(0).MarginBottom);
+    }
+
+    [TestMethod]
     public void MarkdownControl_DoesNotFollowTail_ByDefault()
     {
         var markdown = string.Join("\n\n", Enumerable.Range(0, 80).Select(static i => $"Paragraph {i:00}"));
@@ -397,7 +407,7 @@ public sealed class MarkdownControlTests
         Assert.AreEqual(1, firstBlock.MarginBottom, "Paragraph spacing should default to a single blank row.");
         Assert.AreEqual(0, headingBlock.MarginTop, "Heading spacing before should default to compact (no extra blank rows).");
         Assert.AreEqual(1, headingBlock.MarginBottom, "Heading spacing after should default to a single blank row.");
-        Assert.AreEqual(1, thirdBlock.MarginBottom, "Paragraph spacing should remain consistent after headings.");
+        Assert.AreEqual(0, thirdBlock.MarginBottom, "The final block should not leave a trailing blank line.");
     }
 
     [TestMethod]

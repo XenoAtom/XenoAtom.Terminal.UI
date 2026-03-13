@@ -49,6 +49,7 @@ internal sealed class MarkdownDocumentBuilder
     {
         ArgumentNullException.ThrowIfNull(document);
         RenderBlocks(document, indent: 0, quotePrefix: null, quoteDepth: 0, listDepth: 0);
+        TrimTrailingMarginBottom();
         return _blocks.Count == 0 ? Array.Empty<DocumentFlowBlock>() : _blocks.ToArray();
     }
 
@@ -272,6 +273,23 @@ internal sealed class MarkdownDocumentBuilder
         }
 
         _blocks[lastIndex] = new MarginOverrideBlock(last, last.MarginTop, minMarginBottom);
+    }
+
+    private void TrimTrailingMarginBottom()
+    {
+        if (_blocks.Count == 0)
+        {
+            return;
+        }
+
+        var lastIndex = _blocks.Count - 1;
+        var last = _blocks[lastIndex];
+        if (last.MarginBottom == 0)
+        {
+            return;
+        }
+
+        _blocks[lastIndex] = new MarginOverrideBlock(last, last.MarginTop, marginBottom: 0);
     }
 
     private void RenderAlert(AlertBlock alert, int indent, string? quotePrefix)
