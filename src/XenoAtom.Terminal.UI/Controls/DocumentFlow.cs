@@ -481,6 +481,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
         {
             var width = constraints.MaxWidth == LayoutConstants.Infinite ? LayoutConstants.MaxFinite : Math.Max(1, constraints.MaxWidth);
             EnsureLayouts(width);
+            RefreshLayoutsForRealizedVisualSizeChanges(_owner._items, width, _owner.ItemSpacing, _owner.ItemPadding);
 
             var desired = constraints.Clamp(new Size(
                 Math.Max(1, width),
@@ -508,7 +509,9 @@ public sealed partial class DocumentFlow : Visual, IScrollable
                 return;
             }
 
-            EnsureLayouts(Math.Max(1, finalRect.Width));
+            var width = Math.Max(1, finalRect.Width);
+            EnsureLayouts(width);
+            RefreshLayoutsForRealizedVisualSizeChanges(_owner._items, width, _owner.ItemSpacing, _owner.ItemPadding);
 
             _scroll.SetViewport(finalRect.Width, finalRect.Height);
             _scroll.SetExtent(finalRect.Width, _extentHeight);
@@ -596,6 +599,63 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             _layoutCacheValid = true;
         }
 
+        private void RefreshLayoutsForRealizedVisualSizeChanges(BindableList<DocumentFlowItem> items, int viewportWidth, int itemSpacing, Thickness defaultPadding)
+        {
+            if (_activeBlocks.Count == 0 || _documentLayouts.Count == 0)
+            {
+                return;
+            }
+
+            HashSet<int>? changedDocumentIndexes = null;
+            var firstChangedDocumentIndex = int.MaxValue;
+
+            foreach (var pair in _activeBlocks)
+            {
+                var documentIndex = (int)(pair.Key >> 32);
+                var blockIndex = (int)(pair.Key & 0xFFFFFFFF);
+
+                if ((uint)documentIndex >= (uint)_documentLayouts.Count)
+                {
+                    continue;
+                }
+
+                var layout = _documentLayouts[documentIndex];
+                if ((uint)blockIndex >= (uint)layout.Blocks.Length)
+                {
+                    continue;
+                }
+
+                var item = items[documentIndex];
+                var padding = item.Padding ?? defaultPadding;
+                var innerWidth = Math.Max(1, layout.BubbleWidth - padding.Horizontal);
+                var active = pair.Value;
+                active.Visual.Measure(new LayoutConstraints(0, innerWidth, 0, LayoutConstants.Infinite));
+
+                if (Math.Max(1, active.Visual.DesiredSize.Height) == layout.Blocks[blockIndex].Height)
+                {
+                    continue;
+                }
+
+                changedDocumentIndexes ??= new HashSet<int>();
+                if (changedDocumentIndexes.Add(documentIndex) && documentIndex < firstChangedDocumentIndex)
+                {
+                    firstChangedDocumentIndex = documentIndex;
+                }
+            }
+
+            if (changedDocumentIndexes is null)
+            {
+                return;
+            }
+
+            foreach (var documentIndex in changedDocumentIndexes)
+            {
+                _documentLayouts[documentIndex] = BuildDocumentLayout(items[documentIndex], documentIndex, viewportWidth, defaultPadding);
+            }
+
+            RecomputeDocumentOffsetsFrom(firstChangedDocumentIndex, itemSpacing);
+        }
+
         private bool HasDocumentVersionChanges(BindableList<DocumentFlowItem> items, int viewportWidth)
         {
             if (_documentLayouts.Count != items.Count)
@@ -674,6 +734,36 @@ public sealed partial class DocumentFlow : Visual, IScrollable
                 }
 
                 _documentOffsets[docIndex + 1] = runningOffset;
+            }
+
+            _extentHeight = Math.Max(0, runningOffset);
+        }
+
+        private void RecomputeDocumentOffsetsFrom(int documentIndex, int itemSpacing)
+        {
+            if (_documentLayouts.Count == 0)
+            {
+                _extentHeight = 0;
+                return;
+            }
+
+            var spacing = Math.Max(0, itemSpacing);
+            if (documentIndex <= 0)
+            {
+                documentIndex = 0;
+                _documentOffsets[0] = 0;
+            }
+
+            var runningOffset = _documentOffsets[documentIndex];
+            for (var index = documentIndex; index < _documentLayouts.Count; index++)
+            {
+                runningOffset += _documentLayouts[index].TotalHeight;
+                if (index + 1 < _documentLayouts.Count)
+                {
+                    runningOffset += spacing;
+                }
+
+                _documentOffsets[index + 1] = runningOffset;
             }
 
             _extentHeight = Math.Max(0, runningOffset);

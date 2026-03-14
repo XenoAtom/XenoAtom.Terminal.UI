@@ -499,6 +499,37 @@ public sealed class DocumentFlowTests
     }
 
     [TestMethod]
+    public void DocumentFlow_Reflows_When_Visible_Block_Visual_Changes_Size_Without_Content_Version_Change()
+    {
+        var paragraph = new Paragraph("Short");
+        var flow = new DocumentFlow
+        {
+            ItemPadding = Thickness.Zero,
+            ItemSpacing = 0,
+        };
+
+        flow.Items.Add(new DocumentFlowItem
+        {
+            Content = new SingleBlockContent(new ExistingVisualBlock(paragraph)),
+            Alignment = DocumentFlowAlignment.Left,
+            MaxWidth = 12,
+            Padding = Thickness.Zero,
+        });
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(20, 6));
+        driver.Tick();
+
+        var initialExtent = flow.Scroll.ExtentHeight;
+        Assert.AreEqual(1, initialExtent, "Expected the initial paragraph to fit on a single row.");
+
+        paragraph.Text = "A paragraph that should wrap across multiple rows once the visible block updates.";
+        driver.Tick();
+
+        var updatedExtent = flow.Scroll.ExtentHeight;
+        Assert.IsTrue(updatedExtent > initialExtent, "Expected DocumentFlow to recompute the extent when a visible block changes its desired height.");
+    }
+
+    [TestMethod]
     public void DocumentFlow_Selection_IsExclusive_Across_Paragraph_Blocks()
     {
         var flow = new DocumentFlow
@@ -680,6 +711,35 @@ public sealed class DocumentFlowTests
             var width = constraints.MaxWidth == LayoutConstants.Infinite ? 1 : Math.Max(1, constraints.MaxWidth);
             return SizeHints.Fixed(new Size(width, 1));
         }
+    }
+
+    private sealed class ExistingVisualBlock : DocumentFlowBlock
+    {
+        private readonly Visual _visual;
+
+        public ExistingVisualBlock(Visual visual)
+        {
+            _visual = visual;
+        }
+
+        public override Visual CreateVisual() => _visual;
+    }
+
+    private sealed class SingleBlockContent : IDocumentFlowContent
+    {
+        private readonly DocumentFlowBlock _block;
+
+        public SingleBlockContent(DocumentFlowBlock block)
+        {
+            _block = block;
+        }
+
+        public int Version => 0;
+
+        public int BlockCount => 1;
+
+        public DocumentFlowBlock GetBlock(int index)
+            => index == 0 ? _block : throw new ArgumentOutOfRangeException(nameof(index));
     }
 
     private sealed class ToggleContent : IDocumentFlowContent
