@@ -293,6 +293,7 @@ public partial class PromptEditor : TextEditorBase
             Gesture = new KeyGesture(TerminalKey.Tab),
             Importance = CommandImportance.Primary,
             Presentation = CommandPresentation.CommandBar,
+            IsVisible = static v => ((PromptEditor)v).CompletionHandler.Invoke is not null,
             Execute = static v => ((PromptEditor)v).RequestCompletion(TerminalModifiers.None),
         });
 
@@ -304,6 +305,7 @@ public partial class PromptEditor : TextEditorBase
             Gesture = new KeyGesture(TerminalKey.Up, TerminalModifiers.Alt),
             Importance = CommandImportance.Secondary,
             Presentation = CommandPresentation.CommandBar,
+            IsVisible = static v => ((PromptEditor)v).History is { Entries.Count: > 0 },
             Execute = static v => ((PromptEditor)v).HistoryPrevious(),
             CanExecute = static v => ((PromptEditor)v).CanNavigateHistory,
         });
@@ -316,6 +318,7 @@ public partial class PromptEditor : TextEditorBase
             Gesture = new KeyGesture(TerminalKey.Down, TerminalModifiers.Alt),
             Importance = CommandImportance.Secondary,
             Presentation = CommandPresentation.CommandBar,
+            IsVisible = static v => ((PromptEditor)v).History is { Entries.Count: > 0 },
             Execute = static v => ((PromptEditor)v).HistoryNext(),
             CanExecute = static v => ((PromptEditor)v).CanNavigateHistory,
         });
