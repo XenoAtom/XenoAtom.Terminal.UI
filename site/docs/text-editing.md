@@ -17,6 +17,7 @@ These controls share the same editing engine and most of the same user experienc
 - [TextArea](controls/textarea.md) — multi-line editor, soft wrapping, Find/Replace popup
 - [MaskedInput](controls/maskedinput.md) — structured templates (credit cards, dates, IDs, etc.)
 - [NumberBox](controls/numberbox.md) — numeric value binding with inline validation
+- [PromptEditor](controls/prompteditor.md) — prompt-style editor with configurable command hints for accept/new-line workflows
 
 Other controls also *use* the same infrastructure for parts of their UX:
 
@@ -88,6 +89,7 @@ with accessibility settings in many terminals.
 - [TextArea](controls/textarea.md)
 - [MaskedInput](controls/maskedinput.md)
 - [NumberBox](controls/numberbox.md)
+- [PromptEditor](controls/prompteditor.md)
 - [SearchReplacePopup](controls/searchreplacepopup.md)
 - [Binding & State](binding.md)
 - [Input](input.md)

@@ -2,10 +2,11 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Linq;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Hosting;
-using System.Linq;
+using XenoAtom.Terminal.UI.Input;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -137,5 +138,55 @@ public sealed class PromptEditorTests
 
         driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
         driver.TickUntil(() => editor.Text == "hello");
+    }
+
+    [TestMethod]
+    public void PromptEditor_Uses_Default_Command_Config_When_Config_Is_Null()
+    {
+        var editor = new PromptEditor((PromptEditorConfig?)null);
+        var defaultConfig = PromptEditorConfig.Default;
+
+        AssertCommand(editor, "PromptEditor.Accept", defaultConfig.AcceptCommand);
+        AssertCommand(editor, "PromptEditor.Cancel", defaultConfig.CancelCommand);
+        AssertCommand(editor, "PromptEditor.InsertNewLine", defaultConfig.InsertNewLineCommand);
+        AssertCommand(editor, "PromptEditor.Complete", defaultConfig.CompleteCommand);
+        AssertCommand(editor, "PromptEditor.HistoryPrevious", defaultConfig.HistoryPreviousCommand);
+        AssertCommand(editor, "PromptEditor.HistoryNext", defaultConfig.HistoryNextCommand);
+    }
+
+    [TestMethod]
+    public void PromptEditor_Applies_Custom_Command_Config()
+    {
+        var defaultConfig = PromptEditorConfig.Default;
+        var config = defaultConfig with
+        {
+            AcceptCommand = defaultConfig.AcceptCommand with
+            {
+                LabelMarkup = "Submit",
+                DescriptionMarkup = "Submit the current prompt text.",
+                Gesture = new KeyGesture(TerminalChar.CtrlM, TerminalModifiers.Ctrl),
+            },
+            InsertNewLineCommand = defaultConfig.InsertNewLineCommand with
+            {
+                LabelMarkup = "Line break",
+                DescriptionMarkup = "Insert a line break with Enter.",
+                Gesture = new KeyGesture(TerminalKey.Enter),
+            },
+        };
+
+        var editor = new PromptEditor(config)
+            .EnterMode(PromptEditorEnterMode.EnterInsertsNewLine);
+
+        AssertCommand(editor, "PromptEditor.Accept", config.AcceptCommand);
+        AssertCommand(editor, "PromptEditor.InsertNewLine", config.InsertNewLineCommand);
+    }
+
+    private static void AssertCommand(PromptEditor editor, string id, PromptEditorCommandConfig expected)
+    {
+        var command = editor.Commands.FirstOrDefault(x => string.Equals(x.Id, id, StringComparison.Ordinal));
+        Assert.IsNotNull(command, $"Expected command '{id}' to be registered.");
+        Assert.AreEqual(expected.LabelMarkup, command.LabelMarkup);
+        Assert.AreEqual(expected.DescriptionMarkup, command.DescriptionMarkup);
+        Assert.AreEqual(expected.Gesture, command.Gesture);
     }
 }

@@ -41,6 +41,32 @@ new PromptEditor()
     .EnterMode(PromptEditorEnterMode.EnterInsertsNewLine);
 ```
 
+If you also surface prompt commands through a `CommandBar`, you can configure their labels, descriptions, and gestures at
+construction time so the hints match your chosen enter mode semantics:
+
+```csharp
+var config = PromptEditorConfig.Default with
+{
+    AcceptCommand = PromptEditorConfig.Default.AcceptCommand with
+    {
+        LabelMarkup = "Submit",
+        DescriptionMarkup = "Submit the current prompt text with Ctrl+J.",
+        Gesture = new KeyGesture(TerminalChar.CtrlJ, TerminalModifiers.Ctrl),
+    },
+    InsertNewLineCommand = PromptEditorConfig.Default.InsertNewLineCommand with
+    {
+        LabelMarkup = "New line",
+        DescriptionMarkup = "Insert a newline with Enter.",
+        Gesture = new KeyGesture(TerminalKey.Enter),
+    },
+};
+
+new PromptEditor(config)
+    .EnterMode(PromptEditorEnterMode.EnterInsertsNewLine);
+```
+
+`PromptEditorConfig.Default` preserves the existing command labels and shortcuts.
+
 ## Syntax highlighting
 
 `PromptEditor` supports lightweight, pluggable syntax highlighting via a delegate that produces style runs:
@@ -110,6 +136,8 @@ When `Prompt` is set, it takes precedence over `PromptMarkup` on the first visua
 - `PromptEditor.InsertNewLine`
 - `PromptEditor.Complete`
 - `PromptEditor.HistoryPrevious` / `PromptEditor.HistoryNext`
+
+Use `PromptEditorConfig` when you need those command hints to reflect a custom enter/new-line workflow.
 
 It also inherits `TextEditor.*` commands from `TextEditorBase` (undo/redo/copy/paste/select-all, etc.).
 

@@ -208,8 +208,22 @@ public partial class PromptEditor : TextEditorBase
     /// <summary>
     /// Initializes a new instance of the <see cref="PromptEditor"/> class.
     /// </summary>
-    public PromptEditor()
+    public PromptEditor() : this((PromptEditorConfig?)null)
     {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PromptEditor"/> class with command metadata configuration.
+    /// </summary>
+    /// <param name="config">
+    /// The command metadata configuration used for prompt-specific commands. If <see langword="null"/>,
+    /// <see cref="PromptEditorConfig.Default"/> is used.
+    /// </param>
+    public PromptEditor(PromptEditorConfig? config)
+    {
+        var defaultConfig = PromptEditorConfig.Default;
+        var effectiveConfig = config ?? defaultConfig;
+
         _markupParser = new MarkupTextParser();
 
         Focusable = true;
@@ -230,98 +244,12 @@ public partial class PromptEditor : TextEditorBase
             getter: () => Text ?? string.Empty,
             setter: value => Text = value);
 
-        AddCommand(new Command
-        {
-            Id = "PromptEditor.Accept",
-            LabelMarkup = "Accept",
-            DescriptionMarkup = "Accept the current prompt text.",
-            Gesture = new KeyGesture(TerminalKey.Enter),
-            Importance = CommandImportance.Primary,
-            Presentation = CommandPresentation.CommandBar,
-            Execute = static v =>
-            {
-                var editor = (PromptEditor)v;
-                if (editor.EnterMode == PromptEditorEnterMode.EnterAccepts)
-                {
-                    editor.Accept();
-                }
-                else
-                {
-                    editor.InsertNewLine();
-                }
-            },
-        });
-
-        AddCommand(new Command
-        {
-            Id = "PromptEditor.Cancel",
-            LabelMarkup = "Cancel",
-            DescriptionMarkup = "Cancel completion or cancel the prompt.",
-            Gesture = new KeyGesture(TerminalKey.Escape),
-            Importance = CommandImportance.Secondary,
-            Presentation = CommandPresentation.CommandBar,
-            Execute = static v => ((PromptEditor)v).Cancel(),
-        });
-
-        AddCommand(new Command
-        {
-            Id = "PromptEditor.InsertNewLine",
-            LabelMarkup = "New line",
-            DescriptionMarkup = "Insert a newline in the prompt editor (LF).",
-            Gesture = new KeyGesture(TerminalChar.CtrlJ, TerminalModifiers.Ctrl),
-            Importance = CommandImportance.Secondary,
-            Presentation = CommandPresentation.CommandBar,
-            Execute = static v =>
-            {
-                var editor = (PromptEditor)v;
-                if (editor.EnterMode == PromptEditorEnterMode.EnterAccepts)
-                {
-                    editor.InsertNewLine();
-                }
-                else
-                {
-                    editor.Accept();
-                }
-            },
-        });
-
-        AddCommand(new Command
-        {
-            Id = "PromptEditor.Complete",
-            LabelMarkup = "Complete",
-            DescriptionMarkup = "Request completion at the caret.",
-            Gesture = new KeyGesture(TerminalKey.Tab),
-            Importance = CommandImportance.Primary,
-            Presentation = CommandPresentation.CommandBar,
-            IsVisible = static v => ((PromptEditor)v).CompletionHandler.Invoke is not null,
-            Execute = static v => ((PromptEditor)v).RequestCompletion(TerminalModifiers.None),
-        });
-
-        AddCommand(new Command
-        {
-            Id = "PromptEditor.HistoryPrevious",
-            LabelMarkup = "History (previous)",
-            DescriptionMarkup = "Load the previous history entry.",
-            Gesture = new KeyGesture(TerminalKey.Up, TerminalModifiers.Alt),
-            Importance = CommandImportance.Secondary,
-            Presentation = CommandPresentation.CommandBar,
-            IsVisible = static v => ((PromptEditor)v).History is { Entries.Count: > 0 },
-            Execute = static v => ((PromptEditor)v).HistoryPrevious(),
-            CanExecute = static v => ((PromptEditor)v).CanNavigateHistory,
-        });
-
-        AddCommand(new Command
-        {
-            Id = "PromptEditor.HistoryNext",
-            LabelMarkup = "History (next)",
-            DescriptionMarkup = "Load the next history entry.",
-            Gesture = new KeyGesture(TerminalKey.Down, TerminalModifiers.Alt),
-            Importance = CommandImportance.Secondary,
-            Presentation = CommandPresentation.CommandBar,
-            IsVisible = static v => ((PromptEditor)v).History is { Entries.Count: > 0 },
-            Execute = static v => ((PromptEditor)v).HistoryNext(),
-            CanExecute = static v => ((PromptEditor)v).CanNavigateHistory,
-        });
+        AddCommand(CreateAcceptCommand(effectiveConfig.AcceptCommand ?? defaultConfig.AcceptCommand));
+        AddCommand(CreateCancelCommand(effectiveConfig.CancelCommand ?? defaultConfig.CancelCommand));
+        AddCommand(CreateInsertNewLineCommand(effectiveConfig.InsertNewLineCommand ?? defaultConfig.InsertNewLineCommand));
+        AddCommand(CreateCompleteCommand(effectiveConfig.CompleteCommand ?? defaultConfig.CompleteCommand));
+        AddCommand(CreateHistoryPreviousCommand(effectiveConfig.HistoryPreviousCommand ?? defaultConfig.HistoryPreviousCommand));
+        AddCommand(CreateHistoryNextCommand(effectiveConfig.HistoryNextCommand ?? defaultConfig.HistoryNextCommand));
     }
 
     /// <summary>
@@ -349,6 +277,117 @@ public partial class PromptEditor : TextEditorBase
     public PromptEditor(Binding<string?> text) : this()
     {
         this.BindText(text);
+    }
+
+    private static Command CreateAcceptCommand(PromptEditorCommandConfig config)
+    {
+        return new Command
+        {
+            Id = "PromptEditor.Accept",
+            LabelMarkup = config.LabelMarkup,
+            DescriptionMarkup = config.DescriptionMarkup,
+            Gesture = config.Gesture,
+            Importance = CommandImportance.Primary,
+            Presentation = CommandPresentation.CommandBar,
+            Execute = static v =>
+            {
+                var editor = (PromptEditor)v;
+                if (editor.EnterMode == PromptEditorEnterMode.EnterAccepts)
+                {
+                    editor.Accept();
+                }
+                else
+                {
+                    editor.InsertNewLine();
+                }
+            },
+        };
+    }
+
+    private static Command CreateCancelCommand(PromptEditorCommandConfig config)
+    {
+        return new Command
+        {
+            Id = "PromptEditor.Cancel",
+            LabelMarkup = config.LabelMarkup,
+            DescriptionMarkup = config.DescriptionMarkup,
+            Gesture = config.Gesture,
+            Importance = CommandImportance.Secondary,
+            Presentation = CommandPresentation.CommandBar,
+            Execute = static v => ((PromptEditor)v).Cancel(),
+        };
+    }
+
+    private static Command CreateInsertNewLineCommand(PromptEditorCommandConfig config)
+    {
+        return new Command
+        {
+            Id = "PromptEditor.InsertNewLine",
+            LabelMarkup = config.LabelMarkup,
+            DescriptionMarkup = config.DescriptionMarkup,
+            Gesture = config.Gesture,
+            Importance = CommandImportance.Secondary,
+            Presentation = CommandPresentation.CommandBar,
+            Execute = static v =>
+            {
+                var editor = (PromptEditor)v;
+                if (editor.EnterMode == PromptEditorEnterMode.EnterAccepts)
+                {
+                    editor.InsertNewLine();
+                }
+                else
+                {
+                    editor.Accept();
+                }
+            },
+        };
+    }
+
+    private static Command CreateCompleteCommand(PromptEditorCommandConfig config)
+    {
+        return new Command
+        {
+            Id = "PromptEditor.Complete",
+            LabelMarkup = config.LabelMarkup,
+            DescriptionMarkup = config.DescriptionMarkup,
+            Gesture = config.Gesture,
+            Importance = CommandImportance.Primary,
+            Presentation = CommandPresentation.CommandBar,
+            IsVisible = static v => ((PromptEditor)v).CompletionHandler.Invoke is not null,
+            Execute = static v => ((PromptEditor)v).RequestCompletion(TerminalModifiers.None),
+        };
+    }
+
+    private static Command CreateHistoryPreviousCommand(PromptEditorCommandConfig config)
+    {
+        return new Command
+        {
+            Id = "PromptEditor.HistoryPrevious",
+            LabelMarkup = config.LabelMarkup,
+            DescriptionMarkup = config.DescriptionMarkup,
+            Gesture = config.Gesture,
+            Importance = CommandImportance.Secondary,
+            Presentation = CommandPresentation.CommandBar,
+            IsVisible = static v => ((PromptEditor)v).History is { Entries.Count: > 0 },
+            Execute = static v => ((PromptEditor)v).HistoryPrevious(),
+            CanExecute = static v => ((PromptEditor)v).CanNavigateHistory,
+        };
+    }
+
+    private static Command CreateHistoryNextCommand(PromptEditorCommandConfig config)
+    {
+        return new Command
+        {
+            Id = "PromptEditor.HistoryNext",
+            LabelMarkup = config.LabelMarkup,
+            DescriptionMarkup = config.DescriptionMarkup,
+            Gesture = config.Gesture,
+            Importance = CommandImportance.Secondary,
+            Presentation = CommandPresentation.CommandBar,
+            IsVisible = static v => ((PromptEditor)v).History is { Entries.Count: > 0 },
+            Execute = static v => ((PromptEditor)v).HistoryNext(),
+            CanExecute = static v => ((PromptEditor)v).CanNavigateHistory,
+        };
     }
 
     /// <summary>
