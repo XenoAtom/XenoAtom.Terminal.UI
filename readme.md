@@ -143,7 +143,7 @@ Highlights:
 - Lists: `ListBox`, `OptionList`, `SelectionList`, `Select<T>`, `TreeView`
 - Data: `Table`, `DataGridControl`
 - Layout: `VStack`, `HStack`, `Grid`, `DockLayout`, `Splitters`, `Border`, `Group`, `Padder`
-- Overlays: `Popup`, `Dialog`, `TooltipHost`, `Backdrop`
+- Overlays: `Popup`, resizable `Dialog`, `TooltipHost`, `Backdrop`
 - Toasts: `Toast`, `ToastHost` (overlay notifications)
 - Visualization: `BarChart`, `LineChart`, `Sparkline`, `Canvas`, `BreakdownChart`, `TextFiglet`, `Placeholder`
 - Progress: `ProgressBar`, `ProgressTaskGroup`, `Spinner`

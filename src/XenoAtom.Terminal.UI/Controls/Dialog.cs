@@ -16,13 +16,30 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// </summary>
 public sealed partial class Dialog : Visual, IModalVisual
 {
+    private enum DialogResizeHandle
+    {
+        None,
+        Left,
+        Right,
+        Bottom,
+        BottomRight,
+    }
+
     private Rectangle _layoutSlot;
 
-    private bool _dragging;
-    private int _dragStartUiX;
-    private int _dragStartUiY;
-    private int _dragStartLeft;
-    private int _dragStartTop;
+    private bool _draggingMove;
+    private int _interactionStartUiX;
+    private int _interactionStartUiY;
+    private int _interactionStartLeft;
+    private int _interactionStartTop;
+    private int _interactionStartWidth;
+    private int _interactionStartHeight;
+
+    [Bindable]
+    private partial int HoveredResizeHandleValue { get; set; }
+
+    [Bindable]
+    private partial int ActiveResizeHandleValue { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Dialog"/> class.
@@ -31,6 +48,9 @@ public sealed partial class Dialog : Visual, IModalVisual
     {
         this.HorizontalAlignment(Align.Stretch);
         this.VerticalAlignment(Align.Stretch);
+        IsResizable = true;
+        HoveredResizeHandle = DialogResizeHandle.None;
+        ActiveResizeHandle = DialogResizeHandle.None;
     }
 
     /// <summary>
@@ -116,6 +136,12 @@ public sealed partial class Dialog : Visual, IModalVisual
     public partial Thickness Padding { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the dialog can be resized with the mouse.
+    /// </summary>
+    [Bindable]
+    public partial bool IsResizable { get; set; }
+
+    /// <summary>
     /// Gets or sets the optional left position (relative to the layout slot).
     /// </summary>
     [Bindable]
@@ -149,9 +175,31 @@ public sealed partial class Dialog : Visual, IModalVisual
     [Bindable]
     public partial Visual? Content { get; set; }
 
+    /// <summary>
+    /// Gets or sets the optional top-right label visual.
+    /// </summary>
+    [Bindable]
+    public partial Visual? TopRightText { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional bottom-left label visual.
+    /// </summary>
+    [Bindable]
+    public partial Visual? BottomLeftText { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional bottom-right label visual.
+    /// </summary>
+    [Bindable]
+    public partial Visual? BottomRightText { get; set; }
+
     /// <inheritdoc/>
     protected override int ChildrenCount
-        => (_title is null ? 0 : 1) + (_content is null ? 0 : 1);
+        => (_title is null ? 0 : 1)
+            + (_topRightText is null ? 0 : 1)
+            + (_bottomLeftText is null ? 0 : 1)
+            + (_bottomRightText is null ? 0 : 1)
+            + (_content is null ? 0 : 1);
 
     /// <inheritdoc/>
     protected override Visual GetChild(int index)
@@ -161,6 +209,33 @@ public sealed partial class Dialog : Visual, IModalVisual
             if (index == 0)
             {
                 return _title;
+            }
+            index--;
+        }
+
+        if (_topRightText is not null)
+        {
+            if (index == 0)
+            {
+                return _topRightText;
+            }
+            index--;
+        }
+
+        if (_bottomLeftText is not null)
+        {
+            if (index == 0)
+            {
+                return _bottomLeftText;
+            }
+            index--;
+        }
+
+        if (_bottomRightText is not null)
+        {
+            if (index == 0)
+            {
+                return _bottomRightText;
             }
             index--;
         }
@@ -192,14 +267,26 @@ public sealed partial class Dialog : Visual, IModalVisual
             content.Measure(new LayoutConstraints(0, innerWidth, 0, innerHeight));
         }
 
-        var desiredWidth = Width ?? Math.Max(3, 2 + padding.Horizontal + (content?.DesiredSize.Width ?? 0));
-        var desiredHeight = Height ?? Math.Max(3, 2 + padding.Vertical + (content?.DesiredSize.Height ?? 0));
+        var desiredWidth = Math.Max(GetMinimumDialogWidth(), Width ?? (2 + padding.Horizontal + (content?.DesiredSize.Width ?? 0)));
+        var desiredHeight = Math.Max(GetMinimumDialogHeight(), Height ?? (2 + padding.Vertical + (content?.DesiredSize.Height ?? 0)));
 
+        var labelConstraints = new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1);
         var title = Title;
-        if (title is not null)
+        var topRight = TopRightText;
+        var bottomLeft = BottomLeftText;
+        var bottomRight = BottomRightText;
+
+        if (title is not null) title.Measure(labelConstraints);
+        if (topRight is not null) topRight.Measure(labelConstraints);
+        if (bottomLeft is not null) bottomLeft.Measure(labelConstraints);
+        if (bottomRight is not null) bottomRight.Measure(labelConstraints);
+
+        var topRequired = GetLabelWidth(title) + GetLabelWidth(topRight);
+        var bottomRequired = GetLabelWidth(bottomLeft) + GetLabelWidth(bottomRight);
+        var labelRequired = Math.Max(topRequired, bottomRequired);
+        if (labelRequired > 0)
         {
-            title.Measure(new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1));
-            desiredWidth = Math.Max(desiredWidth, Math.Max(3, title.DesiredSize.Width + 4));
+            desiredWidth = Math.Max(desiredWidth, 2 + labelRequired);
         }
 
         return SizeHints.Fixed(constraints.Clamp(new Size(desiredWidth, desiredHeight)));
@@ -209,8 +296,8 @@ public sealed partial class Dialog : Visual, IModalVisual
     protected override Rectangle PrepareArrangeBounds(in Rectangle finalRect)
     {
         _layoutSlot = finalRect;
-        var width = Math.Max(3, Math.Min(finalRect.Width, Width ?? DesiredSize.Width));
-        var height = Math.Max(3, Math.Min(finalRect.Height, Height ?? DesiredSize.Height));
+        var width = ClampWidthToSlot(Width ?? DesiredSize.Width, finalRect.Width);
+        var height = ClampHeightToSlot(Height ?? DesiredSize.Height, finalRect.Height);
 
         var maxLeft = Math.Max(0, finalRect.Width - width);
         var maxTop = Math.Max(0, finalRect.Height - height);
@@ -224,13 +311,7 @@ public sealed partial class Dialog : Visual, IModalVisual
     /// <inheritdoc/>
     protected override void ArrangeCore(in Rectangle finalRect)
     {
-        var title = Title;
-        if (title is not null && finalRect.Width >= 4)
-        {
-            var titleMaxWidth = Math.Max(0, finalRect.Width - 4);
-            var titleWidth = Math.Min(titleMaxWidth, title.DesiredSize.Width);
-            title.Arrange(new Rectangle(finalRect.X + 2, finalRect.Y, titleWidth, 1));
-        }
+        ArrangeLabels(finalRect);
 
         var content = Content;
         if (content is not null)
@@ -256,32 +337,17 @@ public sealed partial class Dialog : Visual, IModalVisual
         }
 
         var focused = HasFocusWithin;
-
         var theme = GetTheme();
-        var glyphs = theme.Lines;
-        var borderStyle = theme.BorderStyle(focused);
-        borderStyle = borderStyle.WithTextStyle(borderStyle.TextStyle);
-
-        var dialogBackground = theme.PopupSurface ?? theme.SurfaceAlt ?? theme.Surface;
-        var surface = theme.ForegroundTextStyle();
-        surface = surface.WithTextStyle(surface.TextStyle);
-        if (dialogBackground is { } bg)
-        {
-            surface = surface.WithBackground(bg);
-        }
-
-        var chromeStyle = borderStyle;
-        if (dialogBackground is { } chromeBg)
-        {
-            chromeStyle = chromeStyle.WithBackground(chromeBg);
-        }
+        var dialogStyle = GetStyle<DialogStyle>();
+        var glyphs = dialogStyle.Glyphs ?? theme.Lines;
+        var surface = dialogStyle.ResolveSurfaceStyle(theme);
+        var chromeStyle = dialogStyle.ResolveBorderStyle(theme, focused);
 
         var left = rect.X;
         var top = rect.Y;
         var right = rect.X + rect.Width - 1;
         var bottom = rect.Y + rect.Height - 1;
 
-        // Fill background.
         for (var y = top; y <= bottom; y++)
         {
             for (var x = left; x <= right; x++)
@@ -307,22 +373,43 @@ public sealed partial class Dialog : Visual, IModalVisual
             buffer.SetCell(right, y, glyphs.Vertical, chromeStyle);
         }
 
-        var title = Title;
-        if (title is not null && rect.Width >= 4 && title.Bounds.Width > 0)
+        var labelStyle = dialogStyle.ResolveLabelBackgroundStyle();
+        var innerWidth = Math.Max(0, rect.Width - 2);
+        if (innerWidth > 0)
         {
-            for (var x = title.Bounds.X; x < title.Bounds.X + title.Bounds.Width && x < rect.Right - 2; x++)
-            {
-                buffer.SetCell(x, rect.Y, new Rune(' '), chromeStyle | TextStyle.Bold);
-            }
+            var innerLeft = rect.X + 1;
+            RenderLabelLeft(buffer, Title, innerLeft, top, innerWidth, labelStyle);
+            RenderLabelRight(buffer, TopRightText, innerLeft, top, innerWidth, labelStyle);
+            RenderLabelLeft(buffer, BottomLeftText, innerLeft, bottom, innerWidth, labelStyle);
+            RenderLabelRight(buffer, BottomRightText, innerLeft, bottom, innerWidth, labelStyle);
+        }
+
+        var highlightedHandle = ActiveResizeHandle != DialogResizeHandle.None
+            ? ActiveResizeHandle
+            : (IsHovered && IsResizable ? HoveredResizeHandle : DialogResizeHandle.None);
+        if (highlightedHandle != DialogResizeHandle.None && TryGetResizeHandleRect(highlightedHandle, out var handleRect))
+        {
+            ApplyResizeHandleHighlight(buffer, handleRect, glyphs, dialogStyle.ResolveResizeHandleHoverStyle(theme, focused), highlightedHandle);
         }
     }
 
     /// <inheritdoc/>
     protected override void OnPointerPressed(PointerEventArgs e)
     {
-        if (e.Button != TerminalMouseButton.Left)
+        if (e.Button != TerminalMouseButton.Left || !IsEnabled)
         {
             return;
+        }
+
+        if (IsResizable)
+        {
+            var resizeHandle = HitTestResizeHandle(e.UiX, e.UiY);
+            if (resizeHandle != DialogResizeHandle.None)
+            {
+                BeginInteraction(e, resizeHandle);
+                e.Handled = true;
+                return;
+            }
         }
 
         if (e.UiY != Bounds.Y)
@@ -330,40 +417,33 @@ public sealed partial class Dialog : Visual, IModalVisual
             return;
         }
 
-        _dragging = true;
-
-        _dragStartUiX = e.UiX;
-        _dragStartUiY = e.UiY;
-
-        var currentLeft = Bounds.X - _layoutSlot.X;
-        var currentTop = Bounds.Y - _layoutSlot.Y;
-        _dragStartLeft = currentLeft;
-        _dragStartTop = currentTop;
-
-        Left = currentLeft;
-        Top = currentTop;
-
+        BeginInteraction(e, DialogResizeHandle.None);
+        _draggingMove = true;
         e.Handled = true;
     }
 
     /// <inheritdoc/>
     protected override void OnPointerMoved(PointerEventArgs e)
     {
-        if (!_dragging)
+        if (ActiveResizeHandle != DialogResizeHandle.None)
         {
+            UpdateResize(e.UiX, e.UiY, ActiveResizeHandle);
+            e.Handled = true;
             return;
         }
 
-        var deltaX = e.UiX - _dragStartUiX;
-        var deltaY = e.UiY - _dragStartUiY;
+        if (_draggingMove)
+        {
+            UpdateMove(e.UiX, e.UiY);
+            e.Handled = true;
+            return;
+        }
 
-        var maxLeft = Math.Max(0, _layoutSlot.Width - Bounds.Width);
-        var maxTop = Math.Max(0, _layoutSlot.Height - Bounds.Height);
-
-        Left = Math.Clamp(_dragStartLeft + deltaX, 0, maxLeft);
-        Top = Math.Clamp(_dragStartTop + deltaY, 0, maxTop);
-
-        e.Handled = true;
+        var hoveredHandle = IsResizable ? HitTestResizeHandle(e.UiX, e.UiY) : DialogResizeHandle.None;
+        if (HoveredResizeHandle != hoveredHandle)
+        {
+            HoveredResizeHandle = hoveredHandle;
+        }
     }
 
     /// <inheritdoc/>
@@ -374,10 +454,318 @@ public sealed partial class Dialog : Visual, IModalVisual
             return;
         }
 
-        if (_dragging)
+        if (_draggingMove || ActiveResizeHandle != DialogResizeHandle.None)
         {
-            _dragging = false;
+            _draggingMove = false;
+            ActiveResizeHandle = DialogResizeHandle.None;
+            HoveredResizeHandle = IsResizable ? HitTestResizeHandle(e.UiX, e.UiY) : DialogResizeHandle.None;
             e.Handled = true;
         }
+    }
+
+    private void ArrangeLabels(in Rectangle finalRect)
+    {
+        var innerWidth = Math.Max(0, finalRect.Width - 2);
+        if (innerWidth <= 0 || finalRect.Height <= 0)
+        {
+            return;
+        }
+
+        var innerLeft = finalRect.X + 1;
+        var topY = finalRect.Y;
+        var bottomY = finalRect.Y + finalRect.Height - 1;
+
+        ArrangeLabelLeft(Title, innerLeft, topY, innerWidth);
+        ArrangeLabelRight(TopRightText, innerLeft, topY, innerWidth);
+        ArrangeLabelLeft(BottomLeftText, innerLeft, bottomY, innerWidth);
+        ArrangeLabelRight(BottomRightText, innerLeft, bottomY, innerWidth);
+    }
+
+    private static void ArrangeLabelLeft(Visual? label, int innerLeft, int y, int innerWidth)
+    {
+        if (label is null)
+        {
+            return;
+        }
+
+        var totalWidth = Math.Min(innerWidth, label.DesiredSize.Width + 2);
+        if (totalWidth < 2)
+        {
+            label.Arrange(new Rectangle(innerLeft, y, 0, 1));
+            return;
+        }
+
+        label.Arrange(new Rectangle(innerLeft + 1, y, Math.Max(0, totalWidth - 2), 1));
+    }
+
+    private static void ArrangeLabelRight(Visual? label, int innerLeft, int y, int innerWidth)
+    {
+        if (label is null)
+        {
+            return;
+        }
+
+        var totalWidth = Math.Min(innerWidth, label.DesiredSize.Width + 2);
+        if (totalWidth < 2)
+        {
+            label.Arrange(new Rectangle(innerLeft, y, 0, 1));
+            return;
+        }
+
+        var startX = innerLeft + Math.Max(0, innerWidth - totalWidth);
+        label.Arrange(new Rectangle(startX + 1, y, Math.Max(0, totalWidth - 2), 1));
+    }
+
+    private static void RenderLabelLeft(CellBuffer buffer, Visual? label, int innerLeft, int y, int innerWidth, Style style)
+    {
+        if (label is null)
+        {
+            return;
+        }
+
+        var totalWidth = Math.Min(innerWidth, label.DesiredSize.Width + 2);
+        if (totalWidth <= 0)
+        {
+            return;
+        }
+
+        for (var i = 0; i < totalWidth; i++)
+        {
+            buffer.SetCell(innerLeft + i, y, new Rune(' '), style);
+        }
+    }
+
+    private static void RenderLabelRight(CellBuffer buffer, Visual? label, int innerLeft, int y, int innerWidth, Style style)
+    {
+        if (label is null)
+        {
+            return;
+        }
+
+        var totalWidth = Math.Min(innerWidth, label.DesiredSize.Width + 2);
+        if (totalWidth <= 0)
+        {
+            return;
+        }
+
+        var startX = innerLeft + Math.Max(0, innerWidth - totalWidth);
+        for (var i = 0; i < totalWidth; i++)
+        {
+            buffer.SetCell(startX + i, y, new Rune(' '), style);
+        }
+    }
+
+    private static int GetLabelWidth(Visual? label)
+        => label is null ? 0 : label.DesiredSize.Width + 2;
+
+    private DialogResizeHandle HoveredResizeHandle
+    {
+        get => (DialogResizeHandle)HoveredResizeHandleValue;
+        set => HoveredResizeHandleValue = (int)value;
+    }
+
+    private DialogResizeHandle ActiveResizeHandle
+    {
+        get => (DialogResizeHandle)ActiveResizeHandleValue;
+        set => ActiveResizeHandleValue = (int)value;
+    }
+
+    private void BeginInteraction(PointerEventArgs e, DialogResizeHandle resizeHandle)
+    {
+        ActiveResizeHandle = resizeHandle;
+        HoveredResizeHandle = resizeHandle;
+
+        _interactionStartUiX = e.UiX;
+        _interactionStartUiY = e.UiY;
+        _interactionStartLeft = Bounds.X - _layoutSlot.X;
+        _interactionStartTop = Bounds.Y - _layoutSlot.Y;
+        _interactionStartWidth = Bounds.Width;
+        _interactionStartHeight = Bounds.Height;
+
+        Left = _interactionStartLeft;
+        Top = _interactionStartTop;
+        Width = _interactionStartWidth;
+        Height = _interactionStartHeight;
+    }
+
+    private void UpdateMove(int uiX, int uiY)
+    {
+        var deltaX = uiX - _interactionStartUiX;
+        var deltaY = uiY - _interactionStartUiY;
+
+        var maxLeft = Math.Max(0, _layoutSlot.Width - Bounds.Width);
+        var maxTop = Math.Max(0, _layoutSlot.Height - Bounds.Height);
+
+        Left = Math.Clamp(_interactionStartLeft + deltaX, 0, maxLeft);
+        Top = Math.Clamp(_interactionStartTop + deltaY, 0, maxTop);
+    }
+
+    private void UpdateResize(int uiX, int uiY, DialogResizeHandle handle)
+    {
+        var deltaX = uiX - _interactionStartUiX;
+        var deltaY = uiY - _interactionStartUiY;
+
+        var slotWidth = Math.Max(0, _layoutSlot.Width);
+        var slotHeight = Math.Max(0, _layoutSlot.Height);
+
+        var nextLeft = _interactionStartLeft;
+        var nextWidth = _interactionStartWidth;
+        var nextHeight = _interactionStartHeight;
+
+        switch (handle)
+        {
+            case DialogResizeHandle.Left:
+            {
+                var right = _interactionStartLeft + _interactionStartWidth;
+                var proposedWidth = right - (_interactionStartLeft + deltaX);
+                nextWidth = ClampWidthToSlot(proposedWidth, Math.Min(slotWidth, right));
+                nextLeft = Math.Clamp(right - nextWidth, 0, Math.Max(0, slotWidth - nextWidth));
+                break;
+            }
+            case DialogResizeHandle.Right:
+                nextWidth = ClampWidthToSlot(_interactionStartWidth + deltaX, slotWidth - _interactionStartLeft);
+                break;
+            case DialogResizeHandle.Bottom:
+                nextHeight = ClampHeightToSlot(_interactionStartHeight + deltaY, slotHeight - _interactionStartTop);
+                break;
+            case DialogResizeHandle.BottomRight:
+                nextWidth = ClampWidthToSlot(_interactionStartWidth + deltaX, slotWidth - _interactionStartLeft);
+                nextHeight = ClampHeightToSlot(_interactionStartHeight + deltaY, slotHeight - _interactionStartTop);
+                break;
+        }
+
+        Left = nextLeft;
+        Top = _interactionStartTop;
+        Width = nextWidth;
+        Height = nextHeight;
+    }
+
+    private DialogResizeHandle HitTestResizeHandle(int uiX, int uiY)
+    {
+        if (!IsResizable || Bounds.Width <= 0 || Bounds.Height <= 0)
+        {
+            return DialogResizeHandle.None;
+        }
+
+        if (TryGetResizeHandleRect(DialogResizeHandle.BottomRight, out var bottomRight) && bottomRight.Contains(uiX, uiY))
+        {
+            return DialogResizeHandle.BottomRight;
+        }
+
+        if (TryGetResizeHandleRect(DialogResizeHandle.Left, out var left) && left.Contains(uiX, uiY))
+        {
+            return DialogResizeHandle.Left;
+        }
+
+        if (TryGetResizeHandleRect(DialogResizeHandle.Right, out var right) && right.Contains(uiX, uiY))
+        {
+            return DialogResizeHandle.Right;
+        }
+
+        if (TryGetResizeHandleRect(DialogResizeHandle.Bottom, out var bottom) && bottom.Contains(uiX, uiY))
+        {
+            return DialogResizeHandle.Bottom;
+        }
+
+        return DialogResizeHandle.None;
+    }
+
+    private bool TryGetResizeHandleRect(DialogResizeHandle handle, out Rectangle rect)
+    {
+        rect = default;
+        var bounds = Bounds;
+        if (!IsResizable || bounds.Width <= 0 || bounds.Height <= 0)
+        {
+            return false;
+        }
+
+        switch (handle)
+        {
+            case DialogResizeHandle.Left:
+            {
+                var availableHeight = Math.Max(1, bounds.Height - 2);
+                var handleHeight = Math.Min(5, availableHeight);
+                var y = bounds.Y + 1 + Math.Max(0, (availableHeight - handleHeight) / 2);
+                rect = new Rectangle(bounds.X, y, 1, handleHeight);
+                return true;
+            }
+            case DialogResizeHandle.Right:
+            {
+                var availableHeight = Math.Max(1, bounds.Height - 2);
+                var handleHeight = Math.Min(5, availableHeight);
+                var y = bounds.Y + 1 + Math.Max(0, (availableHeight - handleHeight) / 2);
+                rect = new Rectangle(bounds.Right - 1, y, 1, handleHeight);
+                return true;
+            }
+            case DialogResizeHandle.Bottom:
+            {
+                var availableWidth = Math.Max(1, bounds.Width - 2);
+                var handleWidth = Math.Min(5, availableWidth);
+                var x = bounds.X + 1 + Math.Max(0, (availableWidth - handleWidth) / 2);
+                rect = new Rectangle(x, bounds.Bottom - 1, handleWidth, 1);
+                return true;
+            }
+            case DialogResizeHandle.BottomRight:
+                rect = new Rectangle(bounds.Right - 1, bounds.Bottom - 1, 1, 1);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static void ApplyResizeHandleHighlight(CellBuffer buffer, Rectangle rect, LineGlyphs glyphs, Style style, DialogResizeHandle handle)
+    {
+        for (var y = rect.Y; y < rect.Bottom; y++)
+        {
+            for (var x = rect.X; x < rect.Right; x++)
+            {
+                var glyph = handle switch
+                {
+                    DialogResizeHandle.Left or DialogResizeHandle.Right => glyphs.Vertical,
+                    DialogResizeHandle.Bottom => glyphs.Horizontal,
+                    DialogResizeHandle.BottomRight => glyphs.BottomRight,
+                    _ => new Rune(' '),
+                };
+                buffer.SetCell(x, y, glyph, style);
+            }
+        }
+    }
+
+    private int GetMinimumDialogWidth() => Math.Max(3, MinWidth);
+
+    private int GetMinimumDialogHeight() => Math.Max(3, MinHeight);
+
+    private int GetMaximumDialogWidth()
+        => MaxWidth == LayoutConstants.Infinite ? int.MaxValue : Math.Max(GetMinimumDialogWidth(), MaxWidth);
+
+    private int GetMaximumDialogHeight()
+        => MaxHeight == LayoutConstants.Infinite ? int.MaxValue : Math.Max(GetMinimumDialogHeight(), MaxHeight);
+
+    private int ClampWidthToSlot(int width, int availableWidth)
+    {
+        var clampedAvailable = Math.Max(0, availableWidth);
+        if (clampedAvailable == 0)
+        {
+            return 0;
+        }
+
+        var min = Math.Min(GetMinimumDialogWidth(), clampedAvailable);
+        var max = Math.Min(GetMaximumDialogWidth(), clampedAvailable);
+        max = Math.Max(min, max);
+        return Math.Clamp(width, min, max);
+    }
+
+    private int ClampHeightToSlot(int height, int availableHeight)
+    {
+        var clampedAvailable = Math.Max(0, availableHeight);
+        if (clampedAvailable == 0)
+        {
+            return 0;
+        }
+
+        var min = Math.Min(GetMinimumDialogHeight(), clampedAvailable);
+        var max = Math.Min(GetMaximumDialogHeight(), clampedAvailable);
+        max = Math.Max(min, max);
+        return Math.Clamp(height, min, max);
     }
 }

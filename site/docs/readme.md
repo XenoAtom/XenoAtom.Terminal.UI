@@ -57,6 +57,7 @@ See also:
 - [Text Editing](text-editing.md) (TextBox/TextArea/MaskedInput and the text subsystem)
 - [Undo/Redo](undo-redo.md) (undo/redo for text editors)
 - [Markup](markup.md) (markup syntax, semantic tokens, `MarkupTextParser`)
+- [Overlays](controls/dialog.md) (dialogs, popups, backdrops, tooltips, toasts)
 - [Nerd Font icons](controls/nerdfont.md) (generated `Rune` helpers for official Nerd Fonts glyphs)
 - [Debugging](debugging.md) (debug overlay, performance metrics)
 

@@ -52,5 +52,30 @@ public sealed class BorderGroupGlyphStyleRenderTests
         Assert.AreEqual('+', lines[0][group.Bounds.Width - 1]);
         Assert.AreEqual('+', lines[group.Bounds.Height - 1][0]);
     }
+
+    [TestMethod]
+    public void DialogStyle_AsAscii_Renders_Plus_Corners()
+    {
+        var dialog = new Dialog
+        {
+            Title = "Title",
+            Width = 12,
+            Height = 5,
+            Content = "X",
+        }
+        .Style(DialogStyle.Ascii);
+
+        using var driver = new TerminalAppTestDriver(dialog, TerminalHostKind.Fullscreen, new TerminalSize(20, 8));
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(20, 8);
+        screen.Apply(driver.Backend.GetOutText());
+        var lines = screen.GetText().Split('\n');
+
+        Assert.AreEqual('+', lines[dialog.Bounds.Y][dialog.Bounds.X]);
+        Assert.AreEqual('+', lines[dialog.Bounds.Y][dialog.Bounds.Right - 1]);
+        Assert.AreEqual('+', lines[dialog.Bounds.Bottom - 1][dialog.Bounds.X]);
+        Assert.AreEqual('+', lines[dialog.Bounds.Bottom - 1][dialog.Bounds.Right - 1]);
+    }
 }
 
