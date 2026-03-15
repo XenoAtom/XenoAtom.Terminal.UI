@@ -15,6 +15,7 @@ This document captures design and implementation notes for `TreeView` and `TreeN
 - **Primary purpose**: Display hierarchical nodes with selection and expand/collapse interaction.
 - **Key goals**:
   - composable node headers (`Visual`)
+  - optional right-aligned node visuals for indicators/actions
   - expandable/collapsible nodes with a visible expander glyph
   - selection as a visible-row index (`SelectedIndex`)
   - keyboard navigation and mouse selection
@@ -30,6 +31,7 @@ This document captures design and implementation notes for `TreeView` and `TreeN
 - Primary implementation:
   - `src/XenoAtom.Terminal.UI/Controls/TreeView.cs`
   - `src/XenoAtom.Terminal.UI/Controls/TreeNode.cs`
+  - `src/XenoAtom.Terminal.UI/Controls/TreeNodeRightVisual.cs`
   - `src/XenoAtom.Terminal.UI/Styling/TreeViewStyle.cs`
 - Tests:
   - `src/XenoAtom.Terminal.UI.Tests/TreeViewTests.cs`
@@ -76,6 +78,9 @@ Properties:
 - `Header : Visual` (required)
 - `Children : BindableList<TreeNode>` (bindable getter)
   - When the node is attached to a TreeView, adding/removing children automatically attaches/detaches their headers.
+- `RightVisuals : BindableList<TreeNodeRightVisual>` (bindable getter)
+  - Right-aligned visuals attached to the row end.
+  - When the node is attached to a TreeView, adding/removing entries automatically attaches/detaches their visuals.
 - `Parent : TreeNode?` (set automatically when added as a child)
 - `IsExpanded : bool` (bindable)
 - `Icon : Rune?` (bindable)
@@ -89,16 +94,30 @@ Properties:
 Notes:
 - TreeNode is an `IVisualElement` because it owns a `BindableList<TreeNode>`, but it is not itself a `Visual`. The
   renderable surface is the `Header` visual.
+- Convenience fluent helpers:
+  - `AddRightVisual(Visual visual)`
+  - `AddRightVisual(Visual visual, TreeNodeRightVisualVisibility visibility)`
+
+### TreeNodeRightVisual
+
+- `TreeNodeRightVisual : IVisualElement` (sealed)
+
+Properties:
+- `Visual : Visual` (required)
+- `Visibility : TreeNodeRightVisualVisibility` (bindable)
+  - `Always`: visible whenever the node row is visible
+  - `Hover`: visible only while the row is hovered
 
 ## Visible rows and child attachment model
 
 TreeView maintains:
 - `_headers`: a `VisualList<Visual>` containing the header visuals for all nodes currently in the tree
+- `_rightVisuals`: a `VisualList<Visual>` containing right-aligned visuals for all nodes currently in the tree
 - `_visible`: a list of visible rows derived from expanded nodes
 
-Node headers are attached once and reused:
-- when a node is added (directly or via child list changes), its header is attached to the TreeView visual tree
-- when a node is removed, its header is detached
+Node visuals are attached once and reused:
+- when a node is added (directly or via child list changes), its header and right visuals are attached to the TreeView visual tree
+- when a node is removed, its header and right visuals are detached
 
 The visible row list is recomputed during `PrepareChildren`:
 - it traverses `Roots` recursively and includes children only when `IsExpanded` is true
@@ -111,7 +130,11 @@ Example:
 
 To avoid allocating temporary sets when toggling visibility, `PrepareChildren`:
 - sets all headers `IsVisible = false`
-- then sets `IsVisible = true` for headers that appear in `_visible`
+- sets all right visuals `IsVisible = false`
+- then sets `IsVisible = true` for headers/right visuals that belong to rows in `_visible`
+
+Hover-only right visuals remain attached and measurable, but TreeView collapses them to zero-width rectangles when the row
+is not hovered so they stay out of rendering and hit testing without losing their measured size.
 
 Important: this is not viewport virtualization. All expanded nodes are part of `_visible`, even if scrolled out of
 view. Viewport virtualization could be a future improvement.
@@ -162,6 +185,7 @@ TreeView also stores `MeasuredContentWidth` as a private bindable so arrange can
 
 TreeView measures based on the visible row list and header desired widths:
 - each visible node header is measured with infinite max width and height 1
+- each right visual is also measured with infinite max width and height 1
 - the control computes a "prefix width" per row:
   - selection marker glyph width (`FocusMarkerGlyph`)
   - indentation (depends on depth and whether hierarchy lines are enabled)
@@ -169,7 +193,7 @@ TreeView measures based on the visible row list and header desired widths:
   - a fixed 1-cell gap
   - icon glyph width
   - `SpaceBetweenGlyphAndText` gap
-- the max row width is `prefix + header.DesiredSize.Width`
+- the max row width is `prefix + header.DesiredSize.Width + allRightVisualWidths`
 
 The measured content width is stored in `MeasuredContentWidth`.
 
@@ -197,6 +221,11 @@ Arrange:
 Each visible header is arranged to a 1-row rectangle at:
 - `y = Bounds.Y + (rowIndex - Scroll.OffsetY)`
 - `x = Bounds.X + prefixWidth - Scroll.OffsetX`
+
+Right visuals are arranged against the viewport right edge for the row:
+- always-visible visuals occupy the far-right slots
+- hover-only visuals (when active) are inserted immediately to the left of the always-visible group
+- inactive hover-only visuals are arranged with width `0`
 
 ### Render
 
@@ -230,6 +259,9 @@ There is no type-to-search in v1.
 - Left click selects the clicked row.
 - Clicking on the expander glyph cell toggles expand/collapse.
   - The expander hit test is based on the computed prefix position and includes horizontal scrolling (`OffsetX`).
+- Pointer move tracks a hovered row index.
+  - This drives hover-only right visuals.
+  - A click on a right-aligned interactive visual still routes to that visual because it is a normal child visual of the TreeView.
 
 ### Wheel
 
@@ -266,6 +298,7 @@ TreeViewStyle controls:
   - expanding nodes and showing children
   - hierarchy line rendering (default and disabled)
   - root sibling connector rendering
+  - right-aligned visuals (always visible, hover-only, interactive button click)
   - scrolling to keep selection visible when hosted in a ScrollViewer
 - `TreeViewScrollViewerTests` cover:
   - ScrollViewer driving the tree scroll offsets
@@ -274,6 +307,7 @@ TreeViewStyle controls:
 - ControlsDemo shows:
   - style variants for hierarchy lines
   - `SelectedNode` / `TrySelectNode(...)` usage
+  - right-aligned status indicators and hover-only row actions
   - a larger tree hosted in a ScrollViewer
 
 ## Future / v2 ideas

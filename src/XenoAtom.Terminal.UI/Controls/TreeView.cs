@@ -20,6 +20,7 @@ public sealed partial class TreeView : Visual, IScrollable
 {
     private readonly BindableList<TreeNode> _roots;
     private readonly VisualList<Visual> _headers;
+    private readonly VisualList<Visual> _rightVisuals;
 
     private readonly ScrollModel _scroll;
     private readonly List<VisibleRow> _visible = new(64);
@@ -36,8 +37,10 @@ public sealed partial class TreeView : Visual, IScrollable
         Focusable = true;
         HorizontalAlignment = Align.Stretch;
         VerticalAlignment = Align.Stretch;
+        HoveredIndex = -1;
 
         _headers = new VisualList<Visual>(this, "TreeView.Headers");
+        _rightVisuals = new VisualList<Visual>(this, "TreeView.RightVisuals");
         _scroll = new ScrollModel(this);
         _roots = new BindableList<TreeNode>(
             owner: this,
@@ -109,15 +112,22 @@ public sealed partial class TreeView : Visual, IScrollable
     private partial int MeasuredContentWidth { get; set; }
 
     /// <inheritdoc />
-    protected override int ChildrenCount => _headers.Count;
+    protected override int ChildrenCount => _headers.Count + _rightVisuals.Count;
 
     /// <inheritdoc />
-    protected override Visual GetChild(int index) => _headers[index];
+    protected override Visual GetChild(int index) => index < _headers.Count ? _headers[index] : _rightVisuals[index - _headers.Count];
+
+    [Bindable]
+    internal partial int HoveredIndex { get; set; }
 
     /// <inheritdoc />
     protected override void PrepareChildren()
     {
         ScrollVersion = _scroll.Version;
+        if (!IsHovered)
+        {
+            HoveredIndex = -1;
+        }
 
         var previouslySelectedNode = _selectedNodeCache;
 
@@ -134,9 +144,19 @@ public sealed partial class TreeView : Visual, IScrollable
             _headers[i].IsVisible = false;
         }
 
+        for (var i = 0; i < _rightVisuals.Count; i++)
+        {
+            _rightVisuals[i].IsVisible = false;
+        }
+
         for (var i = 0; i < _visible.Count; i++)
         {
-            _visible[i].Node.Header.IsVisible = true;
+            var node = _visible[i].Node;
+            node.Header.IsVisible = true;
+            for (var j = 0; j < node.RightVisuals.Count; j++)
+            {
+                node.RightVisuals[j].Visual.IsVisible = true;
+            }
         }
 
         SynchronizeSelection(previouslySelectedNode);
@@ -158,6 +178,12 @@ public sealed partial class TreeView : Visual, IScrollable
         node.Attach(this);
     }
 
+    internal void AttachNodeRightVisual(TreeNodeRightVisual rightVisual)
+    {
+        ArgumentNullException.ThrowIfNull(rightVisual);
+        _rightVisuals.Add(rightVisual.Visual);
+    }
+
     /// <summary>
     /// Detaches a node and its header from the visual tree.
     /// </summary>
@@ -167,6 +193,12 @@ public sealed partial class TreeView : Visual, IScrollable
 
         node.Detach(this);
         _headers.Remove(node.Header);
+    }
+
+    internal void DetachNodeRightVisual(TreeNodeRightVisual rightVisual)
+    {
+        ArgumentNullException.ThrowIfNull(rightVisual);
+        _rightVisuals.Remove(rightVisual.Visual);
     }
 
     /// <summary>
@@ -204,24 +236,15 @@ public sealed partial class TreeView : Visual, IScrollable
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = GetStyle<TreeViewStyle>();
-        var indentSize = style.HierarchyLines is null ? style.IndentSize : Math.Max(2, style.IndentSize);
-        var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
-        var gapAfterIcon = Math.Max(0, style.SpaceBetweenGlyphAndText);
-
         var maxWidth = 0;
         var headerConstraints = new LayoutConstraints(0, LayoutConstants.Infinite, 0, 1);
         for (var i = 0; i < _visible.Count; i++)
         {
             var (node, depth, _, _) = _visible[i];
-            var visualDepth = style.HierarchyLines is null ? depth : depth + 1;
-            var expander = node.Children.Count > 0 ? (node.IsExpanded ? style.ExpandedGlyph : style.CollapsedGlyph) : new Rune(' ');
-            var expanderWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(expander));
-            var icon = style.ResolveIcon(node.Data, node.Icon);
-            var iconWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(icon));
-
-            var prefix = visualDepth * indentSize + markerWidth + expanderWidth + 1 + iconWidth + gapAfterIcon;
+            var prefix = GetPrefixWidth(style, node, depth);
+            var rightVisualWidth = MeasureRightVisuals(node, headerConstraints);
             node.Header.Measure(headerConstraints);
-            maxWidth = Math.Max(maxWidth, prefix + node.Header.DesiredSize.Width);
+            maxWidth = Math.Max(maxWidth, prefix + node.Header.DesiredSize.Width + rightVisualWidth);
         }
 
         var width = Math.Max(1, maxWidth);
@@ -244,9 +267,6 @@ public sealed partial class TreeView : Visual, IScrollable
         _ = ScrollVersion;
 
         var style = GetStyle<TreeViewStyle>();
-        var indentSize = style.HierarchyLines is null ? style.IndentSize : Math.Max(2, style.IndentSize);
-        var markerWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
-        var gapAfterIcon = Math.Max(0, style.SpaceBetweenGlyphAndText);
         var innerLeft = finalRect.X;
         var innerTop = finalRect.Y;
         var innerWidth = Math.Max(0, finalRect.Width);
@@ -284,15 +304,12 @@ public sealed partial class TreeView : Visual, IScrollable
         for (var i = 0; i < count; i++)
         {
             var (node, depth, _, _) = _visible[i];
-            var visualDepth = style.HierarchyLines is null ? depth : depth + 1;
-            var expander = node.Children.Count > 0 ? (node.IsExpanded ? style.ExpandedGlyph : style.CollapsedGlyph) : new Rune(' ');
-            var expanderWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(expander));
-            var icon = style.ResolveIcon(node.Data, node.Icon);
-            var iconWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(icon));
-
-            var prefix = visualDepth * indentSize + markerWidth + expanderWidth + 1 + iconWidth + gapAfterIcon;
+            var prefix = GetPrefixWidth(style, node, depth);
+            var isRowHovered = i == HoveredIndex;
+            var rightVisualWidth = GetActiveRightVisualWidth(node, isRowHovered);
             var y = innerTop + (i - scrollOffset);
-            node.Header.Arrange(new Rectangle(innerLeft + prefix - offsetX, y, Math.Max(0, extentWidth - prefix), 1));
+            node.Header.Arrange(new Rectangle(innerLeft + prefix - offsetX, y, Math.Max(0, extentWidth - prefix - rightVisualWidth), 1));
+            ArrangeRightVisuals(node, innerLeft, innerWidth, y, isRowHovered);
         }
     }
 
@@ -557,6 +574,20 @@ public sealed partial class TreeView : Visual, IScrollable
         }
     }
 
+    /// <inheritdoc />
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        if (!Bounds.Contains(e.UiX, e.UiY))
+        {
+            HoveredIndex = -1;
+            return;
+        }
+
+        var innerY = e.UiY - Bounds.Y;
+        var index = _scroll.OffsetY + innerY;
+        HoveredIndex = (uint)index < (uint)_visible.Count ? index : -1;
+    }
+
     /// <summary>
     /// Attempts to select a currently visible node.
     /// </summary>
@@ -664,5 +695,106 @@ public sealed partial class TreeView : Visual, IScrollable
         }
 
         return -1;
+    }
+
+    private static int GetIndentSize(TreeViewStyle style) => style.HierarchyLines is null ? style.IndentSize : Math.Max(2, style.IndentSize);
+
+    private static int GetMarkerWidth(TreeViewStyle style) => Math.Max(1, TerminalTextUtility.GetRuneWidth(style.FocusMarkerGlyph));
+
+    private static int GetExpanderWidth(TreeViewStyle style, TreeNode node)
+    {
+        var expander = node.Children.Count > 0 ? (node.IsExpanded ? style.ExpandedGlyph : style.CollapsedGlyph) : new Rune(' ');
+        return Math.Max(1, TerminalTextUtility.GetRuneWidth(expander));
+    }
+
+    private static int GetIconWidth(TreeViewStyle style, TreeNode node)
+    {
+        var icon = style.ResolveIcon(node.Data, node.Icon);
+        return Math.Max(1, TerminalTextUtility.GetRuneWidth(icon));
+    }
+
+    private static int GetPrefixWidth(TreeViewStyle style, TreeNode node, int depth)
+    {
+        var visualDepth = style.HierarchyLines is null ? depth : depth + 1;
+        var gapAfterIcon = Math.Max(0, style.SpaceBetweenGlyphAndText);
+        return visualDepth * GetIndentSize(style) + GetMarkerWidth(style) + GetExpanderWidth(style, node) + 1 + GetIconWidth(style, node) + gapAfterIcon;
+    }
+
+    private static bool IsRightVisualVisible(TreeNodeRightVisual rightVisual, bool isRowHovered)
+        => rightVisual.Visibility == TreeNodeRightVisualVisibility.Always || (isRowHovered && rightVisual.Visibility == TreeNodeRightVisualVisibility.Hover);
+
+    private static int MeasureRightVisuals(TreeNode node, in LayoutConstraints constraints)
+    {
+        var totalWidth = 0;
+        for (var i = 0; i < node.RightVisuals.Count; i++)
+        {
+            var visual = node.RightVisuals[i].Visual;
+            visual.Measure(constraints);
+            totalWidth += visual.DesiredSize.Width;
+        }
+
+        return totalWidth;
+    }
+
+    private static int GetActiveRightVisualWidth(TreeNode node, bool isRowHovered)
+    {
+        var totalWidth = 0;
+        for (var i = 0; i < node.RightVisuals.Count; i++)
+        {
+            var rightVisual = node.RightVisuals[i];
+            if (IsRightVisualVisible(rightVisual, isRowHovered))
+            {
+                totalWidth += rightVisual.Visual.DesiredSize.Width;
+            }
+        }
+
+        return totalWidth;
+    }
+
+    private static void ArrangeRightVisuals(TreeNode node, int innerLeft, int innerWidth, int y, bool isRowHovered)
+    {
+        if (innerWidth <= 0 || node.RightVisuals.Count == 0)
+        {
+            return;
+        }
+
+        var totalWidth = GetActiveRightVisualWidth(node, isRowHovered);
+        var collapsedX = innerLeft + innerWidth;
+
+        var x = collapsedX - totalWidth;
+        ArrangeRightVisualGroup(node, TreeNodeRightVisualVisibility.Hover, isRowHovered, y, ref x);
+        ArrangeRightVisualGroup(node, TreeNodeRightVisualVisibility.Always, isRowHovered, y, ref x);
+        CollapseInactiveRightVisuals(node, collapsedX, y, isRowHovered);
+    }
+
+    private static void ArrangeRightVisualGroup(TreeNode node, TreeNodeRightVisualVisibility visibility, bool isRowHovered, int y, ref int x)
+    {
+        for (var i = 0; i < node.RightVisuals.Count; i++)
+        {
+            var rightVisual = node.RightVisuals[i];
+            if (rightVisual.Visibility != visibility || !IsRightVisualVisible(rightVisual, isRowHovered))
+            {
+                continue;
+            }
+
+            var visual = rightVisual.Visual;
+            var width = Math.Max(0, visual.DesiredSize.Width);
+            visual.Arrange(new Rectangle(x, y, width, 1));
+            x += width;
+        }
+    }
+
+    private static void CollapseInactiveRightVisuals(TreeNode node, int x, int y, bool isRowHovered)
+    {
+        for (var i = 0; i < node.RightVisuals.Count; i++)
+        {
+            var rightVisual = node.RightVisuals[i];
+            if (IsRightVisualVisible(rightVisual, isRowHovered))
+            {
+                continue;
+            }
+
+            rightVisual.Visual.Arrange(new Rectangle(x, y, 0, 1));
+        }
     }
 }

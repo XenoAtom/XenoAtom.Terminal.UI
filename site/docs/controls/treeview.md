@@ -85,6 +85,35 @@ var logs = new TreeNode("Logs")
 };
 ```
 
+## Right-aligned row visuals
+
+Each `TreeNode` can also expose visuals pinned to the right edge of the row.
+These can be status indicators, one-cell action buttons, counters, or any other `Visual`.
+
+- Use `RightVisuals` for direct collection access.
+- Use `AddRightVisual(...)` for a fluent setup.
+- `TreeNodeRightVisualVisibility.Always` keeps the visual visible whenever the node row is visible.
+- `TreeNodeRightVisualVisibility.Hover` shows the visual only while the row is hovered.
+- When both modes are present, always-visible visuals stay on the far right and hover-only visuals appear immediately to their left.
+
+```csharp
+var compactButtonStyle = ButtonStyle.Default with { Padding = Thickness.Zero };
+
+var node = new TreeNode("Build pipeline")
+    .AddRightVisual(
+        "!",
+        TreeNodeRightVisualVisibility.Always)
+    .AddRightVisual(
+        new Button("x")
+            .Style(compactButtonStyle)
+            .Tone(ControlTone.Error)
+            .Click(() => Console.WriteLine("Dismissed"))
+            .Margin(new Thickness(1, 0, 0, 0)),
+        TreeNodeRightVisualVisibility.Hover);
+```
+
+Spacing is controlled by the visuals themselves, so margins work well for separating stacked indicators and actions.
+
 ## Styling
 
 `TreeViewStyle` controls indentation, glyphs, spacing, selection colors, and a default `IconStyle`.

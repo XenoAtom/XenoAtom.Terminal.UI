@@ -5,6 +5,7 @@
 using System.Linq;
 using System.Reflection;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -261,6 +262,75 @@ public sealed class TreeViewTests
         Assert.IsTrue(stateA.Value, "Clicking the check box header should toggle state.");
     }
 
+    [TestMethod]
+    public void TreeView_Renders_Always_Visible_RightVisual_At_Row_End()
+    {
+        var node = new TreeNode("Root") { Icon = TreeNodeIcons.FileGlyph };
+        node.AddRightVisual("!");
+
+        var tree = new TreeView();
+        tree.Roots.Add(node);
+
+        using var driver = new TerminalAppTestDriver(tree, TerminalHostKind.Fullscreen, new TerminalSize(20, 4));
+        driver.Tick();
+
+        var line = GetRenderedLine(driver, width: 20, height: 4, lineIndex: 0);
+        Assert.AreEqual('!', line[19], "Expected the right visual to render flush with the row end.");
+    }
+
+    [TestMethod]
+    public void TreeView_Shows_Hover_RightVisual_To_The_Left_Of_Always_Visible_RightVisuals()
+    {
+        var node = new TreeNode("Root") { Icon = TreeNodeIcons.FileGlyph };
+        node.AddRightVisual("!");
+        node.AddRightVisual("?", TreeNodeRightVisualVisibility.Hover);
+
+        var tree = new TreeView();
+        tree.Roots.Add(node);
+
+        using var driver = new TerminalAppTestDriver(tree, TerminalHostKind.Fullscreen, new TerminalSize(20, 4));
+        driver.Tick();
+
+        var line = GetRenderedLine(driver, width: 20, height: 4, lineIndex: 0);
+        Assert.AreEqual(' ', line[18], "Expected the hover-only visual to stay hidden before hover.");
+        Assert.AreEqual('!', line[19], "Expected the always-visible visual to stay on the far right.");
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, Button = TerminalMouseButton.None, X = 1, Y = 0 });
+        driver.TickUntil(() => node.RightVisuals[1].Visual.Bounds.Width > 0);
+
+        line = GetRenderedLine(driver, width: 20, height: 4, lineIndex: 0);
+        Assert.AreEqual('?', line[18], "Expected the hover-only visual to appear just left of the always-visible visual.");
+        Assert.AreEqual('!', line[19], "Expected the always-visible visual to remain on the far right when hovered.");
+    }
+
+    [TestMethod]
+    public void TreeView_Allows_Clicking_Interactive_RightVisual_Controls()
+    {
+        var clicked = false;
+        var button = new Button("x")
+            .Style(ButtonStyle.Default with { Padding = Thickness.Zero });
+        button.Click(() => clicked = true);
+
+        var node = new TreeNode("Root") { Icon = TreeNodeIcons.FileGlyph };
+        node.AddRightVisual(button);
+
+        var tree = new TreeView();
+        tree.Roots.Add(node);
+
+        using var driver = new TerminalAppTestDriver(tree, TerminalHostKind.Fullscreen, new TerminalSize(20, 4));
+        driver.Tick();
+
+        var clickX = button.Bounds.X;
+        var clickY = button.Bounds.Y;
+        Assert.IsTrue(button.Bounds.Contains(clickX, clickY), "Expected click point to be inside the right visual button bounds.");
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = clickX, Y = clickY });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = clickX, Y = clickY });
+        driver.TickUntil(() => clicked);
+
+        Assert.IsTrue(clicked, "Clicking the right visual button should invoke its click handler.");
+    }
+
     private static (Style Style, int Index) FindRenderedRune(TerminalApp app, Rune rune)
     {
         var renderBufferField = typeof(TerminalApp).GetField("_renderBuffer", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -286,5 +356,12 @@ public sealed class TreeViewTests
 
         Assert.Fail($"Expected to find rune `{rune}` in the render buffer.");
         return default;
+    }
+
+    private static string GetRenderedLine(TerminalAppTestDriver driver, int width, int height, int lineIndex)
+    {
+        var screen = new AnsiTestScreen(width, height);
+        screen.Apply(driver.Backend.GetOutText());
+        return screen.GetText().Split('\n')[lineIndex];
     }
 }
