@@ -93,6 +93,49 @@ public sealed class DialogTests
     }
 
     [TestMethod]
+    public void Dialog_Border_Controls_Can_Handle_Clicks_Without_Starting_Drag()
+    {
+        var titleClicked = false;
+        var topRightClicked = false;
+
+        var titleButton = new Button("L")
+            .Style(ButtonStyle.Default with { Padding = Thickness.Zero });
+        titleButton.Click(() => titleClicked = true);
+
+        var topRightButton = new Button("R")
+            .Style(ButtonStyle.Default with { Padding = Thickness.Zero });
+        topRightButton.Click(() => topRightClicked = true);
+
+        var dialog = new Dialog
+        {
+            Width = 16,
+            Height = 6,
+            Title = titleButton,
+            TopRightText = topRightButton,
+            Content = new TextBlock("Body"),
+        };
+
+        using var driver = new TerminalAppTestDriver(dialog, TerminalHostKind.Fullscreen, new TerminalSize(40, 12));
+        driver.Tick();
+
+        var initialLeft = dialog.Left;
+        var initialTop = dialog.Top;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = titleButton.Bounds.X, Y = titleButton.Bounds.Y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = titleButton.Bounds.X, Y = titleButton.Bounds.Y });
+        driver.TickUntil(() => titleClicked);
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = topRightButton.Bounds.X, Y = topRightButton.Bounds.Y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = topRightButton.Bounds.X, Y = topRightButton.Bounds.Y });
+        driver.TickUntil(() => topRightClicked);
+
+        Assert.IsTrue(titleClicked);
+        Assert.IsTrue(topRightClicked);
+        Assert.AreEqual(initialLeft, dialog.Left);
+        Assert.AreEqual(initialTop, dialog.Top);
+    }
+
+    [TestMethod]
     public void Dialog_Resizing_Right_Updates_Width()
     {
         var dialog = new Dialog

@@ -396,7 +396,9 @@ public sealed partial class Dialog : Visual, IModalVisual
     /// <inheritdoc/>
     protected override void OnPointerPressed(PointerEventArgs e)
     {
-        if (e.Button != TerminalMouseButton.Left || !IsEnabled)
+        if (e.RoutingPhase != RoutingPhase.Bubble
+            || e.Button != TerminalMouseButton.Left
+            || !IsEnabled)
         {
             return;
         }
