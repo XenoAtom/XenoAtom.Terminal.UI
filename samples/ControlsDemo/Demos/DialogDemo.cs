@@ -18,9 +18,16 @@ public sealed class DialogDemo : ControlsDemoBase
         Dialog CreateDialog()
         {
             Dialog? dlg = null;
+            var cornerButton = new Button("Log")
+                .Style(ButtonStyle.Default with { Padding = 0 })
+                .Click(() => context.Log("Dialog corner button clicked"));
+
             dlg = new Dialog()
                 .Title("Modal dialog")
-                .TopRightText(new TextBlock("Resizable").Style(new TextBlockStyle { Foreground = Colors.DeepSkyBlue }))
+                .TopRightText(new HStack(
+                        new TextBlock("Resizable").Style(new TextBlockStyle { Foreground = Colors.DeepSkyBlue }),
+                        cornerButton)
+                    .Spacing(1))
                 .BottomLeftText("Min 36x9")
                 .BottomRightText("Drag edge")
                 .IsModal(true)
