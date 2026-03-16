@@ -16,6 +16,7 @@ Dialogs are displayed in fullscreen apps and typically:
 - take focus when shown
 - can be modal or non-modal depending on configuration
 - can be moved by dragging the top border row
+- highlights the top border row on hover so the move affordance is visible
 - can be resized from the left, right, bottom, and bottom-right handles
 - can be closed via an action (e.g. Close button)
 
@@ -24,7 +25,7 @@ Dialogs are displayed in fullscreen apps and typically:
 - Resize handles are enabled by default via `IsResizable`.
 - Minimum interactive size uses the inherited `MinWidth` and `MinHeight` properties.
 - `TopRightText`, `BottomLeftText`, and `BottomRightText` let you decorate the dialog border the same way `Group` does.
-- `DialogStyle` lets you override border glyphs, surface/border styles, label cutout styling, and resize-handle hover styling.
+- `DialogStyle` lets you override border glyphs, surface/border styles, label cutout styling, and the hover styling used for resize handles and the move bar.
 
 ```csharp
 var dialog = new Dialog()

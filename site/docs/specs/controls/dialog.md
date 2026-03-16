@@ -137,7 +137,7 @@ The dialog renders its own surface and chrome:
   - Background uses `Theme.PopupSurface ?? Theme.SurfaceAlt ?? Theme.Surface` when available.
 - Border: drawn using `DialogStyle.Glyphs ?? theme.Lines` and `DialogStyle.ResolveBorderStyle(...)`.
 - Label cutouts: border-label spans are cleared with `DialogStyle.ResolveLabelBackgroundStyle()`.
-- Resize hover/drag affordances: the active handle is redrawn with `DialogStyle.ResolveResizeHandleHoverStyle(...)`.
+- Resize hover/drag affordances: the active resize handle and hovered/active move bar are redrawn with `DialogStyle.ResolveResizeHandleHoverStyle(...)`.
 
 > [!IMPORTANT]
 > The dialog explicitly preserves/normalizes text attributes when rendering the surface/chrome (`WithTextStyle(...)`) so that
@@ -148,6 +148,7 @@ The dialog renders its own surface and chrome:
 ### Dragging
 
 - Left mouse button press on the top border row (`uiY == Bounds.Y`) starts a drag operation.
+- Hovering the top border row highlights the move bar using the same hover style as the resize handles.
 - While dragging, pointer movement updates `Left` and `Top` (clamped to the layout slot) so the dialog follows the cursor.
 - Releasing the left mouse button ends the drag.
 
@@ -176,7 +177,7 @@ The dialog renders its own surface and chrome:
   - border labels arrange on each edge
   - each resize handle updates the expected dimension(s)
   - min-size clamping works during resize
-  - custom resize hover style is rendered
+  - custom resize hover style is rendered on resize edges and the move bar
 - `OverlaySurfaceTextStyleLeakTests`:
   - dialog surface does not inherit underline from underlay
 

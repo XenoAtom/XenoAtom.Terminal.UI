@@ -149,7 +149,7 @@ public sealed class DialogTests
         driver.Tick();
 
         var handleX = dialog.Bounds.Right - 1;
-        var handleY = dialog.Bounds.Y + 2;
+        var handleY = dialog.Bounds.Y + 1;
 
         driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = handleX, Y = handleY });
         driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Drag, Button = TerminalMouseButton.Left, X = handleX + 4, Y = handleY });
@@ -198,7 +198,7 @@ public sealed class DialogTests
         using var driver = new TerminalAppTestDriver(dialog, TerminalHostKind.Fullscreen, new TerminalSize(40, 12));
         driver.Tick();
 
-        var handleX = dialog.Bounds.X + 5;
+        var handleX = dialog.Bounds.X + 1;
         var handleY = dialog.Bounds.Bottom - 1;
 
         driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = handleX, Y = handleY });
@@ -281,7 +281,69 @@ public sealed class DialogTests
         driver.Tick();
 
         var handleX = dialog.Bounds.Right - 1;
-        var handleY = dialog.Bounds.Y + 2;
+        var handleY = dialog.Bounds.Y + 1;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, Button = TerminalMouseButton.None, X = handleX, Y = handleY });
+        driver.Tick();
+
+        var buffer = (CellBuffer)typeof(TerminalApp).GetField("_renderBuffer", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(driver.App)!;
+        var cell = buffer.UnsafeCells[(handleY * buffer.Width) + handleX];
+
+        Assert.IsTrue(cell.TryGetBackground(out var background));
+        Assert.AreEqual(hoverBackground, background);
+    }
+
+    [TestMethod]
+    public void Dialog_Renders_Custom_Resize_Hover_Style_On_Full_Bottom_Handle()
+    {
+        var theme = Theme.FromScheme(ColorScheme.RootLoopsDark with { Name = "Test" });
+        var hoverBackground = Color.Rgb(255, 0, 0);
+
+        var dialog = new Dialog
+        {
+            Width = 12,
+            Height = 6,
+            Content = new TextBlock("Body"),
+        }
+        .Style(theme)
+        .Style(DialogStyle.Default with { ResizeHandleHoverStyle = Style.None.WithBackground(hoverBackground) });
+
+        using var driver = new TerminalAppTestDriver(dialog, TerminalHostKind.Fullscreen, new TerminalSize(40, 12));
+        driver.Tick();
+
+        var handleX = dialog.Bounds.X + 1;
+        var handleY = dialog.Bounds.Bottom - 1;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, Button = TerminalMouseButton.None, X = handleX, Y = handleY });
+        driver.Tick();
+
+        var buffer = (CellBuffer)typeof(TerminalApp).GetField("_renderBuffer", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(driver.App)!;
+        var cell = buffer.UnsafeCells[(handleY * buffer.Width) + handleX];
+
+        Assert.IsTrue(cell.TryGetBackground(out var background));
+        Assert.AreEqual(hoverBackground, background);
+    }
+
+    [TestMethod]
+    public void Dialog_Renders_Custom_Resize_Hover_Style_On_Move_Bar()
+    {
+        var theme = Theme.FromScheme(ColorScheme.RootLoopsDark with { Name = "Test" });
+        var hoverBackground = Color.Rgb(255, 0, 0);
+
+        var dialog = new Dialog
+        {
+            Width = 12,
+            Height = 6,
+            Content = new TextBlock("Body"),
+        }
+        .Style(theme)
+        .Style(DialogStyle.Default with { ResizeHandleHoverStyle = Style.None.WithBackground(hoverBackground) });
+
+        using var driver = new TerminalAppTestDriver(dialog, TerminalHostKind.Fullscreen, new TerminalSize(40, 12));
+        driver.Tick();
+
+        var handleX = dialog.Bounds.X + 1;
+        var handleY = dialog.Bounds.Y;
 
         driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, Button = TerminalMouseButton.None, X = handleX, Y = handleY });
         driver.Tick();

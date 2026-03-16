@@ -41,6 +41,9 @@ public sealed partial class Dialog : Visual, IModalVisual
     [Bindable]
     private partial int ActiveResizeHandleValue { get; set; }
 
+    [Bindable]
+    private partial bool HoveredMoveHandleValue { get; set; }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="Dialog"/> class.
     /// </summary>
@@ -391,6 +394,11 @@ public sealed partial class Dialog : Visual, IModalVisual
         {
             ApplyResizeHandleHighlight(buffer, handleRect, glyphs, dialogStyle.ResolveResizeHandleHoverStyle(theme, focused), highlightedHandle);
         }
+
+        if ((_draggingMove || (IsHovered && HoveredMoveHandle)) && TryGetMoveHandleRect(out var moveHandleRect))
+        {
+            ApplyMoveHandleHighlight(buffer, moveHandleRect, glyphs, dialogStyle.ResolveResizeHandleHoverStyle(theme, focused));
+        }
     }
 
     /// <inheritdoc/>
@@ -414,7 +422,7 @@ public sealed partial class Dialog : Visual, IModalVisual
             }
         }
 
-        if (e.UiY != Bounds.Y)
+        if (!HitTestMoveHandle(e.UiX, e.UiY))
         {
             return;
         }
@@ -446,6 +454,12 @@ public sealed partial class Dialog : Visual, IModalVisual
         {
             HoveredResizeHandle = hoveredHandle;
         }
+
+        var hoveredMoveHandle = HitTestMoveHandle(e.UiX, e.UiY);
+        if (HoveredMoveHandle != hoveredMoveHandle)
+        {
+            HoveredMoveHandle = hoveredMoveHandle;
+        }
     }
 
     /// <inheritdoc/>
@@ -461,6 +475,7 @@ public sealed partial class Dialog : Visual, IModalVisual
             _draggingMove = false;
             ActiveResizeHandle = DialogResizeHandle.None;
             HoveredResizeHandle = IsResizable ? HitTestResizeHandle(e.UiX, e.UiY) : DialogResizeHandle.None;
+            HoveredMoveHandle = HitTestMoveHandle(e.UiX, e.UiY);
             e.Handled = true;
         }
     }
@@ -572,6 +587,12 @@ public sealed partial class Dialog : Visual, IModalVisual
         set => ActiveResizeHandleValue = (int)value;
     }
 
+    private bool HoveredMoveHandle
+    {
+        get => HoveredMoveHandleValue;
+        set => HoveredMoveHandleValue = value;
+    }
+
     private void BeginInteraction(PointerEventArgs e, DialogResizeHandle resizeHandle)
     {
         ActiveResizeHandle = resizeHandle;
@@ -672,6 +693,22 @@ public sealed partial class Dialog : Visual, IModalVisual
         return DialogResizeHandle.None;
     }
 
+    private bool HitTestMoveHandle(int uiX, int uiY)
+        => TryGetMoveHandleRect(out var rect) && rect.Contains(uiX, uiY);
+
+    private bool TryGetMoveHandleRect(out Rectangle rect)
+    {
+        rect = default;
+        var bounds = Bounds;
+        if (bounds.Width <= 2 || bounds.Height <= 0)
+        {
+            return false;
+        }
+
+        rect = new Rectangle(bounds.X + 1, bounds.Y, bounds.Width - 2, 1);
+        return true;
+    }
+
     private bool TryGetResizeHandleRect(DialogResizeHandle handle, out Rectangle rect)
     {
         rect = default;
@@ -684,29 +721,14 @@ public sealed partial class Dialog : Visual, IModalVisual
         switch (handle)
         {
             case DialogResizeHandle.Left:
-            {
-                var availableHeight = Math.Max(1, bounds.Height - 2);
-                var handleHeight = Math.Min(5, availableHeight);
-                var y = bounds.Y + 1 + Math.Max(0, (availableHeight - handleHeight) / 2);
-                rect = new Rectangle(bounds.X, y, 1, handleHeight);
+                rect = new Rectangle(bounds.X, bounds.Y + 1, 1, Math.Max(1, bounds.Height - 2));
                 return true;
-            }
             case DialogResizeHandle.Right:
-            {
-                var availableHeight = Math.Max(1, bounds.Height - 2);
-                var handleHeight = Math.Min(5, availableHeight);
-                var y = bounds.Y + 1 + Math.Max(0, (availableHeight - handleHeight) / 2);
-                rect = new Rectangle(bounds.Right - 1, y, 1, handleHeight);
+                rect = new Rectangle(bounds.Right - 1, bounds.Y + 1, 1, Math.Max(1, bounds.Height - 2));
                 return true;
-            }
             case DialogResizeHandle.Bottom:
-            {
-                var availableWidth = Math.Max(1, bounds.Width - 2);
-                var handleWidth = Math.Min(5, availableWidth);
-                var x = bounds.X + 1 + Math.Max(0, (availableWidth - handleWidth) / 2);
-                rect = new Rectangle(x, bounds.Bottom - 1, handleWidth, 1);
+                rect = new Rectangle(bounds.X + 1, bounds.Bottom - 1, Math.Max(1, bounds.Width - 2), 1);
                 return true;
-            }
             case DialogResizeHandle.BottomRight:
                 rect = new Rectangle(bounds.Right - 1, bounds.Bottom - 1, 1, 1);
                 return true;
@@ -729,6 +751,17 @@ public sealed partial class Dialog : Visual, IModalVisual
                     _ => new Rune(' '),
                 };
                 buffer.SetCell(x, y, glyph, style);
+            }
+        }
+    }
+
+    private static void ApplyMoveHandleHighlight(CellBuffer buffer, Rectangle rect, LineGlyphs glyphs, Style style)
+    {
+        for (var y = rect.Y; y < rect.Bottom; y++)
+        {
+            for (var x = rect.X; x < rect.Right; x++)
+            {
+                buffer.SetCell(x, y, glyphs.Horizontal, style);
             }
         }
     }
