@@ -392,12 +392,25 @@ public sealed partial class Dialog : Visual, IModalVisual
             : (IsHovered && IsResizable ? HoveredResizeHandle : DialogResizeHandle.None);
         if (highlightedHandle != DialogResizeHandle.None && TryGetResizeHandleRect(highlightedHandle, out var handleRect))
         {
-            ApplyResizeHandleHighlight(buffer, handleRect, glyphs, dialogStyle.ResolveResizeHandleHoverStyle(theme, focused), highlightedHandle);
+            ApplyResizeHandleHighlight(
+                buffer,
+                handleRect,
+                glyphs,
+                dialogStyle.ResolveResizeHandleHoverStyle(theme, focused),
+                highlightedHandle,
+                GetClampedLabelWidth(BottomLeftText, innerWidth),
+                GetClampedLabelWidth(BottomRightText, innerWidth));
         }
 
         if ((_draggingMove || (IsHovered && HoveredMoveHandle)) && TryGetMoveHandleRect(out var moveHandleRect))
         {
-            ApplyMoveHandleHighlight(buffer, moveHandleRect, glyphs, dialogStyle.ResolveResizeHandleHoverStyle(theme, focused));
+            ApplyMoveHandleHighlight(
+                buffer,
+                moveHandleRect,
+                glyphs,
+                dialogStyle.ResolveResizeHandleHoverStyle(theme, focused),
+                GetClampedLabelWidth(Title, innerWidth),
+                GetClampedLabelWidth(TopRightText, innerWidth));
         }
     }
 
@@ -575,6 +588,9 @@ public sealed partial class Dialog : Visual, IModalVisual
     private static int GetLabelWidth(Visual? label)
         => label is null ? 0 : label.DesiredSize.Width + 2;
 
+    private static int GetClampedLabelWidth(Visual? label, int innerWidth)
+        => label is null ? 0 : Math.Min(innerWidth, label.DesiredSize.Width + 2);
+
     private DialogResizeHandle HoveredResizeHandle
     {
         get => (DialogResizeHandle)HoveredResizeHandleValue;
@@ -737,12 +753,17 @@ public sealed partial class Dialog : Visual, IModalVisual
         }
     }
 
-    private static void ApplyResizeHandleHighlight(CellBuffer buffer, Rectangle rect, LineGlyphs glyphs, Style style, DialogResizeHandle handle)
+    private static void ApplyResizeHandleHighlight(CellBuffer buffer, Rectangle rect, LineGlyphs glyphs, Style style, DialogResizeHandle handle, int leftReservedWidth, int rightReservedWidth)
     {
         for (var y = rect.Y; y < rect.Bottom; y++)
         {
             for (var x = rect.X; x < rect.Right; x++)
             {
+                if (handle == DialogResizeHandle.Bottom && IsInReservedHorizontalEdgeSegment(rect, x, leftReservedWidth, rightReservedWidth))
+                {
+                    continue;
+                }
+
                 var glyph = handle switch
                 {
                     DialogResizeHandle.Left or DialogResizeHandle.Right => glyphs.Vertical,
@@ -755,15 +776,26 @@ public sealed partial class Dialog : Visual, IModalVisual
         }
     }
 
-    private static void ApplyMoveHandleHighlight(CellBuffer buffer, Rectangle rect, LineGlyphs glyphs, Style style)
+    private static void ApplyMoveHandleHighlight(CellBuffer buffer, Rectangle rect, LineGlyphs glyphs, Style style, int leftReservedWidth, int rightReservedWidth)
     {
         for (var y = rect.Y; y < rect.Bottom; y++)
         {
             for (var x = rect.X; x < rect.Right; x++)
             {
+                if (IsInReservedHorizontalEdgeSegment(rect, x, leftReservedWidth, rightReservedWidth))
+                {
+                    continue;
+                }
+
                 buffer.SetCell(x, y, glyphs.Horizontal, style);
             }
         }
+    }
+
+    private static bool IsInReservedHorizontalEdgeSegment(Rectangle rect, int x, int leftReservedWidth, int rightReservedWidth)
+    {
+        var relativeX = x - rect.X;
+        return relativeX < leftReservedWidth || relativeX >= rect.Width - rightReservedWidth;
     }
 
     private int GetMinimumDialogWidth() => Math.Max(3, MinWidth);

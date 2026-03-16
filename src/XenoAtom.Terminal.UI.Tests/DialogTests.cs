@@ -356,6 +356,78 @@ public sealed class DialogTests
     }
 
     [TestMethod]
+    public void Dialog_Move_Hover_Does_Not_Overwrite_Top_Border_Labels()
+    {
+        var theme = Theme.FromScheme(ColorScheme.RootLoopsDark with { Name = "Test" });
+        var hoverBackground = Color.Rgb(255, 0, 0);
+
+        var dialog = new Dialog
+        {
+            Width = 18,
+            Height = 6,
+            Title = new TextBlock("TL"),
+            TopRightText = new TextBlock("TR"),
+            Content = new TextBlock("Body"),
+        }
+        .Style(theme)
+        .Style(DialogStyle.Default with { ResizeHandleHoverStyle = Style.None.WithBackground(hoverBackground) });
+
+        using var driver = new TerminalAppTestDriver(dialog, TerminalHostKind.Fullscreen, new TerminalSize(40, 12));
+        driver.Tick();
+
+        var hoverX = dialog.Bounds.X + 7;
+        var hoverY = dialog.Bounds.Y;
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, Button = TerminalMouseButton.None, X = hoverX, Y = hoverY });
+        driver.Tick();
+
+        var buffer = (CellBuffer)typeof(TerminalApp).GetField("_renderBuffer", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(driver.App)!;
+        var middleCell = buffer.UnsafeCells[(hoverY * buffer.Width) + hoverX];
+        var leftLabelCell = buffer.UnsafeCells[(hoverY * buffer.Width) + (dialog.Bounds.X + 1)];
+        var rightLabelCell = buffer.UnsafeCells[(hoverY * buffer.Width) + (dialog.Bounds.Right - 2)];
+
+        Assert.IsTrue(middleCell.TryGetBackground(out var middleBackground));
+        Assert.AreEqual(hoverBackground, middleBackground);
+        Assert.IsFalse(leftLabelCell.TryGetBackground(out var leftBackground) && leftBackground == hoverBackground);
+        Assert.IsFalse(rightLabelCell.TryGetBackground(out var rightBackground) && rightBackground == hoverBackground);
+    }
+
+    [TestMethod]
+    public void Dialog_Bottom_Resize_Hover_Does_Not_Overwrite_Bottom_Border_Labels()
+    {
+        var theme = Theme.FromScheme(ColorScheme.RootLoopsDark with { Name = "Test" });
+        var hoverBackground = Color.Rgb(255, 0, 0);
+
+        var dialog = new Dialog
+        {
+            Width = 18,
+            Height = 6,
+            BottomLeftText = new TextBlock("BL"),
+            BottomRightText = new TextBlock("BR"),
+            Content = new TextBlock("Body"),
+        }
+        .Style(theme)
+        .Style(DialogStyle.Default with { ResizeHandleHoverStyle = Style.None.WithBackground(hoverBackground) });
+
+        using var driver = new TerminalAppTestDriver(dialog, TerminalHostKind.Fullscreen, new TerminalSize(40, 12));
+        driver.Tick();
+
+        var hoverX = dialog.Bounds.X + 7;
+        var hoverY = dialog.Bounds.Bottom - 1;
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, Button = TerminalMouseButton.None, X = hoverX, Y = hoverY });
+        driver.Tick();
+
+        var buffer = (CellBuffer)typeof(TerminalApp).GetField("_renderBuffer", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(driver.App)!;
+        var middleCell = buffer.UnsafeCells[(hoverY * buffer.Width) + hoverX];
+        var leftLabelCell = buffer.UnsafeCells[(hoverY * buffer.Width) + (dialog.Bounds.X + 1)];
+        var rightLabelCell = buffer.UnsafeCells[(hoverY * buffer.Width) + (dialog.Bounds.Right - 2)];
+
+        Assert.IsTrue(middleCell.TryGetBackground(out var middleBackground));
+        Assert.AreEqual(hoverBackground, middleBackground);
+        Assert.IsFalse(leftLabelCell.TryGetBackground(out var leftBackground) && leftBackground == hoverBackground);
+        Assert.IsFalse(rightLabelCell.TryGetBackground(out var rightBackground) && rightBackground == hoverBackground);
+    }
+
+    [TestMethod]
     public void Dialog_Hover_Highlight_Clears_When_Pointer_Leaves()
     {
         var theme = Theme.FromScheme(ColorScheme.RootLoopsDark with { Name = "Test" });

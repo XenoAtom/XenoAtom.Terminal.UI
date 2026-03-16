@@ -26,6 +26,7 @@ Dialogs are displayed in fullscreen apps and typically:
 - Minimum interactive size uses the inherited `MinWidth` and `MinHeight` properties.
 - `TopRightText`, `BottomLeftText`, and `BottomRightText` let you decorate the dialog border the same way `Group` does.
 - `DialogStyle` lets you override border glyphs, surface/border styles, label cutout styling, and the hover styling used for resize handles and the move bar.
+- Top and bottom hover affordances respect border-label cutouts so the highlight does not paint over those visuals.
 
 ```csharp
 var dialog = new Dialog()

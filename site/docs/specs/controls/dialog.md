@@ -137,7 +137,7 @@ The dialog renders its own surface and chrome:
   - Background uses `Theme.PopupSurface ?? Theme.SurfaceAlt ?? Theme.Surface` when available.
 - Border: drawn using `DialogStyle.Glyphs ?? theme.Lines` and `DialogStyle.ResolveBorderStyle(...)`.
 - Label cutouts: border-label spans are cleared with `DialogStyle.ResolveLabelBackgroundStyle()`.
-- Resize hover/drag affordances: the active resize handle and hovered/active move bar are redrawn with `DialogStyle.ResolveResizeHandleHoverStyle(...)`.
+- Resize hover/drag affordances: the active resize handle and hovered/active move bar are redrawn with `DialogStyle.ResolveResizeHandleHoverStyle(...)`, while respecting the border-label cutout spans on the top and bottom rows.
 
 > [!IMPORTANT]
 > The dialog explicitly preserves/normalizes text attributes when rendering the surface/chrome (`WithTextStyle(...)`) so that
