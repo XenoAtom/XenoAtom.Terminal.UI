@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Text;
+using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
@@ -16,29 +17,48 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// </summary>
 public sealed partial class TabControl : Visual
 {
-    private readonly List<TabPage> _tabs = new();
-    private readonly List<TabHitRange> _hitRanges = new();
+    private readonly BindableList<TabPage> _tabs;
+    private readonly List<TabHeaderLayout> _headerLayouts = new();
+    private readonly TabContentHost _contentHost = new();
+
+    private int _headerHeight = 1;
+    private int _overflowButtonWidth;
+    private bool _showOverflowButtons;
+    private bool _canScrollPrevious;
+    private bool _canScrollNext;
+    private int _resolvedFirstVisibleIndex;
+    private int _resolvedVisibleEndIndex;
+
+    private ContentVisual? _contentTemplate;
+    private Visual? _contentRoot;
+    private Func<Visual, ContentVisual?>? _contentTemplateFactory;
 
     [Bindable]
     internal partial int HoveredIndex { get; set; }
 
     [Bindable]
+    internal partial TabHeaderPart HoveredPart { get; set; }
+
+    [Bindable]
     internal partial int PressedIndex { get; set; }
 
     [Bindable]
-    internal partial bool IsPressedInside { get; set; }
+    internal partial TabHeaderPart PressedPart { get; set; }
 
-    private int _headerHeight = 1;
-    private readonly TabContentHost _contentHost = new();
-    private ContentVisual? _contentTemplate;
-    private Visual? _contentRoot;
-    private Func<Visual, ContentVisual?>? _contentTemplateFactory;
+    [Bindable]
+    internal partial bool IsPressedInside { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TabControl"/> class.
     /// </summary>
     public TabControl()
     {
+        _tabs = new BindableList<TabPage>(
+            owner: this,
+            name: "TabControl.Tabs",
+            onAdding: AttachPage,
+            onRemoving: DetachPage);
+
         Focusable = true;
         HorizontalAlignment = Align.Stretch;
         VerticalAlignment = Align.Stretch;
@@ -47,6 +67,8 @@ public sealed partial class TabControl : Visual
         _contentHost.VerticalAlignment = Align.Stretch;
         HoveredIndex = -1;
         PressedIndex = -1;
+        HoveredPart = TabHeaderPart.None;
+        PressedPart = TabHeaderPart.None;
     }
 
     /// <summary>
@@ -67,6 +89,22 @@ public sealed partial class TabControl : Visual
     /// </summary>
     [Bindable]
     public partial int SelectedIndex { get; set; }
+
+    /// <summary>
+    /// Gets or sets the first tab index used as the preferred start of the visible tab window.
+    /// </summary>
+    [Bindable]
+    public partial int FirstVisibleIndex { get; set; }
+
+    partial void OnSelectedIndexChanging(ref int value) => value = Math.Max(0, value);
+
+    partial void OnSelectedIndexChanged(int value)
+    {
+        _ = value;
+        SyncFirstVisibleIndexToSelection();
+    }
+
+    partial void OnFirstVisibleIndexChanging(ref int value) => value = Math.Max(0, value);
 
     /// <inheritdoc/>
     protected override void PrepareChildren()
@@ -98,22 +136,7 @@ public sealed partial class TabControl : Visual
     {
         ArgumentNullException.ThrowIfNull(header);
         ArgumentNullException.ThrowIfNull(content);
-
-        if (header.Parent is not null)
-        {
-            throw new InvalidOperationException("A visual that is already in the UI tree cannot be used as a tab header.");
-        }
-
-        if (content.Parent is not null)
-        {
-            throw new InvalidOperationException("A visual that is already in the UI tree cannot be used as a tab content.");
-        }
-
-        var index = _tabs.Count;
-        var page = new TabPage(header, content);
-        _tabs.Add(page);
-
-        AttachChild(header);
+        AddTab(new TabPage(header, content));
     }
 
     /// <summary>
@@ -123,7 +146,25 @@ public sealed partial class TabControl : Visual
     public void AddTab(TabPage page)
     {
         ArgumentNullException.ThrowIfNull(page);
-        AddTab(page.Header, page.Content);
+        _tabs.Add(page);
+    }
+
+    /// <summary>
+    /// Attempts to close the tab page at the specified index.
+    /// </summary>
+    /// <param name="index">The tab index.</param>
+    /// <returns><see langword="true"/> when the tab was closed; otherwise <see langword="false"/>.</returns>
+    public bool TryCloseTab(int index) => TryCloseTab(index, TabCloseReason.Programmatic);
+
+    /// <summary>
+    /// Attempts to close the specified tab page.
+    /// </summary>
+    /// <param name="page">The tab page to close.</param>
+    /// <returns><see langword="true"/> when the tab was closed; otherwise <see langword="false"/>.</returns>
+    public bool TryCloseTab(TabPage page)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+        return TryCloseTab(_tabs.IndexOf(page), TabCloseReason.Programmatic);
     }
 
     /// <inheritdoc/>
@@ -154,28 +195,9 @@ public sealed partial class TabControl : Visual
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var style = GetStyle<TabControlStyle>();
-        var pad = style.TabPadding;
+        var headerMetrics = MeasureHeaders(style, new LayoutConstraints(0, LayoutConstants.Infinite, 0, constraints.MaxHeight));
 
-        var headerHeight = 1;
-        var headerTotalWidth = 0;
-        var headerConstraints = new LayoutConstraints(0, LayoutConstants.Infinite, 0, constraints.MaxHeight);
-
-        for (var i = 0; i < _tabs.Count; i++)
-        {
-            var header = _tabs[i].Header;
-            var headerHints = header.Measure(headerConstraints);
-            headerHeight = Math.Max(headerHeight, headerHints.Natural.Height);
-
-            var tabWidth = headerHints.Natural.Width + pad.Horizontal;
-            headerTotalWidth += tabWidth;
-            if (i + 1 < _tabs.Count)
-            {
-                headerTotalWidth += 1;
-            }
-        }
-
-        headerHeight = Math.Max(1, headerHeight);
-
+        var headerHeight = Math.Max(1, headerMetrics.Height);
         var contentMaxW = constraints.MaxWidth == LayoutConstants.Infinite
             ? LayoutConstants.Infinite
             : Math.Max(0, constraints.MaxWidth);
@@ -192,7 +214,7 @@ public sealed partial class TabControl : Visual
             contentHeight = contentHints.Natural.Height;
         }
 
-        var width = Math.Max(headerTotalWidth, contentWidth);
+        var width = Math.Max(headerMetrics.TotalWidth, contentWidth);
         var height = headerHeight + contentHeight;
 
         var min = new Size(Math.Min(width, LayoutConstants.MaxFinite), Math.Min(height, LayoutConstants.MaxFinite));
@@ -205,48 +227,102 @@ public sealed partial class TabControl : Visual
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         var style = GetStyle<TabControlStyle>();
-        var pad = style.TabPadding;
+        var headerMetrics = MeasureHeaders(style, new LayoutConstraints(0, LayoutConstants.Infinite, 0, finalRect.Height));
+        var widths = headerMetrics.Widths;
 
-        var headerHeight = 1;
+        _headerHeight = Math.Max(1, Math.Min(headerMetrics.Height, finalRect.Height));
+        _overflowButtonWidth = GetOverflowButtonWidth(style);
+
+        _headerLayouts.Clear();
+        _resolvedFirstVisibleIndex = 0;
+        _resolvedVisibleEndIndex = 0;
+        _showOverflowButtons = false;
+        _canScrollPrevious = false;
+        _canScrollNext = false;
+
         for (var i = 0; i < _tabs.Count; i++)
         {
-            headerHeight = Math.Max(headerHeight, _tabs[i].Header.DesiredSize.Height);
+            _tabs[i].Header.Arrange(new Rectangle(0, 0, 0, 0));
         }
 
-        _headerHeight = Math.Max(1, Math.Min(headerHeight, finalRect.Height));
-
-        _hitRanges.Clear();
-
-        var x0 = finalRect.X;
-        for (var i = 0; i < _tabs.Count && x0 < finalRect.Right; i++)
+        if (finalRect.Width <= 0 || finalRect.Height <= 0 || _tabs.Count == 0)
         {
-            var header = _tabs[i].Header;
-            var headerWidth = header.DesiredSize.Width;
+            _contentRoot?.Arrange(new Rectangle(finalRect.X, finalRect.Y + _headerHeight, Math.Max(0, finalRect.Width), Math.Max(0, finalRect.Height - _headerHeight)));
+            return;
+        }
 
-            var tabWidth = Math.Min(finalRect.Right - x0, headerWidth + pad.Horizontal);
-            if (tabWidth <= 0)
+        _showOverflowButtons = headerMetrics.TotalWidth > finalRect.Width;
+        var buttonReserve = _showOverflowButtons ? _overflowButtonWidth * 2 : 0;
+        var availableTabsWidth = Math.Max(0, finalRect.Width - buttonReserve);
+        _resolvedFirstVisibleIndex = ResolveVisibleStartIndex(FirstVisibleIndex, availableTabsWidth, widths, _showOverflowButtons);
+        _resolvedVisibleEndIndex = ComputeVisibleEnd(_resolvedFirstVisibleIndex, availableTabsWidth, widths);
+
+        if (_showOverflowButtons)
+        {
+            _canScrollPrevious = _resolvedFirstVisibleIndex > 0;
+            _canScrollNext = _resolvedVisibleEndIndex < _tabs.Count;
+        }
+
+        var tabsLeft = finalRect.X + (_showOverflowButtons ? _overflowButtonWidth : 0);
+        var tabsRight = finalRect.Right - (_showOverflowButtons ? _overflowButtonWidth : 0);
+        var x = tabsLeft;
+        var pad = style.TabPadding;
+
+        for (var i = _resolvedFirstVisibleIndex; i < _tabs.Count && x < tabsRight; i++)
+        {
+            var remaining = tabsRight - x;
+            var arrangedWidth = Math.Min(remaining, widths[i]);
+            if (arrangedWidth <= 0)
             {
                 break;
             }
 
-            var headerSlot = new Rectangle(
-                x0 + pad.Left,
+            var page = _tabs[i];
+            var closeReserve = page.ShowCloseButton ? GetCloseButtonReserve(style) : 0;
+            if (closeReserve > arrangedWidth)
+            {
+                closeReserve = arrangedWidth;
+            }
+
+            var headerWidth = Math.Max(0, arrangedWidth - pad.Horizontal - closeReserve);
+            var headerRect = new Rectangle(
+                x + pad.Left,
                 finalRect.Y,
-                Math.Max(0, tabWidth - pad.Horizontal),
+                headerWidth,
                 _headerHeight);
 
-            header.Arrange(headerSlot);
+            page.Header.Arrange(headerRect);
 
-            _hitRanges.Add(new TabHitRange(i, x0 - finalRect.X, (x0 - finalRect.X) + tabWidth));
-            x0 += tabWidth + 1;
+            var closeStart = -1;
+            var closeEnd = -1;
+            if (closeReserve > 0)
+            {
+                closeStart = x + arrangedWidth - closeReserve - finalRect.X;
+                closeEnd = x + arrangedWidth - finalRect.X;
+            }
+
+            _headerLayouts.Add(new TabHeaderLayout(
+                i,
+                x - finalRect.X,
+                (x - finalRect.X) + arrangedWidth,
+                closeStart,
+                closeEnd));
+
+            x += arrangedWidth;
+            if (i + 1 < _tabs.Count && x < tabsRight)
+            {
+                x++;
+            }
         }
+
+        _resolvedVisibleEndIndex = _headerLayouts.Count == 0
+            ? _resolvedFirstVisibleIndex
+            : _headerLayouts[^1].Index + 1;
+        _canScrollNext = _showOverflowButtons && _resolvedVisibleEndIndex < _tabs.Count;
 
         var contentTop = finalRect.Y + _headerHeight;
         var contentHeight = Math.Max(0, finalRect.Height - _headerHeight);
-
-        var inner = new Rectangle(finalRect.X, contentTop, finalRect.Width, contentHeight);
-
-        _contentRoot?.Arrange(inner);
+        _contentRoot?.Arrange(new Rectangle(finalRect.X, contentTop, finalRect.Width, contentHeight));
     }
 
     /// <inheritdoc/>
@@ -265,7 +341,6 @@ public sealed partial class TabControl : Visual
         var headerHeight = Math.Min(Math.Max(1, _headerHeight), rect.Height);
         var stripStyle = style.ResolveStripStyle(theme);
 
-        // Header strip.
         for (var y = rect.Y; y < rect.Y + headerHeight; y++)
         {
             for (var x = rect.X; x < rect.X + rect.Width; x++)
@@ -274,32 +349,57 @@ public sealed partial class TabControl : Visual
             }
         }
 
-        for (var i = 0; i < _hitRanges.Count; i++)
+        if (_showOverflowButtons)
         {
-            var range = _hitRanges[i];
-            if ((uint)range.Index >= (uint)_tabs.Count)
+            var previousStyle = style.ResolveOverflowButtonStyle(
+                theme,
+                enabled: _canScrollPrevious,
+                hovered: HoveredPart == TabHeaderPart.ScrollPrevious,
+                pressed: PressedPart == TabHeaderPart.ScrollPrevious && IsPressedInside);
+            var nextStyle = style.ResolveOverflowButtonStyle(
+                theme,
+                enabled: _canScrollNext,
+                hovered: HoveredPart == TabHeaderPart.ScrollNext,
+                pressed: PressedPart == TabHeaderPart.ScrollNext && IsPressedInside);
+
+            var previousRect = new Rectangle(rect.X, rect.Y, _overflowButtonWidth, headerHeight);
+            var nextRect = new Rectangle(rect.Right - _overflowButtonWidth, rect.Y, _overflowButtonWidth, headerHeight);
+            FillRect(buffer, previousRect, previousStyle);
+            FillRect(buffer, nextRect, nextStyle);
+            WriteCenteredRune(buffer, previousRect, style.OverflowPreviousRune, previousStyle);
+            WriteCenteredRune(buffer, nextRect, style.OverflowNextRune, nextStyle);
+        }
+
+        for (var i = 0; i < _headerLayouts.Count; i++)
+        {
+            var layout = _headerLayouts[i];
+            if ((uint)layout.Index >= (uint)_tabs.Count)
             {
                 continue;
             }
 
-            var tab = _tabs[range.Index];
-            var selected = range.Index == SelectedIndex;
-            var hovered = range.Index == HoveredIndex;
-            var pressed = range.Index == PressedIndex && IsPressedInside;
-            var tabStyle = style.ResolveTabStyle(theme, tab.Content.IsEnabled, focused, selected, hovered, pressed);
+            var page = _tabs[layout.Index];
+            var enabled = IsTabEnabled(page);
+            var selected = layout.Index == SelectedIndex;
+            var hovered = HoveredPart == TabHeaderPart.Tab && layout.Index == HoveredIndex;
+            var pressed = PressedPart == TabHeaderPart.Tab && layout.Index == PressedIndex && IsPressedInside;
+            var tabStyle = style.ResolveTabStyle(theme, enabled, focused, selected, hovered, pressed);
 
-            var xStart = rect.X + range.Start;
-            var xEnd = rect.X + range.End;
+            FillRect(
+                buffer,
+                new Rectangle(rect.X + layout.Start, rect.Y, layout.End - layout.Start, headerHeight),
+                tabStyle);
 
-            for (var y = rect.Y; y < rect.Y + headerHeight; y++)
+            if (layout.CloseStart >= 0 && layout.CloseEnd > layout.CloseStart)
             {
-                for (var x = xStart; x < xEnd && x < rect.X + rect.Width; x++)
-                {
-                    buffer.SetCell(x, y, new Rune(' '), tabStyle);
-                }
+                var closeHovered = HoveredPart == TabHeaderPart.CloseButton && layout.Index == HoveredIndex;
+                var closePressed = PressedPart == TabHeaderPart.CloseButton && layout.Index == PressedIndex && IsPressedInside;
+                var closeRect = new Rectangle(rect.X + layout.CloseStart, rect.Y, layout.CloseEnd - layout.CloseStart, headerHeight);
+                var closeStyle = style.ResolveCloseButtonStyle(theme, tabStyle, enabled, closeHovered, closePressed);
+                FillRect(buffer, closeRect, closeStyle);
+                WriteCenteredRune(buffer, closeRect, style.CloseButtonRune, closeStyle);
             }
         }
-
     }
 
     /// <inheritdoc/>
@@ -313,12 +413,10 @@ public sealed partial class TabControl : Visual
         switch (e.Key)
         {
             case TerminalKey.Left:
-                SelectedIndex = Math.Max(0, SelectedIndex - 1);
-                e.Handled = true;
+                e.Handled = TrySelectRelative(-1);
                 return;
             case TerminalKey.Right:
-                SelectedIndex = Math.Min(_tabs.Count - 1, SelectedIndex + 1);
-                e.Handled = true;
+                e.Handled = TrySelectRelative(1);
                 return;
         }
     }
@@ -326,18 +424,17 @@ public sealed partial class TabControl : Visual
     /// <inheritdoc/>
     protected override void OnPointerMoved(PointerEventArgs e)
     {
-        var localX = e.UiX - Bounds.X;
         var localY = e.UiY - Bounds.Y;
         if (localY < 0 || localY >= _headerHeight)
         {
-            UpdateHoveredIndex(-1);
+            UpdateHoveredTarget(default);
             UpdatePressedInside(false);
             return;
         }
 
-        var index = HitTestTabIndex(localX);
-        UpdateHoveredIndex(index);
-        UpdatePressedInside(index >= 0 && index == PressedIndex);
+        var target = HitTestHeader(e.UiX - Bounds.X);
+        UpdateHoveredTarget(target);
+        UpdatePressedInside(target == new HitTarget(PressedPart, PressedIndex));
     }
 
     /// <inheritdoc/>
@@ -348,76 +445,330 @@ public sealed partial class TabControl : Visual
             return;
         }
 
-        var localX = e.UiX - Bounds.X;
         var localY = e.UiY - Bounds.Y;
         if (localY < 0 || localY >= _headerHeight)
         {
             return;
         }
 
-        var index = HitTestTabIndex(localX);
-        if (index >= 0)
+        var target = HitTestHeader(e.UiX - Bounds.X);
+        if (!IsTargetEnabled(target))
         {
-            PressedIndex = index;
-            IsPressedInside = true;
-            UpdateHoveredIndex(index);
-            e.Handled = true;
+            return;
         }
+
+        PressedPart = target.Part;
+        PressedIndex = target.Index;
+        IsPressedInside = true;
+        UpdateHoveredTarget(target);
+        e.Handled = true;
     }
 
     /// <inheritdoc/>
     protected override void OnPointerReleased(PointerEventArgs e)
     {
-        if (e.Button != TerminalMouseButton.Left)
+        if (e.Button != TerminalMouseButton.Left || PressedPart == TabHeaderPart.None)
         {
             return;
         }
 
-        if (PressedIndex < 0)
-        {
-            return;
-        }
-
-        var localX = e.UiX - Bounds.X;
         var localY = e.UiY - Bounds.Y;
+        var currentTarget = localY >= 0 && localY < _headerHeight
+            ? HitTestHeader(e.UiX - Bounds.X)
+            : default;
+        var pressedTarget = new HitTarget(PressedPart, PressedIndex);
+        var activate = IsPressedInside && currentTarget == pressedTarget;
 
-        var overHeader = localY >= 0 && localY < _headerHeight;
-        var index = overHeader ? HitTestTabIndex(localX) : -1;
-        var activate = IsPressedInside && index == PressedIndex;
-
+        PressedPart = TabHeaderPart.None;
         PressedIndex = -1;
         IsPressedInside = false;
-        UpdateHoveredIndex(index);
+        UpdateHoveredTarget(currentTarget);
 
-        if (activate)
+        if (!activate)
         {
-            SelectedIndex = index;
-            e.Handled = true;
+            return;
+        }
+
+        e.Handled = ActivateTarget(pressedTarget);
+    }
+
+    internal void ValidateReplacementVisual(Visual value, string role)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        if (value.Parent is not null)
+        {
+            throw new InvalidOperationException($"A visual that is already in the UI tree cannot be used as a {role}.");
         }
     }
 
-    private int HitTestTabIndex(int localX)
+    internal void OnPageHeaderChanged(TabPage page, Visual? oldHeader, Visual newHeader)
     {
-        for (var i = 0; i < _hitRanges.Count; i++)
+        ArgumentNullException.ThrowIfNull(page);
+        ArgumentNullException.ThrowIfNull(newHeader);
+
+        if (oldHeader is not null && ReferenceEquals(oldHeader.Parent, this))
         {
-            var range = _hitRanges[i];
-            if (localX >= range.Start && localX < range.End)
+            DetachChild(oldHeader);
+        }
+
+        AttachChild(newHeader);
+    }
+
+    internal void OnPageContentChanged(TabPage page, Visual? oldContent, Visual newContent)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+        ArgumentNullException.ThrowIfNull(newContent);
+
+        if (ReferenceEquals(_contentHost.Content, oldContent))
+        {
+            _contentHost.Content = newContent;
+        }
+    }
+
+    private void AttachPage(TabPage page)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+        ValidateReplacementVisual(page.Header, "tab header");
+        ValidateReplacementVisual(page.Content, "tab content");
+        page.Attach(this);
+        AttachChild(page.Header);
+    }
+
+    private void DetachPage(TabPage page)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+
+        if (ReferenceEquals(_contentHost.Content, page.Content))
+        {
+            _contentHost.Content = null;
+        }
+
+        if (ReferenceEquals(page.Header.Parent, this))
+        {
+            DetachChild(page.Header);
+        }
+
+        page.Detach(this);
+    }
+
+    private bool TryCloseTab(int index, TabCloseReason reason)
+    {
+        if ((uint)index >= (uint)_tabs.Count)
+        {
+            return false;
+        }
+
+        var page = _tabs[index];
+        if (!page.RaiseRequestClosing(this, index, reason))
+        {
+            return false;
+        }
+
+        var nextSelectedIndex = ResolveSelectedIndexAfterRemoval(index);
+        AdjustInteractionStateAfterRemoval(index);
+        _tabs.RemoveAt(index);
+        page.RaiseClosed(this, index, reason);
+
+        if (_tabs.Count == 0)
+        {
+            _contentHost.Content = null;
+            SelectedIndex = 0;
+            FirstVisibleIndex = 0;
+            return true;
+        }
+
+        if (SelectedIndex != nextSelectedIndex)
+        {
+            SelectedIndex = nextSelectedIndex;
+        }
+
+        SyncFirstVisibleIndexToSelection();
+        return true;
+    }
+
+    private int ResolveSelectedIndexAfterRemoval(int removedIndex)
+    {
+        if (_tabs.Count <= 1)
+        {
+            return 0;
+        }
+
+        if (removedIndex < SelectedIndex)
+        {
+            return SelectedIndex - 1;
+        }
+
+        if (removedIndex == SelectedIndex)
+        {
+            return Math.Min(removedIndex, _tabs.Count - 2);
+        }
+
+        return SelectedIndex;
+    }
+
+    private void AdjustInteractionStateAfterRemoval(int removedIndex)
+    {
+        AdjustInteractionIndex(ref _hoveredIndex, ref _hoveredPart, removedIndex);
+        AdjustInteractionIndex(ref _pressedIndex, ref _pressedPart, removedIndex);
+        if (PressedPart == TabHeaderPart.None)
+        {
+            IsPressedInside = false;
+        }
+    }
+
+    private static void AdjustInteractionIndex(ref int index, ref TabHeaderPart part, int removedIndex)
+    {
+        if (index < 0)
+        {
+            return;
+        }
+
+        if (index == removedIndex)
+        {
+            index = -1;
+            part = TabHeaderPart.None;
+            return;
+        }
+
+        if (index > removedIndex)
+        {
+            index--;
+        }
+    }
+
+    private bool TrySelectRelative(int direction)
+    {
+        if (_tabs.Count == 0 || direction == 0)
+        {
+            return false;
+        }
+
+        var index = Math.Clamp(SelectedIndex, 0, _tabs.Count - 1);
+        while (true)
+        {
+            index += direction;
+            if ((uint)index >= (uint)_tabs.Count)
             {
-                return range.Index;
+                return false;
+            }
+
+            if (IsTabEnabled(_tabs[index]))
+            {
+                SelectedIndex = index;
+                SyncFirstVisibleIndexToSelection();
+                return true;
+            }
+        }
+    }
+
+    private bool ActivateTarget(HitTarget target)
+    {
+        switch (target.Part)
+        {
+            case TabHeaderPart.Tab:
+                if (!IsTargetEnabled(target))
+                {
+                    return false;
+                }
+
+                SelectedIndex = target.Index;
+                SyncFirstVisibleIndexToSelection();
+                return true;
+            case TabHeaderPart.CloseButton:
+                return TryCloseTab(target.Index, TabCloseReason.CloseButton);
+            case TabHeaderPart.ScrollPrevious:
+                return ScrollTabs(-1);
+            case TabHeaderPart.ScrollNext:
+                return ScrollTabs(1);
+            default:
+                return false;
+        }
+    }
+
+    private bool ScrollTabs(int delta)
+    {
+        if (!_showOverflowButtons || delta == 0)
+        {
+            return false;
+        }
+
+        var next = Math.Clamp(_resolvedFirstVisibleIndex + delta, 0, Math.Max(0, _tabs.Count - 1));
+        if (delta < 0 && !_canScrollPrevious)
+        {
+            return false;
+        }
+
+        if (delta > 0 && !_canScrollNext)
+        {
+            return false;
+        }
+
+        if (FirstVisibleIndex == next)
+        {
+            return false;
+        }
+
+        FirstVisibleIndex = next;
+        return true;
+    }
+
+    private HitTarget HitTestHeader(int localX)
+    {
+        if (_showOverflowButtons)
+        {
+            if (localX >= 0 && localX < _overflowButtonWidth)
+            {
+                return new HitTarget(TabHeaderPart.ScrollPrevious, -1);
+            }
+
+            if (localX >= Bounds.Width - _overflowButtonWidth && localX < Bounds.Width)
+            {
+                return new HitTarget(TabHeaderPart.ScrollNext, -1);
             }
         }
 
-        return -1;
+        for (var i = 0; i < _headerLayouts.Count; i++)
+        {
+            var layout = _headerLayouts[i];
+            if (localX < layout.Start || localX >= layout.End)
+            {
+                continue;
+            }
+
+            if (layout.CloseStart >= 0 && localX >= layout.CloseStart && localX < layout.CloseEnd)
+            {
+                return new HitTarget(TabHeaderPart.CloseButton, layout.Index);
+            }
+
+            return new HitTarget(TabHeaderPart.Tab, layout.Index);
+        }
+
+        return default;
     }
 
-    private void UpdateHoveredIndex(int index)
+    private bool IsTargetEnabled(HitTarget target)
     {
-        if (HoveredIndex == index)
+        return target.Part switch
+        {
+            TabHeaderPart.Tab => target.Index >= 0 && target.Index < _tabs.Count && IsTabEnabled(_tabs[target.Index]),
+            TabHeaderPart.CloseButton => target.Index >= 0 && target.Index < _tabs.Count && IsTabEnabled(_tabs[target.Index]),
+            TabHeaderPart.ScrollPrevious => _showOverflowButtons && _canScrollPrevious,
+            TabHeaderPart.ScrollNext => _showOverflowButtons && _canScrollNext,
+            _ => false,
+        };
+    }
+
+    private bool IsTabEnabled(TabPage page) => page.IsEnabled && page.Header.IsEnabled && page.Content.IsEnabled;
+
+    private void UpdateHoveredTarget(HitTarget target)
+    {
+        if (HoveredPart == target.Part && HoveredIndex == target.Index)
         {
             return;
         }
 
-        HoveredIndex = index;
+        HoveredPart = target.Part;
+        HoveredIndex = target.Index;
     }
 
     private void UpdatePressedInside(bool value)
@@ -430,7 +781,194 @@ public sealed partial class TabControl : Visual
         IsPressedInside = value;
     }
 
-    private readonly record struct TabHitRange(int Index, int Start, int End);
+    private void SyncFirstVisibleIndexToSelection()
+    {
+        if (_tabs.Count == 0 || Bounds.Width <= 0)
+        {
+            if (FirstVisibleIndex != 0)
+            {
+                FirstVisibleIndex = 0;
+            }
+
+            return;
+        }
+
+        var style = GetStyle<TabControlStyle>();
+        var headerMetrics = MeasureHeaders(style, new LayoutConstraints(0, LayoutConstants.Infinite, 0, Bounds.Height));
+        if (headerMetrics.TotalWidth <= Bounds.Width)
+        {
+            if (FirstVisibleIndex != 0)
+            {
+                FirstVisibleIndex = 0;
+            }
+
+            return;
+        }
+
+        var availableTabsWidth = Math.Max(0, Bounds.Width - (GetOverflowButtonWidth(style) * 2));
+        var next = ResolveVisibleStartIndexForSelection(FirstVisibleIndex, availableTabsWidth, headerMetrics.Widths);
+        if (FirstVisibleIndex != next)
+        {
+            FirstVisibleIndex = next;
+        }
+    }
+
+    private HeaderMetrics MeasureHeaders(TabControlStyle style, in LayoutConstraints constraints)
+    {
+        var widths = new int[_tabs.Count];
+        var height = 1;
+        var totalWidth = 0;
+
+        for (var i = 0; i < _tabs.Count; i++)
+        {
+            var header = _tabs[i].Header;
+            var hints = header.Measure(constraints);
+            height = Math.Max(height, hints.Natural.Height);
+
+            var width = hints.Natural.Width + style.TabPadding.Horizontal;
+            width += _tabs[i].ShowCloseButton ? GetCloseButtonReserve(style) : 0;
+            widths[i] = Math.Max(0, width);
+            totalWidth += widths[i];
+            if (i + 1 < _tabs.Count)
+            {
+                totalWidth += 1;
+            }
+        }
+
+        return new HeaderMetrics(Math.Max(1, height), totalWidth, widths);
+    }
+
+    private int GetCloseButtonReserve(TabControlStyle style)
+    {
+        var closeWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.CloseButtonRune));
+        return closeWidth + Math.Max(0, style.CloseButtonSpacing);
+    }
+
+    private int GetOverflowButtonWidth(TabControlStyle style)
+    {
+        var previousWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.OverflowPreviousRune));
+        var nextWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(style.OverflowNextRune));
+        return Math.Max(previousWidth, nextWidth);
+    }
+
+    private int ResolveVisibleStartIndex(int desiredStart, int availableTabsWidth, IReadOnlyList<int> widths, bool overflowEnabled)
+    {
+        if (!overflowEnabled || _tabs.Count == 0)
+        {
+            return 0;
+        }
+
+        return Math.Clamp(desiredStart, 0, _tabs.Count - 1);
+    }
+
+    private int ResolveVisibleStartIndexForSelection(int desiredStart, int availableTabsWidth, IReadOnlyList<int> widths)
+    {
+        if (_tabs.Count == 0)
+        {
+            return 0;
+        }
+
+        var start = Math.Clamp(desiredStart, 0, _tabs.Count - 1);
+        var selected = Math.Clamp(SelectedIndex, 0, _tabs.Count - 1);
+        var end = ComputeVisibleEnd(start, availableTabsWidth, widths);
+
+        if (selected < start)
+        {
+            start = selected;
+            end = ComputeVisibleEnd(start, availableTabsWidth, widths);
+        }
+        else if (selected >= end)
+        {
+            while (start < selected)
+            {
+                start++;
+                end = ComputeVisibleEnd(start, availableTabsWidth, widths);
+                if (selected < end)
+                {
+                    break;
+                }
+            }
+        }
+
+        while (start > 0)
+        {
+            var candidateStart = start - 1;
+            var candidateEnd = ComputeVisibleEnd(candidateStart, availableTabsWidth, widths);
+            if (selected >= candidateStart && selected < candidateEnd)
+            {
+                start = candidateStart;
+                end = candidateEnd;
+                continue;
+            }
+
+            break;
+        }
+
+        return start;
+    }
+
+    private int ComputeVisibleEnd(int start, int availableTabsWidth, IReadOnlyList<int> widths)
+    {
+        if ((uint)start >= (uint)_tabs.Count || availableTabsWidth <= 0)
+        {
+            return start;
+        }
+
+        var remaining = availableTabsWidth;
+        var index = start;
+        while (index < _tabs.Count && remaining > 0)
+        {
+            var tabWidth = Math.Min(remaining, widths[index]);
+            if (tabWidth <= 0)
+            {
+                break;
+            }
+
+            remaining -= tabWidth;
+            index++;
+
+            if (index < _tabs.Count && remaining > 0)
+            {
+                remaining--;
+            }
+        }
+
+        return index > start ? index : Math.Min(_tabs.Count, start + 1);
+    }
+
+    private static void FillRect(CellBuffer buffer, Rectangle rect, Style style)
+    {
+        if (rect.Width <= 0 || rect.Height <= 0)
+        {
+            return;
+        }
+
+        for (var y = rect.Y; y < rect.Y + rect.Height; y++)
+        {
+            for (var x = rect.X; x < rect.X + rect.Width; x++)
+            {
+                buffer.SetCell(x, y, new Rune(' '), style);
+            }
+        }
+    }
+
+    private static void WriteCenteredRune(CellBuffer buffer, Rectangle rect, Rune rune, Style style)
+    {
+        if (rect.Width <= 0 || rect.Height <= 0)
+        {
+            return;
+        }
+
+        var runeWidth = Math.Max(1, TerminalTextUtility.GetRuneWidth(rune));
+        if (runeWidth > rect.Width)
+        {
+            return;
+        }
+
+        var x = rect.X + Math.Max(0, (rect.Width - runeWidth) / 2);
+        var y = rect.Y + (rect.Height / 2);
+        buffer.SetCell(x, y, rune, style);
+    }
 
     private void EnsureContentTemplate(TabControlStyle style)
     {
@@ -480,6 +1018,33 @@ public sealed partial class TabControl : Visual
         _contentRoot.HorizontalAlignment = Align.Stretch;
         _contentRoot.VerticalAlignment = Align.Stretch;
         AttachChild(_contentRoot);
+    }
+
+    private readonly record struct HeaderMetrics(int Height, int TotalWidth, int[] Widths);
+
+    private readonly record struct TabHeaderLayout(int Index, int Start, int End, int CloseStart, int CloseEnd);
+
+    private readonly record struct HitTarget(TabHeaderPart Part, int Index);
+
+    /// <summary>
+    /// Identifies an interactive region within the tab header strip.
+    /// </summary>
+    public enum TabHeaderPart
+    {
+        /// <summary>No interactive header element.</summary>
+        None,
+
+        /// <summary>The main tab header surface.</summary>
+        Tab,
+
+        /// <summary>The tab close button.</summary>
+        CloseButton,
+
+        /// <summary>The overflow button that reveals earlier tabs.</summary>
+        ScrollPrevious,
+
+        /// <summary>The overflow button that reveals later tabs.</summary>
+        ScrollNext,
     }
 
     private sealed class TabContentHost : ContentVisual

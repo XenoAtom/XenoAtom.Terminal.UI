@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Text;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Controls;
 
@@ -145,6 +146,66 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     public Style? TabDisabledStyle { get; init; }
 
     /// <summary>
+    /// Gets the rune used for the tab close button.
+    /// </summary>
+    public Rune CloseButtonRune { get; init; } = new('×');
+
+    /// <summary>
+    /// Gets the number of cells reserved between the tab header content and the close button.
+    /// </summary>
+    public int CloseButtonSpacing { get; init; } = 1;
+
+    /// <summary>
+    /// Gets the optional base style for a tab close button.
+    /// </summary>
+    public Style? CloseButtonStyle { get; init; }
+
+    /// <summary>
+    /// Gets the optional style for a hovered tab close button.
+    /// </summary>
+    public Style? CloseButtonHoveredStyle { get; init; }
+
+    /// <summary>
+    /// Gets the optional style for a pressed tab close button.
+    /// </summary>
+    public Style? CloseButtonPressedStyle { get; init; }
+
+    /// <summary>
+    /// Gets the optional style for a disabled tab close button.
+    /// </summary>
+    public Style? CloseButtonDisabledStyle { get; init; }
+
+    /// <summary>
+    /// Gets the rune used by the overflow button that reveals earlier tabs.
+    /// </summary>
+    public Rune OverflowPreviousRune { get; init; } = new('◀');
+
+    /// <summary>
+    /// Gets the rune used by the overflow button that reveals later tabs.
+    /// </summary>
+    public Rune OverflowNextRune { get; init; } = new('▶');
+
+    /// <summary>
+    /// Gets the optional base style for overflow navigation buttons.
+    /// </summary>
+    public Style? OverflowButtonStyle { get; init; }
+
+    /// <summary>
+    /// Gets the optional style for hovered overflow navigation buttons.
+    /// </summary>
+    public Style? OverflowButtonHoveredStyle { get; init; }
+
+    /// <summary>
+    /// Gets the optional style for pressed overflow navigation buttons.
+    /// </summary>
+    public Style? OverflowButtonPressedStyle { get; init; }
+
+    /// <summary>
+    /// Gets the optional style for disabled overflow navigation buttons.
+    /// </summary>
+    public Style? OverflowButtonDisabledStyle { get; init; }
+
+    /// <summary>
     /// Gets an optional template factory used to wrap the tab content host.
     /// </summary>
     /// <remarks>
@@ -207,6 +268,67 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
         return normal;
     }
 
+    /// <summary>
+    /// Resolves the close button style for the provided state.
+    /// </summary>
+    /// <param name="theme">The current theme.</param>
+    /// <param name="tabStyle">The resolved tab header style.</param>
+    /// <param name="enabled">Whether the parent tab is enabled.</param>
+    /// <param name="hovered">Whether the close button is hovered.</param>
+    /// <param name="pressed">Whether the close button is pressed.</param>
+    public Style ResolveCloseButtonStyle(Theme theme, Style tabStyle, bool enabled, bool hovered, bool pressed)
+    {
+        ArgumentNullException.ThrowIfNull(theme);
+
+        var normal = CloseButtonStyle ?? tabStyle;
+        if (!enabled)
+        {
+            return CloseButtonDisabledStyle ?? ResolveDefaultDisabled(theme, normal);
+        }
+
+        if (pressed)
+        {
+            return CloseButtonPressedStyle ?? ResolveDefaultClosePressed(theme, normal);
+        }
+
+        if (hovered)
+        {
+            return CloseButtonHoveredStyle ?? ResolveDefaultCloseHovered(theme, normal);
+        }
+
+        return normal;
+    }
+
+    /// <summary>
+    /// Resolves the overflow button style for the provided state.
+    /// </summary>
+    /// <param name="theme">The current theme.</param>
+    /// <param name="enabled">Whether the button is enabled.</param>
+    /// <param name="hovered">Whether the button is hovered.</param>
+    /// <param name="pressed">Whether the button is pressed.</param>
+    public Style ResolveOverflowButtonStyle(Theme theme, bool enabled, bool hovered, bool pressed)
+    {
+        ArgumentNullException.ThrowIfNull(theme);
+
+        var normal = OverflowButtonStyle ?? TabStyle ?? theme.SurfaceStyle();
+        if (!enabled)
+        {
+            return OverflowButtonDisabledStyle ?? ResolveDefaultDisabled(theme, normal);
+        }
+
+        if (pressed)
+        {
+            return OverflowButtonPressedStyle ?? ResolveDefaultPressed(theme, normal);
+        }
+
+        if (hovered)
+        {
+            return OverflowButtonHoveredStyle ?? ResolveDefaultHovered(theme, normal);
+        }
+
+        return normal;
+    }
+
     private static Style ResolveDefaultHovered(Theme theme, Style normal)
     {
         if ((theme.ControlFillHover ?? theme.SurfaceAlt) is { } hoverBg)
@@ -219,7 +341,7 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
 
     private static Style ResolveDefaultPressed(Theme theme, Style normal)
     {
-        if (theme.Selection is { } selectionBg)
+        if ((theme.ControlFillPressed ?? theme.Selection) is { } selectionBg)
         {
             normal = normal.WithBackground(selectionBg);
         }
@@ -245,5 +367,45 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
         }
 
         return style | TextStyle.Underline;
+    }
+
+    private static Style ResolveDefaultDisabled(Theme theme, Style normal)
+    {
+        if (theme.Disabled is { } disabled)
+        {
+            normal = normal.WithForeground(disabled);
+        }
+
+        return normal | TextStyle.Dim;
+    }
+
+    private static Style ResolveDefaultCloseHovered(Theme theme, Style normal)
+    {
+        if ((theme.Error ?? theme.ControlFillHover ?? theme.SurfaceAlt) is { } bg)
+        {
+            normal = normal.WithBackground(bg);
+        }
+
+        if ((theme.Background ?? theme.Foreground) is { } fg)
+        {
+            normal = normal.WithForeground(fg);
+        }
+
+        return normal | TextStyle.Bold;
+    }
+
+    private static Style ResolveDefaultClosePressed(Theme theme, Style normal)
+    {
+        if ((theme.Error ?? theme.ControlFillPressed ?? theme.Selection) is { } bg)
+        {
+            normal = normal.WithBackground(bg);
+        }
+
+        if ((theme.Background ?? theme.Foreground) is { } fg)
+        {
+            normal = normal.WithForeground(fg);
+        }
+
+        return normal | TextStyle.Bold;
     }
 }

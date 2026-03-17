@@ -38,9 +38,10 @@ public sealed class TabControlRenderingTests
         Assert.IsTrue(cells[39].TryGetBackground(out var stripBg), "Expected strip cell to have a background color.");
         Assert.AreNotEqual(stripBg, tabBg, "Expected tab header background to differ from the header strip background.");
 
-        // Pressing the first tab should use the theme selection background.
-        var selection = theme.Selection ?? throw new AssertFailedException("Theme is expected to provide a selection background.");
+        // Pressing the first tab should use the pressed control background.
+        var pressedFill = theme.ControlFillPressed ?? theme.Selection ?? throw new AssertFailedException("Theme is expected to provide a pressed background.");
         typeof(TabControl).GetProperty("PressedIndex", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(tabControl, 0);
+        typeof(TabControl).GetProperty("PressedPart", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(tabControl, TabControl.TabHeaderPart.Tab);
         typeof(TabControl).GetProperty("IsPressedInside", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(tabControl, true);
 
         buffer.Clear(theme.BaseTextStyle());
@@ -52,7 +53,7 @@ public sealed class TabControlRenderingTests
         Assert.IsTrue(cells[39].TryGetBackground(out var stripBgPressed), "Expected strip cell to have a background color.");
 
         // Selection backgrounds can be RGBA overlays; they should be blended over the header strip background.
-        var expected = selection.Kind == ColorKind.RgbA ? BlendLinear(selection, stripBgPressed) : selection;
+        var expected = pressedFill.Kind == ColorKind.RgbA ? BlendLinear(pressedFill, stripBgPressed) : pressedFill;
         AssertClose(expected, pressedBg);
     }
 
@@ -79,6 +80,34 @@ public sealed class TabControlRenderingTests
         // Border is rendered below the header strip.
         var expectedTopLeft = LineGlyphs.Rounded.TopLeft.Value;
         Assert.AreEqual(expectedTopLeft, scalars[buffer.Width], "Expected the tab content to be wrapped by the rounded border template.");
+    }
+
+    [TestMethod]
+    public void TabControl_Renders_Close_Button_Hover_With_Error_Background()
+    {
+        var tabControl = new TabControl(
+            new TabPage("One", new TextBlock("A")) { ShowCloseButton = true });
+
+        var theme = Theme.FromScheme(ColorScheme.RootLoopsDark);
+        tabControl.Style(theme);
+
+        tabControl.Measure(new Size(20, 6));
+        tabControl.Arrange(new Rectangle(0, 0, 20, 6));
+
+        typeof(TabControl).GetProperty("HoveredIndex", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(tabControl, 0);
+        typeof(TabControl).GetProperty("HoveredPart", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(tabControl, TabControl.TabHeaderPart.CloseButton);
+
+        var buffer = new CellBuffer(20, 6);
+        buffer.Clear(theme.BaseTextStyle());
+
+        typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .Invoke(tabControl, new object[] { buffer });
+
+        var cells = (Style[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
+        var closeStyle = cells[8];
+
+        Assert.IsTrue(closeStyle.TryGetBackground(out var closeBg), "Expected close button cell to have a background color.");
+        AssertClose(theme.Error ?? throw new AssertFailedException("Theme is expected to provide an error color."), closeBg);
     }
 
     private static void AssertClose(Color expected, Color actual)

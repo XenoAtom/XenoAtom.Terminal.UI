@@ -12,16 +12,14 @@ This document captures design and implementation notes for `TabControl`.
 ## Overview
 
 - **Status**: Implemented
-- **Primary purpose**: Display one tab page at a time, with a clickable header strip to switch pages.
+- **Primary purpose**: Display one tab page at a time, with a clickable header strip used for selection, closing, and overflow navigation.
 - **Key goals**:
   - lightweight tab UI for terminal apps
   - tab headers are visuals (supports icons, counters, dynamic text, etc.)
-  - only the selected tab content is attached/measured/rendered
-  - styleable header strip and "button-like" tab header states
-  - optional content wrapper (e.g., border) via a template factory
-- **Non-goals**:
-  - removing/reordering tabs in v1 (tabs are added imperatively)
-  - header scrolling / overflow management (no horizontal scrolling in v1)
+  - tab pages are bindable model objects that can mutate in place
+  - optional close buttons with state-aware styling
+  - single-line overflow handling via left/right navigation buttons
+  - optional content wrapper (e.g. border) via a template factory
 
 ## Implementation notes
 
@@ -32,6 +30,7 @@ This document captures design and implementation notes for `TabControl`.
 - Tests:
   - `src/XenoAtom.Terminal.UI.Tests/TabControlInteractionTests.cs`
   - `src/XenoAtom.Terminal.UI.Tests/TabControlRenderingTests.cs`
+  - `src/XenoAtom.Terminal.UI.Tests/TabControlFeatureTests.cs`
 - Demo:
   - `samples/ControlsDemo/Demos/TabControlDemo.cs`
 
@@ -40,7 +39,10 @@ This document captures design and implementation notes for `TabControl`.
 ### Types
 
 - `TabControl : Visual` (sealed)
-- `TabPage : record class` (header/content pair)
+- `TabPage : record class, IVisualElement`
+- `TabCloseReason`
+- `TabPageClosingEventArgs`
+- `TabPageClosedEventArgs`
 
 ### Layout defaults (TabControl constructor)
 
@@ -51,164 +53,194 @@ This document captures design and implementation notes for `TabControl`.
 ### Properties
 
 - `SelectedIndex : int` (bindable)
-  - Determines which tab is selected (0-based index).
-  - `OnKeyDown` clamps changes to `[0 .. Tabs.Count - 1]`.
-  - Important: the implementation does not always coerce the property itself. During `PrepareChildren`, tab content
-    selection uses a clamped index even if `SelectedIndex` is out of range.
+  - determines which tab content is shown
+  - keyboard navigation skips disabled tabs
+- `FirstVisibleIndex : int` (bindable)
+  - preferred starting tab index for the visible header window when overflow buttons are active
 - `Tabs : IReadOnlyList<TabPage>`
-  - Read-only view of the internal tab list.
+  - read-only view over the bindable internal list
 
 ### Methods
 
 - `AddTab(Visual header, Visual content)`
-  - Validates that `header.Parent` and `content.Parent` are null (tab visuals must not already be attached elsewhere).
-  - Attaches the header to the tab control's visual tree.
 - `AddTab(TabPage page)`
-  - Convenience overload.
+- `TryCloseTab(int index)`
+- `TryCloseTab(TabPage page)`
 
 ### TabPage
 
-`TabPage` is a simple pair:
+`TabPage` is a bindable state container:
+
 - `Header : Visual`
 - `Content : Visual`
+- `IsEnabled : bool`
+- `ShowCloseButton : bool`
+- `Data : object?`
+- `RequestClosing` event
+- `Closed` event
 
-Strings are commonly used as headers/contents via implicit conversion to `Visual` (a string becomes a `TextBlock`).
+Because `TabPage` implements `IVisualElement`, page property changes participate in dependency tracking once the page is attached to a `TabControl`.
 
 ## Child and content model
 
 `TabControl` attaches:
-- all tab headers as children (always attached)
+
+- all tab headers as children (always attached while their page is present)
 - a single content root as the final child (always attached once initialized)
 
 Only the selected content is hosted at any given time:
+
 - an internal `ContentVisual` host (`TabContentHost`) contains the selected `TabPage.Content`
 - that host is optionally wrapped by a template (`TabControlStyle.TabContentTemplateFactory`)
 
-Changing the content template factory replaces the content root visual:
-- old content root is detached
-- a new wrapper is created and attached
-- the wrapper's `Content` is forced to be the internal content host
+When a bound `TabPage.Header` changes while attached:
+
+- the old header visual is detached
+- the new header visual is attached
+
+When a bound `TabPage.Content` changes while that page is selected:
+
+- the content host switches to the new content visual immediately
 
 ## Layout and rendering
 
 ### PrepareChildren
 
 `PrepareChildren`:
-- resolves `TabControlStyle` and ensures a content template exists (`EnsureContentTemplate(style)`)
-- if no tabs exist, sets host content to null
-- otherwise sets host content to the selected tab content using `Math.Clamp(SelectedIndex, 0, Tabs.Count - 1)`
+
+- resolves `TabControlStyle` and ensures a content template exists
+- clears content when there are no tabs
+- otherwise hosts the selected page content using a clamped `SelectedIndex`
 
 ### Measure
 
 Measurement considers:
-- header strip desired size (based on headers and padding)
-- selected tab content desired size (via the content root)
 
-Header measurement:
-- each header is measured with infinite max width
-- header height is the max of all header natural heights (minimum 1)
-- tab header width is `header.Natural.Width + TabPadding.Horizontal`
-- the measured header strip width is the sum of tab widths plus a 1-cell gap between tabs
+- header strip desired size (headers + tab padding + optional close button reserve)
+- selected content desired size
 
-Content measurement:
-- content is measured with:
-  - max width: `constraints.MaxWidth` (or infinite)
-  - max height: `constraints.MaxHeight - headerHeight` (or infinite)
+Close button layout reserve:
 
-The returned hints are:
-- `min` and `natural` are set to the computed (clamped) size `(max(headerWidth, contentWidth), headerHeight + contentHeight)`
-- `max` is infinite in both dimensions
-- grow/shrink are enabled (grow 1, shrink 1)
+- width = `GetRuneWidth(CloseButtonRune) + CloseButtonSpacing`
+- only applied when `TabPage.ShowCloseButton` is true
 
 ### Arrange
 
 Arrange computes:
-- `_headerHeight` as max header desired height, clamped to `[1 .. finalRect.Height]`
-- `_hitRanges` for each arranged tab area
 
-Headers are arranged left-to-right:
-- each tab width is `header.DesiredSize.Width + TabPadding.Horizontal`, clamped to remaining width
-- the header itself is arranged inside that tab width using left/right padding
-- a 1-cell gap is reserved after every tab (including the last tab, as implemented)
+- `_headerHeight`
+- the visible header window
+- hit ranges for:
+  - tab selection
+  - per-tab close buttons
+  - overflow previous/next buttons
 
-Content is arranged below the header strip:
-- content rectangle starts at `Y + _headerHeight`
-- height is `finalRect.Height - _headerHeight`
-- the content root is arranged into that rectangle
+Overflow behavior:
+
+- headers are kept on a single row
+- when total header width exceeds the arranged width, overflow buttons are reserved at the far left and far right
+- `FirstVisibleIndex` determines where the visible window starts
+- selection changes can adjust `FirstVisibleIndex` to keep the selected tab visible
+- manual overflow-button navigation updates `FirstVisibleIndex` directly and may hide the selected tab header while keeping the selected content visible
+
+Non-visible headers are arranged to a zero rectangle so stale bounds do not render.
 
 ### Render
 
-Render draws only the header strip backgrounds:
-1) fills the header strip rectangle with spaces using `ResolveStripStyle(theme)`
-2) for each hit range, fills that tab rectangle with spaces using `ResolveTabStyle(...)`
+Render draws:
 
-The actual header text and tab content are rendered by child visuals.
+1. the header strip background
+2. overflow button surfaces and glyphs when overflow is active
+3. tab header surfaces for the currently visible tabs
+4. close button surfaces and glyphs for visible closable tabs
 
-Tab style state inputs:
-- enabled: `TabPage.Content.IsEnabled`
-- focused: `TabControl.HasFocus`
-- selected: `range.Index == SelectedIndex`
-- hovered: `range.Index == HoveredIndex`
-- pressed: `range.Index == PressedIndex && IsPressedInside`
+Header/background text is still rendered by child visuals.
+
+State inputs:
+
+- tab enabled: `TabPage.IsEnabled && TabPage.Header.IsEnabled && TabPage.Content.IsEnabled`
+- tab focused: `TabControl.HasFocus`
+- tab selected: `index == SelectedIndex`
+- tab hovered/pressed: tracked per header part
+- close button hovered/pressed: tracked separately from the tab body
+- overflow buttons have their own hover/pressed/disabled state
 
 ## Input behavior
-
-TabControl currently implements interactions directly in pointer/key handlers (it does not register commands yet).
 
 ### Keyboard
 
 When focused:
-- `Left`: `SelectedIndex = max(0, SelectedIndex - 1)`
-- `Right`: `SelectedIndex = min(Tabs.Count - 1, SelectedIndex + 1)`
 
-There is no wrap-around in v1.
+- `Left`: select previous enabled tab
+- `Right`: select next enabled tab
+
+There is no wrap-around.
 
 ### Mouse
 
-Mouse interaction targets the header strip only (the first `_headerHeight` rows).
+Mouse interaction targets the header strip only:
 
-- Move:
-  - updates `HoveredIndex` based on hit testing
-  - updates `IsPressedInside` when dragging within the same pressed tab range
-- Left press on a tab range:
-  - sets `PressedIndex` and `IsPressedInside = true`
-- Left release:
-  - activates the tab only when released over the same pressed tab range while `IsPressedInside` is true
-  - always clears pressed state afterwards
+- tab body click selects the tab
+- close button click requests closure via `TabPage.RequestClosing`
+- overflow buttons move `FirstVisibleIndex` backward/forward by one tab
+
+Close requests:
+
+- `TabPage.RequestClosing` is raised first and may set `Cancel = true`
+- if not cancelled, the page is removed and `TabPage.Closed` is raised
+- `TabControl.TryCloseTab(...)` uses the same lifecycle
 
 ## Styling
 
 ### TabControlStyle
 
-Key properties:
-- `TabPadding : Thickness` (horizontal padding affects layout; vertical padding is currently not applied in arrange)
-- `StripStyle : Style?` (tab strip background)
+Existing properties remain:
+
+- `TabPadding`
+- `StripStyle`
 - `TabStyle`, `TabHoveredStyle`, `TabPressedStyle`, `TabSelectedStyle`, `TabDisabledStyle`
-- `TabContentTemplateFactory : Func<Visual, ContentVisual?>?`
-  - wraps the selected content host (default wraps in a `Border`)
+- `TabContentTemplateFactory`
 
-Default style resolution:
-- strip: `StripStyle ?? theme.BaseTextStyle()`
-- normal tab: `TabStyle ?? theme.SurfaceStyle()`
-- hovered: uses `theme.ControlFillHover ?? theme.SurfaceAlt` (background) and bold
-- pressed: uses `theme.Selection` (background) and bold
-- selected: bold and `theme.Accent` foreground
-- focused + selected: underline and `theme.FocusBorder` foreground when available
+New styling surface:
 
-There are several predefined `TabControlStyle` variants that swap the content wrapper border style (e.g. rounded/single/double/ascii).
+- `CloseButtonRune`
+- `CloseButtonSpacing`
+- `CloseButtonStyle`, `CloseButtonHoveredStyle`, `CloseButtonPressedStyle`, `CloseButtonDisabledStyle`
+- `OverflowPreviousRune`, `OverflowNextRune`
+- `OverflowButtonStyle`, `OverflowButtonHoveredStyle`, `OverflowButtonPressedStyle`, `OverflowButtonDisabledStyle`
+
+Default close button behavior:
+
+- normal: inherits the resolved tab style
+- hovered: error-toned background (falling back to hover/surface colors)
+- pressed: error-toned pressed background
+- disabled: dimmed/disabled foreground
+
+Default overflow button behavior:
+
+- normal: tab/button surface styling
+- hovered: hover surface
+- pressed: pressed surface
+- disabled: dimmed/disabled foreground
 
 ## Tests
 
 - `TabControlInteractionTests` covers:
-  - left/right arrow selection changes
-  - mouse click selection switching content
-  - visual headers and bounds arrange
+  - keyboard selection
+  - mouse-based tab switching
+  - visual headers and arrange bounds
 - `TabControlRenderingTests` covers:
-  - header strip/tab background rendering and pressed state blending
-  - application of `TabContentTemplateFactory` (verifies the rounded border template renders below the strip)
+  - tab pressed-state rendering
+  - close-button hover rendering
+  - content wrapper templating
+- `TabControlFeatureTests` covers:
+  - close-button lifecycle
+  - cancellation
+  - disabled-tab interaction
+  - in-place page mutation
+  - overflow scrolling
 
-## Future / v2 ideas
+## Notes
 
-- Commands for key actions (select next/previous) for CommandBar discoverability.
-- Tab strip overflow behavior (scrolling or multi-row strip) for many tabs.
-- Optional "close tab" affordances and tab removal APIs.
+- `TabPage` remains a record class for compatibility, but now behaves as an attached, bindable model object.
+- `Tabs` stays read-only at the public API boundary; list mutation still flows through `AddTab(...)` / `TryCloseTab(...)`.
