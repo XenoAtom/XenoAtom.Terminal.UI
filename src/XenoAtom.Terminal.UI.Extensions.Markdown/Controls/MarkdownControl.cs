@@ -35,8 +35,8 @@ public sealed partial class MarkdownControl : Visual, IScrollable
             VerticalAlignment = Align.Stretch,
             ItemPadding = new Thickness(0),
             ItemSpacing = 0,
+            FollowTail = false,
         };
-        _flow.ScrollToTail(false);
         AttachChild(_flow);
 
         Options = MarkdownRenderOptions.Default;

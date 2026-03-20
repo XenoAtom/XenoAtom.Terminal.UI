@@ -46,6 +46,7 @@ public sealed partial class LogControl : Visual, ISelectionOwner
 
     private LogTextPosition? _selectionAnchor;
     private LogTextPosition? _selectionActive;
+    private bool _isTailFollowed = true;
     private bool _pendingFollowTailScroll;
     private bool _bulkUpdatingSearchFlags;
 
@@ -77,6 +78,8 @@ public sealed partial class LogControl : Visual, ISelectionOwner
             // Closing the popup should remove match highlights.
             ClearQueryOnClose = true,
         };
+
+        FollowTail = true;
 
         AttachChild(_scrollViewer);
         AttachChild(_searchPopup);
@@ -204,9 +207,11 @@ public sealed partial class LogControl : Visual, ISelectionOwner
     public int ActiveMatchIndex => _activeMatchIndex;
 
     /// <summary>
-    /// Gets a value indicating whether the control is currently following the tail (auto-scrolling on append).
+    /// Gets or sets a value indicating whether appended entries keep the view pinned to the tail.
+    /// Set this to <see langword="false"/> to stop automatic tail following even when the viewport is already at the tail.
     /// </summary>
-    public bool FollowTail { get; private set; } = true;
+    [Bindable]
+    public partial bool FollowTail { get; set; }
 
     /// <summary>
     /// Scrolls to the end of the log and enables follow-tail mode so subsequent appends keep the view pinned to the bottom.
@@ -373,6 +378,19 @@ public sealed partial class LogControl : Visual, ISelectionOwner
 
     partial void OnMaxCapacityChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
 
+    partial void OnFollowTailChanged(bool value)
+    {
+        if (!value)
+        {
+            _pendingFollowTailScroll = false;
+            return;
+        }
+
+        ClearSelection();
+        _pendingFollowTailScroll = true;
+        ApplyFollowTailIfNeeded();
+    }
+
     /// <inheritdoc/>
     protected override void PrepareChildren()
     {
@@ -437,7 +455,7 @@ public sealed partial class LogControl : Visual, ISelectionOwner
             _scrollViewer.Arrange(innerRect);
         }
 
-        UpdateFollowTailState();
+        UpdateTailFollowedState();
     }
 
     /// <inheritdoc/>
@@ -516,31 +534,43 @@ public sealed partial class LogControl : Visual, ISelectionOwner
             case TerminalKey.Up:
                 _scrollViewer.VerticalOffset = Math.Max(0, _scrollViewer.VerticalOffset - 1);
                 FollowTail = false;
+                UpdateTailFollowedState(maxOffset);
                 e.Handled = true;
                 return;
             case TerminalKey.Down:
                 _scrollViewer.VerticalOffset = Math.Min(maxOffset, _scrollViewer.VerticalOffset + 1);
-                FollowTail = _scrollViewer.VerticalOffset >= maxOffset;
+                UpdateTailFollowedState(maxOffset);
+                if (!_isTailFollowed)
+                {
+                    FollowTail = false;
+                }
                 e.Handled = true;
                 return;
             case TerminalKey.PageUp:
                 _scrollViewer.VerticalOffset = Math.Max(0, _scrollViewer.VerticalOffset - page);
                 FollowTail = false;
+                UpdateTailFollowedState(maxOffset);
                 e.Handled = true;
                 return;
             case TerminalKey.PageDown:
                 _scrollViewer.VerticalOffset = Math.Min(maxOffset, _scrollViewer.VerticalOffset + page);
-                FollowTail = _scrollViewer.VerticalOffset >= maxOffset;
+                UpdateTailFollowedState(maxOffset);
+                if (!_isTailFollowed)
+                {
+                    FollowTail = false;
+                }
                 e.Handled = true;
                 return;
             case TerminalKey.Home:
                 _scrollViewer.VerticalOffset = 0;
                 FollowTail = false;
+                UpdateTailFollowedState(maxOffset);
                 e.Handled = true;
                 return;
             case TerminalKey.End:
                 _scrollViewer.VerticalOffset = maxOffset;
                 FollowTail = true;
+                UpdateTailFollowedState(maxOffset);
                 e.Handled = true;
                 return;
         }
@@ -749,24 +779,31 @@ public sealed partial class LogControl : Visual, ISelectionOwner
 
         if (_scrollViewer.VerticalOffset == maxOffset)
         {
+            _isTailFollowed = true;
             return false;
         }
 
         _scrollViewer.VerticalOffset = maxOffset;
+        _isTailFollowed = true;
         return true;
     }
 
-    private void UpdateFollowTailState()
+    private void UpdateTailFollowedState()
     {
         if (HasSelection)
         {
-            FollowTail = false;
+            _isTailFollowed = false;
             return;
         }
 
         var viewportHeight = Math.Max(1, _scrollViewer.ViewportHeight);
         var maxOffset = Math.Max(0, _content.ExtentHeight - viewportHeight);
-        FollowTail = _scrollViewer.VerticalOffset >= maxOffset;
+        UpdateTailFollowedState(maxOffset);
+    }
+
+    private void UpdateTailFollowedState(int maxOffset)
+    {
+        _isTailFollowed = _scrollViewer.VerticalOffset >= maxOffset;
     }
 
     private void RebuildMatches()

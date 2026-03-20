@@ -102,6 +102,73 @@ public sealed class DocumentFlowTests
     }
 
     [TestMethod]
+    public void DocumentFlow_FollowTail_Property_Can_Disable_And_Reenable_At_Tail()
+    {
+        var flow = new DocumentFlow();
+        for (var i = 0; i < 40; i++)
+        {
+            flow.Items.Add(CreateItem($"Item {i}"));
+        }
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(40, 8));
+        driver.Tick();
+
+        flow.ScrollToTail();
+        driver.Tick();
+        var pinnedOffset = flow.Scroll.OffsetY;
+        Assert.IsTrue(pinnedOffset > 0);
+
+        flow.FollowTail = false;
+        driver.Tick();
+        Assert.IsFalse(flow.FollowTail);
+        Assert.AreEqual(pinnedOffset, flow.Scroll.OffsetY, "Disabling follow-tail at the tail should keep the viewport where it is.");
+
+        flow.Items.Add(CreateItem("Item 40"));
+        driver.Tick();
+        Assert.AreEqual(pinnedOffset, flow.Scroll.OffsetY, "Appending while FollowTail is false should not advance the viewport.");
+
+        flow.FollowTail = true;
+        driver.Tick();
+        Assert.IsTrue(flow.FollowTail);
+        Assert.AreEqual(Math.Max(0, flow.Scroll.ExtentHeight - flow.Scroll.ViewportHeight), flow.Scroll.OffsetY);
+
+        flow.Items.Add(CreateItem("Item 41"));
+        driver.Tick();
+        Assert.AreEqual(Math.Max(0, flow.Scroll.ExtentHeight - flow.Scroll.ViewportHeight), flow.Scroll.OffsetY);
+    }
+
+    [TestMethod]
+    public void DocumentFlow_PageDown_To_Tail_Does_Not_Reenable_Disabled_FollowTail()
+    {
+        var flow = new DocumentFlow
+        {
+            FollowTail = false,
+        };
+
+        for (var i = 0; i < 60; i++)
+        {
+            flow.Items.Add(CreateItem($"Item {i}"));
+        }
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(40, 8));
+        driver.Tick();
+
+        var tailOffset = Math.Max(0, flow.Scroll.ExtentHeight - flow.Scroll.ViewportHeight);
+        for (var i = 0; i < 100 && flow.Scroll.OffsetY < tailOffset; i++)
+        {
+            driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.PageDown });
+            driver.Tick();
+        }
+
+        Assert.AreEqual(tailOffset, flow.Scroll.OffsetY);
+        Assert.IsFalse(flow.FollowTail, "Paging down to the bottom should not silently re-enable follow-tail.");
+
+        flow.Items.Add(CreateItem("Item 60"));
+        driver.Tick();
+        Assert.AreEqual(tailOffset, flow.Scroll.OffsetY, "Appending after paging to the bottom should keep the viewport stable while FollowTail is false.");
+    }
+
+    [TestMethod]
     public void DocumentFlow_ScrollToItem_Jumps_To_Item_Top_And_Disables_FollowTail()
     {
         var flow = new DocumentFlow

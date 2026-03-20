@@ -40,7 +40,7 @@ This document specifies the current behavior and design of the `LogControl` cont
 
 ### Scrolling
 
-- `FollowTail : bool` (read-only; indicates whether the view is pinned to the bottom)
+- `FollowTail : bool` (read/write; controls whether appended entries auto-follow the tail)
 - `ScrollToTail()` (clears selection, enables follow-tail, and scrolls to the end)
 
 ### Search
@@ -137,13 +137,14 @@ The content visual maintains a prefix-sum array mapping content-row -> entry ind
 
 ## Follow-tail behavior
 
-Follow-tail is enabled when the viewport is at the maximum vertical offset (bottom).
+`FollowTail` is the user-controlled auto-follow mode, not just a reflection of whether the viewport currently happens to sit at the tail.
 
 - Appending while `FollowTail` is true and there is no selection schedules a scroll-to-bottom.
+- Setting `FollowTail = false` disables auto-follow even if the viewport is already at the maximum vertical offset (bottom).
 - The control applies a pending follow-tail scroll during arrange (and may re-arrange the ScrollViewer in the same pass so the view updates immediately).
-- Any manual scroll (keyboard/page keys or mouse wheel) disables follow-tail.
+- Manual navigation away from the tail disables follow-tail; returning to the bottom by paging does not silently re-enable it.
 - Creating a selection disables follow-tail.
-- `ScrollToTail()` clears selection and re-enables follow-tail.
+- `ScrollToTail()` and `FollowTail = true` clear selection and re-enable follow-tail.
 
 ## Selection and copy
 

@@ -75,6 +75,49 @@ public sealed class LogControlTests
     }
 
     [TestMethod]
+    public void LogControl_FollowTail_Property_Can_Disable_And_Reenable_At_Tail()
+    {
+        var log = new LogControl();
+
+        using var driver = new TerminalAppTestDriver(log, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        for (var i = 0; i < 20; i++)
+        {
+            log.AppendLine($"Line {i}");
+        }
+
+        driver.Tick();
+
+        log.FollowTail = false;
+        driver.Tick();
+        Assert.IsFalse(log.FollowTail);
+
+        log.AppendLine("AfterDisable");
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(40, 6);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText();
+        Assert.IsFalse(rendered.Contains("AfterDisable", StringComparison.Ordinal), "Disabling FollowTail at the tail should keep newly appended lines out of view.");
+
+        log.FollowTail = true;
+        driver.Tick();
+        Assert.IsTrue(log.FollowTail);
+
+        screen.Apply(driver.Backend.GetOutText());
+        rendered = screen.GetText();
+        StringAssert.Contains(rendered, "AfterDisable");
+
+        log.AppendLine("AfterReenable");
+        driver.Tick();
+
+        screen.Apply(driver.Backend.GetOutText());
+        rendered = screen.GetText();
+        StringAssert.Contains(rendered, "AfterReenable");
+    }
+
+    [TestMethod]
     public void LogControl_Trims_MaxCapacity()
     {
         var log = new LogControl

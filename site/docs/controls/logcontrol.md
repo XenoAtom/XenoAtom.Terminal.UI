@@ -44,6 +44,18 @@ log.Search("error");
 log.GoToNextMatch();
 ```
 
+## Follow-tail
+
+`LogControl` follows appended entries by default.
+
+```csharp
+log.FollowTail = false; // disable auto-follow, even if the viewport is already at the end
+log.FollowTail = true;  // re-enable auto-follow and pin to the current tail
+log.ScrollToTail();     // explicit jump-to-tail helper
+```
+
+When `FollowTail` is `false`, newly appended entries do not move the viewport.
+
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch` 

@@ -151,7 +151,7 @@ public sealed class DocumentFlow : Visual, IScrollable
     public ScrollModel Scroll { get; }
 
     // Live feed behavior.
-    public bool FollowTail { get; }
+    public bool FollowTail { get; set; }
     public void ScrollToTail();
     public void ScrollToTail(bool followTail);
 
@@ -605,9 +605,9 @@ Tests should focus on determinism and virtualization behavior:
 - **Virtualization**:
   - appending many documents does not create/measures/renders offscreen blocks (assert via metrics or a test renderer hook).
 - **Follow tail**:
-  - append while pinned scrolls to bottom,
-  - manual scroll disables follow-tail,
-  - `ScrollToTail()` restores it.
+  - append while `FollowTail` is enabled scrolls to bottom,
+  - setting `FollowTail = false` disables auto-follow even if the viewport is already at the tail,
+  - `ScrollToTail()` or `FollowTail = true` restores it.
 - **Alignment**:
   - left/right aligned bubbles are arranged within the viewport width and do not overlap.
 - **Width change**:

@@ -24,6 +24,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
 
     private int _lastItemsVersion = -1;
     private int _lastItemCount;
+    private bool _isTailFollowed = true;
     private bool _pendingFollowTailScroll;
     private int _pendingScrollToItemIndex = -1;
 
@@ -83,10 +84,11 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     public partial int ItemSpacing { get; set; }
 
     /// <summary>
-    /// Gets a value indicating whether the view follows the tail when new items are appended.
+    /// Gets or sets a value indicating whether appended items keep the view pinned to the tail.
+    /// Set this to <see langword="false"/> to stop automatic tail following even when the viewport is already at the tail.
     /// </summary>
     [Bindable]
-    public partial bool FollowTail { get; private set; }
+    public partial bool FollowTail { get; set; }
 
     /// <summary>
     /// Scrolls to the tail and enables follow-tail mode.
@@ -149,6 +151,19 @@ public sealed partial class DocumentFlow : Visual, IScrollable
 
     partial void OnItemSpacingChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
 
+    partial void OnFollowTailChanged(bool value)
+    {
+        if (!value)
+        {
+            _pendingFollowTailScroll = false;
+            return;
+        }
+
+        _pendingScrollToItemIndex = -1;
+        _pendingFollowTailScroll = true;
+        ApplyFollowTailIfNeeded();
+    }
+
     /// <inheritdoc />
     protected override void PrepareChildren()
     {
@@ -208,7 +223,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             _scrollViewer.Arrange(finalRect);
         }
 
-        UpdateFollowTailState();
+        UpdateTailFollowedState();
     }
 
     /// <inheritdoc />
@@ -223,31 +238,43 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             case TerminalKey.Up:
                 _scrollViewer.VerticalOffset = Math.Max(0, _scrollViewer.VerticalOffset - 1);
                 FollowTail = false;
+                UpdateTailFollowedState(maxVerticalOffset);
                 e.Handled = true;
                 return;
             case TerminalKey.Down:
                 _scrollViewer.VerticalOffset = Math.Min(maxVerticalOffset, _scrollViewer.VerticalOffset + 1);
-                FollowTail = _scrollViewer.VerticalOffset >= maxVerticalOffset;
+                UpdateTailFollowedState(maxVerticalOffset);
+                if (!_isTailFollowed)
+                {
+                    FollowTail = false;
+                }
                 e.Handled = true;
                 return;
             case TerminalKey.PageUp:
                 _scrollViewer.VerticalOffset = Math.Max(0, _scrollViewer.VerticalOffset - page);
                 FollowTail = false;
+                UpdateTailFollowedState(maxVerticalOffset);
                 e.Handled = true;
                 return;
             case TerminalKey.PageDown:
                 _scrollViewer.VerticalOffset = Math.Min(maxVerticalOffset, _scrollViewer.VerticalOffset + page);
-                FollowTail = _scrollViewer.VerticalOffset >= maxVerticalOffset;
+                UpdateTailFollowedState(maxVerticalOffset);
+                if (!_isTailFollowed)
+                {
+                    FollowTail = false;
+                }
                 e.Handled = true;
                 return;
             case TerminalKey.Home:
                 _scrollViewer.VerticalOffset = 0;
                 FollowTail = false;
+                UpdateTailFollowedState(maxVerticalOffset);
                 e.Handled = true;
                 return;
             case TerminalKey.End:
                 _scrollViewer.VerticalOffset = maxVerticalOffset;
                 FollowTail = true;
+                UpdateTailFollowedState(maxVerticalOffset);
                 e.Handled = true;
                 return;
         }
@@ -279,13 +306,17 @@ public sealed partial class DocumentFlow : Visual, IScrollable
         }
 
         _scrollViewer.VerticalOffset = nextOffset;
-        FollowTail = nextOffset >= maxVerticalOffset;
+        UpdateTailFollowedState(maxVerticalOffset);
+        if (!_isTailFollowed)
+        {
+            FollowTail = false;
+        }
         e.Handled = true;
     }
 
     private bool ApplyFollowTailIfNeeded()
     {
-        if (!_pendingFollowTailScroll)
+        if (!_pendingFollowTailScroll || !FollowTail)
         {
             return false;
         }
@@ -299,6 +330,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
         var target = Math.Max(0, _content.ExtentHeight - viewportHeight);
         _scrollViewer.VerticalOffset = target;
         _pendingFollowTailScroll = false;
+        _isTailFollowed = true;
         return true;
     }
 
@@ -311,6 +343,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
 
         FollowTail = false;
         _pendingFollowTailScroll = false;
+        _isTailFollowed = false;
         _pendingScrollToItemIndex = itemIndex;
         ApplyPendingScrollToItemIfNeeded();
         return true;
@@ -348,14 +381,20 @@ public sealed partial class DocumentFlow : Visual, IScrollable
         var changed = _scrollViewer.VerticalOffset != target;
         _scrollViewer.VerticalOffset = target;
         _pendingScrollToItemIndex = -1;
+        UpdateTailFollowedState(maxVerticalOffset);
         return changed;
     }
 
-    private void UpdateFollowTailState()
+    private void UpdateTailFollowedState()
     {
         var viewportHeight = Math.Max(1, _scrollViewer.ViewportHeight);
         var maxVerticalOffset = Math.Max(0, _content.ExtentHeight - viewportHeight);
-        FollowTail = _scrollViewer.VerticalOffset >= maxVerticalOffset;
+        UpdateTailFollowedState(maxVerticalOffset);
+    }
+
+    private void UpdateTailFollowedState(int maxVerticalOffset)
+    {
+        _isTailFollowed = _scrollViewer.VerticalOffset >= maxVerticalOffset;
     }
 
     private void TrimToCapacity()

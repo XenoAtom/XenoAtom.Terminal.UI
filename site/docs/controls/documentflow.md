@@ -65,9 +65,13 @@ var document = new FlowDocument()
 `DocumentFlow` follows the tail by default for append-heavy feeds.
 
 ```csharp
+flow.FollowTail = false;   // disable auto-follow, even if the viewport is already at the tail
+flow.FollowTail = true;    // re-enable auto-follow and pin to the current tail
 flow.ScrollToTail();       // enable follow-tail and jump to the end
 flow.ScrollToTail(false);  // disable follow-tail (keeps current viewport)
 ```
+
+When `FollowTail` is `false`, appending new items keeps the current viewport stable instead of advancing to the new tail.
 
 ## Scroll to a specific item
 
