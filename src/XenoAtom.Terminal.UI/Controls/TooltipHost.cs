@@ -24,6 +24,7 @@ public sealed partial class TooltipHost : ContentVisual, IAnimatedVisual
     private readonly TooltipWindow _tooltipWindow;
     private Visual? _tooltipContent;
     private bool _isOpen;
+    private bool _isPointerInteractionActive;
     private long _scheduledShowTick = long.MaxValue;
 
     /// <summary>
@@ -32,6 +33,8 @@ public sealed partial class TooltipHost : ContentVisual, IAnimatedVisual
     public TooltipHost()
     {
         _tooltipWindow = new TooltipWindow();
+        AddHandler(PointerPressedEvent, OnPointerPressedHandledToo, handledEventsToo: true);
+        AddHandler(PointerReleasedEvent, OnPointerReleasedHandledToo, handledEventsToo: true);
         this.ShowDelayMilliseconds(500);
         this.Placement(PopupPlacement.Below);
         this.OffsetY(1);
@@ -132,6 +135,13 @@ public sealed partial class TooltipHost : ContentVisual, IAnimatedVisual
             return false;
         }
 
+        if (_isPointerInteractionActive)
+        {
+            CloseTooltip();
+            _scheduledShowTick = long.MaxValue;
+            return false;
+        }
+
         if (!IsHovered)
         {
             CloseTooltip();
@@ -208,6 +218,29 @@ public sealed partial class TooltipHost : ContentVisual, IAnimatedVisual
         _isOpen = false;
         app.CloseTooltipWindow(_tooltipWindow);
         _tooltipWindow.Content = null;
+    }
+
+    private void OnPointerPressedHandledToo(object? sender, PointerEventArgs e)
+    {
+        if (!ReferenceEquals(sender, this) || e.RoutingPhase != RoutingPhase.Bubble)
+        {
+            return;
+        }
+
+        _isPointerInteractionActive = true;
+        _scheduledShowTick = long.MaxValue;
+        CloseTooltip();
+    }
+
+    private void OnPointerReleasedHandledToo(object? sender, PointerEventArgs e)
+    {
+        if (!ReferenceEquals(sender, this) || e.RoutingPhase != RoutingPhase.Bubble)
+        {
+            return;
+        }
+
+        _isPointerInteractionActive = false;
+        _scheduledShowTick = long.MaxValue;
     }
 
     private static long ToStopwatchTicks(TimeSpan interval)

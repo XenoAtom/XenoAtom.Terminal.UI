@@ -36,6 +36,7 @@ new Button("More info")
 ```
 
 Tooltips are implemented as a non-interactive overlay in fullscreen apps.
+They are dismissed when pointer interaction begins on the host, so clicks do not leave stale tooltip overlays behind.
 
 > [!NOTE]
 > Tooltips rely on mouse hover events. In inline/live hosting, hover may not be available depending on the terminal

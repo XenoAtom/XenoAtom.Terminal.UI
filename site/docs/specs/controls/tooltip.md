@@ -92,6 +92,7 @@ Implementation detail:
 On each animation pass:
 - if not attached to an app, not visible, or not enabled: close tooltip
 - if `TooltipContent` is null: close tooltip and clear any scheduled show tick
+- if a pointer interaction is active on the host: close tooltip and keep it suppressed until release
 - if not hovered: close tooltip and clear scheduled show tick
 - if already open and still hovered: do nothing
 - if hovered and not open:
@@ -103,6 +104,11 @@ When `TooltipContent` changes:
 
 On detach from app:
 - TooltipHost closes the tooltip (ensures windows do not outlive the anchor tree).
+
+Pointer interaction handling:
+- `TooltipHost` registers handled-events-too pointer press/release listeners on itself.
+- Pressing a clickable child therefore still dismisses the tooltip even when that child handles the click event.
+- Release clears the suppression and restarts the hover delay before a tooltip can re-open.
 
 ### One tooltip per app
 
@@ -188,6 +194,7 @@ This ensures the tooltip surface/border establishes a stable baseline for any ne
 `TooltipTests` validate:
 - tooltips show after a delay when hovered and hide when hover leaves
 - tooltips do not intercept clicks on the underlying control (hit testing/input routing bypass the tooltip window)
+- clicking a tooltip host dismisses the tooltip and leaving afterward does not leave it stuck open
 
 ## Future / v2 ideas
 

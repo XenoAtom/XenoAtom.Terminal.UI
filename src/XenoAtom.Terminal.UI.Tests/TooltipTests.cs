@@ -62,5 +62,44 @@ public sealed class TooltipTests
         driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = x, Y = y });
         driver.TickUntil(() => clicks == 1);
     }
+
+    [TestMethod]
+    public void Tooltip_Closes_When_Clicking_And_Does_Not_Stick_On_Leave()
+    {
+        var clicks = 0;
+        var button = new Button("OK").Click(() => clicks++);
+        var root = new VStack
+        {
+            button.Tooltip("Tooltip text").ShowDelayMilliseconds(0)
+        };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 10));
+        driver.Tick();
+
+        var x = button.Bounds.X + 1;
+        var y = button.Bounds.Y;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, Button = TerminalMouseButton.None, X = x, Y = y });
+        driver.Tick(2);
+
+        var screen = new AnsiTestScreen(30, 10);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "Tooltip text");
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = x, Y = y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = x, Y = y });
+        driver.TickUntil(() => clicks == 1);
+
+        screen = new AnsiTestScreen(30, 10);
+        screen.Apply(driver.Backend.GetOutText());
+        Assert.DoesNotContain("Tooltip text", screen.GetText(), "Clicking a tooltip host should dismiss the tooltip before hover changes.");
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, Button = TerminalMouseButton.None, X = 29, Y = 9 });
+        driver.Tick(2);
+
+        screen = new AnsiTestScreen(30, 10);
+        screen.Apply(driver.Backend.GetOutText());
+        Assert.DoesNotContain("Tooltip text", screen.GetText(), "Leaving after a click should not leave the tooltip stuck open.");
+    }
 }
 
