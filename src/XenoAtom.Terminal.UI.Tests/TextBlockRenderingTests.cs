@@ -15,6 +15,23 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class TextBlockRenderingTests
 {
     [TestMethod]
+    public void TextBlock_SingleLine_Reports_Horizontal_Shrink_Budget()
+    {
+        var tb = new TextBlock("HelloWorld")
+        {
+            Wrap = false,
+            Trimming = TextTrimming.EndEllipsis,
+        };
+
+        tb.Measure(LayoutConstraints.Unbounded);
+
+        Assert.AreEqual(1, tb.MeasureHints.Min.Width);
+        Assert.AreEqual(10, tb.MeasureHints.Natural.Width);
+        Assert.AreEqual(10, tb.MeasureHints.Max.Width);
+        Assert.AreEqual(1, tb.MeasureHints.FlexShrinkX);
+    }
+
+    [TestMethod]
     public void TextBlock_EndEllipsis_Trims_To_Width()
     {
         var tb = new TextBlock("HelloWorld")

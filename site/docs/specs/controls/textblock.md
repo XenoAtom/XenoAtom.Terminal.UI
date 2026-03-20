@@ -66,7 +66,7 @@ There are no events and no input handling.
 
 ### Measurement model
 
-`TextBlock` measures to a fixed size based on:
+`TextBlock` measures based on:
 - the text's cell width (not string length)
 - the wrap flag and available width
 - the available height (clamped)
@@ -76,8 +76,14 @@ Let:
 - `naturalWidth = TerminalTextUtility.GetWidth(text)`
 - `width = min(constraints.MaxWidth, naturalWidth)`
 
-When `Wrap` is false or `width == 0`:
-- desired size is `(width, 1)` (height is clamped to 1)
+When `Wrap` is false:
+- `Natural.Width` is the full text width
+- `Min.Width` is `1` for non-empty text (`0` for empty text), so single-line text can shrink during layout
+- `Max.Width` is the full text width
+- `FlexShrinkX = 1` when the text is wider than its minimum
+
+When `Wrap` is true and `width == 0`:
+- desired size is `(0, 1)` (height is clamped to 1)
 
 When `Wrap` is true:
 - height is computed as the number of wrapped lines for the given width (at least 1)
@@ -86,6 +92,8 @@ When `Wrap` is true:
 Notes:
 - The measured width does not attempt to "stretch to fill" when there is more horizontal space than the text requires.
   Stretching is handled by layout via `HorizontalAlignment = Align.Stretch` if desired.
+- This horizontal shrink budget is what allows layouts such as `Grid(Star + Auto)` to keep trailing controls visible
+  while the text trims in the remaining width.
 
 ### Rendering model
 

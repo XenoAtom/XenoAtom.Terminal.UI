@@ -114,6 +114,32 @@ public sealed class GridLayoutTests
         Assert.AreEqual(new Rectangle(7, 0, 3, 1), star.Bounds);
     }
 
+    [TestMethod]
+    public void Star_Text_Column_Shrinks_Before_Auto_Button_Column()
+    {
+        var grid = new Grid();
+        grid.ColumnDefinitions.AddRange(
+            new ColumnDefinition { Width = GridLength.Star(1) },
+            new ColumnDefinition { Width = GridLength.Auto });
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        var text = new TextBlock("HelloWorld")
+        {
+            Wrap = false,
+            Trimming = TextTrimming.EndEllipsis,
+        };
+        var button = new Button("X");
+
+        grid.Cell(text, 0, 0);
+        grid.Cell(button, 0, 1);
+
+        grid.Measure(new Size(8, 1));
+        grid.Arrange(new Rectangle(0, 0, 8, 1));
+
+        Assert.AreEqual(3, text.Bounds.Width);
+        Assert.AreEqual(new Rectangle(3, 0, 5, 1), button.Bounds);
+    }
+
     private sealed class FillVisual : Visual
     {
         private readonly Size _desired;

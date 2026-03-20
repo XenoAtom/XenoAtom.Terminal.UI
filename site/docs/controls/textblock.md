@@ -36,6 +36,9 @@ new TextBlock("This is a long single line that will be trimmed.")
     .Trimming(TextTrimming.EndEllipsis);
 ```
 
+When `Wrap` is `false`, `TextBlock` can shrink horizontally during layout, so it works well in patterns such as
+`Grid(Star + Auto)` where trailing actions should remain visible while the text trims.
+
 ## Alignment
 
 `TextAlignment` controls how the text is aligned inside the available width:

@@ -121,10 +121,24 @@ public sealed partial class TextBlock : Visual, ISelectionOwner
         var text = Text ?? string.Empty;
         var naturalWidth = TerminalTextUtility.GetWidth(text.AsSpan());
         var width = Math.Max(0, Math.Min(availableSize.Width, naturalWidth));
+        var lineHeight = Math.Min(Math.Max(0, availableSize.Height), 1);
 
-        if (!Wrap || width == 0)
+        if (!Wrap)
         {
-            return SizeHints.Fixed(new Size(width, Math.Min(Math.Max(0, availableSize.Height), 1)));
+            var minWidth = naturalWidth > 0 ? 1 : 0;
+            return SizeHints.Flex(
+                new Size(minWidth, lineHeight),
+                new Size(naturalWidth, lineHeight),
+                new Size(naturalWidth, lineHeight),
+                growX: 0,
+                growY: 0,
+                shrinkX: naturalWidth > minWidth ? 1 : 0,
+                shrinkY: 0);
+        }
+
+        if (width == 0)
+        {
+            return SizeHints.Fixed(new Size(width, lineHeight));
         }
 
         var height = CountWrappedLines(text.AsSpan(), Math.Max(1, width));
