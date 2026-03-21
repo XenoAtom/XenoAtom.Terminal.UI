@@ -2437,6 +2437,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
         _hoveredPath ??= new List<Visual>(8);
         _hoveredPathScratch ??= new List<Visual>(8);
+        var wakeAnimations = false;
 
         _hoveredPathScratch.Clear();
         for (var v = hoveredLeaf; v is not null; v = v.Parent)
@@ -2468,6 +2469,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             if (!_hoveredPathScratch.Contains(v))
             {
                 v.IsHovered = false;
+                wakeAnimations |= v is IAnimatedVisual;
             }
         }
 
@@ -2477,11 +2479,19 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             if (!_hoveredPath.Contains(v))
             {
                 v.IsHovered = true;
+                wakeAnimations |= v is IAnimatedVisual;
             }
         }
 
         _hoveredElement = hoveredLeaf;
         (_hoveredPath, _hoveredPathScratch) = (_hoveredPathScratch, _hoveredPath);
+
+        // Hover-driven animated visuals can stay dormant while idle, so wake the scheduler when
+        // the hovered path changes instead of forcing them to poll every tick.
+        if (wakeAnimations)
+        {
+            RequestAnimation();
+        }
     }
 
     private Visual GetInputRoot() => FindActiveModalRoot(Root) ?? Root;

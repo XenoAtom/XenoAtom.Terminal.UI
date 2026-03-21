@@ -108,7 +108,7 @@ public sealed partial class TooltipHost : ContentVisual, IAnimatedVisual
     [Bindable]
     public partial int OffsetY { get; set; }
 
-    long IAnimatedVisual.NextAnimationTick => 0;
+    long IAnimatedVisual.NextAnimationTick => GetNextAnimationTick();
 
     bool IAnimatedVisual.AdvanceAnimation(long timestamp) => AdvanceAnimation(timestamp);
 
@@ -169,6 +169,28 @@ public sealed partial class TooltipHost : ContentVisual, IAnimatedVisual
         OpenTooltip(tooltipContent);
         _scheduledShowTick = long.MaxValue;
         return true;
+    }
+
+    private long GetNextAnimationTick()
+    {
+        if (_isOpen)
+        {
+            return 0;
+        }
+
+        if (_scheduledShowTick != long.MaxValue)
+        {
+            return _scheduledShowTick;
+        }
+
+        return App is not null &&
+               IsVisible &&
+               IsEnabled &&
+               !_isPointerInteractionActive &&
+               IsHovered &&
+               TooltipContent is not null
+            ? 0
+            : long.MaxValue;
     }
 
     private void OpenTooltip(Visual tooltipContent)
