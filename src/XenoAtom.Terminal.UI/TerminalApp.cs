@@ -4,6 +4,7 @@
 
 using System.Text;
 using System.Diagnostics;
+using System.Threading.Channels;
 using XenoAtom.Ansi;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Animation;
@@ -89,6 +90,9 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private static readonly AsyncLocal<int> UpdateCallbackDepth = new();
 
     private Task<TerminalLoopResult>? _pendingUpdateTask;
+    private readonly System.Collections.Concurrent.ConcurrentQueue<TerminalEvent> _pendingTerminalEvents = new();
+    private CancellationTokenSource? _inputRelayCts;
+    private Task? _inputRelayTask;
     private IDisposable? _wideRuneResolverScope;
 
     private readonly record struct PendingAction(Action Action, bool CaptureFlowOutput);
@@ -640,7 +644,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
         FlushCapturedFlowOutputIfNeeded();
 
-        while (_terminal.TryReadEvent(out var ev))
+        while (TryDequeueTerminalEvent(out var ev))
         {
             HandleTerminalEvent(ev);
         }
@@ -673,6 +677,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                         else
                         {
                             _pendingUpdateTask = resultTask.AsTask();
+                            AttachPendingUpdateWake(_pendingUpdateTask);
                         }
                     }
                 }
@@ -770,6 +775,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         try
         {
             BeginRunCore(started);
+            StartInputRelay(token);
 
             while (!token.IsCancellationRequested)
             {
@@ -806,6 +812,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
         finally
         {
+            StopInputRelay();
             EndRunCore();
         }
     }
@@ -933,11 +940,88 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         SignalWakeUp();
     }
 
+    private bool TryDequeueTerminalEvent(out TerminalEvent ev)
+    {
+        if (_inputRelayTask is not null)
+        {
+            return _pendingTerminalEvents.TryDequeue(out ev!);
+        }
+
+        return _terminal.TryReadEvent(out ev!);
+    }
+
+    private void StartInputRelay(CancellationToken token)
+    {
+        if (_inputRelayTask is not null)
+        {
+            return;
+        }
+
+        _inputRelayCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+        var relayToken = _inputRelayCts.Token;
+        _inputRelayTask = Task.Run(async () =>
+        {
+            try
+            {
+                while (!relayToken.IsCancellationRequested)
+                {
+                    var ev = await _terminal.ReadEventAsync(relayToken).ConfigureAwait(false);
+                    _pendingTerminalEvents.Enqueue(ev);
+                    SignalWakeUp();
+                }
+            }
+            catch (Exception ex) when (ex is OperationCanceledException or ChannelClosedException)
+            {
+                // Ignore shutdown races while stopping the relay.
+            }
+        }, CancellationToken.None);
+    }
+
+    private void StopInputRelay()
+    {
+        _inputRelayCts?.Cancel();
+
+        if (_inputRelayTask is not null)
+        {
+            try
+            {
+                _inputRelayTask.GetAwaiter().GetResult();
+            }
+            catch (Exception ex) when (ex is OperationCanceledException or ChannelClosedException)
+            {
+                // Ignore shutdown races while stopping the relay.
+            }
+        }
+
+        _inputRelayTask = null;
+        _inputRelayCts?.Dispose();
+        _inputRelayCts = null;
+
+        while (_pendingTerminalEvents.TryDequeue(out _))
+        {
+        }
+    }
+
+    private void AttachPendingUpdateWake(Task<TerminalLoopResult> pendingTask)
+    {
+        pendingTask.ContinueWith(static (_, state) =>
+        {
+            ((TerminalApp)state!).SignalWakeUp();
+        }, this, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+    }
+
     private void SignalWakeUp()
     {
         Volatile.Write(ref _wakeRequested, 1);
         _wakeUp.Set();
-        _wakeSignal.Set();
+        try
+        {
+            _wakeSignal.Set();
+        }
+        catch (ObjectDisposedException)
+        {
+            // A late background completion can race with disposal during shutdown.
+        }
     }
 
     private void DrainWakeSignal()

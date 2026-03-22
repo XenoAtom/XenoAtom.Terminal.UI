@@ -144,6 +144,31 @@ public sealed class TerminalExtensionsTests
     }
 
     [TestMethod]
+    public async Task LiveAsync_WakesPromptly_WhenAsyncUpdateCompletesOffContext()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(30, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var wait = TimeSpan.FromMilliseconds(250);
+        var stopwatch = Stopwatch.StartNew();
+
+        await session.Instance.LiveAsync(
+            new TextBlock("Async wait"),
+            async _ =>
+            {
+                await Task.Delay(20).ConfigureAwait(false);
+                return TerminalLoopResult.Stop;
+            },
+            new TerminalLiveOptions { UpdateWaitDuration = wait });
+
+        stopwatch.Stop();
+
+        Assert.IsTrue(
+            stopwatch.Elapsed < wait - TimeSpan.FromMilliseconds(40),
+            $"Expected async completion wake-up before the polling slice elapsed. Elapsed: {stopwatch.Elapsed}.");
+    }
+
+    [TestMethod]
     public void Live_Options_UpdateWaitDuration_IsApplied()
     {
         var backend = new InMemoryTerminalBackend(new TerminalSize(30, 10));
@@ -197,5 +222,30 @@ public sealed class TerminalExtensionsTests
         Assert.IsTrue(
             stopwatch.Elapsed >= minimumExpected,
             $"Expected configured wait duration to slow down loop ticks by roughly the configured wait. Elapsed: {stopwatch.Elapsed}.");
+    }
+
+    [TestMethod]
+    public void Live_WakesPromptly_WhenInputArrivesDuringPollingWait()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(30, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var wait = TimeSpan.FromMilliseconds(250);
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(20).ConfigureAwait(false);
+            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        });
+
+        var stopwatch = Stopwatch.StartNew();
+        session.Instance.Live(
+            new TextBlock("Input wake"),
+            _ => TerminalLoopResult.Continue,
+            new TerminalLiveOptions { UpdateWaitDuration = wait });
+        stopwatch.Stop();
+
+        Assert.IsTrue(
+            stopwatch.Elapsed < wait - TimeSpan.FromMilliseconds(40),
+            $"Expected input to wake the blocking loop before the polling slice elapsed. Elapsed: {stopwatch.Elapsed}.");
     }
 }
