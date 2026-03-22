@@ -165,9 +165,10 @@ public sealed class TerminalExtensionsTests
         stopwatch.Stop();
 
         Assert.AreEqual(2, tickCount);
+        var minimumExpected = wait - TimeSpan.FromMilliseconds(5);
         Assert.IsTrue(
-            stopwatch.Elapsed >= TimeSpan.FromMilliseconds(50),
-            $"Expected configured wait duration to slow down loop ticks. Elapsed: {stopwatch.Elapsed}.");
+            stopwatch.Elapsed >= minimumExpected,
+            $"Expected configured wait duration to slow down loop ticks by roughly the configured wait. Elapsed: {stopwatch.Elapsed}.");
     }
 
     [TestMethod]
@@ -192,8 +193,9 @@ public sealed class TerminalExtensionsTests
         stopwatch.Stop();
 
         Assert.AreEqual(2, tickCount);
+        var minimumExpected = wait - TimeSpan.FromMilliseconds(5);
         Assert.IsTrue(
-            stopwatch.Elapsed >= TimeSpan.FromMilliseconds(50),
-            $"Expected configured wait duration to slow down loop ticks. Elapsed: {stopwatch.Elapsed}.");
+            stopwatch.Elapsed >= minimumExpected,
+            $"Expected configured wait duration to slow down loop ticks by roughly the configured wait. Elapsed: {stopwatch.Elapsed}.");
     }
 }

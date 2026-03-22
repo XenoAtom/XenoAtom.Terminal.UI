@@ -35,7 +35,10 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private readonly InlineInteractiveHost? _inlineHost;
     private readonly FullscreenHost? _fullscreenHost;
     private readonly AsyncAutoResetEvent _wakeUp = new();
+    private readonly AutoResetEvent _wakeSignal = new(false);
     private readonly CancellationTokenSource _cts = new();
+    private readonly ITerminalLoopClock _loopClock;
+    private readonly ITerminalLoopWaitBackend _loopWaitBackend;
 
     private bool _renderRequested = true;
     private Visual? _pointerCapture;
@@ -65,6 +68,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private BindableList<Command>? _globalCommands;
 
     private long _lastTickTimestamp;
+    private int _wakeRequested;
     private readonly KeyGesture[] _pendingSequence = new KeyGesture[4];
     private int _pendingSequenceCount;
     private long _pendingSequenceTimestamp;
@@ -200,11 +204,18 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     /// <param name="terminal">The terminal instance to use. When <see langword="null"/>, uses <see cref="Terminal.Instance"/>.</param>
     /// <param name="options">Optional host configuration.</param>
     public TerminalApp(Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
+        : this(root, terminal, options, loopClock: null, loopWaitBackend: null)
+    {
+    }
+
+    internal TerminalApp(Visual root, TerminalInstance? terminal, TerminalAppOptions? options, ITerminalLoopClock? loopClock, ITerminalLoopWaitBackend? loopWaitBackend)
     {
         ArgumentNullException.ThrowIfNull(root);
         _terminal = terminal ?? global::XenoAtom.Terminal.Terminal.Instance;
         _options = options ?? new TerminalAppOptions();
         _wideRuneResolver = _options.WideRuneResolver ?? TerminalWideRuneResolvers.Default;
+        _loopClock = loopClock ?? StopwatchTerminalLoopClock.Instance;
+        _loopWaitBackend = loopWaitBackend ?? new TimeoutTerminalLoopWaitBackend(_loopClock);
         if (_options.UpdateWaitDuration < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(options), "The update wait duration cannot be negative.");
@@ -364,7 +375,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     {
         ArgumentNullException.ThrowIfNull(action);
         _pendingActions.Enqueue(new PendingAction(action, CaptureFlowOutput: UpdateCallbackDepth.Value > 0));
-        _wakeUp.Set();
+        SignalWakeUp();
     }
 
     internal Visual? SelectionOwnerElement => _selectionOwnerElement;
@@ -453,7 +464,11 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     /// <summary>
     /// Requests the app loop to stop.
     /// </summary>
-    public void Stop() => _cts.Cancel();
+    public void Stop()
+    {
+        _cts.Cancel();
+        SignalWakeUp();
+    }
 
     internal int PendingCommandSequenceCount => _pendingSequenceCount;
 
@@ -478,6 +493,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
         _inlineHost?.Dispose();
         _fullscreenHost?.Dispose();
+        _wakeSignal.Dispose();
         _cts.Dispose();
         _updateOutputBuilder.Dispose();
         await ValueTask.CompletedTask;
@@ -601,8 +617,9 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     internal void Tick(long? timestamp = null)
     {
         VerifyAccess();
+        Interlocked.Exchange(ref _wakeRequested, 0);
 
-        _lastTickTimestamp = timestamp ?? Stopwatch.GetTimestamp();
+        _lastTickTimestamp = timestamp ?? _loopClock.GetTimestamp();
         var metrics = _debugOverlayMetrics;
         metrics?.BeginTick(_lastTickTimestamp);
 
@@ -637,8 +654,8 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
             if (_pendingUpdateTask is null)
             {
-                var updateStart = metrics is null ? 0 : Stopwatch.GetTimestamp();
-                _updateContext!.Timestamp = timestamp ?? Stopwatch.GetTimestamp();
+                var updateStart = metrics is null ? 0 : _loopClock.GetTimestamp();
+                _updateContext!.Timestamp = timestamp ?? _loopClock.GetTimestamp();
 
                 var previousDepth = UpdateCallbackDepth.Value;
                 UpdateCallbackDepth.Value = previousDepth + 1;
@@ -665,7 +682,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
                 if (metrics is not null)
                 {
-                    userUpdateTicks = Math.Max(0, Stopwatch.GetTimestamp() - updateStart);
+                    userUpdateTicks = Math.Max(0, _loopClock.GetTimestamp() - updateStart);
                 }
 
                 FlushCapturedFlowOutputIfNeeded();
@@ -756,10 +773,33 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             while (!token.IsCancellationRequested)
             {
                 Tick();
-                var updateWaitDuration = _options.UpdateWaitDuration;
-                if (updateWaitDuration > TimeSpan.Zero)
+                if (token.IsCancellationRequested)
                 {
-                    Thread.Sleep(updateWaitDuration);
+                    break;
+                }
+
+                var now = _loopClock.GetTimestamp();
+                var deadline = ComputeNextRunDeadline(now);
+                if (deadline <= now)
+                {
+                    continue;
+                }
+
+                if (Volatile.Read(ref _wakeRequested) != 0)
+                {
+                    continue;
+                }
+
+                DrainWakeSignal();
+                if (Volatile.Read(ref _wakeRequested) != 0)
+                {
+                    continue;
+                }
+
+                var waitResult = _loopWaitBackend.WaitUntil(deadline, _wakeSignal, token);
+                if (waitResult == TerminalLoopWaitResult.Canceled)
+                {
+                    break;
                 }
             }
         }
@@ -883,13 +923,33 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     internal void RequestRender()
     {
         _renderRequested = true;
-        _wakeUp.Set();
+        SignalWakeUp();
     }
 
     internal void RequestAnimation()
     {
         _nextAnimationTick = 0;
+        SignalWakeUp();
+    }
+
+    private void SignalWakeUp()
+    {
+        Volatile.Write(ref _wakeRequested, 1);
         _wakeUp.Set();
+        _wakeSignal.Set();
+    }
+
+    private void DrainWakeSignal()
+    {
+        while (_wakeSignal.WaitOne(0))
+        {
+        }
+    }
+
+    private long ComputeNextRunDeadline(long now)
+    {
+        var pollingSliceTicks = TerminalLoopScheduler.ToStopwatchTicks(_options.UpdateWaitDuration, _loopClock.Frequency);
+        return TerminalLoopScheduler.ComputePollingDeadline(now, _nextAnimationTick, pollingSliceTicks);
     }
 
     internal void ClearInlineLiveRegion()
