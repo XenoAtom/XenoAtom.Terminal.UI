@@ -17,6 +17,8 @@ internal enum TerminalLoopWaitResult
 internal interface ITerminalLoopWaitBackend : IDisposable
 {
     TerminalLoopWaitResult WaitUntil(long deadline, AutoResetEvent wakeSignal, CancellationToken cancellationToken);
+
+    TerminalLoopWaitDiagnostics GetDiagnosticsSnapshot();
 }
 
 internal static class TerminalLoopWaitBackendFactory
@@ -34,15 +36,20 @@ internal static class TerminalLoopWaitBackendFactory
     }
 }
 
-internal sealed class TimeoutTerminalLoopWaitBackend : ITerminalLoopWaitBackend
+internal abstract class AdaptiveTerminalLoopWaitBackend : ITerminalLoopWaitBackend
 {
     private readonly ITerminalLoopClock _clock;
+    private readonly TerminalLoopWaitTelemetry _telemetry;
 
-    public TimeoutTerminalLoopWaitBackend(ITerminalLoopClock clock)
+    protected AdaptiveTerminalLoopWaitBackend(ITerminalLoopClock clock, string backendName)
     {
         ArgumentNullException.ThrowIfNull(clock);
+        ArgumentException.ThrowIfNullOrEmpty(backendName);
         _clock = clock;
+        _telemetry = new TerminalLoopWaitTelemetry(backendName, clock.Frequency);
     }
+
+    protected ITerminalLoopClock Clock => _clock;
 
     public TerminalLoopWaitResult WaitUntil(long deadline, AutoResetEvent wakeSignal, CancellationToken cancellationToken)
     {
@@ -55,23 +62,104 @@ internal sealed class TimeoutTerminalLoopWaitBackend : ITerminalLoopWaitBackend
 
         if (deadline == long.MaxValue)
         {
-            var infiniteHandles = new WaitHandle[] { wakeSignal, cancellationToken.WaitHandle };
-            var infiniteSignaled = WaitHandle.WaitAny(infiniteHandles);
-            return infiniteSignaled switch
-            {
-                0 => TerminalLoopWaitResult.WakeSignal,
-                1 => TerminalLoopWaitResult.Canceled,
-                _ => TerminalLoopWaitResult.Deadline,
-            };
+            return WaitIndefinitely(wakeSignal, cancellationToken);
         }
 
-        var remainingTicks = Math.Max(0, deadline - _clock.GetTimestamp());
+        while (true)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return TerminalLoopWaitResult.Canceled;
+            }
+
+            if (wakeSignal.WaitOne(0))
+            {
+                return TerminalLoopWaitResult.WakeSignal;
+            }
+
+            var now = _clock.GetTimestamp();
+            var remainingTicks = deadline - now;
+            if (remainingTicks <= 0)
+            {
+                return TerminalLoopWaitResult.Deadline;
+            }
+
+            var yieldWindowTicks = _telemetry.YieldWindowTicks;
+            if (remainingTicks <= yieldWindowTicks)
+            {
+                return YieldUntilDeadline(deadline, wakeSignal, cancellationToken);
+            }
+
+            var coarseDeadline = deadline - yieldWindowTicks;
+            var coarseResult = WaitCoarseUntil(coarseDeadline, wakeSignal, cancellationToken);
+            if (coarseResult != TerminalLoopWaitResult.Deadline)
+            {
+                return coarseResult;
+            }
+
+            var overshootTicks = Math.Max(0, _clock.GetTimestamp() - coarseDeadline);
+            _telemetry.RecordOvershoot(overshootTicks);
+        }
+    }
+
+    public TerminalLoopWaitDiagnostics GetDiagnosticsSnapshot() => _telemetry.GetSnapshot();
+
+    public abstract void Dispose();
+
+    protected internal abstract TerminalLoopWaitResult WaitCoarseUntil(long deadline, AutoResetEvent wakeSignal, CancellationToken cancellationToken);
+
+    protected internal abstract TerminalLoopWaitResult WaitIndefinitely(AutoResetEvent wakeSignal, CancellationToken cancellationToken);
+
+    private TerminalLoopWaitResult YieldUntilDeadline(long deadline, AutoResetEvent wakeSignal, CancellationToken cancellationToken)
+    {
+        var yieldStart = _clock.GetTimestamp();
+
+        while (true)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _telemetry.RecordYieldDuration(Math.Max(0, _clock.GetTimestamp() - yieldStart));
+                return TerminalLoopWaitResult.Canceled;
+            }
+
+            if (wakeSignal.WaitOne(0))
+            {
+                _telemetry.RecordYieldDuration(Math.Max(0, _clock.GetTimestamp() - yieldStart));
+                return TerminalLoopWaitResult.WakeSignal;
+            }
+
+            var now = _clock.GetTimestamp();
+            if (now >= deadline)
+            {
+                _telemetry.RecordYieldDuration(Math.Max(0, now - yieldStart));
+                return TerminalLoopWaitResult.Deadline;
+            }
+
+            Thread.Yield();
+        }
+    }
+}
+
+internal sealed class TimeoutTerminalLoopWaitBackend : AdaptiveTerminalLoopWaitBackend
+{
+    public TimeoutTerminalLoopWaitBackend(ITerminalLoopClock clock)
+        : base(clock, "timeout")
+    {
+    }
+
+    public override void Dispose()
+    {
+    }
+
+    protected internal override TerminalLoopWaitResult WaitCoarseUntil(long deadline, AutoResetEvent wakeSignal, CancellationToken cancellationToken)
+    {
+        var remainingTicks = Math.Max(0, deadline - Clock.GetTimestamp());
         if (remainingTicks <= 0)
         {
             return TerminalLoopWaitResult.Deadline;
         }
 
-        var timeout = ToTimeoutMilliseconds(remainingTicks, _clock.Frequency);
+        var timeout = ToTimeoutMilliseconds(remainingTicks, Clock.Frequency);
         if (timeout <= 0)
         {
             return TerminalLoopWaitResult.Deadline;
@@ -88,8 +176,16 @@ internal sealed class TimeoutTerminalLoopWaitBackend : ITerminalLoopWaitBackend
         };
     }
 
-    public void Dispose()
+    protected internal override TerminalLoopWaitResult WaitIndefinitely(AutoResetEvent wakeSignal, CancellationToken cancellationToken)
     {
+        var handles = new WaitHandle[] { wakeSignal, cancellationToken.WaitHandle };
+        var signaled = WaitHandle.WaitAny(handles);
+        return signaled switch
+        {
+            0 => TerminalLoopWaitResult.WakeSignal,
+            1 => TerminalLoopWaitResult.Canceled,
+            _ => TerminalLoopWaitResult.Deadline,
+        };
     }
 
     internal static int ToTimeoutMilliseconds(long ticks, long frequency)
@@ -109,7 +205,7 @@ internal sealed class TimeoutTerminalLoopWaitBackend : ITerminalLoopWaitBackend
     }
 }
 
-internal sealed partial class WindowsTerminalLoopWaitBackend : ITerminalLoopWaitBackend
+internal sealed partial class WindowsTerminalLoopWaitBackend : AdaptiveTerminalLoopWaitBackend
 {
     private const uint CreateWaitableTimerHighResolution = 0x00000002;
     private const uint Synchronize = 0x00100000;
@@ -117,13 +213,12 @@ internal sealed partial class WindowsTerminalLoopWaitBackend : ITerminalLoopWait
     private const uint WaitObject0 = 0x00000000;
     private const uint WaitFailed = 0xFFFFFFFF;
 
-    private readonly ITerminalLoopClock _clock;
     private readonly SafeWaitHandle _timerHandle;
     private readonly TimeoutTerminalLoopWaitBackend _fallback;
 
     private WindowsTerminalLoopWaitBackend(ITerminalLoopClock clock, SafeWaitHandle timerHandle)
+        : base(clock, "windows-highres")
     {
-        _clock = clock;
         _timerHandle = timerHandle;
         _fallback = new TimeoutTerminalLoopWaitBackend(clock);
     }
@@ -151,60 +246,21 @@ internal sealed partial class WindowsTerminalLoopWaitBackend : ITerminalLoopWait
         return true;
     }
 
-    public TerminalLoopWaitResult WaitUntil(long deadline, AutoResetEvent wakeSignal, CancellationToken cancellationToken)
+    public override void Dispose()
     {
-        ArgumentNullException.ThrowIfNull(wakeSignal);
+        _fallback.Dispose();
+        _timerHandle.Dispose();
+    }
 
-        if (cancellationToken.IsCancellationRequested)
-        {
-            return TerminalLoopWaitResult.Canceled;
-        }
-
-        if (deadline == long.MaxValue)
-        {
-            var addRefInfiniteWake = false;
-            var addRefInfiniteCancel = false;
-            try
-            {
-                wakeSignal.SafeWaitHandle.DangerousAddRef(ref addRefInfiniteWake);
-                cancellationToken.WaitHandle.SafeWaitHandle.DangerousAddRef(ref addRefInfiniteCancel);
-
-                var infiniteHandles = new[]
-                {
-                    wakeSignal.SafeWaitHandle.DangerousGetHandle(),
-                    cancellationToken.WaitHandle.SafeWaitHandle.DangerousGetHandle(),
-                };
-
-                var result = Win32.WaitForMultipleObjects((uint)infiniteHandles.Length, infiniteHandles, waitAll: false, timeoutMilliseconds: uint.MaxValue);
-                return result switch
-                {
-                    WaitObject0 => TerminalLoopWaitResult.WakeSignal,
-                    WaitObject0 + 1 => TerminalLoopWaitResult.Canceled,
-                    WaitFailed => _fallback.WaitUntil(deadline, wakeSignal, cancellationToken),
-                    _ => TerminalLoopWaitResult.Deadline,
-                };
-            }
-            finally
-            {
-                if (addRefInfiniteCancel)
-                {
-                    cancellationToken.WaitHandle.SafeWaitHandle.DangerousRelease();
-                }
-
-                if (addRefInfiniteWake)
-                {
-                    wakeSignal.SafeWaitHandle.DangerousRelease();
-                }
-            }
-        }
-
-        var now = _clock.GetTimestamp();
+    protected internal override TerminalLoopWaitResult WaitCoarseUntil(long deadline, AutoResetEvent wakeSignal, CancellationToken cancellationToken)
+    {
+        var now = Clock.GetTimestamp();
         if (deadline <= now)
         {
             return TerminalLoopWaitResult.Deadline;
         }
 
-        var relativeDueTime = ToRelativeDueTime100Nanoseconds(deadline - now, _clock.Frequency);
+        var relativeDueTime = ToRelativeDueTime100Nanoseconds(deadline - now, Clock.Frequency);
         if (relativeDueTime == 0)
         {
             return TerminalLoopWaitResult.Deadline;
@@ -260,10 +316,42 @@ internal sealed partial class WindowsTerminalLoopWaitBackend : ITerminalLoopWait
         }
     }
 
-    public void Dispose()
+    protected internal override TerminalLoopWaitResult WaitIndefinitely(AutoResetEvent wakeSignal, CancellationToken cancellationToken)
     {
-        _fallback.Dispose();
-        _timerHandle.Dispose();
+        var addRefWake = false;
+        var addRefCancel = false;
+        try
+        {
+            wakeSignal.SafeWaitHandle.DangerousAddRef(ref addRefWake);
+            cancellationToken.WaitHandle.SafeWaitHandle.DangerousAddRef(ref addRefCancel);
+
+            var handles = new[]
+            {
+                wakeSignal.SafeWaitHandle.DangerousGetHandle(),
+                cancellationToken.WaitHandle.SafeWaitHandle.DangerousGetHandle(),
+            };
+
+            var result = Win32.WaitForMultipleObjects((uint)handles.Length, handles, waitAll: false, timeoutMilliseconds: uint.MaxValue);
+            return result switch
+            {
+                WaitObject0 => TerminalLoopWaitResult.WakeSignal,
+                WaitObject0 + 1 => TerminalLoopWaitResult.Canceled,
+                WaitFailed => _fallback.WaitIndefinitely(wakeSignal, cancellationToken),
+                _ => TerminalLoopWaitResult.Deadline,
+            };
+        }
+        finally
+        {
+            if (addRefCancel)
+            {
+                cancellationToken.WaitHandle.SafeWaitHandle.DangerousRelease();
+            }
+
+            if (addRefWake)
+            {
+                wakeSignal.SafeWaitHandle.DangerousRelease();
+            }
+        }
     }
 
     private static long ToRelativeDueTime100Nanoseconds(long remainingStopwatchTicks, long frequency)

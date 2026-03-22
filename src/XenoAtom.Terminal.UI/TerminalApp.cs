@@ -70,6 +70,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
     private long _lastTickTimestamp;
     private int _wakeRequested;
+    private int _pendingWakeReasons;
     private readonly KeyGesture[] _pendingSequence = new KeyGesture[4];
     private int _pendingSequenceCount;
     private long _pendingSequenceTimestamp;
@@ -380,7 +381,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     {
         ArgumentNullException.ThrowIfNull(action);
         _pendingActions.Enqueue(new PendingAction(action, CaptureFlowOutput: UpdateCallbackDepth.Value > 0));
-        SignalWakeUp();
+        SignalWakeUp(TerminalLoopWakeReason.Post);
     }
 
     internal Visual? SelectionOwnerElement => _selectionOwnerElement;
@@ -472,7 +473,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     public void Stop()
     {
         _cts.Cancel();
-        SignalWakeUp();
+        SignalWakeUp(TerminalLoopWakeReason.Shutdown);
     }
 
     internal int PendingCommandSequenceCount => _pendingSequenceCount;
@@ -628,6 +629,11 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         _lastTickTimestamp = timestamp ?? _loopClock.GetTimestamp();
         var metrics = _debugOverlayMetrics;
         metrics?.BeginTick(_lastTickTimestamp);
+        var wakeReasons = (TerminalLoopWakeReason)Interlocked.Exchange(ref _pendingWakeReasons, 0);
+        if (wakeReasons != TerminalLoopWakeReason.None)
+        {
+            metrics?.RecordWake(wakeReasons);
+        }
 
         CancelPendingSequenceIfTimedOut(_lastTickTimestamp);
 
@@ -790,6 +796,11 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 var deadline = ComputeNextRunDeadline(now);
                 if (deadline <= now)
                 {
+                    if (deadline != long.MaxValue)
+                    {
+                        _debugOverlayMetrics?.RecordLateDeadline(Math.Max(0, now - deadline));
+                        Interlocked.Or(ref _pendingWakeReasons, (int)TerminalLoopWakeReason.Deadline);
+                    }
                     continue;
                 }
 
@@ -808,6 +819,11 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 if (waitResult == TerminalLoopWaitResult.Canceled)
                 {
                     break;
+                }
+
+                if (waitResult == TerminalLoopWaitResult.Deadline)
+                {
+                    Interlocked.Or(ref _pendingWakeReasons, (int)TerminalLoopWakeReason.Deadline);
                 }
             }
         }
@@ -932,13 +948,13 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     internal void RequestRender()
     {
         _renderRequested = true;
-        SignalWakeUp();
+        SignalWakeUp(TerminalLoopWakeReason.Render);
     }
 
     internal void RequestAnimation()
     {
         _nextAnimationTick = 0;
-        SignalWakeUp();
+        SignalWakeUp(TerminalLoopWakeReason.Animation);
     }
 
     private bool TryDequeueTerminalEvent(out TerminalEvent ev)
@@ -968,7 +984,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 {
                     var ev = await _terminal.ReadEventAsync(relayToken).ConfigureAwait(false);
                     _pendingTerminalEvents.Enqueue(ev);
-                    SignalWakeUp();
+                    SignalWakeUp(TerminalLoopWakeReason.Input);
                 }
             }
             catch (Exception ex) when (ex is OperationCanceledException or ChannelClosedException)
@@ -1007,12 +1023,13 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     {
         pendingTask.ContinueWith(static (_, state) =>
         {
-            ((TerminalApp)state!).SignalWakeUp();
+            ((TerminalApp)state!).SignalWakeUp(TerminalLoopWakeReason.AsyncUpdate);
         }, this, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
     }
 
-    private void SignalWakeUp()
+    private void SignalWakeUp(TerminalLoopWakeReason reason)
     {
+        Interlocked.Or(ref _pendingWakeReasons, (int)reason);
         Volatile.Write(ref _wakeRequested, 1);
         _wakeUp.Set();
         try
@@ -1663,6 +1680,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         var focus = FocusedElement;
         var hover = _hoveredElement;
         var metrics = _debugOverlayMetrics;
+        var waitDiagnostics = _loopWaitBackend.GetDiagnosticsSnapshot();
 
         static double ToMs(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
         static string FormatMs(long ticks) => ToMs(ticks).ToString("0.0", global::System.Globalization.CultureInfo.InvariantCulture);
@@ -1682,10 +1700,14 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             repaintText = $"Repaint: ({r.X},{r.Y}) {r.Width}x{r.Height}";
         }
 
-        var lines = new List<string>(16)
+        var lines = new List<string>(20)
         {
             $"Frame: {_renderFrameIndex}  FPS: {FormatFps(metrics?.Fps ?? 0)}",
             $"Tick: {FormatMs(metrics?.TickTotalTicks ?? 0)}ms  Update: {FormatMs(metrics?.TickUserUpdateTicks ?? 0)}ms",
+            $"Loop: {waitDiagnostics.BackendName}  YieldWin {FormatMs(waitDiagnostics.YieldWindowTicks)}ms  Overshoot avg/p95 {FormatMs(waitDiagnostics.AverageOvershootTicks)}/{FormatMs(waitDiagnostics.P95OvershootTicks)}ms",
+            $"Loop: Yield avg {FormatMs(waitDiagnostics.AverageYieldTicks)}ms  Late {(metrics?.LateDeadlineCount ?? 0)}",
+            $"Wake64: deadline {(metrics?.WakeDeadlineCount ?? 0)}  input {(metrics?.WakeInputCount ?? 0)}  render {(metrics?.WakeRenderCount ?? 0)}  anim {(metrics?.WakeAnimationCount ?? 0)}",
+            $"Wake64: post {(metrics?.WakePostCount ?? 0)}  async {(metrics?.WakeAsyncUpdateCount ?? 0)}  stop {(metrics?.WakeShutdownCount ?? 0)}",
             $"Top: Measure {FormatMs(metrics?.RenderMeasureTicks ?? 0)}ms  Arrange {FormatMs(metrics?.RenderArrangeTicks ?? 0)}ms  Render {FormatMs(metrics?.RenderTreeTicks ?? 0)}ms  Host {FormatMs(metrics?.RenderHostTicks ?? 0)}ms",
             $"Top: Total {FormatMs(metrics?.RenderTotalTicks ?? 0)}ms",
             $"Calls: DynamicUpdate {(metrics?.DynamicUpdate.Calls ?? 0)} ({FormatMs(metrics?.DynamicUpdate.Ticks ?? 0)}ms)",

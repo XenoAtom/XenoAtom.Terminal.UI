@@ -35,6 +35,8 @@ internal sealed class TerminalAppTestDriver : IDisposable
             ExitGesture = appOptions?.ExitGesture,
             InitialFocusMode = appOptions?.InitialFocusMode ?? InitialFocusMode.FirstFocusable,
             Culture = appOptions?.Culture ?? System.Globalization.CultureInfo.InvariantCulture,
+            LoopMode = appOptions?.LoopMode ?? TerminalLoopMode.Auto,
+            UpdateWaitDuration = appOptions?.UpdateWaitDuration ?? TimeSpan.FromMilliseconds(1),
             WideRuneResolver = appOptions?.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
         };
         _app = new TerminalApp(root, _session.Instance, effectiveOptions);

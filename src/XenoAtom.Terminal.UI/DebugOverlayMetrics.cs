@@ -5,6 +5,7 @@
 using System.Diagnostics;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Threading;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -54,6 +55,14 @@ internal sealed class DebugOverlayMetrics : ICellBufferDiffMetricsSink
 
     internal double Fps { get; private set; }
     internal long FrameIndex { get; private set; }
+    internal int LateDeadlineCount { get; private set; }
+    internal int WakeDeadlineCount { get; private set; }
+    internal int WakePostCount { get; private set; }
+    internal int WakeRenderCount { get; private set; }
+    internal int WakeAnimationCount { get; private set; }
+    internal int WakeInputCount { get; private set; }
+    internal int WakeAsyncUpdateCount { get; private set; }
+    internal int WakeShutdownCount { get; private set; }
 
     private int _dynamicUpdateCalls;
     private long _dynamicUpdateTicks;
@@ -80,6 +89,9 @@ internal sealed class DebugOverlayMetrics : ICellBufferDiffMetricsSink
     private Rectangle _repaintRect;
 
     private long _lastFrameTimestamp;
+    private readonly TerminalLoopWakeReason[] _wakeSamples = new TerminalLoopWakeReason[64];
+    private int _wakeSampleCount;
+    private int _wakeSampleIndex;
 
     public void BeginTick(long timestamp)
     {
@@ -206,6 +218,28 @@ internal sealed class DebugOverlayMetrics : ICellBufferDiffMetricsSink
 
     public void RecordRenderClipSkip() => _renderClipSkips++;
 
+    public void RecordWake(TerminalLoopWakeReason wakeReason)
+    {
+        _wakeSamples[_wakeSampleIndex] = wakeReason;
+        _wakeSampleIndex = (_wakeSampleIndex + 1) % _wakeSamples.Length;
+        if (_wakeSampleCount < _wakeSamples.Length)
+        {
+            _wakeSampleCount++;
+        }
+
+        RecomputeWakeCounters();
+    }
+
+    public void RecordLateDeadline(long latenessTicks)
+    {
+        if (latenessTicks <= 0)
+        {
+            return;
+        }
+
+        LateDeadlineCount++;
+    }
+
     void ICellBufferDiffMetricsSink.OnRendered(CellBufferDiffMetrics metrics)
     {
         DiffOutputChars = metrics.OutputChars;
@@ -214,4 +248,27 @@ internal sealed class DebugOverlayMetrics : ICellBufferDiffMetricsSink
     }
 
     private long _tickStartTimestamp;
+
+    private void RecomputeWakeCounters()
+    {
+        WakeDeadlineCount = 0;
+        WakePostCount = 0;
+        WakeRenderCount = 0;
+        WakeAnimationCount = 0;
+        WakeInputCount = 0;
+        WakeAsyncUpdateCount = 0;
+        WakeShutdownCount = 0;
+
+        for (var i = 0; i < _wakeSampleCount; i++)
+        {
+            var wakeReason = _wakeSamples[i];
+            if ((wakeReason & TerminalLoopWakeReason.Deadline) != 0) WakeDeadlineCount++;
+            if ((wakeReason & TerminalLoopWakeReason.Post) != 0) WakePostCount++;
+            if ((wakeReason & TerminalLoopWakeReason.Render) != 0) WakeRenderCount++;
+            if ((wakeReason & TerminalLoopWakeReason.Animation) != 0) WakeAnimationCount++;
+            if ((wakeReason & TerminalLoopWakeReason.Input) != 0) WakeInputCount++;
+            if ((wakeReason & TerminalLoopWakeReason.AsyncUpdate) != 0) WakeAsyncUpdateCount++;
+            if ((wakeReason & TerminalLoopWakeReason.Shutdown) != 0) WakeShutdownCount++;
+        }
+    }
 }
