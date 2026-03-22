@@ -79,6 +79,17 @@ public sealed class TerminalLoopSchedulerTests
         Assert.AreEqual(TerminalLoopWaitResult.Deadline, result);
     }
 
+    [TestMethod]
+    public void CreateDefaultWaitBackend_ReturnsBackendThatCanWakeFromSignal()
+    {
+        using var signal = new AutoResetEvent(initialState: true);
+        using var waitBackend = TerminalLoopWaitBackendFactory.CreateDefault(new FakeClock(100, frequency: 1000));
+
+        var result = waitBackend.WaitUntil(deadline: 200, signal, CancellationToken.None);
+
+        Assert.AreEqual(TerminalLoopWaitResult.WakeSignal, result);
+    }
+
     private sealed class FakeClock(long timestamp, long frequency) : ITerminalLoopClock
     {
         public long Frequency { get; } = frequency;

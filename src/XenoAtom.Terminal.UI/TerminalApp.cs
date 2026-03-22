@@ -215,7 +215,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         _options = options ?? new TerminalAppOptions();
         _wideRuneResolver = _options.WideRuneResolver ?? TerminalWideRuneResolvers.Default;
         _loopClock = loopClock ?? StopwatchTerminalLoopClock.Instance;
-        _loopWaitBackend = loopWaitBackend ?? new TimeoutTerminalLoopWaitBackend(_loopClock);
+        _loopWaitBackend = loopWaitBackend ?? TerminalLoopWaitBackendFactory.CreateDefault(_loopClock);
         if (_options.UpdateWaitDuration < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(options), "The update wait duration cannot be negative.");
@@ -493,6 +493,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
         _inlineHost?.Dispose();
         _fullscreenHost?.Dispose();
+        _loopWaitBackend.Dispose();
         _wakeSignal.Dispose();
         _cts.Dispose();
         _updateOutputBuilder.Dispose();
