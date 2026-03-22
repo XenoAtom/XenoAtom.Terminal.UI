@@ -56,24 +56,49 @@ Terminal.Live(
     options: new TerminalLiveOptions { EnableMouse = true, MouseMode = TerminalMouseMode.Move });
 ```
 
-### Update tick wait (default: 1ms)
+### Loop pacing
 
-`Terminal.Live(...)` and `Terminal.Run(...)` use a 1ms wait between loop ticks by default.
-You can increase this wait if you want to reduce update frequency and CPU usage:
+`Terminal.Live(...)` and `Terminal.Run(...)` now default to `LoopMode = Auto`.
+
+In auto mode, the host loop is deadline/event-driven:
+
+- idle apps block until input, resize, `Post(...)`, render invalidation, animation work, or async update completion wakes them;
+- active update callbacks use an internal active cadence cap (about 60 Hz) instead of a fixed `Sleep(1)` loop;
+- Windows uses a high-resolution waitable timer when supported, with a safe fallback on older systems.
+
+This gives better responsiveness and more stable animation pacing than the old fixed 1ms polling loop while still
+keeping UI work on the calling thread.
+
+### Polling mode and `UpdateWaitDuration`
+
+`UpdateWaitDuration` is no longer the default frame cadence control.
+It is now the maximum coarse wait slice used by `LoopMode = Polling`, which preserves the older periodic re-evaluation
+behavior when you explicitly opt into it:
 
 ```csharp
 Terminal.Live(
     visual,
     onUpdate: () => TerminalLoopResult.Continue,
-    options: new TerminalLiveOptions { UpdateWaitDuration = TimeSpan.FromMilliseconds(20) });
+    options: new TerminalLiveOptions
+    {
+        LoopMode = TerminalLoopMode.Polling,
+        UpdateWaitDuration = TimeSpan.FromMilliseconds(20)
+    });
 
 Terminal.Run(
     visual,
     onUpdate: () => TerminalLoopResult.Continue,
-    options: new TerminalRunOptions { UpdateWaitDuration = TimeSpan.FromMilliseconds(20) });
+    options: new TerminalRunOptions
+    {
+        LoopMode = TerminalLoopMode.Polling,
+        UpdateWaitDuration = TimeSpan.FromMilliseconds(20)
+    });
 ```
 
-Larger values can make animations (for example spinners) update less smoothly.
+Use polling mode only when you specifically want legacy periodic wake-ups.
+Larger `UpdateWaitDuration` values reduce wake frequency, but they also make updates less responsive.
+
+In `LoopMode = Auto`, changing `UpdateWaitDuration` does not change the active animation cadence.
 
 ### Filling the viewport height
 
