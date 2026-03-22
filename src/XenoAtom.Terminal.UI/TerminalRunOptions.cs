@@ -29,10 +29,16 @@ public readonly record struct TerminalRunOptions()
     public global::XenoAtom.Terminal.UI.Input.KeyGesture? ExitGesture { get; init; }
 
     /// <summary>
-    /// Gets the wait duration between update ticks.
+    /// Gets the host loop mode.
+    /// </summary>
+    public TerminalLoopMode LoopMode { get; init; } = TerminalLoopMode.Auto;
+
+    /// <summary>
+    /// Gets the maximum coarse wait slice used in <see cref="TerminalLoopMode.Polling"/>.
     /// </summary>
     /// <remarks>
-    /// The default is 1ms. Increase this value to reduce update frequency and CPU usage.
+    /// In <see cref="TerminalLoopMode.Auto"/>, the loop is deadline/event-driven and this value is not treated as a
+    /// frame cadence setting.
     /// </remarks>
     public global::System.TimeSpan UpdateWaitDuration { get; init; } = global::System.TimeSpan.FromMilliseconds(1);
 

@@ -80,11 +80,16 @@ public sealed class TerminalAppOptions
     public CultureInfo Culture { get; init; } = CultureInfo.InvariantCulture;
 
     /// <summary>
-    /// Gets the wait duration between host loop ticks.
+    /// Gets the host loop mode.
+    /// </summary>
+    public TerminalLoopMode LoopMode { get; init; } = TerminalLoopMode.Auto;
+
+    /// <summary>
+    /// Gets the maximum coarse wait slice used in <see cref="TerminalLoopMode.Polling"/>.
     /// </summary>
     /// <remarks>
-    /// The default is 1ms to keep animation updates responsive while yielding the CPU.
-    /// Increase this value to reduce CPU usage when frequent updates are not required.
+    /// In <see cref="TerminalLoopMode.Auto"/>, the loop is deadline/event-driven and this value is not treated as a
+    /// frame cadence setting.
     /// </remarks>
     public global::System.TimeSpan UpdateWaitDuration { get; init; } = global::System.TimeSpan.FromMilliseconds(1);
 
@@ -117,4 +122,20 @@ public enum InitialFocusMode
     /// If a visual has <see cref="Visual.AutoFocus"/> set, that visual is preferred.
     /// </remarks>
     FirstFocusable,
+}
+
+/// <summary>
+/// Specifies how the host loop decides when to wake between ticks.
+/// </summary>
+public enum TerminalLoopMode
+{
+    /// <summary>
+    /// Uses deadline/event-driven pacing with a default active cadence while the host update callback remains active.
+    /// </summary>
+    Auto,
+
+    /// <summary>
+    /// Uses <see cref="TerminalAppOptions.UpdateWaitDuration"/> as the maximum polling slice between re-evaluations.
+    /// </summary>
+    Polling,
 }

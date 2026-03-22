@@ -53,6 +53,18 @@ internal sealed class TimeoutTerminalLoopWaitBackend : ITerminalLoopWaitBackend
             return TerminalLoopWaitResult.Canceled;
         }
 
+        if (deadline == long.MaxValue)
+        {
+            var infiniteHandles = new WaitHandle[] { wakeSignal, cancellationToken.WaitHandle };
+            var infiniteSignaled = WaitHandle.WaitAny(infiniteHandles);
+            return infiniteSignaled switch
+            {
+                0 => TerminalLoopWaitResult.WakeSignal,
+                1 => TerminalLoopWaitResult.Canceled,
+                _ => TerminalLoopWaitResult.Deadline,
+            };
+        }
+
         var remainingTicks = Math.Max(0, deadline - _clock.GetTimestamp());
         if (remainingTicks <= 0)
         {
@@ -146,6 +158,44 @@ internal sealed partial class WindowsTerminalLoopWaitBackend : ITerminalLoopWait
         if (cancellationToken.IsCancellationRequested)
         {
             return TerminalLoopWaitResult.Canceled;
+        }
+
+        if (deadline == long.MaxValue)
+        {
+            var addRefInfiniteWake = false;
+            var addRefInfiniteCancel = false;
+            try
+            {
+                wakeSignal.SafeWaitHandle.DangerousAddRef(ref addRefInfiniteWake);
+                cancellationToken.WaitHandle.SafeWaitHandle.DangerousAddRef(ref addRefInfiniteCancel);
+
+                var infiniteHandles = new[]
+                {
+                    wakeSignal.SafeWaitHandle.DangerousGetHandle(),
+                    cancellationToken.WaitHandle.SafeWaitHandle.DangerousGetHandle(),
+                };
+
+                var result = Win32.WaitForMultipleObjects((uint)infiniteHandles.Length, infiniteHandles, waitAll: false, timeoutMilliseconds: uint.MaxValue);
+                return result switch
+                {
+                    WaitObject0 => TerminalLoopWaitResult.WakeSignal,
+                    WaitObject0 + 1 => TerminalLoopWaitResult.Canceled,
+                    WaitFailed => _fallback.WaitUntil(deadline, wakeSignal, cancellationToken),
+                    _ => TerminalLoopWaitResult.Deadline,
+                };
+            }
+            finally
+            {
+                if (addRefInfiniteCancel)
+                {
+                    cancellationToken.WaitHandle.SafeWaitHandle.DangerousRelease();
+                }
+
+                if (addRefInfiniteWake)
+                {
+                    wakeSignal.SafeWaitHandle.DangerousRelease();
+                }
+            }
         }
 
         var now = _clock.GetTimestamp();

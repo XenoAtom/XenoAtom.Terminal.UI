@@ -185,7 +185,7 @@ public sealed class TerminalExtensionsTests
                 tickCount++;
                 return tickCount >= 2 ? TerminalLoopResult.Stop : TerminalLoopResult.Continue;
             },
-            new TerminalLiveOptions { UpdateWaitDuration = wait });
+            new TerminalLiveOptions { LoopMode = TerminalLoopMode.Polling, UpdateWaitDuration = wait });
 
         stopwatch.Stop();
 
@@ -194,6 +194,33 @@ public sealed class TerminalExtensionsTests
         Assert.IsTrue(
             stopwatch.Elapsed >= minimumExpected,
             $"Expected configured wait duration to slow down loop ticks by roughly the configured wait. Elapsed: {stopwatch.Elapsed}.");
+    }
+
+    [TestMethod]
+    public void Live_AutoMode_DoesNotTreatUpdateWaitDurationAsFrameCadence()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(30, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+
+        var tickCount = 0;
+        var wait = TimeSpan.FromMilliseconds(250);
+        var stopwatch = Stopwatch.StartNew();
+
+        session.Instance.Live(
+            new TextBlock("Auto cadence test"),
+            _ =>
+            {
+                tickCount++;
+                return tickCount >= 2 ? TerminalLoopResult.Stop : TerminalLoopResult.Continue;
+            },
+            new TerminalLiveOptions { LoopMode = TerminalLoopMode.Auto, UpdateWaitDuration = wait });
+
+        stopwatch.Stop();
+
+        Assert.AreEqual(2, tickCount);
+        Assert.IsTrue(
+            stopwatch.Elapsed < wait - TimeSpan.FromMilliseconds(40),
+            $"Expected auto mode to use the active cadence instead of the polling slice. Elapsed: {stopwatch.Elapsed}.");
     }
 
     [TestMethod]
@@ -213,7 +240,7 @@ public sealed class TerminalExtensionsTests
                 tickCount++;
                 return tickCount >= 2 ? TerminalLoopResult.Stop : TerminalLoopResult.Continue;
             },
-            new TerminalRunOptions { UpdateWaitDuration = wait });
+            new TerminalRunOptions { LoopMode = TerminalLoopMode.Polling, UpdateWaitDuration = wait });
 
         stopwatch.Stop();
 

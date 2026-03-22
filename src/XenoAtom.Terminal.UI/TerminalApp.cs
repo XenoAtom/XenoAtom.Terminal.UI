@@ -88,6 +88,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private int _lastRenderHeight;
 
     private static readonly AsyncLocal<int> UpdateCallbackDepth = new();
+    private static readonly TimeSpan DefaultActiveFrameInterval = TimeSpan.FromMilliseconds(1000.0 / 60.0);
 
     private Task<TerminalLoopResult>? _pendingUpdateTask;
     private readonly System.Collections.Concurrent.ConcurrentQueue<TerminalEvent> _pendingTerminalEvents = new();
@@ -1033,6 +1034,27 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
     private long ComputeNextRunDeadline(long now)
     {
+        if (_options.LoopMode == TerminalLoopMode.Auto)
+        {
+            if (_nextAnimationTick == 0)
+            {
+                return now;
+            }
+
+            if (_nextAnimationTick != long.MaxValue)
+            {
+                return _nextAnimationTick <= now ? now : _nextAnimationTick;
+            }
+
+            if (_onUpdate is not null && _pendingUpdateTask is null)
+            {
+                var activeFrameTicks = TerminalLoopScheduler.ToStopwatchTicks(DefaultActiveFrameInterval, _loopClock.Frequency);
+                return now + activeFrameTicks;
+            }
+
+            return long.MaxValue;
+        }
+
         var pollingSliceTicks = TerminalLoopScheduler.ToStopwatchTicks(_options.UpdateWaitDuration, _loopClock.Frequency);
         return TerminalLoopScheduler.ComputePollingDeadline(now, _nextAnimationTick, pollingSliceTicks);
     }

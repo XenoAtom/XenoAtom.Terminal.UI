@@ -352,6 +352,7 @@ public static partial class TerminalExtensions
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
                 EnableMouse = options.EnableMouse,
                 MouseMode = options.MouseMode,
+                LoopMode = options.LoopMode,
                 UpdateWaitDuration = options.UpdateWaitDuration,
                 WideRuneResolver = options.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
             };
@@ -423,6 +424,7 @@ public static partial class TerminalExtensions
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
                 EnableMouse = options.EnableMouse,
                 MouseMode = options.MouseMode,
+                LoopMode = options.LoopMode,
                 UpdateWaitDuration = options.UpdateWaitDuration,
                 WideRuneResolver = options.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
             };
@@ -443,6 +445,7 @@ public static partial class TerminalExtensions
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
                 EnableMouse = options.EnableMouse,
                 MouseMode = options.MouseMode,
+                LoopMode = options.LoopMode,
                 UpdateWaitDuration = options.UpdateWaitDuration,
                 WideRuneResolver = options.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
             };
@@ -468,6 +471,7 @@ public static partial class TerminalExtensions
                 HostKind = TerminalHostKind.Fullscreen,
                 ExitGesture = options.ExitGesture,
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
+                LoopMode = options.LoopMode,
                 UpdateWaitDuration = options.UpdateWaitDuration,
                 WideRuneResolver = options.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
             };
@@ -496,6 +500,7 @@ public static partial class TerminalExtensions
                 HostKind = TerminalHostKind.Fullscreen,
                 ExitGesture = options.ExitGesture,
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
+                LoopMode = options.LoopMode,
                 UpdateWaitDuration = options.UpdateWaitDuration,
                 WideRuneResolver = options.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
             };
@@ -521,6 +526,7 @@ public static partial class TerminalExtensions
                 HostKind = TerminalHostKind.Fullscreen,
                 ExitGesture = options.ExitGesture,
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
+                LoopMode = options.LoopMode,
                 UpdateWaitDuration = options.UpdateWaitDuration,
                 WideRuneResolver = options.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
             };
