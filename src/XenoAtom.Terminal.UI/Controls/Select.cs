@@ -25,6 +25,8 @@ public partial class Select<T> : ContentVisual
     private int _contentIndex = -1;
     private int _selectionChangedIndex = -1;
     private DataTemplate<T> _lastResolvedTemplate;
+    private T _lastSelectedValue = default!;
+    private bool _hasLastSelectedValue;
     private Rune _cachedArrowGlyph;
     private string _cachedArrowText = string.Empty;
     private int _cachedArrowWidth;
@@ -267,6 +269,8 @@ public partial class Select<T> : ContentVisual
 
             _contentIndex = -1;
             _lastResolvedTemplate = default;
+            _lastSelectedValue = default!;
+            _hasLastSelectedValue = false;
             return;
         }
 
@@ -279,11 +283,18 @@ public partial class Select<T> : ContentVisual
 
         var value = items[index];
         var template = ResolveItemTemplate();
+        var comparer = EqualityComparer<T>.Default;
+        var hasSameSelectedValue =
+            _contentIndex == index &&
+            _hasLastSelectedValue &&
+            comparer.Equals(_lastSelectedValue, value);
 
         _contentIndex = index;
 
         if (value is Visual asVisual)
         {
+            _lastSelectedValue = value;
+            _hasLastSelectedValue = true;
             Content = asVisual;
             _lastResolvedTemplate = template;
             return;
@@ -294,13 +305,22 @@ public partial class Select<T> : ContentVisual
 
         if (!forceRebuild && _lastResolvedTemplate.Equals(template) && Content is not null)
         {
+            if (hasSameSelectedValue)
+            {
+                return;
+            }
+
             if (template.TryUpdate is { } updater && updater(Content, templateValue, ctx))
             {
+                _lastSelectedValue = value;
+                _hasLastSelectedValue = true;
                 return;
             }
         }
 
         _lastResolvedTemplate = template;
+        _lastSelectedValue = value;
+        _hasLastSelectedValue = true;
         Content = template.IsEmpty || template.Display is null
             ? new TextBlock(() => ToStringObject(value))
             : template.Display(templateValue, ctx);

@@ -33,4 +33,43 @@ public sealed class SelectTests
 
         Assert.AreEqual(1, select.SelectedIndex);
     }
+
+    [TestMethod]
+    public void Select_IdleTick_DoesNotRebuild_SelectedContent()
+    {
+        var select = new Select<string>()
+            .Items(["First", "Second", "Third"]);
+
+        var root = new VStack { select };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        var initialContent = select.Content;
+        Assert.IsNotNull(initialContent);
+
+        driver.Tick();
+
+        Assert.AreSame(initialContent, select.Content);
+    }
+
+    [TestMethod]
+    public void Select_SelectedItemChange_Rebuilds_SelectedContent()
+    {
+        var select = new Select<string>()
+            .Items(["First", "Second", "Third"]);
+
+        var root = new VStack { select };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        var initialContent = select.Content;
+        Assert.IsNotNull(initialContent);
+
+        select.Items[0] = "Updated";
+        driver.Tick();
+
+        Assert.AreNotSame(initialContent, select.Content);
+    }
 }
