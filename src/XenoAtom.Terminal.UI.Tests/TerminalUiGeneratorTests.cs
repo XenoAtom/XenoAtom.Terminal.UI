@@ -139,6 +139,51 @@ public sealed class TerminalUiGeneratorTests
             "Expected generated model Accessor for DerivedRow with correct inheritance.");
     }
 
+    [TestMethod]
+    public void Generates_New_Accessor_And_IBindings_For_Derived_Types_From_Referenced_Assemblies()
+    {
+        const string source = """
+                              using XenoAtom.Terminal.UI;
+
+                              namespace Demo;
+
+                              public partial class DerivedVisual : Visual
+                              {
+                                  [Bindable]
+                                  public partial int Count { get; set; }
+                              }
+                              """;
+
+        var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview);
+        var compilation = CreateCompilation(source, parseOptions);
+        var generator = new TerminalUiGenerator();
+
+        GeneratorDriver driver = CSharpGeneratorDriver.Create([generator.AsSourceGenerator()], parseOptions: parseOptions);
+        driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var generatorDiagnostics);
+
+        var diagnostics = generatorDiagnostics.Concat(outputCompilation.GetDiagnostics()).ToArray();
+        var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToArray();
+        Assert.IsEmpty(errors, string.Join(Environment.NewLine, errors.Select(x => x.ToString())));
+
+        var warnings = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Warning).ToArray();
+        Assert.IsFalse(
+            warnings.Any(d => d.Id == "CS0108"),
+            "Did not expect generated members to hide Visual.Accessor or Visual.IBindings without the new keyword.");
+
+        var generatedSources = driver.GetRunResult().Results
+            .SelectMany(r => r.GeneratedSources)
+            .Select(s => s.SourceText.ToString())
+            .ToList();
+
+        Assert.IsTrue(
+            generatedSources.Any(s => s.Contains("public new class Accessor : global::XenoAtom.Terminal.UI.Visual.Accessor", StringComparison.Ordinal)),
+            "Expected derived generated Accessor to hide Visual.Accessor with the new keyword.");
+
+        Assert.IsTrue(
+            generatedSources.Any(s => s.Contains("public new interface IBindings : global::XenoAtom.Terminal.UI.Visual.IBindings", StringComparison.Ordinal)),
+            "Expected derived generated IBindings to hide Visual.IBindings with the new keyword.");
+    }
+
     private static CSharpCompilation CreateCompilation(string source, CSharpParseOptions parseOptions)
     {
         var syntaxTree = CSharpSyntaxTree.ParseText(source, parseOptions);

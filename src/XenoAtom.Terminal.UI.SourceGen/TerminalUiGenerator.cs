@@ -1448,7 +1448,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             var baseType = containingType.BaseType;
             while (baseType is not null)
             {
-                if (typesWithBindings.Contains(baseType))
+                if (typesWithBindings.Contains(baseType) || HasNestedType(baseType, "IBindings"))
                 {
                     return $"{baseType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}.IBindings";
                 }
@@ -1463,7 +1463,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             var baseType = containingType.BaseType;
             while (baseType is not null)
             {
-                if (typesWithAccessors.Contains(baseType))
+                if (typesWithAccessors.Contains(baseType) || HasNestedType(baseType, "Accessor"))
                 {
                     return $"{baseType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}.Accessor";
                 }
@@ -1471,6 +1471,11 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
             }
 
             return string.Empty;
+        }
+
+        private static bool HasNestedType(INamedTypeSymbol typeSymbol, string nestedTypeName)
+        {
+            return typeSymbol.GetTypeMembers(nestedTypeName).Length != 0;
         }
 
         internal static List<INamedTypeSymbol> GetContainingTypes(INamedTypeSymbol type)
