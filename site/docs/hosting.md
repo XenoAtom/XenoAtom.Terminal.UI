@@ -63,7 +63,7 @@ Terminal.Live(
 In auto mode, the host loop is deadline/event-driven:
 
 - idle apps block until input, resize, `Post(...)`, render invalidation, animation work, or async update completion wakes them;
-- active update callbacks use an internal active cadence cap (about 60 Hz) instead of a fixed `Sleep(1)` loop;
+- active update callbacks use an internal active cadence cap of about `16 ms` (`~62.5 Hz`) instead of a fixed `Sleep(1)` loop;
 - Windows uses a high-resolution waitable timer when supported, with a safe fallback on older systems.
 
 This gives better responsiveness and more stable animation pacing than the old fixed 1ms polling loop while still

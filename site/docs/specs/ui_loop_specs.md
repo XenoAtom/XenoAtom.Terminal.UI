@@ -368,7 +368,7 @@ The framework should not enforce a single universal frame cadence for all situat
 Recommended default policy:
 
 - **active animation / active interaction**
-  - target up to `16.666 ms` per frame (`~60 Hz`)
+  - target up to `16 ms` per frame (`~62.5 Hz`)
 - **lower-priority / power-friendly animation**
   - target up to `33.333 ms` per frame (`~30 Hz`)
 - **idle**
@@ -379,7 +379,7 @@ those intervals.
 
 These values are soft timing targets only.
 
-If user code, layout, rendering, terminal I/O, or OS scheduling causes a tick to take longer than `16.666 ms` or
+If user code, layout, rendering, terminal I/O, or OS scheduling causes a tick to take longer than `16 ms` or
 `33.333 ms`, the loop must continue correctly:
 
 - the app remains responsive and correct,
@@ -388,8 +388,8 @@ If user code, layout, rendering, terminal I/O, or OS scheduling causes a tick to
 
 Why this is the recommended default:
 
-- `~60 Hz` is a sensible upper bound for smooth terminal interaction and aligns with common display/terminal refresh
-  behavior.
+- a nominal `16 ms` cap gives the loop a small amount of headroom so real-world wait overshoot still tends to land
+  closer to the user-visible `~60 FPS` range.
 - `~30 Hz` is often sufficient for spinners, progress indicators, and less critical motion while reducing wake-ups.
 - idle mode should not spend wake-ups chasing a cadence when nothing is changing.
 
@@ -405,8 +405,8 @@ That should remain the primary source of timing for animation:
 
 This keeps the loop both more efficient and more correct:
 
-- a spinner that advances every 80 ms should not wake at 16.666 ms just because the app is "animated",
-- a hover or drag interaction may still benefit from the active 60 Hz cap,
+- a spinner that advances every 80 ms should not wake at 16 ms just because the app is "animated",
+- a hover or drag interaction may still benefit from the active default cap,
 - the loop remains event-driven when no visual is asking for time-based advancement.
 
 ### Overrun behavior

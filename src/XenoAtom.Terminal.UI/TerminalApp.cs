@@ -89,7 +89,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private int _lastRenderHeight;
 
     private static readonly AsyncLocal<int> UpdateCallbackDepth = new();
-    private static readonly TimeSpan DefaultActiveFrameInterval = TimeSpan.FromMilliseconds(1000.0 / 60.0);
+    private static readonly TimeSpan DefaultActiveFrameInterval = TimeSpan.FromMilliseconds(15);
 
     private Task<TerminalLoopResult>? _pendingUpdateTask;
     private readonly System.Collections.Concurrent.ConcurrentQueue<TerminalEvent> _pendingTerminalEvents = new();
