@@ -81,5 +81,6 @@ The `site/docs/specs` folder contains deeper design documents and implementation
 
 - [Layout Protocol Specs](specs/layout_protocol_specs.md)
 - [Text Editor Specs](specs/text_editor_specs.md)
+- [UI Loop & Frame Pacing Specs](specs/ui_loop_specs.md)
 - [Specs Index](specs/specs.md)
 - [Original Specs](specs/original_specs.md)
