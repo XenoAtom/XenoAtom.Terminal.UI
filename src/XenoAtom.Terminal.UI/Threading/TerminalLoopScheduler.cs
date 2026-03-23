@@ -42,4 +42,25 @@ internal static class TerminalLoopScheduler
 
         return Math.Min(pollingDeadline, animationDeadline);
     }
+
+    public static long ComputeNextActiveDeadline(long tickStart, long now, long previousDeadline, long activeFrameTicks)
+    {
+        if (activeFrameTicks <= 0)
+        {
+            return now;
+        }
+
+        if (previousDeadline == long.MaxValue || previousDeadline <= 0)
+        {
+            return tickStart + activeFrameTicks;
+        }
+
+        if (previousDeadline > tickStart)
+        {
+            return previousDeadline;
+        }
+
+        var intervalsToAdvance = ((tickStart - previousDeadline) / activeFrameTicks) + 1;
+        return previousDeadline + (intervalsToAdvance * activeFrameTicks);
+    }
 }

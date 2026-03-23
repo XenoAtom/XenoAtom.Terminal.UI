@@ -78,6 +78,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
     private readonly List<IAnimatedVisual> _animatedVisuals = new();
     private long _nextAnimationTick = long.MaxValue;
+    private long _nextActiveUpdateTick = long.MaxValue;
 
     private readonly HashSet<Binding> _pendingBindingWrites = new(BindingReferenceComparer.Instance);
 
@@ -850,6 +851,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         _updateContext = new TerminalRunningContext(this, _terminal, _options.HostKind);
         _inlineRemoveOnEnd = false;
         _pendingUpdateTask = null;
+        _nextActiveUpdateTick = long.MaxValue;
         _updateOutputBuilder.Clear();
 
         if (!_terminal.IsInputRunning)
@@ -889,6 +891,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         try
         {
             _pendingUpdateTask = null;
+            _nextActiveUpdateTick = long.MaxValue;
             _updateOutputBuilder.Clear();
 
             _terminal.MarkupStyles = _previousMarkupStyles;
@@ -1058,18 +1061,33 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 return now;
             }
 
-            if (_nextAnimationTick != long.MaxValue)
-            {
-                return _nextAnimationTick <= now ? now : _nextAnimationTick;
-            }
-
+            var activeDeadline = long.MaxValue;
             if (_onUpdate is not null && _pendingUpdateTask is null)
             {
                 var activeFrameTicks = TerminalLoopScheduler.ToStopwatchTicks(DefaultActiveFrameInterval, _loopClock.Frequency);
-                return now + activeFrameTicks;
+                activeDeadline = TerminalLoopScheduler.ComputeNextActiveDeadline(_lastTickTimestamp, now, _nextActiveUpdateTick, activeFrameTicks);
+                _nextActiveUpdateTick = activeDeadline;
+            }
+            else
+            {
+                _nextActiveUpdateTick = long.MaxValue;
             }
 
-            return long.MaxValue;
+            var animationDeadline = _nextAnimationTick == long.MaxValue
+                ? long.MaxValue
+                : (_nextAnimationTick <= now ? now : _nextAnimationTick);
+
+            if (activeDeadline == long.MaxValue)
+            {
+                return animationDeadline;
+            }
+
+            if (animationDeadline == long.MaxValue)
+            {
+                return activeDeadline;
+            }
+
+            return Math.Min(activeDeadline, animationDeadline);
         }
 
         var pollingSliceTicks = TerminalLoopScheduler.ToStopwatchTicks(_options.UpdateWaitDuration, _loopClock.Frequency);

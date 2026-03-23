@@ -377,6 +377,10 @@ Recommended default policy:
 This should be interpreted as a ceiling for framework-driven pacing, not as a guarantee that every frame is rendered at
 those intervals.
 
+The active cadence budget applies to the whole loop iteration, not only to the wait after user code completes. If
+`onUpdate`, layout, or rendering already consumed part of the `15 ms` budget, the remaining wait should shrink
+accordingly.
+
 These values are soft timing targets only.
 
 If user code, layout, rendering, terminal I/O, or OS scheduling causes a tick to take longer than `15 ms` or

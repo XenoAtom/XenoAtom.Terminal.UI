@@ -104,7 +104,38 @@ public sealed class TerminalAppLoopWakeTests
             app.Run();
 
             Assert.AreEqual(2, tickCount);
-            Assert.AreEqual(1, waitBackend.DeadlineWaitCount, "Expected the loop to keep progressing without replaying missed frames.");
+            Assert.AreEqual(0, waitBackend.DeadlineWaitCount, "Expected an over-budget tick to skip waiting instead of replaying missed frames.");
+        }
+        finally
+        {
+            app.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+    }
+
+    [TestMethod]
+    public void Run_ActiveCadence_UsesWholeFrameBudget_IncludingUpdateWork()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(30, 10));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+        var clock = new MutableLoopClock();
+        var waitBackend = new ImmediateDeadlineWaitBackend(clock);
+        var app = CreateApp(session.Instance, clock, waitBackend);
+
+        try
+        {
+            var tickCount = 0;
+            app.SetUpdateCallback(_ =>
+            {
+                tickCount++;
+                clock.Advance(TimeSpan.FromMilliseconds(5).Ticks);
+                return tickCount >= 2 ? TerminalLoopResult.Stop : TerminalLoopResult.Continue;
+            });
+
+            app.Run();
+
+            Assert.AreEqual(2, tickCount);
+            Assert.AreEqual(TimeSpan.FromMilliseconds(20).Ticks, clock.GetTimestamp(), "Expected 5ms of work plus a 15ms cadence budget across two ticks.");
+            Assert.AreEqual(1, waitBackend.DeadlineWaitCount);
         }
         finally
         {

@@ -64,6 +64,7 @@ In auto mode, the host loop is deadline/event-driven:
 
 - idle apps block until input, resize, `Post(...)`, render invalidation, animation work, or async update completion wakes them;
 - active update callbacks use an internal active cadence cap of about `15 ms` (`~66.7 Hz`) instead of a fixed `Sleep(1)` loop;
+- work already spent inside `onUpdate`, layout, and rendering counts against that budget instead of being added on top of it;
 - Windows uses a high-resolution waitable timer when supported, with a safe fallback on older systems.
 
 This gives better responsiveness and more stable animation pacing than the old fixed 1ms polling loop while still

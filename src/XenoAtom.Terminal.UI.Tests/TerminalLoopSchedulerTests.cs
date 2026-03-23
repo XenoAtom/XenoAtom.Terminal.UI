@@ -45,6 +45,30 @@ public sealed class TerminalLoopSchedulerTests
     }
 
     [TestMethod]
+    public void ComputeNextActiveDeadline_StartsFromTickStart_NotCurrentTime()
+    {
+        var deadline = TerminalLoopScheduler.ComputeNextActiveDeadline(
+            tickStart: 100,
+            now: 105,
+            previousDeadline: long.MaxValue,
+            activeFrameTicks: 15);
+
+        Assert.AreEqual(115, deadline);
+    }
+
+    [TestMethod]
+    public void ComputeNextActiveDeadline_AdvancesFromPreviousScheduledDeadline()
+    {
+        var deadline = TerminalLoopScheduler.ComputeNextActiveDeadline(
+            tickStart: 130,
+            now: 135,
+            previousDeadline: 115,
+            activeFrameTicks: 15);
+
+        Assert.AreEqual(145, deadline);
+    }
+
+    [TestMethod]
     public void TimeoutWaitBackend_ReturnsWakeSignal_WhenSignalIsAlreadySet()
     {
         using var signal = new AutoResetEvent(initialState: true);
