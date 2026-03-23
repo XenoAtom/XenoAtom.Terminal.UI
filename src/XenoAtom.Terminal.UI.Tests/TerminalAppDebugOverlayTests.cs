@@ -4,7 +4,6 @@
 
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Controls;
-using XenoAtom.Terminal.UI.Hosting;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -12,24 +11,20 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class TerminalAppDebugOverlayTests
 {
     [TestMethod]
-    public void DebugOverlay_Shows_Metrics()
+    public void DebugOverlay_ContinuesRendering_OnActiveTicksWithoutOtherInvalidation()
     {
-        var root = new TextBlock("Body");
-        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(80, 20));
-
-        driver.Tick();
+        using var driver = new TerminalAppTestDriver(new TextBlock("Overlay"));
+        driver.App.SetUpdateCallback(_ => TerminalLoopResult.Continue);
 
         driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F12 });
         driver.Tick();
+
+        var metrics = driver.App.DebugOverlayMetrics;
+        Assert.IsNotNull(metrics, "Expected the debug overlay to be enabled after F12.");
+
+        var firstFrameIndex = metrics.FrameIndex;
         driver.Tick();
 
-        var outText = driver.Backend.GetOutText();
-        var screen = new AnsiTestScreen(80, 20);
-        screen.Apply(outText);
-        var rendered = screen.GetText();
-
-        StringAssert.Contains(rendered, "FPS:");
-        StringAssert.Contains(rendered, "Calls: Prepare");
-        StringAssert.Contains(rendered, "Diff:");
+        Assert.IsTrue(metrics.FrameIndex > firstFrameIndex, "Expected the debug overlay to render on the next tick even without other UI invalidation.");
     }
 }

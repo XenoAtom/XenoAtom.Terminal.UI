@@ -723,6 +723,11 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
         ProcessBindingWrites();
 
+        if (_debugOverlayVisible)
+        {
+            _renderRequested = true;
+        }
+
         if (_renderRequested)
         {
             _renderRequested = false;
