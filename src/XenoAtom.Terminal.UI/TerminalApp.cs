@@ -85,6 +85,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private bool _pendingRenderHasLayoutImpact;
     private bool _pendingRenderDirtyRectValid;
     private Rectangle _pendingRenderDirtyRect;
+    private bool _forceNextFullRepaint;
 
     private int _lastRenderWidth;
     private int _lastRenderHeight;
@@ -1483,6 +1484,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             var baseStyle = Root.GetTheme().BaseTextStyle();
 
             var fullRepaint =
+                _forceNextFullRepaint ||
                 _debugOverlayVisible ||
                 width != _lastRenderWidth ||
                 height != _lastRenderHeight ||
@@ -1548,6 +1550,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             }
             _pendingRenderHasLayoutImpact = false;
             _pendingRenderDirtyRectValid = false;
+            _forceNextFullRepaint = false;
             return;
         }
 
@@ -1586,6 +1589,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             var baseStyle = Root.GetTheme().BaseTextStyle();
 
             var fullRepaint =
+                _forceNextFullRepaint ||
                 _debugOverlayVisible ||
                 width != _lastRenderWidth ||
                 layoutProducedWrites ||
@@ -1652,6 +1656,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
             _pendingRenderHasLayoutImpact = false;
             _pendingRenderDirtyRectValid = false;
+            _forceNextFullRepaint = false;
         }
     }
 
@@ -2334,6 +2339,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             _debugOverlayMetrics = _debugOverlayVisible ? new DebugOverlayMetrics() : null;
             _fullscreenHost?.SetMetricsSink(_debugOverlayMetrics);
             _inlineHost?.SetMetricsSink(_debugOverlayMetrics);
+            _forceNextFullRepaint = true;
             RequestRender();
             return;
         }

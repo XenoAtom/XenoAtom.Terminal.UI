@@ -44,6 +44,43 @@ public sealed class DebugOverlayStyleLeakTests
         Assert.AreNotEqual(red, fg, "Debug overlay should not inherit the underlay foreground.");
     }
 
+    [TestMethod]
+    public void DebugOverlay_Hide_Forces_Full_Repaint_When_Other_Dirty_Rect_Is_Pending()
+    {
+        var theme = Theme.FromScheme(ColorScheme.RootLoopsDark with { Name = "Test" });
+        var button = new Button("Hover")
+        {
+            HorizontalAlignment = Align.End,
+            VerticalAlignment = Align.End,
+        };
+
+        var root = new ZStack(
+            new ColoredUnderlay(Color.Basic16(1)),
+            button)
+            .Style(theme);
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F12 });
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F12 });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Move,
+            Button = TerminalMouseButton.None,
+            X = button.Bounds.X,
+            Y = button.Bounds.Y,
+        });
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(40, 10);
+        screen.Apply(driver.Backend.GetOutText());
+
+        Assert.AreEqual('X', screen.GetText()[0], "Hiding the debug overlay should repaint the cells it previously covered.");
+    }
+
     private sealed class ColoredUnderlay : Visual
     {
         private readonly Color _foreground;
