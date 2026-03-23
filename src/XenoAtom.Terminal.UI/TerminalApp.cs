@@ -1297,7 +1297,19 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             var visual = _animatedVisuals[i];
             if (now >= visual.NextAnimationTick)
             {
-                changed |= visual.AdvanceAnimation(now);
+                var visualChanged = visual.AdvanceAnimation(now);
+                changed |= visualChanged;
+                if (visualChanged)
+                {
+                    if (visual is Visual renderVisual)
+                    {
+                        AddRenderDirtyRect(renderVisual);
+                    }
+                    else
+                    {
+                        _pendingRenderDirtyRectValid = false;
+                    }
+                }
             }
 
             next = Math.Min(next, visual.NextAnimationTick);
@@ -1413,33 +1425,39 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             {
                 foreach (var v in renderVisuals)
                 {
-                    var bounds = v.Bounds;
-                    if (bounds.Width <= 0 || bounds.Height <= 0)
-                    {
-                        continue;
-                    }
-
-                    // Expand by 1 cell horizontally to reduce artifacts with wide glyphs clipped at region boundaries.
-                    var x = Math.Max(0, bounds.X - 1);
-                    var right = Math.Min(LayoutConstants.MaxFinite, bounds.Right + 1);
-                    var expanded = new Rectangle(x, bounds.Y, Math.Max(0, right - x), bounds.Height);
-                    metrics?.AddDirtyRect(expanded);
-
-                    if (!_pendingRenderDirtyRectValid)
-                    {
-                        _pendingRenderDirtyRect = expanded;
-                        _pendingRenderDirtyRectValid = true;
-                    }
-                    else
-                    {
-                        _pendingRenderDirtyRect = Rectangle.Union(_pendingRenderDirtyRect, expanded);
-                    }
+                    AddRenderDirtyRect(v);
                 }
             }
         }
 
         _pendingBindingWrites.Clear();
         _renderRequested = true;
+    }
+
+    private void AddRenderDirtyRect(Visual visual)
+    {
+        var bounds = visual.Bounds;
+        if (bounds.Width <= 0 || bounds.Height <= 0)
+        {
+            return;
+        }
+
+        // Expand by 1 cell horizontally to reduce artifacts with wide glyphs clipped at region boundaries.
+        var x = Math.Max(0, bounds.X - 1);
+        var right = Math.Min(LayoutConstants.MaxFinite, bounds.Right + 1);
+        var expanded = new Rectangle(x, bounds.Y, Math.Max(0, right - x), bounds.Height);
+
+        _debugOverlayMetrics?.AddDirtyRect(expanded);
+
+        if (!_pendingRenderDirtyRectValid)
+        {
+            _pendingRenderDirtyRect = expanded;
+            _pendingRenderDirtyRectValid = true;
+        }
+        else
+        {
+            _pendingRenderDirtyRect = Rectangle.Union(_pendingRenderDirtyRect, expanded);
+        }
     }
 
     private void Render()

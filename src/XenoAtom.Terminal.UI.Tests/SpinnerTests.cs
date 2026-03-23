@@ -57,6 +57,44 @@ public sealed class SpinnerTests
     }
 
     [TestMethod]
+    public void Spinner_Animation_Redraws_When_Same_Frame_Uses_Partial_Repaint()
+    {
+        var marker = new Spinner("Marker")
+            .IsActive(false);
+        marker.Style(new SpinnerStyle("Test", TimeSpan.FromMilliseconds(10), "x", "y")
+        {
+            TextStyle = TextStyle.None,
+        });
+        var spinner = new Spinner("Loading");
+        spinner.Style(new SpinnerStyle("Test", TimeSpan.FromMilliseconds(10), "a", "b")
+        {
+            TextStyle = TextStyle.None,
+        });
+
+        var root = new VStack(
+            marker,
+            new HStack(
+                "Depth:",
+                new VStack(
+                    new HStack(
+                        "Node",
+                        spinner).Spacing(1))).Spacing(1));
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 5));
+        driver.Tick();
+
+        marker.Tone = ControlTone.Success;
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(30, 5);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText();
+
+        StringAssert.Contains(rendered, "x Marker");
+        StringAssert.Contains(rendered, "b Loading");
+    }
+
+    [TestMethod]
     public void SpinnerStyle_Computes_MaxWidth_For_Different_FrameWidths()
     {
         var style = new SpinnerStyle("Bad", TimeSpan.FromMilliseconds(10), "a", "ab");
@@ -75,4 +113,5 @@ public sealed class SpinnerTests
         Assert.AreEqual(2, style.GetFrameWidth(TerminalWideRuneResolvers.NerdFontDoubleWidth));
         Assert.AreEqual(1, style.GetFrameWidth(TerminalWideRuneResolvers.NerdFontMono));
     }
+
 }
