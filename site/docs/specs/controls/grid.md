@@ -12,7 +12,7 @@ This document specifies the current behavior and design of the `Grid` control as
 ## Goals
 
 - Provide a retained-mode rows/columns layout container with deterministic integer sizing.
-- Support common track sizing modes: `Fixed(n)`, `Auto`, `Star(weight)`.
+- Support common track sizing modes: `Fixed(n)`, `Auto`, `Star(weight)`, `Proportional(weight)`.
 - Support per-track `Min`/`Max` constraints.
 - Support padding and row/column gaps.
 - Support cell placement with row/column indices and spans.
@@ -70,7 +70,8 @@ This document specifies the current behavior and design of the `Grid` control as
 
 - `Fixed(n)`: track size is exactly `n` (after min/max clamping).
 - `Auto`: track size is derived from the maximum child size in that track (span == 1), with no extra growth.
-- `Star(weight)`: like `Auto` for intrinsic sizing, but participates in growth when extra space is available.
+- `Star(weight)`: content-aware weighted sizing. It tracks intrinsic child size first, then participates in growth when extra space is available.
+- `Proportional(weight)` / `Fraction(weight)`: weighted remaining-space sizing. On bounded axes it starts from the track min and divides the remaining space by weight.
 
 ### Min/Max constraints
 
@@ -124,16 +125,18 @@ For each row/column, the grid constructs arrays:
 The arrays are initialized from the track definitions:
 
 - `Fixed`: min/natural/max are set to the fixed size (clamped to min/max); grow/shrink are 0.
-- `Auto` / `Star`:
+- `Auto` / `Star` / `Proportional`:
   - initial `min` and `natural` are the track min (MinWidth/MinHeight)
   - `max` is MaxWidth/MaxHeight (or infinite), normalized to be at least min
-  - `grow` is 0 for Auto, and `>= 1` for Star (from `Star(weight)` with a default weight of 1)
+  - `grow` is 0 for Auto, and `>= 1` for Star/Proportional (from the weight with a default of 1)
   - `shrink` is 1
 
 Then, after measuring cells:
 
-- For each cell with `ColumnSpan == 1`, the column's `min/natural` are updated to max of the cell hints.
-- For each cell with `RowSpan == 1`, the row's `min/natural` are updated to max of the cell hints.
+- For each cell with `ColumnSpan == 1`, the column's `min` is updated to the max of the cell min hint.
+- For each cell with `RowSpan == 1`, the row's `min` is updated to the max of the cell min hint.
+- `Auto` and `Star` also update `natural` from child natural hints.
+- `Proportional` updates `natural` from child natural hints only when the measured axis is unbounded; on bounded axes it keeps `natural == min` so child natural widths/heights do not bias the ratio.
 
 The grid then normalizes tracks so `natural` is clamped to `[min..max]` when max is finite.
 
@@ -141,7 +144,7 @@ The grid then normalizes tracks so `natural` is clamped to `[min..max]` when max
 
 During arrange, `FlexAllocator.Allocate(...)` computes the final integer sizes for each track:
 
-- If there is extra space, it is distributed to Star tracks by their weights.
+- If there is extra space, it is distributed to Star and Proportional tracks by their weights.
 - If space is constrained, tracks shrink toward their `min` according to `shrink` weights.
 
 After allocation, the grid computes offsets using padding + gaps, then arranges each cell into its spanned rect.
@@ -153,6 +156,8 @@ When measuring with an unbounded width (max width is infinite), the grid treats 
 - It allocates columns using `availableForColumns = Sum(colNat)` instead of infinite.
 
 This makes the grid report a meaningful desired width in unbounded measure scenarios (see `GridLayoutTests.Unbounded_Measure_Treats_Star_Columns_As_Intrinsic`).
+
+`Proportional` tracks follow the same intrinsic fallback on unbounded axes, because there is no bounded "remaining space" to divide.
 
 ## Spanning behavior (current)
 
@@ -175,9 +180,10 @@ None. Input routing and focus are handled by child visuals.
 
 - `GridLayoutTests` covers:
   - fixed + star allocation
+  - proportional allocation
   - auto track sizing from child desired sizes
   - implicit track growth when addressing columns beyond the definitions
-  - unbounded measure behavior for star columns
+  - unbounded measure behavior for star/proportional columns
   - constrained layouts where auto tracks shrink to preserve star track min width
 - `GridDemo` shows typical form-like layouts using the fluent `.Rows(...)`, `.Columns(...)`, and `.Cell(...)` helpers.
 

@@ -14,7 +14,7 @@ public sealed class GridDemo : ControlsDemoBase
     {
         _ = context;
 
-        var grid = new Grid()
+        var formGrid = new Grid()
             .Rows(
                 new RowDefinition { Height = GridLength.Auto },
                 new RowDefinition { Height = GridLength.Auto },
@@ -23,7 +23,7 @@ public sealed class GridDemo : ControlsDemoBase
                 new ColumnDefinition { Width = GridLength.Auto },
                 new ColumnDefinition { Width = GridLength.Star(1) });
 
-        grid
+        formGrid
             .Cell("Name:", 0, 0)
             .Cell(new TextBox("Alex").HorizontalAlignment(Align.Stretch), 0, 1)
             .Cell("Mode:", 1, 0)
@@ -34,9 +34,37 @@ public sealed class GridDemo : ControlsDemoBase
             .Cell("Notes:", 2, 0)
             .Cell(new TextBox("Grid uses GridCell objects instead of attached properties.").HorizontalAlignment(Align.Stretch), 2, 1);
 
+        var leftPane = new Group()
+            .TopLeftText("2fr")
+            .Padding(1)
+            .Content(new TextBlock("Proportional columns keep a stable 2/3 + 1/3 split on bounded layouts, even when this text wants more width.")
+                .Wrap(true))
+            .Stretch();
+
+        var rightPane = new Group()
+            .TopLeftText("1fr")
+            .Padding(1)
+            .Content(new VStack(
+                    new TextBlock("Progress"),
+                    new ProgressBar(0.72).HorizontalAlignment(Align.Stretch),
+                    new ProgressBar(0.41).HorizontalAlignment(Align.Stretch))
+                .Spacing(1))
+            .Stretch();
+
+        var proportionalGrid = new Grid()
+            .Columns(
+                new ColumnDefinition { Width = GridLength.Proportional(2) },
+                new ColumnDefinition { Width = GridLength.Proportional(1) })
+            .Rows(new RowDefinition { Height = GridLength.Auto })
+            .Cell(leftPane, 0, 0)
+            .Cell(rightPane, 0, 1)
+            .HorizontalAlignment(Align.Stretch);
+
         return new VStack(
                 DemoUi.Hint("Grid uses explicit GridCell entries (row/column definitions + Cells list)."),
-                new Border(grid).Padding(1))
+                DemoUi.Hint("Use GridLength.Proportional(...) when you need a stable weighted split of the remaining space."),
+                new Border(formGrid).Padding(1),
+                new Border(proportionalGrid).Padding(1))
             .Spacing(1);
     }
 }

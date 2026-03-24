@@ -100,6 +100,8 @@ public sealed partial class Grid : Visual
         var innerAvailH = maxH == LayoutConstants.Infinite
             ? LayoutConstants.Infinite
             : Math.Max(0, maxH - padding.Vertical - totalRowGaps);
+        var widthBounded = innerAvailW != LayoutConstants.Infinite;
+        var heightBounded = innerAvailH != LayoutConstants.Infinite;
 
         var colDefs = GetEffectiveColumnDefinitions(cols);
         var rowDefs = GetEffectiveRowDefinitions(rows);
@@ -155,7 +157,10 @@ public sealed partial class Grid : Visual
                     if (type != GridUnitType.Fixed)
                     {
                         colMin[col] = Math.Max(colMin[col], hints.Min.Width);
-                        colNat[col] = Math.Max(colNat[col], hints.Natural.Width);
+                        if (ShouldTrackNaturalSizeFromChildren(type, widthBounded))
+                        {
+                            colNat[col] = Math.Max(colNat[col], hints.Natural.Width);
+                        }
                     }
                 }
 
@@ -166,7 +171,10 @@ public sealed partial class Grid : Visual
                     if (type != GridUnitType.Fixed)
                     {
                         rowMin[row] = Math.Max(rowMin[row], hints.Min.Height);
-                        rowNat[row] = Math.Max(rowNat[row], hints.Natural.Height);
+                        if (ShouldTrackNaturalSizeFromChildren(type, heightBounded))
+                        {
+                            rowNat[row] = Math.Max(rowNat[row], hints.Natural.Height);
+                        }
                     }
                 }
             }
@@ -197,7 +205,10 @@ public sealed partial class Grid : Visual
                     {
                         var hints = cell.MeasureHints;
                         rowMin[row] = Math.Max(rowMin[row], hints.Min.Height);
-                        rowNat[row] = Math.Max(rowNat[row], hints.Natural.Height);
+                        if (ShouldTrackNaturalSizeFromChildren(type, heightBounded))
+                        {
+                            rowNat[row] = Math.Max(rowNat[row], hints.Natural.Height);
+                        }
                     }
                 }
             }
@@ -308,20 +319,28 @@ public sealed partial class Grid : Visual
                 if (placement.ColumnSpan == 1)
                 {
                     var col = placement.Column;
-                    if (colDefs[col].Width.Type != GridUnitType.Fixed)
+                    var type = colDefs[col].Width.Type;
+                    if (type != GridUnitType.Fixed)
                     {
                         colMin[col] = Math.Max(colMin[col], hints.Min.Width);
-                        colNat[col] = Math.Max(colNat[col], hints.Natural.Width);
+                        if (ShouldTrackNaturalSizeFromChildren(type, boundedAxis: true))
+                        {
+                            colNat[col] = Math.Max(colNat[col], hints.Natural.Width);
+                        }
                     }
                 }
 
                 if (placement.RowSpan == 1)
                 {
                     var row = placement.Row;
-                    if (rowDefs[row].Height.Type != GridUnitType.Fixed)
+                    var type = rowDefs[row].Height.Type;
+                    if (type != GridUnitType.Fixed)
                     {
                         rowMin[row] = Math.Max(rowMin[row], hints.Min.Height);
-                        rowNat[row] = Math.Max(rowNat[row], hints.Natural.Height);
+                        if (ShouldTrackNaturalSizeFromChildren(type, boundedAxis: true))
+                        {
+                            rowNat[row] = Math.Max(rowNat[row], hints.Natural.Height);
+                        }
                     }
                 }
             }
@@ -344,11 +363,15 @@ public sealed partial class Grid : Visual
                 if (placement.RowSpan == 1)
                 {
                     var row = placement.Row;
-                    if (rowDefs[row].Height.Type != GridUnitType.Fixed)
+                    var type = rowDefs[row].Height.Type;
+                    if (type != GridUnitType.Fixed)
                     {
                         var hints = cell.MeasureHints;
                         rowMin[row] = Math.Max(rowMin[row], hints.Min.Height);
-                        rowNat[row] = Math.Max(rowNat[row], hints.Natural.Height);
+                        if (ShouldTrackNaturalSizeFromChildren(type, boundedAxis: true))
+                        {
+                            rowNat[row] = Math.Max(rowNat[row], hints.Natural.Height);
+                        }
                     }
                 }
             }
@@ -538,7 +561,7 @@ public sealed partial class Grid : Visual
 
             max[i] = maxW == LayoutConstants.Infinite ? LayoutConstants.Infinite : Math.Max(maxW, minW);
 
-            grow[i] = type == GridUnitType.Star ? GetStarWeight(def.Width.Value) : 0;
+            grow[i] = IsFlexibleTrack(type) ? GetTrackWeight(def.Width.Value) : 0;
             shrink[i] = 1;
         }
     }
@@ -569,7 +592,7 @@ public sealed partial class Grid : Visual
             natural[i] = minH;
             max[i] = maxH == LayoutConstants.Infinite ? LayoutConstants.Infinite : Math.Max(maxH, minH);
 
-            grow[i] = type == GridUnitType.Star ? GetStarWeight(def.Height.Value) : 0;
+            grow[i] = IsFlexibleTrack(type) ? GetTrackWeight(def.Height.Value) : 0;
             shrink[i] = 1;
         }
     }
@@ -656,7 +679,18 @@ public sealed partial class Grid : Visual
         return false;
     }
 
-    private static int GetStarWeight(double value)
+    private static bool IsFlexibleTrack(GridUnitType type)
+        => type is GridUnitType.Star or GridUnitType.Proportional;
+
+    private static bool ShouldTrackNaturalSizeFromChildren(GridUnitType type, bool boundedAxis)
+        => type switch
+        {
+            GridUnitType.Fixed => false,
+            GridUnitType.Proportional => !boundedAxis,
+            _ => true,
+        };
+
+    private static int GetTrackWeight(double value)
     {
         if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0)
         {
