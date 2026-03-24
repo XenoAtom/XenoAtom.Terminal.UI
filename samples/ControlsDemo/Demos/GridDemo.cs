@@ -35,9 +35,9 @@ public sealed class GridDemo : ControlsDemoBase
             .Cell(new TextBox("Grid uses GridCell objects instead of attached properties.").HorizontalAlignment(Align.Stretch), 2, 1);
 
         var leftPane = new Group()
-            .TopLeftText("2fr")
+            .TopLeftText("2*")
             .Padding(1)
-            .Content(new TextBlock("Proportional columns keep a stable 2/3 + 1/3 split on bounded layouts, even when this text wants more width.")
+            .Content(new TextBlock("Star columns keep a stable 2/3 + 1/3 split on bounded layouts, even when this text wants more width.")
                 .Wrap(true))
             .Stretch();
 
@@ -51,10 +51,10 @@ public sealed class GridDemo : ControlsDemoBase
                 .Spacing(1))
             .Stretch();
 
-        var proportionalGrid = new Grid()
+        var starGrid = new Grid()
             .Columns(
-                new ColumnDefinition { Width = GridLength.Proportional(2) },
-                new ColumnDefinition { Width = GridLength.Proportional(1) })
+                new ColumnDefinition { Width = GridLength.Star(2) },
+                new ColumnDefinition { Width = GridLength.Star(1) })
             .Rows(new RowDefinition { Height = GridLength.Auto })
             .Cell(leftPane, 0, 0)
             .Cell(rightPane, 0, 1)
@@ -62,9 +62,9 @@ public sealed class GridDemo : ControlsDemoBase
 
         return new VStack(
                 DemoUi.Hint("Grid uses explicit GridCell entries (row/column definitions + Cells list)."),
-                DemoUi.Hint("Use GridLength.Proportional(...) when you need a stable weighted split of the remaining space."),
+                DemoUi.Hint("GridLength.Star(...) divides remaining space by weight. Use GridLength.FlexStar(...) for content-aware weighted tracks."),
                 new Border(formGrid).Padding(1),
-                new Border(proportionalGrid).Padding(1))
+                new Border(starGrid).Padding(1))
             .Spacing(1);
     }
 }

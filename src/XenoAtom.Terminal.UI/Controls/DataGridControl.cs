@@ -2790,8 +2790,8 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             BaseWidth: baseWidth,
             MinWidth: Math.Max(0, ui.MinWidth),
             MaxWidth: ui.MaxWidth <= 0 ? int.MaxValue : ui.MaxWidth,
-            IsStar: ui.Width.Type is GridUnitType.Star or GridUnitType.Proportional,
-            StarWeight: ui.Width.Type is GridUnitType.Star or GridUnitType.Proportional ? ui.Width.Value : 0);
+            IsStar: ui.Width.Type is GridUnitType.Star or GridUnitType.FlexStar,
+            StarWeight: ui.Width.Type is GridUnitType.Star or GridUnitType.FlexStar ? ui.Width.Value : 0);
     }
 
     private ResolvedColumn CreateResolvedFromSchema(IDataGridViewSnapshot snapshot, DataGridColumnInfo info, DataGridColumn? uiColumn, CultureInfo culture)
@@ -2807,7 +2807,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
 
         var baseWidth = ResolveBaseWidth(snapshot, ui, info.Accessor, info.ValueType, headerWidth, culture);
 
-        var isStar = ui?.Width.Type is GridUnitType.Star or GridUnitType.Proportional;
+        var isStar = ui?.Width.Type is GridUnitType.Star or GridUnitType.FlexStar;
         var starWeight = isStar == true ? ui!.Width.Value : 0;
 
         return new ResolvedColumn(
@@ -2832,7 +2832,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         maxWidth = maxWidth <= 0 ? int.MaxValue : maxWidth;
 
         var w = ui?.Width ?? GridLength.Auto;
-        var sampleWidth = w.Type is GridUnitType.Auto or GridUnitType.Star or GridUnitType.Proportional
+        var sampleWidth = w.Type is GridUnitType.Auto or GridUnitType.Star or GridUnitType.FlexStar
             ? ComputeSampleContentWidth(snapshot, ui, accessor, valueType, culture)
             : 0;
 
@@ -2841,7 +2841,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             GridUnitType.Fixed => (int)Math.Round(w.Value),
             GridUnitType.Auto => Math.Max(headerWidth, sampleWidth),
             GridUnitType.Star => Math.Max(Math.Max(minWidth, headerWidth), sampleWidth),
-            GridUnitType.Proportional => Math.Max(Math.Max(minWidth, headerWidth), sampleWidth),
+            GridUnitType.FlexStar => Math.Max(Math.Max(minWidth, headerWidth), sampleWidth),
             _ => Math.Max(headerWidth, sampleWidth),
         };
 

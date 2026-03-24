@@ -18,20 +18,20 @@ public enum GridUnitType
     /// </summary>
     Fixed = 1,
     /// <summary>
-    /// Content-aware weighted sizing.
+    /// Remaining-space weighted sizing.
     /// </summary>
     Star = 2,
     /// <summary>
-    /// Remaining-space weighted sizing.
+    /// Content-aware weighted sizing.
     /// </summary>
-    Proportional = 3,
+    FlexStar = 3,
 }
 
 /// <summary>
-/// Represents a grid length (Auto/Fixed/Star/Proportional).
+/// Represents a grid length (Auto/Fixed/Star/FlexStar).
 /// </summary>
 /// <param name="Type">The unit type.</param>
-/// <param name="Value">The unit value (cells for Fixed, weight for Star/Proportional).</param>
+/// <param name="Value">The unit value (cells for Fixed, weight for Star/FlexStar).</param>
 public readonly record struct GridLength(GridUnitType Type, double Value)
 {
     /// <summary>
@@ -45,19 +45,14 @@ public readonly record struct GridLength(GridUnitType Type, double Value)
     public static GridLength Fixed(int cells) => new(GridUnitType.Fixed, Math.Max(0, cells));
 
     /// <summary>
-    /// Creates a content-aware weighted grid length with a weight.
+    /// Creates a weighted remaining-space grid length with a weight.
     /// </summary>
     public static GridLength Star(double weight = 1) => new(GridUnitType.Star, weight <= 0 ? 1 : weight);
 
     /// <summary>
-    /// Creates a proportional grid length with a weight.
+    /// Creates a content-aware weighted grid length with a weight.
     /// </summary>
-    public static GridLength Proportional(double weight = 1) => new(GridUnitType.Proportional, weight <= 0 ? 1 : weight);
-
-    /// <summary>
-    /// Creates a proportional grid length with a weight.
-    /// </summary>
-    public static GridLength Fraction(double weight = 1) => Proportional(weight);
+    public static GridLength FlexStar(double weight = 1) => new(GridUnitType.FlexStar, weight <= 0 ? 1 : weight);
 
     /// <inheritdoc />
     public override string ToString()
@@ -66,7 +61,7 @@ public readonly record struct GridLength(GridUnitType Type, double Value)
             GridUnitType.Auto => "Auto",
             GridUnitType.Fixed => Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
             GridUnitType.Star => Value.ToString(System.Globalization.CultureInfo.InvariantCulture) + "*",
-            GridUnitType.Proportional => Value.ToString(System.Globalization.CultureInfo.InvariantCulture) + "fr",
+            GridUnitType.FlexStar => Value.ToString(System.Globalization.CultureInfo.InvariantCulture) + "flex*",
             _ => base.ToString() ?? string.Empty,
         };
 }

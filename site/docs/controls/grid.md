@@ -21,29 +21,28 @@ new Grid()
 
 ## Star sizing
 
-`GridLength.Star(weight)` is not a fixed ratio split.
+`GridLength.Star(weight)` divides the remaining bounded space by weight.
 
-- `Auto` and `Star` tracks both start from the natural size of their content.
-- `Star` only changes how extra space is distributed after those natural sizes are known.
-- When content is wider than the available width, tracks shrink from their natural sizes toward their mins; the star weight does not force a strict `2:1`, `3:1`, etc. split under pressure.
-
-## Proportional sizing
-
-Use `GridLength.Proportional(weight)` when you want a stable weighted split of the remaining space.
+- `Auto` tracks measure to content first.
+- `Star` tracks start from their mins on bounded axes, then divide the remaining space by weight.
+- Child natural size does not bias the ratio unless min/max constraints force it to.
 
 ```csharp
 new Grid()
     .Columns(
-        new ColumnDefinition { Width = GridLength.Proportional(2) },
-        new ColumnDefinition { Width = GridLength.Proportional(1) })
+        new ColumnDefinition { Width = GridLength.Star(2) },
+        new ColumnDefinition { Width = GridLength.Star(1) })
     .Rows(new RowDefinition { Height = GridLength.Star(1) })
     .Cell(leftPane, row: 0, column: 0)
     .Cell(rightPane, row: 0, column: 1);
 ```
 
-- `Proportional` tracks start from their mins on bounded axes, then divide the remaining space by weight.
-- Child natural size does not bias the ratio unless min/max constraints force it to.
-- `GridLength.Fraction(weight)` is an alias for `Proportional(weight)`.
+## FlexStar sizing
+
+Use `GridLength.FlexStar(weight)` when you want a flexible track that preserves child natural size before sharing extra space by weight.
+
+- `FlexStar` is content-aware.
+- It is useful for layouts where intrinsic content width should matter, but the track should still grow when extra space exists.
 
 ## Spans
 

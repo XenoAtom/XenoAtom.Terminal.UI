@@ -141,12 +141,12 @@ public sealed class GridLayoutTests
     }
 
     [TestMethod]
-    public void Star_Columns_Preserve_Natural_Size_Bias_Before_Applying_Weights()
+    public void FlexStar_Columns_Preserve_Natural_Size_Bias_Before_Applying_Weights()
     {
         var grid = new Grid();
         grid.ColumnDefinitions.AddRange(
-            new ColumnDefinition { Width = GridLength.Star(2) },
-            new ColumnDefinition { Width = GridLength.Star(1), MinWidth = 4 });
+            new ColumnDefinition { Width = GridLength.FlexStar(2) },
+            new ColumnDefinition { Width = GridLength.FlexStar(1), MinWidth = 4 });
         grid.RowDefinitions.AddRange(new RowDefinition { Height = GridLength.Fixed(1) });
 
         var left = new ShrinkableVisual(desiredWidth: 18, minWidth: 0);
@@ -163,12 +163,12 @@ public sealed class GridLayoutTests
     }
 
     [TestMethod]
-    public void Proportional_Columns_Use_Weighted_Remaining_Space()
+    public void Star_Columns_Use_Weighted_Remaining_Space()
     {
         var grid = new Grid();
         grid.ColumnDefinitions.AddRange(
-            new ColumnDefinition { Width = GridLength.Proportional(2) },
-            new ColumnDefinition { Width = GridLength.Proportional(1) });
+            new ColumnDefinition { Width = GridLength.Star(2) },
+            new ColumnDefinition { Width = GridLength.Star(1) });
         grid.RowDefinitions.AddRange(new RowDefinition { Height = GridLength.Fixed(1) });
 
         var left = new ShrinkableVisual(desiredWidth: 40, minWidth: 0);
@@ -185,13 +185,13 @@ public sealed class GridLayoutTests
     }
 
     [TestMethod]
-    public void Proportional_Columns_Split_Space_Remaining_After_Auto_Columns()
+    public void Star_Columns_Split_Space_Remaining_After_Auto_Columns()
     {
         var grid = new Grid();
         grid.ColumnDefinitions.AddRange(
             new ColumnDefinition { Width = GridLength.Auto },
-            new ColumnDefinition { Width = GridLength.Proportional(2) },
-            new ColumnDefinition { Width = GridLength.Proportional(1) });
+            new ColumnDefinition { Width = GridLength.Star(2) },
+            new ColumnDefinition { Width = GridLength.Star(1) });
         grid.RowDefinitions.AddRange(new RowDefinition { Height = GridLength.Fixed(1) });
 
         var auto = new FillVisual(new Size(3, 1));
@@ -211,12 +211,12 @@ public sealed class GridLayoutTests
     }
 
     [TestMethod]
-    public void Unbounded_Measure_Treats_Proportional_Columns_As_Intrinsic()
+    public void Unbounded_Measure_Treats_FlexStar_Columns_As_Intrinsic()
     {
         var grid = new Grid().ColumnGap(1);
         grid.ColumnDefinitions.AddRange(
-            new ColumnDefinition { Width = GridLength.Proportional(2) },
-            new ColumnDefinition { Width = GridLength.Proportional(1) });
+            new ColumnDefinition { Width = GridLength.FlexStar(2) },
+            new ColumnDefinition { Width = GridLength.FlexStar(1) });
         grid.RowDefinitions.AddRange(new RowDefinition { Height = GridLength.Auto });
 
         var left = new FillVisual(new Size(8, 1));

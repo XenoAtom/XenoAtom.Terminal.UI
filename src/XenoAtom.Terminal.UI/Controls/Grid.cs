@@ -680,13 +680,13 @@ public sealed partial class Grid : Visual
     }
 
     private static bool IsFlexibleTrack(GridUnitType type)
-        => type is GridUnitType.Star or GridUnitType.Proportional;
+        => type is GridUnitType.Star or GridUnitType.FlexStar;
 
     private static bool ShouldTrackNaturalSizeFromChildren(GridUnitType type, bool boundedAxis)
         => type switch
         {
             GridUnitType.Fixed => false,
-            GridUnitType.Proportional => !boundedAxis,
+            GridUnitType.Star => !boundedAxis,
             _ => true,
         };
 
