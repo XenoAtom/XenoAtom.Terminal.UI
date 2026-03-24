@@ -32,6 +32,22 @@ public sealed class TextBlockRenderingTests
     }
 
     [TestMethod]
+    public void TextBlock_Wrap_Reports_Horizontal_Shrink_Budget()
+    {
+        var tb = new TextBlock("Hello World")
+        {
+            Wrap = true,
+        };
+
+        tb.Measure(new LayoutConstraints(0, 8, 0, 5));
+
+        Assert.AreEqual(1, tb.MeasureHints.Min.Width);
+        Assert.AreEqual(8, tb.MeasureHints.Natural.Width);
+        Assert.AreEqual(2, tb.MeasureHints.Natural.Height);
+        Assert.AreEqual(1, tb.MeasureHints.FlexShrinkX);
+    }
+
+    [TestMethod]
     public void TextBlock_EndEllipsis_Trims_To_Width()
     {
         var tb = new TextBlock("HelloWorld")

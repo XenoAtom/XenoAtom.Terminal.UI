@@ -37,18 +37,15 @@ public sealed class GridDemo : ControlsDemoBase
         var leftPane = new Group()
             .TopLeftText("2*")
             .Padding(1)
-            .Content(new TextBlock("Star columns keep a stable 2/3 + 1/3 split on bounded layouts, even when this text wants more width.")
+            .Content(new TextBlock("Star columns divide remaining space by weight on bounded layouts.")
                 .Wrap(true))
             .Stretch();
 
         var rightPane = new Group()
-            .TopLeftText("1fr")
+            .TopLeftText("1*")
             .Padding(1)
-            .Content(new VStack(
-                    new TextBlock("Progress"),
-                    new ProgressBar(0.72).HorizontalAlignment(Align.Stretch),
-                    new ProgressBar(0.41).HorizontalAlignment(Align.Stretch))
-                .Spacing(1))
+            .Content(new TextBlock("Child minimum widths still apply.")
+                .Wrap(true))
             .Stretch();
 
         var starGrid = new Grid()
@@ -64,7 +61,7 @@ public sealed class GridDemo : ControlsDemoBase
                 DemoUi.Hint("Grid uses explicit GridCell entries (row/column definitions + Cells list)."),
                 DemoUi.Hint("GridLength.Star(...) divides remaining space by weight. Use GridLength.FlexStar(...) for content-aware weighted tracks."),
                 new Border(formGrid).Padding(1),
-                new Border(starGrid).Padding(1))
+                new Border(starGrid).Padding(1).MinWidth(72))
             .Spacing(1);
     }
 }

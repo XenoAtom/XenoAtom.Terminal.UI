@@ -211,6 +211,22 @@ public sealed class GridLayoutTests
     }
 
     [TestMethod]
+    public void Group_With_Wrapped_TextBlock_Does_Not_Inflate_MinWidth_To_Bounded_Width()
+    {
+        var group = new Group()
+            .TopLeftText("2*")
+            .Padding(1)
+            .Content(new TextBlock("Star columns keep a stable 2/3 + 1/3 split on bounded layouts, even when this text wants more width.")
+                .Wrap(true))
+            .Stretch();
+
+        group.Measure(new LayoutConstraints(0, 40, 0, 10));
+
+        Assert.AreEqual(6, group.MeasureHints.Min.Width);
+        Assert.AreEqual(40, group.MeasureHints.Natural.Width);
+    }
+
+    [TestMethod]
     public void Unbounded_Measure_Treats_FlexStar_Columns_As_Intrinsic()
     {
         var grid = new Grid().ColumnGap(1);

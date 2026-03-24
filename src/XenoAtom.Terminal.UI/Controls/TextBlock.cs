@@ -142,7 +142,16 @@ public sealed partial class TextBlock : Visual, ISelectionOwner
         }
 
         var height = CountWrappedLines(text.AsSpan(), Math.Max(1, width));
-        return SizeHints.Fixed(new Size(width, Math.Min(availableSize.Height, Math.Max(1, height))));
+        var wrappedHeight = Math.Min(availableSize.Height, Math.Max(1, height));
+        var wrapMinWidth = naturalWidth > 0 ? 1 : 0;
+        return SizeHints.Flex(
+            new Size(wrapMinWidth, lineHeight),
+            new Size(width, wrappedHeight),
+            new Size(naturalWidth, LayoutConstants.Infinite),
+            growX: 0,
+            growY: 0,
+            shrinkX: width > wrapMinWidth ? 1 : 0,
+            shrinkY: 0);
     }
 
     /// <inheritdoc />
