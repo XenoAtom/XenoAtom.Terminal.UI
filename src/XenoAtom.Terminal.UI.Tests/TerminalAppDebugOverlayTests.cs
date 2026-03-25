@@ -87,4 +87,57 @@ public sealed class TerminalAppDebugOverlayTests
             repaintRect.Width < 40 || repaintRect.Height < 10,
             $"Expected a local scene repaint. Actual rect: {repaintRect}");
     }
+
+    [TestMethod]
+    public void DebugOverlay_RetainsLastSceneUpdate_AfterReturningToIdle()
+    {
+        var button = new Button("Hover")
+        {
+            HorizontalAlignment = Align.End,
+            VerticalAlignment = Align.End,
+        };
+
+        using var driver = new TerminalAppTestDriver(
+            new ZStack(
+                new TextBlock("Root")
+                {
+                    HorizontalAlignment = Align.Stretch,
+                    VerticalAlignment = Align.Stretch,
+                },
+                button),
+            TerminalHostKind.Fullscreen,
+            new TerminalSize(40, 10));
+
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F12 });
+        driver.Tick();
+
+        var metrics = driver.App.DebugOverlayMetrics;
+        Assert.IsNotNull(metrics, "Expected the debug overlay to be enabled after F12.");
+
+        typeof(TerminalApp)
+            .GetMethod("AddRenderDirtyRect", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .Invoke(driver.App, [button]);
+        driver.App.RequestRender();
+        driver.Tick();
+
+        Assert.IsTrue(metrics.HasLastSceneUpdate, "Expected the scene update to be remembered.");
+        Assert.IsTrue(metrics.LastSceneHasRepaintRect);
+        Assert.IsTrue(metrics.LastSceneHasDirtyRect);
+
+        var lastRepaintRect = metrics.LastSceneRepaintRect;
+        var lastDirtyRect = metrics.LastSceneDirtyRect;
+        var lastSceneTimestamp = metrics.LastSceneUpdateTimestamp;
+
+        driver.Tick();
+
+        Assert.IsFalse(metrics.SceneHasRepaintRect, "The follow-up idle frame should return to no current scene repaint.");
+        Assert.IsFalse(metrics.SceneHasDirtyRect, "The follow-up idle frame should return to no current scene dirty rect.");
+        Assert.IsTrue(metrics.OverlayOnlyFrame, "The follow-up idle frame should be overlay-only.");
+        Assert.IsTrue(metrics.HasLastSceneUpdate, "Expected the last scene update to remain visible after the app returns to idle.");
+        Assert.AreEqual(lastRepaintRect, metrics.LastSceneRepaintRect);
+        Assert.AreEqual(lastDirtyRect, metrics.LastSceneDirtyRect);
+        Assert.AreEqual(lastSceneTimestamp, metrics.LastSceneUpdateTimestamp);
+    }
 }

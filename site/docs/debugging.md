@@ -72,9 +72,11 @@ If `Measure`/`Arrange` calls are high every frame, it often means:
 - `Scene: Repaint`: the region of the real UI scene that the app chose to repaint for this frame.
 - `Scene: Dirty`: the union of scene dirty rectangles reported during the frame.
 - `Scene: Full yes/no`: whether the scene renderer used a full repaint.
+- `Scene: Last ... ago`: the most recent scene repaint/dirty/full snapshot, kept visible after the app returns to idle.
 
 When the overlay is the only thing updating, the scene lines stay at `<none>` / `no`. This is intentional: the overlay
-is composed in a separate pass so it does not distort scene repaint diagnostics.
+is composed in a separate pass so it does not distort scene repaint diagnostics. The `Scene: Last ... ago` line is the
+sticky context that lets you see what changed recently even after the current frame has already gone back to idle.
 
 ### Overlay composition
 

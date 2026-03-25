@@ -1537,6 +1537,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             _lastRenderWidth = width;
             _lastRenderHeight = height;
             UpdateSceneMetrics(metrics, sceneRenderMode, sceneRenderMode == SceneRenderMode.Full ? new Rectangle(0, 0, width, height) : dirtyRect);
+            metrics?.FinalizeSceneFrame(renderStartTimestamp);
             metrics?.SetOverlayFrame(_debugOverlayVisible, overlayOnlyFrame: _debugOverlayVisible && sceneRenderMode == SceneRenderMode.None);
 
             RenderScene(buffer, baseStyle, metrics, sceneRenderMode, dirtyRect);
@@ -1631,6 +1632,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             _lastRenderWidth = width;
             _lastRenderHeight = viewportHeight;
             UpdateSceneMetrics(metrics, sceneRenderMode, sceneRenderMode == SceneRenderMode.Full ? new Rectangle(0, 0, width, buffer.Height) : dirtyRect);
+            metrics?.FinalizeSceneFrame(renderStartTimestamp);
             metrics?.SetOverlayFrame(_debugOverlayVisible, overlayOnlyFrame: _debugOverlayVisible && sceneRenderMode == SceneRenderMode.None);
 
             RenderScene(buffer, baseStyle, metrics, sceneRenderMode, dirtyRect);
@@ -1799,6 +1801,34 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         static double ToMs(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
         static string FormatMs(long ticks) => ToMs(ticks).ToString("0.0", global::System.Globalization.CultureInfo.InvariantCulture).PadLeft(6);
         static string FormatFps(double fps) => fps <= 0 ? "-" : fps.ToString("0.0", global::System.Globalization.CultureInfo.InvariantCulture);
+        static string FormatAge(long elapsedTicks)
+        {
+            var seconds = Math.Max(0, elapsedTicks) / (double)Stopwatch.Frequency;
+            if (seconds < 1)
+            {
+                return $"{(seconds * 1000):0}ms ago";
+            }
+
+            if (seconds < 10)
+            {
+                return $"{seconds:0.0}s ago";
+            }
+
+            if (seconds < 60)
+            {
+                return $"{seconds:0}s ago";
+            }
+
+            var minutes = seconds / 60;
+            if (minutes < 60)
+            {
+                return $"{minutes:0.0}m ago";
+            }
+
+            return $"{(minutes / 60):0.0}h ago";
+        }
+
+        var overlayNowTimestamp = Stopwatch.GetTimestamp();
 
         List<string> BuildLines(Rectangle overlayRect)
         {
@@ -1825,6 +1855,18 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 overlayText += "  overlay-only";
             }
 
+            var lastSceneText = "Scene: Last <none yet>";
+            if (metrics is not null && metrics.HasLastSceneUpdate)
+            {
+                var lastRepaintText = metrics.LastSceneHasRepaintRect
+                    ? $"repaint ({metrics.LastSceneRepaintRect.X},{metrics.LastSceneRepaintRect.Y}) {metrics.LastSceneRepaintRect.Width}x{metrics.LastSceneRepaintRect.Height}"
+                    : "repaint <none>";
+                var lastDirtyText = metrics.LastSceneHasDirtyRect
+                    ? $"dirty ({metrics.LastSceneDirtyRect.X},{metrics.LastSceneDirtyRect.Y}) {metrics.LastSceneDirtyRect.Width}x{metrics.LastSceneDirtyRect.Height}"
+                    : "dirty <none>";
+                lastSceneText = $"Scene: Last {lastRepaintText}  {lastDirtyText}  full={(metrics.LastSceneFullRepaint ? "yes" : "no")}  {FormatAge(overlayNowTimestamp - metrics.LastSceneUpdateTimestamp)}";
+            }
+
             return
             [
                 $"Frame: {_renderFrameIndex}  FPS: {FormatFps(metrics?.Fps ?? 0)}",
@@ -1843,6 +1885,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 repaintText,
                 dirtyText,
                 $"Scene: Full {((metrics?.SceneFullRepaint ?? false) ? "yes" : "no")}",
+                lastSceneText,
                 overlayText,
                 $"HostDiff: {(metrics?.DiffOutputChars ?? 0)} chars  {(metrics?.DiffCellsTouched ?? 0)} cells  full={((metrics?.DiffForceFull ?? false) ? "yes" : "no")}",
                 $"Focus: {(focus is null ? "<none>" : focus.GetType().Name)}",

@@ -48,6 +48,13 @@ internal sealed class DebugOverlayMetrics : ICellBufferDiffMetricsSink
 
     internal bool SceneHasRepaintRect => _sceneRepaintRectValid;
     internal Rectangle SceneRepaintRect => _sceneRepaintRect;
+    internal bool HasLastSceneUpdate => _lastSceneUpdateTimestamp != 0;
+    internal bool LastSceneHasDirtyRect => _lastSceneDirtyRectValid;
+    internal Rectangle LastSceneDirtyRect => _lastSceneDirtyRect;
+    internal bool LastSceneHasRepaintRect => _lastSceneRepaintRectValid;
+    internal Rectangle LastSceneRepaintRect => _lastSceneRepaintRect;
+    internal bool LastSceneFullRepaint { get; private set; }
+    internal long LastSceneUpdateTimestamp => _lastSceneUpdateTimestamp;
 
     internal bool OverlayVisible { get; private set; }
     internal bool OverlayComposited { get; private set; }
@@ -94,6 +101,13 @@ internal sealed class DebugOverlayMetrics : ICellBufferDiffMetricsSink
 
     private bool _sceneRepaintRectValid;
     private Rectangle _sceneRepaintRect;
+
+    private bool _lastSceneDirtyRectValid;
+    private Rectangle _lastSceneDirtyRect;
+
+    private bool _lastSceneRepaintRectValid;
+    private Rectangle _lastSceneRepaintRect;
+    private long _lastSceneUpdateTimestamp;
 
     private bool _overlayRectValid;
     private Rectangle _overlayRect;
@@ -179,6 +193,21 @@ internal sealed class DebugOverlayMetrics : ICellBufferDiffMetricsSink
         }
 
         _lastFrameTimestamp = endTimestamp;
+    }
+
+    public void FinalizeSceneFrame(long timestamp)
+    {
+        if (!SceneHasRepaintRect && !SceneHasDirtyRect && !SceneFullRepaint)
+        {
+            return;
+        }
+
+        _lastSceneRepaintRectValid = _sceneRepaintRectValid;
+        _lastSceneRepaintRect = _sceneRepaintRect;
+        _lastSceneDirtyRectValid = _sceneDirtyRectValid;
+        _lastSceneDirtyRect = _sceneDirtyRect;
+        LastSceneFullRepaint = SceneFullRepaint;
+        _lastSceneUpdateTimestamp = timestamp != 0 ? timestamp : Stopwatch.GetTimestamp();
     }
 
     public void AddSceneDirtyRect(in Rectangle rect)
