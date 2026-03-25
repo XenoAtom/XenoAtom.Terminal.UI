@@ -53,6 +53,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private int _renderFrameIndex;
     private Task? _runTask;
     private CellBuffer? _renderBuffer;
+    private readonly CellBufferRegionSnapshot _debugOverlaySnapshot = new();
     private Visual? _focusedElement;
     private Visual? _selectionOwnerElement;
     private ISelectionOwner? _selectionOwner;
@@ -109,6 +110,15 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         Arrange = 3,
         Render = 4,
     }
+
+    private enum SceneRenderMode
+    {
+        None = 0,
+        Dirty = 1,
+        Full = 2,
+    }
+
+    private readonly record struct DebugOverlayLayout(Rectangle Rect, List<string> Lines, Style BorderStyle, Style BackgroundStyle);
 
     private readonly BindingDependencyIndex _dynamicUpdateIndex = new();
     private readonly BindingDependencyIndex _prepareChildrenIndex = new();
@@ -1447,7 +1457,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         var right = Math.Min(LayoutConstants.MaxFinite, bounds.Right + 1);
         var expanded = new Rectangle(x, bounds.Y, Math.Max(0, right - x), bounds.Height);
 
-        _debugOverlayMetrics?.AddDirtyRect(expanded);
+        _debugOverlayMetrics?.AddSceneDirtyRect(expanded);
 
         if (!_pendingRenderDirtyRectValid)
         {
@@ -1475,97 +1485,85 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             var width = Math.Max(1, _terminal.Size.Columns);
             var height = Math.Max(1, _terminal.Size.Rows);
 
-            if (metrics is not null)
-            {
-                var t0 = Stopwatch.GetTimestamp();
-                Root.Measure(new LayoutConstraints(0, width, 0, height));
-                metrics.RenderMeasureTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
-
-                t0 = Stopwatch.GetTimestamp();
-                Root.Arrange(new Rectangle(0, 0, width, height));
-                metrics.RenderArrangeTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
-            }
-            else
-            {
-                Root.Measure(new LayoutConstraints(0, width, 0, height));
-                Root.Arrange(new Rectangle(0, 0, width, height));
-            }
-
-            var layoutProducedWrites = _pendingBindingWrites.Count > 0;
-
-            // Ensure any bindings updated during layout are processed before rendering (e.g. Bounds from Arrange)
-            ProcessBindingWrites();
-
-            var wantsCursor = TryGetDesiredCursor(out var cursorX, out var cursorY);
-
             var buffer = EnsureRenderBuffer(width, height);
             var baseStyle = Root.GetTheme().BaseTextStyle();
+            var layoutRequired =
+                _forceNextFullRepaint ||
+                width != _lastRenderWidth ||
+                height != _lastRenderHeight ||
+                _pendingRenderHasLayoutImpact;
+
+            var layoutProducedWrites = false;
+            if (layoutRequired)
+            {
+                if (metrics is not null)
+                {
+                    var t0 = Stopwatch.GetTimestamp();
+                    Root.Measure(new LayoutConstraints(0, width, 0, height));
+                    metrics.RenderMeasureTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+
+                    t0 = Stopwatch.GetTimestamp();
+                    Root.Arrange(new Rectangle(0, 0, width, height));
+                    metrics.RenderArrangeTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+                }
+                else
+                {
+                    Root.Measure(new LayoutConstraints(0, width, 0, height));
+                    Root.Arrange(new Rectangle(0, 0, width, height));
+                }
+
+                layoutProducedWrites = _pendingBindingWrites.Count > 0;
+
+                // Ensure any bindings updated during layout are processed before rendering (e.g. Bounds from Arrange)
+                ProcessBindingWrites();
+            }
+
+            var wantsCursor = TryGetDesiredCursor(out var cursorX, out var cursorY);
+            var dirtyRect = _pendingRenderDirtyRectValid ? ClampToViewport(_pendingRenderDirtyRect, width, height) : default;
+            if (dirtyRect.Width > 0 && dirtyRect.Height > 0)
+            {
+                metrics?.AddSceneDirtyRect(dirtyRect);
+            }
 
             var fullRepaint =
                 _forceNextFullRepaint ||
-                _debugOverlayVisible ||
                 width != _lastRenderWidth ||
                 height != _lastRenderHeight ||
                 layoutProducedWrites ||
-                _pendingRenderHasLayoutImpact ||
-                !_pendingRenderDirtyRectValid;
+                _pendingRenderHasLayoutImpact;
+
+            var sceneRenderMode = DetermineSceneRenderMode(fullRepaint, dirtyRect);
 
             _lastRenderWidth = width;
             _lastRenderHeight = height;
-            metrics?.SetFullRepaint(fullRepaint);
-            if (metrics is not null)
-            {
-                metrics.SetRepaintRect(fullRepaint ? new Rectangle(0, 0, width, height) : ClampToViewport(_pendingRenderDirtyRect, width, height));
-            }
+            UpdateSceneMetrics(metrics, sceneRenderMode, sceneRenderMode == SceneRenderMode.Full ? new Rectangle(0, 0, width, height) : dirtyRect);
+            metrics?.SetOverlayFrame(_debugOverlayVisible, overlayOnlyFrame: _debugOverlayVisible && sceneRenderMode == SceneRenderMode.None);
 
-            if (fullRepaint)
+            RenderScene(buffer, baseStyle, metrics, sceneRenderMode, dirtyRect);
+
+            var overlayComposited = _debugOverlayVisible && ComposeDebugOverlay(buffer, metrics);
+            try
             {
-                buffer.Clear(baseStyle);
                 if (metrics is not null)
                 {
                     var t0 = Stopwatch.GetTimestamp();
-                    Root.RenderTree(buffer);
-                    metrics.RenderTreeTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+                    _fullscreenHost!.Render(buffer, wantsCursor, cursorX, cursorY);
+                    metrics.RenderHostTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+                    metrics.EndRenderFrame(renderStartTimestamp, Stopwatch.GetTimestamp());
                 }
                 else
                 {
-                    Root.RenderTree(buffer);
+                    _fullscreenHost!.Render(buffer, wantsCursor, cursorX, cursorY);
                 }
             }
-            else
+            finally
             {
-                var rect = ClampToViewport(_pendingRenderDirtyRect, width, height);
-                buffer.PushClip(rect);
-                buffer.ClearCurrentClip(baseStyle);
-                if (metrics is not null)
+                if (overlayComposited)
                 {
-                    var t0 = Stopwatch.GetTimestamp();
-                    Root.RenderTree(buffer);
-                    metrics.RenderTreeTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+                    _debugOverlaySnapshot.Restore(buffer);
                 }
-                else
-                {
-                    Root.RenderTree(buffer);
-                }
-                buffer.PopClip();
             }
 
-            if (_debugOverlayVisible)
-            {
-                RenderDebugOverlay(buffer);
-            }
-
-            if (metrics is not null)
-            {
-                var t0 = Stopwatch.GetTimestamp();
-                _fullscreenHost!.Render(buffer, wantsCursor, cursorX, cursorY);
-                metrics.RenderHostTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
-                metrics.EndRenderFrame(renderStartTimestamp, Stopwatch.GetTimestamp());
-            }
-            else
-            {
-                _fullscreenHost!.Render(buffer, wantsCursor, cursorX, cursorY);
-            }
             _pendingRenderHasLayoutImpact = false;
             _pendingRenderDirtyRectValid = false;
             _forceNextFullRepaint = false;
@@ -1577,104 +1575,156 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             var viewportHeight = Math.Max(1, _terminal.Size.Rows);
             var stretchRootToViewport = Root.VerticalAlignment == Align.Stretch;
 
-            if (metrics is not null)
+            var layoutRequired =
+                _forceNextFullRepaint ||
+                width != _lastRenderWidth ||
+                viewportHeight != _lastRenderHeight ||
+                _pendingRenderHasLayoutImpact;
+
+            var layoutProducedWrites = false;
+            if (layoutRequired)
             {
-                var t0 = Stopwatch.GetTimestamp();
-                Root.Measure(new LayoutConstraints(0, width, 0, stretchRootToViewport ? viewportHeight : LayoutConstants.Infinite));
-                metrics.RenderMeasureTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+                if (metrics is not null)
+                {
+                    var t0 = Stopwatch.GetTimestamp();
+                    Root.Measure(new LayoutConstraints(0, width, 0, stretchRootToViewport ? viewportHeight : LayoutConstants.Infinite));
+                    metrics.RenderMeasureTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
 
-                t0 = Stopwatch.GetTimestamp();
-                var arrangeHeight = stretchRootToViewport ? viewportHeight : Root.DesiredSize.Height;
-                Root.Arrange(new Rectangle(0, 0, width, arrangeHeight));
-                metrics.RenderArrangeTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+                    t0 = Stopwatch.GetTimestamp();
+                    var arrangeHeight = stretchRootToViewport ? viewportHeight : Root.DesiredSize.Height;
+                    Root.Arrange(new Rectangle(0, 0, width, arrangeHeight));
+                    metrics.RenderArrangeTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+                }
+                else
+                {
+                    Root.Measure(new LayoutConstraints(0, width, 0, stretchRootToViewport ? viewportHeight : LayoutConstants.Infinite));
+                    var arrangeHeight = stretchRootToViewport ? viewportHeight : Root.DesiredSize.Height;
+                    Root.Arrange(new Rectangle(0, 0, width, arrangeHeight));
+                }
+
+                layoutProducedWrites = _pendingBindingWrites.Count > 0;
+
+                // Ensure any bindings updated during layout are processed before rendering (e.g. Bounds from Arrange)
+                ProcessBindingWrites();
             }
-            else
-            {
-                Root.Measure(new LayoutConstraints(0, width, 0, stretchRootToViewport ? viewportHeight : LayoutConstants.Infinite));
-                var arrangeHeight = stretchRootToViewport ? viewportHeight : Root.DesiredSize.Height;
-                Root.Arrange(new Rectangle(0, 0, width, arrangeHeight));
-            }
-
-            var layoutProducedWrites = _pendingBindingWrites.Count > 0;
-
-            // Ensure any bindings updated during layout are processed before rendering (e.g. Bounds from Arrange)
-            ProcessBindingWrites();
 
             var wantsCursor = TryGetDesiredCursor(out var cursorX, out var cursorY);
 
             var bufferHeight = stretchRootToViewport ? viewportHeight : Math.Max(1, Root.DesiredSize.Height);
             var buffer = EnsureRenderBuffer(width, bufferHeight);
             var baseStyle = Root.GetTheme().BaseTextStyle();
+            var dirtyRect = _pendingRenderDirtyRectValid ? ClampToViewport(_pendingRenderDirtyRect, width, buffer.Height) : default;
+            if (dirtyRect.Width > 0 && dirtyRect.Height > 0)
+            {
+                metrics?.AddSceneDirtyRect(dirtyRect);
+            }
 
             var fullRepaint =
                 _forceNextFullRepaint ||
-                _debugOverlayVisible ||
                 width != _lastRenderWidth ||
+                viewportHeight != _lastRenderHeight ||
                 layoutProducedWrites ||
-                _pendingRenderHasLayoutImpact ||
-                !_pendingRenderDirtyRectValid;
+                _pendingRenderHasLayoutImpact;
+
+            var sceneRenderMode = DetermineSceneRenderMode(fullRepaint, dirtyRect);
 
             _lastRenderWidth = width;
             _lastRenderHeight = viewportHeight;
-            metrics?.SetFullRepaint(fullRepaint);
-            if (metrics is not null)
-            {
-                metrics.SetRepaintRect(fullRepaint ? new Rectangle(0, 0, width, buffer.Height) : ClampToViewport(_pendingRenderDirtyRect, width, buffer.Height));
-            }
+            UpdateSceneMetrics(metrics, sceneRenderMode, sceneRenderMode == SceneRenderMode.Full ? new Rectangle(0, 0, width, buffer.Height) : dirtyRect);
+            metrics?.SetOverlayFrame(_debugOverlayVisible, overlayOnlyFrame: _debugOverlayVisible && sceneRenderMode == SceneRenderMode.None);
 
-            if (fullRepaint)
+            RenderScene(buffer, baseStyle, metrics, sceneRenderMode, dirtyRect);
+
+            var overlayComposited = _debugOverlayVisible && ComposeDebugOverlay(buffer, metrics);
+            try
             {
-                buffer.Clear(baseStyle);
                 if (metrics is not null)
                 {
                     var t0 = Stopwatch.GetTimestamp();
-                    Root.RenderTree(buffer);
-                    metrics.RenderTreeTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+                    _inlineHost!.Render(buffer, wantsCursor, cursorX, cursorY);
+                    metrics.RenderHostTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+                    metrics.EndRenderFrame(renderStartTimestamp, Stopwatch.GetTimestamp());
                 }
                 else
                 {
-                    Root.RenderTree(buffer);
+                    _inlineHost!.Render(buffer, wantsCursor, cursorX, cursorY);
                 }
             }
-            else
+            finally
             {
-                var rect = ClampToViewport(_pendingRenderDirtyRect, width, buffer.Height);
-                buffer.PushClip(rect);
-                buffer.ClearCurrentClip(baseStyle);
-                if (metrics is not null)
+                if (overlayComposited)
                 {
-                    var t0 = Stopwatch.GetTimestamp();
-                    Root.RenderTree(buffer);
-                    metrics.RenderTreeTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+                    _debugOverlaySnapshot.Restore(buffer);
                 }
-                else
-                {
-                    Root.RenderTree(buffer);
-                }
-                buffer.PopClip();
             }
 
-            if (_debugOverlayVisible)
-            {
-                RenderDebugOverlay(buffer);
-            }
-
-            if (metrics is not null)
-            {
-                var t0 = Stopwatch.GetTimestamp();
-                _inlineHost!.Render(buffer, wantsCursor, cursorX, cursorY);
-                metrics.RenderHostTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
-                metrics.EndRenderFrame(renderStartTimestamp, Stopwatch.GetTimestamp());
-            }
-            else
-            {
-                _inlineHost!.Render(buffer, wantsCursor, cursorX, cursorY);
-            }
             _inlineLiveRegionTopRow = _inlineHost.LiveRegionTopRow;
 
             _pendingRenderHasLayoutImpact = false;
             _pendingRenderDirtyRectValid = false;
             _forceNextFullRepaint = false;
+        }
+    }
+
+    private static SceneRenderMode DetermineSceneRenderMode(bool fullRepaint, in Rectangle dirtyRect)
+    {
+        if (fullRepaint)
+        {
+            return SceneRenderMode.Full;
+        }
+
+        return dirtyRect.Width > 0 && dirtyRect.Height > 0
+            ? SceneRenderMode.Dirty
+            : SceneRenderMode.None;
+    }
+
+    private static void UpdateSceneMetrics(DebugOverlayMetrics? metrics, SceneRenderMode sceneRenderMode, in Rectangle repaintRect)
+    {
+        if (metrics is null)
+        {
+            return;
+        }
+
+        metrics.SetSceneFullRepaint(sceneRenderMode == SceneRenderMode.Full);
+        metrics.SetSceneRepaintRect(sceneRenderMode == SceneRenderMode.None ? default : repaintRect);
+    }
+
+    private void RenderScene(CellBuffer buffer, Style baseStyle, DebugOverlayMetrics? metrics, SceneRenderMode sceneRenderMode, in Rectangle dirtyRect)
+    {
+        switch (sceneRenderMode)
+        {
+            case SceneRenderMode.None:
+                return;
+            case SceneRenderMode.Full:
+                buffer.Clear(baseStyle);
+                break;
+            case SceneRenderMode.Dirty:
+                buffer.PushClip(dirtyRect);
+                buffer.ClearCurrentClip(baseStyle);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(sceneRenderMode));
+        }
+
+        try
+        {
+            if (metrics is not null)
+            {
+                var t0 = Stopwatch.GetTimestamp();
+                Root.RenderTree(buffer);
+                metrics.RenderTreeTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
+            }
+            else
+            {
+                Root.RenderTree(buffer);
+            }
+        }
+        finally
+        {
+            if (sceneRenderMode == SceneRenderMode.Dirty)
+            {
+                buffer.PopClip();
+            }
         }
     }
 
@@ -1712,73 +1762,122 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         return _renderBuffer;
     }
 
-    private void RenderDebugOverlay(CellBuffer buffer)
+    private bool ComposeDebugOverlay(CellBuffer buffer, DebugOverlayMetrics? metrics)
+    {
+        if (!TryCreateDebugOverlayLayout(buffer, out var layout))
+        {
+            return false;
+        }
+
+        _debugOverlaySnapshot.Save(buffer, layout.Rect);
+        var startTimestamp = metrics is null ? 0 : Stopwatch.GetTimestamp();
+        RenderDebugOverlay(buffer, layout);
+        if (metrics is not null)
+        {
+            metrics.RecordOverlayComposition(layout.Rect, Math.Max(0, Stopwatch.GetTimestamp() - startTimestamp));
+        }
+
+        return true;
+    }
+
+    private bool TryCreateDebugOverlayLayout(CellBuffer buffer, out DebugOverlayLayout layout)
     {
         var maxWidth = buffer.Width;
         var maxHeight = buffer.Height;
         if (maxWidth <= 0 || maxHeight <= 0)
         {
-            return;
+            layout = default;
+            return false;
         }
 
         var theme = Root.GetTheme();
-
         var focus = FocusedElement;
         var hover = _hoveredElement;
         var metrics = _debugOverlayMetrics;
         var waitDiagnostics = _loopWaitBackend.GetDiagnosticsSnapshot();
 
         static double ToMs(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
-        static string FormatMs(long ticks) => ToMs(ticks).ToString("0.0", global::System.Globalization.CultureInfo.InvariantCulture);
+        static string FormatMs(long ticks) => ToMs(ticks).ToString("0.0", global::System.Globalization.CultureInfo.InvariantCulture).PadLeft(6);
         static string FormatFps(double fps) => fps <= 0 ? "-" : fps.ToString("0.0", global::System.Globalization.CultureInfo.InvariantCulture);
 
-        var dirtyText = "Dirty: <none>";
-        if (metrics is not null && metrics.HasDirtyRect)
+        List<string> BuildLines(Rectangle overlayRect)
         {
-            var r = metrics.DirtyRect;
-            dirtyText = $"Dirty: ({r.X},{r.Y}) {r.Width}x{r.Height}";
+            var dirtyText = "Scene: Dirty <none>";
+            if (metrics is not null && metrics.SceneHasDirtyRect)
+            {
+                var r = metrics.SceneDirtyRect;
+                dirtyText = $"Scene: Dirty ({r.X},{r.Y}) {r.Width}x{r.Height}";
+            }
+
+            var repaintText = "Scene: Repaint <none>";
+            if (metrics is not null && metrics.SceneHasRepaintRect)
+            {
+                var r = metrics.SceneRepaintRect;
+                repaintText = $"Scene: Repaint ({r.X},{r.Y}) {r.Width}x{r.Height}";
+            }
+
+            var overlayText = overlayRect.Width > 0 && overlayRect.Height > 0
+                ? $"Overlay: ({overlayRect.X},{overlayRect.Y}) {overlayRect.Width}x{overlayRect.Height}  {FormatMs(metrics?.OverlayRenderTicks ?? 0)}ms"
+                : $"Overlay: <clipped>  {FormatMs(metrics?.OverlayRenderTicks ?? 0)}ms";
+
+            if (metrics?.OverlayOnlyFrame ?? false)
+            {
+                overlayText += "  overlay-only";
+            }
+
+            return
+            [
+                $"Frame: {_renderFrameIndex}  FPS: {FormatFps(metrics?.Fps ?? 0)}",
+                $"Tick: {FormatMs(metrics?.TickTotalTicks ?? 0)}ms  Update: {FormatMs(metrics?.TickUserUpdateTicks ?? 0)}ms",
+                $"Loop: {waitDiagnostics.BackendName}  YieldWin {FormatMs(waitDiagnostics.YieldWindowTicks)}ms  Overshoot avg/p95 {FormatMs(waitDiagnostics.AverageOvershootTicks)}/{FormatMs(waitDiagnostics.P95OvershootTicks)}ms",
+                $"Loop: Yield avg {FormatMs(waitDiagnostics.AverageYieldTicks)}ms  Late {(metrics?.LateDeadlineCount ?? 0)}",
+                $"Wake64: deadline {(metrics?.WakeDeadlineCount ?? 0)}  input {(metrics?.WakeInputCount ?? 0)}  render {(metrics?.WakeRenderCount ?? 0)}  anim {(metrics?.WakeAnimationCount ?? 0)}",
+                $"Wake64: post {(metrics?.WakePostCount ?? 0)}  async {(metrics?.WakeAsyncUpdateCount ?? 0)}  stop {(metrics?.WakeShutdownCount ?? 0)}",
+                $"Top: Measure {FormatMs(metrics?.RenderMeasureTicks ?? 0)}ms  Arrange {FormatMs(metrics?.RenderArrangeTicks ?? 0)}ms  Render {FormatMs(metrics?.RenderTreeTicks ?? 0)}ms",
+                $"Top: Overlay {FormatMs(metrics?.OverlayRenderTicks ?? 0)}ms  Host {FormatMs(metrics?.RenderHostTicks ?? 0)}ms  Total {FormatMs(metrics?.RenderTotalTicks ?? 0)}ms",
+                $"Calls: DynamicUpdate {(metrics?.DynamicUpdate.Calls ?? 0)} ({FormatMs(metrics?.DynamicUpdate.Ticks ?? 0)}ms)",
+                $"Calls: Prepare {(metrics?.PrepareChildren.Calls ?? 0)} ({FormatMs(metrics?.PrepareChildren.Ticks ?? 0)}ms)",
+                $"Calls: Measure {(metrics?.Measure.Calls ?? 0)} ({FormatMs(metrics?.Measure.Ticks ?? 0)}ms)  Cache {(metrics?.MeasureCacheHits ?? 0)}",
+                $"Calls: Arrange {(metrics?.Arrange.Calls ?? 0)} ({FormatMs(metrics?.Arrange.Ticks ?? 0)}ms)  Cache {(metrics?.ArrangeCacheHits ?? 0)}",
+                $"Calls: Render {(metrics?.RenderOverride.Calls ?? 0)} ({FormatMs(metrics?.RenderOverride.Ticks ?? 0)}ms)  ClipSkips {(metrics?.RenderClipSkips ?? 0)}",
+                repaintText,
+                dirtyText,
+                $"Scene: Full {((metrics?.SceneFullRepaint ?? false) ? "yes" : "no")}",
+                overlayText,
+                $"HostDiff: {(metrics?.DiffOutputChars ?? 0)} chars  {(metrics?.DiffCellsTouched ?? 0)} cells  full={((metrics?.DiffForceFull ?? false) ? "yes" : "no")}",
+                $"Focus: {(focus is null ? "<none>" : focus.GetType().Name)}",
+                $"Hover: {(hover is null ? "<none>" : hover.GetType().Name)}",
+            ];
         }
 
-        var repaintText = "Repaint: <unknown>";
-        if (metrics is not null && metrics.HasRepaintRect)
+        Rectangle overlayRect = default;
+        List<string> lines = [];
+        for (var pass = 0; pass < 4; pass++)
         {
-            var r = metrics.RepaintRect;
-            repaintText = $"Repaint: ({r.X},{r.Y}) {r.Width}x{r.Height}";
-        }
+            lines = BuildLines(overlayRect);
 
-        var lines = new List<string>(20)
-        {
-            $"Frame: {_renderFrameIndex}  FPS: {FormatFps(metrics?.Fps ?? 0)}",
-            $"Tick: {FormatMs(metrics?.TickTotalTicks ?? 0)}ms  Update: {FormatMs(metrics?.TickUserUpdateTicks ?? 0)}ms",
-            $"Loop: {waitDiagnostics.BackendName}  YieldWin {FormatMs(waitDiagnostics.YieldWindowTicks)}ms  Overshoot avg/p95 {FormatMs(waitDiagnostics.AverageOvershootTicks)}/{FormatMs(waitDiagnostics.P95OvershootTicks)}ms",
-            $"Loop: Yield avg {FormatMs(waitDiagnostics.AverageYieldTicks)}ms  Late {(metrics?.LateDeadlineCount ?? 0)}",
-            $"Wake64: deadline {(metrics?.WakeDeadlineCount ?? 0)}  input {(metrics?.WakeInputCount ?? 0)}  render {(metrics?.WakeRenderCount ?? 0)}  anim {(metrics?.WakeAnimationCount ?? 0)}",
-            $"Wake64: post {(metrics?.WakePostCount ?? 0)}  async {(metrics?.WakeAsyncUpdateCount ?? 0)}  stop {(metrics?.WakeShutdownCount ?? 0)}",
-            $"Top: Measure {FormatMs(metrics?.RenderMeasureTicks ?? 0)}ms  Arrange {FormatMs(metrics?.RenderArrangeTicks ?? 0)}ms  Render {FormatMs(metrics?.RenderTreeTicks ?? 0)}ms  Host {FormatMs(metrics?.RenderHostTicks ?? 0)}ms",
-            $"Top: Total {FormatMs(metrics?.RenderTotalTicks ?? 0)}ms",
-            $"Calls: DynamicUpdate {(metrics?.DynamicUpdate.Calls ?? 0)} ({FormatMs(metrics?.DynamicUpdate.Ticks ?? 0)}ms)",
-            $"Calls: Prepare {(metrics?.PrepareChildren.Calls ?? 0)} ({FormatMs(metrics?.PrepareChildren.Ticks ?? 0)}ms)",
-            $"Calls: Measure {(metrics?.Measure.Calls ?? 0)} ({FormatMs(metrics?.Measure.Ticks ?? 0)}ms)  Cache {(metrics?.MeasureCacheHits ?? 0)}",
-            $"Calls: Arrange {(metrics?.Arrange.Calls ?? 0)} ({FormatMs(metrics?.Arrange.Ticks ?? 0)}ms)  Cache {(metrics?.ArrangeCacheHits ?? 0)}",
-            $"Calls: Render {(metrics?.RenderOverride.Calls ?? 0)} ({FormatMs(metrics?.RenderOverride.Ticks ?? 0)}ms)  ClipSkips {(metrics?.RenderClipSkips ?? 0)}",
-            repaintText + (metrics is not null && metrics.FullRepaint ? "  (full repaint)" : string.Empty),
-            dirtyText + (metrics is not null && metrics.FullRepaint ? "  (full repaint)" : string.Empty),
-            $"Diff: {(metrics?.DiffOutputChars ?? 0)} chars  {(metrics?.DiffCellsTouched ?? 0)} cells  full={((metrics?.DiffForceFull ?? false) ? "yes" : "no")}",
-            $"Focus: {(focus is null ? "<none>" : focus.GetType().Name)}",
-            $"Hover: {(hover is null ? "<none>" : hover.GetType().Name)}",
-        };
+            var contentWidth = 0;
+            foreach (var line in lines)
+            {
+                contentWidth = Math.Max(contentWidth, TerminalTextUtility.GetWidth(line.AsSpan()));
+            }
 
-        var contentWidth = 0;
-        foreach (var line in lines)
-        {
-            contentWidth = Math.Max(contentWidth, TerminalTextUtility.GetWidth(line.AsSpan()));
-        }
+            var width = Math.Min(maxWidth, Math.Max(3, contentWidth + 2));
+            var height = Math.Min(maxHeight, Math.Max(3, lines.Count + 2));
+            if (width < 3 || height < 3)
+            {
+                layout = default;
+                return false;
+            }
 
-        var width = Math.Min(maxWidth, Math.Max(3, contentWidth + 2));
-        var height = Math.Min(maxHeight, Math.Max(3, lines.Count + 2));
-        if (width < 3 || height < 3)
-        {
-            return;
+            var nextRect = new Rectangle(0, 0, width, height);
+            if (nextRect == overlayRect)
+            {
+                overlayRect = nextRect;
+                break;
+            }
+
+            overlayRect = nextRect;
         }
 
         var borderStyle = theme.BorderStyle(focused: true) | TextStyle.Bold;
@@ -1791,37 +1890,50 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             backgroundStyle = backgroundStyle.WithBackground(bg);
         }
 
+        layout = new DebugOverlayLayout(overlayRect, lines, borderStyle, backgroundStyle);
+        return true;
+    }
+
+    private void RenderDebugOverlay(CellBuffer buffer, in DebugOverlayLayout layout)
+    {
+        var rect = layout.Rect;
+        var width = rect.Width;
+        var height = rect.Height;
+        var borderStyle = layout.BorderStyle;
+        var backgroundStyle = layout.BackgroundStyle;
+        var lines = layout.Lines;
+
         for (var y = 0; y < height; y++)
         {
             for (var x = 0; x < width; x++)
             {
-                buffer.SetCell(x, y, new Rune(' '), backgroundStyle);
+                buffer.SetCell(rect.X + x, rect.Y + y, new Rune(' '), backgroundStyle);
             }
         }
 
-        var right = width - 1;
-        var bottom = height - 1;
+        var right = rect.X + width - 1;
+        var bottom = rect.Y + height - 1;
 
-        buffer.SetCell(0, 0, new Rune('+'), borderStyle);
-        buffer.SetCell(right, 0, new Rune('+'), borderStyle);
-        buffer.SetCell(0, bottom, new Rune('+'), borderStyle);
+        buffer.SetCell(rect.X, rect.Y, new Rune('+'), borderStyle);
+        buffer.SetCell(right, rect.Y, new Rune('+'), borderStyle);
+        buffer.SetCell(rect.X, bottom, new Rune('+'), borderStyle);
         buffer.SetCell(right, bottom, new Rune('+'), borderStyle);
 
-        for (var x = 1; x < right; x++)
+        for (var x = rect.X + 1; x < right; x++)
         {
-            buffer.SetCell(x, 0, new Rune('-'), borderStyle);
+            buffer.SetCell(x, rect.Y, new Rune('-'), borderStyle);
             buffer.SetCell(x, bottom, new Rune('-'), borderStyle);
         }
 
-        for (var y = 1; y < bottom; y++)
+        for (var y = rect.Y + 1; y < bottom; y++)
         {
-            buffer.SetCell(0, y, new Rune('|'), borderStyle);
+            buffer.SetCell(rect.X, y, new Rune('|'), borderStyle);
             buffer.SetCell(right, y, new Rune('|'), borderStyle);
         }
 
-        for (var i = 0; i < lines.Count && i + 1 < bottom; i++)
+        for (var i = 0; i < lines.Count && i + 1 < height - 1; i++)
         {
-            buffer.WriteText(1, 1 + i, lines[i].AsSpan(), Style.None);
+            buffer.WriteText(rect.X + 1, rect.Y + 1 + i, lines[i].AsSpan(), Style.None);
         }
     }
 
@@ -2357,7 +2469,6 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             _debugOverlayMetrics = _debugOverlayVisible ? new DebugOverlayMetrics() : null;
             _fullscreenHost?.SetMetricsSink(_debugOverlayMetrics);
             _inlineHost?.SetMetricsSink(_debugOverlayMetrics);
-            _forceNextFullRepaint = true;
             RequestRender();
             return;
         }

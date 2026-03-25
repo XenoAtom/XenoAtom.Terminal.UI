@@ -43,6 +43,7 @@ These are top-level timings for the render pipeline:
 - `Measure`: total time spent measuring the visual tree.
 - `Arrange`: total time spent arranging the visual tree.
 - `Render`: total time spent rendering the visual tree into the `CellBuffer`.
+- `Overlay`: time spent composing the debug overlay on top of the scene buffer.
 - `Host`: time spent diffing + writing output to the terminal.
 - `Total`: total render frame time.
 
@@ -66,24 +67,32 @@ If `Measure`/`Arrange` calls are high every frame, it often means:
 - you are changing bindable state every frame (even when values don’t really change), or
 - a control is reading state in a way that prevents caching (unstable dependencies).
 
-### Repaint and Dirty rectangles
+### Scene repaint and dirty rectangles
 
-- `Repaint`: the region that the app chose to repaint for this frame.
-- `Dirty`: the union of dirty rectangles reported during the frame.
+- `Scene: Repaint`: the region of the real UI scene that the app chose to repaint for this frame.
+- `Scene: Dirty`: the union of scene dirty rectangles reported during the frame.
+- `Scene: Full yes/no`: whether the scene renderer used a full repaint.
 
-If the overlay says `(full repaint)`, the frame repainted the entire viewport.
+When the overlay is the only thing updating, the scene lines stay at `<none>` / `no`. This is intentional: the overlay
+is composed in a separate pass so it does not distort scene repaint diagnostics.
 
-> [!NOTE]
-> `Dirty: <none>` combined with `(full repaint)` usually means the host forced a full repaint (common after resize or
-> initial frames), not that the dirty system is broken.
+### Overlay composition
 
-### Diff output
+- `Overlay: (x,y) wxh`: the overlay rectangle on the composed frame.
+- `overlay-only`: shown when the scene did not repaint and only the overlay was updated.
 
-- `Diff: N chars`: how many output characters the diff renderer wrote to the terminal.
-- `Diff: N cells`: how many cells changed compared to the previous buffer.
+The overlay timing is reported separately so you can leave it on without confusing scene metrics.
+
+### Host diff output
+
+- `HostDiff: N chars`: how many output characters the host diff renderer wrote to the terminal.
+- `HostDiff: N cells`: how many cells changed compared to the previous composed buffer.
 - `full=yes/no`: whether the diff renderer forced a full redraw.
 
-If `Diff` is consistently high, you are rewriting many cells each frame (large animated regions, blinking cursors, etc.).
+These numbers include overlay changes because they describe what the host actually wrote to the terminal.
+
+If `HostDiff` is consistently high, you are rewriting many cells each frame (large animated regions, blinking cursors,
+etc.).
 
 ### Focus and Hover
 

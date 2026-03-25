@@ -598,6 +598,60 @@ public sealed class CellBuffer
         }
     }
 
+    internal void CopyRegion(in Rectangle rect, Span<int> scalars, Span<Style> cells, Span<ulong> hyperlinks)
+    {
+        ValidateRegionCopyArguments(rect, scalars.Length, cells.Length, hyperlinks.Length);
+
+        var targetIndex = 0;
+        for (var y = rect.Y; y < rect.Bottom; y++)
+        {
+            var sourceIndex = (y * Width) + rect.X;
+            _scalars.AsSpan(sourceIndex, rect.Width).CopyTo(scalars[targetIndex..]);
+            _cells.AsSpan(sourceIndex, rect.Width).CopyTo(cells[targetIndex..]);
+            _hyperlinks.AsSpan(sourceIndex, rect.Width).CopyTo(hyperlinks[targetIndex..]);
+            targetIndex += rect.Width;
+        }
+    }
+
+    internal void RestoreRegion(in Rectangle rect, ReadOnlySpan<int> scalars, ReadOnlySpan<Style> cells, ReadOnlySpan<ulong> hyperlinks)
+    {
+        ValidateRegionCopyArguments(rect, scalars.Length, cells.Length, hyperlinks.Length);
+
+        var sourceIndex = 0;
+        for (var y = rect.Y; y < rect.Bottom; y++)
+        {
+            var targetIndex = (y * Width) + rect.X;
+            scalars[sourceIndex..].Slice(0, rect.Width).CopyTo(_scalars.AsSpan(targetIndex, rect.Width));
+            cells[sourceIndex..].Slice(0, rect.Width).CopyTo(_cells.AsSpan(targetIndex, rect.Width));
+            hyperlinks[sourceIndex..].Slice(0, rect.Width).CopyTo(_hyperlinks.AsSpan(targetIndex, rect.Width));
+            sourceIndex += rect.Width;
+        }
+    }
+
+    private void ValidateRegionCopyArguments(in Rectangle rect, int scalarLength, int cellLength, int hyperlinkLength)
+    {
+        if (rect.X < 0 || rect.Y < 0 || rect.Right > Width || rect.Bottom > Height)
+        {
+            throw new ArgumentOutOfRangeException(nameof(rect));
+        }
+
+        var requiredLength = checked(rect.Width * rect.Height);
+        if (scalarLength < requiredLength)
+        {
+            throw new ArgumentException("The scalar span is too small for the requested region.", nameof(scalarLength));
+        }
+
+        if (cellLength < requiredLength)
+        {
+            throw new ArgumentException("The cell span is too small for the requested region.", nameof(cellLength));
+        }
+
+        if (hyperlinkLength < requiredLength)
+        {
+            throw new ArgumentException("The hyperlink span is too small for the requested region.", nameof(hyperlinkLength));
+        }
+    }
+
     private static ulong ComputeFnv1a64(ReadOnlySpan<char> text, ulong seed)
     {
         const ulong prime = 1099511628211ul;

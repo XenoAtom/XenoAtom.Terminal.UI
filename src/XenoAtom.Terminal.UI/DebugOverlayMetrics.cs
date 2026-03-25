@@ -42,12 +42,19 @@ internal sealed class DebugOverlayMetrics : ICellBufferDiffMetricsSink
     internal int ArrangeCacheHits => _arrangeCacheHits;
     internal int RenderClipSkips => _renderClipSkips;
 
-    internal bool HasDirtyRect => _dirtyRectValid;
-    internal Rectangle DirtyRect => _dirtyRect;
-    internal bool FullRepaint { get; private set; }
+    internal bool SceneHasDirtyRect => _sceneDirtyRectValid;
+    internal Rectangle SceneDirtyRect => _sceneDirtyRect;
+    internal bool SceneFullRepaint { get; private set; }
 
-    internal bool HasRepaintRect => _repaintRectValid;
-    internal Rectangle RepaintRect => _repaintRect;
+    internal bool SceneHasRepaintRect => _sceneRepaintRectValid;
+    internal Rectangle SceneRepaintRect => _sceneRepaintRect;
+
+    internal bool OverlayVisible { get; private set; }
+    internal bool OverlayComposited { get; private set; }
+    internal bool OverlayOnlyFrame { get; private set; }
+    internal bool HasOverlayRect => _overlayRectValid;
+    internal Rectangle OverlayRect => _overlayRect;
+    internal long OverlayRenderTicks { get; private set; }
 
     internal int DiffOutputChars { get; private set; }
     internal int DiffCellsTouched { get; private set; }
@@ -82,11 +89,14 @@ internal sealed class DebugOverlayMetrics : ICellBufferDiffMetricsSink
     private int _renderClipSkips;
     private long _renderOverrideTicks;
 
-    private bool _dirtyRectValid;
-    private Rectangle _dirtyRect;
+    private bool _sceneDirtyRectValid;
+    private Rectangle _sceneDirtyRect;
 
-    private bool _repaintRectValid;
-    private Rectangle _repaintRect;
+    private bool _sceneRepaintRectValid;
+    private Rectangle _sceneRepaintRect;
+
+    private bool _overlayRectValid;
+    private Rectangle _overlayRect;
 
     private long _lastFrameTimestamp;
     private readonly TerminalLoopWakeReason[] _wakeSamples = new TerminalLoopWakeReason[64];
@@ -115,13 +125,16 @@ internal sealed class DebugOverlayMetrics : ICellBufferDiffMetricsSink
     public void BeginRenderFrame(long frameIndex)
     {
         FrameIndex = frameIndex;
-        FullRepaint = false;
+        SceneFullRepaint = false;
 
         RenderMeasureTicks = 0;
         RenderArrangeTicks = 0;
         RenderTreeTicks = 0;
         RenderHostTicks = 0;
         RenderTotalTicks = 0;
+        OverlayVisible = false;
+        OverlayComposited = false;
+        OverlayOnlyFrame = false;
 
         _dynamicUpdateCalls = 0;
         _dynamicUpdateTicks = 0;
@@ -137,19 +150,22 @@ internal sealed class DebugOverlayMetrics : ICellBufferDiffMetricsSink
         _renderClipSkips = 0;
         _renderOverrideTicks = 0;
 
-        _dirtyRectValid = false;
-        _dirtyRect = default;
+        _sceneDirtyRectValid = false;
+        _sceneDirtyRect = default;
 
-        _repaintRectValid = false;
-        _repaintRect = default;
+        _sceneRepaintRectValid = false;
+        _sceneRepaintRect = default;
+
+        _overlayRectValid = false;
+        _overlayRect = default;
     }
 
-    public void SetFullRepaint(bool fullRepaint) => FullRepaint = fullRepaint;
+    public void SetSceneFullRepaint(bool fullRepaint) => SceneFullRepaint = fullRepaint;
 
-    public void SetRepaintRect(in Rectangle rect)
+    public void SetSceneRepaintRect(in Rectangle rect)
     {
-        _repaintRect = rect;
-        _repaintRectValid = rect.Width > 0 && rect.Height > 0;
+        _sceneRepaintRect = rect;
+        _sceneRepaintRectValid = rect.Width > 0 && rect.Height > 0;
     }
 
     public void EndRenderFrame(long startTimestamp, long endTimestamp)
@@ -165,21 +181,38 @@ internal sealed class DebugOverlayMetrics : ICellBufferDiffMetricsSink
         _lastFrameTimestamp = endTimestamp;
     }
 
-    public void AddDirtyRect(in Rectangle rect)
+    public void AddSceneDirtyRect(in Rectangle rect)
     {
         if (rect.Width <= 0 || rect.Height <= 0)
         {
             return;
         }
 
-        if (!_dirtyRectValid)
+        if (!_sceneDirtyRectValid)
         {
-            _dirtyRect = rect;
-            _dirtyRectValid = true;
+            _sceneDirtyRect = rect;
+            _sceneDirtyRectValid = true;
             return;
         }
 
-        _dirtyRect = Rectangle.Union(_dirtyRect, rect);
+        _sceneDirtyRect = Rectangle.Union(_sceneDirtyRect, rect);
+    }
+
+    public void SetOverlayFrame(bool visible, bool overlayOnlyFrame)
+    {
+        OverlayVisible = visible;
+        OverlayOnlyFrame = visible && overlayOnlyFrame;
+        OverlayComposited = false;
+        _overlayRectValid = false;
+        _overlayRect = default;
+    }
+
+    public void RecordOverlayComposition(in Rectangle rect, long renderTicks)
+    {
+        OverlayComposited = rect.Width > 0 && rect.Height > 0;
+        OverlayRenderTicks = renderTicks;
+        _overlayRect = rect;
+        _overlayRectValid = OverlayComposited;
     }
 
     public void RecordDynamicUpdate(long elapsedTicks)

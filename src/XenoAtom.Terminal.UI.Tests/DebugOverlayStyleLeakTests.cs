@@ -18,7 +18,7 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class DebugOverlayStyleLeakTests
 {
     [TestMethod]
-    public void DebugOverlay_DoesNotInherit_Foreground_From_Underlay()
+    public void DebugOverlay_Composes_On_Host_Output_Without_Polluting_RenderBuffer()
     {
         var theme = Theme.FromScheme(ColorScheme.RootLoopsDark with { Name = "Test" });
         var red = Color.Basic16(1);
@@ -33,19 +33,25 @@ public sealed class DebugOverlayStyleLeakTests
         driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F12 });
         driver.Tick();
 
+        var screen = new AnsiTestScreen(60, 20);
+        screen.Apply(driver.Backend.GetOutText());
+        Assert.AreEqual('+', screen.GetText()[0], "The composed frame sent to the host should include the debug overlay border.");
+
         var app = driver.App;
         var buffer = (CellBuffer)typeof(TerminalApp).GetField("_renderBuffer", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(app)!;
 
-        // Pick a cell in the overlay content area (1,1). The overlay is rendered at top-left.
-        var index = (1 * buffer.Width) + 1;
+        // The retained render buffer must stay scene-only after the overlay frame completes.
+        var index = 0;
+        var scalar = buffer.UnsafeScalars[index];
         var cell = buffer.UnsafeCells[index];
 
-        Assert.IsTrue(cell.TryGetForeground(out var fg), "Debug overlay should write an explicit foreground.");
-        Assert.AreNotEqual(red, fg, "Debug overlay should not inherit the underlay foreground.");
+        Assert.AreEqual((int)'X', scalar, "The retained render buffer should restore the underlying scene after overlay composition.");
+        Assert.IsTrue(cell.TryGetForeground(out var fg), "The underlay scene cell should keep its foreground.");
+        Assert.AreEqual(red, fg, "Overlay composition should not leave overlay styling in the retained scene buffer.");
     }
 
     [TestMethod]
-    public void DebugOverlay_Hide_Forces_Full_Repaint_When_Other_Dirty_Rect_Is_Pending()
+    public void DebugOverlay_Hide_Restores_Underlay_When_Other_Dirty_Rect_Is_Pending()
     {
         var theme = Theme.FromScheme(ColorScheme.RootLoopsDark with { Name = "Test" });
         var button = new Button("Hover")
