@@ -26,6 +26,8 @@ new Grid()
 - `Auto` tracks measure to content first.
 - `Star` tracks start from their mins on bounded axes, then divide the remaining space by weight.
 - Child natural size does not bias the ratio unless min/max constraints force it to.
+- On bounded axes, a grid with `Star` tracks still reports the bounded allocated width as its natural size, so start-aligned
+  parents do not collapse star layouts down to the tracks' minimum widths.
 
 ```csharp
 new Grid()

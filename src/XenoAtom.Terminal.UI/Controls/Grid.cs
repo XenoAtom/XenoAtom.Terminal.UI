@@ -220,6 +220,10 @@ public sealed partial class Grid : Visual
 
             var gridMinW = padH + totalColGaps + Sum(colMin);
             var gridNatW = padH + totalColGaps + Sum(colNat);
+            if (widthBounded && HasTrackType(colDefs, GridUnitType.Star))
+            {
+                gridNatW = padH + totalColGaps + Sum(allocatedColWidths);
+            }
             var gridMaxW = HasInfinite(colMax) ? LayoutConstants.Infinite : padH + totalColGaps + Sum(colMax);
 
             var gridMinH = padV + totalRowGaps + Sum(rowMin);
@@ -681,6 +685,19 @@ public sealed partial class Grid : Visual
 
     private static bool IsFlexibleTrack(GridUnitType type)
         => type is GridUnitType.Star or GridUnitType.FlexStar;
+
+    private static bool HasTrackType(ColumnDefinition[] defs, GridUnitType type)
+    {
+        for (var i = 0; i < defs.Length; i++)
+        {
+            if (defs[i].Width.Type == type)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static bool ShouldTrackNaturalSizeFromChildren(GridUnitType type, bool boundedAxis)
         => type switch

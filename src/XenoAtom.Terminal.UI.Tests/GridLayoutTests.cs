@@ -166,6 +166,24 @@ public sealed class GridLayoutTests
     }
 
     [TestMethod]
+    public void Bounded_Star_Grid_Uses_Available_Width_As_Natural_Size()
+    {
+        var grid = new Grid();
+        grid.ColumnDefinitions.AddRange(
+            new ColumnDefinition { Width = GridLength.Star(1) },
+            new ColumnDefinition { Width = GridLength.Auto });
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        grid.Cell(new Markup("This is a longfilename.txt") { Wrap = false, HorizontalAlignment = Align.Stretch }, 0, 0);
+        grid.Cell(new Markup("[green]+150[/] [red]-200[/]") { Wrap = false, HorizontalAlignment = Align.End }, 0, 1);
+
+        grid.Measure(new LayoutConstraints(0, 26, 0, 2));
+
+        Assert.AreEqual(26, grid.MeasureHints.Natural.Width);
+        Assert.AreEqual(2, grid.MeasureHints.Min.Width);
+    }
+
+    [TestMethod]
     public void FlexStar_Columns_Preserve_Natural_Size_Bias_Before_Applying_Weights()
     {
         var grid = new Grid();
@@ -265,6 +283,58 @@ public sealed class GridLayoutTests
 
         Assert.AreEqual(6, group.MeasureHints.Min.Width);
         Assert.AreEqual(40, group.MeasureHints.Natural.Width);
+    }
+
+    [TestMethod]
+    public void Button_With_Star_Grid_Content_Uses_Bounded_Width()
+    {
+        var fileNameText = new Markup("This is a longfilename.txt")
+        {
+            Wrap = false,
+            HorizontalAlignment = Align.Stretch,
+        };
+        var directoryText = new Markup("C:\\hello\\long\\directory")
+        {
+            Wrap = false,
+            HorizontalAlignment = Align.Stretch,
+        };
+        var countsText = new Markup("[green]+150[/] [red]-200[/]")
+        {
+            Wrap = false,
+            HorizontalAlignment = Align.End,
+        };
+
+        var summaryLayout = new Grid
+        {
+            HorizontalAlignment = Align.Stretch,
+            VerticalAlignment = Align.Start,
+        }
+            .Rows(
+                new RowDefinition { Height = GridLength.Auto },
+                new RowDefinition { Height = GridLength.Auto })
+            .Columns(
+                new ColumnDefinition { Width = GridLength.Star(1) },
+                new ColumnDefinition { Width = GridLength.Auto });
+        summaryLayout.Cell(fileNameText, 0, 0);
+        summaryLayout.Cell(directoryText, 1, 0);
+        summaryLayout.Cell(countsText, 1, 1);
+
+        var button = new Button(summaryLayout)
+        {
+            MinWidth = 18,
+            MaxWidth = 30,
+            HorizontalAlignment = Align.Start,
+            VerticalAlignment = Align.Start,
+        };
+
+        button.Measure(new LayoutConstraints(0, 80, 0, 10));
+        button.Arrange(new Rectangle(0, 0, 80, 10));
+
+        Assert.AreEqual(30, button.Bounds.Width);
+        Assert.AreEqual(26, summaryLayout.Bounds.Width);
+        Assert.AreEqual(17, fileNameText.Bounds.Width);
+        Assert.AreEqual(17, directoryText.Bounds.Width);
+        Assert.AreEqual(9, countsText.Bounds.Width);
     }
 
     [TestMethod]

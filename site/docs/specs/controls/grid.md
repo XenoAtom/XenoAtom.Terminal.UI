@@ -140,6 +140,10 @@ Then, after measuring cells:
 
 The grid then normalizes tracks so `natural` is clamped to `[min..max]` when max is finite.
 
+When the width is bounded and at least one column is `Star`, the grid reports its own natural width from the bounded column
+allocation result rather than from `Sum(colNat)`. This keeps the `Star` ratio content-agnostic while still giving start-aligned
+parents a meaningful desired width.
+
 ### Allocation (Arrange)
 
 During arrange, `FlexAllocator.Allocate(...)` computes the final integer sizes for each track:
