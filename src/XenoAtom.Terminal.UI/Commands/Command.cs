@@ -89,6 +89,14 @@ public sealed class Command
     public Func<Visual, bool>? IsVisible { get; init; }
 
     /// <summary>
+    /// Gets a value indicating whether a matching gesture is treated as handled when the command is hidden or cannot execute.
+    /// </summary>
+    /// <remarks>
+    /// When set to <see langword="false"/>, gesture routing continues to the next matching command instead of consuming the key.
+    /// </remarks>
+    public bool ConsumesGestureWhenUnavailable { get; init; } = true;
+
+    /// <summary>
     /// Returns <see langword="true"/> if the command is visible for the specified <paramref name="target"/>.
     /// </summary>
     public bool IsVisibleFor(Visual target) => IsVisible is null || IsVisible(target);

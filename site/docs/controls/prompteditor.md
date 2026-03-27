@@ -104,6 +104,16 @@ Default behavior:
 - `Tab` requests completion (unless `AcceptTab=true`).
 - `Esc` cancels completion (or cancels the prompt if no completion UI is active).
 
+If you want to reuse `Esc` for another command when completion is inactive, switch the editor to completion-only escape
+handling:
+
+```csharp
+new PromptEditor()
+    .EscapeBehavior(PromptEditorEscapeBehavior.CancelCompletionOnly);
+```
+
+With that mode, `Esc` still dismisses active completion UI, but otherwise falls through to other shortcut bindings.
+
 ## Prompt prefix
 
 `PromptEditor` renders the prompt prefix in a dedicated left column:

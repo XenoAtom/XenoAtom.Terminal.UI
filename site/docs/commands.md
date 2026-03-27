@@ -41,6 +41,8 @@ Notes:
 
 - For Ctrl shortcuts, prefer `TerminalChar.CtrlX` + `TerminalModifiers.Ctrl` (terminals commonly emit control characters).
 - `Gesture` and `Sequence` are mutually exclusive.
+- By default, a matched `Gesture` is consumed even if the command is currently hidden or disabled. Set
+  `ConsumesGestureWhenUnavailable = false` when a command should reserve the key only while it is active.
 
 ## Multi-stroke shortcuts (key sequences)
 

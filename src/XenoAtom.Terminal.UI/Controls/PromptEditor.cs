@@ -35,6 +35,22 @@ public enum PromptEditorEnterMode
 }
 
 /// <summary>
+/// Specifies how <see cref="TerminalKey.Escape"/> is interpreted by <see cref="PromptEditor"/>.
+/// </summary>
+public enum PromptEditorEscapeBehavior
+{
+    /// <summary>
+    /// Escape cancels completion when active; otherwise it raises <see cref="PromptEditor.CanceledEvent"/>.
+    /// </summary>
+    CancelPromptOrCompletion = 0,
+
+    /// <summary>
+    /// Escape cancels completion when active and otherwise falls through to other bindings.
+    /// </summary>
+    CancelCompletionOnly = 1,
+}
+
+/// <summary>
 /// Specifies the completion UI mode used by <see cref="PromptEditor"/>.
 /// </summary>
 public enum PromptEditorCompletionPresentation
@@ -314,6 +330,9 @@ public partial class PromptEditor : TextEditorBase
             Gesture = config.Gesture,
             Importance = CommandImportance.Secondary,
             Presentation = CommandPresentation.CommandBar,
+            IsVisible = static v => ((PromptEditor)v).IsCancelCommandVisible,
+            CanExecute = static v => ((PromptEditor)v).CanExecuteCancelCommand,
+            ConsumesGestureWhenUnavailable = false,
             Execute = static v => ((PromptEditor)v).Cancel(),
         };
     }
@@ -431,6 +450,12 @@ public partial class PromptEditor : TextEditorBase
     public partial PromptEditorEnterMode EnterMode { get; set; }
 
     /// <summary>
+    /// Gets or sets how <see cref="TerminalKey.Escape"/> is interpreted.
+    /// </summary>
+    [Bindable]
+    public partial PromptEditorEscapeBehavior EscapeBehavior { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether ghost completion is rendered when available.
     /// </summary>
     [Bindable]
@@ -515,6 +540,12 @@ public partial class PromptEditor : TextEditorBase
     /// <inheritdoc />
     protected override bool ShowPlaceholderWhenUnfocusedOnly => false;
 
+    private bool HasActiveCompletion => _completionActive || _completionPopup is not null;
+
+    private bool CanExecuteCancelCommand => EscapeBehavior == PromptEditorEscapeBehavior.CancelPromptOrCompletion || HasActiveCompletion;
+
+    private bool IsCancelCommandVisible => EscapeBehavior == PromptEditorEscapeBehavior.CancelPromptOrCompletion || HasActiveCompletion;
+
     /// <summary>
     /// Accepts the current text and raises <see cref="AcceptedEvent"/>.
     /// </summary>
@@ -556,7 +587,8 @@ public partial class PromptEditor : TextEditorBase
     /// <inheritdoc />
     protected override void OnKeyDown(KeyEventArgs e)
     {
-        if (_completionActive && e.Key != TerminalKey.Tab)
+        var hadActiveCompletion = HasActiveCompletion;
+        if (hadActiveCompletion && e.Key != TerminalKey.Tab)
         {
             CancelCompletion();
         }
@@ -575,9 +607,18 @@ public partial class PromptEditor : TextEditorBase
 
         if (e.Key == TerminalKey.Escape)
         {
-            Cancel();
-            e.Handled = true;
-            return;
+            if (hadActiveCompletion)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            if (EscapeBehavior == PromptEditorEscapeBehavior.CancelPromptOrCompletion)
+            {
+                Cancel();
+                e.Handled = true;
+                return;
+            }
         }
 
         base.OnKeyDown(e);

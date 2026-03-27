@@ -1,18 +1,24 @@
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
+using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Input;
 
-State<string?> text = new("Type here");
-State<bool> exit = new(false);
+
+
+var promptEditor = new PromptEditor();
+promptEditor.EscapeBehavior(PromptEditorEscapeBehavior.CancelCompletionOnly);
+
+promptEditor.AddCommand(new Command()
+{
+    Id = "CodeAlta.Thread.ExpandPrompt.Close",
+    LabelMarkup = "Close",
+    DescriptionMarkup = "Close the large prompt editor and keep the current draft.",
+    Gesture = new KeyGesture(TerminalKey.Escape),
+    Importance = CommandImportance.Primary,
+    Execute = _ => Terminal.Title = "Hello",
+});
 
 Terminal.Run(
-    new VStack(
-        new TextBox(text),
-        new HStack(
-            "Hello this is a long element Hello this is a long element Hello this is a long element Hello this is a long element Hello this is a long element",
-            "This is another line"
-        ),
-        new TextBlock(() => $"The text typed is: {text.Value}"),
-        new Button("Exit").Click(() => exit.Value = true)
-    ),
-    onUpdate: () => exit.Value ? TerminalLoopResult.StopAndKeepVisual : TerminalLoopResult.Continue);
+    promptEditor,
+    onUpdate: () => TerminalLoopResult.Continue);

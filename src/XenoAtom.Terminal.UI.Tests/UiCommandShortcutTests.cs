@@ -102,6 +102,38 @@ public sealed class CommandShortcutTests
         });
     }
 
+    [TestMethod]
+    public void Disabled_Command_Consumes_Gesture_By_Default()
+    {
+        var probe = new FallbackGestureProbe(allowFallthrough: false);
+        var root = new VStack { probe };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        driver.Tick();
+
+        Assert.AreEqual(0, probe.PrimaryCount);
+        Assert.AreEqual(0, probe.FallbackCount);
+    }
+
+    [TestMethod]
+    public void Disabled_Command_Can_Allow_Gesture_Fallthrough()
+    {
+        var probe = new FallbackGestureProbe(allowFallthrough: true);
+        var root = new VStack { probe };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        driver.Tick();
+
+        Assert.AreEqual(0, probe.PrimaryCount);
+        Assert.AreEqual(1, probe.FallbackCount);
+    }
+
     private sealed class EmptyProbe : Visual
     {
         protected override SizeHints MeasureCore(in LayoutConstraints constraints) => SizeHints.Fixed(constraints.Clamp(new Size(1, 1)));
@@ -135,6 +167,43 @@ public sealed class CommandShortcutTests
         protected override void RenderOverride(CellBuffer buffer)
         {
             buffer.WriteText(Bounds.X, Bounds.Y, $"Count:{Count}".AsSpan(), Style.None);
+        }
+    }
+
+    private sealed class FallbackGestureProbe : Visual
+    {
+        public int PrimaryCount { get; private set; }
+
+        public int FallbackCount { get; private set; }
+
+        public FallbackGestureProbe(bool allowFallthrough)
+        {
+            Focusable = true;
+
+            AddCommand(new Command
+            {
+                Id = "primary",
+                LabelMarkup = "Primary",
+                Gesture = new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalKey.Escape),
+                CanExecute = _ => false,
+                ConsumesGestureWhenUnavailable = allowFallthrough ? false : true,
+                Execute = _ => PrimaryCount++,
+            });
+
+            AddCommand(new Command
+            {
+                Id = "fallback",
+                LabelMarkup = "Fallback",
+                Gesture = new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalKey.Escape),
+                Execute = _ => FallbackCount++,
+            });
+        }
+
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints) => SizeHints.Fixed(constraints.Clamp(new Size(10, 1)));
+
+        protected override void RenderOverride(CellBuffer buffer)
+        {
+            buffer.WriteText(Bounds.X, Bounds.Y, $"P:{PrimaryCount} F:{FallbackCount}".AsSpan(), Style.None);
         }
     }
 }

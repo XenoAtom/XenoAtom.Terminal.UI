@@ -2069,7 +2069,12 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
                 if (!cmd.IsVisibleFor(v) || !cmd.CanExecuteFor(v))
                 {
-                    return true; // gesture matched but is disabled/hidden in this context; treat as handled.
+                    if (cmd.ConsumesGestureWhenUnavailable)
+                    {
+                        return true; // gesture matched but is disabled/hidden in this context; treat as handled.
+                    }
+
+                    continue;
                 }
 
                 cmd.Execute(v);
@@ -2101,7 +2106,12 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
                 if (!cmd.IsVisibleFor(globalTarget) || !cmd.CanExecuteFor(globalTarget))
                 {
-                    return true;
+                    if (cmd.ConsumesGestureWhenUnavailable)
+                    {
+                        return true;
+                    }
+
+                    continue;
                 }
 
                 cmd.Execute(globalTarget);

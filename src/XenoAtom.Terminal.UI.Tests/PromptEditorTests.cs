@@ -4,6 +4,7 @@
 
 using System.Linq;
 using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Input;
@@ -138,6 +139,80 @@ public sealed class PromptEditorTests
 
         driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
         driver.TickUntil(() => editor.Text == "hello");
+    }
+
+    [TestMethod]
+    public void PromptEditor_Escape_Cancels_By_Default()
+    {
+        var canceled = false;
+
+        var editor = new PromptEditor()
+            .Canceled((_, _) => canceled = true)
+            .AutoFocus(true);
+
+        var root = new VStack { editor };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        driver.TickUntil(() => canceled);
+    }
+
+    [TestMethod]
+    public void PromptEditor_Can_Reserve_Escape_Only_While_Completion_Is_Active()
+    {
+        static PromptEditorCompletion Complete(in PromptEditorCompletionRequest request)
+            => new(
+                Handled: true,
+                Candidates: ["hello", "help"],
+                ReplaceStart: 0,
+                ReplaceLength: request.CaretIndex);
+
+        var canceled = false;
+        var customEscapeCount = 0;
+
+        var editor = new PromptEditor()
+            .EscapeBehavior(PromptEditorEscapeBehavior.CancelCompletionOnly)
+            .CompletionPresentation(PromptEditorCompletionPresentation.InlineCycle)
+            .CompletionHandler(Complete)
+            .Canceled((_, _) => canceled = true)
+            .AutoFocus(true);
+
+        editor.AddCommand(new Command
+        {
+            Id = "Custom.Close",
+            LabelMarkup = "Close",
+            Gesture = new KeyGesture(TerminalKey.Escape),
+            Execute = _ => customEscapeCount++,
+        });
+
+        var root = new VStack { editor };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "h" });
+        driver.TickUntil(() => editor.Text == "h");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        driver.TickUntil(() => customEscapeCount == 1);
+
+        Assert.IsFalse(canceled);
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
+        driver.TickUntil(() => editor.Text == "hello");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        driver.Tick();
+
+        Assert.AreEqual(1, customEscapeCount);
+        Assert.IsFalse(canceled);
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
+        driver.Tick();
+
+        Assert.AreEqual("hello", editor.Text);
     }
 
     [TestMethod]
