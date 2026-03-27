@@ -156,12 +156,21 @@ public sealed partial class Markup : Visual, ISelectionOwner
         var text = _plainText.AsSpan();
         var availableWidth = Math.Max(0, availableSize.Width);
         var availableHeight = Math.Max(0, availableSize.Height);
+        var naturalWidth = GetMaxLineWidth(text);
+        var width = Math.Max(0, Math.Min(availableWidth, naturalWidth));
+        var minWidth = naturalWidth > 0 ? 1 : 0;
 
-        var width = Math.Max(0, Math.Min(availableWidth, GetMaxLineWidth(text)));
         if (!Wrap)
         {
             var height = Math.Min(availableHeight, CountHardLines(text));
-            return SizeHints.Fixed(new Size(width, height));
+            return SizeHints.Flex(
+                new Size(minWidth, height),
+                new Size(naturalWidth, height),
+                new Size(naturalWidth, height),
+                growX: 0,
+                growY: 0,
+                shrinkX: naturalWidth > minWidth ? 1 : 0,
+                shrinkY: 0);
         }
 
         if (width == 0)
@@ -170,7 +179,14 @@ public sealed partial class Markup : Visual, ISelectionOwner
         }
 
         var wrappedHeight = CountWrappedLines(text, Math.Max(1, width));
-        return SizeHints.Fixed(new Size(width, Math.Min(availableHeight, Math.Max(1, wrappedHeight))));
+        return SizeHints.Flex(
+            new Size(minWidth, Math.Min(availableHeight, Math.Max(1, wrappedHeight))),
+            new Size(width, Math.Min(availableHeight, Math.Max(1, wrappedHeight))),
+            new Size(naturalWidth, LayoutConstants.Infinite),
+            growX: 0,
+            growY: 0,
+            shrinkX: width > minWidth ? 1 : 0,
+            shrinkY: 0);
     }
 
     /// <inheritdoc />
@@ -982,6 +998,17 @@ public sealed partial class Markup : Visual, ISelectionOwner
         if (start > text.Length)
         {
             return false;
+        }
+
+        if (start == text.Length)
+        {
+            if (text.IsEmpty)
+            {
+                return true;
+            }
+
+            var last = text[^1];
+            return last is '\n' or '\r';
         }
 
         var i = start;

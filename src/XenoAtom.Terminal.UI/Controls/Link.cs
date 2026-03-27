@@ -64,9 +64,17 @@ public sealed partial class Link : Visual
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         var text = Text ?? Uri ?? string.Empty;
-        var width = TerminalTextUtility.GetWidth(text.AsSpan());
-        var natural = constraints.Clamp(new Size(Math.Max(0, width), 1));
-        return SizeHints.Fixed(natural);
+        var naturalWidth = TerminalTextUtility.GetWidth(text.AsSpan());
+        var lineHeight = Math.Min(Math.Max(0, constraints.MaxHeight), 1);
+        var minWidth = naturalWidth > 0 ? 1 : 0;
+        return SizeHints.Flex(
+            new Size(minWidth, lineHeight),
+            new Size(naturalWidth, lineHeight),
+            new Size(naturalWidth, lineHeight),
+            growX: 0,
+            growY: 0,
+            shrinkX: naturalWidth > minWidth ? 1 : 0,
+            shrinkY: 0);
     }
 
     /// <inheritdoc />

@@ -141,6 +141,31 @@ public sealed class GridLayoutTests
     }
 
     [TestMethod]
+    public void Star_Link_Column_Shrinks_Before_Auto_Button_Column()
+    {
+        var grid = new Grid();
+        grid.ColumnDefinitions.AddRange(
+            new ColumnDefinition { Width = GridLength.Star(1) },
+            new ColumnDefinition { Width = GridLength.Auto });
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        var link = new Link("https://example.com", "HelloWorld")
+        {
+            Trimming = TextTrimming.EndEllipsis,
+        };
+        var button = new Button("X");
+
+        grid.Cell(link, 0, 0);
+        grid.Cell(button, 0, 1);
+
+        grid.Measure(new Size(8, 1));
+        grid.Arrange(new Rectangle(0, 0, 8, 1));
+
+        Assert.AreEqual(3, link.Bounds.Width);
+        Assert.AreEqual(new Rectangle(3, 0, 5, 1), button.Bounds);
+    }
+
+    [TestMethod]
     public void FlexStar_Columns_Preserve_Natural_Size_Bias_Before_Applying_Weights()
     {
         var grid = new Grid();
@@ -217,6 +242,22 @@ public sealed class GridLayoutTests
             .TopLeftText("2*")
             .Padding(1)
             .Content(new TextBlock("Star columns keep a stable 2/3 + 1/3 split on bounded layouts, even when this text wants more width.")
+                .Wrap(true))
+            .Stretch();
+
+        group.Measure(new LayoutConstraints(0, 40, 0, 10));
+
+        Assert.AreEqual(6, group.MeasureHints.Min.Width);
+        Assert.AreEqual(40, group.MeasureHints.Natural.Width);
+    }
+
+    [TestMethod]
+    public void Group_With_Wrapped_Markup_Does_Not_Inflate_MinWidth_To_Bounded_Width()
+    {
+        var group = new Group()
+            .TopLeftText("2*")
+            .Padding(1)
+            .Content(new Markup("[bold]Star[/] columns keep a stable 2/3 + 1/3 split on bounded layouts, even when this text wants more width.")
                 .Wrap(true))
             .Stretch();
 

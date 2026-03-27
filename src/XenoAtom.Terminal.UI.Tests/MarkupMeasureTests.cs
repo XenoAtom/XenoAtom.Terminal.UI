@@ -3,12 +3,46 @@
 
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
 [TestClass]
 public sealed class MarkupMeasureTests
 {
+    [TestMethod]
+    public void Markup_SingleLine_Reports_Horizontal_Shrink_Budget()
+    {
+        var markup = new Markup("[red]Hello[/][green]World[/]")
+        {
+            Wrap = false,
+            Trimming = TextTrimming.EndEllipsis,
+        };
+
+        markup.Measure(LayoutConstraints.Unbounded);
+
+        Assert.AreEqual(1, markup.MeasureHints.Min.Width);
+        Assert.AreEqual(10, markup.MeasureHints.Natural.Width);
+        Assert.AreEqual(10, markup.MeasureHints.Max.Width);
+        Assert.AreEqual(1, markup.MeasureHints.FlexShrinkX);
+    }
+
+    [TestMethod]
+    public void Markup_Wrap_Reports_Horizontal_Shrink_Budget()
+    {
+        var markup = new Markup("[green]Hello[/] world")
+        {
+            Wrap = true,
+        };
+
+        markup.Measure(new LayoutConstraints(0, 8, 0, 5));
+
+        Assert.AreEqual(1, markup.MeasureHints.Min.Width);
+        Assert.AreEqual(8, markup.MeasureHints.Natural.Width);
+        Assert.AreEqual(2, markup.MeasureHints.Natural.Height);
+        Assert.AreEqual(1, markup.MeasureHints.FlexShrinkX);
+    }
+
     [TestMethod]
     public void Measure_Uses_Visible_Text_Width()
     {
