@@ -105,7 +105,7 @@ Sorting is opt-in per UI column:
 - set `DataGridColumn.Sortable = true` to show the header sort button,
 - optionally set `DataGridColumn<T>.SortComparer` to override the default `Comparer<T>.Default`,
 - click the header sort button to cycle `None -> Descending -> Ascending -> None`,
-- `Shift+click` adds/removes secondary sorts so multi-column sorts are additive and stable.
+- `Ctrl+click` adds/removes secondary sorts so multi-column sorts are additive and stable (`Alt+click` is also accepted).
 
 You can also sort programmatically:
 
@@ -121,7 +121,7 @@ When the view is a `DataGridDocumentView`, any configured `SortComparer` is forw
 - `Ctrl+F`: open find UI (uses `SearchReplacePopup` in find mode)
 - `F3` / `Shift+F3`: next / previous match
 - `F4`: toggle filter row (when `View` is filterable)
-- click header sort button: toggle sort (`Shift+click` for additive multi-sort)
+- click header sort button: toggle sort (`Ctrl+click` for additive multi-sort; `Alt+click` also works)
 - Arrow keys / PageUp / PageDown: navigate the current cell
 - `F2` or `Enter`: edit current cell (when editable)
 

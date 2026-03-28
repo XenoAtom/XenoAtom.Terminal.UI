@@ -68,7 +68,7 @@ public sealed class DataGridDemo : ControlsDemoBase
 
         return new VStack(
                 DemoUi.Hint("Wrap DataGridControl in a ScrollViewer to show scrollbars."),
-                DemoUi.Hint("Click a header sort button to cycle off/descending/ascending. Shift+click adds a secondary sort."),
+                DemoUi.Hint("Click a header sort button to cycle off/descending/ascending. Ctrl+click adds a secondary sort."),
                 DemoUi.Hint("Ctrl+F: search (find), F3/Shift+F3: next/previous match"),
                 DemoUi.Hint("F4: toggle filter row, F2: edit current cell"),
                 controls,

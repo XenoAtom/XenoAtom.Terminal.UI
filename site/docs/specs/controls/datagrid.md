@@ -704,7 +704,7 @@ Suggested UX:
 
 - sortable columns render a sort button in the header (right aligned inside the header cell)
 - click the sort button toggles `None → Desc → Asc → None`
-- `Shift+click` adds/removes secondary sort (multi-sort)
+- `Ctrl+click` adds/removes secondary sort (multi-sort); `Alt+click` MAY be accepted as an equivalent terminal-safe modifier
 - programmatic sorting is available through `DataGridControl.TrySetColumnSortDirection(...)`
 - the default `DataGridDocumentView` preserves row stability by using the full active sort description list and falling
   back to document order for ties

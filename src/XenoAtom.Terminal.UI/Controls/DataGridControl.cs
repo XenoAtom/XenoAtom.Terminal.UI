@@ -1377,7 +1377,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
                 var columns = EnsureResolvedColumns(snapshot, visibleColumns);
                 if ((uint)sortColumnIndex < (uint)columns.Count)
                 {
-                    _ = TryToggleColumnSortDirection(columns[sortColumnIndex].Key, additive: (e.Modifiers & TerminalModifiers.Shift) != 0);
+                    _ = TryToggleColumnSortDirection(columns[sortColumnIndex].Key, additive: IsAdditiveSortModifier(e.Modifiers));
                 }
             }
 
@@ -1808,6 +1808,9 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
     private bool CanFilter => View is IFilterableDataGridView;
 
     private bool CanSort => View is ISortableDataGridView;
+
+    private static bool IsAdditiveSortModifier(TerminalModifiers modifiers)
+        => (modifiers & (TerminalModifiers.Ctrl | TerminalModifiers.Alt)) != 0;
 
     private bool TryGetSortableColumn(string columnKey, out DataGridColumn? column)
     {

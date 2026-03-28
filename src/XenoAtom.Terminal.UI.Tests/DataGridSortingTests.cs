@@ -149,6 +149,54 @@ public sealed class DataGridSortingTests
         Assert.AreEqual("a", ((SortRow)view.CurrentSnapshot.GetRowModel(0)).Name);
     }
 
+    [TestMethod]
+    public void DataGrid_Header_Sort_Button_Uses_Ctrl_Click_For_Additive_Sort()
+    {
+        var groupAccessor = new BindingAccessor<string>("group", o => ((GroupedSortRow)o).Group, (o, v) => ((GroupedSortRow)o).Group = v);
+        var nameAccessor = new BindingAccessor<string>("name", o => ((GroupedSortRow)o).Name, (o, v) => ((GroupedSortRow)o).Name = v);
+
+        var doc = new DataGridListDocument<GroupedSortRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("group", "Group", typeof(string), ReadOnly: false, groupAccessor),
+            new DataGridColumnInfo("name", "Name", typeof(string), ReadOnly: false, nameAccessor),
+        });
+
+        doc.AddRow(new GroupedSortRow { Group = "B", Name = "a", Sequence = 0 });
+        doc.AddRow(new GroupedSortRow { Group = "A", Name = "b", Sequence = 1 });
+        doc.AddRow(new GroupedSortRow { Group = "A", Name = "a", Sequence = 2 });
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowRowAnchor = false };
+        grid.Columns.Add(new DataGridColumn<string> { Key = "group", TypedValueAccessor = groupAccessor, Width = GridLength.Fixed(7), Sortable = true });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "name", TypedValueAccessor = nameAccessor, Width = GridLength.Fixed(6), Sortable = true });
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(16, 5));
+        driver.Tick();
+
+        var groupSortButtonX = grid.Bounds.X + 6;
+        var nameSortButtonX = grid.Bounds.X + 13;
+        var sortButtonY = grid.Bounds.Y;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = groupSortButtonX, Y = sortButtonY });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = groupSortButtonX, Y = sortButtonY });
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = nameSortButtonX, Y = sortButtonY, Modifiers = TerminalModifiers.Ctrl });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = nameSortButtonX, Y = sortButtonY, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+
+        var sorts = grid.SortDescriptions.ToArray();
+        CollectionAssert.AreEqual(
+            new[]
+            {
+                new DataGridSortDescription("group", DataGridSortDirection.Descending),
+                new DataGridSortDescription("name", DataGridSortDirection.Descending),
+            },
+            sorts);
+    }
+
     private sealed class SortRow
     {
         public string Name { get; set; } = string.Empty;
