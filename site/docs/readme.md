@@ -10,7 +10,8 @@ It supports both:
 - Inline widgets that render as part of normal terminal output (`Terminal.Write`, `Terminal.Live`)
 - Fullscreen applications (alternate screen, focus navigation, routed input, dialogs, etc.)
 
-This guide documents the concepts, features, and controls of the library.
+This guide documents the concepts, features, and controls of the library, including interactive controls such as
+`DataGridControl` with sorting, filtering, search, resizing, and inline editing.
 
 ![Fullscreen demo screenshot](../img/fullscreen.png){.terminal}
 

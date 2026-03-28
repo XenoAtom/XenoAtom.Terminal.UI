@@ -5,7 +5,7 @@ title: DataGridControl
 # DataGridControl
 
 `DataGridControl` is an interactive, virtualized, data-bound table control intended for large datasets and rich interaction:
-scrolling, selection, searching/filtering, column resizing, and inline editing.
+scrolling, selection, sorting, searching/filtering, column resizing, and inline editing.
 
 The lower-level contracts and data model live in [DataGrid Specs](../specs/controls/datagrid.md).
 
@@ -53,6 +53,7 @@ grid.Columns.Add(new DataGridColumn<int>
     TypedValueAccessor = MyRow.Accessor.Id,
     Width = GridLength.Auto,
     CellAlignment = TextAlignment.Right,
+    Sortable = true,
 });
 
 grid.Columns.Add(new DataGridColumn<string>
@@ -60,6 +61,7 @@ grid.Columns.Add(new DataGridColumn<string>
     Key = MyRow.Accessor.Name.Name,
     TypedValueAccessor = MyRow.Accessor.Name,
     Width = GridLength.Star(1),
+    Sortable = true,
 });
 
 var root = new ScrollViewer(grid);
@@ -96,11 +98,30 @@ You can resize columns at runtime:
 > Auto-size scans the entire column. For very large datasets, prefer `AutoSizeSampleRowCount`-style sizing
 > (the default auto sizing) and use auto-size on demand.
 
+## Sorting
+
+Sorting is opt-in per UI column:
+
+- set `DataGridColumn.Sortable = true` to show the header sort button,
+- optionally set `DataGridColumn<T>.SortComparer` to override the default `Comparer<T>.Default`,
+- click the header sort button to cycle `None -> Descending -> Ascending -> None`,
+- `Shift+click` adds/removes secondary sorts so multi-column sorts are additive and stable.
+
+You can also sort programmatically:
+
+```csharp
+grid.TrySetColumnSortDirection(MyRow.Accessor.Name.Name, DataGridSortDirection.Ascending);
+grid.TrySetColumnSortDirection(MyRow.Accessor.Id.Name, DataGridSortDirection.Descending, additive: true);
+```
+
+When the view is a `DataGridDocumentView`, any configured `SortComparer` is forwarded automatically.
+
 ## Input
 
 - `Ctrl+F`: open find UI (uses `SearchReplacePopup` in find mode)
 - `F3` / `Shift+F3`: next / previous match
 - `F4`: toggle filter row (when `View` is filterable)
+- click header sort button: toggle sort (`Shift+click` for additive multi-sort)
 - Arrow keys / PageUp / PageDown: navigate the current cell
 - `F2` or `Enter`: edit current cell (when editable)
 

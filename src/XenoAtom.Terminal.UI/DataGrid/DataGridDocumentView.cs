@@ -16,11 +16,12 @@ namespace XenoAtom.Terminal.UI.DataGrid;
 /// For very large or remote datasets, applications should implement <see cref="IDataGridView"/> directly.
 /// </para>
 /// </remarks>
-public sealed class DataGridDocumentView : ISortableDataGridView, IFilterableDataGridView, ISearchableDataGridView, IDisposable
+public sealed class DataGridDocumentView : ISortableDataGridView, IFilterableDataGridView, ISearchableDataGridView, IConfigurableSortableDataGridView, IDisposable
 {
     private readonly IDataGridDocument _document;
     private readonly List<DataGridSortDescription> _sorts;
     private readonly List<DataGridFilterDescription> _filters;
+    private readonly Dictionary<string, IComparer<object?>> _sortComparers;
     private SearchQuery _searchQuery;
 
     private int _version;
@@ -40,6 +41,7 @@ public sealed class DataGridDocumentView : ISortableDataGridView, IFilterableDat
         _culture = culture ?? CultureInfo.InvariantCulture;
         _sorts = new List<DataGridSortDescription>();
         _filters = new List<DataGridFilterDescription>();
+        _sortComparers = new Dictionary<string, IComparer<object?>>(StringComparer.Ordinal);
         _searchQuery = default;
 
         _rowMap = Array.Empty<int>();
@@ -60,6 +62,68 @@ public sealed class DataGridDocumentView : ISortableDataGridView, IFilterableDat
 
     /// <inheritdoc />
     public IReadOnlyList<DataGridSortDescription> SortDescriptions => _sorts;
+
+    void IConfigurableSortableDataGridView.ConfigureSortComparers(IReadOnlyList<DataGridSortComparerConfiguration> comparers)
+    {
+        ArgumentNullException.ThrowIfNull(comparers);
+
+        var nextComparers = new Dictionary<string, IComparer<object?>>(comparers.Count, StringComparer.Ordinal);
+        for (var i = 0; i < comparers.Count; i++)
+        {
+            var comparer = comparers[i];
+            if (string.IsNullOrEmpty(comparer.ColumnKey))
+            {
+                continue;
+            }
+
+            nextComparers[comparer.ColumnKey] = comparer.Comparer;
+        }
+
+        var changed = _sortComparers.Count != nextComparers.Count;
+        if (!changed)
+        {
+            foreach (var pair in nextComparers)
+            {
+                if (!_sortComparers.TryGetValue(pair.Key, out var existing) || !ReferenceEquals(existing, pair.Value))
+                {
+                    changed = true;
+                    break;
+                }
+            }
+        }
+
+        if (!changed)
+        {
+            return;
+        }
+
+        var activeSortAffected = false;
+        if (_sorts.Count != 0)
+        {
+            for (var i = 0; i < _sorts.Count; i++)
+            {
+                var columnKey = _sorts[i].ColumnKey;
+                var oldFound = _sortComparers.TryGetValue(columnKey, out var oldComparer);
+                var newFound = nextComparers.TryGetValue(columnKey, out var newComparer);
+                if (oldFound != newFound || (oldFound && !ReferenceEquals(oldComparer, newComparer)))
+                {
+                    activeSortAffected = true;
+                    break;
+                }
+            }
+        }
+
+        _sortComparers.Clear();
+        foreach (var pair in nextComparers)
+        {
+            _sortComparers.Add(pair.Key, pair.Value);
+        }
+
+        if (activeSortAffected)
+        {
+            Rebuild(kind: DataGridChangeKind.Projection);
+        }
+    }
 
     /// <inheritdoc />
     public void SetSortDescriptions(IReadOnlyList<DataGridSortDescription> sortDescriptions)
@@ -162,7 +226,7 @@ public sealed class DataGridDocumentView : ISortableDataGridView, IFilterableDat
             var a = column.Accessor.GetValueAsObject(rowA);
             var b = column.Accessor.GetValueAsObject(rowB);
 
-            var cmp = CompareValues(a, b);
+            var cmp = CompareValues(s.ColumnKey, a, b);
             if (cmp == 0)
             {
                 continue;
@@ -225,6 +289,16 @@ public sealed class DataGridDocumentView : ISortableDataGridView, IFilterableDat
 
         columnIndex = -1;
         return false;
+    }
+
+    private int CompareValues(string columnKey, object? a, object? b)
+    {
+        if (_sortComparers.TryGetValue(columnKey, out var comparer))
+        {
+            return comparer.Compare(a, b);
+        }
+
+        return CompareValues(a, b);
     }
 
     private static int CompareValues(object? a, object? b)
@@ -297,4 +371,3 @@ public sealed class DataGridDocumentView : ISortableDataGridView, IFilterableDat
         }
     }
 }
-

@@ -68,6 +68,7 @@ public sealed class DataGridDemo : ControlsDemoBase
 
         return new VStack(
                 DemoUi.Hint("Wrap DataGridControl in a ScrollViewer to show scrollbars."),
+                DemoUi.Hint("Click a header sort button to cycle off/descending/ascending. Shift+click adds a secondary sort."),
                 DemoUi.Hint("Ctrl+F: search (find), F3/Shift+F3: next/previous match"),
                 DemoUi.Hint("F4: toggle filter row, F2: edit current cell"),
                 controls,
@@ -130,10 +131,10 @@ public sealed class DataGridDemo : ControlsDemoBase
             .FrozenRows(frozenRows)
             .ReadOnly(readOnly);
 
-        grid.Columns.Add(new DataGridColumn<int> { Key = laneAccessor.Name, TypedValueAccessor = laneAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right });
-        grid.Columns.Add(new DataGridColumn<string> { Key = swimmerAccessor.Name, TypedValueAccessor = swimmerAccessor, Width = GridLength.Star(2) });
-        grid.Columns.Add(new DataGridColumn<string> { Key = countryAccessor.Name, TypedValueAccessor = countryAccessor, Width = GridLength.Star(2) });
-        grid.Columns.Add(new DataGridColumn<double> { Key = timeAccessor.Name, TypedValueAccessor = timeAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right });
+        grid.Columns.Add(new DataGridColumn<int> { Key = laneAccessor.Name, TypedValueAccessor = laneAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right, Sortable = true });
+        grid.Columns.Add(new DataGridColumn<string> { Key = swimmerAccessor.Name, TypedValueAccessor = swimmerAccessor, Width = GridLength.Star(2), Sortable = true });
+        grid.Columns.Add(new DataGridColumn<string> { Key = countryAccessor.Name, TypedValueAccessor = countryAccessor, Width = GridLength.Star(2), Sortable = true });
+        grid.Columns.Add(new DataGridColumn<double> { Key = timeAccessor.Name, TypedValueAccessor = timeAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right, Sortable = true });
 
         var themed = new Border(new ScrollViewer(grid).MinHeight(12).MaxHeight(12))
             .Style(BorderStyle.Rounded)
@@ -168,6 +169,9 @@ public sealed class DataGridDemo : ControlsDemoBase
 
         var rnd = new Random(123);
         var categories = new[] { "Fuel", "Food", "Tools", "Tickets", "Coffee", "Repairs", "Books" };
+        var categoryOrder = categories
+            .Select((name, index) => (name, index))
+            .ToDictionary(static x => x.name, static x => x.index, StringComparer.Ordinal);
 
         for (var i = 0; i < 180; i++)
         {
@@ -195,10 +199,27 @@ public sealed class DataGridDemo : ControlsDemoBase
             .FrozenRows(frozenRows)
             .ReadOnly(readOnly);
 
-        grid.Columns.Add(new DataGridColumn<string> { Key = "date", TypedValueAccessor = dateAccessor, Width = GridLength.Auto });
-        grid.Columns.Add(new DataGridColumn<string> { Key = "desc", TypedValueAccessor = descAccessor, Width = GridLength.Star(3) });
-        grid.Columns.Add(new DataGridColumn<double> { Key = "amount", TypedValueAccessor = amountAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right });
-        grid.Columns.Add(new DataGridColumn<string> { Key = "cat", TypedValueAccessor = categoryAccessor, Width = GridLength.Star(1) });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "date", TypedValueAccessor = dateAccessor, Width = GridLength.Auto, Sortable = true });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "desc", TypedValueAccessor = descAccessor, Width = GridLength.Star(3), Sortable = true });
+        grid.Columns.Add(new DataGridColumn<double> { Key = "amount", TypedValueAccessor = amountAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right, Sortable = true });
+        grid.Columns.Add(new DataGridColumn<string>
+        {
+            Key = "cat",
+            TypedValueAccessor = categoryAccessor,
+            Width = GridLength.Star(1),
+            Sortable = true,
+            SortComparer = Comparer<string>.Create((left, right) =>
+            {
+                var leftRank = categoryOrder.TryGetValue(left, out var rank) ? rank : int.MaxValue;
+                var rightRank = categoryOrder.TryGetValue(right, out rank) ? rank : int.MaxValue;
+                return leftRank != rightRank
+                    ? leftRank.CompareTo(rightRank)
+                    : string.Compare(left, right, StringComparison.Ordinal);
+            }),
+        });
+
+        _ = grid.TrySetColumnSortDirection("cat", DataGridSortDirection.Ascending);
+        _ = grid.TrySetColumnSortDirection("amount", DataGridSortDirection.Descending, additive: true);
 
         var styled = new Border(new ScrollViewer(grid).MinHeight(12).MaxHeight(12))
             .Style(BorderStyle.Single)
@@ -259,9 +280,9 @@ public sealed class DataGridDemo : ControlsDemoBase
             .FrozenRows(frozenRows)
             .ReadOnly(readOnly);
 
-        grid.Columns.Add(new DataGridColumn<int> { Key = "id", TypedValueAccessor = idAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right });
-        grid.Columns.Add(new DataGridColumn<string> { Key = "planet", TypedValueAccessor = planetAccessor, Width = GridLength.Star(2) });
-        grid.Columns.Add(new DataGridColumn<double> { Key = "distance_au", TypedValueAccessor = distAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right });
+        grid.Columns.Add(new DataGridColumn<int> { Key = "id", TypedValueAccessor = idAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right, Sortable = true });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "planet", TypedValueAccessor = planetAccessor, Width = GridLength.Star(2), Sortable = true });
+        grid.Columns.Add(new DataGridColumn<double> { Key = "distance_au", TypedValueAccessor = distAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right, Sortable = true });
 
         var framed = new Border(new ScrollViewer(grid).MinHeight(12).MaxHeight(12))
             .Style(BorderStyle.Double)

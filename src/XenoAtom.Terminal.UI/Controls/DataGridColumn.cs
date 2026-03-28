@@ -102,6 +102,15 @@ public abstract partial class DataGridColumn : IVisualElement
     public partial bool ReadOnly { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether this column participates in sorting.
+    /// </summary>
+    /// <remarks>
+    /// Sorting UI is only shown when the owning <see cref="DataGridControl"/> is bound to a sortable view.
+    /// </remarks>
+    [Bindable]
+    public partial bool Sortable { get; set; }
+
+    /// <summary>
     /// Gets the CLR type of the cell values in this column.
     /// </summary>
     public abstract Type ValueType { get; }
@@ -110,6 +119,18 @@ public abstract partial class DataGridColumn : IVisualElement
     /// Gets the accessor used to create bindings against a row model for this column.
     /// </summary>
     public abstract BindingAccessor ValueAccessor { get; }
+
+    partial void OnKeyChanged(string value)
+    {
+        _ = value;
+        NotifySortConfigurationChanged();
+    }
+
+    partial void OnSortableChanged(bool value)
+    {
+        _ = value;
+        NotifySortConfigurationChanged();
+    }
 
     internal void Attach(DataGridControl owner) => _owner = owner;
 
@@ -121,7 +142,11 @@ public abstract partial class DataGridColumn : IVisualElement
         }
     }
 
+    internal void NotifySortConfigurationChanged() => _owner?.OnColumnSortConfigurationChanged();
+
     internal abstract string FormatValue(Visual owner, object rowModel, CultureInfo culture);
+
+    internal virtual IComparer<object?>? CreateSortComparer() => null;
 
     internal abstract bool HasDisplayTemplate(Visual owner, bool effectiveReadOnly);
 
@@ -179,7 +204,30 @@ public sealed partial class DataGridColumn<T> : DataGridColumn
     [Bindable]
     public partial DataTemplate<T> CellEditorTemplate { get; set; }
 
+    /// <summary>
+    /// Gets or sets the optional comparer used when this sortable column is sorted.
+    /// </summary>
+    /// <remarks>
+    /// When <see cref="DataGridColumn.Sortable"/> is <see langword="true"/> and this property is not set,
+    /// the grid uses <see cref="Comparer{T}.Default"/>.
+    /// </remarks>
+    [Bindable]
+    public partial IComparer<T>? SortComparer { get; set; }
+
+    private IComparer<object?>? _cachedSortComparer;
+    private IComparer<T>? _cachedTypedSortComparer;
+    private bool _cachedUsesDefaultComparer;
+
     partial void OnTypedValueAccessorChanging(ref BindingAccessor<T> value) => ArgumentNullException.ThrowIfNull(value);
+
+    partial void OnSortComparerChanged(IComparer<T>? value)
+    {
+        _ = value;
+        _cachedSortComparer = null;
+        _cachedTypedSortComparer = null;
+        _cachedUsesDefaultComparer = false;
+        NotifySortConfigurationChanged();
+    }
 
     internal override string FormatValue(Visual owner, object rowModel, CultureInfo culture)
     {
@@ -252,6 +300,29 @@ public sealed partial class DataGridColumn<T> : DataGridColumn
         return false;
     }
 
+    internal override IComparer<object?>? CreateSortComparer()
+    {
+        if (!Sortable)
+        {
+            return null;
+        }
+
+        var typedComparer = SortComparer;
+        var usesDefaultComparer = typedComparer is null;
+        if (_cachedSortComparer is not null &&
+            ReferenceEquals(_cachedTypedSortComparer, typedComparer) &&
+            _cachedUsesDefaultComparer == usesDefaultComparer)
+        {
+            return _cachedSortComparer;
+        }
+
+        var effectiveComparer = typedComparer ?? Comparer<T>.Default;
+        _cachedTypedSortComparer = typedComparer;
+        _cachedUsesDefaultComparer = usesDefaultComparer;
+        _cachedSortComparer = new UntypedSortComparer(effectiveComparer);
+        return _cachedSortComparer;
+    }
+
     private DataTemplate<T> ResolveDisplayTemplate(Visual owner, bool effectiveReadOnly)
     {
         _ = owner;
@@ -291,5 +362,35 @@ public sealed partial class DataGridColumn<T> : DataGridColumn
         }
 
         return default;
+    }
+
+    private sealed class UntypedSortComparer : IComparer<object?>
+    {
+        private readonly IComparer<T> _comparer;
+
+        public UntypedSortComparer(IComparer<T> comparer)
+        {
+            _comparer = comparer;
+        }
+
+        public int Compare(object? x, object? y)
+        {
+            if (ReferenceEquals(x, y))
+            {
+                return 0;
+            }
+
+            if (x is null)
+            {
+                return -1;
+            }
+
+            if (y is null)
+            {
+                return 1;
+            }
+
+            return _comparer.Compare((T)x, (T)y);
+        }
     }
 }

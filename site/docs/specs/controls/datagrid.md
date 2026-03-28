@@ -420,6 +420,11 @@ public abstract partial class DataGridColumn : IVisualElement
     [Bindable] public bool ReadOnly { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether this column participates in sorting.
+    /// </summary>
+    [Bindable] public bool Sortable { get; set; }
+
+    /// <summary>
     /// Gets the CLR type of the cell values in this column.
     /// </summary>
     public abstract Type ValueType { get; }
@@ -470,6 +475,11 @@ public sealed partial class DataGridColumn<T> : DataGridColumn
     /// in the environment; if none is found, DataGrid uses built-in editors for common types.
     /// </summary>
     [Bindable] public DataTemplate<T> CellEditorTemplate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional comparer used when this sortable column is sorted.
+    /// </summary>
+    [Bindable] public IComparer<T>? SortComparer { get; set; }
 }
 ```
 
@@ -692,8 +702,12 @@ Sorting MUST be expressed through the view layer when possible:
 
 Suggested UX:
 
-- click header toggles `None → Asc → Desc → None`
+- sortable columns render a sort button in the header (right aligned inside the header cell)
+- click the sort button toggles `None → Desc → Asc → None`
 - `Shift+click` adds/removes secondary sort (multi-sort)
+- programmatic sorting is available through `DataGridControl.TrySetColumnSortDirection(...)`
+- the default `DataGridDocumentView` preserves row stability by using the full active sort description list and falling
+  back to document order for ties
 
 ### Filtering
 

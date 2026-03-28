@@ -79,6 +79,7 @@ public enum DataGridEditMode
 public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwner
 {
     private const int AutoSizeSampleRowCount = 64;
+    private const int SortButtonWidth = 2;
 
     private readonly ScrollModel _scroll;
     private readonly BindableList<DataGridColumn> _columns;
@@ -134,6 +135,15 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
 
     [Bindable]
     private partial int HoveredResizeColumnIndex { get; set; }
+
+    [Bindable]
+    private partial int HoveredSortColumnIndex { get; set; }
+
+    [Bindable]
+    private partial int PressedSortColumnIndex { get; set; }
+
+    [Bindable]
+    private partial bool IsSortPressedInside { get; set; }
 
     private int _lastMatchesKey;
     private readonly List<DataGridCell> _matches;
@@ -343,6 +353,8 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         this.CurrentCell(DataGridCell.None);
         this.SelectedRow(-1);
         HoveredResizeColumnIndex = -1;
+        HoveredSortColumnIndex = -1;
+        PressedSortColumnIndex = -1;
     }
 
     /// <summary>
@@ -524,6 +536,97 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
     [Bindable]
     public partial SearchQuery SearchQuery { get; set; }
 
+    /// <summary>
+    /// Gets the current sort descriptions when the view supports sorting.
+    /// </summary>
+    public IReadOnlyList<DataGridSortDescription> SortDescriptions
+        => View is ISortableDataGridView sortable ? sortable.SortDescriptions : Array.Empty<DataGridSortDescription>();
+
+    /// <summary>
+    /// Gets the sort direction for the specified column, or <see langword="null"/> when that column is not sorted.
+    /// </summary>
+    /// <param name="columnKey">The column key.</param>
+    /// <returns>The current sort direction, or <see langword="null"/>.</returns>
+    public DataGridSortDirection? GetColumnSortDirection(string columnKey)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(columnKey);
+
+        var sorts = SortDescriptions;
+        for (var i = 0; i < sorts.Count; i++)
+        {
+            if (string.Equals(sorts[i].ColumnKey, columnKey, StringComparison.Ordinal))
+            {
+                return sorts[i].Direction;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Sets the sort direction for the specified column.
+    /// </summary>
+    /// <param name="columnKey">The column key.</param>
+    /// <param name="direction">The new direction, or <see langword="null"/> to clear the column sort.</param>
+    /// <param name="additive">
+    /// <see langword="true"/> to preserve other active sort descriptions; otherwise the column becomes the only active sort.
+    /// </param>
+    /// <returns><see langword="true"/> if the sort was applied; otherwise <see langword="false"/>.</returns>
+    public bool TrySetColumnSortDirection(string columnKey, DataGridSortDirection? direction, bool additive = false)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(columnKey);
+
+        if (View is not ISortableDataGridView sortable || !TryGetSortableColumn(columnKey, out _))
+        {
+            return false;
+        }
+
+        ConfigureSortComparers();
+
+        var current = sortable.SortDescriptions;
+        var next = new List<DataGridSortDescription>(additive ? current.Count + 1 : 1);
+        if (additive)
+        {
+            for (var i = 0; i < current.Count; i++)
+            {
+                if (!string.Equals(current[i].ColumnKey, columnKey, StringComparison.Ordinal))
+                {
+                    next.Add(current[i]);
+                }
+            }
+        }
+
+        if (direction is { } appliedDirection)
+        {
+            next.Add(new DataGridSortDescription(columnKey, appliedDirection));
+        }
+
+        sortable.SetSortDescriptions(next);
+        return true;
+    }
+
+    /// <summary>
+    /// Cycles the sort direction for the specified column.
+    /// </summary>
+    /// <param name="columnKey">The column key.</param>
+    /// <param name="additive">
+    /// <see langword="true"/> to preserve other active sort descriptions; otherwise the column becomes the only active sort.
+    /// </param>
+    /// <returns><see langword="true"/> if the sort was applied; otherwise <see langword="false"/>.</returns>
+    public bool TryToggleColumnSortDirection(string columnKey, bool additive = false)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(columnKey);
+
+        DataGridSortDirection? nextDirection = GetColumnSortDirection(columnKey) switch
+        {
+            null => DataGridSortDirection.Descending,
+            DataGridSortDirection.Descending => DataGridSortDirection.Ascending,
+            _ => null,
+        };
+
+        return TrySetColumnSortDirection(columnKey, nextDirection, additive);
+    }
+
     [Bindable]
     private partial int ScrollVersion { get; set; }
 
@@ -635,6 +738,11 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             _appliedView.Changed += OnViewChangedEvent;
             SourceVersion = _appliedView.CurrentSnapshot.Version;
         }
+
+        HoveredSortColumnIndex = -1;
+        PressedSortColumnIndex = -1;
+        IsSortPressedInside = false;
+        ConfigureSortComparers();
     }
 
     private void OnSourceChanged(object? sender, DataGridDocumentChangedEventArgs e)
@@ -854,6 +962,9 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         _ = SourceVersion;
         _ = IsTableSelected;
         _ = HoveredResizeColumnIndex;
+        _ = HoveredSortColumnIndex;
+        _ = PressedSortColumnIndex;
+        _ = IsSortPressedInside;
 
         var snapshot = GetSnapshot();
         if (snapshot is null)
@@ -877,6 +988,9 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         var frozenRows = Math.Clamp(FrozenRows, 0, rowCount);
         var frozenColumns = Math.Clamp(FrozenColumns, 0, visibleColumns);
         var hoveredResize = HoveredResizeColumnIndex;
+        var hoveredSort = HoveredSortColumnIndex;
+        var pressedSort = PressedSortColumnIndex;
+        var sortPressedInside = IsSortPressedInside;
 
         FillRect(buffer, rect, cellStyle);
 
@@ -909,11 +1023,6 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             for (var c = 0; c < cols.Count && c < _resolvedColumnWidths.Length; c++)
             {
                 var col = cols[c];
-                if (col.HeaderVisual is not null)
-                {
-                    continue;
-                }
-
                 var w = _resolvedColumnWidths[c];
                 if (w <= 0)
                 {
@@ -926,8 +1035,28 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
                     continue;
                 }
 
-                var align = col.Column?.HeaderAlignment ?? TextAlignment.Left;
-                WriteAlignedText(buffer, new Rectangle(x, rect.Y, w, 1), col.HeaderText.AsSpan(), headerStyle, align);
+                var buttonRect = GetSortButtonRect(col, x, rect.Y, w);
+                var contentWidth = buttonRect?.X - x ?? w;
+                if (contentWidth > 0 && col.HeaderVisual is null)
+                {
+                    var align = col.Column?.HeaderAlignment ?? TextAlignment.Left;
+                    WriteAlignedText(buffer, new Rectangle(x, rect.Y, contentWidth, 1), col.HeaderText.AsSpan(), headerStyle, align);
+                }
+
+                if (buttonRect is { } resolvedButtonRect)
+                {
+                    var isPressed = pressedSort == c && sortPressedInside;
+                    var isHovered = pressedSort == c ? sortPressedInside : hoveredSort == c;
+                    var buttonStyle = style.ResolveSortButtonStyle(theme, headerStyle, isHovered, isPressed);
+                    FillRect(buffer, resolvedButtonRect, buttonStyle);
+
+                    var glyph = style.ResolveSortButtonGlyph(GetColumnSortDirection(col.Key));
+                    buffer.SetCell(
+                        resolvedButtonRect.X + resolvedButtonRect.Width - 1,
+                        resolvedButtonRect.Y,
+                        glyph,
+                        buttonStyle);
+                }
             }
         }
 
@@ -1055,6 +1184,16 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             return;
         }
 
+        if (headerHeight > 0 && TryHitSortButton(snapshot, e.UiX, e.UiY, rect, out var sortColumnIndex))
+        {
+            HoveredResizeColumnIndex = -1;
+            HoveredSortColumnIndex = sortColumnIndex;
+            PressedSortColumnIndex = sortColumnIndex;
+            IsSortPressedInside = true;
+            e.Handled = true;
+            return;
+        }
+
         if (TryBeginColumnResize(snapshot, e, rect))
         {
             e.Handled = true;
@@ -1117,6 +1256,27 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
     /// <inheritdoc />
     protected override void OnPointerMoved(PointerEventArgs e)
     {
+        if (PressedSortColumnIndex >= 0)
+        {
+            var snapshotForSort = GetSnapshot();
+            if (snapshotForSort is null)
+            {
+                PressedSortColumnIndex = -1;
+                IsSortPressedInside = false;
+            }
+            else
+            {
+                var bounds = Bounds;
+                var isPressedInside = TryHitSortButton(snapshotForSort, e.UiX, e.UiY, bounds, out var pressedSortColumnIndex) &&
+                                      pressedSortColumnIndex == PressedSortColumnIndex;
+                IsSortPressedInside = isPressedInside;
+                HoveredSortColumnIndex = isPressedInside ? pressedSortColumnIndex : -1;
+                HoveredResizeColumnIndex = -1;
+            }
+
+            return;
+        }
+
         if (_resizingColumn && !e.Handled)
         {
             var snapshot = GetSnapshot();
@@ -1179,15 +1339,52 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         if (!rect.Contains(e.UiX, e.UiY))
         {
             HoveredResizeColumnIndex = -1;
+            HoveredSortColumnIndex = -1;
             return;
         }
 
+        if (TryHitSortButton(snapshotForHover, e.UiX, e.UiY, rect, out var hoveredSortColumn))
+        {
+            HoveredSortColumnIndex = hoveredSortColumn;
+            HoveredResizeColumnIndex = -1;
+            return;
+        }
+
+        HoveredSortColumnIndex = -1;
         HoveredResizeColumnIndex = TryHitColumnResizeHandle(snapshotForHover, e.UiX, e.UiY, rect, out var columnIndex) ? columnIndex : -1;
     }
 
     /// <inheritdoc />
     protected override void OnPointerReleased(PointerEventArgs e)
     {
+        if (PressedSortColumnIndex >= 0 && !e.Handled && e.Kind == TerminalMouseKind.Up && e.Button == TerminalMouseButton.Left)
+        {
+            var sortColumnIndex = PressedSortColumnIndex;
+            var activate = IsSortPressedInside;
+
+            PressedSortColumnIndex = -1;
+            IsSortPressedInside = false;
+
+            var snapshot = GetSnapshot();
+            var rect = Bounds;
+            HoveredSortColumnIndex = snapshot is not null && TryHitSortButton(snapshot, e.UiX, e.UiY, rect, out var hoveredSortColumn)
+                ? hoveredSortColumn
+                : -1;
+
+            if (activate && snapshot is not null)
+            {
+                var visibleColumns = GetVisibleColumnCount(snapshot);
+                var columns = EnsureResolvedColumns(snapshot, visibleColumns);
+                if ((uint)sortColumnIndex < (uint)columns.Count)
+                {
+                    _ = TryToggleColumnSortDirection(columns[sortColumnIndex].Key, additive: (e.Modifiers & TerminalModifiers.Shift) != 0);
+                }
+            }
+
+            e.Handled = true;
+            return;
+        }
+
         if (!_resizingColumn || e.Handled)
         {
             return;
@@ -1528,9 +1725,17 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         return _searchError;
     }
 
-    private void AttachColumn(DataGridColumn column) => column.Attach(this);
+    private void AttachColumn(DataGridColumn column)
+    {
+        column.Attach(this);
+        ConfigureSortComparers();
+    }
 
-    private void DetachColumn(DataGridColumn column) => column.Detach(this);
+    private void DetachColumn(DataGridColumn column)
+    {
+        column.Detach(this);
+        ConfigureSortComparers();
+    }
 
     private IDataGridViewSnapshot? GetSnapshot()
     {
@@ -1569,7 +1774,56 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         return count;
     }
 
+    internal void OnColumnSortConfigurationChanged() => ConfigureSortComparers();
+
+    private void ConfigureSortComparers()
+    {
+        if (View is not IConfigurableSortableDataGridView configurableSortableView)
+        {
+            return;
+        }
+
+        if (Columns.Count == 0)
+        {
+            configurableSortableView.ConfigureSortComparers(Array.Empty<DataGridSortComparerConfiguration>());
+            return;
+        }
+
+        var sortComparers = new List<DataGridSortComparerConfiguration>(Columns.Count);
+        for (var i = 0; i < Columns.Count; i++)
+        {
+            var column = Columns[i];
+            var comparer = column.CreateSortComparer();
+            if (comparer is null || string.IsNullOrEmpty(column.Key))
+            {
+                continue;
+            }
+
+            sortComparers.Add(new DataGridSortComparerConfiguration(column.Key, comparer));
+        }
+
+        configurableSortableView.ConfigureSortComparers(sortComparers);
+    }
+
     private bool CanFilter => View is IFilterableDataGridView;
+
+    private bool CanSort => View is ISortableDataGridView;
+
+    private bool TryGetSortableColumn(string columnKey, out DataGridColumn? column)
+    {
+        for (var i = 0; i < Columns.Count; i++)
+        {
+            var candidate = Columns[i];
+            if (candidate.Sortable && string.Equals(candidate.Key, columnKey, StringComparison.Ordinal))
+            {
+                column = candidate;
+                return true;
+            }
+        }
+
+        column = null;
+        return false;
+    }
 
     private int GetEffectiveRowAnchorWidth()
         => ShowRowAnchor ? Math.Max(0, RowAnchorWidth) : 0;
@@ -1761,6 +2015,39 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         return x;
     }
 
+    private int GetHeaderContentWidth(in ResolvedColumn column, int columnWidth)
+    {
+        if (columnWidth <= 0)
+        {
+            return 0;
+        }
+
+        return GetSortButtonWidth(column, columnWidth) is { } buttonWidth && buttonWidth > 0
+            ? Math.Max(0, columnWidth - buttonWidth)
+            : columnWidth;
+    }
+
+    private int GetSortButtonWidth(in ResolvedColumn column, int columnWidth)
+    {
+        if (!CanSort || column.Column?.Sortable != true || columnWidth <= 0)
+        {
+            return 0;
+        }
+
+        return Math.Min(SortButtonWidth, columnWidth);
+    }
+
+    private Rectangle? GetSortButtonRect(in ResolvedColumn column, int x, int y, int columnWidth)
+    {
+        var buttonWidth = GetSortButtonWidth(column, columnWidth);
+        if (buttonWidth <= 0)
+        {
+            return null;
+        }
+
+        return new Rectangle(x + columnWidth - buttonWidth, y, buttonWidth, 1);
+    }
+
     private void ArrangeHeaderAndFilter(Rectangle rect, int headerHeight, int filterHeight, int frozenColumns)
     {
         var yHeader = rect.Y;
@@ -1768,6 +2055,8 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
 
         if (headerHeight > 0)
         {
+            var snapshot = GetSnapshot();
+            var cols = snapshot is null ? null : EnsureResolvedColumns(snapshot, GetVisibleColumnCount(snapshot));
             for (var i = 0; i < _headerVisuals.Count && i < _headerVisualColumns.Count; i++)
             {
                 var visibleColumnIndex = _headerVisualColumns[i];
@@ -1778,6 +2067,16 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
 
                 var x = rect.X + GetColumnX(visibleColumnIndex, rect, frozenColumns);
                 var w = _resolvedColumnWidths[visibleColumnIndex];
+                if (cols is not null && (uint)visibleColumnIndex < (uint)cols.Count)
+                {
+                    w = GetHeaderContentWidth(cols[visibleColumnIndex], w);
+                }
+
+                if (w <= 0)
+                {
+                    continue;
+                }
+
                 // DataGridControl does not measure children in MeasureCore; ensure visuals have a non-zero desired height.
                 _headerVisuals[i].Measure(new LayoutConstraints(0, w, 0, 1));
                 _headerVisuals[i].Arrange(new Rectangle(x, yHeader, w, 1));
@@ -2752,6 +3051,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         var hc = new HashCode();
         hc.Add(snapshot.Version);
         hc.Add(snapshot.ColumnCount);
+        hc.Add(CanSort);
 
         var cols = Columns;
         hc.Add(cols.Count);
@@ -2767,6 +3067,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             hc.Add(c.HeaderAlignment);
             hc.Add(c.CellAlignment);
             hc.Add(c.ReadOnly);
+            hc.Add(c.Sortable);
             hc.Add(c.Header is null ? 0 : RuntimeHelpers.GetHashCode(c.Header));
         }
 
@@ -2777,6 +3078,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
     {
         var header = ui.Header;
         var headerWidth = header is null ? TerminalTextUtility.GetWidth(ui.Key.AsSpan()) : MeasureHeaderVisualWidth(header);
+        headerWidth += ui.Sortable && CanSort ? SortButtonWidth : 0;
         var baseWidth = ResolveBaseWidth(snapshot, ui, ui.ValueAccessor, ui.ValueType, headerWidth, culture);
 
         return new ResolvedColumn(
@@ -2800,6 +3102,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         var headerVisual = ui?.Header;
         var headerText = info.HeaderText;
         var headerWidth = headerVisual is not null ? MeasureHeaderVisualWidth(headerVisual) : TerminalTextUtility.GetWidth(headerText.AsSpan());
+        headerWidth += ui?.Sortable == true && CanSort ? SortButtonWidth : 0;
 
         var minWidth = ui?.MinWidth ?? 0;
         var maxWidth = ui?.MaxWidth ?? int.MaxValue;
@@ -3123,6 +3426,42 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             }
 
             if (handleRect.Contains(uiX, uiY))
+            {
+                columnIndex = c;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool TryHitSortButton(IDataGridViewSnapshot snapshot, int uiX, int uiY, Rectangle rect, out int columnIndex)
+    {
+        columnIndex = -1;
+        if (!CanSort || !ShowHeader || !rect.Contains(uiX, uiY) || uiY != rect.Y)
+        {
+            return false;
+        }
+
+        var visibleColumns = GetVisibleColumnCount(snapshot);
+        if (visibleColumns <= 0)
+        {
+            return false;
+        }
+
+        var frozenColumns = Math.Clamp(FrozenColumns, 0, visibleColumns);
+        var columns = EnsureResolvedColumns(snapshot, visibleColumns);
+        for (var c = 0; c < columns.Count && c < _resolvedColumnWidths.Length; c++)
+        {
+            var w = _resolvedColumnWidths[c];
+            if (w <= 0)
+            {
+                continue;
+            }
+
+            var x = rect.X + GetColumnX(c, rect, frozenColumns);
+            var buttonRect = GetSortButtonRect(columns[c], x, rect.Y, w);
+            if (buttonRect is { } resolvedButtonRect && resolvedButtonRect.Contains(uiX, uiY))
             {
                 columnIndex = c;
                 return true;
