@@ -177,10 +177,10 @@ public sealed record DataTemplates : IStyle<DataTemplates>
             => new(binding.Owner, (BindingAccessor<string?>)(object)binding.Accessor);
 
         static Visual DisplayBool(DataTemplateValue<bool> value, in DataTemplateContext _)
-            => new TextBlock(() => value.GetValue() ? "true" : "false");
+            => new CheckBox("", value.GetBinding()).IsEnabled(false);
 
         static Visual EditBindingBool(Binding<bool> binding, in DataTemplateContext _)
-            => new Switch().IsOn(binding);
+            => new CheckBox("", binding);
 
         static Visual DisplayFormattable<T>(DataTemplateValue<T> value, in DataTemplateContext context)
         {

@@ -36,6 +36,17 @@ public readonly record struct DataTemplateValue<T>
     }
 
     /// <summary>
+    /// Gets a value indicating whether the current instance has an active binding.
+    /// </summary>
+    public bool IsBinding => !_binding.IsEmpty;
+    
+    /// <summary>
+    /// Returns the underlying binding instance of type Binding&lt;T>.
+    /// </summary>
+    /// <returns>The binding instance associated with the current object.</returns>
+    public Binding<T> GetBinding() => _binding;
+
+    /// <summary>
     /// Gets the current value.
     /// </summary>
     /// <remarks>
