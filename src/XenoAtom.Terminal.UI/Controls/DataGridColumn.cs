@@ -325,10 +325,9 @@ public sealed partial class DataGridColumn<T> : DataGridColumn
 
     private DataTemplate<T> ResolveDisplayTemplate(Visual owner, bool effectiveReadOnly)
     {
-        _ = owner;
-
         // DataGrid is optimized for fast rendering: it draws plain text directly unless a per-column
-        // display template is explicitly provided.
+        // display template is explicitly provided. Bool is the notable built-in exception because its
+        // default template is intentionally non-textual (checkbox glyphs).
         if (effectiveReadOnly)
         {
             if (!ReadOnlyCellTemplate.IsEmpty)
@@ -341,10 +340,26 @@ public sealed partial class DataGridColumn<T> : DataGridColumn
                 return CellTemplate;
             }
 
-            return default;
+            if (typeof(T) != typeof(bool))
+            {
+                return default;
+            }
+        }
+        else if (!CellTemplate.IsEmpty)
+        {
+            return CellTemplate;
         }
 
-        return CellTemplate.IsEmpty ? default : CellTemplate;
+        if (typeof(T) == typeof(bool))
+        {
+            var templates = owner.GetStyle<DataTemplates>();
+            if (templates.TryResolve<T>(DataTemplateRole.Display, out var template) && !template.IsEmpty && template.Display is not null)
+            {
+                return template;
+            }
+        }
+
+        return default;
     }
 
     private DataTemplate<T> ResolveEditorTemplate(Visual owner)

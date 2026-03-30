@@ -7,6 +7,8 @@ using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.DataGrid;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Layout;
+using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Templating;
 using System.Linq;
 
 namespace XenoAtom.Terminal.UI.Tests;
@@ -474,6 +476,145 @@ public sealed class DataGridRenderingTests
 
         // When the caret is forced to the right, the editor should horizontally scroll and show an overflow indicator.
         Assert.IsTrue(rendered.Contains("←", StringComparison.Ordinal) || rendered.Contains("→", StringComparison.Ordinal), $"bounds={focusedTextBox.Bounds} text=[{rendered}]");
+    }
+
+    [TestMethod]
+    public void DataGrid_Editing_Cell_Clears_Display_Content_Behind_Editor()
+    {
+        var textAccessor = new BindingAccessor<string>("text", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
+
+        var doc = new DataGridListDocument<TextRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("text", "Text", typeof(string), ReadOnly: false, textAccessor),
+        });
+
+        doc.AddRow(new TextRow { Text = "ABCDTAIL" });
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false };
+        grid.Columns.Add(new DataGridColumn<string>
+        {
+            Key = "text",
+            TypedValueAccessor = textAccessor,
+            Width = GridLength.Fixed(10),
+            CellEditorTemplate = new DataTemplate<string>(
+                Display: null,
+                Editor: static (Binding<string> _, in DataTemplateContext _) => new TextBlock("ED")),
+        });
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(10, 2));
+        driver.Tick();
+        driver.App.Focus(grid);
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(10, 2);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText().Split('\n')[0].TrimEnd('\r');
+        StringAssert.Contains(rendered, "TAIL", "Expected the display template to be visible before editing starts.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F2 });
+        driver.Tick();
+
+        screen = new AnsiTestScreen(10, 2);
+        screen.Apply(driver.Backend.GetOutText());
+        rendered = screen.GetText().Split('\n')[0].TrimEnd('\r');
+
+        Assert.IsFalse(rendered.Contains("TAIL", StringComparison.Ordinal), $"Expected the display content to be cleared behind the editor. rendered=[{rendered}]");
+    }
+
+    [TestMethod]
+    public void DataGrid_Schema_Bool_Cell_Uses_Default_CheckBox_Display()
+    {
+        var boolAccessor = new BindingAccessor<bool>("enabled", o => ((BoolRow)o).Value, (o, v) => ((BoolRow)o).Value = v);
+
+        var doc = new DataGridListDocument<BoolRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("enabled", "enabled", typeof(bool), ReadOnly: false, boolAccessor),
+        });
+
+        doc.AddRow(new BoolRow { Value = true });
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false };
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(6, 2));
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(6, 2);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText().Split('\n')[0].TrimEnd('\r');
+
+        Assert.IsFalse(rendered.Contains("true", StringComparison.OrdinalIgnoreCase), $"Expected bool cells to use the default display template instead of plain text. rendered=[{rendered}]");
+        StringAssert.Contains(rendered, CheckBoxStyle.Default.CheckedGlyph.ToString());
+    }
+
+    [TestMethod]
+    public void DataGrid_Schema_Bool_Cell_Uses_Default_CheckBox_Editor()
+    {
+        var boolAccessor = new BindingAccessor<bool>("enabled", o => ((BoolRow)o).Value, (o, v) => ((BoolRow)o).Value = v);
+
+        var doc = new DataGridListDocument<BoolRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("enabled", "enabled", typeof(bool), ReadOnly: false, boolAccessor),
+        });
+
+        var row = new BoolRow { Value = true };
+        doc.AddRow(row);
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false };
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(8, 2));
+        driver.Tick();
+        driver.App.Focus(grid);
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F2 });
+        driver.Tick();
+
+        var checkBox = grid.EnumerateVisualsDepthFirst().OfType<CheckBox>().FirstOrDefault(c => c.HasFocus);
+        Assert.IsNotNull(checkBox, "Expected a focused CheckBox editor for schema bool cells.");
+        Assert.IsTrue(checkBox.IsChecked);
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Space });
+        driver.Tick();
+
+        Assert.IsFalse(row.Value);
+    }
+
+    [TestMethod]
+    public void DataGrid_Column_Bool_Cell_Uses_Default_CheckBox_Display()
+    {
+        var boolAccessor = new BindingAccessor<bool>("enabled", o => ((BoolRow)o).Value, (o, v) => ((BoolRow)o).Value = v);
+
+        var doc = new DataGridListDocument<BoolRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("enabled", "enabled", typeof(bool), ReadOnly: false, boolAccessor),
+        });
+
+        doc.AddRow(new BoolRow { Value = true });
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false };
+        grid.Columns.Add(new DataGridColumn<bool> { Key = "enabled", TypedValueAccessor = boolAccessor, Width = GridLength.Fixed(4) });
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(6, 2));
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(6, 2);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText().Split('\n')[0].TrimEnd('\r');
+
+        Assert.IsFalse(rendered.Contains("true", StringComparison.OrdinalIgnoreCase), $"Expected bool columns to use the default display template instead of plain text. rendered=[{rendered}]");
+        StringAssert.Contains(rendered, CheckBoxStyle.Default.CheckedGlyph.ToString());
     }
 
     [TestMethod]
@@ -954,4 +1095,10 @@ public sealed class DataGridRenderingTests
     {
         public int Value { get; set; }
     }
+
+    private sealed class BoolRow
+    {
+        public bool Value { get; set; }
+    }
+
 }

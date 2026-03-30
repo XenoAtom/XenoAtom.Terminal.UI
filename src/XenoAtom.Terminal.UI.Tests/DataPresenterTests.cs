@@ -80,7 +80,7 @@ public sealed class DataPresenterTests
     }
 
     [TestMethod]
-    public void DataPresenter_Default_Bool_Display_Is_Lowercase()
+    public void DataPresenter_Default_Bool_Display_Uses_CheckBox()
     {
         var value = new State<bool>(true);
 
@@ -89,13 +89,14 @@ public sealed class DataPresenterTests
         using var driver = new TerminalAppTestDriver(new VStack { presenter }, TerminalHostKind.Fullscreen, new TerminalSize(20, 5));
         driver.Tick();
 
-        Assert.IsInstanceOfType<TextBlock>(presenter.GetChildUnsafe(0));
-        var textBlock = (TextBlock)presenter.GetChildUnsafe(0);
-        Assert.AreEqual("true", textBlock.Text);
+        Assert.IsInstanceOfType<CheckBox>(presenter.GetChildUnsafe(0));
+        var checkBox = (CheckBox)presenter.GetChildUnsafe(0);
+        Assert.IsTrue(checkBox.IsChecked);
+        Assert.IsFalse(checkBox.IsEnabled);
 
         value.Value = false;
         driver.Tick();
-        Assert.AreEqual("false", textBlock.Text);
+        Assert.IsFalse(checkBox.IsChecked);
     }
 
     [TestMethod]

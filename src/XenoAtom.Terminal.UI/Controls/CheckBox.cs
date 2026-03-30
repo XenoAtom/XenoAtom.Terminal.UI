@@ -25,6 +25,26 @@ public sealed partial class CheckBox : Visual
     }
 
     /// <summary>
+    /// Initializes a new instance of the CheckBox class with the specified checked state.
+    /// </summary>
+    /// <param name="isChecked">A value indicating whether the CheckBox is initially checked. Set to <see langword="true"/> to check the box;
+    /// otherwise, <see langword="false"/>.</param>
+    public CheckBox(bool isChecked) : this()
+    {
+        IsChecked = isChecked;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the CheckBox class and binds its checked state to the specified binding.
+    /// </summary>
+    /// <param name="isChecked">A binding that represents the checked state of the CheckBox. The CheckBox will reflect and update this value as
+    /// its state changes.</param>
+    public CheckBox(Binding<bool> isChecked) : this()
+    {
+        this.BindIsChecked(isChecked);
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="CheckBox"/> class with content.
     /// </summary>
     /// <param name="text">The checkbox label.</param>

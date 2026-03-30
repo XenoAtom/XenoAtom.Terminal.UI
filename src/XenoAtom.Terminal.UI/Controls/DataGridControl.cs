@@ -2270,14 +2270,20 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
 
             for (var c = 0; c < cols.Count; c++)
             {
-                var column = cols[c].Column;
-                if (column is null)
+                if (IsEditingCell(row, c))
                 {
                     continue;
                 }
 
-                var effectiveReadOnly = ReadOnly || column.ReadOnly || cols[c].SchemaReadOnly;
-                if (!column.HasDisplayTemplate(this, effectiveReadOnly))
+                var column = cols[c].Column;
+                var schemaAccessor = cols[c].SchemaAccessor;
+                var schemaValueType = cols[c].SchemaValueType;
+                var effectiveReadOnly = ReadOnly || cols[c].SchemaReadOnly || (column is not null && column.ReadOnly);
+                var hasDisplayVisual = column is not null
+                    ? column.HasDisplayTemplate(this, effectiveReadOnly)
+                    : HasSchemaDisplayTemplate(schemaValueType);
+
+                if (!hasDisplayVisual)
                 {
                     continue;
                 }
@@ -2320,8 +2326,18 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
                 }
 
                 var ctx = ctxBase with { Index = row, State = state };
-                var v = column.CreateOrUpdateDisplayVisual(this, rowModel, ctx, effectiveReadOnly, reused, out _);
+                Visual? v;
+                if (column is not null)
+                {
+                    v = column.CreateOrUpdateDisplayVisual(this, rowModel, ctx, effectiveReadOnly, reused, out _);
+                }
+                else if (!TryCreateSchemaDisplayVisual(schemaValueType, rowModel, schemaAccessor, ctx, reused, out v) || v is null)
+                {
+                    continue;
+                }
+
                 _cellVisuals.Add(v);
+                v.Measure(new LayoutConstraints(0, cellRect.Width, 0, cellRect.Height));
                 v.Arrange(cellRect);
             }
         }
@@ -2381,7 +2397,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
 
         // Built-in schema-driven editors when no explicit UI column/editor exists.
         // This keeps the grid usable even with schema-only documents.
-        if (column is null && TryCreateDefaultEditorFromSchema(schemaValueType, rowModel, schemaAccessor, out var schemaEditor) && schemaEditor is not null)
+        if (column is null && TryCreateDefaultEditorFromSchema(schemaValueType, rowModel, schemaAccessor, ctx, out var schemaEditor) && schemaEditor is not null)
         {
             _activeEditorRowModel = rowModel;
             _activeEditorAccessor = schemaAccessor;
@@ -2443,7 +2459,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         };
     }
 
-    private bool TryCreateDefaultEditorFromSchema(Type? schemaValueType, object rowModel, BindingAccessor accessor, out Visual? editor)
+    private bool TryCreateDefaultEditorFromSchema(Type? schemaValueType, object rowModel, BindingAccessor accessor, in DataTemplateContext context, out Visual? editor)
     {
         editor = null;
         if (schemaValueType is null)
@@ -2453,8 +2469,15 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
 
         if (schemaValueType == typeof(bool))
         {
-            var boolAccessor = WrapAccessor<bool>(accessor);
-            editor = new Switch().IsOn(new Binding<bool>(rowModel, boolAccessor));
+            var boolBinding = new Binding<bool>(rowModel, WrapAccessor<bool>(accessor));
+            var templates = GetStyle<DataTemplates>();
+            if (templates.TryResolve<bool>(DataTemplateRole.Editor, out var template) && !template.IsEmpty && template.Editor is not null)
+            {
+                editor = template.Editor(boolBinding, context);
+                return true;
+            }
+
+            editor = new CheckBox(boolBinding);
             return true;
         }
 
@@ -2902,10 +2925,20 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
 
             var schema = cols[c];
             var column = schema.Column;
-            var effectiveReadOnly = column is not null && (ReadOnly || column.ReadOnly || schema.SchemaReadOnly);
+            var effectiveReadOnly = ReadOnly || schema.SchemaReadOnly || (column is not null && column.ReadOnly);
+            var hasDisplayVisual = column is not null
+                ? column.HasDisplayTemplate(this, effectiveReadOnly)
+                : HasSchemaDisplayTemplate(schema.SchemaValueType);
 
             var isSelected = IsSelectedCell(viewRow, c);
             var style = isSelected || isRowSelected ? selectionStyle : cellStyle;
+            var cellRect = new Rectangle(x, y, w, 1);
+
+            if (IsEditingCell(viewRow, c))
+            {
+                FillRect(buffer, cellRect, style);
+                continue;
+            }
 
             var text = column is not null
                 ? column.FormatValue(this, rowModel, culture)
@@ -2919,15 +2952,55 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
                 }
             }
 
-            if (column is not null && column.HasDisplayTemplate(this, effectiveReadOnly))
+            if (hasDisplayVisual)
             {
-                FillRect(buffer, new Rectangle(x, y, w, 1), style);
+                FillRect(buffer, cellRect, style);
                 continue;
             }
 
-            FillRect(buffer, new Rectangle(x, y, w, 1), style);
-            WriteAlignedText(buffer, new Rectangle(x, y, w, 1), text.AsSpan(), style, column?.CellAlignment ?? TextAlignment.Left);
+            FillRect(buffer, cellRect, style);
+            WriteAlignedText(buffer, cellRect, text.AsSpan(), style, column?.CellAlignment ?? TextAlignment.Left);
         }
+    }
+
+    private bool IsEditingCell(int row, int visibleColumnIndex)
+        => _activeEditor is not null
+           && _activeEditorCell.Row == row
+           && _activeEditorCell.Column == visibleColumnIndex;
+
+    private bool HasSchemaDisplayTemplate(Type? schemaValueType)
+        => schemaValueType == typeof(bool) && TryResolveSchemaBoolDisplayTemplate(out _);
+
+    private bool TryCreateSchemaDisplayVisual(Type? schemaValueType, object rowModel, BindingAccessor accessor, in DataTemplateContext context, Visual? reused, out Visual? visual)
+    {
+        visual = null;
+        if (schemaValueType != typeof(bool) || !TryResolveSchemaBoolDisplayTemplate(out var template))
+        {
+            return false;
+        }
+
+        var binding = new Binding<bool>(rowModel, WrapAccessor<bool>(accessor));
+        var value = new DataTemplateValue<bool>(binding);
+
+        if (reused is not null && template.TryUpdate is { } updater && updater(reused, value, context))
+        {
+            visual = reused;
+            return true;
+        }
+
+        if (reused is not null && template.Release is { } release)
+        {
+            release(reused);
+        }
+
+        visual = template.Display!(value, context);
+        return true;
+    }
+
+    private bool TryResolveSchemaBoolDisplayTemplate(out DataTemplate<bool> template)
+    {
+        var templates = GetStyle<DataTemplates>();
+        return templates.TryResolve<bool>(DataTemplateRole.Display, out template) && !template.IsEmpty && template.Display is not null;
     }
 
     private void RebuildMatchesIfNeeded()
