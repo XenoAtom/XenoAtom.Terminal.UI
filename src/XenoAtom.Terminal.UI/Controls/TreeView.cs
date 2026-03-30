@@ -674,7 +674,9 @@ public sealed partial class TreeView : Visual, IScrollable
             candidate = candidate.Parent;
         }
 
-        return Math.Clamp(SelectedIndex, 0, _visible.Count - 1);
+        // Use the generated backing field directly so PrepareChildren can reconcile selection
+        // without recording a read dependency on SelectedIndex before writing it back.
+        return Math.Clamp(_selectedIndex, 0, _visible.Count - 1);
     }
 
     private void UpdateSelectedNodeFromSelectedIndex(int selectedIndex)

@@ -174,6 +174,7 @@ TreeView both:
 To avoid "read then write the same bindable in one tracking context" errors, TreeView uses the standard pattern:
 - in `PrepareChildren`, copy `Scroll.Version` into a private bindable `ScrollVersion`
 - in `ArrangeCore` and `RenderOverride`, read `ScrollVersion` (not `Scroll.Version`)
+- when selection is reconciled during `PrepareChildren`, clamp against the internal selected-index snapshot rather than re-reading the bindable `SelectedIndex`
 
 This decouples the binding dependency read from the writes performed during arrange.
 

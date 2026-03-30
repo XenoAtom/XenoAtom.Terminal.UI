@@ -78,6 +78,34 @@ public sealed class TreeViewTests
     }
 
     [TestMethod]
+    public void TreeView_Replacing_Roots_With_Smaller_Visible_Set_Does_Not_Throw()
+    {
+        var tree = new TreeView();
+
+        var root = new TreeNode("Root") { IsExpanded = true };
+        root.Children.Add(new TreeNode("Child"));
+        tree.Roots.Add(root);
+
+        using var driver = new TerminalAppTestDriver(
+            tree,
+            TerminalHostKind.Fullscreen,
+            new TerminalSize(40, 10));
+
+        driver.Tick();
+
+        tree.SelectedIndex = 1;
+
+        var onlyNode = new TreeNode("Only");
+        tree.Roots.Clear();
+        tree.Roots.Add(onlyNode);
+
+        driver.Tick();
+
+        Assert.AreEqual(0, tree.SelectedIndex);
+        Assert.AreSame(onlyNode, tree.SelectedNode);
+    }
+
+    [TestMethod]
     public void TreeView_Can_Select_A_Visible_Node_By_Reference()
     {
         var tree = new TreeView();
