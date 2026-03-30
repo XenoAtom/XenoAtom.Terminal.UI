@@ -124,6 +124,8 @@ When the view is a `DataGridDocumentView`, any configured `SortComparer` is forw
 - click header sort button: toggle sort (`Ctrl+click` for additive multi-sort; `Alt+click` also works)
 - Arrow keys / PageUp / PageDown: navigate the current cell
 - `F2` or `Enter`: edit current cell (when editable)
+- bool cells toggle on `Space`, `Enter`, or a single click without staying in edit mode
+- columns configured with `DataGridColumn.CellActivationMode = DataGridCellActivationMode.DirectActivate` can replay button-like actions from the first key press or click
 
 ## Selection, copy, and clipboard
 
@@ -147,6 +149,15 @@ When editing starts, the control chooses an editor:
 - `TextBox` for strings (supports selection, scrolling inside the cell, copy/paste, undo/redo),
 - `NumberBox` for numeric types,
 - boolean and enum columns use type-appropriate editors when a typed UI column is provided.
+
+Cell activation defaults to a hybrid model:
+
+- text-style editors stay in explicit edit mode (`F2`, `Enter`, second click, or double-click),
+- bool cells activate directly,
+- custom action cells can opt in per column with `CellActivationMode = DataGridCellActivationMode.DirectActivate`.
+
+When the grid is focused but no cell editor is active, `Esc` now falls through normally, so wrapping dialogs can bind their
+own `Escape` shortcut without the grid reserving it.
 
 > [!TIP]
 > If you need a custom cell editor or display, provide a typed `DataGridColumn<T>` and use templates.

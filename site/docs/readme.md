@@ -11,7 +11,7 @@ It supports both:
 - Fullscreen applications (alternate screen, focus navigation, routed input, dialogs, etc.)
 
 This guide documents the concepts, features, and controls of the library, including interactive controls such as
-`DataGridControl` with sorting, filtering, search, resizing, and inline editing.
+`DataGridControl` with sorting, filtering, search, resizing, inline editing, and direct cell activation for toggle/action cells.
 
 ![Fullscreen demo screenshot](../img/fullscreen.png){.terminal}
 

@@ -141,7 +141,7 @@ Highlights:
 
 - Text input: `TextBox`, `TextArea`, `MaskedInput`, `NumberBox`, `ValidationPresenter`
 - Lists: `ListBox`, `OptionList`, `SelectionList`, `Select<T>`, `TreeView`
-- Data: `Table`, `DataGridControl` (sorting, filtering, search, resizing, inline editing)
+- Data: `Table`, `DataGridControl` (sorting, filtering, search, resizing, inline editing, direct cell activation)
 - Layout: `VStack`, `HStack`, `Grid`, `DockLayout`, `Splitters`, `Border`, `Group`, `Padder`
 - Overlays: `Popup`, resizable `Dialog`, `TooltipHost`, `Backdrop`
 - Toasts: `Toast`, `ToastHost` (overlay notifications)

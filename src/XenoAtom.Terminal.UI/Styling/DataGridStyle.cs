@@ -136,7 +136,7 @@ public sealed record DataGridStyle : IStyle<DataGridStyle>
                 return focusedStyle;
             }
 
-            return StrengthenSelection(theme.SelectionStyle(), theme.Selection, minAlpha: 0x70);
+            return StrengthenSelection(theme.SelectionStyle(), theme.Selection, minAlpha: 0x20);
         }
 
         if (SelectedUnfocused is { } unfocusedStyle)
@@ -145,7 +145,7 @@ public sealed record DataGridStyle : IStyle<DataGridStyle>
         }
 
         // Keep the selection visible even when focus moves away.
-        return StrengthenSelection(theme.SelectionStyle() | TextStyle.Dim, theme.Selection, minAlpha: 0x40);
+        return StrengthenSelection(theme.SelectionStyle() | TextStyle.Dim, theme.Selection, minAlpha: 0x10);
     }
 
     /// <summary>
@@ -162,7 +162,7 @@ public sealed record DataGridStyle : IStyle<DataGridStyle>
         var style = Style.None;
         if (theme.Accent is { } c)
         {
-            style = style.WithBackground(c.WithAlpha(0x30));
+            style = style.WithBackground(c.WithAlpha(0x18));
         }
         return style;
     }

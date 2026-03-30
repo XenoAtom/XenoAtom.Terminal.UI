@@ -74,6 +74,27 @@ public enum DataGridEditMode
 }
 
 /// <summary>
+/// Specifies how a cell reacts to keyboard and pointer activation.
+/// </summary>
+public enum DataGridCellActivationMode
+{
+    /// <summary>
+    /// Choose the behavior automatically based on the active editor kind.
+    /// </summary>
+    Auto,
+
+    /// <summary>
+    /// Require the cell to enter edit mode before the editor can be used.
+    /// </summary>
+    ExplicitEdit,
+
+    /// <summary>
+    /// Activate the editor directly from the triggering gesture.
+    /// </summary>
+    DirectActivate,
+}
+
+/// <summary>
 /// A high-performance, scrollable, virtualized, data-bound grid control.
 /// </summary>
 public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwner
@@ -123,6 +144,8 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
     private BindingAccessor? _activeEditorAccessor;
     private object? _activeEditorOriginalValue;
     private bool _activeEditorPooled;
+    private bool _pendingDirectPointerActivation;
+    private bool _routingSyntheticEditorInput;
 
     private readonly List<TextBox> _textBoxPool = new(8);
 
@@ -206,6 +229,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             Presentation = CommandPresentation.None,
             Execute = static v => ((DataGridControl)v).CommitEdit(),
             CanExecute = static v => ((DataGridControl)v)._activeEditor is not null,
+            ConsumesGestureWhenUnavailable = false,
         });
 
         AddCommand(new Command
@@ -216,6 +240,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             Presentation = CommandPresentation.None,
             Execute = static v => ((DataGridControl)v).CancelEdit(),
             CanExecute = static v => ((DataGridControl)v)._activeEditor is not null,
+            ConsumesGestureWhenUnavailable = false,
         });
 
         AddCommand(new Command
@@ -226,6 +251,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             Presentation = CommandPresentation.None,
             Execute = static v => ((DataGridControl)v).MoveEditorToAdjacentCell(deltaColumn: 1),
             CanExecute = static v => ((DataGridControl)v)._activeEditor is not null,
+            ConsumesGestureWhenUnavailable = false,
         });
 
         AddCommand(new Command
@@ -236,6 +262,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             Presentation = CommandPresentation.None,
             Execute = static v => ((DataGridControl)v).MoveEditorToAdjacentCell(deltaColumn: -1),
             CanExecute = static v => ((DataGridControl)v)._activeEditor is not null,
+            ConsumesGestureWhenUnavailable = false,
         });
 
         AddCommand(new Command
@@ -348,6 +375,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         this.RowAnchorWidth(1);
         this.SelectionMode(DataGridSelectionMode.Cell);
         this.EditMode(DataGridEditMode.OnEnter);
+        this.CellActivationMode(DataGridCellActivationMode.Auto);
         this.FrozenRows(0);
         this.FrozenColumns(0);
         this.CurrentCell(DataGridCell.None);
@@ -523,6 +551,16 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
     /// </summary>
     [Bindable]
     public partial DataGridEditMode EditMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the default activation behavior used by editable cells.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="DataGridCellActivationMode.Auto"/> keeps text-style editors in explicit edit mode while allowing
+    /// toggle/action-style editors to react directly. Columns can override this behavior individually.
+    /// </remarks>
+    [Bindable]
+    public partial DataGridCellActivationMode CellActivationMode { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the filter row is visible.
@@ -938,7 +976,6 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
                 // Ensure the active editor is measured so its arrange logic doesn't clamp to a 0-size desired height.
                 _activeEditor.Measure(new LayoutConstraints(0, r.Width, 0, r.Height));
                 _activeEditor.Arrange(r);
-                App?.Focus(_activeEditor);
             }
             else
             {
@@ -1150,6 +1187,37 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             return;
         }
 
+        if (_routingSyntheticEditorInput && _activeEditor is not null && IsDescendantOf(e.OriginalSource, _activeEditor))
+        {
+            return;
+        }
+
+        if (_pendingDirectPointerActivation &&
+            _activeEditor is not null &&
+            e.Kind == TerminalMouseKind.DoubleClick &&
+            e.Button == TerminalMouseButton.Left)
+        {
+            var args = CreateSyntheticPointerEvent(_activeEditor, e, TerminalMouseKind.Up);
+            _routingSyntheticEditorInput = true;
+            try
+            {
+                _activeEditor.RaiseEvent(Visual.PointerReleasedEvent, args);
+            }
+            finally
+            {
+                _routingSyntheticEditorInput = false;
+            }
+
+            _pendingDirectPointerActivation = false;
+            if (_activeEditor is not null)
+            {
+                CloseEditor();
+            }
+
+            e.Handled = true;
+            return;
+        }
+
         if (e.Kind is not (TerminalMouseKind.Down or TerminalMouseKind.DoubleClick) || e.Button != TerminalMouseButton.Left)
         {
             return;
@@ -1246,6 +1314,19 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             App?.Focus(this);
             e.Handled = true;
 
+            if (!ReadOnly && _activeEditor is null && TryGetEditableCellContext(snapshot, cell, out var editableContext))
+            {
+                if (ResolveCellActivationMode(editableContext) == DataGridCellActivationMode.DirectActivate)
+                {
+                    if (e.Kind == TerminalMouseKind.Down)
+                    {
+                        _ = TryDirectActivateWithPointer(snapshot, cell, e);
+                    }
+
+                    return;
+                }
+            }
+
             if (!ReadOnly && (e.ClickCount >= 2 || wasCurrent) && _activeEditor is null)
             {
                 _ = TryStartEdit(snapshot);
@@ -1256,6 +1337,17 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
     /// <inheritdoc />
     protected override void OnPointerMoved(PointerEventArgs e)
     {
+        if (_routingSyntheticEditorInput && _activeEditor is not null && IsDescendantOf(e.OriginalSource, _activeEditor))
+        {
+            return;
+        }
+
+        if (_pendingDirectPointerActivation && e.Kind is TerminalMouseKind.Move or TerminalMouseKind.Drag)
+        {
+            ContinueDirectPointerActivation(e);
+            return;
+        }
+
         if (PressedSortColumnIndex >= 0)
         {
             var snapshotForSort = GetSnapshot();
@@ -1357,6 +1449,17 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
     /// <inheritdoc />
     protected override void OnPointerReleased(PointerEventArgs e)
     {
+        if (_routingSyntheticEditorInput && _activeEditor is not null && IsDescendantOf(e.OriginalSource, _activeEditor))
+        {
+            return;
+        }
+
+        if (_pendingDirectPointerActivation && e.Kind == TerminalMouseKind.Up && e.Button == TerminalMouseButton.Left)
+        {
+            ContinueDirectPointerActivation(e);
+            return;
+        }
+
         if (PressedSortColumnIndex >= 0 && !e.Handled && e.Kind == TerminalMouseKind.Up && e.Button == TerminalMouseButton.Left)
         {
             var sortColumnIndex = PressedSortColumnIndex;
@@ -1404,6 +1507,11 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
     {
         var snapshot = GetSnapshot();
         if (snapshot is null)
+        {
+            return;
+        }
+
+        if (_routingSyntheticEditorInput && _activeEditor is not null && IsDescendantOf(e.OriginalSource, _activeEditor))
         {
             return;
         }
@@ -1549,7 +1657,19 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
                 CurrentCell = new DataGridCell(CurrentCell.Row, Math.Max(0, GetVisibleColumnCount(snapshot) - 1));
                 e.Handled = true;
                 return;
+            case TerminalKey.Space:
+                if (!ReadOnly && TryDirectActivateWithKeyboard(snapshot, CurrentCell, e.Key, e.Modifiers))
+                {
+                    e.Handled = true;
+                }
+                return;
             case TerminalKey.Enter:
+                if (!ReadOnly && TryDirectActivateWithKeyboard(snapshot, CurrentCell, e.Key, e.Modifiers))
+                {
+                    e.Handled = true;
+                    return;
+                }
+                goto case TerminalKey.F2;
             case TerminalKey.F2:
                 if (!ReadOnly && TryStartEdit(snapshot))
                 {
@@ -2251,106 +2371,147 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         }
 
         var viewportScrollRows = Math.Max(0, height - frozenRows);
-        var maxRow = Math.Min(snapshot.RowCount, frozenRows + _scroll.OffsetY + viewportScrollRows);
+        var frozenRowCount = Math.Min(snapshot.RowCount, frozenRows);
+        var scrollStartRow = Math.Min(snapshot.RowCount, frozenRows + _scroll.OffsetY);
+        var maxRow = Math.Min(snapshot.RowCount, scrollStartRow + viewportScrollRows);
 
         var ctxBase = new DataTemplateContext(this, DataTemplateRole.Display, -1, DataTemplateItemState.None);
 
-        for (var row = 0; row < maxRow; row++)
+        for (var row = 0; row < frozenRowCount; row++)
         {
-            var y = row < frozenRows
-                ? yTop + row
-                : yTop + frozenRows + (row - frozenRows) - _scroll.OffsetY;
+            EnsureCellRowVisuals(snapshot, rect, cols, row, yTop + row, ctxBase, frozenColumns);
+        }
 
-            if ((uint)(y - rect.Y) >= (uint)rect.Height)
-            {
-                continue;
-            }
-
-            var rowModel = snapshot.GetRowModel(row);
-
-            for (var c = 0; c < cols.Count; c++)
-            {
-                if (IsEditingCell(row, c))
-                {
-                    continue;
-                }
-
-                var column = cols[c].Column;
-                var schemaAccessor = cols[c].SchemaAccessor;
-                var schemaValueType = cols[c].SchemaValueType;
-                var effectiveReadOnly = ReadOnly || cols[c].SchemaReadOnly || (column is not null && column.ReadOnly);
-                var hasDisplayVisual = column is not null
-                    ? column.HasDisplayTemplate(this, effectiveReadOnly)
-                    : HasSchemaDisplayTemplate(schemaValueType);
-
-                if (!hasDisplayVisual)
-                {
-                    continue;
-                }
-
-                var x = rect.X + GetColumnX(c, rect, frozenColumns);
-                var w = _resolvedColumnWidths[c];
-                if (w <= 0)
-                {
-                    continue;
-                }
-
-                var cellRect = new Rectangle(x, y, w, 1);
-                if (!rect.Intersects(cellRect))
-                {
-                    continue;
-                }
-
-                Visual? reused = null;
-                if (_cellRecyclePool.Count != 0)
-                {
-                    var last = _cellRecyclePool.Count - 1;
-                    reused = _cellRecyclePool[last];
-                    _cellRecyclePool.RemoveAt(last);
-                }
-
-                var state = DataTemplateItemState.None;
-                if (!IsEnabled)
-                {
-                    state |= DataTemplateItemState.Disabled;
-                }
-
-                if (HasFocusWithin)
-                {
-                    state |= DataTemplateItemState.Focused;
-                }
-
-                if (IsSelectedCell(row, c))
-                {
-                    state |= DataTemplateItemState.Selected;
-                }
-
-                var ctx = ctxBase with { Index = row, State = state };
-                Visual? v;
-                if (column is not null)
-                {
-                    v = column.CreateOrUpdateDisplayVisual(this, rowModel, ctx, effectiveReadOnly, reused, out _);
-                }
-                else if (!TryCreateSchemaDisplayVisual(schemaValueType, rowModel, schemaAccessor, ctx, reused, out v) || v is null)
-                {
-                    continue;
-                }
-
-                _cellVisuals.Add(v);
-                v.Measure(new LayoutConstraints(0, cellRect.Width, 0, cellRect.Height));
-                v.Arrange(cellRect);
-            }
+        for (var row = scrollStartRow; row < maxRow; row++)
+        {
+            var y = yTop + frozenRows + (row - scrollStartRow);
+            EnsureCellRowVisuals(snapshot, rect, cols, row, y, ctxBase, frozenColumns);
         }
 
         _cellRecyclePool.Clear();
     }
 
-    private bool TryStartEdit(IDataGridViewSnapshot snapshot)
+    private void EnsureCellRowVisuals(
+        IDataGridViewSnapshot snapshot,
+        Rectangle rect,
+        IReadOnlyList<ResolvedColumn> cols,
+        int row,
+        int y,
+        DataTemplateContext ctxBase,
+        int frozenColumns)
     {
+        if ((uint)(y - rect.Y) >= (uint)rect.Height)
+        {
+            return;
+        }
+
+        var rowModel = snapshot.GetRowModel(row);
+
+        for (var c = 0; c < cols.Count; c++)
+        {
+            if (IsEditingCell(row, c))
+            {
+                continue;
+            }
+
+            var column = cols[c].Column;
+            var schemaAccessor = cols[c].SchemaAccessor;
+            var schemaValueType = cols[c].SchemaValueType;
+            var effectiveReadOnly = ReadOnly || cols[c].SchemaReadOnly || (column is not null && column.ReadOnly);
+            var hasDisplayVisual = column is not null
+                ? column.HasDisplayTemplate(this, effectiveReadOnly)
+                : HasSchemaDisplayTemplate(schemaValueType);
+
+            if (!hasDisplayVisual)
+            {
+                continue;
+            }
+
+            var x = rect.X + GetColumnX(c, rect, frozenColumns);
+            var w = _resolvedColumnWidths[c];
+            if (w <= 0)
+            {
+                continue;
+            }
+
+            var cellRect = new Rectangle(x, y, w, 1);
+            if (!rect.Intersects(cellRect))
+            {
+                continue;
+            }
+
+            Visual? reused = null;
+            if (_cellRecyclePool.Count != 0)
+            {
+                var last = _cellRecyclePool.Count - 1;
+                reused = _cellRecyclePool[last];
+                _cellRecyclePool.RemoveAt(last);
+            }
+
+            var state = DataTemplateItemState.None;
+            if (!IsEnabled)
+            {
+                state |= DataTemplateItemState.Disabled;
+            }
+
+            if (HasFocusWithin)
+            {
+                state |= DataTemplateItemState.Focused;
+            }
+
+            if (IsSelectedCell(row, c))
+            {
+                state |= DataTemplateItemState.Selected;
+            }
+
+            var ctx = ctxBase with { Index = row, State = state };
+            Visual? v;
+            if (column is not null)
+            {
+                v = column.CreateOrUpdateDisplayVisual(this, rowModel, ctx, effectiveReadOnly, reused, out _);
+            }
+            else if (!TryCreateSchemaDisplayVisual(schemaValueType, rowModel, schemaAccessor, ctx, reused, out v) || v is null)
+            {
+                continue;
+            }
+
+            _cellVisuals.Add(v);
+            v.Measure(new LayoutConstraints(0, cellRect.Width, 0, cellRect.Height));
+            v.Arrange(cellRect);
+        }
+    }
+
+    private bool TryStartEdit(IDataGridViewSnapshot snapshot) => TryStartEdit(snapshot, CurrentCell, out _);
+
+    private bool TryStartEdit(IDataGridViewSnapshot snapshot, DataGridCell cell, out Visual? editor)
+    {
+        editor = null;
+        if (!TryGetEditableCellContext(snapshot, cell, out var context))
+        {
+            return false;
+        }
+
+        if (!TryCreateEditorForCell(context, out editor, out var pooled, out var accessor) || editor is null)
+        {
+            return false;
+        }
+
+        _activeEditorRowModel = context.RowModel;
+        _activeEditorAccessor = accessor;
+        _activeEditorOriginalValue = accessor.GetValueAsObject(context.RowModel);
+
+        PrepareEditorForCell(editor);
+        OpenEditor(editor, context.Cell, pooled);
+        return true;
+    }
+
+    private bool TryGetEditableCellContext(IDataGridViewSnapshot snapshot, DataGridCell cell, out EditableCellContext context)
+    {
+        context = null!;
+
         var visibleColumns = GetVisibleColumnCount(snapshot);
         var columns = EnsureResolvedColumns(snapshot, visibleColumns);
 
-        var cell = CurrentCell;
         if (cell == DataGridCell.None)
         {
             if (snapshot.RowCount <= 0 || columns.Count <= 0)
@@ -2364,59 +2525,272 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
 
         var row = cell.Row;
         var col = cell.Column;
-
         if ((uint)row >= (uint)snapshot.RowCount || (uint)col >= (uint)columns.Count)
         {
             return false;
         }
 
-        var column = columns[col].Column;
-        var schemaAccessor = columns[col].SchemaAccessor;
-        var schemaValueType = columns[col].SchemaValueType;
-        var schemaReadOnly = columns[col].SchemaReadOnly;
-
-        var effectiveReadOnly = ReadOnly || schemaReadOnly || (column is not null && column.ReadOnly);
+        var resolvedColumn = columns[col];
+        var column = resolvedColumn.Column;
+        var effectiveReadOnly = ReadOnly || resolvedColumn.SchemaReadOnly || (column is not null && column.ReadOnly);
         if (effectiveReadOnly)
         {
             return false;
         }
 
-        var rowModel = snapshot.GetRowModel(row);
-        var ctx = new DataTemplateContext(this, DataTemplateRole.Editor, row, DataTemplateItemState.Focused);
+        context = new EditableCellContext(cell, snapshot.GetRowModel(row), resolvedColumn);
+        return true;
+    }
 
-        if (column is not null && column.TryCreateEditorVisual(this, rowModel, ctx, out var editor) && editor is not null)
+    private bool TryCreateEditorForCell(EditableCellContext context, out Visual? editor, out bool pooled, out BindingAccessor accessor)
+    {
+        pooled = false;
+        editor = null;
+
+        var cell = context.Cell;
+        var rowModel = context.RowModel;
+        var column = context.ResolvedColumn.Column;
+        var schemaAccessor = context.ResolvedColumn.SchemaAccessor;
+        var schemaValueType = context.ResolvedColumn.SchemaValueType;
+        var ctx = new DataTemplateContext(this, DataTemplateRole.Editor, cell.Row, DataTemplateItemState.Focused);
+
+        if (column is not null && column.TryCreateEditorVisual(this, rowModel, ctx, out editor) && editor is not null)
         {
-            _activeEditorRowModel = rowModel;
-            _activeEditorAccessor = column.ValueAccessor;
-            _activeEditorOriginalValue = column.ValueAccessor.GetValueAsObject(rowModel);
-
-            PrepareEditorForCell(editor);
-            OpenEditor(editor, cell, pooled: false);
+            accessor = column.ValueAccessor;
             return true;
         }
 
-        // Built-in schema-driven editors when no explicit UI column/editor exists.
-        // This keeps the grid usable even with schema-only documents.
-        if (column is null && TryCreateDefaultEditorFromSchema(schemaValueType, rowModel, schemaAccessor, ctx, out var schemaEditor) && schemaEditor is not null)
+        if (column is null && TryCreateDefaultEditorFromSchema(schemaValueType, rowModel, schemaAccessor, ctx, out editor) && editor is not null)
         {
-            _activeEditorRowModel = rowModel;
-            _activeEditorAccessor = schemaAccessor;
-            _activeEditorOriginalValue = schemaAccessor.GetValueAsObject(rowModel);
-
-            OpenEditor(schemaEditor, cell, pooled: false);
+            accessor = schemaAccessor;
             return true;
         }
 
-        // Built-in pooled editor for string cells: use TextBox to get full editor behavior (selection, clipboard, overflow indicators).
         var isStringCell = schemaValueType == typeof(string) || column is DataGridColumn<string>;
         if (isStringCell && TryCreatePooledTextBoxEditor(rowModel, schemaAccessor, out var textBox))
         {
-            _activeEditorRowModel = rowModel;
-            _activeEditorAccessor = schemaAccessor;
-            _activeEditorOriginalValue = schemaAccessor.GetValueAsObject(rowModel);
-
-            OpenEditor(textBox, cell, pooled: true);
+            pooled = true;
+            editor = textBox;
+            accessor = schemaAccessor;
             return true;
+        }
+
+        accessor = schemaAccessor;
+        return false;
+    }
+
+    private DataGridCellActivationMode ResolveCellActivationMode(EditableCellContext context)
+    {
+        if (context.ResolvedColumn.Column?.CellActivationMode is { } columnMode)
+        {
+            return columnMode;
+        }
+
+        if (CellActivationMode != DataGridCellActivationMode.Auto)
+        {
+            return CellActivationMode;
+        }
+
+        var valueType = context.ResolvedColumn.Column?.ValueType ?? context.ResolvedColumn.SchemaValueType;
+        return valueType == typeof(bool)
+            ? DataGridCellActivationMode.DirectActivate
+            : DataGridCellActivationMode.ExplicitEdit;
+    }
+
+    private bool TryDirectActivateWithKeyboard(IDataGridViewSnapshot snapshot, DataGridCell cell, TerminalKey key, TerminalModifiers modifiers)
+    {
+        if (!TryGetEditableCellContext(snapshot, cell, out var context) ||
+            ResolveCellActivationMode(context) != DataGridCellActivationMode.DirectActivate)
+        {
+            return false;
+        }
+
+        if (!TryStartEdit(snapshot, context.Cell, out var editor) || editor is null)
+        {
+            return false;
+        }
+
+        ArrangeActiveEditorNow(snapshot);
+
+        var args = new KeyEventArgs
+        {
+            RawEvent = new TerminalKeyEvent
+            {
+                Key = key,
+                Modifiers = modifiers,
+            }
+        };
+
+        _routingSyntheticEditorInput = true;
+        try
+        {
+            editor.RaiseEvent(Visual.KeyDownEvent, args);
+        }
+        finally
+        {
+            _routingSyntheticEditorInput = false;
+        }
+
+        if (args.Handled && ReferenceEquals(editor, _activeEditor))
+        {
+            CloseEditor();
+        }
+
+        return true;
+    }
+
+    private bool TryDirectActivateWithPointer(IDataGridViewSnapshot snapshot, DataGridCell cell, PointerEventArgs e)
+    {
+        if (!TryGetEditableCellContext(snapshot, cell, out var context) ||
+            ResolveCellActivationMode(context) != DataGridCellActivationMode.DirectActivate)
+        {
+            return false;
+        }
+
+        if (!TryStartEdit(snapshot, context.Cell, out var editor) || editor is null)
+        {
+            return false;
+        }
+
+        ArrangeActiveEditorNow(snapshot);
+
+        var pressedArgs = CreateSyntheticPointerEvent(editor, e, e.Kind);
+        _routingSyntheticEditorInput = true;
+        try
+        {
+            editor.RaiseEvent(Visual.PointerPressedEvent, pressedArgs);
+        }
+        finally
+        {
+            _routingSyntheticEditorInput = false;
+        }
+
+        if (!ReferenceEquals(editor, _activeEditor))
+        {
+            _pendingDirectPointerActivation = false;
+            return true;
+        }
+
+        if (editor is CheckBox)
+        {
+            CloseEditor();
+            return true;
+        }
+
+        _pendingDirectPointerActivation = editor is Button or Switch;
+        if (!_pendingDirectPointerActivation && pressedArgs.Handled)
+        {
+            CloseEditor();
+        }
+
+        return true;
+    }
+
+    private void ContinueDirectPointerActivation(PointerEventArgs e)
+    {
+        if (!_pendingDirectPointerActivation || _activeEditor is null)
+        {
+            _pendingDirectPointerActivation = false;
+            return;
+        }
+
+        var args = CreateSyntheticPointerEvent(_activeEditor, e, e.Kind);
+        if (e.Kind == TerminalMouseKind.Up)
+        {
+            _routingSyntheticEditorInput = true;
+            try
+            {
+                _activeEditor.RaiseEvent(Visual.PointerReleasedEvent, args);
+            }
+            finally
+            {
+                _routingSyntheticEditorInput = false;
+            }
+
+            _pendingDirectPointerActivation = false;
+            if (_activeEditor is not null)
+            {
+                CloseEditor();
+            }
+        }
+        else
+        {
+            _routingSyntheticEditorInput = true;
+            try
+            {
+                _activeEditor.RaiseEvent(Visual.PointerMovedEvent, args);
+            }
+            finally
+            {
+                _routingSyntheticEditorInput = false;
+            }
+        }
+
+        e.Handled = true;
+    }
+
+    private static PointerEventArgs CreateSyntheticPointerEvent(Visual target, PointerEventArgs source, TerminalMouseKind kind)
+    {
+        return new PointerEventArgs
+        {
+            RawEvent = new TerminalMouseEvent
+            {
+                Kind = kind,
+                Button = source.Button,
+                Modifiers = source.Modifiers,
+                WheelDelta = source.WheelDelta,
+                X = source.X,
+                Y = source.Y,
+            },
+            UiX = source.UiX,
+            UiY = source.UiY,
+            ClickCount = source.ClickCount,
+            LocalX = source.UiX - target.Bounds.X,
+            LocalY = source.UiY - target.Bounds.Y,
+        };
+    }
+
+    private void ArrangeActiveEditorNow(IDataGridViewSnapshot snapshot)
+    {
+        if (_activeEditor is null)
+        {
+            return;
+        }
+
+        var rect = Bounds;
+        if (rect.Width <= 0 || rect.Height <= 0)
+        {
+            return;
+        }
+
+        var headerHeight = ShowHeader ? 1 : 0;
+        var filterHeight = FilterRowVisible && CanFilter ? 1 : 0;
+        var anchorWidth = GetEffectiveRowAnchorWidth();
+        var rowCount = snapshot.RowCount;
+        var visibleColumns = GetVisibleColumnCount(snapshot);
+        var frozenRows = Math.Clamp(FrozenRows, 0, rowCount);
+        var frozenColumns = Math.Clamp(FrozenColumns, 0, visibleColumns);
+
+        ResolveColumnLayout(snapshot, visibleColumns, Math.Max(0, rect.Width - anchorWidth));
+
+        var editorRect = TryGetCellRect(_activeEditorCell, rect, headerHeight, filterHeight, frozenRows, frozenColumns);
+        if (editorRect is not { } r)
+        {
+            return;
+        }
+
+        _activeEditor.Measure(new LayoutConstraints(0, r.Width, 0, r.Height));
+        _activeEditor.Arrange(r);
+    }
+
+    private static bool IsDescendantOf(Visual? visual, Visual ancestor)
+    {
+        for (var current = visual; current is not null; current = current.Parent)
+        {
+            if (ReferenceEquals(current, ancestor))
+            {
+                return true;
+            }
         }
 
         return false;
@@ -2656,6 +3030,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         _activeEditorAccessor = null;
         _activeEditorOriginalValue = null;
         _activeEditorPooled = false;
+        _pendingDirectPointerActivation = false;
 
         if (pooledTextBox is not null)
         {
@@ -3721,6 +4096,11 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         int MaxWidth,
         bool IsStar,
         double StarWeight);
+
+    private sealed record EditableCellContext(
+        DataGridCell Cell,
+        object RowModel,
+        ResolvedColumn ResolvedColumn);
 
     private sealed class IdentitySnapshot : IDataGridViewSnapshot
     {

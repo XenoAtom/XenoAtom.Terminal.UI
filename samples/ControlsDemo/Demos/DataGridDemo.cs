@@ -1,10 +1,13 @@
 using DataRow = System.Data.DataRow;
 using DataTable = System.Data.DataTable;
 using XenoAtom.Terminal.UI;
+using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.DataGrid;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Templating;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
@@ -33,12 +36,14 @@ public sealed class DataGridDemo : ControlsDemoBase
         var ledger = BuildLedgerGrid(showHeader, showRowAnchor, rowAnchorWidth, filterRowVisible, selectionMode, editMode, frozenColumns, frozenRows, readOnly);
         var dataTable = BuildDataTableGrid(showHeader, showRowAnchor, rowAnchorWidth, filterRowVisible, selectionMode, editMode, frozenColumns, frozenRows, readOnly);
         var mixed = BuildMixedTypesGrid(showHeader, showRowAnchor, rowAnchorWidth, filterRowVisible, selectionMode, editMode, frozenColumns, frozenRows, readOnly);
+        var dialog = BuildDialogGridDemo(showHeader, showRowAnchor, rowAnchorWidth, filterRowVisible, selectionMode, editMode, frozenColumns, frozenRows, readOnly);
 
         var tabs = new TabControl(
                 new TabPage(header: "Swim Meet", content: swim),
                 new TabPage(header: "Ledger", content: ledger),
                 new TabPage(header: "DataTable", content: dataTable),
-                new TabPage(header: "Mixed", content: mixed))
+                new TabPage(header: "Mixed", content: mixed),
+                new TabPage(header: "Dialog", content: dialog))
             .HorizontalAlignment(Align.Stretch)
             .VerticalAlignment(Align.Stretch);
 
@@ -71,6 +76,8 @@ public sealed class DataGridDemo : ControlsDemoBase
                 DemoUi.Hint("Click a header sort button to cycle off/descending/ascending. Ctrl+click adds a secondary sort."),
                 DemoUi.Hint("Ctrl+F: search (find), F3/Shift+F3: next/previous match"),
                 DemoUi.Hint("F4: toggle filter row, F2: edit current cell"),
+                DemoUi.Hint("Bool cells toggle with Space or a single click. DirectActivate columns can replay button-like actions from the first click."),
+                DemoUi.Hint("The Dialog tab shows Escape bubbling to the wrapping dialog when the grid is not editing a cell."),
                 controls,
                 new Rule(),
                 tabs)
@@ -307,6 +314,7 @@ public sealed class DataGridDemo : ControlsDemoBase
         var emojiAccessor = MixedRow.Accessor.Emoji;
         var messageAccessor = MixedRow.Accessor.Message;
         var progressAccessor = MixedRow.Accessor.Progress;
+        var actionCountAccessor = MixedRow.Accessor.ActionCount;
 
         var doc = new DataGridListDocument<MixedRow>();
         using (doc.BeginUpdate())
@@ -317,7 +325,8 @@ public sealed class DataGridDemo : ControlsDemoBase
                 .AddColumn(new DataGridColumnInfo<Severity>("severity", "⚠️ Severity", ReadOnly: false, severityAccessor))
                 .AddColumn(new DataGridColumnInfo<string>("emoji", "✨", ReadOnly: true, emojiAccessor))
                 .AddColumn(new DataGridColumnInfo<string>("message", "📦 Message", ReadOnly: false, messageAccessor))
-                .AddColumn(new DataGridColumnInfo<double>("progress", "📈 Progress", ReadOnly: false, progressAccessor));
+                .AddColumn(new DataGridColumnInfo<double>("progress", "📈 Progress", ReadOnly: false, progressAccessor))
+                .AddColumn(new DataGridColumnInfo<int>("actioncount", "▶ Runs", ReadOnly: false, actionCountAccessor));
         }
 
         var emojis = new[] { "🛰️", "🧪", "🧰", "🧭", "🔧", "📡", "🚀", "🧲" };
@@ -343,10 +352,10 @@ public sealed class DataGridDemo : ControlsDemoBase
                 Emoji = emojis[i % emojis.Length],
                 Message = $"{messages[i % messages.Length]} #{i + 1:00}",
                 Progress = Math.Round((i % 100) / 10.0, 1),
+                ActionCount = i % 4,
             });
         }
 
-        // Use the schema-only path to demonstrate built-in editors for bool/enum/number.
         var view = new DataGridDocumentView(doc);
         var grid = new DataGridControl { View = view }
             .ShowHeader(showHeader)
@@ -359,10 +368,108 @@ public sealed class DataGridDemo : ControlsDemoBase
             .FrozenRows(frozenRows)
             .ReadOnly(readOnly);
 
+        grid.Columns.Add(new DataGridColumn<int> { Key = "id", TypedValueAccessor = idAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right, ReadOnly = true, Sortable = true });
+        grid.Columns.Add(new DataGridColumn<bool> { Key = "enabled", TypedValueAccessor = enabledAccessor, Width = GridLength.Auto, Sortable = true });
+        grid.Columns.Add(new DataGridColumn<Severity> { Key = "severity", TypedValueAccessor = severityAccessor, Width = GridLength.Auto, Sortable = true });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "emoji", TypedValueAccessor = emojiAccessor, Width = GridLength.Auto, ReadOnly = true });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "message", TypedValueAccessor = messageAccessor, Width = GridLength.Star(2), Sortable = true });
+        grid.Columns.Add(new DataGridColumn<double> { Key = "progress", TypedValueAccessor = progressAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right, Sortable = true });
+        grid.Columns.Add(new DataGridColumn<int> { Key = "actioncount", TypedValueAccessor = actionCountAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right, Sortable = true });
+        grid.Columns.Add(new DataGridColumn<int>
+        {
+            Key = "actioncount",
+            Header = new TextBlock("▶ Run"),
+            TypedValueAccessor = actionCountAccessor,
+            Width = GridLength.Fixed(8),
+            CellActivationMode = DataGridCellActivationMode.DirectActivate,
+            CellTemplate = new(DataGridButtonDisplay, null),
+            CellEditorTemplate = new(null, DataGridRunButtonEditor),
+        });
+
         var styled = new Border(new ScrollViewer(grid).MinHeight(12).MaxHeight(12))
             .Style(BorderStyle.Single)
             .Padding(new Thickness(1, 0, 1, 0));
         return styled;
+    }
+
+    private static Visual BuildDialogGridDemo(
+        State<bool> showHeader,
+        State<bool> showRowAnchor,
+        State<int> rowAnchorWidth,
+        State<bool> filterRowVisible,
+        State<DataGridSelectionMode> selectionMode,
+        State<DataGridEditMode> editMode,
+        State<int> frozenColumns,
+        State<int> frozenRows,
+        State<bool> readOnly)
+    {
+        var nameAccessor = DialogGridRow.Accessor.Name;
+        var valueAccessor = DialogGridRow.Accessor.Value;
+
+        var doc = new DataGridListDocument<DialogGridRow>()
+            .AddColumn(nameAccessor)
+            .AddColumn(valueAccessor);
+
+        doc.AddRow(new DialogGridRow { Name = "alpha", Value = "press Esc on the grid" });
+        doc.AddRow(new DialogGridRow { Name = "beta", Value = "F2 starts editing first" });
+        doc.AddRow(new DialogGridRow { Name = "gamma", Value = "Esc then cancels the active editor" });
+
+        var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view }
+            .ShowHeader(showHeader)
+            .ShowRowAnchor(showRowAnchor)
+            .RowAnchorWidth(rowAnchorWidth)
+            .FilterRowVisible(filterRowVisible)
+            .SelectionMode(selectionMode)
+            .EditMode(editMode)
+            .FrozenColumns(frozenColumns)
+            .FrozenRows(frozenRows)
+            .ReadOnly(readOnly);
+
+        grid.Columns.Add(new DataGridColumn<string> { Key = nameAccessor.Name, TypedValueAccessor = nameAccessor, Width = GridLength.Auto });
+        grid.Columns.Add(new DataGridColumn<string> { Key = valueAccessor.Name, TypedValueAccessor = valueAccessor, Width = GridLength.Star(1) });
+
+        var escapeCount = new State<int>(0);
+        var dialog = new Dialog
+        {
+            Title = "DataGrid Dialog",
+            Width = 52,
+            Height = 11,
+            Content = new ScrollViewer(grid).MinHeight(6).MaxHeight(6),
+        };
+        dialog.AddCommand(new Command
+        {
+            Id = "DataGridDemo.DialogEscape",
+            LabelMarkup = "Count Esc",
+            Gesture = new KeyGesture(TerminalKey.Escape),
+            Execute = _ => escapeCount.Value++,
+        });
+
+        return new VStack(
+                DemoUi.Hint("Click inside the grid, then press Esc while not editing to increment the dialog counter."),
+                DemoUi.Hint("When a cell editor is active, Esc still cancels the cell edit first."),
+                new TextBlock(() => $"Dialog Escape count: {escapeCount.Value}"),
+                dialog)
+            .Spacing(1);
+    }
+
+    private static Visual DataGridButtonDisplay(DataTemplateValue<int> value, in DataTemplateContext context)
+    {
+        _ = value;
+        _ = context;
+        return new Button("Run")
+        {
+            IsHitTestVisible = false,
+        }.Tone(ControlTone.Primary);
+    }
+
+    private static Visual DataGridRunButtonEditor(Binding<int> binding, in DataTemplateContext context)
+    {
+        _ = context;
+        return new Button("Run")
+            .Tone(ControlTone.Primary)
+            .Click(() => binding.SetValue(binding.GetValue() + 1));
     }
 }
 
@@ -409,4 +516,17 @@ public sealed partial class MixedRow
     [Bindable] public partial string Emoji { get; set; }
     [Bindable] public partial string Message { get; set; }
     [Bindable] public partial double Progress { get; set; }
+    [Bindable] public partial int ActionCount { get; set; }
+}
+
+public sealed partial class DialogGridRow
+{
+    public DialogGridRow()
+    {
+        Name = string.Empty;
+        Value = string.Empty;
+    }
+
+    [Bindable] public partial string Name { get; set; }
+    [Bindable] public partial string Value { get; set; }
 }

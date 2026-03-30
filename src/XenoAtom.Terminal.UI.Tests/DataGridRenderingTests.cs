@@ -589,6 +589,282 @@ public sealed class DataGridRenderingTests
     }
 
     [TestMethod]
+    public void DataGrid_Schema_Bool_Cell_Toggles_On_Space_Without_Entering_Edit_Mode()
+    {
+        var boolAccessor = new BindingAccessor<bool>("enabled", o => ((BoolRow)o).Value, (o, v) => ((BoolRow)o).Value = v);
+
+        var doc = new DataGridListDocument<BoolRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("enabled", "enabled", typeof(bool), ReadOnly: false, boolAccessor),
+        });
+
+        var row = new BoolRow { Value = true };
+        doc.AddRow(row);
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false };
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(8, 2));
+        driver.Tick();
+        driver.App.Focus(grid);
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Space });
+        driver.Tick();
+
+        Assert.IsFalse(row.Value);
+        Assert.IsFalse(grid.EnumerateVisualsDepthFirst().OfType<CheckBox>().Any(c => c.HasFocus), "Expected direct activation to return focus to the grid instead of leaving the editor open.");
+    }
+
+    [TestMethod]
+    public void DataGrid_Schema_Bool_Cell_Toggles_On_Single_Click()
+    {
+        var boolAccessor = new BindingAccessor<bool>("enabled", o => ((BoolRow)o).Value, (o, v) => ((BoolRow)o).Value = v);
+
+        var doc = new DataGridListDocument<BoolRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("enabled", "enabled", typeof(bool), ReadOnly: false, boolAccessor),
+        });
+
+        var row = new BoolRow { Value = true };
+        doc.AddRow(row);
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false };
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(8, 2));
+        driver.Tick();
+
+        var x = grid.Bounds.X + 1;
+        var y = grid.Bounds.Y;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = x, Y = y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = x, Y = y });
+        driver.Tick();
+
+        Assert.IsFalse(row.Value);
+    }
+
+    [TestMethod]
+    public void DataGrid_Column_DirectActivate_Button_Editor_Handles_Single_Click()
+    {
+        var boolAccessor = new BindingAccessor<bool>("enabled", o => ((BoolRow)o).Value, (o, v) => ((BoolRow)o).Value = v);
+
+        var doc = new DataGridListDocument<BoolRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("enabled", "enabled", typeof(bool), ReadOnly: false, boolAccessor),
+        });
+
+        var row = new BoolRow { Value = false };
+        doc.AddRow(row);
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false };
+        grid.Columns.Add(new DataGridColumn<bool>
+        {
+            Key = "enabled",
+            TypedValueAccessor = boolAccessor,
+            Width = GridLength.Fixed(10),
+            CellActivationMode = DataGridCellActivationMode.DirectActivate,
+            CellTemplate = new DataTemplate<bool>(
+                Display: static (DataTemplateValue<bool> _, in DataTemplateContext _) => new Button("Toggle").IsEnabled(false),
+                Editor: null),
+            CellEditorTemplate = new DataTemplate<bool>(
+                Display: null,
+                Editor: (Binding<bool> binding, in DataTemplateContext _) => new Button("Toggle").Click(() => binding.SetValue(!binding.GetValue()))),
+        });
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(12, 3));
+        driver.Tick();
+
+        var x = grid.Bounds.X + 1;
+        var y = grid.Bounds.Y;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = x, Y = y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = x, Y = y });
+        driver.TickUntil(() => row.Value);
+    }
+
+    [TestMethod]
+    public void DataGrid_Column_DirectActivate_Button_DoubleClick_Does_Not_Leave_Blank_Cell()
+    {
+        var intAccessor = new BindingAccessor<int>("count", o => ((IntRow)o).Value, (o, v) => ((IntRow)o).Value = v);
+
+        var doc = new DataGridListDocument<IntRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("count", "cmd", typeof(int), ReadOnly: false, intAccessor),
+        });
+
+        var row = new IntRow { Value = 0 };
+        doc.AddRow(row);
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false };
+        grid.Columns.Add(new DataGridColumn<int>
+        {
+            Key = "count",
+            TypedValueAccessor = intAccessor,
+            Width = GridLength.Fixed(8),
+            CellActivationMode = DataGridCellActivationMode.DirectActivate,
+            CellTemplate = new DataTemplate<int>(
+                Display: static (DataTemplateValue<int> _, in DataTemplateContext _) => new Button("Run") { IsHitTestVisible = false },
+                Editor: null),
+            CellEditorTemplate = new DataTemplate<int>(
+                Display: null,
+                Editor: (Binding<int> binding, in DataTemplateContext _) => new Button("Run").Click(() => binding.SetValue(binding.GetValue() + 1))),
+        });
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(10, 2));
+        driver.Tick();
+
+        var x = grid.Bounds.X + 1;
+        var y = grid.Bounds.Y;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = x, Y = y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = x, Y = y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.DoubleClick, Button = TerminalMouseButton.Left, X = x, Y = y });
+        driver.Tick();
+
+        Assert.AreEqual(1, row.Value, "Direct-activate button cells should not re-enter edit mode on a follow-up double-click event.");
+        Assert.IsFalse(grid.EnumerateVisualsDepthFirst().OfType<Button>().Any(b => b.HasFocus), "No focused button editor should remain after double-click.");
+
+        var screen = new AnsiTestScreen(10, 2);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText().Split('\n')[0].TrimEnd('\r');
+        StringAssert.Contains(rendered, "Run");
+    }
+
+    [TestMethod]
+    public void DataGrid_Column_DirectActivate_Button_DoubleClick_Sequence_Without_Intermediate_Up_Does_Not_Leave_Blank_Cell()
+    {
+        var intAccessor = new BindingAccessor<int>("count", o => ((IntRow)o).Value, (o, v) => ((IntRow)o).Value = v);
+
+        var doc = new DataGridListDocument<IntRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("count", "cmd", typeof(int), ReadOnly: false, intAccessor),
+        });
+
+        var row = new IntRow { Value = 0 };
+        doc.AddRow(row);
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false };
+        grid.Columns.Add(new DataGridColumn<int>
+        {
+            Key = "count",
+            TypedValueAccessor = intAccessor,
+            Width = GridLength.Fixed(8),
+            CellActivationMode = DataGridCellActivationMode.DirectActivate,
+            CellTemplate = new DataTemplate<int>(
+                Display: static (DataTemplateValue<int> _, in DataTemplateContext _) => new Button("Run") { IsHitTestVisible = false },
+                Editor: null),
+            CellEditorTemplate = new DataTemplate<int>(
+                Display: null,
+                Editor: (Binding<int> binding, in DataTemplateContext _) => new Button("Run").Click(() => binding.SetValue(binding.GetValue() + 1))),
+        });
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(10, 2));
+        driver.Tick();
+
+        var x = grid.Bounds.X + 1;
+        var y = grid.Bounds.Y;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = x, Y = y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = x, Y = y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = x, Y = y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.DoubleClick, Button = TerminalMouseButton.Left, X = x, Y = y });
+        driver.Tick();
+
+        Assert.AreEqual(2, row.Value, "A double-click sequence should not strand the transient button editor open.");
+        Assert.IsFalse(grid.EnumerateVisualsDepthFirst().OfType<Button>().Any(b => b.HasFocus), "No focused button editor should remain after the double-click sequence.");
+
+        var screen = new AnsiTestScreen(10, 2);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText().Split('\n')[0].TrimEnd('\r');
+        StringAssert.Contains(rendered, "Run");
+    }
+
+    [TestMethod]
+    public void DataGrid_Scrolled_Display_Visuals_Do_Not_Render_Into_Header_Row()
+    {
+        var boolAccessor = new BindingAccessor<bool>("enabled", o => ((BoolRow)o).Value, (o, v) => ((BoolRow)o).Value = v);
+        var intAccessor = new BindingAccessor<int>("count", o => ((IntRow)o).Value, (o, v) => ((IntRow)o).Value = v);
+
+        var boolDoc = new DataGridListDocument<BoolRow>();
+        boolDoc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("enabled", "Flag", typeof(bool), ReadOnly: false, boolAccessor),
+        });
+        boolDoc.AddRow(new BoolRow { Value = true });
+        boolDoc.AddRow(new BoolRow { Value = false });
+        boolDoc.AddRow(new BoolRow { Value = true });
+        boolDoc.AddRow(new BoolRow { Value = false });
+
+        using var boolView = new DataGridDocumentView(boolDoc);
+        var boolGrid = new DataGridControl { View = boolView, ShowHeader = true, ShowRowAnchor = false };
+        boolGrid.Columns.Add(new DataGridColumn<bool> { Key = "enabled", TypedValueAccessor = boolAccessor, Width = GridLength.Fixed(6) });
+
+        using (var boolDriver = new TerminalAppTestDriver(boolGrid, TerminalHostKind.Fullscreen, new TerminalSize(6, 4)))
+        {
+            boolDriver.Tick();
+            boolGrid.Scroll.SetOffset(0, 1);
+            boolDriver.Tick();
+
+            var screen = new AnsiTestScreen(6, 4);
+            screen.Apply(boolDriver.Backend.GetOutText());
+            var header = screen.GetText().Split('\n')[0].TrimEnd('\r');
+
+            StringAssert.Contains(header, "Flag");
+            Assert.IsFalse(header.Contains(CheckBoxStyle.Default.CheckedGlyph.ToString(), StringComparison.Ordinal), $"Checkbox display leaked into header row. header=[{header}]");
+            Assert.IsFalse(header.Contains(CheckBoxStyle.Default.UncheckedGlyph.ToString(), StringComparison.Ordinal), $"Checkbox display leaked into header row. header=[{header}]");
+        }
+
+        var intDoc = new DataGridListDocument<IntRow>();
+        intDoc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("count", "Cmd", typeof(int), ReadOnly: false, intAccessor),
+        });
+        intDoc.AddRow(new IntRow { Value = 1 });
+        intDoc.AddRow(new IntRow { Value = 2 });
+        intDoc.AddRow(new IntRow { Value = 3 });
+        intDoc.AddRow(new IntRow { Value = 4 });
+
+        using var intView = new DataGridDocumentView(intDoc);
+        var intGrid = new DataGridControl { View = intView, ShowHeader = true, ShowRowAnchor = false };
+        intGrid.Columns.Add(new DataGridColumn<int>
+        {
+            Key = "count",
+            TypedValueAccessor = intAccessor,
+            Width = GridLength.Fixed(6),
+            CellTemplate = new DataTemplate<int>(
+                Display: static (DataTemplateValue<int> _, in DataTemplateContext _) => new Button("Go") { IsHitTestVisible = false },
+                Editor: null),
+        });
+
+        using var intDriver = new TerminalAppTestDriver(intGrid, TerminalHostKind.Fullscreen, new TerminalSize(6, 4));
+        intDriver.Tick();
+        intGrid.Scroll.SetOffset(0, 1);
+        intDriver.Tick();
+
+        var intScreen = new AnsiTestScreen(6, 4);
+        intScreen.Apply(intDriver.Backend.GetOutText());
+        var intHeader = intScreen.GetText().Split('\n')[0].TrimEnd('\r');
+
+        StringAssert.Contains(intHeader, "Cmd");
+        Assert.IsFalse(intHeader.Contains("Go", StringComparison.Ordinal), $"Button display leaked into header row. header=[{intHeader}]");
+    }
+
+    [TestMethod]
     public void DataGrid_Column_Bool_Cell_Uses_Default_CheckBox_Display()
     {
         var boolAccessor = new BindingAccessor<bool>("enabled", o => ((BoolRow)o).Value, (o, v) => ((BoolRow)o).Value = v);
@@ -1026,6 +1302,47 @@ public sealed class DataGridRenderingTests
         var copy = Find(grid, "DataGrid.Copy");
         Assert.AreEqual(CommandPresentation.CommandBar, copy.Presentation);
         Assert.AreEqual(new KeyGesture(TerminalChar.CtrlC, TerminalModifiers.Ctrl), copy.Gesture);
+    }
+
+    [TestMethod]
+    public void DataGrid_Allows_Dialog_Escape_Command_When_Not_Editing()
+    {
+        var textAccessor = new BindingAccessor<string>("text", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
+
+        var doc = new DataGridListDocument<TextRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("text", "Text", typeof(string), ReadOnly: false, textAccessor),
+        });
+        doc.AddRow(new TextRow { Text = "Row 0" });
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false };
+        grid.Columns.Add(new DataGridColumn<string> { Key = "text", TypedValueAccessor = textAccessor, Width = GridLength.Star(1) });
+
+        var closeCount = 0;
+        var dialog = new Dialog
+        {
+            Width = 20,
+            Height = 6,
+            Content = grid,
+        };
+        dialog.AddCommand(new Command
+        {
+            Id = "Dialog.Close",
+            LabelMarkup = "Close",
+            Gesture = new KeyGesture(TerminalKey.Escape),
+            Execute = _ => closeCount++,
+        });
+
+        using var driver = new TerminalAppTestDriver(dialog, TerminalHostKind.Fullscreen, new TerminalSize(30, 10));
+        driver.Tick();
+        driver.App.Focus(grid);
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        driver.TickUntil(() => closeCount == 1);
     }
 
     [TestMethod]

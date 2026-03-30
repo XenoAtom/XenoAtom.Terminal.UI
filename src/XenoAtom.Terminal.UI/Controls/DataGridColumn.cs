@@ -28,6 +28,7 @@ public abstract partial class DataGridColumn : IVisualElement
         HeaderAlignment = TextAlignment.Left;
         CellAlignment = TextAlignment.Left;
         ReadOnly = false;
+        CellActivationMode = null;
     }
 
     /// <summary>
@@ -100,6 +101,15 @@ public abstract partial class DataGridColumn : IVisualElement
     /// </remarks>
     [Bindable]
     public partial bool ReadOnly { get; set; }
+
+    /// <summary>
+    /// Gets or sets how cells in this column react to activation gestures.
+    /// </summary>
+    /// <remarks>
+    /// When <see langword="null"/>, the owning <see cref="DataGridControl"/> decides.
+    /// </remarks>
+    [Bindable]
+    public partial DataGridCellActivationMode? CellActivationMode { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether this column participates in sorting.

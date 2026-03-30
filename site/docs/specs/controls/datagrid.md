@@ -310,6 +310,7 @@ public sealed partial class DataGridControl : Visual, IScrollable
 | `ReadOnly` | `bool` | `false` | Disables editing (still allows selection/sort) |
 | `CurrentCell` | `DataGridCell` | `(-1,-1)` | Focused cell for navigation and editing |
 | `EditMode` | `DataGridEditMode` | `OnEnter` | When editing starts |
+| `CellActivationMode` | `DataGridCellActivationMode` | `Auto` | Whether editable cells require edit mode first or can react directly to the triggering gesture |
 
 The control MUST expose a `ScrollModel` for interoperability with `ScrollViewer`:
 
@@ -344,6 +345,18 @@ public enum DataGridEditMode
 
     /// <summary>Editing starts when the user types (spreadsheet-style).</summary>
     OnTyping,
+}
+
+public enum DataGridCellActivationMode
+{
+    /// <summary>Choose automatically based on the cell editor kind.</summary>
+    Auto,
+
+    /// <summary>Require the cell to enter edit mode first.</summary>
+    ExplicitEdit,
+
+    /// <summary>Replay the triggering gesture directly against the editor.</summary>
+    DirectActivate,
 }
 ```
 
@@ -418,6 +431,14 @@ public abstract partial class DataGridColumn : IVisualElement
     /// (e.g. <see cref="DataGridColumnInfo.ReadOnly"/>) to compute an effective read-only state.
     /// </remarks>
     [Bindable] public bool ReadOnly { get; set; }
+
+    /// <summary>
+    /// Gets or sets how cells in this column react to activation gestures.
+    /// </summary>
+    /// <remarks>
+    /// When <see langword="null"/>, the grid-level <c>CellActivationMode</c> is used.
+    /// </remarks>
+    [Bindable] public DataGridCellActivationMode? CellActivationMode { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether this column participates in sorting.
