@@ -51,7 +51,7 @@ Existing controls:
 
 - `Controls/CommandPalette.cs`:
   - `TextBox` search + `OptionList<CommandPaletteItem>` results
-  - shows itself via `Popup` (fullscreen only)
+  - shows itself via a dialog-backed modal window (fullscreen only)
 - `Controls/CommandPaletteItem.cs`:
   - content/shortcut/description factories + `Action`
 
@@ -171,7 +171,7 @@ When user activates a selected item:
 
 ### Opening / closing
 
-- Palette opens as a `Popup` hosted by the app window layer (fullscreen only).
+- Palette opens as a modal window hosted by the app window layer (fullscreen only).
 - Palette closes when:
   - `Esc` pressed
   - focus moves outside palette (click outside)
@@ -187,6 +187,8 @@ When opened:
 While open:
 
 - `Tab` stays within the palette (search box ↔ results list)
+- `Enter` in the search box executes the currently highlighted result
+- `Down` in the search box moves focus into the results and advances from the default highlighted first item
 - global commands that conflict should not execute (palette should capture key events)
 
 ### List behavior
@@ -207,6 +209,7 @@ Introduce `CommandPaletteStyle` (or update existing one) with:
 
 - `PopupTemplateFactory` (already used elsewhere)
 - `ItemTemplate` (`DataTemplate<Command>`) used by the results list
+- `PopupIsResizable` to control dialog-like resize behavior
 - optional `DescriptionVisible` / `ShowDescription`
 - optional `MaxWidth`, `ResultsHeight`, padding, etc.
 

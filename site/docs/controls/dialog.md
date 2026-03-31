@@ -23,6 +23,8 @@ Dialogs are displayed in fullscreen apps and typically:
 ## Features
 
 - Resize handles are enabled by default via `IsResizable`.
+- Moving is enabled by default via `IsDraggable`.
+- `DragHandleHeight` expands the draggable area while keeping the visible move-bar highlight on the top border row.
 - Minimum interactive size uses the inherited `MinWidth` and `MinHeight` properties.
 - `TopRightText`, `BottomLeftText`, and `BottomRightText` let you decorate the dialog border the same way `Group` does.
 - `DialogStyle` lets you override border glyphs, surface/border styles, label cutout styling, and the hover styling used for resize handles and the move bar.

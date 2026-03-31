@@ -31,9 +31,9 @@ public sealed partial class CommandPalette : Visual
     private int _lastQuerySnapshotVersion = -1;
     private string _lastQuerySnapshotText = string.Empty;
 
-    private Popup? _hostPopup;
+    private Dialog? _hostDialog;
     private Visual? _focusContext;
-    private bool _hostPopupEventsAttached;
+    private bool _hostGeometryInitialized;
 
     // Used to force measure/arrange updates when the search box document changes.
     // The search text is stored in a TextDocument (not a bindable property), so we expose a bindable stamp
@@ -47,6 +47,8 @@ public sealed partial class CommandPalette : Visual
     public CommandPalette()
     {
         Focusable = false;
+        HorizontalAlignment = Align.Stretch;
+        VerticalAlignment = Align.Stretch;
         _collectedCommands = new List<ResolvedCommand>(64);
         _matches = new List<(int, ResolvedCommand)>(64);
 
@@ -74,7 +76,8 @@ public sealed partial class CommandPalette : Visual
 
         _content = new VStack(_searchBox, _resultsHost)
             .Spacing(1)
-            .HorizontalAlignment(Align.Stretch);
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Stretch);
 
         AttachChild(_content);
 
@@ -98,67 +101,68 @@ public sealed partial class CommandPalette : Visual
     }
 
     /// <summary>
-    /// Shows the command palette in a popup.
+    /// Shows the command palette in a resizable overlay window.
     /// </summary>
     public void Show()
     {
         VerifyAccess();
 
-        if (Parent is not null && !IsAttachedToHostPopup())
+        if (Parent is not null && !IsAttachedToHostDialog())
         {
             throw new InvalidOperationException("CommandPalette.Show cannot be called when the palette is part of a visual tree.");
         }
 
         var app = App ?? Dispatcher.AttachedApp
-            ?? throw new InvalidOperationException("Popup.Show is only supported while a TerminalApp is running.");
+            ?? throw new InvalidOperationException("CommandPalette.Show is only supported while a TerminalApp is running.");
+        EnsureHostDialog();
 
-        _hostPopup ??= new Popup
-        {
-            MatchAnchorWidth = false,
-            Placement = PopupPlacement.Below,
-            CloseOnTab = false,
-        }.Style(PopupStyle.Default with { Padding = Thickness.Zero });
-
-        var hostPopup = _hostPopup!;
-
-        if (!_hostPopupEventsAttached)
-        {
-            hostPopup.Closed(RestoreFocus);
-            _hostPopupEventsAttached = true;
-        }
-
-        // If already hosted, simply re-show the existing popup without re-wrapping the palette.
+        // If already hosted, simply re-focus the existing window without re-wrapping the palette.
         // Re-wrapping would attempt to attach the palette to a new parent while it is still parented.
-        if (IsAttachedToHostPopup())
+        if (IsAttachedToHostDialog())
         {
             _focusContext ??= app.FocusedElement;
             InvalidateResults();
-            ApplyPopupChrome(GetStyle<CommandPaletteStyle>());
-            hostPopup.Show();
+            ApplyHostChrome(GetStyle<CommandPaletteStyle>());
             app.Post(FocusSearch);
             return;
         }
 
-        // Capture the focus context before the popup steals focus (so commands are collected from the "app" focus).
+        // Capture the focus context before the host window steals focus (so commands are collected from the "app" focus).
         _focusContext ??= app.FocusedElement;
 
         var style = GetStyle<CommandPaletteStyle>();
         ApplyStyle(style);
-        ApplyPopupChrome(style);
+        ApplyHostChrome(style);
         var content = style.PopupTemplateFactory?.Invoke(this) ?? this;
-        hostPopup.Content = content;
+        _hostDialog!.Content = content;
+        EnsureHostGeometry(app.Root.Bounds, style);
         InvalidateResults();
 
-        hostPopup.Show();
+        app.ShowWindow(_hostDialog);
+        app.Post(RealignHostDialog);
         app.Post(FocusSearch);
     }
 
     /// <summary>
-    /// Closes the command palette popup if it is open.
+    /// Closes the command palette window if it is open.
     /// </summary>
     public void Close()
     {
-        _hostPopup?.Close();
+        if (_hostDialog is null)
+        {
+            return;
+        }
+
+        var app = App ?? _hostDialog.App ?? Dispatcher.AttachedApp;
+        if (app is null || _hostDialog.Parent is null)
+        {
+            return;
+        }
+
+        app.CloseWindow(_hostDialog);
+        _hostDialog?.Content = null;
+        _hostGeometryInitialized = false;
+        RestoreFocus();
     }
 
     /// <inheritdoc />
@@ -192,7 +196,7 @@ public sealed partial class CommandPalette : Visual
     {
         _ = ResultsVersion;
 
-        var app = App ?? _hostPopup?.App;
+        var app = App ?? _hostDialog?.App;
         if (app is null)
         {
             return;
@@ -262,7 +266,7 @@ public sealed partial class CommandPalette : Visual
     {
         var resultsHeight = Math.Max(1, style.ResultsHeight);
         _resultsHost.MinHeight = resultsHeight;
-        _resultsHost.MaxHeight = resultsHeight;
+        _resultsHost.MaxHeight = LayoutConstants.Infinite;
 
         this.MinWidth(Math.Max(0, style.MinWidth));
         this.MaxWidth(Math.Max(style.MinWidth, style.MaxWidth));
@@ -270,24 +274,30 @@ public sealed partial class CommandPalette : Visual
         _results.ItemTemplate = style.ItemTemplate ?? CommandPaletteStyle.CreateDefaultItemTemplate();
     }
 
-    private void ApplyPopupChrome(CommandPaletteStyle style)
+    private void ApplyHostChrome(CommandPaletteStyle style)
     {
-        if (_hostPopup is null)
+        if (_hostDialog is null)
         {
             return;
         }
 
-        _hostPopup.HorizontalPopupAlignment = style.PopupHorizontalAlignment;
-        _hostPopup.VerticalPopupAlignment = style.PopupVerticalAlignment;
-        _hostPopup.OffsetX = style.PopupOffsetX;
-        _hostPopup.OffsetY = style.PopupOffsetY;
-        _hostPopup.IsDraggable = style.PopupIsDraggable;
-        _hostPopup.DragHandleHeight = Math.Max(1, style.PopupDragHandleHeight);
+        var dialogPadding = new Thickness(1);
+        var minContentWidth = Math.Max(0, style.MinWidth);
+        var maxContentWidth = Math.Max(minContentWidth, style.MaxWidth);
+
+        _hostDialog.Title = "Command palette";
+        _hostDialog.Padding = dialogPadding;
+        _hostDialog.MinWidth = 2 + dialogPadding.Horizontal + minContentWidth;
+        _hostDialog.MaxWidth = 2 + dialogPadding.Horizontal + maxContentWidth;
+        _hostDialog.MinHeight = 2 + dialogPadding.Vertical + 3;
+        _hostDialog.IsResizable = style.PopupIsResizable;
+        _hostDialog.IsDraggable = style.PopupIsDraggable;
+        _hostDialog.DragHandleHeight = Math.Max(1, style.PopupDragHandleHeight);
     }
 
     private void FocusSearch()
     {
-        var app = App ?? _hostPopup?.App;
+        var app = App ?? _hostDialog?.App;
         if (app is null)
         {
             return;
@@ -296,10 +306,22 @@ public sealed partial class CommandPalette : Visual
         app.Focus(_searchBox);
     }
 
+    private void RealignHostDialog()
+    {
+        var app = App ?? _hostDialog?.App ?? Dispatcher.AttachedApp;
+        if (app is null || _hostDialog is null || _hostDialog.Parent is null)
+        {
+            return;
+        }
+
+        _hostGeometryInitialized = false;
+        EnsureHostGeometry(app.Root.Bounds, GetStyle<CommandPaletteStyle>());
+        _hostDialog.Arrange(app.Root.Bounds);
+    }
+
     private void RestoreFocus()
     {
-        // Note: the popup is removed from the window layer before raising Closed, so Popup.App can be null here.
-        var app = App ?? _hostPopup?.App ?? Dispatcher.AttachedApp;
+        var app = App ?? _hostDialog?.App ?? Dispatcher.AttachedApp;
         if (app is null)
         {
             return;
@@ -313,16 +335,14 @@ public sealed partial class CommandPalette : Visual
         _focusContext = null;
     }
 
-    private bool IsAttachedToHostPopup()
+    private bool IsAttachedToHostDialog()
     {
-        if (_hostPopup is null)
+        if (_hostDialog is null || _hostDialog.Parent is null)
         {
             return false;
         }
 
-        // When the palette is wrapped by the popup template, the popup content may not be fully attached yet
-        // (e.g. before the first layout pass). Treat the palette as hosted if it is under the content root.
-        var contentRoot = _hostPopup.Content;
+        var contentRoot = _hostDialog?.Content;
         if (ReferenceEquals(contentRoot, this))
         {
             return true;
@@ -330,7 +350,7 @@ public sealed partial class CommandPalette : Visual
 
         for (var parent = Parent; parent is not null; parent = parent.Parent)
         {
-            if (ReferenceEquals(parent, _hostPopup))
+            if (ReferenceEquals(parent, _hostDialog))
             {
                 return true;
             }
@@ -342,6 +362,86 @@ public sealed partial class CommandPalette : Visual
         }
 
         return false;
+    }
+
+    private void EnsureHostDialog()
+    {
+        if (_hostDialog is not null)
+        {
+            return;
+        }
+
+        _hostDialog = new Dialog
+        {
+            IsModal = false,
+        };
+        _hostGeometryInitialized = false;
+    }
+
+    private void EnsureHostGeometry(in Rectangle viewport, CommandPaletteStyle style)
+    {
+        if (_hostDialog is null || _hostGeometryInitialized)
+        {
+            return;
+        }
+
+        if (viewport.Width <= 0 || viewport.Height <= 0)
+        {
+            return;
+        }
+
+        _hostDialog.Measure(new Size(viewport.Width, viewport.Height));
+
+        var width = Math.Clamp(_hostDialog.DesiredSize.Width, _hostDialog.MinWidth, Math.Min(_hostDialog.MaxWidth, viewport.Width));
+        var height = Math.Clamp(_hostDialog.DesiredSize.Height, _hostDialog.MinHeight, viewport.Height);
+
+        if (style.PopupHorizontalAlignment == Align.Stretch)
+        {
+            width = viewport.Width;
+        }
+
+        if (style.PopupVerticalAlignment == Align.Stretch)
+        {
+            height = viewport.Height;
+        }
+
+        var maxLeft = Math.Max(0, viewport.Width - width);
+        var maxTop = Math.Max(0, viewport.Height - height);
+
+        var left = style.PopupHorizontalAlignment switch
+        {
+            Align.End => maxLeft + style.PopupOffsetX,
+            Align.Center => (maxLeft / 2) + style.PopupOffsetX,
+            _ => style.PopupOffsetX,
+        };
+        var top = style.PopupVerticalAlignment switch
+        {
+            Align.End => maxTop + style.PopupOffsetY,
+            Align.Center => (maxTop / 2) + style.PopupOffsetY,
+            _ => style.PopupOffsetY,
+        };
+
+        if (_hostDialog.Left != left)
+        {
+            _hostDialog.Left = left;
+        }
+
+        if (_hostDialog.Top != top)
+        {
+            _hostDialog.Top = top;
+        }
+
+        if (_hostDialog.Width != width)
+        {
+            _hostDialog.Width = width;
+        }
+
+        if (_hostDialog.Height != height)
+        {
+            _hostDialog.Height = height;
+        }
+
+        _hostGeometryInitialized = true;
     }
 
     private void RebuildResults(TerminalApp app, Visual? focusContext, string query)
@@ -430,9 +530,17 @@ public sealed partial class CommandPalette : Visual
             return;
         }
 
+        if (fromSearch && e.Key == TerminalKey.Enter)
+        {
+            InvokeIndex(_results.SelectedIndex);
+            e.Handled = true;
+            return;
+        }
+
         if (fromSearch && e.Key == TerminalKey.Down && _results.Items.Count > 0)
         {
-            (App ?? _hostPopup?.App)?.Focus(_results);
+            _results.SelectedIndex = Math.Clamp(_results.SelectedIndex, 0, _results.Items.Count - 1) + 1;
+            (App ?? _hostDialog?.App)?.Focus(_results);
             e.Handled = true;
             return;
         }
@@ -442,7 +550,7 @@ public sealed partial class CommandPalette : Visual
             return;
         }
 
-        var app = App ?? _hostPopup?.App;
+        var app = App ?? _hostDialog?.App;
         if (app is null)
         {
             return;

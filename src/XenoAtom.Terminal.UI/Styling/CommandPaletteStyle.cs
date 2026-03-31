@@ -27,14 +27,8 @@ public sealed record CommandPaletteStyle : IStyle<CommandPaletteStyle>
         PopupHorizontalAlignment = Align.Center,
         PopupVerticalAlignment = Align.Start,
         PopupIsDraggable = true,
+        PopupIsResizable = true,
         PopupDragHandleHeight = 1,
-        PopupTemplateFactory = visual => new Group
-        {
-            TopLeftText = "Command palette",
-            Padding = new Thickness(1),
-            Content = visual,
-            HorizontalAlignment = Align.Stretch,
-        },
         ItemTemplate = DefaultItemTemplate,
     };
 
@@ -75,6 +69,11 @@ public sealed record CommandPaletteStyle : IStyle<CommandPaletteStyle>
     /// Gets a value indicating whether the palette popup can be repositioned by dragging.
     /// </summary>
     public bool PopupIsDraggable { get; init; } = true;
+
+    /// <summary>
+    /// Gets a value indicating whether the palette host window can be resized with the mouse.
+    /// </summary>
+    public bool PopupIsResizable { get; init; } = true;
 
     /// <summary>
     /// Gets the height (in rows) of the draggable area at the top of the palette popup.

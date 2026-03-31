@@ -11,7 +11,7 @@ title: CommandPalette
 
 ## Fullscreen-only
 
-`CommandPalette` uses the popup/window system and is available only in fullscreen `Terminal.Run(...)` applications.
+`CommandPalette` uses the window layer and is available only in fullscreen `Terminal.Run(...)` applications.
 
 ## What it shows
 
@@ -47,13 +47,15 @@ root.AddCommand(new Command
 When open:
 
 - Type to search
-- Use Up/Down to select
-- Press Enter to execute
+- Press Enter to execute the currently highlighted result (the first match by default)
+- Use Up/Down to navigate results
+- Press Down from the search box to move directly to the next result
+- Resize or drag the palette window with the mouse
 - Press Esc to close
 
-## Popup chrome
+## Host chrome
 
-When displayed via `CommandPalette.Show()`, the palette can be wrapped with a template visual (border/chrome) using `CommandPaletteStyle`:
+When displayed via `CommandPalette.Show()`, the palette is hosted inside a resizable dialog window. You can still wrap the palette content with a template visual using `CommandPaletteStyle`:
 
 ```csharp
 using XenoAtom.Terminal.UI.Controls;
@@ -74,5 +76,5 @@ palette.Style(CommandPaletteStyle.Default with
 - [Commands](../commands.md)
 - [Input](../input.md)
 - [CommandBar](commandbar.md)
-- [Popup](popup.md)
+- [Dialog](dialog.md)
 - [CommandPalette Specs](../specs/controls/commandpalette.md)

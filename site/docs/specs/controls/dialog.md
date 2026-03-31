@@ -35,6 +35,8 @@ This document specifies the current behavior and design of the `Dialog` control 
 - `Left : int?` / `Top : int?` (position relative to the dialog’s layout slot)
 - `Width : int?` / `Height : int?` (optional fixed size)
 - `IsResizable : bool` (defaults to `true`)
+- `IsDraggable : bool` (defaults to `true`)
+- `DragHandleHeight : int` (defaults to `1`)
 - `IsModal : bool` (implements `IModalVisual` for window-layer hit-testing)
 - Style:
   - `DialogStyle`

@@ -22,7 +22,7 @@ public sealed class CommandPaletteDemo : ControlsDemoBase
 
         var host = new VStack(
             DemoUi.Title("Command palette"),
-                new TextBlock("Press Ctrl+P to open the command palette. Type to search, use arrows to select, and Enter to run.")
+                new TextBlock("Press Ctrl+P to open the command palette. Type to search, press Enter to run the top match, use arrows to navigate, or resize the window with the mouse.")
                 .Wrap(true),
                 new TextBox().Placeholder("Enter some text here to enable CTRL+P to be accessible"),
                 new HStack(

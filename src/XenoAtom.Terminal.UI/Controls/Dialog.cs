@@ -49,8 +49,10 @@ public sealed partial class Dialog : Visual, IModalVisual
     /// </summary>
     public Dialog()
     {
-        this.HorizontalAlignment(Align.Stretch);
-        this.VerticalAlignment(Align.Stretch);
+        HorizontalAlignment = Align.Stretch;
+        VerticalAlignment = Align.Stretch;
+        DragHandleHeight = 1;
+        IsDraggable = true;
         IsResizable = true;
         HoveredResizeHandle = DialogResizeHandle.None;
         ActiveResizeHandle = DialogResizeHandle.None;
@@ -143,6 +145,18 @@ public sealed partial class Dialog : Visual, IModalVisual
     /// </summary>
     [Bindable]
     public partial bool IsResizable { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the dialog can be moved by dragging the top border row.
+    /// </summary>
+    [Bindable]
+    public partial bool IsDraggable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the height (in rows) of the draggable area at the top of the dialog.
+    /// </summary>
+    [Bindable]
+    public partial int DragHandleHeight { get; set; }
 
     /// <summary>
     /// Gets or sets the optional left position (relative to the layout slot).
@@ -298,17 +312,19 @@ public sealed partial class Dialog : Visual, IModalVisual
     /// <inheritdoc/>
     protected override Rectangle PrepareArrangeBounds(in Rectangle finalRect)
     {
-        _layoutSlot = finalRect;
-        var width = ClampWidthToSlot(Width ?? DesiredSize.Width, finalRect.Width);
-        var height = ClampHeightToSlot(Height ?? DesiredSize.Height, finalRect.Height);
+        var layoutSlot = Parent is null ? finalRect : Parent.Bounds;
+        _layoutSlot = layoutSlot;
 
-        var maxLeft = Math.Max(0, finalRect.Width - width);
-        var maxTop = Math.Max(0, finalRect.Height - height);
+        var width = ClampWidthToSlot(Width ?? DesiredSize.Width, layoutSlot.Width);
+        var height = ClampHeightToSlot(Height ?? DesiredSize.Height, layoutSlot.Height);
+
+        var maxLeft = Math.Max(0, layoutSlot.Width - width);
+        var maxTop = Math.Max(0, layoutSlot.Height - height);
 
         var left = Left is null ? maxLeft / 2 : Math.Clamp(Left.Value, 0, maxLeft);
         var top = Top is null ? maxTop / 2 : Math.Clamp(Top.Value, 0, maxTop);
 
-        return new Rectangle(finalRect.X + left, finalRect.Y + top, width, height);
+        return new Rectangle(layoutSlot.X + left, layoutSlot.Y + top, width, height);
     }
 
     /// <inheritdoc/>
@@ -402,7 +418,7 @@ public sealed partial class Dialog : Visual, IModalVisual
                 GetClampedLabelWidth(BottomRightText, innerWidth));
         }
 
-        if ((_draggingMove || (IsHovered && HoveredMoveHandle)) && TryGetMoveHandleRect(out var moveHandleRect))
+        if ((_draggingMove || (IsHovered && HoveredMoveHandle)) && TryGetMoveHandleRect(out var moveHandleRect, forRender: true))
         {
             ApplyMoveHandleHighlight(
                 buffer,
@@ -435,7 +451,7 @@ public sealed partial class Dialog : Visual, IModalVisual
             }
         }
 
-        if (!HitTestMoveHandle(e.UiX, e.UiY))
+        if (!IsDraggable || !HitTestMoveHandle(e.UiX, e.UiY))
         {
             return;
         }
@@ -468,7 +484,7 @@ public sealed partial class Dialog : Visual, IModalVisual
             HoveredResizeHandle = hoveredHandle;
         }
 
-        var hoveredMoveHandle = HitTestMoveHandle(e.UiX, e.UiY);
+        var hoveredMoveHandle = IsDraggable && HitTestMoveHandle(e.UiX, e.UiY);
         if (HoveredMoveHandle != hoveredMoveHandle)
         {
             HoveredMoveHandle = hoveredMoveHandle;
@@ -488,7 +504,7 @@ public sealed partial class Dialog : Visual, IModalVisual
             _draggingMove = false;
             ActiveResizeHandle = DialogResizeHandle.None;
             HoveredResizeHandle = IsResizable ? HitTestResizeHandle(e.UiX, e.UiY) : DialogResizeHandle.None;
-            HoveredMoveHandle = HitTestMoveHandle(e.UiX, e.UiY);
+            HoveredMoveHandle = IsDraggable && HitTestMoveHandle(e.UiX, e.UiY);
             e.Handled = true;
         }
     }
@@ -710,18 +726,24 @@ public sealed partial class Dialog : Visual, IModalVisual
     }
 
     private bool HitTestMoveHandle(int uiX, int uiY)
-        => TryGetMoveHandleRect(out var rect) && rect.Contains(uiX, uiY);
+        => TryGetMoveHandleRect(out var rect, forRender: false) && rect.Contains(uiX, uiY);
 
-    private bool TryGetMoveHandleRect(out Rectangle rect)
+    private bool TryGetMoveHandleRect(out Rectangle rect, bool forRender)
     {
         rect = default;
+        if (!IsDraggable)
+        {
+            return false;
+        }
+
         var bounds = Bounds;
         if (bounds.Width <= 2 || bounds.Height <= 0)
         {
             return false;
         }
 
-        rect = new Rectangle(bounds.X + 1, bounds.Y, bounds.Width - 2, 1);
+        var height = forRender ? 1 : Math.Min(bounds.Height, Math.Max(1, DragHandleHeight));
+        rect = new Rectangle(bounds.X + 1, bounds.Y, bounds.Width - 2, height);
         return true;
     }
 
@@ -835,4 +857,5 @@ public sealed partial class Dialog : Visual, IModalVisual
         max = Math.Max(min, max);
         return Math.Clamp(height, min, max);
     }
+
 }

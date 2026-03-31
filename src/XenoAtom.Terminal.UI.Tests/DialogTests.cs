@@ -35,6 +35,30 @@ public sealed class DialogTests
     }
 
     [TestMethod]
+    public void Dialog_Show_Respects_Explicit_Left_In_Complex_Root_Layout()
+    {
+        var root = new DockLayout()
+            .Content(new HSplitter(new TextBlock("Browse"), new TextBlock("Page")).Ratio(0.16))
+            .Bottom(new Footer().Left("Footer"));
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(160, 40));
+        driver.Tick();
+
+        var dialog = new Dialog
+        {
+            Width = 54,
+            Height = 14,
+            Left = 53,
+            Top = 0,
+            Content = new TextBlock("Body"),
+        };
+
+        dialog.Show();
+        driver.Tick();
+
+        Assert.AreEqual(53, dialog.Bounds.X);
+    }
+
+    [TestMethod]
     public void Dialog_Arranges_Border_Labels_On_All_Sides()
     {
         var dialog = new Dialog
