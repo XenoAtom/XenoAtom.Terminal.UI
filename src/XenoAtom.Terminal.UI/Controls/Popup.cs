@@ -45,6 +45,7 @@ public sealed partial class Popup : Visual, IModalVisual
     private readonly ScrollViewer _scrollViewer;
     private Rectangle _layoutSlot;
     private Rectangle _popupRect;
+    private Visual? _restoreFocusTarget;
     private bool _isOpen;
     private bool _dragging;
     private int _dragStartUiX;
@@ -257,8 +258,19 @@ public sealed partial class Popup : Visual, IModalVisual
             throw new InvalidOperationException("Popup.Show is only supported while a TerminalApp is running.");
         }
 
-        _isOpen = true;
-        app.ShowWindow(this);
+        _restoreFocusTarget ??= OverlayFocusRestore.Capture(app, app.FocusedElement);
+
+        try
+        {
+            _isOpen = true;
+            app.ShowWindow(this);
+        }
+        catch
+        {
+            _isOpen = false;
+            _restoreFocusTarget = null;
+            throw;
+        }
     }
 
     /// <summary>
@@ -284,7 +296,14 @@ public sealed partial class Popup : Visual, IModalVisual
 
         _isOpen = false;
         app.CloseWindow(this);
+        OverlayFocusRestore.Restore(app, ref _restoreFocusTarget);
         RaiseEvent(ClosedEvent, closeArgs);
+    }
+
+    internal Visual? RestoreFocusTarget
+    {
+        get => _restoreFocusTarget;
+        set => _restoreFocusTarget = value;
     }
 
     /// <inheritdoc/>

@@ -133,6 +133,27 @@ public sealed class TextAreaSearchReplaceTests
     }
 
     [TestMethod]
+    public void TextArea_SearchReplace_Popup_Restores_Focus_After_Mode_Toggle_And_Close()
+    {
+        var editor = new TextArea("foo bar foo");
+        using var driver = new TerminalAppTestDriver(editor, TerminalHostKind.Fullscreen, new TerminalSize(60, 10));
+        driver.Tick();
+
+        Assert.AreSame(editor, driver.App.FocusedElement);
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlF, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlH, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        driver.Tick();
+
+        Assert.AreSame(editor, driver.App.FocusedElement);
+    }
+
+    [TestMethod]
     public void TextArea_ReplaceAll_Updates_Document_Text()
     {
         var editor = new TextArea("foo bar foo");

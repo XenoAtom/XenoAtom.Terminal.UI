@@ -52,10 +52,13 @@ When open:
 - Press Down from the search box to move directly to the next result
 - Resize or drag the palette window with the mouse
 - Press Esc to close
+- Closing the palette returns focus to the control that was focused before `Show()`
 
 ## Host chrome
 
-When displayed via `CommandPalette.Show()`, the palette is hosted inside a resizable dialog window. You can still wrap the palette content with a template visual using `CommandPaletteStyle`:
+When displayed via `CommandPalette.Show()`, the palette is hosted inside a resizable dialog window. The host dialog takes
+care of restoring the previous focus when the palette closes. You can still wrap the palette content with a template visual
+using `CommandPaletteStyle`:
 
 ```csharp
 using XenoAtom.Terminal.UI.Controls;

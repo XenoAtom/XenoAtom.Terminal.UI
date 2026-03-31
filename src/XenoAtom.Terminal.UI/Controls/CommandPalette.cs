@@ -138,7 +138,7 @@ public sealed partial class CommandPalette : Visual
         EnsureHostGeometry(app.Root.Bounds, style);
         InvalidateResults();
 
-        app.ShowWindow(_hostDialog);
+        _hostDialog.Show();
         app.Post(RealignHostDialog);
         app.Post(FocusSearch);
     }
@@ -153,16 +153,24 @@ public sealed partial class CommandPalette : Visual
             return;
         }
 
+        if (_hostDialog.Parent is null)
+        {
+            _hostDialog.Content = null;
+            _hostGeometryInitialized = false;
+            _focusContext = null;
+            return;
+        }
+
         var app = App ?? _hostDialog.App ?? Dispatcher.AttachedApp;
-        if (app is null || _hostDialog.Parent is null)
+        if (app is null)
         {
             return;
         }
 
-        app.CloseWindow(_hostDialog);
+        _hostDialog.Close();
         _hostDialog?.Content = null;
         _hostGeometryInitialized = false;
-        RestoreFocus();
+        _focusContext = null;
     }
 
     /// <inheritdoc />
@@ -317,22 +325,6 @@ public sealed partial class CommandPalette : Visual
         _hostGeometryInitialized = false;
         EnsureHostGeometry(app.Root.Bounds, GetStyle<CommandPaletteStyle>());
         _hostDialog.Arrange(app.Root.Bounds);
-    }
-
-    private void RestoreFocus()
-    {
-        var app = App ?? _hostDialog?.App ?? Dispatcher.AttachedApp;
-        if (app is null)
-        {
-            return;
-        }
-
-        if (_focusContext is not null && ReferenceEquals(_focusContext.App, app))
-        {
-            app.Focus(_focusContext);
-        }
-
-        _focusContext = null;
     }
 
     private bool IsAttachedToHostDialog()

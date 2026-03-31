@@ -54,6 +54,7 @@ Controls opt in to focus by setting `Focusable = true`.
 - Keyboard focus is kept within a focus scope managed by `TerminalApp`.
 - On mouse down (or double click), `TerminalApp` walks up from the hit target to the nearest focusable ancestor and focuses it.
   - This is why clicking inside a complex control (like a text editor) typically focuses that editor.
+- `Popup` and `Dialog` automatically save the previously focused control when shown and restore it when closed.
 
 If you implement a focusable control, use `HasFocus` / `HasFocusWithin` to render focus cues and to decide what keyboard behavior to enable.
 

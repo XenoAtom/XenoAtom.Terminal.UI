@@ -552,7 +552,6 @@ public static partial class ContextMenuService
             if (popup is not null)
             {
                 popup.Close();
-                _rootPopup.App?.Focus(_parent);
             }
         }
 

@@ -401,8 +401,6 @@ public partial class Select<T> : ContentVisual
             }
 
             owner._popup = null;
-
-            owner.App?.Focus(owner);
         });
 
         popup.Show();

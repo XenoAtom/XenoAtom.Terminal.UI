@@ -407,6 +407,39 @@ public sealed class CommandPaletteTests
     }
 
     [TestMethod]
+    public void CommandPalette_Escape_Restores_Exact_Previous_Focus()
+    {
+        var first = new TextBox("First");
+        var second = new TextBox("Second");
+        var palette = new CommandPalette();
+        var root = new VStack(first, second);
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(80, 16));
+        driver.Tick();
+
+        driver.App.Focus(second);
+        driver.Tick();
+
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.open",
+            LabelMarkup = "Open",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        palette.Show();
+        driver.Tick();
+
+        Assert.IsInstanceOfType(driver.App.FocusedElement, typeof(TextBox), "Expected the palette search box to take focus.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        driver.Tick();
+
+        Assert.AreSame(second, driver.App.FocusedElement);
+    }
+
+    [TestMethod]
     public void CommandPalette_Ranks_Word_Boundary_Matches_Ahead_Of_Later_Matches()
     {
         var root = new VStack();

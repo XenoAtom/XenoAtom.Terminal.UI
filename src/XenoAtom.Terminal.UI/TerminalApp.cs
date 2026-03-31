@@ -65,7 +65,6 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private Dictionary<string, AnsiStyle>? _previousMarkupStyles;
 
     private Popup? _contextMenuPopup;
-    private Visual? _contextMenuFocusContext;
 
     private BindableList<Command>? _globalCommands;
 
@@ -1232,9 +1231,6 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             throw new InvalidOperationException("Cannot show an empty context menu.");
         }
 
-        var focusContext = FocusedElement;
-        _contextMenuFocusContext = focusContext;
-
         var popup = ContextMenuService.CreatePopup(target, menuItems, uiX, uiY);
         _contextMenuPopup = popup;
 
@@ -1243,13 +1239,6 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             if (ReferenceEquals(_contextMenuPopup, popup))
             {
                 _contextMenuPopup = null;
-            }
-
-            var toRestore = _contextMenuFocusContext;
-            _contextMenuFocusContext = null;
-            if (toRestore is not null && ReferenceEquals(toRestore.App, this))
-            {
-                Focus(toRestore);
             }
         });
 

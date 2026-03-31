@@ -34,10 +34,11 @@ Popups participate in focus. Common dismissal patterns:
 - close on `Escape`,
 - close when clicking outside,
 - close when the popup loses focus (for transient UI).
+- restore the previously focused control when the popup closes.
 
 > [!IMPORTANT]
-> When you show a popup from a control, keep the focus rules explicit: decide whether focus should move into the popup
-> (typical for menus) or remain on the originating control (typical for passive tooltips).
+> Interactive popups save the currently focused control when shown and restore it on close. This keeps dropdowns,
+> context menus, search popups, and similar overlays consistent without each caller having to manage focus manually.
 
 ## Defaults
 

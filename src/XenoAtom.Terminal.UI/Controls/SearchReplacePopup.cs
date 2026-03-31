@@ -108,7 +108,7 @@ public sealed partial class SearchReplacePopup : Visual
     private Rectangle _hostRect;
     private int _offsetX;
     private int _offsetY;
-    private Visual? _restoreFocus;
+    private Visual? _restoreFocusTarget;
 
     private bool _bulkUpdating;
     private bool _rebuildingPopup;
@@ -322,8 +322,6 @@ public sealed partial class SearchReplacePopup : Visual
             return;
         }
 
-        _restoreFocus = App?.FocusedElement ?? Dispatcher.AttachedApp?.FocusedElement;
-
         var searchBox = new TextBox()
             .Placeholder("Find…")
             .HorizontalAlignment(Align.Stretch)
@@ -433,6 +431,7 @@ public sealed partial class SearchReplacePopup : Visual
             OffsetY = _offsetY,
             IsDraggable = true,
             DragHandleHeight = 1,
+            RestoreFocusTarget = _restoreFocusTarget,
         };
 
         popup.KeyDown((_, args) =>
@@ -470,12 +469,10 @@ public sealed partial class SearchReplacePopup : Visual
                 var cleared = default(SearchQuery);
                 _target.SetQuery(in cleared);
             }
-            if (!_rebuildingPopup && _restoreFocus is not null)
+            if (!_rebuildingPopup)
             {
-                var app = App ?? Dispatcher.AttachedApp;
-                app?.Focus(_restoreFocus);
+                _restoreFocusTarget = null;
             }
-            _restoreFocus = null;
             _rebuildingPopup = false;
         });
 
@@ -501,6 +498,8 @@ public sealed partial class SearchReplacePopup : Visual
         var popup = _popup;
         _popup = null;
         _rebuildingPopup = true;
+        _restoreFocusTarget = popup.RestoreFocusTarget;
+        popup.RestoreFocusTarget = null;
         popup.Close();
 
         // Reopen using the current mode/query state.

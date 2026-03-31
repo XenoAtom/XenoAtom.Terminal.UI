@@ -28,6 +28,7 @@ public sealed partial class Dialog : Visual, IModalVisual
     private Rectangle _layoutSlot;
 
     private bool _draggingMove;
+    private Visual? _restoreFocusTarget;
     private int _interactionStartUiX;
     private int _interactionStartUiY;
     private int _interactionStartLeft;
@@ -109,7 +110,17 @@ public sealed partial class Dialog : Visual, IModalVisual
             throw new InvalidOperationException("Dialog.Show is only supported while a TerminalApp is running.");
         }
 
-        app.ShowWindow(this);
+        _restoreFocusTarget ??= OverlayFocusRestore.Capture(app, app.FocusedElement);
+
+        try
+        {
+            app.ShowWindow(this);
+        }
+        catch
+        {
+            _restoreFocusTarget = null;
+            throw;
+        }
     }
 
     /// <summary>
@@ -126,6 +137,7 @@ public sealed partial class Dialog : Visual, IModalVisual
         }
 
         app.CloseWindow(this);
+        OverlayFocusRestore.Restore(app, ref _restoreFocusTarget);
     }
 
     /// <summary>
@@ -209,6 +221,12 @@ public sealed partial class Dialog : Visual, IModalVisual
     /// </summary>
     [Bindable]
     public partial Visual? BottomRightText { get; set; }
+
+    internal Visual? RestoreFocusTarget
+    {
+        get => _restoreFocusTarget;
+        set => _restoreFocusTarget = value;
+    }
 
     /// <inheritdoc/>
     protected override int ChildrenCount

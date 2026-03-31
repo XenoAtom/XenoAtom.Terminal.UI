@@ -14,6 +14,7 @@ title: Dialog
 Dialogs are displayed in fullscreen apps and typically:
 
 - take focus when shown
+- restore the previously focused control when closed
 - can be modal or non-modal depending on configuration
 - can be moved by dragging the top border row
 - highlights the top border row on hover so the move affordance is visible
@@ -29,6 +30,7 @@ Dialogs are displayed in fullscreen apps and typically:
 - `TopRightText`, `BottomLeftText`, and `BottomRightText` let you decorate the dialog border the same way `Group` does.
 - `DialogStyle` lets you override border glyphs, surface/border styles, label cutout styling, and the hover styling used for resize handles and the move bar.
 - Top and bottom hover affordances respect border-label cutouts so the highlight does not paint over those visuals.
+- Focus restoration is automatic, so showing a dialog does not require manual save/restore focus code in callers.
 
 ```csharp
 var dialog = new Dialog()

@@ -865,7 +865,6 @@ public partial class PromptEditor : TextEditorBase
 
             owner._completionPopup = null;
             owner._completionActive = false;
-            owner.App?.Focus(owner);
         });
 
         popup.Show();

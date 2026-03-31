@@ -953,7 +953,6 @@ public sealed partial class MenuBar : Visual
                 try
                 {
                     popup.Close();
-                    _owner.App?.Focus(_parent);
                 }
                 finally
                 {
