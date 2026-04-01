@@ -7,6 +7,8 @@ using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Hosting;
+using XenoAtom.Terminal.UI.Layout;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -332,6 +334,76 @@ public sealed class CommandPaletteTests
         Assert.AreEqual(hostDialog.Width, hostDialog.Bounds.Width, $"Unexpected dialog width/bounds mismatch. Width={hostDialog.Width} Bounds={hostDialog.Bounds}.");
         Assert.AreEqual(hostDialog.Left, hostDialog.Bounds.X, $"Unexpected dialog left/bounds mismatch. Left={hostDialog.Left} Bounds={hostDialog.Bounds}.");
         Assert.AreEqual(Math.Max(0, (160 - hostDialog.Bounds.Width) / 2), hostDialog.Bounds.X, "Expected centering to use the full window layer width.");
+    }
+
+    [TestMethod]
+    public void CommandPalette_Show_Can_Use_Viewport_Percentage_For_Width_And_Height()
+    {
+        var root = new VStack();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(160, 40));
+        driver.Tick();
+
+        var palette = new CommandPalette().Style(CommandPaletteStyle.Default with
+        {
+            PopupWidthPercent = 50,
+            PopupHeightPercent = 40,
+            MinWidth = 20,
+            MaxWidth = LayoutConstants.Infinite,
+        });
+
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.open",
+            LabelMarkup = "Open",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        palette.Show();
+        driver.Tick();
+
+        var hostDialog = GetHostDialog(palette);
+        Assert.AreEqual(80, hostDialog.Bounds.Width, "Expected width percent to size the palette host from the viewport width.");
+        Assert.AreEqual(16, hostDialog.Bounds.Height, "Expected height percent to size the palette host from the viewport height.");
+        Assert.AreEqual(Math.Max(0, (160 - 80) / 2), hostDialog.Bounds.X, "Expected percentage sizing to preserve centered horizontal placement.");
+        Assert.AreEqual(0, hostDialog.Bounds.Y, "Expected percentage sizing to preserve top alignment by default.");
+    }
+
+    [TestMethod]
+    public void CommandPalette_Show_Percentage_Size_Still_Uses_Alignment_And_Offsets()
+    {
+        var root = new VStack();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(120, 30));
+        driver.Tick();
+
+        var palette = new CommandPalette().Style(CommandPaletteStyle.Default with
+        {
+            PopupWidthPercent = 50,
+            PopupHeightPercent = 50,
+            MinWidth = 20,
+            MaxWidth = LayoutConstants.Infinite,
+            PopupHorizontalAlignment = Align.End,
+            PopupVerticalAlignment = Align.End,
+            PopupOffsetX = -4,
+            PopupOffsetY = -2,
+        });
+
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.open",
+            LabelMarkup = "Open",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        palette.Show();
+        driver.Tick();
+
+        var hostDialog = GetHostDialog(palette);
+        Assert.AreEqual(60, hostDialog.Bounds.Width, "Expected width percent to use half of the viewport width.");
+        Assert.AreEqual(15, hostDialog.Bounds.Height, "Expected height percent to use half of the viewport height.");
+        Assert.AreEqual(56, hostDialog.Bounds.X, "Expected end alignment to position the palette from the right edge before applying offset.");
+        Assert.AreEqual(13, hostDialog.Bounds.Y, "Expected end alignment to position the palette from the bottom edge before applying offset.");
     }
 
     [TestMethod]

@@ -276,8 +276,13 @@ public sealed partial class CommandPalette : Visual
         _resultsHost.MinHeight = resultsHeight;
         _resultsHost.MaxHeight = LayoutConstants.Infinite;
 
-        this.MinWidth(Math.Max(0, style.MinWidth));
-        this.MaxWidth(Math.Max(style.MinWidth, style.MaxWidth));
+        var minWidth = Math.Max(0, style.MinWidth);
+        var maxWidth = style.MaxWidth == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : Math.Max(minWidth, style.MaxWidth);
+
+        this.MinWidth(minWidth);
+        this.MaxWidth(maxWidth);
 
         _results.ItemTemplate = style.ItemTemplate ?? CommandPaletteStyle.CreateDefaultItemTemplate();
 
@@ -295,12 +300,16 @@ public sealed partial class CommandPalette : Visual
 
         var dialogPadding = new Thickness(1);
         var minContentWidth = Math.Max(0, style.MinWidth);
-        var maxContentWidth = Math.Max(minContentWidth, style.MaxWidth);
+        var maxContentWidth = style.MaxWidth == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : Math.Max(minContentWidth, style.MaxWidth);
 
         _hostDialog.Title = "Command palette";
         _hostDialog.Padding = dialogPadding;
         _hostDialog.MinWidth = 2 + dialogPadding.Horizontal + minContentWidth;
-        _hostDialog.MaxWidth = 2 + dialogPadding.Horizontal + maxContentWidth;
+        _hostDialog.MaxWidth = maxContentWidth == LayoutConstants.Infinite
+            ? LayoutConstants.Infinite
+            : 2 + dialogPadding.Horizontal + maxContentWidth;
         _hostDialog.MinHeight = 2 + dialogPadding.Vertical + 3;
         _hostDialog.IsResizable = style.PopupIsResizable;
         _hostDialog.IsDraggable = style.PopupIsDraggable;
@@ -388,8 +397,8 @@ public sealed partial class CommandPalette : Visual
 
         _hostDialog.Measure(new Size(viewport.Width, viewport.Height));
 
-        var width = Math.Clamp(_hostDialog.DesiredSize.Width, _hostDialog.MinWidth, Math.Min(_hostDialog.MaxWidth, viewport.Width));
-        var height = Math.Clamp(_hostDialog.DesiredSize.Height, _hostDialog.MinHeight, viewport.Height);
+        var width = ResolvePopupWidth(viewport.Width, style);
+        var height = ResolvePopupHeight(viewport.Height, style);
 
         if (style.PopupHorizontalAlignment == Align.Stretch)
         {
@@ -438,6 +447,47 @@ public sealed partial class CommandPalette : Visual
         }
 
         _hostGeometryInitialized = true;
+    }
+
+    private int ResolvePopupWidth(int viewportWidth, CommandPaletteStyle style)
+    {
+        var maxWidth = Math.Min(_hostDialog!.MaxWidth, viewportWidth);
+        if (TryResolveDimensionFromPercent(style.PopupWidthPercent, viewportWidth, out var percentWidth))
+        {
+            return Math.Clamp(percentWidth, _hostDialog.MinWidth, maxWidth);
+        }
+
+        return Math.Clamp(_hostDialog.DesiredSize.Width, _hostDialog.MinWidth, maxWidth);
+    }
+
+    private int ResolvePopupHeight(int viewportHeight, CommandPaletteStyle style)
+    {
+        if (TryResolveDimensionFromPercent(style.PopupHeightPercent, viewportHeight, out var percentHeight))
+        {
+            return Math.Clamp(percentHeight, _hostDialog!.MinHeight, viewportHeight);
+        }
+
+        return Math.Clamp(_hostDialog!.DesiredSize.Height, _hostDialog.MinHeight, viewportHeight);
+    }
+
+    private static bool TryResolveDimensionFromPercent(double? percentValue, int viewportSize, out int size)
+    {
+        size = viewportSize;
+        if (!percentValue.HasValue)
+        {
+            return false;
+        }
+
+        var percent = percentValue.Value;
+        if (double.IsNaN(percent) || double.IsInfinity(percent) || percent <= 0d)
+        {
+            return false;
+        }
+
+        var clampedPercent = Math.Min(100d, percent);
+        size = (int)Math.Floor(viewportSize * (clampedPercent / 100d));
+        size = Math.Clamp(size, 1, viewportSize);
+        return true;
     }
 
     private void RebuildResults(TerminalApp app, Visual? focusContext, string query)

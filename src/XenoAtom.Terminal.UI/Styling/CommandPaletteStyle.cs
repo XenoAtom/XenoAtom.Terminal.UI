@@ -66,6 +66,24 @@ public sealed record CommandPaletteStyle : IStyle<CommandPaletteStyle>
     public int PopupOffsetY { get; init; }
 
     /// <summary>
+    /// Gets an optional popup width as a percentage of the available viewport width.
+    /// </summary>
+    /// <remarks>
+    /// Values are expressed in the [0, 100] range. Non-positive, <see cref="double.NaN"/>, and infinite values are ignored.
+    /// When set, the percentage-derived width is used as the initial popup width before alignment and offsets are applied.
+    /// </remarks>
+    public double? PopupWidthPercent { get; init; }
+
+    /// <summary>
+    /// Gets an optional popup height as a percentage of the available viewport height.
+    /// </summary>
+    /// <remarks>
+    /// Values are expressed in the [0, 100] range. Non-positive, <see cref="double.NaN"/>, and infinite values are ignored.
+    /// When set, the percentage-derived height is used as the initial popup height before alignment and offsets are applied.
+    /// </remarks>
+    public double? PopupHeightPercent { get; init; }
+
+    /// <summary>
     /// Gets a value indicating whether the palette popup can be repositioned by dragging.
     /// </summary>
     public bool PopupIsDraggable { get; init; } = true;

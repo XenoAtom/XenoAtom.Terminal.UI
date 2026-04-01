@@ -68,13 +68,20 @@ using XenoAtom.Terminal.UI.Styling;
 var palette = new CommandPalette();
 palette.Style(CommandPaletteStyle.Default with
 {
+    PopupWidthPercent = 50,
+    MinWidth = 30,
+    MaxWidth = 120,
+    PopupVerticalAlignment = Align.End,
+    PopupOffsetY = -2,
     PopupTemplateFactory = visual => new Border(visual),
 });
 ```
 
+`PopupWidthPercent` and `PopupHeightPercent` are optional viewport-relative sizing hints. Alignment (`Start`, `Center`, `End`, `Stretch`) and `PopupOffsetX` / `PopupOffsetY` still control where the popup appears after that size is resolved.
+
 ## Defaults
 
-- Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+- Default popup alignment: `PopupHorizontalAlignment = Align.Center`, `PopupVerticalAlignment = Align.Start`
 
 ## Related
 - [Commands](../commands.md)

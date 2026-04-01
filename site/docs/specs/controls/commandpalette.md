@@ -210,6 +210,8 @@ Introduce `CommandPaletteStyle` (or update existing one) with:
 - `PopupTemplateFactory` (already used elsewhere)
 - `ItemTemplate` (`DataTemplate<Command>`) used by the results list
 - `PopupIsResizable` to control dialog-like resize behavior
+- `PopupWidthPercent` / `PopupHeightPercent` for viewport-relative popup sizing
+- `PopupHorizontalAlignment` / `PopupVerticalAlignment` with `PopupOffsetX` / `PopupOffsetY` for placement
 - optional `DescriptionVisible` / `ShowDescription`
 - optional `MaxWidth`, `ResultsHeight`, padding, etc.
 
