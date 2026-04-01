@@ -114,9 +114,18 @@ The source generator emits:
 - property accessors wired into the binding hub
 - fluent extension methods for `T`, `Func<T>`, and `Binding<T>` overloads
 
+Generated bindable getters stay pure reads: they register the read and return the current backing field value. They do
+not “catch up” by synchronizing from another source during a later `PrepareChildren` / `Measure` / `Arrange` / `Render`
+read.
+
+The three fluent forms map to two runtime mechanisms:
+
+- `Property(value)` applies a direct value
+- `Property(binding)` attaches an explicit push-driven `Binding<T>`
+- `Property(() => expr)` on a `Visual` installs tracked computed configuration that re-runs during dynamic update
+
 When a generated bindable property is attached to a `Binding<T>`, the framework synchronizes the local backing value as
-soon as the source binding changes. Generated getters stay pure reads; they do not “catch up” by raising change
-callbacks during a later `PrepareChildren` / `Measure` / `Arrange` / `Render` read.
+soon as the source binding changes.
 
 ## Bindable models (your own data types)
 
@@ -190,22 +199,27 @@ var grid = new DataGridControl { View = view };
 
 ## When to use `Func<T>`
 
-Use `Func<T>` to compute a value on demand, while still being dependency-tracked:
-
-```csharp
-new TextBlock(() => $"Tick: {tick.Value}")
-```
-
-The same pattern applies to styles:
+For bindable property fluent APIs on `Visual` receivers, `Func<T>` means "recompute this property during dynamic update
+when the values read by the lambda change":
 
 ```csharp
 new Button("Save")
-    .Style(() => isDanger.Value
-        ? (ButtonStyle.Default with { ShowBorder = true })
-        : ButtonStyle.Default);
+    .IsVisible(() => filter.Value == "show");
 ```
 
-For style-specific guidance, see [Styling](styling.md).
+The lambda reads the real upstream bindables directly. There is no intermediate synthetic binding source.
+
+Semantics:
+
+- `Property(value)` clears a prior computed function for that property.
+- `Property(binding)` clears a prior computed function for that property.
+- Direct setter assignment after computed configuration does not clear the recipe; the next dynamic update reapplies the computed value.
+
+For non-visual bindable models, generated `Func<T>` overloads are one-shot: the function is evaluated immediately and
+the resulting value is assigned once.
+
+If you need a live custom binding source whose value changes over time, that source must notify changes explicitly.
+Read-only does not imply pull-on-read behavior.
 
 ## Two-way binding
 

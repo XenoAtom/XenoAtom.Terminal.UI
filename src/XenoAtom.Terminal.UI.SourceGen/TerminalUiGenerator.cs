@@ -842,6 +842,10 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                         .Append(") where T : ").Append(receiverType).AppendLine();
                     sb.Append(methodIndent).AppendLine("{");
                     sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
+                    if (p.IsParentVisual)
+                    {
+                        sb.Append(methodIndent).Append("    obj.ClearComputedProperty(").Append(receiverType).Append(".Accessor.").Append(EscapeIdentifier(propName)).AppendLine(");");
+                    }
                     sb.Append(methodIndent).Append("    obj.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine(";");
                     sb.Append(methodIndent).AppendLine("    return obj;");
                     sb.Append(methodIndent).AppendLine("}");
@@ -864,6 +868,10 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     }
                     sb.Append(methodIndent).AppendLine("{");
                     sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
+                    if (p.IsParentVisual)
+                    {
+                        sb.Append(methodIndent).Append("    obj.ClearComputedProperty(").Append(receiverType).Append(".Accessor.").Append(EscapeIdentifier(propName)).AppendLine(");");
+                    }
                     sb.Append(methodIndent).Append("    obj.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine(";");
                     sb.Append(methodIndent).AppendLine("    return obj;");
                     sb.Append(methodIndent).AppendLine("}");
@@ -914,78 +922,107 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     sb.AppendLine();
                 }
 
-                if (p.IsParentVisual)
+                if (!p.IsDelegateProperty)
                 {
-                    // If the property itself is a delegate (e.g. Func<...>), avoid generating an overload taking
-                    // Func<PropertyType>. It would compete with the natural "set the delegate" overload and complicate
-                    // method resolution for lambdas.
-                    if (!p.IsDelegateProperty)
+                    sb.Append(methodIndent).AppendLine("/// <summary>");
+                    if (p.IsParentVisual)
                     {
-                        sb.Append(methodIndent).AppendLine("/// <summary>");
-                        sb.Append(methodIndent).Append("/// Configures <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> from a computed value and returns the same instance.");
-                        sb.Append(methodIndent).AppendLine("/// </summary>");
+                        sb.Append(methodIndent).Append("/// Installs tracked computed configuration for <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/> and returns the same instance.");
+                    }
+                    else
+                    {
+                        sb.Append(methodIndent).Append("/// Evaluates the supplied function once, assigns <see cref=\"").Append(receiverTypeXml).Append('.').Append(EscapeIdentifier(propName)).AppendLine("\"/>, and returns the same instance.");
+                    }
+                    sb.Append(methodIndent).AppendLine("/// </summary>");
+                    if (p.IsParentVisual)
+                    {
                         sb.Append(methodIndent).AppendLine("/// <remarks>");
-                        sb.Append(methodIndent).AppendLine("/// The delegate is evaluated as needed; accessed bindings are tracked so only affected visuals are refreshed.");
+                        sb.Append(methodIndent).AppendLine("/// The delegate is re-evaluated during the visual's dynamic update pass, and bindable reads performed by the delegate are tracked directly.");
                         sb.Append(methodIndent).AppendLine("/// </remarks>");
-                        sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
-                        sb.Append(methodIndent).Append("/// <param name=\"").Append(EscapeIdentifier(argName)).AppendLine("\">A delegate that computes the current value.</param>");
-                        sb.Append(methodIndent).AppendLine("/// <returns>The same instance for chaining.</returns>");
-                        sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
-                        if (canUseGeneric)
+                    }
+                    sb.Append(methodIndent).AppendLine("/// <param name=\"obj\">The instance to configure.</param>");
+                    sb.Append(methodIndent).Append("/// <param name=\"").Append(EscapeIdentifier(argName)).AppendLine("\">A delegate that computes the current value.</param>");
+                    sb.Append(methodIndent).AppendLine("/// <returns>The same instance for chaining.</returns>");
+                    sb.Append(methodIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
+                    if (canUseGeneric)
+                    {
+                        sb.Append(methodIndent).Append("public static T ").Append(EscapeIdentifier(propName)).Append("<T>(this T obj, global::System.Func<").Append(argType).Append("> ").Append(EscapeIdentifier(argName))
+                            .Append(") where T : ").Append(receiverType).AppendLine();
+                        sb.Append(methodIndent).AppendLine("{");
+                        sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
+                        sb.Append(methodIndent).Append("    global::System.ArgumentNullException.ThrowIfNull(").Append(EscapeIdentifier(argName)).AppendLine(");");
+                        if (p.IsParentVisual)
                         {
-                            sb.Append(methodIndent).Append("public static T ").Append(EscapeIdentifier(propName)).Append("<T>(this T obj, global::System.Func<").Append(argType).Append("> ").Append(EscapeIdentifier(argName))
-                                .Append(") where T : ").Append(receiverType).AppendLine();
-                            if (p.GenerateImplementation && !p.IsVisualChildProperty)
+                            if (p.GenerateImplementation)
                             {
-                                sb.Append(methodIndent).AppendLine("{");
-                                sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
-                                sb.Append(methodIndent).Append("    var state = new global::XenoAtom.Terminal.UI.FuncState<").Append(argType).Append(">(").Append(EscapeIdentifier(argName)).AppendLine(");");
-                                sb.Append(methodIndent).Append("    obj.Bind").Append(propName).Append("(((")
-                                    .Append("global::XenoAtom.Terminal.UI.FuncState<").Append(argType).Append(">.IBindings)state).Value").AppendLine(");");
-                                sb.Append(methodIndent).AppendLine("    return obj;");
-                                sb.Append(methodIndent).AppendLine("}");
+                                sb.Append(methodIndent).Append("    obj.Bind").Append(propName).AppendLine("(default);");
                             }
                             else
                             {
-                                sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
+                                sb.Append(methodIndent).Append("    obj.ClearComputedProperty(").Append(receiverType).Append(".Accessor.").Append(EscapeIdentifier(propName)).AppendLine(");");
                             }
+
+                            sb.Append(methodIndent).Append("    obj.SetComputedProperty(").Append(receiverType).Append(".Accessor.").Append(EscapeIdentifier(propName)).AppendLine(",");
+                            sb.Append(methodIndent).AppendLine("        static (owner, state) =>");
+                            sb.Append(methodIndent).AppendLine("        {");
+                            sb.Append(methodIndent).Append("            ((").Append(receiverType).Append(")owner).").Append(EscapeIdentifier(propName)).Append(" = ((global::System.Func<").Append(argType).Append(">)state!).Invoke();").AppendLine();
+                            sb.Append(methodIndent).AppendLine("        },");
+                            sb.Append(methodIndent).Append("        ").Append(EscapeIdentifier(argName)).AppendLine(");");
                         }
                         else
                         {
-                            sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName));
-                            if (needsTypeParameters)
-                            {
-                                AppendTypeParameters(sb, containingType);
-                            }
-                            sb.Append("(this ").Append(receiverType).Append(" obj, global::System.Func<").Append(argType)
-                                .Append("> ").Append(EscapeIdentifier(argName)).Append(')');
-                            if (needsTypeParameters)
-                            {
-                                AppendTypeParameterConstraints(sb, containingType, methodIndent);
-                            }
-                            else
-                            {
-                                sb.AppendLine();
-                            }
-                            if (p.GenerateImplementation && !p.IsVisualChildProperty)
-                            {
-                                sb.Append(methodIndent).AppendLine("{");
-                                sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
-                                sb.Append(methodIndent).Append("    var state = new global::XenoAtom.Terminal.UI.FuncState<").Append(argType).Append(">(").Append(EscapeIdentifier(argName)).AppendLine(");");
-                                sb.Append(methodIndent).Append("    obj.Bind").Append(propName).Append("(((")
-                                    .Append("global::XenoAtom.Terminal.UI.FuncState<").Append(argType).Append(">.IBindings)state).Value").AppendLine(");");
-                                sb.Append(methodIndent).AppendLine("    return obj;");
-                                sb.Append(methodIndent).AppendLine("}");
-                            }
-                            else
-                            {
-                                sb.Append(methodIndent).Append("    => global::XenoAtom.Terminal.UI.VisualExtensions.Update(obj, x => x.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("());");
-                            }
+                            sb.Append(methodIndent).Append("    obj.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("();");
                         }
+                        sb.Append(methodIndent).AppendLine("    return obj;");
+                        sb.Append(methodIndent).AppendLine("}");
+                    }
+                    else
+                    {
+                        sb.Append(methodIndent).Append("public static ").Append(receiverType).Append(' ').Append(EscapeIdentifier(propName));
+                        if (needsTypeParameters)
+                        {
+                            AppendTypeParameters(sb, containingType);
+                        }
+                        sb.Append("(this ").Append(receiverType).Append(" obj, global::System.Func<").Append(argType)
+                            .Append("> ").Append(EscapeIdentifier(argName)).Append(')');
+                        if (needsTypeParameters)
+                        {
+                            AppendTypeParameterConstraints(sb, containingType, methodIndent);
+                        }
+                        else
+                        {
+                            sb.AppendLine();
+                        }
+                        sb.Append(methodIndent).AppendLine("{");
+                        sb.Append(methodIndent).AppendLine("    global::System.ArgumentNullException.ThrowIfNull(obj);");
+                        sb.Append(methodIndent).Append("    global::System.ArgumentNullException.ThrowIfNull(").Append(EscapeIdentifier(argName)).AppendLine(");");
+                        if (p.IsParentVisual)
+                        {
+                            if (p.GenerateImplementation)
+                            {
+                                sb.Append(methodIndent).Append("    obj.Bind").Append(propName).AppendLine("(default);");
+                            }
+                            else
+                            {
+                                sb.Append(methodIndent).Append("    obj.ClearComputedProperty(").Append(receiverType).Append(".Accessor.").Append(EscapeIdentifier(propName)).AppendLine(");");
+                            }
 
-                        sb.AppendLine();
+                            sb.Append(methodIndent).Append("    obj.SetComputedProperty(").Append(receiverType).Append(".Accessor.").Append(EscapeIdentifier(propName)).AppendLine(",");
+                            sb.Append(methodIndent).AppendLine("        static (owner, state) =>");
+                            sb.Append(methodIndent).AppendLine("        {");
+                            sb.Append(methodIndent).Append("            ((").Append(receiverType).Append(")owner).").Append(EscapeIdentifier(propName)).Append(" = ((global::System.Func<").Append(argType).Append(">)state!).Invoke();").AppendLine();
+                            sb.Append(methodIndent).AppendLine("        },");
+                            sb.Append(methodIndent).Append("        ").Append(EscapeIdentifier(argName)).AppendLine(");");
+                        }
+                        else
+                        {
+                            sb.Append(methodIndent).Append("    obj.").Append(EscapeIdentifier(propName)).Append(" = ").Append(EscapeIdentifier(argName)).AppendLine("();");
+                        }
+                        sb.Append(methodIndent).AppendLine("    return obj;");
+                        sb.Append(methodIndent).AppendLine("}");
                     }
 
+                    sb.AppendLine();
                 }
             }
 
@@ -1243,11 +1280,6 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                         var boundFieldName = p.BackingFieldName + "Bound";
                         sb.Append(baseIndent).Append("    ").Append(string.IsNullOrEmpty(p.GetAccessorModifier) ? string.Empty : p.GetAccessorModifier + " ").Append("get").AppendLine();
                         sb.Append(baseIndent).AppendLine("    {");
-                        sb.Append(baseIndent).Append("        if (!").Append(boundFieldName).AppendLine(".IsEmpty && ").Append(boundFieldName).AppendLine(".Owner is global::XenoAtom.Terminal.UI.IPullBindingSource)");
-                        sb.Append(baseIndent).AppendLine("        {");
-                        sb.Append(baseIndent).Append("            __ApplyBound").Append(p.PropertyName).Append("(").Append(boundFieldName).AppendLine(".GetValue());");
-                        sb.Append(baseIndent).AppendLine("        }");
-                        sb.AppendLine();
                         sb.Append(baseIndent).Append("        return global::XenoAtom.Terminal.UI.BindingManager.Current.GetValue(this, ref ").Append(p.BackingFieldName).Append(", ").Append(p.AccessorClassName).AppendLine(".Instance);");
                         sb.Append(baseIndent).AppendLine("    }");
                         sb.Append(baseIndent).Append("    ").Append(string.IsNullOrEmpty(p.SetAccessorModifier) ? string.Empty : p.SetAccessorModifier + " ").Append(p.SetAccessorKeyword).AppendLine();
@@ -1290,11 +1322,6 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                         var boundFieldName = p.BackingFieldName + "Bound";
                         sb.Append(baseIndent).Append("    ").Append(string.IsNullOrEmpty(p.GetAccessorModifier) ? string.Empty : p.GetAccessorModifier + " ").AppendLine("get");
                         sb.Append(baseIndent).AppendLine("    {");
-                        sb.Append(baseIndent).Append("        if (!").Append(boundFieldName).AppendLine(".IsEmpty && ").Append(boundFieldName).AppendLine(".Owner is global::XenoAtom.Terminal.UI.IPullBindingSource)");
-                        sb.Append(baseIndent).AppendLine("        {");
-                        sb.Append(baseIndent).Append("            __ApplyBound").Append(p.PropertyName).Append("(").Append(boundFieldName).AppendLine(".GetValue());");
-                        sb.Append(baseIndent).AppendLine("        }");
-                        sb.AppendLine();
                         sb.Append(baseIndent).Append("        return global::XenoAtom.Terminal.UI.BindingManager.Current.GetValue(this, ref ").Append(p.BackingFieldName).Append(", ").Append(p.AccessorClassName).AppendLine(".Instance);");
                         sb.Append(baseIndent).AppendLine("    }");
                         sb.Append(baseIndent).Append("    ").Append(string.IsNullOrEmpty(p.SetAccessorModifier) ? string.Empty : p.SetAccessorModifier + " ").Append(p.SetAccessorKeyword).AppendLine();
@@ -1331,6 +1358,11 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     sb.Append(baseIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                     sb.Append(baseIndent).Append("public void Bind").Append(p.PropertyName).Append("(global::XenoAtom.Terminal.UI.Binding<").Append(p.PropertyTypeFullyQualified).Append("> binding)").AppendLine();
                     sb.Append(baseIndent).AppendLine("{");
+                    if (p.IsParentVisual)
+                    {
+                        sb.Append(baseIndent).Append("    ClearComputedProperty(").Append(p.AccessorClassName).AppendLine(".Instance);");
+                        sb.AppendLine();
+                    }
                     sb.Append(baseIndent).Append("    if (global::System.Object.ReferenceEquals(").Append(p.BackingFieldName).Append("Bound.Owner, binding.Owner) && global::System.Object.ReferenceEquals(").Append(p.BackingFieldName).Append("Bound.Accessor, binding.Accessor))").AppendLine();
                     sb.Append(baseIndent).AppendLine("    {");
                     sb.Append(baseIndent).AppendLine("        return;");
@@ -1347,10 +1379,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     sb.Append(baseIndent).AppendLine("        return;");
                     sb.Append(baseIndent).AppendLine("    }");
                     sb.AppendLine();
-                    sb.Append(baseIndent).Append("    if (binding.Owner is not global::XenoAtom.Terminal.UI.IPullBindingSource)").AppendLine();
-                    sb.Append(baseIndent).AppendLine("    {");
-                    sb.Append(baseIndent).Append("        global::XenoAtom.Terminal.UI.BindingManager.Current.RegisterBoundValue(this, ").Append(p.AccessorClassName).Append(".Instance, binding, static (owner, value) => ((").Append(containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).Append(")owner).__ApplyBound").Append(p.PropertyName).AppendLine("(value));");
-                    sb.Append(baseIndent).AppendLine("    }");
+                    sb.Append(baseIndent).Append("    global::XenoAtom.Terminal.UI.BindingManager.Current.RegisterBoundValue(this, ").Append(p.AccessorClassName).Append(".Instance, binding, static (owner, value) => ((").Append(containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).Append(")owner).__ApplyBound").Append(p.PropertyName).AppendLine("(value));");
                     sb.AppendLine();
                     sb.Append(baseIndent).AppendLine("    using (global::XenoAtom.Terminal.UI.BindingManager.Current.SuppressReadTracking())");
                     sb.Append(baseIndent).AppendLine("    {");

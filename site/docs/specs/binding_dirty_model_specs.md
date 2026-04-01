@@ -96,7 +96,7 @@ Render reads are tracked separately from measure/arrange. Rendering should:
 - Prefer theme/style access via `GetTheme()` and `GetStyle<T>()` so style reads are tracked.
 
 Rendering can be triggered even if layout does not change (e.g. caret blink). Bindable computations used during render
-should therefore avoid expensive work on every render tick. Prefer cached state or computed bindings that only
+should therefore avoid expensive work on every render tick. Prefer cached state or computed visual updates that only
 recompute on dependency changes.
 
 ## Manual invalidation is not supported

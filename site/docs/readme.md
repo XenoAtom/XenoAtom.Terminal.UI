@@ -46,7 +46,7 @@ See also:
 ## Core concepts
 
 - [Visual Tree](visual-tree.md) (Visuals, fluent API, dynamic composition)
-- [Binding](binding.md) (`State<T>`, bindable properties, dependency tracking)
+- [Binding](binding.md) (`State<T>`, pure-read bindable properties, push bindings, computed visual configuration)
 - [Data Templating](data-templating.md) (DataTemplates, DataPresenter<T>, item templates)
 - [Culture](culture.md) (culture-aware value formatting)
 - [Layout](layout.md) (layout protocol, alignment, margin/padding)

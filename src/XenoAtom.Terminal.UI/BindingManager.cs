@@ -37,7 +37,7 @@ public sealed class BindingManager
 
     private TrackingContext? _tracking;
     private TrackingContext? _freeList;
-    private readonly Dictionary<Binding, List<BoundValueSubscription>> _boundSubscriptions = new(BindingReferenceComparer.Instance);
+    private readonly ConditionalWeakTable<object, SourceOwnerSubscriptions> _boundSubscriptions = new();
 
     private int _suppressReadTrackingCount;
     private int _suppressWriteTrackingCount;
@@ -301,14 +301,8 @@ public sealed class BindingManager
             return;
         }
 
-        var binding = (Binding)sourceBinding;
-        if (!_boundSubscriptions.TryGetValue(binding, out var subscriptions))
-        {
-            subscriptions = [];
-            _boundSubscriptions.Add(binding, subscriptions);
-        }
-
-        subscriptions.Add(new BoundValueSubscription<T>(targetOwner, targetAccessor, sourceBinding, applyValue));
+        var subscriptions = _boundSubscriptions.GetOrCreateValue(sourceBinding.Owner);
+        subscriptions.Add(sourceBinding.Accessor, new BoundValueSubscription<T>(targetOwner, targetAccessor, sourceBinding.Accessor.Getter, applyValue));
     }
 
     /// <summary>
@@ -329,25 +323,12 @@ public sealed class BindingManager
             return;
         }
 
-        var binding = (Binding)sourceBinding;
-        if (!_boundSubscriptions.TryGetValue(binding, out var subscriptions))
+        if (!_boundSubscriptions.TryGetValue(sourceBinding.Owner, out var subscriptions))
         {
             return;
         }
 
-        for (var i = subscriptions.Count - 1; i >= 0; i--)
-        {
-            var subscription = subscriptions[i];
-            if (!subscription.IsAlive || subscription.Matches(targetOwner, targetAccessor))
-            {
-                subscriptions.RemoveAt(i);
-            }
-        }
-
-        if (subscriptions.Count == 0)
-        {
-            _boundSubscriptions.Remove(binding);
-        }
+        subscriptions.Remove(sourceBinding.Accessor, targetOwner, targetAccessor);
     }
 
     private void RaiseValueChanged(Binding binding)
@@ -358,36 +339,12 @@ public sealed class BindingManager
 
     private void PropagateBoundValues(Binding binding)
     {
-        if (!_boundSubscriptions.TryGetValue(binding, out var subscriptions) || subscriptions.Count == 0)
+        if (!_boundSubscriptions.TryGetValue(binding.Owner, out var subscriptions))
         {
             return;
         }
 
-        var snapshot = subscriptions.ToArray();
-        var requiresCleanup = false;
-
-        foreach (var subscription in snapshot)
-        {
-            requiresCleanup |= !subscription.TryApply();
-        }
-
-        if (!requiresCleanup || !_boundSubscriptions.TryGetValue(binding, out subscriptions))
-        {
-            return;
-        }
-
-        for (var i = subscriptions.Count - 1; i >= 0; i--)
-        {
-            if (!subscriptions[i].IsAlive)
-            {
-                subscriptions.RemoveAt(i);
-            }
-        }
-
-        if (subscriptions.Count == 0)
-        {
-            _boundSubscriptions.Remove(binding);
-        }
+        subscriptions.Propagate(binding);
     }
 
     private static void ReleaseSuppression(ref int counter)
@@ -506,21 +463,21 @@ public sealed class BindingManager
 
         public abstract bool Matches(object targetOwner, BindingAccessor targetAccessor);
 
-        public abstract bool TryApply();
+        public abstract bool TryApply(object sourceOwner);
     }
 
     private sealed class BoundValueSubscription<T> : BoundValueSubscription
     {
         private readonly WeakReference<object> _targetOwner;
         private readonly BindingAccessor<T> _targetAccessor;
-        private readonly Binding<T> _sourceBinding;
+        private readonly Func<object, T> _getSourceValue;
         private readonly Action<object, T> _applyValue;
 
-        public BoundValueSubscription(object targetOwner, BindingAccessor<T> targetAccessor, Binding<T> sourceBinding, Action<object, T> applyValue)
+        public BoundValueSubscription(object targetOwner, BindingAccessor<T> targetAccessor, Func<object, T> getSourceValue, Action<object, T> applyValue)
         {
             _targetOwner = new WeakReference<object>(targetOwner);
             _targetAccessor = targetAccessor;
-            _sourceBinding = sourceBinding;
+            _getSourceValue = getSourceValue;
             _applyValue = applyValue;
         }
 
@@ -536,7 +493,7 @@ public sealed class BindingManager
             return ReferenceEquals(currentTargetOwner, targetOwner) && ReferenceEquals(_targetAccessor, targetAccessor);
         }
 
-        public override bool TryApply()
+        public override bool TryApply(object sourceOwner)
         {
             if (!_targetOwner.TryGetTarget(out var targetOwner))
             {
@@ -546,11 +503,94 @@ public sealed class BindingManager
             T value;
             using (Current.SuppressReadTracking())
             {
-                value = _sourceBinding.GetValue();
+                value = _getSourceValue(sourceOwner);
             }
 
             _applyValue(targetOwner, value);
             return true;
+        }
+    }
+
+    private sealed class SourceOwnerSubscriptions
+    {
+        private readonly Dictionary<BindingAccessor, List<BoundValueSubscription>> _subscriptionsByAccessor = new();
+
+        public void Add(BindingAccessor accessor, BoundValueSubscription subscription)
+        {
+            ArgumentNullException.ThrowIfNull(accessor);
+            ArgumentNullException.ThrowIfNull(subscription);
+
+            if (!_subscriptionsByAccessor.TryGetValue(accessor, out var subscriptions))
+            {
+                subscriptions = [];
+                _subscriptionsByAccessor.Add(accessor, subscriptions);
+            }
+
+            subscriptions.Add(subscription);
+        }
+
+        public void Remove(BindingAccessor accessor, object targetOwner, BindingAccessor targetAccessor)
+        {
+            ArgumentNullException.ThrowIfNull(accessor);
+            ArgumentNullException.ThrowIfNull(targetOwner);
+            ArgumentNullException.ThrowIfNull(targetAccessor);
+
+            if (!_subscriptionsByAccessor.TryGetValue(accessor, out var subscriptions))
+            {
+                return;
+            }
+
+            CleanupSubscriptions(subscriptions, static (subscription, state) =>
+            {
+                var (owner, accessor) = ((object Owner, BindingAccessor Accessor))state;
+                return !subscription.IsAlive || subscription.Matches(owner, accessor);
+            }, (targetOwner, targetAccessor));
+
+            if (subscriptions.Count == 0)
+            {
+                _subscriptionsByAccessor.Remove(accessor);
+            }
+        }
+
+        public void Propagate(Binding binding)
+        {
+            if (!_subscriptionsByAccessor.TryGetValue(binding.Accessor, out var subscriptions) || subscriptions.Count == 0)
+            {
+                return;
+            }
+
+            var snapshot = subscriptions.ToArray();
+            var requiresCleanup = false;
+
+            foreach (var subscription in snapshot)
+            {
+                requiresCleanup |= !subscription.TryApply(binding.Owner);
+            }
+
+            if (!requiresCleanup || !_subscriptionsByAccessor.TryGetValue(binding.Accessor, out subscriptions))
+            {
+                return;
+            }
+
+            CleanupSubscriptions<object?>(subscriptions, static (subscription, _) => !subscription.IsAlive, null);
+            if (subscriptions.Count == 0)
+            {
+                _subscriptionsByAccessor.Remove(binding.Accessor);
+            }
+        }
+
+        private static void CleanupSubscriptions<TState>(
+            List<BoundValueSubscription> subscriptions,
+            Func<BoundValueSubscription, TState, bool> shouldRemove,
+            TState state)
+        {
+            for (var i = subscriptions.Count - 1; i >= 0; i--)
+            {
+                if (shouldRemove(subscriptions[i], state))
+                {
+                    subscriptions.RemoveAt(i);
+                }
+            }
         }
     }
 }

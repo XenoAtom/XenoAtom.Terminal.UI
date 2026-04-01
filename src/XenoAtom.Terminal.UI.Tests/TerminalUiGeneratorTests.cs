@@ -76,6 +76,7 @@ public sealed class TerminalUiGeneratorTests
         Assert.IsTrue(generatedSources.Any(s => s.Contains("IBindings", StringComparison.Ordinal)), "Expected generated IBindings interface.");
         Assert.IsTrue(generatedSources.Any(s => s.Contains("BindingManager.Current.GetValue(this", StringComparison.Ordinal)), "Expected generated binding accessors.");
         Assert.IsTrue(generatedSources.Any(s => s.Contains("return global::XenoAtom.Terminal.UI.BindingManager.Current.GetValue(this, ref _content, __Content__BindingAccessor.Instance);", StringComparison.Ordinal)), "Expected generated Visual bindable getter tracking.");
+        Assert.IsFalse(generatedSources.Any(s => s.Contains("IPullBindingSource", StringComparison.Ordinal)), "Did not expect generated pull-on-read checks.");
         Assert.IsTrue(generatedSources.Any(s => s.Contains("AttachChild(updated)", StringComparison.Ordinal)), "Expected generated Visual bindable setter child attachment.");
         Assert.IsTrue(generatedSources.Any(s => s.Contains("NotifyValueChanged(this, __Content__BindingAccessor.Instance)", StringComparison.Ordinal)), "Expected generated Visual bindable setter notifications.");
         Assert.IsTrue(generatedSources.Any(s => s.Contains("public void BindCount(", StringComparison.Ordinal)), "Expected generated Bind* method for bidirectional bindings.");
@@ -184,6 +185,51 @@ public sealed class TerminalUiGeneratorTests
         Assert.IsTrue(
             generatedSources.Any(s => s.Contains("public new interface IBindings : global::XenoAtom.Terminal.UI.Visual.IBindings", StringComparison.Ordinal)),
             "Expected derived generated IBindings to hide Visual.IBindings with the new keyword.");
+    }
+
+    [TestMethod]
+    public void Generates_Func_Overloads_With_Computed_Visual_And_One_Shot_Model_Semantics()
+    {
+        const string source = """
+                              using XenoAtom.Terminal.UI;
+
+                              namespace Demo;
+
+                              public partial class DerivedVisual : Visual
+                              {
+                                  [Bindable]
+                                  public partial int Count { get; set; }
+                              }
+
+                              public partial class RowModel
+                              {
+                                  [Bindable]
+                                  public partial int Count { get; set; }
+                              }
+                              """;
+
+        var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview);
+        var compilation = CreateCompilation(source, parseOptions);
+        var generator = new TerminalUiGenerator();
+
+        GeneratorDriver driver = CSharpGeneratorDriver.Create([generator.AsSourceGenerator()], parseOptions: parseOptions);
+        driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var generatorDiagnostics);
+
+        var diagnostics = generatorDiagnostics.Concat(outputCompilation.GetDiagnostics()).ToArray();
+        var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToArray();
+        Assert.IsEmpty(errors, string.Join(Environment.NewLine, errors.Select(x => x.ToString())));
+
+        var generatedSources = driver.GetRunResult().Results
+            .SelectMany(r => r.GeneratedSources)
+            .Select(s => s.SourceText.ToString())
+            .ToList();
+
+        Assert.IsFalse(generatedSources.Any(s => s.Contains("FuncState<", StringComparison.Ordinal)), "Did not expect FuncState-based generation.");
+        Assert.IsFalse(generatedSources.Any(s => s.Contains("IPullBindingSource", StringComparison.Ordinal)), "Did not expect pull-binding generation.");
+        Assert.IsTrue(generatedSources.Any(s => s.Contains("obj.ClearComputedProperty(global::Demo.DerivedVisual.Accessor.Count);", StringComparison.Ordinal)), "Expected direct visual assignments to clear computed recipes.");
+        Assert.IsTrue(generatedSources.Any(s => s.Contains("obj.BindCount(default);", StringComparison.Ordinal) && s.Contains("obj.SetComputedProperty(global::Demo.DerivedVisual.Accessor.Count,", StringComparison.Ordinal)), "Expected visual Func<T> overloads to install computed-property recipes.");
+        Assert.IsTrue(generatedSources.Any(s => s.Contains("ClearComputedProperty(__Count__BindingAccessor.Instance);", StringComparison.Ordinal)), "Expected visual bind methods to clear computed recipes.");
+        Assert.IsTrue(generatedSources.Any(s => s.Contains("obj.Count = count();", StringComparison.Ordinal) && s.Contains("RowModel", StringComparison.Ordinal)), "Expected non-visual Func<T> overloads to evaluate once.");
     }
 
     private static CSharpCompilation CreateCompilation(string source, CSharpParseOptions parseOptions)

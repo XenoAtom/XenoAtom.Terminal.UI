@@ -65,7 +65,7 @@ Convenience methods in `ValidationExtensions` make the feature easy to use witho
 - `content.Validation(State<ValidationMessage?>)`
 - `content.Validate(valueBinding, validator, placement)`
 
-`Validate(...)` binds `ValidationPresenter.Message` to a computed binding that calls the validator on demand:
+`Validate(...)` configures `ValidationPresenter.Message` with a tracked computed visual update that calls the validator:
 
 - The validator is evaluated as part of dependency tracking, so it re-runs when the bound value changes.
 - The validator returns `null` when valid.

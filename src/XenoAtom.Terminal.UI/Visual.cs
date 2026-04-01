@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Diagnostics;
+using System.ComponentModel;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
@@ -34,10 +35,12 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     private Dictionary<object, Delegate?>? _handledEventHandlers;
     private BindableList<Command>? _commands;
     internal Dictionary<object, object?>? StyleEnvironment;
+    private Dictionary<BindingAccessor, ComputedPropertyRecipe>? _computedProperties;
     private List<Action<Visual>>? _dynamicUpdates;
 
     private Size _lastDesiredSizeWithoutMargin;
 
+    private bool _hasComputedPropertyRunner;
     private bool _dynamicUpdatesDirty;
     private bool _prepareChildrenDirty = true;
     private bool _measureDirty = true;
@@ -637,6 +640,74 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         _dynamicUpdates ??= new List<Action<Visual>>();
         _dynamicUpdates.Add(configure);
         _dynamicUpdatesDirty = true;
+    }
+
+    /// <summary>
+    /// Installs or replaces a computed-property recipe for this visual.
+    /// </summary>
+    /// <remarks>
+    /// This API is intended for source-generated fluent configuration. The callback is executed during the visual's dynamic
+    /// update pass so bindable reads are tracked against the real upstream dependencies.
+    /// </remarks>
+    /// <param name="accessor">The accessor that identifies the target property.</param>
+    /// <param name="apply">The callback that computes and applies the property value.</param>
+    /// <param name="state">Opaque state captured for the callback.</param>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public void SetComputedProperty(BindingAccessor accessor, Action<Visual, object?> apply, object? state)
+    {
+        VerifyAccess();
+        ArgumentNullException.ThrowIfNull(accessor);
+        ArgumentNullException.ThrowIfNull(apply);
+
+        _computedProperties ??= new Dictionary<BindingAccessor, ComputedPropertyRecipe>();
+        _computedProperties[accessor] = new ComputedPropertyRecipe
+        {
+            Accessor = accessor,
+            State = state,
+            Apply = apply,
+        };
+
+        EnsureComputedPropertyRunner();
+
+        if (App is null)
+        {
+            using (BindingManager.Current.SuppressReadTracking())
+            {
+                apply(this, state);
+            }
+        }
+
+        MarkDynamicUpdateDirty();
+    }
+
+    /// <summary>
+    /// Removes a previously installed computed-property recipe from this visual.
+    /// </summary>
+    /// <param name="accessor">The accessor that identifies the target property.</param>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public void ClearComputedProperty(BindingAccessor accessor)
+    {
+        VerifyAccess();
+        ArgumentNullException.ThrowIfNull(accessor);
+
+        if (_computedProperties is null || !_computedProperties.Remove(accessor))
+        {
+            return;
+        }
+
+        if (_computedProperties.Count == 0)
+        {
+            _computedProperties = null;
+        }
+
+        MarkDynamicUpdateDirty();
+    }
+
+    internal bool HasComputedProperty(BindingAccessor accessor)
+    {
+        VerifyAccess();
+        ArgumentNullException.ThrowIfNull(accessor);
+        return _computedProperties is not null && _computedProperties.ContainsKey(accessor);
     }
 
     internal void AttachToApp(TerminalApp app)
@@ -1339,6 +1410,33 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         if (metrics is not null)
         {
             metrics.RecordDynamicUpdate(Math.Max(0, Stopwatch.GetTimestamp() - startTimestamp));
+        }
+    }
+
+    private void EnsureComputedPropertyRunner()
+    {
+        if (_hasComputedPropertyRunner)
+        {
+            return;
+        }
+
+        _dynamicUpdates ??= new List<Action<Visual>>();
+        _dynamicUpdates.Insert(0, static visual => visual.RunComputedProperties());
+        _hasComputedPropertyRunner = true;
+    }
+
+    private void RunComputedProperties()
+    {
+        if (_computedProperties is null || _computedProperties.Count == 0)
+        {
+            return;
+        }
+
+        var recipes = _computedProperties.Values.ToArray();
+        for (var i = 0; i < recipes.Length; i++)
+        {
+            var recipe = recipes[i];
+            recipe.Apply(this, recipe.State);
         }
     }
 
