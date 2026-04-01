@@ -93,6 +93,15 @@ public partial class Select<T> : ContentVisual
     [Bindable]
     public partial DataTemplate<T> ItemTemplate { get; set; }
 
+    partial void OnSelectedIndexChanging(ref int value)
+    {
+        var count = Items.Count;
+        if (count > 0)
+        {
+            value = Math.Clamp(value, 0, count - 1);
+        }
+    }
+
     partial void OnSelectedIndexChanged(int value)
     {
         _ = value;
@@ -115,11 +124,14 @@ public partial class Select<T> : ContentVisual
     }
 
     /// <inheritdoc/>
+    protected override void PrepareChildren()
+    {
+        UpdateSelectedContent();
+    }
+
+    /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        // Rebuild selected content before measuring when needed.
-        UpdateSelectedContent();
-
         var style = GetStyle<SelectStyle>();
         EnsureArrowGlyphCache(style);
         var padding = style.Padding;
@@ -275,12 +287,6 @@ public partial class Select<T> : ContentVisual
         }
 
         var index = Math.Clamp(SelectedIndex, 0, items.Count - 1);
-        if (index != SelectedIndex)
-        {
-            SelectedIndex = index;
-            return;
-        }
-
         var value = items[index];
         var template = ResolveItemTemplate();
         var comparer = EqualityComparer<T>.Default;

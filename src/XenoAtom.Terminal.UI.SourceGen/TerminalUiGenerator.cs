@@ -1243,6 +1243,11 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                         var boundFieldName = p.BackingFieldName + "Bound";
                         sb.Append(baseIndent).Append("    ").Append(string.IsNullOrEmpty(p.GetAccessorModifier) ? string.Empty : p.GetAccessorModifier + " ").Append("get").AppendLine();
                         sb.Append(baseIndent).AppendLine("    {");
+                        sb.Append(baseIndent).Append("        if (!").Append(boundFieldName).AppendLine(".IsEmpty && ").Append(boundFieldName).AppendLine(".Owner is global::XenoAtom.Terminal.UI.IPullBindingSource)");
+                        sb.Append(baseIndent).AppendLine("        {");
+                        sb.Append(baseIndent).Append("            __ApplyBound").Append(p.PropertyName).Append("(").Append(boundFieldName).AppendLine(".GetValue());");
+                        sb.Append(baseIndent).AppendLine("        }");
+                        sb.AppendLine();
                         sb.Append(baseIndent).Append("        return global::XenoAtom.Terminal.UI.BindingManager.Current.GetValue(this, ref ").Append(p.BackingFieldName).Append(", ").Append(p.AccessorClassName).AppendLine(".Instance);");
                         sb.Append(baseIndent).AppendLine("    }");
                         sb.Append(baseIndent).Append("    ").Append(string.IsNullOrEmpty(p.SetAccessorModifier) ? string.Empty : p.SetAccessorModifier + " ").Append(p.SetAccessorKeyword).AppendLine();
@@ -1285,6 +1290,11 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                         var boundFieldName = p.BackingFieldName + "Bound";
                         sb.Append(baseIndent).Append("    ").Append(string.IsNullOrEmpty(p.GetAccessorModifier) ? string.Empty : p.GetAccessorModifier + " ").AppendLine("get");
                         sb.Append(baseIndent).AppendLine("    {");
+                        sb.Append(baseIndent).Append("        if (!").Append(boundFieldName).AppendLine(".IsEmpty && ").Append(boundFieldName).AppendLine(".Owner is global::XenoAtom.Terminal.UI.IPullBindingSource)");
+                        sb.Append(baseIndent).AppendLine("        {");
+                        sb.Append(baseIndent).Append("            __ApplyBound").Append(p.PropertyName).Append("(").Append(boundFieldName).AppendLine(".GetValue());");
+                        sb.Append(baseIndent).AppendLine("        }");
+                        sb.AppendLine();
                         sb.Append(baseIndent).Append("        return global::XenoAtom.Terminal.UI.BindingManager.Current.GetValue(this, ref ").Append(p.BackingFieldName).Append(", ").Append(p.AccessorClassName).AppendLine(".Instance);");
                         sb.Append(baseIndent).AppendLine("    }");
                         sb.Append(baseIndent).Append("    ").Append(string.IsNullOrEmpty(p.SetAccessorModifier) ? string.Empty : p.SetAccessorModifier + " ").Append(p.SetAccessorKeyword).AppendLine();
@@ -1337,7 +1347,10 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     sb.Append(baseIndent).AppendLine("        return;");
                     sb.Append(baseIndent).AppendLine("    }");
                     sb.AppendLine();
-                    sb.Append(baseIndent).Append("    global::XenoAtom.Terminal.UI.BindingManager.Current.RegisterBoundValue(this, ").Append(p.AccessorClassName).Append(".Instance, binding, static (owner, value) => ((").Append(containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).Append(")owner).__ApplyBound").Append(p.PropertyName).AppendLine("(value));");
+                    sb.Append(baseIndent).Append("    if (binding.Owner is not global::XenoAtom.Terminal.UI.IPullBindingSource)").AppendLine();
+                    sb.Append(baseIndent).AppendLine("    {");
+                    sb.Append(baseIndent).Append("        global::XenoAtom.Terminal.UI.BindingManager.Current.RegisterBoundValue(this, ").Append(p.AccessorClassName).Append(".Instance, binding, static (owner, value) => ((").Append(containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).Append(")owner).__ApplyBound").Append(p.PropertyName).AppendLine("(value));");
+                    sb.Append(baseIndent).AppendLine("    }");
                     sb.AppendLine();
                     sb.Append(baseIndent).AppendLine("    using (global::XenoAtom.Terminal.UI.BindingManager.Current.SuppressReadTracking())");
                     sb.Append(baseIndent).AppendLine("    {");

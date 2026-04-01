@@ -72,4 +72,56 @@ public sealed class SelectTests
 
         Assert.AreNotSame(initialContent, select.Content);
     }
+
+    [TestMethod]
+    public void Select_Bound_SelectedIndex_Does_Not_Write_Source_During_Tick()
+    {
+        var selectedIndex = new State<int>(0);
+        var select = new Select<string>()
+            .Items(["First", "Second", "Third"])
+            .SelectedIndex(selectedIndex);
+
+        var root = new VStack { select };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        var rewroteSource = false;
+        select.SelectionChanged((_, e) =>
+        {
+            if (rewroteSource || e.NewIndex != 1)
+            {
+                return;
+            }
+
+            rewroteSource = true;
+            selectedIndex.Value = 0;
+        });
+
+        selectedIndex.Value = 1;
+
+        driver.Tick();
+
+        Assert.IsTrue(rewroteSource, "Expected the bound source change to notify the control once.");
+        Assert.AreEqual(0, selectedIndex.Value);
+        Assert.AreEqual(0, select.SelectedIndex);
+    }
+
+    [TestMethod]
+    public void Select_Out_Of_Range_State_Does_Not_Get_Clamped_During_Tick()
+    {
+        var selectedIndex = new State<int>(10);
+        var select = new Select<string>()
+            .Items(["First", "Second", "Third"])
+            .SelectedIndex(selectedIndex);
+
+        var root = new VStack { select };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        Assert.AreEqual(10, selectedIndex.Value, "The bound source should not be rewritten during prepare/measure.");
+        Assert.AreEqual(2, select.SelectedIndex, "The control should clamp its local selected index outside guarded callbacks.");
+        Assert.IsNotNull(select.Content);
+    }
 }

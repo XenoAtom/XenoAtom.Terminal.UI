@@ -18,7 +18,7 @@ namespace XenoAtom.Terminal.UI;
 /// </para>
 /// </remarks>
 /// <typeparam name="T">The value type.</typeparam>
-public sealed partial class FuncState<T>
+public sealed partial class FuncState<T> : IPullBindingSource
 {
     private readonly Func<T> _valueFactory;
 

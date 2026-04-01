@@ -114,6 +114,10 @@ The source generator emits:
 - property accessors wired into the binding hub
 - fluent extension methods for `T`, `Func<T>`, and `Binding<T>` overloads
 
+When a generated bindable property is attached to a `Binding<T>`, the framework synchronizes the local backing value as
+soon as the source binding changes. Generated getters stay pure reads; they do not “catch up” by raising change
+callbacks during a later `PrepareChildren` / `Measure` / `Arrange` / `Render` read.
+
 ## Bindable models (your own data types)
 
 You can also use `[Bindable]` on your own model classes so controls can bind to them directly.
@@ -248,6 +252,10 @@ protected override void ArrangeCore(in Rectangle rect)
 ```
 
 This pattern is also useful for “measured values” that are computed in `Measure` but consumed in `Arrange`.
+
+> [!IMPORTANT]
+> Avoid clamping or “fixing up” a public bindable value from `PrepareChildren`, `Measure`, `Arrange`, or `Render`.
+> Read the public value, compute a safe local/clamped value, and use that local value for layout/rendering instead.
 
 > [!TIP]
 > If you need a derived/computed value for layout, prefer an internal bindable property like `MeasuredContentWidth`
