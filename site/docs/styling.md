@@ -37,6 +37,8 @@ var themed = new Group(new TextArea("Themed region"))
 - `Border`, `FocusBorder`: stroke colors
 - `Accent`, `Selection`: key interaction colors
 
+In dark RGB themes, `PopupSurface` is intentionally closer to the app background than the older lifted-panel treatment so dialogs and popups do not feel washed out.
+
 > [!NOTE]
 > For RGB schemes, many tokens are derived using subtle **alpha overlays**. This is how the default theme achieves
 > “lifted” panels and soft hover effects without hard-coded colors.

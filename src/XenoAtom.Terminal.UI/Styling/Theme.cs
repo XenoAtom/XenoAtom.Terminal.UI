@@ -196,7 +196,7 @@ public sealed class Theme : IStyle<Theme>
             // - surfaces and controls are lifted using low-alpha white overlays
             // - editable regions are inset using a low-alpha black overlay
             surface = Color.RgbA(255, 255, 255, 0x08);
-            popupSurface = background.Mix(foreground, t: 0.12f);
+            popupSurface = background.Mix(foreground, t: 0.08f);
 
             controlFill = Color.RgbA(255, 255, 255, 0x0F);
             controlHover = Color.RgbA(255, 255, 255, 0x17);

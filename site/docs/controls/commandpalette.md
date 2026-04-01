@@ -57,7 +57,8 @@ When open:
 ## Host chrome
 
 When displayed via `CommandPalette.Show()`, the palette is hosted inside a resizable dialog window. The host dialog takes
-care of restoring the previous focus when the palette closes. You can still wrap the palette content with a template visual
+care of restoring the previous focus when the palette closes. The built-in palette chrome uses a recessed search field and a
+lifted active-row surface so the current focus stands out from the surrounding dialog panel. You can still wrap the palette content with a template visual
 using `CommandPaletteStyle`:
 
 ```csharp

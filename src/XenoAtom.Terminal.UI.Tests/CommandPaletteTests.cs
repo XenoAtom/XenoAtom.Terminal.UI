@@ -335,6 +335,43 @@ public sealed class CommandPaletteTests
     }
 
     [TestMethod]
+    public void CommandPalette_Show_Applies_Distinct_Search_And_Selected_Row_Surfaces()
+    {
+        var root = new VStack();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(80, 20));
+        driver.Tick();
+
+        var palette = new CommandPalette();
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.open",
+            LabelMarkup = "Open",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        palette.Show();
+        driver.Tick();
+
+        var hostDialog = GetHostDialog(palette);
+        var theme = hostDialog.GetTheme();
+        var dialogSurface = hostDialog.GetStyle<DialogStyle>().ResolveSurfaceStyle(theme);
+        Assert.IsTrue(dialogSurface.TryGetBackground(out var dialogBackground), "Expected the host dialog to define a popup background.");
+
+        var searchBox = GetPrivateField<TextBox>(palette, "_searchBox");
+        var searchBoxStyle = searchBox.GetStyle<TextBoxStyle>();
+        Assert.IsNotNull(searchBoxStyle.Background, "Expected the palette search box to use an explicit fill.");
+        Assert.AreNotEqual(dialogBackground, searchBoxStyle.Background!.Value, "Expected the search box fill to be visually distinct from the dialog surface.");
+
+        var results = GetPrivateField<OptionList<ResolvedCommand>>(palette, "_results");
+        var resultsStyle = results.GetStyle<OptionListStyle>();
+        Assert.IsNotNull(resultsStyle.SelectedFocused, "Expected the palette to define a focused selected-row style.");
+        var selectedFocused = resultsStyle.SelectedFocused!.Value;
+        Assert.IsTrue(selectedFocused.TryGetBackground(out var selectedBackground), "Expected the selected result row to define a background.");
+        Assert.AreNotEqual(dialogBackground, selectedBackground, "Expected the selected result row to be lifted from the dialog surface.");
+    }
+
+    [TestMethod]
     public void CommandPalette_Show_Filters_Items_Based_On_Query()
     {
         var root = new VStack();

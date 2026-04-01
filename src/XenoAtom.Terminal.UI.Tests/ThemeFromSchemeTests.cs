@@ -51,6 +51,22 @@ public sealed class ThemeFromSchemeTests
     }
 
     [TestMethod]
+    public void FromScheme_DarkScheme_Uses_Darker_Popup_Surface_Than_Previous_Lifted_Mix()
+    {
+        var scheme = ColorScheme.RootLoopsDark;
+        var theme = Theme.FromScheme(scheme, ThemeSchemeBrightness.Auto);
+
+        var background = scheme.Background!.Value.ToRgb();
+        var previousPopupSurface = background.Mix(scheme.Foreground!.Value.ToRgb(), 0.12f);
+        var popupSurface = theme.PopupSurface!.Value;
+
+        Assert.IsGreaterThan(background.R, popupSurface.R, "Popup surfaces should still lift the red channel above the app background.");
+        Assert.IsGreaterThan(background.G, popupSurface.G, "Popup surfaces should still lift the green channel above the app background.");
+        Assert.IsGreaterThan(background.B, popupSurface.B, "Popup surfaces should still lift the blue channel above the app background.");
+        Assert.IsLessThan(GetLuma(previousPopupSurface), GetLuma(popupSurface), "Popup surfaces should be darker than the previous lifted mix.");
+    }
+
+    [TestMethod]
     public void FromScheme_LightScheme_Uses_Light_Surfaces_And_Dark_Overlays()
     {
         var scheme = ColorScheme.RootLoopsLight;

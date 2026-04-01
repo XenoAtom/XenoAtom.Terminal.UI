@@ -280,6 +280,10 @@ public sealed partial class CommandPalette : Visual
         this.MaxWidth(Math.Max(style.MinWidth, style.MaxWidth));
 
         _results.ItemTemplate = style.ItemTemplate ?? CommandPaletteStyle.CreateDefaultItemTemplate();
+
+        var theme = GetTheme();
+        _searchBox.Style(ResolveSearchBoxStyle(theme));
+        _results.Style(ResolveResultsStyle(theme));
     }
 
     private void ApplyHostChrome(CommandPaletteStyle style)
@@ -660,4 +664,70 @@ public sealed partial class CommandPalette : Visual
 
         return sb.ToString();
     }
+
+    private static TextBoxStyle ResolveSearchBoxStyle(Theme theme)
+    {
+        var popupBackground = ResolvePaletteBackground(theme);
+        Color? background = theme.InputFillFocused ?? theme.InputFill ?? popupBackground;
+        if (popupBackground.IsRgbLike && (theme.Background ?? popupBackground).IsRgbLike)
+        {
+            background = popupBackground.ToRgb().Mix((theme.Background ?? popupBackground).ToRgb(), 0.34f, ColorMixSpace.LinearRgb);
+        }
+
+        return TextBoxStyle.Default with
+        {
+            Background = background,
+            Placeholder = theme.Muted ?? theme.Foreground,
+        };
+    }
+
+    private static OptionListStyle ResolveResultsStyle(Theme theme)
+    {
+        var item = theme.ForegroundTextStyle();
+        var popupBackground = ResolvePaletteBackground(theme);
+
+        var hovered = item;
+        if (popupBackground.IsRgbLike && (theme.Foreground ?? popupBackground).IsRgbLike)
+        {
+            var hoverBackground = popupBackground.ToRgb().Mix((theme.Foreground ?? popupBackground).ToRgb(), 0.05f, ColorMixSpace.LinearRgb);
+            hovered = hovered.WithBackground(hoverBackground);
+        }
+        else if ((theme.ControlFill ?? theme.SurfaceAlt ?? theme.PopupSurface ?? theme.Surface) is { } hoverBackground)
+        {
+            hovered = hovered.WithBackground(hoverBackground);
+        }
+
+        var selectedFocused = item | TextStyle.Bold;
+        if (popupBackground.IsRgbLike && (theme.FocusBorder ?? theme.Accent ?? theme.Primary ?? popupBackground).IsRgbLike)
+        {
+            var selectedFocusedBackground = popupBackground.ToRgb().Mix((theme.FocusBorder ?? theme.Accent ?? theme.Primary ?? popupBackground).ToRgb(), 0.24f, ColorMixSpace.LinearRgb);
+            selectedFocused = selectedFocused.WithBackground(selectedFocusedBackground);
+        }
+        else if ((theme.Selection ?? theme.ControlFillHover ?? theme.ControlFill ?? theme.SurfaceAlt) is { } selectedFocusedBackground)
+        {
+            selectedFocused = selectedFocused.WithBackground(selectedFocusedBackground);
+        }
+
+        var selectedUnfocused = item | TextStyle.Bold;
+        if (popupBackground.IsRgbLike && (theme.FocusBorder ?? theme.Accent ?? theme.Primary ?? popupBackground).IsRgbLike)
+        {
+            var selectedBackground = popupBackground.ToRgb().Mix((theme.FocusBorder ?? theme.Accent ?? theme.Primary ?? popupBackground).ToRgb(), 0.12f, ColorMixSpace.LinearRgb);
+            selectedUnfocused = selectedUnfocused.WithBackground(selectedBackground);
+        }
+        else if ((theme.ControlFill ?? theme.SurfaceAlt ?? theme.PopupSurface ?? theme.Surface) is { } selectedBackground)
+        {
+            selectedUnfocused = selectedUnfocused.WithBackground(selectedBackground);
+        }
+
+        return OptionListStyle.Default with
+        {
+            Item = item,
+            Hovered = hovered,
+            SelectedFocused = selectedFocused,
+            SelectedUnfocused = selectedUnfocused,
+        };
+    }
+
+    private static Color ResolvePaletteBackground(Theme theme)
+        => (theme.PopupSurface ?? theme.SurfaceAlt ?? theme.Surface ?? theme.Background ?? Colors.Black).ToRgb();
 }
