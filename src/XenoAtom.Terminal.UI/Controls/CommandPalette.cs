@@ -25,19 +25,18 @@ public sealed partial class CommandPalette : Visual
     private readonly List<ResolvedCommand> _collectedCommands;
     private readonly List<(int Score, ResolvedCommand Command)> _matches;
 
+    private bool _syncingQueryTextFromSearchBox;
     private string _lastQuery = string.Empty;
     private int _lastCommandStamp = int.MinValue;
     private Visual? _lastFocusContext;
-    private int _lastQuerySnapshotVersion = -1;
-    private string _lastQuerySnapshotText = string.Empty;
 
     private Dialog? _hostDialog;
     private Visual? _focusContext;
     private bool _hostGeometryInitialized;
 
     // Used to force measure/arrange updates when the search box document changes.
-    // The search text is stored in a TextDocument (not a bindable property), so we expose a bindable stamp
-    // that participates in dependency tracking.
+    // QueryText is bindable, but the editor still mutates through a TextDocument, so we expose a bindable stamp
+    // that participates in dependency tracking for live filtering/layout updates.
     [Bindable]
     internal partial int ResultsVersion { get; set; }
 
@@ -59,6 +58,8 @@ public sealed partial class CommandPalette : Visual
         // The palette query is stored in the search box document. Listen to document changes instead of relying on
         // routed TextInput events, because text editors typically mark those events handled.
         _searchBox.TextDocument.Changed += OnSearchDocumentChanged;
+        this.QueryText(string.Empty);
+        this.ClearQueryOnShow(true);
 
         _results = new OptionList<ResolvedCommand>()
             .ActivateOnClick(true)
@@ -93,6 +94,7 @@ public sealed partial class CommandPalette : Visual
     {
         _ = sender;
         _ = e;
+        SyncQueryTextFromSearchBox();
         InvalidateResults();
 
         // Filtering must update immediately as users type. Rendering can happen without a full measure pass
@@ -115,6 +117,7 @@ public sealed partial class CommandPalette : Visual
         var app = App ?? Dispatcher.AttachedApp
             ?? throw new InvalidOperationException("CommandPalette.Show is only supported while a TerminalApp is running.");
         EnsureHostDialog();
+        ResetQueryOnShowIfRequested();
 
         // If already hosted, simply re-focus the existing window without re-wrapping the palette.
         // Re-wrapping would attempt to attach the palette to a new parent while it is still parented.
@@ -192,6 +195,40 @@ public sealed partial class CommandPalette : Visual
         _content.Arrange(finalRect);
     }
 
+    /// <summary>
+    /// Gets or sets the current query text shown in the palette search box.
+    /// </summary>
+    /// <remarks>
+    /// This property stays synchronized with the search editor so applications can bind it to other controls or set it
+    /// programmatically before showing the palette.
+    /// </remarks>
+    [Bindable]
+    public partial string? QueryText { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether <see cref="Show"/> clears the current query before focusing the palette.
+    /// </summary>
+    /// <remarks>
+    /// The default is <see langword="true"/> so repeated openings start from a clean search.
+    /// </remarks>
+    [Bindable]
+    public partial bool ClearQueryOnShow { get; set; }
+
+    partial void OnQueryTextChanging(ref string? value)
+        => value ??= string.Empty;
+
+    partial void OnQueryTextChanged(string? value)
+    {
+        if (_syncingQueryTextFromSearchBox)
+        {
+            return;
+        }
+
+        SyncSearchBoxFromQueryText(value ?? string.Empty);
+        InvalidateResults();
+        EnsureResultsUpToDate();
+    }
+
     private void InvalidateResults()
     {
         _lastCommandStamp = int.MinValue;
@@ -216,7 +253,7 @@ public sealed partial class CommandPalette : Visual
             focus = null;
         }
 
-        var query = GetQueryText().Trim();
+        var query = (QueryText ?? string.Empty).Trim();
         var stamp = ComputeCommandStamp(app, focus);
 
         if (stamp == _lastCommandStamp
@@ -230,30 +267,6 @@ public sealed partial class CommandPalette : Visual
         _lastQuery = query;
         _lastFocusContext = focus;
         RebuildResults(app, focus, query);
-    }
-
-    private string GetQueryText()
-    {
-        // Command palette filtering must reflect what is currently displayed in the editor.
-        // Using the document snapshot avoids relying on TextBox.Text being synchronized.
-        var snapshot = _searchBox.TextDocument.CurrentSnapshot;
-        if (snapshot.Version == _lastQuerySnapshotVersion)
-        {
-            return _lastQuerySnapshotText;
-        }
-
-        _lastQuerySnapshotVersion = snapshot.Version;
-        if (snapshot.Length == 0)
-        {
-            _lastQuerySnapshotText = string.Empty;
-            return _lastQuerySnapshotText;
-        }
-
-        var length = snapshot.Length;
-        Span<char> buffer = length <= 256 ? stackalloc char[length] : new char[length];
-        snapshot.CopyTo(0, buffer);
-        _lastQuerySnapshotText = new string(buffer);
-        return _lastQuerySnapshotText;
     }
 
     private static int ComputeCommandStamp(TerminalApp app, Visual? focus)
@@ -488,6 +501,46 @@ public sealed partial class CommandPalette : Visual
         size = (int)Math.Floor(viewportSize * (clampedPercent / 100d));
         size = Math.Clamp(size, 1, viewportSize);
         return true;
+    }
+
+    private void ResetQueryOnShowIfRequested()
+    {
+        if (!ClearQueryOnShow || string.IsNullOrEmpty(QueryText))
+        {
+            return;
+        }
+
+        QueryText = string.Empty;
+    }
+
+    private void SyncQueryTextFromSearchBox()
+    {
+        var query = TextDocumentUtility.GetText(_searchBox.TextDocument);
+        if (string.Equals(QueryText, query, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _syncingQueryTextFromSearchBox = true;
+        try
+        {
+            QueryText = query;
+        }
+        finally
+        {
+            _syncingQueryTextFromSearchBox = false;
+        }
+    }
+
+    private void SyncSearchBoxFromQueryText(string query)
+    {
+        if (string.Equals(TextDocumentUtility.GetText(_searchBox.TextDocument), query, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _searchBox.Text = query;
+        _searchBox.CaretIndex = _searchBox.TextDocument.CurrentSnapshot.Length;
     }
 
     private void RebuildResults(TerminalApp app, Visual? focusContext, string query)

@@ -215,6 +215,11 @@ Introduce `CommandPaletteStyle` (or update existing one) with:
 - optional `DescriptionVisible` / `ShowDescription`
 - optional `MaxWidth`, `ResultsHeight`, padding, etc.
 
+The palette control itself also exposes bindable query state so apps can integrate it with the rest of their UI:
+
+- `QueryText` for the current search text
+- `ClearQueryOnShow` to control whether `Show()` starts from an empty query or preserves the existing one
+
 ### Default item template
 
 Default row visual (single line):

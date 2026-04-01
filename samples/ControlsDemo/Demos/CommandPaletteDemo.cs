@@ -24,6 +24,8 @@ public sealed class CommandPaletteDemo : ControlsDemoBase
         var verticalAlignment = new State<Align>(Align.Start);
         var offsetX = new State<int>(0);
         var offsetY = new State<int>(0);
+        var clearQueryOnShow = new State<bool>(true);
+        var queryText = new State<string?>(string.Empty);
         var palette = new CommandPalette().Style(() => CommandPaletteStyle.Default with
         {
             PopupWidthPercent = Math.Clamp(widthPercent.Value, 1, 100),
@@ -33,7 +35,9 @@ public sealed class CommandPaletteDemo : ControlsDemoBase
             PopupVerticalAlignment = verticalAlignment.Value,
             PopupOffsetX = offsetX.Value,
             PopupOffsetY = offsetY.Value,
-        });
+        })
+            .QueryText(queryText)
+            .ClearQueryOnShow(clearQueryOnShow);
 
         void ShowPalette()
         {
@@ -44,6 +48,14 @@ public sealed class CommandPaletteDemo : ControlsDemoBase
             DemoUi.Title("Command palette"),
                 new TextBlock("Press Ctrl+P to open the command palette. Type to search, press Enter to run the top match, use arrows to navigate, or resize the window with the mouse.")
                 .Wrap(true),
+                new Group("Query state").Content(new VStack(
+                        new CheckBox("Clear query on show").IsChecked(clearQueryOnShow),
+                        new HStack(
+                                new Button("Preset query").Click(() => queryText.Value = "reset"),
+                                new Button("Clear query").Click(() => queryText.Value = string.Empty))
+                            .Spacing(1),
+                        new TextBlock(() => $"Current query: {queryText.Value}"))
+                    .Spacing(1)),
                 new Group("Popup host style").Content(new VStack(
                         new HStack(
                                 "Width (%):",

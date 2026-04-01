@@ -47,6 +47,7 @@ root.AddCommand(new Command
 When open:
 
 - Type to search
+- `Show()` clears the previous search by default
 - Press Enter to execute the currently highlighted result (the first match by default)
 - Use Up/Down to navigate results
 - Press Down from the search box to move directly to the next result
@@ -79,9 +80,22 @@ palette.Style(CommandPaletteStyle.Default with
 
 `PopupWidthPercent` and `PopupHeightPercent` are optional viewport-relative sizing hints. Alignment (`Start`, `Center`, `End`, `Stretch`) and `PopupOffsetX` / `PopupOffsetY` still control where the popup appears after that size is resolved.
 
+## Query state
+
+`QueryText` is a bindable property on `CommandPalette`, so applications can observe, prefill, or two-way bind the current search text. `ClearQueryOnShow` controls whether `Show()` resets that query before the palette takes focus. It defaults to `true`.
+
+```csharp
+var palette = new CommandPalette
+{
+    ClearQueryOnShow = false,
+    QueryText = "reset",
+};
+```
+
 ## Defaults
 
 - Default popup alignment: `PopupHorizontalAlignment = Align.Center`, `PopupVerticalAlignment = Align.Start`
+- Default query behavior: `ClearQueryOnShow = true`
 
 ## Related
 - [Commands](../commands.md)

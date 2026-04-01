@@ -113,6 +113,163 @@ public sealed class CommandPaletteTests
     }
 
     [TestMethod]
+    public void CommandPalette_QueryText_Tracks_Search_Box_Input()
+    {
+        var root = new VStack();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 12));
+        driver.Tick();
+
+        var palette = new CommandPalette();
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.open",
+            LabelMarkup = "Open",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        palette.Show();
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "op" });
+        driver.Tick();
+
+        Assert.AreEqual("op", palette.QueryText, "Expected typing in the search box to update the bindable QueryText property.");
+    }
+
+    [TestMethod]
+    public void CommandPalette_Show_Clears_Query_By_Default()
+    {
+        var root = new VStack();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 12));
+        driver.Tick();
+
+        var palette = new CommandPalette
+        {
+            QueryText = "op",
+        };
+
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.open",
+            LabelMarkup = "Open",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.build",
+            LabelMarkup = "Build",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        palette.Show();
+        driver.Tick();
+
+        Assert.AreEqual(string.Empty, palette.QueryText, "Expected Show() to clear the previous query by default.");
+
+        var outText = driver.Backend.GetOutText();
+        var screen = new AnsiTestScreen(60, 12);
+        screen.Apply(outText);
+        var rendered = screen.GetText();
+
+        StringAssert.Contains(rendered, "Open");
+        StringAssert.Contains(rendered, "Build");
+    }
+
+    [TestMethod]
+    public void CommandPalette_Show_Can_Preserve_Query_When_Configured()
+    {
+        var root = new VStack();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 12));
+        driver.Tick();
+
+        var palette = new CommandPalette
+        {
+            ClearQueryOnShow = false,
+            QueryText = "op",
+        };
+
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.open",
+            LabelMarkup = "Open",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.build",
+            LabelMarkup = "Build",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        palette.Show();
+        driver.Tick();
+
+        Assert.AreEqual("op", palette.QueryText, "Expected Show() to preserve the query when ClearQueryOnShow is disabled.");
+
+        var outText = driver.Backend.GetOutText();
+        var screen = new AnsiTestScreen(60, 12);
+        screen.Apply(outText);
+        var rendered = screen.GetText();
+
+        StringAssert.Contains(rendered, "Open");
+        Assert.IsFalse(rendered.Contains("Build", StringComparison.Ordinal), "Expected the preserved query to remain active when the palette opens.");
+    }
+
+    [TestMethod]
+    public void CommandPalette_QueryText_Can_Be_Set_Programmatically_While_Open()
+    {
+        var root = new VStack();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 12));
+        driver.Tick();
+
+        var palette = new CommandPalette
+        {
+            ClearQueryOnShow = false,
+        };
+
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.open",
+            LabelMarkup = "Open",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.build",
+            LabelMarkup = "Build",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        palette.Show();
+        driver.Tick();
+
+        palette.QueryText = "build";
+        driver.Tick();
+
+        var searchBox = GetPrivateField<TextBox>(palette, "_searchBox");
+        Assert.AreEqual("build", palette.QueryText);
+        Assert.AreEqual("build", searchBox.Text, "Expected programmatic QueryText updates to synchronize the search box content.");
+
+        var outText = driver.Backend.GetOutText();
+        var screen = new AnsiTestScreen(60, 12);
+        screen.Apply(outText);
+        var rendered = screen.GetText();
+
+        StringAssert.Contains(rendered, "Build");
+        Assert.IsFalse(rendered.Contains("Open", StringComparison.Ordinal), "Expected programmatic QueryText updates to re-filter the palette immediately.");
+    }
+
+    [TestMethod]
     public void CommandPalette_Down_From_Search_Advances_To_Second_Item()
     {
         var firstInvoked = false;
