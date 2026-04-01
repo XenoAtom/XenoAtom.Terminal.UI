@@ -317,7 +317,8 @@ Default completion behavior:
   - applying a candidate replaces `[ReplaceStart..ReplaceStart+ReplaceLength)` in the document,
   - repeated triggers cycle the candidate list until any other key is pressed.
 - Popup list for `PopupList`:
-  - open an overlay `Popup` containing an `OptionList`,
+  - if there is exactly one candidate, apply it immediately without opening a popup,
+  - otherwise open an overlay `Popup` containing an `OptionList`,
   - selecting a candidate applies it and closes the popup.
 
 ### History

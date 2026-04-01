@@ -747,6 +747,13 @@ public partial class PromptEditor : TextEditorBase
         if (CompletionPresentation == PromptEditorCompletionPresentation.PopupList)
         {
             _completionSelectedIndex = initialIndex;
+            if (candidatesCount == 1)
+            {
+                ApplyCompletionCandidate(result.Candidates[initialIndex]);
+                CancelCompletion();
+                return;
+            }
+
             OpenCompletionPopup(result.Candidates, initialIndex);
             _completionActive = true;
             return;

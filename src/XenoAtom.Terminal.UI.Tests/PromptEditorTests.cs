@@ -142,6 +142,39 @@ public sealed class PromptEditorTests
     }
 
     [TestMethod]
+    public void PromptEditor_TabCompletion_Applies_Single_Candidate_In_Popup_Mode_Without_Opening_Popup()
+    {
+        static PromptEditorCompletion Complete(in PromptEditorCompletionRequest request)
+        {
+            var replaceStart = Math.Max(0, request.CaretIndex - 1);
+            return new PromptEditorCompletion(
+                Handled: true,
+                Candidates: new[] { "help" },
+                ReplaceStart: replaceStart,
+                ReplaceLength: request.CaretIndex - replaceStart);
+        }
+
+        var editor = new PromptEditor()
+            .CompletionPresentation(PromptEditorCompletionPresentation.PopupList)
+            .CompletionHandler(Complete)
+            .AutoFocus(true);
+
+        var root = new VStack { editor };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "h" });
+        driver.TickUntil(() => editor.Text == "h");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
+        driver.TickUntil(() => editor.Text == "help");
+
+        var popupCount = driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Count();
+        Assert.AreEqual(0, popupCount, "Single-candidate completion should apply directly instead of opening a popup.");
+    }
+
+    [TestMethod]
     public void PromptEditor_Escape_Cancels_By_Default()
     {
         var canceled = false;

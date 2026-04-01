@@ -102,6 +102,7 @@ new PromptEditor()
 Default behavior:
 
 - `Tab` requests completion (unless `AcceptTab=true`).
+- In `PopupList` mode, a single candidate is applied immediately; the popup is only used when there are multiple choices.
 - `Esc` cancels completion (or cancels the prompt if no completion UI is active).
 
 If you want to reuse `Esc` for another command when completion is inactive, switch the editor to completion-only escape
