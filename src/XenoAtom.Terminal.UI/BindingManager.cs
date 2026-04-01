@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -36,6 +37,7 @@ public sealed class BindingManager
 
     private TrackingContext? _tracking;
     private TrackingContext? _freeList;
+    private readonly Dictionary<Binding, List<BoundValueSubscription>> _boundSubscriptions = new(BindingReferenceComparer.Instance);
 
     private int _suppressReadTrackingCount;
     private int _suppressWriteTrackingCount;
@@ -88,7 +90,7 @@ public sealed class BindingManager
         {
             if (_tracking is null || _tracking.RegisterWrite(owner, accessor))
             {
-                ValueChanged?.Invoke(new Binding(owner, accessor));
+                RaiseValueChanged(new Binding(owner, accessor));
             }
         }
         return true;
@@ -275,7 +277,116 @@ public sealed class BindingManager
 
         if (Volatile.Read(ref _suppressWriteTrackingCount) == 0)
         {
-            ValueChanged?.Invoke(new Binding(owner, accessor));
+            RaiseValueChanged(new Binding(owner, accessor));
+        }
+    }
+
+    /// <summary>
+    /// Registers a bound target so source writes synchronize the local bindable value before it is read again.
+    /// </summary>
+    /// <typeparam name="T">The property type.</typeparam>
+    /// <param name="targetOwner">The target owner instance.</param>
+    /// <param name="targetAccessor">The accessor describing the target property.</param>
+    /// <param name="sourceBinding">The source binding to observe.</param>
+    /// <param name="applyValue">The callback that applies a synchronized value to the target.</param>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public void RegisterBoundValue<T>(object targetOwner, BindingAccessor<T> targetAccessor, Binding<T> sourceBinding, Action<object, T> applyValue)
+    {
+        ArgumentNullException.ThrowIfNull(targetOwner);
+        ArgumentNullException.ThrowIfNull(targetAccessor);
+        ArgumentNullException.ThrowIfNull(applyValue);
+
+        if (sourceBinding.IsEmpty)
+        {
+            return;
+        }
+
+        var binding = (Binding)sourceBinding;
+        if (!_boundSubscriptions.TryGetValue(binding, out var subscriptions))
+        {
+            subscriptions = [];
+            _boundSubscriptions.Add(binding, subscriptions);
+        }
+
+        subscriptions.Add(new BoundValueSubscription<T>(targetOwner, targetAccessor, sourceBinding, applyValue));
+    }
+
+    /// <summary>
+    /// Removes a previously registered bound target synchronization.
+    /// </summary>
+    /// <typeparam name="T">The property type.</typeparam>
+    /// <param name="targetOwner">The target owner instance.</param>
+    /// <param name="targetAccessor">The accessor describing the target property.</param>
+    /// <param name="sourceBinding">The source binding to stop observing.</param>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public void UnregisterBoundValue<T>(object targetOwner, BindingAccessor<T> targetAccessor, Binding<T> sourceBinding)
+    {
+        ArgumentNullException.ThrowIfNull(targetOwner);
+        ArgumentNullException.ThrowIfNull(targetAccessor);
+
+        if (sourceBinding.IsEmpty)
+        {
+            return;
+        }
+
+        var binding = (Binding)sourceBinding;
+        if (!_boundSubscriptions.TryGetValue(binding, out var subscriptions))
+        {
+            return;
+        }
+
+        for (var i = subscriptions.Count - 1; i >= 0; i--)
+        {
+            var subscription = subscriptions[i];
+            if (!subscription.IsAlive || subscription.Matches(targetOwner, targetAccessor))
+            {
+                subscriptions.RemoveAt(i);
+            }
+        }
+
+        if (subscriptions.Count == 0)
+        {
+            _boundSubscriptions.Remove(binding);
+        }
+    }
+
+    private void RaiseValueChanged(Binding binding)
+    {
+        PropagateBoundValues(binding);
+        ValueChanged?.Invoke(binding);
+    }
+
+    private void PropagateBoundValues(Binding binding)
+    {
+        if (!_boundSubscriptions.TryGetValue(binding, out var subscriptions) || subscriptions.Count == 0)
+        {
+            return;
+        }
+
+        var snapshot = subscriptions.ToArray();
+        var requiresCleanup = false;
+
+        foreach (var subscription in snapshot)
+        {
+            requiresCleanup |= !subscription.TryApply();
+        }
+
+        if (!requiresCleanup || !_boundSubscriptions.TryGetValue(binding, out subscriptions))
+        {
+            return;
+        }
+
+        for (var i = subscriptions.Count - 1; i >= 0; i--)
+        {
+            if (!subscriptions[i].IsAlive)
+            {
+                subscriptions.RemoveAt(i);
+            }
+        }
+
+        if (subscriptions.Count == 0)
+        {
+            _boundSubscriptions.Remove(binding);
         }
     }
 
@@ -385,6 +496,60 @@ public sealed class BindingManager
             }
 
             _writes.Add(binding);
+            return true;
+        }
+    }
+
+    private abstract class BoundValueSubscription
+    {
+        public abstract bool IsAlive { get; }
+
+        public abstract bool Matches(object targetOwner, BindingAccessor targetAccessor);
+
+        public abstract bool TryApply();
+    }
+
+    private sealed class BoundValueSubscription<T> : BoundValueSubscription
+    {
+        private readonly WeakReference<object> _targetOwner;
+        private readonly BindingAccessor<T> _targetAccessor;
+        private readonly Binding<T> _sourceBinding;
+        private readonly Action<object, T> _applyValue;
+
+        public BoundValueSubscription(object targetOwner, BindingAccessor<T> targetAccessor, Binding<T> sourceBinding, Action<object, T> applyValue)
+        {
+            _targetOwner = new WeakReference<object>(targetOwner);
+            _targetAccessor = targetAccessor;
+            _sourceBinding = sourceBinding;
+            _applyValue = applyValue;
+        }
+
+        public override bool IsAlive => _targetOwner.TryGetTarget(out _);
+
+        public override bool Matches(object targetOwner, BindingAccessor targetAccessor)
+        {
+            if (!_targetOwner.TryGetTarget(out var currentTargetOwner))
+            {
+                return false;
+            }
+
+            return ReferenceEquals(currentTargetOwner, targetOwner) && ReferenceEquals(_targetAccessor, targetAccessor);
+        }
+
+        public override bool TryApply()
+        {
+            if (!_targetOwner.TryGetTarget(out var targetOwner))
+            {
+                return false;
+            }
+
+            T value;
+            using (Current.SuppressReadTracking())
+            {
+                value = _sourceBinding.GetValue();
+            }
+
+            _applyValue(targetOwner, value);
             return true;
         }
     }

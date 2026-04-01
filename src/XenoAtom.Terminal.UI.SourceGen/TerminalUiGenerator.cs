@@ -1199,6 +1199,43 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     sb.AppendLine();
 
                     sb.Append(baseIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
+                    sb.Append(baseIndent).Append("private void __ApplyBound").Append(p.PropertyName).Append("(").Append(p.PropertyTypeFullyQualified).AppendLine(" value)");
+                    sb.Append(baseIndent).AppendLine("{");
+                    sb.Append(baseIndent).Append("    var updated = value;").AppendLine();
+                    sb.Append(baseIndent).Append("    On").Append(p.PropertyName).AppendLine("Changing(ref updated);");
+                    sb.AppendLine();
+                    if (p.IsVisualChildProperty)
+                    {
+                        sb.Append(baseIndent).Append("    if (global::System.Object.ReferenceEquals(").Append(p.BackingFieldName).AppendLine(", updated))");
+                        sb.Append(baseIndent).AppendLine("    {");
+                        sb.Append(baseIndent).AppendLine("        return;");
+                        sb.Append(baseIndent).AppendLine("    }");
+                        sb.AppendLine();
+                        sb.Append(baseIndent).Append("    if (").Append(p.BackingFieldName).AppendLine(" is not null)");
+                        sb.Append(baseIndent).AppendLine("    {");
+                        sb.Append(baseIndent).AppendLine("        DetachChild(" + p.BackingFieldName + ");");
+                        sb.Append(baseIndent).AppendLine("    }");
+                        sb.AppendLine();
+                        sb.Append(baseIndent).Append("    ").Append(p.BackingFieldName).AppendLine(" = updated;");
+                        sb.Append(baseIndent).AppendLine("    if (updated is not null)");
+                        sb.Append(baseIndent).AppendLine("    {");
+                        sb.Append(baseIndent).AppendLine("        AttachChild(updated);");
+                        sb.Append(baseIndent).AppendLine("    }");
+                        sb.AppendLine();
+                        sb.Append(baseIndent).Append("    global::XenoAtom.Terminal.UI.BindingManager.Current.NotifyValueChanged(this, ").Append(p.AccessorClassName).AppendLine(".Instance);");
+                        sb.Append(baseIndent).Append("    On").Append(p.PropertyName).AppendLine("Changed(updated);");
+                    }
+                    else
+                    {
+                        sb.Append(baseIndent).Append("    if (global::XenoAtom.Terminal.UI.BindingManager.Current.SetValue(this, ref ").Append(p.BackingFieldName).Append(", updated, ").Append(p.AccessorClassName).AppendLine(".Instance))");
+                        sb.Append(baseIndent).AppendLine("    {");
+                        sb.Append(baseIndent).Append("        On").Append(p.PropertyName).AppendLine("Changed(updated);");
+                        sb.Append(baseIndent).AppendLine("    }");
+                    }
+                    sb.Append(baseIndent).AppendLine("}");
+                    sb.AppendLine();
+
+                    sb.Append(baseIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                     sb.Append(baseIndent).Append(p.PropertyModifiers).Append(' ').Append(p.PropertyTypeFullyQualified).Append(' ').Append(p.PropertyName).AppendLine();
                     sb.Append(baseIndent).AppendLine("{");
                     if (p.IsVisualChildProperty)
@@ -1206,33 +1243,7 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                         var boundFieldName = p.BackingFieldName + "Bound";
                         sb.Append(baseIndent).Append("    ").Append(string.IsNullOrEmpty(p.GetAccessorModifier) ? string.Empty : p.GetAccessorModifier + " ").Append("get").AppendLine();
                         sb.Append(baseIndent).AppendLine("    {");
-                        sb.Append(baseIndent).Append("        if (!").Append(boundFieldName).AppendLine(".IsEmpty)");
-                        sb.Append(baseIndent).AppendLine("        {");
-                        sb.Append(baseIndent).Append("            var boundValue = ").Append(boundFieldName).AppendLine(".GetValue();");
-                        sb.Append(baseIndent).AppendLine("            var boundUpdated = boundValue;");
-                        sb.Append(baseIndent).Append("            On").Append(p.PropertyName).AppendLine("Changing(ref boundUpdated);");
-                        sb.AppendLine();
-                        sb.Append(baseIndent).Append("            if (!global::System.Object.ReferenceEquals(").Append(p.BackingFieldName).AppendLine(", boundUpdated))");
-                        sb.Append(baseIndent).AppendLine("            {");
-                        sb.Append(baseIndent).Append("                if (").Append(p.BackingFieldName).AppendLine(" is not null)");
-                        sb.Append(baseIndent).AppendLine("                {");
-                        sb.Append(baseIndent).AppendLine("                    DetachChild(" + p.BackingFieldName + ");");
-                        sb.Append(baseIndent).AppendLine("                }");
-                        sb.AppendLine();
-                        sb.Append(baseIndent).Append("                ").Append(p.BackingFieldName).AppendLine(" = boundUpdated;");
-                        sb.Append(baseIndent).AppendLine("                if (boundUpdated is not null)");
-                        sb.Append(baseIndent).AppendLine("                {");
-                        sb.Append(baseIndent).AppendLine("                    AttachChild(boundUpdated);");
-                        sb.Append(baseIndent).AppendLine("                }");
-                        sb.AppendLine();
-                        sb.Append(baseIndent).Append("                On").Append(p.PropertyName).AppendLine("Changed(boundUpdated);");
-                        sb.Append(baseIndent).AppendLine("            }");
-                        sb.AppendLine();
-                        sb.Append(baseIndent).AppendLine("            return boundUpdated;");
-                        sb.Append(baseIndent).AppendLine("        }");
-                        sb.AppendLine();
-                        sb.Append(baseIndent).Append("        global::XenoAtom.Terminal.UI.BindingManager.Current.RegisterRead(this, ").Append(p.AccessorClassName).AppendLine(".Instance);");
-                        sb.Append(baseIndent).Append("        return ").Append(p.BackingFieldName).AppendLine(";");
+                        sb.Append(baseIndent).Append("        return global::XenoAtom.Terminal.UI.BindingManager.Current.GetValue(this, ref ").Append(p.BackingFieldName).Append(", ").Append(p.AccessorClassName).AppendLine(".Instance);");
                         sb.Append(baseIndent).AppendLine("    }");
                         sb.Append(baseIndent).Append("    ").Append(string.IsNullOrEmpty(p.SetAccessorModifier) ? string.Empty : p.SetAccessorModifier + " ").Append(p.SetAccessorKeyword).AppendLine();
                         sb.Append(baseIndent).AppendLine("    {");
@@ -1242,22 +1253,6 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                         sb.Append(baseIndent).Append("            On").Append(p.PropertyName).AppendLine("Changing(ref boundUpdated);");
                         sb.AppendLine();
                         sb.Append(baseIndent).Append("            ").Append(boundFieldName).AppendLine(".SetValue(boundUpdated);");
-                        sb.AppendLine();
-                        sb.Append(baseIndent).Append("            if (!global::System.Object.ReferenceEquals(").Append(p.BackingFieldName).AppendLine(", boundUpdated))");
-                        sb.Append(baseIndent).AppendLine("            {");
-                        sb.Append(baseIndent).Append("                if (").Append(p.BackingFieldName).AppendLine(" is not null)");
-                        sb.Append(baseIndent).AppendLine("                {");
-                        sb.Append(baseIndent).AppendLine("                    DetachChild(" + p.BackingFieldName + ");");
-                        sb.Append(baseIndent).AppendLine("                }");
-                        sb.AppendLine();
-                        sb.Append(baseIndent).Append("                ").Append(p.BackingFieldName).AppendLine(" = boundUpdated;");
-                        sb.Append(baseIndent).AppendLine("                if (boundUpdated is not null)");
-                        sb.Append(baseIndent).AppendLine("                {");
-                        sb.Append(baseIndent).AppendLine("                    AttachChild(boundUpdated);");
-                        sb.Append(baseIndent).AppendLine("                }");
-                        sb.AppendLine();
-                        sb.Append(baseIndent).Append("                On").Append(p.PropertyName).AppendLine("Changed(boundUpdated);");
-                        sb.Append(baseIndent).AppendLine("            }");
                         sb.AppendLine();
                         sb.Append(baseIndent).AppendLine("            return;");
                         sb.Append(baseIndent).AppendLine("        }");
@@ -1290,21 +1285,6 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                         var boundFieldName = p.BackingFieldName + "Bound";
                         sb.Append(baseIndent).Append("    ").Append(string.IsNullOrEmpty(p.GetAccessorModifier) ? string.Empty : p.GetAccessorModifier + " ").AppendLine("get");
                         sb.Append(baseIndent).AppendLine("    {");
-                        sb.Append(baseIndent).Append("        if (!").Append(boundFieldName).AppendLine(".IsEmpty)");
-                        sb.Append(baseIndent).AppendLine("        {");
-                        sb.Append(baseIndent).Append("            var boundValue = ").Append(boundFieldName).AppendLine(".GetValue();");
-                        sb.Append(baseIndent).AppendLine("            var boundUpdated = boundValue;");
-                        sb.Append(baseIndent).Append("            On").Append(p.PropertyName).AppendLine("Changing(ref boundUpdated);");
-                        sb.AppendLine();
-                        sb.Append(baseIndent).Append("            if (!global::System.Collections.Generic.EqualityComparer<").Append(p.PropertyTypeFullyQualified).Append(">.Default.Equals(").Append(p.BackingFieldName).AppendLine(", boundUpdated))");
-                        sb.Append(baseIndent).AppendLine("            {");
-                        sb.Append(baseIndent).Append("                ").Append(p.BackingFieldName).AppendLine(" = boundUpdated;");
-                        sb.Append(baseIndent).Append("                On").Append(p.PropertyName).AppendLine("Changed(boundUpdated);");
-                        sb.Append(baseIndent).AppendLine("            }");
-                        sb.AppendLine();
-                        sb.Append(baseIndent).AppendLine("            return boundUpdated;");
-                        sb.Append(baseIndent).AppendLine("        }");
-                        sb.AppendLine();
                         sb.Append(baseIndent).Append("        return global::XenoAtom.Terminal.UI.BindingManager.Current.GetValue(this, ref ").Append(p.BackingFieldName).Append(", ").Append(p.AccessorClassName).AppendLine(".Instance);");
                         sb.Append(baseIndent).AppendLine("    }");
                         sb.Append(baseIndent).Append("    ").Append(string.IsNullOrEmpty(p.SetAccessorModifier) ? string.Empty : p.SetAccessorModifier + " ").Append(p.SetAccessorKeyword).AppendLine();
@@ -1315,12 +1295,6 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                         sb.Append(baseIndent).Append("            On").Append(p.PropertyName).AppendLine("Changing(ref boundUpdated);");
                         sb.AppendLine();
                         sb.Append(baseIndent).Append("            ").Append(boundFieldName).AppendLine(".SetValue(boundUpdated);");
-                        sb.AppendLine();
-                        sb.Append(baseIndent).Append("            if (!global::System.Collections.Generic.EqualityComparer<").Append(p.PropertyTypeFullyQualified).Append(">.Default.Equals(").Append(p.BackingFieldName).AppendLine(", boundUpdated))");
-                        sb.Append(baseIndent).AppendLine("            {");
-                        sb.Append(baseIndent).Append("                ").Append(p.BackingFieldName).AppendLine(" = boundUpdated;");
-                        sb.Append(baseIndent).Append("                On").Append(p.PropertyName).AppendLine("Changed(boundUpdated);");
-                        sb.Append(baseIndent).AppendLine("            }");
                         sb.AppendLine();
                         sb.Append(baseIndent).AppendLine("            return;");
                         sb.Append(baseIndent).AppendLine("        }");
@@ -1347,7 +1321,28 @@ public sealed partial class TerminalUiGenerator : IIncrementalGenerator
                     sb.Append(baseIndent).AppendLine("[global::System.CodeDom.Compiler.GeneratedCode(\"XenoAtom.Terminal.UI.SourceGen\", \"0.1.0\")]");
                     sb.Append(baseIndent).Append("public void Bind").Append(p.PropertyName).Append("(global::XenoAtom.Terminal.UI.Binding<").Append(p.PropertyTypeFullyQualified).Append("> binding)").AppendLine();
                     sb.Append(baseIndent).AppendLine("{");
+                    sb.Append(baseIndent).Append("    if (global::System.Object.ReferenceEquals(").Append(p.BackingFieldName).Append("Bound.Owner, binding.Owner) && global::System.Object.ReferenceEquals(").Append(p.BackingFieldName).Append("Bound.Accessor, binding.Accessor))").AppendLine();
+                    sb.Append(baseIndent).AppendLine("    {");
+                    sb.Append(baseIndent).AppendLine("        return;");
+                    sb.Append(baseIndent).AppendLine("    }");
+                    sb.AppendLine();
+                    sb.Append(baseIndent).Append("    if (!").Append(p.BackingFieldName).AppendLine("Bound.IsEmpty)");
+                    sb.Append(baseIndent).AppendLine("    {");
+                    sb.Append(baseIndent).Append("        global::XenoAtom.Terminal.UI.BindingManager.Current.UnregisterBoundValue(this, ").Append(p.AccessorClassName).Append(".Instance, ").Append(p.BackingFieldName).AppendLine("Bound);");
+                    sb.Append(baseIndent).AppendLine("    }");
+                    sb.AppendLine();
                     sb.Append(baseIndent).Append("    ").Append(p.BackingFieldName).Append("Bound = binding;").AppendLine();
+                    sb.Append(baseIndent).Append("    if (binding.IsEmpty)").AppendLine();
+                    sb.Append(baseIndent).AppendLine("    {");
+                    sb.Append(baseIndent).AppendLine("        return;");
+                    sb.Append(baseIndent).AppendLine("    }");
+                    sb.AppendLine();
+                    sb.Append(baseIndent).Append("    global::XenoAtom.Terminal.UI.BindingManager.Current.RegisterBoundValue(this, ").Append(p.AccessorClassName).Append(".Instance, binding, static (owner, value) => ((").Append(containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).Append(")owner).__ApplyBound").Append(p.PropertyName).AppendLine("(value));");
+                    sb.AppendLine();
+                    sb.Append(baseIndent).AppendLine("    using (global::XenoAtom.Terminal.UI.BindingManager.Current.SuppressReadTracking())");
+                    sb.Append(baseIndent).AppendLine("    {");
+                    sb.Append(baseIndent).Append("        __ApplyBound").Append(p.PropertyName).AppendLine("(binding.GetValue());");
+                    sb.Append(baseIndent).AppendLine("    }");
                     sb.Append(baseIndent).AppendLine("}");
                     sb.AppendLine();
                 }
