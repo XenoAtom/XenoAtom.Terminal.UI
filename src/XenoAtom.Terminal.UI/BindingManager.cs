@@ -73,10 +73,7 @@ public sealed class BindingManager
             return false;
         }
 
-        if (owner is Threading.DispatcherObject dispatcherObject)
-        {
-            dispatcherObject.VerifyAccess();
-        }
+        VerifyWriteAccess(owner, accessor);
 
         backingField = value;
 
@@ -270,10 +267,7 @@ public sealed class BindingManager
     public void NotifyValueChanged(object owner, BindingAccessor accessor)
     {
         ArgumentNullException.ThrowIfNull(accessor);
-        if (owner is Threading.DispatcherObject dispatcherObject)
-        {
-            dispatcherObject.VerifyAccess();
-        }
+        VerifyWriteAccess(owner, accessor);
 
         if (Volatile.Read(ref _suppressWriteTrackingCount) == 0)
         {
@@ -335,6 +329,26 @@ public sealed class BindingManager
     {
         PropagateBoundValues(binding);
         ValueChanged?.Invoke(binding);
+    }
+
+    private static void VerifyWriteAccess(object owner, BindingAccessor accessor)
+    {
+        ArgumentNullException.ThrowIfNull(owner);
+        ArgumentNullException.ThrowIfNull(accessor);
+
+        if (owner is Threading.DispatcherObject dispatcherObject)
+        {
+            dispatcherObject.VerifyAccess();
+            return;
+        }
+
+        var dispatcher = Threading.Dispatcher.Current;
+        if (dispatcher.AttachedApp is not null && !dispatcher.CheckAccess())
+        {
+            throw new InvalidOperationException(
+                $"Invalid thread access for bindable update `{owner.GetType().Name}.{accessor.Name}`. " +
+                "Use TerminalApp.Dispatcher.InvokeAsync(...) to update bound state on the UI thread.");
+        }
     }
 
     private void PropagateBoundValues(Binding binding)
