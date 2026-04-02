@@ -134,6 +134,7 @@ Important behavioral notes:
 - `LiveAsync` / `RunAsync` still **run the UI loop on the calling thread**; the async aspect is the update callback and the ability to `await` it naturally.
 - Only the **hosting update callback** (`onUpdate`) is async. Routed event handlers remain synchronous (`OnKeyDown`, `OnPointer*`, etc.).
 - The async update callback is executed **cooperatively**: if it awaits, Terminal.UI continues to tick input/animations/rendering and resumes the callback later on the UI thread.
+- There is only one hosted async update callback in flight at a time.
 
 ### When to use an async update callback
 
@@ -162,10 +163,12 @@ await Terminal.LiveAsync(
 
 ### Guidance (keep the UI responsive)
 
-- Avoid long-running work directly on the UI thread.
-  - Prefer starting background work and then updating bindable state when results arrive.
-- If you do use `await`, avoid `ConfigureAwait(false)` in the update callback unless you explicitly marshal back to the UI thread.
-  - Use `context.App.Dispatcher.InvokeAsync(...)` to update UI state from a background continuation.
+- Avoid long-running synchronous work directly on the UI thread.
+- If you use `await` in `onUpdate`, prefer the default context-capturing behavior.
+- Avoid `ConfigureAwait(false)` in the update callback unless you explicitly marshal back to the UI thread with `context.App.Dispatcher.InvokeAsync(...)`.
+
+For a detailed explanation of the synchronization context, continuation behavior, thread affinity, limitations, and
+recommended event-handler workarounds, see [Async & Await](async-await.md).
 
 ## Fullscreen: `Terminal.Run`
 
