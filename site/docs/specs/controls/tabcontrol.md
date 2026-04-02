@@ -19,7 +19,7 @@ This document captures design and implementation notes for `TabControl`.
   - tab pages are bindable model objects that can mutate in place
   - optional close buttons with state-aware styling
   - single-line overflow handling via left/right navigation buttons
-  - optional content wrapper (e.g. border) via a template factory
+  - additive styling support for both the legacy compact strip and the default attached-tab layout
 
 ## Implementation notes
 
@@ -43,6 +43,7 @@ This document captures design and implementation notes for `TabControl`.
 - `TabCloseReason`
 - `TabPageClosingEventArgs`
 - `TabPageClosedEventArgs`
+- `TabControlLayoutMode`
 
 ### Layout defaults (TabControl constructor)
 
@@ -91,7 +92,8 @@ Because `TabPage` implements `IVisualElement`, page property changes participate
 Only the selected content is hosted at any given time:
 
 - an internal `ContentVisual` host (`TabContentHost`) contains the selected `TabPage.Content`
-- that host is optionally wrapped by a template (`TabControlStyle.TabContentTemplateFactory`)
+- that host may be wrapped by `TabControlStyle.TabContentTemplateFactory`
+- in attached layout, the wrapped content is hosted below an internal separator visual that cuts a gap under the selected tab
 
 When a bound `TabPage.Header` changes while attached:
 
@@ -108,7 +110,7 @@ When a bound `TabPage.Content` changes while that page is selected:
 
 `PrepareChildren`:
 
-- resolves `TabControlStyle` and ensures a content template exists
+- resolves `TabControlStyle` and ensures the current content host composition exists
 - clears content when there are no tabs
 - otherwise hosts the selected page content using a clamped `SelectedIndex`
 
@@ -116,13 +118,19 @@ When a bound `TabPage.Content` changes while that page is selected:
 
 Measurement considers:
 
-- header strip desired size (headers + tab padding + optional close button reserve)
+- header desired size (headers + tab padding + optional close button reserve)
 - selected content desired size
+- the layout-specific header chrome reserve
 
 Close button layout reserve:
 
 - width = `GetRuneWidth(CloseButtonRune) + CloseButtonSpacing`
 - only applied when `TabPage.ShowCloseButton` is true
+
+Layout-specific header sizing:
+
+- `Compact`: header height matches the measured header height
+- `Attached`: header height adds one chrome row above the header visuals
 
 ### Arrange
 
@@ -137,24 +145,33 @@ Arrange computes:
 
 Overflow behavior:
 
-- headers are kept on a single row
+- headers are kept on a single row of tabs
 - when total header width exceeds the arranged width, overflow buttons are reserved at the far left and far right
 - `FirstVisibleIndex` determines where the visible window starts
 - selection changes can adjust `FirstVisibleIndex` to keep the selected tab visible
-- manual overflow-button navigation updates `FirstVisibleIndex` directly and may hide the selected tab header while keeping the selected content visible
 
-Non-visible headers are arranged to a zero rectangle so stale bounds do not render.
+Attached layout:
+
+- header visuals are arranged one row below the top tab outline
+- content starts below a separator row with a gap beneath the selected tab
+- the selected content is not boxed by default
+
+Compact layout:
+
+- headers render as a flat strip
+- optional content chrome comes from `TabContentTemplateFactory`
 
 ### Render
 
 Render draws:
 
 1. the header strip background
-2. overflow button surfaces and glyphs when overflow is active
-3. tab header surfaces for the currently visible tabs
-4. close button surfaces and glyphs for visible closable tabs
+2. overflow button glyphs when overflow is active
+3. tab chrome for the currently visible tabs
+4. close button glyphs for visible closable tabs
+5. the attached separator line when attached layout is active
 
-Header/background text is still rendered by child visuals.
+Header/content text is still rendered by child visuals.
 
 State inputs:
 
@@ -194,20 +211,31 @@ Close requests:
 
 ### TabControlStyle
 
-Existing properties remain:
+Relevant properties:
 
+- `LayoutMode`
+- `Glyphs`
+- `BorderCellStyle`, `FocusedBorderCellStyle`
 - `TabPadding`
 - `StripStyle`
 - `TabStyle`, `TabHoveredStyle`, `TabPressedStyle`, `TabSelectedStyle`, `TabDisabledStyle`
-- `TabContentTemplateFactory`
-
-New styling surface:
-
-- `CloseButtonRune`
-- `CloseButtonSpacing`
+- `CloseButtonRune`, `CloseButtonSpacing`
 - `CloseButtonStyle`, `CloseButtonHoveredStyle`, `CloseButtonPressedStyle`, `CloseButtonDisabledStyle`
 - `OverflowPreviousRune`, `OverflowNextRune`
 - `OverflowButtonStyle`, `OverflowButtonHoveredStyle`, `OverflowButtonPressedStyle`, `OverflowButtonDisabledStyle`
+- `TabContentTemplateFactory`
+
+Predefined styles:
+
+- `TabControlStyle.Default` / `TabControlStyle.AttachedRounded`
+  - attached rounded tabs above a separator line
+  - no extra content wrapper by default
+- `TabControlStyle.Compact`
+  - attached single-line tabs with tighter padding
+- `TabControlStyle.Legacy`
+  - restores the original flat strip + boxed content layout
+- `TabControlStyle.Rounded`, `Single`, `Double`, `Heavy`, `Ascii`, `AsciiHeavy`, `Dashed`
+  - compact layout presets with the corresponding content wrapper border
 
 Default close button behavior:
 
@@ -218,10 +246,8 @@ Default close button behavior:
 
 Default overflow button behavior:
 
-- normal: tab/button surface styling
-- hovered: hover surface
-- pressed: pressed surface
-- disabled: dimmed/disabled foreground
+- attached layout: glyph-only affordance over the strip background
+- compact layout: tab/button surface styling
 
 ## Tests
 
@@ -230,7 +256,8 @@ Default overflow button behavior:
   - mouse-based tab switching
   - visual headers and arrange bounds
 - `TabControlRenderingTests` covers:
-  - tab pressed-state rendering
+  - compact pressed-state rendering
+  - attached default rendering
   - close-button hover rendering
   - content wrapper templating
 - `TabControlFeatureTests` covers:

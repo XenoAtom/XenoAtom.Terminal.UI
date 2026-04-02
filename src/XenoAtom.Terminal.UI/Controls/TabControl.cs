@@ -20,6 +20,7 @@ public sealed partial class TabControl : Visual
     private readonly BindableList<TabPage> _tabs;
     private readonly List<TabHeaderLayout> _headerLayouts = new();
     private readonly TabContentHost _contentHost = new();
+    private readonly AttachedContentChrome _attachedContentChrome;
 
     private int _headerHeight = 1;
     private int _overflowButtonWidth;
@@ -32,6 +33,7 @@ public sealed partial class TabControl : Visual
     private ContentVisual? _contentTemplate;
     private Visual? _contentRoot;
     private Func<Visual, ContentVisual?>? _contentTemplateFactory;
+    private TabControlLayoutMode _contentLayoutMode;
 
     [Bindable]
     internal partial int HoveredIndex { get; set; }
@@ -65,6 +67,11 @@ public sealed partial class TabControl : Visual
 
         _contentHost.HorizontalAlignment = Align.Stretch;
         _contentHost.VerticalAlignment = Align.Stretch;
+        _attachedContentChrome = new AttachedContentChrome(this)
+        {
+            HorizontalAlignment = Align.Stretch,
+            VerticalAlignment = Align.Stretch,
+        };
         HoveredIndex = -1;
         PressedIndex = -1;
         HoveredPart = TabHeaderPart.None;
@@ -197,7 +204,7 @@ public sealed partial class TabControl : Visual
         var style = GetStyle<TabControlStyle>();
         var headerMetrics = MeasureHeaders(style, new LayoutConstraints(0, LayoutConstants.Infinite, 0, constraints.MaxHeight));
 
-        var headerHeight = Math.Max(1, headerMetrics.Height);
+        var headerHeight = GetHeaderHeight(style, headerMetrics.Height, constraints.MaxHeight);
         var contentMaxW = constraints.MaxWidth == LayoutConstants.Infinite
             ? LayoutConstants.Infinite
             : Math.Max(0, constraints.MaxWidth);
@@ -229,8 +236,12 @@ public sealed partial class TabControl : Visual
         var style = GetStyle<TabControlStyle>();
         var headerMetrics = MeasureHeaders(style, new LayoutConstraints(0, LayoutConstants.Infinite, 0, finalRect.Height));
         var widths = headerMetrics.Widths;
+        var isAttachedLayout = style.LayoutMode == TabControlLayoutMode.Attached;
+        var headerVisualTop = finalRect.Y + (isAttachedLayout ? 1 : 0);
+        var headerVisualHeight = Math.Max(0, GetHeaderVisualHeight(style, GetHeaderHeight(style, headerMetrics.Height, finalRect.Height)));
+        var tabBorderReserve = isAttachedLayout ? 2 : 0;
 
-        _headerHeight = Math.Max(1, Math.Min(headerMetrics.Height, finalRect.Height));
+        _headerHeight = GetHeaderHeight(style, headerMetrics.Height, finalRect.Height);
         _overflowButtonWidth = GetOverflowButtonWidth(style);
 
         _headerLayouts.Clear();
@@ -279,17 +290,18 @@ public sealed partial class TabControl : Visual
 
             var page = _tabs[i];
             var closeReserve = page.ShowCloseButton ? GetCloseButtonReserve(style) : 0;
-            if (closeReserve > arrangedWidth)
+            var contentReserve = Math.Max(0, arrangedWidth - tabBorderReserve);
+            if (closeReserve > contentReserve)
             {
-                closeReserve = arrangedWidth;
+                closeReserve = contentReserve;
             }
 
-            var headerWidth = Math.Max(0, arrangedWidth - pad.Horizontal - closeReserve);
+            var headerWidth = Math.Max(0, contentReserve - pad.Horizontal - closeReserve);
             var headerRect = new Rectangle(
-                x + pad.Left,
-                finalRect.Y,
+                x + (isAttachedLayout ? 1 : 0) + pad.Left,
+                headerVisualTop,
                 headerWidth,
-                _headerHeight);
+                headerVisualHeight);
 
             page.Header.Arrange(headerRect);
 
@@ -297,8 +309,8 @@ public sealed partial class TabControl : Visual
             var closeEnd = -1;
             if (closeReserve > 0)
             {
-                closeStart = x + arrangedWidth - closeReserve - finalRect.X;
-                closeEnd = x + arrangedWidth - finalRect.X;
+                closeEnd = x + arrangedWidth - (isAttachedLayout ? 1 : 0) - finalRect.X;
+                closeStart = closeEnd - closeReserve;
             }
 
             _headerLayouts.Add(new TabHeaderLayout(
@@ -337,6 +349,7 @@ public sealed partial class TabControl : Visual
         var theme = GetTheme();
         var style = GetStyle<TabControlStyle>();
         var focused = HasFocus;
+        var isAttachedLayout = style.LayoutMode == TabControlLayoutMode.Attached;
 
         var headerHeight = Math.Min(Math.Max(1, _headerHeight), rect.Height);
         var stripStyle = style.ResolveStripStyle(theme);
@@ -362,6 +375,12 @@ public sealed partial class TabControl : Visual
                 hovered: HoveredPart == TabHeaderPart.ScrollNext,
                 pressed: PressedPart == TabHeaderPart.ScrollNext && IsPressedInside);
 
+            if (isAttachedLayout)
+            {
+                previousStyle = previousStyle.ClearBackground();
+                nextStyle = nextStyle.ClearBackground();
+            }
+
             var previousRect = new Rectangle(rect.X, rect.Y, _overflowButtonWidth, headerHeight);
             var nextRect = new Rectangle(rect.Right - _overflowButtonWidth, rect.Y, _overflowButtonWidth, headerHeight);
             FillRect(buffer, previousRect, previousStyle);
@@ -384,18 +403,34 @@ public sealed partial class TabControl : Visual
             var hovered = HoveredPart == TabHeaderPart.Tab && layout.Index == HoveredIndex;
             var pressed = PressedPart == TabHeaderPart.Tab && layout.Index == PressedIndex && IsPressedInside;
             var tabStyle = style.ResolveTabStyle(theme, enabled, focused, selected, hovered, pressed);
+            var tabRect = new Rectangle(rect.X + layout.Start, rect.Y, layout.End - layout.Start, headerHeight);
 
-            FillRect(
-                buffer,
-                new Rectangle(rect.X + layout.Start, rect.Y, layout.End - layout.Start, headerHeight),
-                tabStyle);
+            if (isAttachedLayout)
+            {
+                RenderAttachedTab(buffer, tabRect, tabStyle, style.ResolveBorderStyle(theme, focused), style.ResolveGlyphs(theme));
+            }
+            else
+            {
+                FillRect(buffer, tabRect, tabStyle);
+            }
 
             if (layout.CloseStart >= 0 && layout.CloseEnd > layout.CloseStart)
             {
                 var closeHovered = HoveredPart == TabHeaderPart.CloseButton && layout.Index == HoveredIndex;
                 var closePressed = PressedPart == TabHeaderPart.CloseButton && layout.Index == PressedIndex && IsPressedInside;
-                var closeRect = new Rectangle(rect.X + layout.CloseStart, rect.Y, layout.CloseEnd - layout.CloseStart, headerHeight);
-                var closeStyle = style.ResolveCloseButtonStyle(theme, tabStyle, enabled, closeHovered, closePressed);
+                var closeHeight = isAttachedLayout ? Math.Max(0, headerHeight - 1) : headerHeight;
+                if (closeHeight <= 0)
+                {
+                    continue;
+                }
+
+                var closeBaseStyle = isAttachedLayout ? tabStyle.ClearBackground() : tabStyle;
+                var closeRect = new Rectangle(
+                    rect.X + layout.CloseStart,
+                    rect.Y + (isAttachedLayout ? 1 : 0),
+                    layout.CloseEnd - layout.CloseStart,
+                    closeHeight);
+                var closeStyle = style.ResolveCloseButtonStyle(theme, closeBaseStyle, enabled, closeHovered, closePressed);
                 FillRect(buffer, closeRect, closeStyle);
                 WriteCenteredRune(buffer, closeRect, style.CloseButtonRune, closeStyle);
             }
@@ -818,6 +853,7 @@ public sealed partial class TabControl : Visual
         var widths = new int[_tabs.Count];
         var height = 1;
         var totalWidth = 0;
+        var tabBorderReserve = style.LayoutMode == TabControlLayoutMode.Attached ? 2 : 0;
 
         for (var i = 0; i < _tabs.Count; i++)
         {
@@ -825,7 +861,7 @@ public sealed partial class TabControl : Visual
             var hints = header.Measure(constraints);
             height = Math.Max(height, hints.Natural.Height);
 
-            var width = hints.Natural.Width + style.TabPadding.Horizontal;
+            var width = hints.Natural.Width + style.TabPadding.Horizontal + tabBorderReserve;
             width += _tabs[i].ShowCloseButton ? GetCloseButtonReserve(style) : 0;
             widths[i] = Math.Max(0, width);
             totalWidth += widths[i];
@@ -936,6 +972,151 @@ public sealed partial class TabControl : Visual
         return index > start ? index : Math.Min(_tabs.Count, start + 1);
     }
 
+    private static int GetHeaderHeight(TabControlStyle style, int measuredHeaderHeight, int availableHeight)
+    {
+        var baseHeight = Math.Max(1, measuredHeaderHeight);
+        if (style.LayoutMode == TabControlLayoutMode.Attached)
+        {
+            baseHeight++;
+        }
+
+        return Math.Max(1, Math.Min(baseHeight, Math.Max(0, availableHeight)));
+    }
+
+    private static int GetHeaderVisualHeight(TabControlStyle style, int headerHeight)
+        => style.LayoutMode == TabControlLayoutMode.Attached ? Math.Max(0, headerHeight - 1) : headerHeight;
+
+    private static void RenderAttachedTab(CellBuffer buffer, Rectangle rect, Style tabStyle, Style borderStyle, LineGlyphs glyphs)
+    {
+        if (rect.Width <= 0 || rect.Height <= 0)
+        {
+            return;
+        }
+
+        FillRect(buffer, rect, tabStyle.ClearBackground());
+
+        var left = rect.X;
+        var top = rect.Y;
+        var right = rect.Right - 1;
+        var bottom = rect.Bottom - 1;
+
+        buffer.SetCell(left, top, glyphs.TopLeft, borderStyle);
+        if (right > left)
+        {
+            buffer.SetCell(right, top, glyphs.TopRight, borderStyle);
+            for (var x = left + 1; x < right; x++)
+            {
+                buffer.SetCell(x, top, glyphs.Horizontal, borderStyle);
+            }
+        }
+
+        for (var y = top + 1; y <= bottom; y++)
+        {
+            buffer.SetCell(left, y, glyphs.Vertical, borderStyle);
+            if (right > left)
+            {
+                buffer.SetCell(right, y, glyphs.Vertical, borderStyle);
+            }
+        }
+    }
+
+    private bool TryGetSelectedHeaderGap(out int gapStart, out int gapEnd)
+    {
+        gapStart = -1;
+        gapEnd = -1;
+
+        for (var i = 0; i < _headerLayouts.Count; i++)
+        {
+            var layout = _headerLayouts[i];
+            if (layout.Index != SelectedIndex)
+            {
+                continue;
+            }
+
+            gapStart = layout.Start;
+            gapEnd = layout.End;
+            return true;
+        }
+
+        return false;
+    }
+
+    private void RenderAttachedContentChrome(CellBuffer buffer, Rectangle rect)
+    {
+        if (rect.Width <= 0 || rect.Height <= 0)
+        {
+            return;
+        }
+
+        var theme = GetTheme();
+        var style = GetStyle<TabControlStyle>();
+        var glyphs = style.ResolveGlyphs(theme);
+        var inactiveJointGlyphs = glyphs.Equals(LineGlyphs.Rounded) ? LineGlyphs.Single : glyphs;
+        var borderStyle = style.ResolveBorderStyle(theme, HasFocus);
+        var left = rect.X;
+        var top = rect.Y;
+        var right = rect.Right - 1;
+        var visibleLeft = _showOverflowButtons ? Math.Min(rect.Width - 1, _overflowButtonWidth) : 0;
+        var visibleRight = _showOverflowButtons ? Math.Max(visibleLeft, rect.Width - _overflowButtonWidth - 1) : rect.Width - 1;
+
+        for (var x = left; x <= right; x++)
+        {
+            buffer.SetCell(x, top, glyphs.Horizontal, borderStyle);
+        }
+
+        for (var i = 0; i < _headerLayouts.Count; i++)
+        {
+            var layout = _headerLayouts[i];
+            if (layout.Index == SelectedIndex || layout.Start >= rect.Width || layout.End <= 0)
+            {
+                continue;
+            }
+
+            var inactiveStart = Math.Max(0, layout.Start);
+            var inactiveEndExclusive = Math.Min(rect.Width, layout.End);
+            var inactiveEnd = inactiveEndExclusive - 1;
+            if (inactiveEnd < inactiveStart)
+            {
+                continue;
+            }
+
+            var startRune = inactiveJointGlyphs.TeeBottom;
+            var endRune = inactiveJointGlyphs.TeeBottom;
+
+            buffer.SetCell(left + inactiveStart, top, startRune, borderStyle);
+
+            if (inactiveEnd > inactiveStart)
+            {
+                buffer.SetCell(left + inactiveEnd, top, endRune, borderStyle);
+                for (var x = inactiveStart + 1; x < inactiveEnd; x++)
+                {
+                    buffer.SetCell(left + x, top, glyphs.Horizontal, borderStyle);
+                }
+            }
+        }
+
+        if (!TryGetSelectedHeaderGap(out var gapStart, out var gapEnd))
+        {
+            return;
+        }
+
+        var start = Math.Max(0, gapStart);
+        var endExclusive = Math.Min(rect.Width, gapEnd);
+        var end = endExclusive - 1;
+
+        var startAtVisibleEdge = start <= visibleLeft;
+        var endAtVisibleEdge = end >= visibleRight;
+
+        buffer.SetCell(left + start, top, glyphs.BottomRight, borderStyle);
+
+        buffer.SetCell(left + end, top, glyphs.BottomLeft, borderStyle);
+
+        for (var x = start + 1; x < endExclusive - 1; x++)
+        {
+            buffer.SetCell(left + x, top, new Rune(' '), style.ResolveStripStyle(theme));
+        }
+    }
+
     private static void FillRect(CellBuffer buffer, Rectangle rect, Style style)
     {
         if (rect.Width <= 0 || rect.Height <= 0)
@@ -975,7 +1156,9 @@ public sealed partial class TabControl : Visual
         ArgumentNullException.ThrowIfNull(style);
 
         var factory = style.TabContentTemplateFactory;
-        if (_contentRoot is not null && ReferenceEquals(factory, _contentTemplateFactory))
+        if (_contentRoot is not null
+            && ReferenceEquals(factory, _contentTemplateFactory)
+            && _contentLayoutMode == style.LayoutMode)
         {
             return;
         }
@@ -986,6 +1169,8 @@ public sealed partial class TabControl : Visual
             _contentRoot = null;
         }
 
+        _attachedContentChrome.Content = null;
+
         if (_contentTemplate is not null)
         {
             _contentTemplate.Content = null;
@@ -993,10 +1178,13 @@ public sealed partial class TabControl : Visual
         }
 
         _contentTemplateFactory = factory;
+        _contentLayoutMode = style.LayoutMode;
+
+        Visual innerRoot;
 
         if (factory is null)
         {
-            _contentRoot = _contentHost;
+            innerRoot = _contentHost;
         }
         else
         {
@@ -1012,7 +1200,18 @@ public sealed partial class TabControl : Visual
             }
 
             _contentTemplate = template;
-            _contentRoot = template;
+            innerRoot = template;
+        }
+
+        if (style.LayoutMode == TabControlLayoutMode.Attached)
+        {
+            _attachedContentChrome.Content = innerRoot;
+            _contentRoot = _attachedContentChrome;
+        }
+        else
+        {
+            _attachedContentChrome.Content = null;
+            _contentRoot = innerRoot;
         }
 
         _contentRoot.HorizontalAlignment = Align.Stretch;
@@ -1049,5 +1248,20 @@ public sealed partial class TabControl : Visual
 
     private sealed class TabContentHost : ContentVisual
     {
+    }
+
+    private sealed class AttachedContentChrome : Padder
+    {
+        private readonly TabControl _owner;
+
+        public AttachedContentChrome(TabControl owner)
+        {
+            _owner = owner ?? throw new ArgumentNullException(nameof(owner));
+        }
+
+        protected override Thickness Inset => new(Left: 0, Top: 1, Right: 0, Bottom: 0);
+
+        protected override void RenderOverride(CellBuffer buffer)
+            => _owner.RenderAttachedContentChrome(buffer, Bounds);
     }
 }

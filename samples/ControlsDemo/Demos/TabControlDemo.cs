@@ -1,11 +1,22 @@
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
-[Demo("TabControl", "Layout", Description = "Closable tabs, mutable tab pages, and single-line overflow navigation.")]
+[Demo("TabControl", "Layout", Description = "Attached tabs by default, mutable tab pages, and single-line overflow navigation.")]
 public sealed class TabControlDemo : ControlsDemoBase
 {
+    private enum TabStylePreset
+    {
+        Default,
+        Compact,
+        Legacy,
+        RoundedBox,
+        SingleBox,
+        DoubleBox,
+    }
+
     public TabControlDemo() : base(DemoSource.Get())
     {
     }
@@ -15,6 +26,7 @@ public sealed class TabControlDemo : ControlsDemoBase
         var progress = context.Runtime.Progress01;
         var renameCount = new State<int>(1);
         var closeAttempts = new State<int>(0);
+        var stylePreset = new State<TabStylePreset>(TabStylePreset.Default);
 
         var statusPage = new TabPage(
             header: new HStack("Status", new TextBlock(() => $"({(int)(progress.Value * 100)}%)")).Spacing(1),
@@ -23,7 +35,7 @@ public sealed class TabControlDemo : ControlsDemoBase
             Data = "primary",
         };
         statusPage.Content = new VStack(
-                DemoUi.Hint("The selected content stays attached while the header can be any visual."),
+                new Markup(() => $"[dim]{DescribePreset(stylePreset.Value)}[/]").Wrap(true),
                 new ProgressBar().Value(progress),
                 new TextBlock(() => $"Status data: {statusPage.Data ?? "<null>"}"))
             .Spacing(1);
@@ -72,13 +84,28 @@ public sealed class TabControlDemo : ControlsDemoBase
             new TabPage("Search", DemoUi.Hint("Add enough tabs to force the strip to scroll.")) { ShowCloseButton = true },
             new TabPage("Preview", DemoUi.Hint("Use the left/right overflow arrows to browse hidden headers.")) { ShowCloseButton = true },
             new TabPage("History", DemoUi.Hint("Overflow keeps the strip on a single row.")) { ShowCloseButton = true })
-            .MinHeight(9)
-            .MaxHeight(9)
-            .MaxWidth(42);
+            .Style(() => ResolveStyle(stylePreset.Value))
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Stretch);
 
-        return new VStack(
-                DemoUi.Hint("Tab pages are bindable models: mutate Header, Content, Data, IsEnabled, or ShowCloseButton directly."),
+        var root = new Grid()
+            .Rows(
+                new RowDefinition { Height = GridLength.Auto },
+                new RowDefinition { Height = GridLength.Auto },
+                new RowDefinition { Height = GridLength.Star(1) })
+            .Columns(new ColumnDefinition { Width = GridLength.Star(1) })
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Stretch);
+
+        root
+            .Cell(
+                DemoUi.Hint("Tab pages are bindable models: mutate Header, Content, Data, IsEnabled, or ShowCloseButton directly. Resize the terminal to exercise overflow, then switch presets to compare the chrome."),
+                0,
+                0)
+            .Cell(
                 new HStack(
+                        new TextBlock("Style"),
+                        new EnumSelect<TabStylePreset>().Value(stylePreset),
                         new Button("Rename Logs").Click(() =>
                         {
                             renameCount.Value++;
@@ -87,7 +114,34 @@ public sealed class TabControlDemo : ControlsDemoBase
                         new Button("Toggle Metrics Close").Click(() => metricsPage.ShowCloseButton = !metricsPage.ShowCloseButton),
                         new Button("Disable Metrics").Click(() => metricsPage.IsEnabled = !metricsPage.IsEnabled))
                     .Spacing(1),
-                tabs)
-            .Spacing(1);
+                1,
+                0)
+            .Cell(tabs, 2, 0);
+
+        return root;
     }
+
+    private static string DescribePreset(TabStylePreset preset)
+        => preset switch
+        {
+            TabStylePreset.Default => "Default: attached rounded tabs with unwrapped content.",
+            TabStylePreset.Compact => "Compact: tighter attached tabs with single-line glyphs.",
+            TabStylePreset.Legacy => "Legacy: the original flat strip with boxed content.",
+            TabStylePreset.RoundedBox => "RoundedBox: legacy strip with a rounded content border.",
+            TabStylePreset.SingleBox => "SingleBox: legacy strip with a single-line content border.",
+            TabStylePreset.DoubleBox => "DoubleBox: legacy strip with a double-line content border.",
+            _ => "Tab style preset.",
+        };
+
+    private static TabControlStyle ResolveStyle(TabStylePreset preset)
+        => preset switch
+        {
+            TabStylePreset.Default => TabControlStyle.Default,
+            TabStylePreset.Compact => TabControlStyle.Compact,
+            TabStylePreset.Legacy => TabControlStyle.Legacy,
+            TabStylePreset.RoundedBox => TabControlStyle.Rounded,
+            TabStylePreset.SingleBox => TabControlStyle.Single,
+            TabStylePreset.DoubleBox => TabControlStyle.Double,
+            _ => TabControlStyle.Default,
+        };
 }

@@ -21,6 +21,7 @@ public sealed class TabControlRenderingTests
 
         var theme = Theme.FromScheme(ColorScheme.RootLoopsDark);
         tabControl.Style(theme);
+        tabControl.Style(TabControlStyle.Legacy);
 
         tabControl.Measure(new Size(40, 6));
         tabControl.Arrange(new Rectangle(0, 0, 40, 6));
@@ -33,12 +34,10 @@ public sealed class TabControlRenderingTests
 
         var cells = (Style[])typeof(CellBuffer).GetField("_cells", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
 
-        // First tab background should differ from the strip background.
         Assert.IsTrue(cells[0].TryGetBackground(out var tabBg), "Expected tab header cell to have a background color.");
         Assert.IsTrue(cells[39].TryGetBackground(out var stripBg), "Expected strip cell to have a background color.");
         Assert.AreNotEqual(stripBg, tabBg, "Expected tab header background to differ from the header strip background.");
 
-        // Pressing the first tab should use the pressed control background.
         var pressedFill = theme.ControlFillPressed ?? theme.Selection ?? throw new AssertFailedException("Theme is expected to provide a pressed background.");
         typeof(TabControl).GetProperty("PressedIndex", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(tabControl, 0);
         typeof(TabControl).GetProperty("PressedPart", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(tabControl, TabControl.TabHeaderPart.Tab);
@@ -52,7 +51,6 @@ public sealed class TabControlRenderingTests
         Assert.IsTrue(cells[0].TryGetBackground(out var pressedBg));
         Assert.IsTrue(cells[39].TryGetBackground(out var stripBgPressed), "Expected strip cell to have a background color.");
 
-        // Selection backgrounds can be RGBA overlays; they should be blended over the header strip background.
         var expected = pressedFill.Kind == ColorKind.RgbA ? BlendLinear(pressedFill, stripBgPressed) : pressedFill;
         AssertClose(expected, pressedBg);
     }
@@ -77,9 +75,115 @@ public sealed class TabControlRenderingTests
 
         var scalars = (int[])typeof(CellBuffer).GetField("_scalars", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
 
-        // Border is rendered below the header strip.
         var expectedTopLeft = LineGlyphs.Rounded.TopLeft.Value;
         Assert.AreEqual(expectedTopLeft, scalars[buffer.Width], "Expected the tab content to be wrapped by the rounded border template.");
+    }
+
+    [TestMethod]
+    public void TabControl_Default_Renders_Attached_Rounded_Header_And_Content_Frame()
+    {
+        var tabControl = new TabControl(
+            new TabPage("One", new TextBlock("A")),
+            new TabPage("Two", new TextBlock("B")));
+
+        var theme = Theme.FromScheme(ColorScheme.RootLoopsDark);
+        tabControl.Style(theme);
+
+        tabControl.Measure(new Size(24, 8));
+        tabControl.Arrange(new Rectangle(0, 0, 24, 8));
+
+        var buffer = new CellBuffer(24, 8);
+        buffer.Clear(theme.BaseTextStyle());
+
+        typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .Invoke(tabControl, new object[] { buffer });
+
+        var scalars = (int[])typeof(CellBuffer).GetField("_scalars", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
+
+        Assert.AreEqual(LineGlyphs.Rounded.TopLeft.Value, scalars[0], "Expected the selected tab to use a rounded top-left corner.");
+
+        var separatorRow = scalars.AsSpan(buffer.Width * 2, buffer.Width);
+        Assert.AreEqual(LineGlyphs.Rounded.BottomRight.Value, separatorRow[0], "Expected the first selected tab edge to connect with a rounded left hook.");
+        Assert.AreEqual(new Rune(' ').Value, separatorRow[1], "Expected the separator row to stay open beneath the selected tab interior.");
+        Assert.IsTrue(separatorRow.IndexOf(LineGlyphs.Rounded.BottomLeft.Value) >= 0 || separatorRow.IndexOf(LineGlyphs.Rounded.BottomRight.Value) >= 0, "Expected the separator row to contain a tab joint glyph.");
+        Assert.IsTrue(separatorRow.IndexOf(LineGlyphs.Rounded.Horizontal.Value) >= 0, "Expected the separator row to continue after the selected tab.");
+    }
+
+    [TestMethod]
+    public void TabControl_Selected_First_Visible_Tab_Uses_Rounded_Left_Join_When_Overflow_Is_Shown()
+    {
+        var tabControl = new TabControl(
+            new TabPage("Status", new TextBlock("A")),
+            new TabPage("Logs", new TextBlock("B")),
+            new TabPage("Metrics", new TextBlock("C")),
+            new TabPage("Search", new TextBlock("D")),
+            new TabPage("Preview", new TextBlock("E")),
+            new TabPage("History", new TextBlock("F")));
+
+        var theme = Theme.FromScheme(ColorScheme.RootLoopsDark);
+        tabControl.Style(theme);
+
+        tabControl.Measure(new Size(36, 8));
+        tabControl.Arrange(new Rectangle(0, 0, 36, 8));
+
+        var buffer = new CellBuffer(36, 8);
+        buffer.Clear(theme.BaseTextStyle());
+
+        typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .Invoke(tabControl, new object[] { buffer });
+
+        var layouts = (System.Collections.IEnumerable)typeof(TabControl)
+            .GetField("_headerLayouts", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .GetValue(tabControl)!;
+        var enumerator = layouts.GetEnumerator();
+        Assert.IsTrue(enumerator.MoveNext(), "Expected at least one visible tab layout.");
+        var firstLayout = enumerator.Current!;
+        var start = (int)firstLayout.GetType().GetProperty("Start")!.GetValue(firstLayout)!;
+
+        var scalars = (int[])typeof(CellBuffer).GetField("_scalars", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
+        var separatorRow = scalars.AsSpan(buffer.Width * 2, buffer.Width);
+
+        Assert.AreEqual(LineGlyphs.Rounded.BottomRight.Value, separatorRow[start], "Expected the first visible selected tab to use a rounded left join above the separator.");
+    }
+
+    [TestMethod]
+    public void TabControl_First_Visible_Inactive_Tab_Uses_Straight_Separator_Join_When_Overflow_Is_Shown()
+    {
+        var tabControl = new TabControl(
+            new TabPage("Status", new TextBlock("A")),
+            new TabPage("Logs", new TextBlock("B")),
+            new TabPage("Metrics", new TextBlock("C")),
+            new TabPage("Search", new TextBlock("D")),
+            new TabPage("Preview", new TextBlock("E")),
+            new TabPage("History", new TextBlock("F")))
+        {
+            SelectedIndex = 1,
+        };
+
+        var theme = Theme.FromScheme(ColorScheme.RootLoopsDark);
+        tabControl.Style(theme);
+
+        tabControl.Measure(new Size(36, 8));
+        tabControl.Arrange(new Rectangle(0, 0, 36, 8));
+
+        var buffer = new CellBuffer(36, 8);
+        buffer.Clear(theme.BaseTextStyle());
+
+        typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .Invoke(tabControl, new object[] { buffer });
+
+        var layouts = (System.Collections.IEnumerable)typeof(TabControl)
+            .GetField("_headerLayouts", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .GetValue(tabControl)!;
+        var enumerator = layouts.GetEnumerator();
+        Assert.IsTrue(enumerator.MoveNext(), "Expected at least one visible tab layout.");
+        var firstLayout = enumerator.Current!;
+        var start = (int)firstLayout.GetType().GetProperty("Start")!.GetValue(firstLayout)!;
+
+        var scalars = (int[])typeof(CellBuffer).GetField("_scalars", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(buffer)!;
+        var separatorRow = scalars.AsSpan(buffer.Width * 2, buffer.Width);
+
+        Assert.AreEqual(LineGlyphs.Single.TeeBottom.Value, separatorRow[start], "Expected the first visible inactive tab to use a straight separator join instead of a rounded hook or vertical drop.");
     }
 
     [TestMethod]
@@ -90,6 +194,7 @@ public sealed class TabControlRenderingTests
 
         var theme = Theme.FromScheme(ColorScheme.RootLoopsDark);
         tabControl.Style(theme);
+        tabControl.Style(TabControlStyle.Legacy);
 
         tabControl.Measure(new Size(20, 6));
         tabControl.Arrange(new Rectangle(0, 0, 20, 6));
@@ -110,9 +215,40 @@ public sealed class TabControlRenderingTests
         AssertClose(theme.Error ?? throw new AssertFailedException("Theme is expected to provide an error color."), closeBg);
     }
 
+    [TestMethod]
+    public void TabControl_Focused_Tab_Style_Does_Not_Add_Underline()
+    {
+        var theme = Theme.FromScheme(ColorScheme.RootLoopsDark);
+
+        var defaultFocused = TabControlStyle.Default.ResolveTabStyle(
+            theme,
+            enabled: true,
+            focused: true,
+            selected: true,
+            hovered: false,
+            pressed: false);
+        var compactFocused = TabControlStyle.Compact.ResolveTabStyle(
+            theme,
+            enabled: true,
+            focused: true,
+            selected: true,
+            hovered: false,
+            pressed: false);
+        var legacyFocused = TabControlStyle.Legacy.ResolveTabStyle(
+            theme,
+            enabled: true,
+            focused: true,
+            selected: true,
+            hovered: false,
+            pressed: false);
+
+        Assert.AreEqual(TextStyle.None, defaultFocused.TextStyle & TextStyle.Underline);
+        Assert.AreEqual(TextStyle.None, compactFocused.TextStyle & TextStyle.Underline);
+        Assert.AreEqual(TextStyle.None, legacyFocused.TextStyle & TextStyle.Underline);
+    }
+
     private static void AssertClose(Color expected, Color actual)
     {
-        // The production code uses LUTs for speed; allow a small tolerance.
         Assert.AreEqual(ColorKind.Rgb, actual.Kind);
 
         Assert.IsLessThanOrEqualTo(1, Math.Abs(expected.R - actual.R));

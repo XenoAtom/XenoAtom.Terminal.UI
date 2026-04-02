@@ -13,96 +13,139 @@ namespace XenoAtom.Terminal.UI.Styling;
 /// </summary>
 public sealed record TabControlStyle : IStyle<TabControlStyle>
 {
+    private static readonly Func<Visual, ContentVisual?> _defaultCompactTemplateFactory = _ => new Border()
+        .HorizontalAlignment(Align.Stretch)
+        .VerticalAlignment(Align.Stretch);
+
+    private static readonly Func<Visual, ContentVisual?> _roundedCompactTemplateFactory = _ => new Border()
+        .Style(BorderStyle.Rounded)
+        .HorizontalAlignment(Align.Stretch)
+        .VerticalAlignment(Align.Stretch);
+
+    private static readonly Func<Visual, ContentVisual?> _singleCompactTemplateFactory = _ => new Border()
+        .Style(BorderStyle.Single)
+        .HorizontalAlignment(Align.Stretch)
+        .VerticalAlignment(Align.Stretch);
+
+    private static readonly Func<Visual, ContentVisual?> _doubleCompactTemplateFactory = _ => new Border()
+        .Style(BorderStyle.Double)
+        .HorizontalAlignment(Align.Stretch)
+        .VerticalAlignment(Align.Stretch);
+
+    private static readonly Func<Visual, ContentVisual?> _heavyCompactTemplateFactory = _ => new Border()
+        .Style(BorderStyle.Heavy)
+        .HorizontalAlignment(Align.Stretch)
+        .VerticalAlignment(Align.Stretch);
+
+    private static readonly Func<Visual, ContentVisual?> _asciiCompactTemplateFactory = _ => new Border()
+        .Style(BorderStyle.Ascii)
+        .HorizontalAlignment(Align.Stretch)
+        .VerticalAlignment(Align.Stretch);
+
+    private static readonly Func<Visual, ContentVisual?> _asciiHeavyCompactTemplateFactory = _ => new Border()
+        .Style(BorderStyle.AsciiHeavy)
+        .HorizontalAlignment(Align.Stretch)
+        .VerticalAlignment(Align.Stretch);
+
+    private static readonly Func<Visual, ContentVisual?> _dashedCompactTemplateFactory = _ => new Border()
+        .Style(BorderStyle.Dashed)
+        .HorizontalAlignment(Align.Stretch)
+        .VerticalAlignment(Align.Stretch);
+
     /// <summary>
     /// Gets the default tab control style.
     /// </summary>
     public static TabControlStyle Default { get; } = new()
     {
-        TabContentTemplateFactory = host => new Border(host)
-            .HorizontalAlignment(Align.Stretch)
-            .VerticalAlignment(Align.Stretch),
+        LayoutMode = TabControlLayoutMode.Attached,
+        Glyphs = LineGlyphs.Rounded,
+        TabPadding = new Thickness(Left: 1, Top: 0, Right: 1, Bottom: 0),
     };
 
     /// <summary>
-    /// Gets a predefined tab control style that does not apply an additional content template.
+    /// Gets a predefined tab control style with a tighter single-line attached tab layout.
     /// </summary>
-    public static TabControlStyle NoBorder { get; } = new();
+    public static TabControlStyle Compact { get; } = new()
+    {
+        LayoutMode = TabControlLayoutMode.Attached,
+        Glyphs = LineGlyphs.Single,
+        TabPadding = new Thickness(Left: 1, Top: 0, Right: 1, Bottom: 0),
+    };
+
+    /// <summary>
+    /// Gets a predefined flat-strip tab control style that preserves the legacy boxed layout.
+    /// </summary>
+    public static TabControlStyle Legacy { get; } = new()
+    {
+        LayoutMode = TabControlLayoutMode.Compact,
+        TabPadding = new Thickness(Left: 2, Top: 0, Right: 2, Bottom: 0),
+        TabContentTemplateFactory = _defaultCompactTemplateFactory,
+    };
+
+    /// <summary>
+    /// Gets a predefined flat-strip tab control style with no additional content template.
+    /// </summary>
+    public static TabControlStyle NoBorder { get; } = Legacy with { TabContentTemplateFactory = null };
+
+    /// <summary>
+    /// Gets a predefined tab control style with attached rounded tabs and a rounded content frame.
+    /// </summary>
+    public static TabControlStyle AttachedRounded { get; } = Default;
 
     /// <summary>
     /// Gets a predefined tab control style with a rounded content border.
     /// </summary>
-    public static TabControlStyle Rounded { get; } = Default with
+    public static TabControlStyle Rounded { get; } = Legacy with
     {
-        TabContentTemplateFactory = host => new Border(host)
-            .Style(BorderStyle.Rounded)
-            .HorizontalAlignment(Align.Stretch)
-            .VerticalAlignment(Align.Stretch),
+        TabContentTemplateFactory = _roundedCompactTemplateFactory,
     };
 
     /// <summary>
     /// Gets a predefined tab control style with a single-line content border.
     /// </summary>
-    public static TabControlStyle Single { get; } = Default with
+    public static TabControlStyle Single { get; } = Legacy with
     {
-        TabContentTemplateFactory = host => new Border(host)
-            .Style(BorderStyle.Single)
-            .HorizontalAlignment(Align.Stretch)
-            .VerticalAlignment(Align.Stretch),
+        TabContentTemplateFactory = _singleCompactTemplateFactory,
     };
 
     /// <summary>
     /// Gets a predefined tab control style with a double-line content border.
     /// </summary>
-    public static TabControlStyle Double { get; } = Default with
+    public static TabControlStyle Double { get; } = Legacy with
     {
-        TabContentTemplateFactory = host => new Border(host)
-            .Style(BorderStyle.Double)
-            .HorizontalAlignment(Align.Stretch)
-            .VerticalAlignment(Align.Stretch),
+        TabContentTemplateFactory = _doubleCompactTemplateFactory,
     };
 
     /// <summary>
     /// Gets a predefined tab control style with a heavy content border.
     /// </summary>
-    public static TabControlStyle Heavy { get; } = Default with
+    public static TabControlStyle Heavy { get; } = Legacy with
     {
-        TabContentTemplateFactory = host => new Border(host)
-            .Style(BorderStyle.Heavy)
-            .HorizontalAlignment(Align.Stretch)
-            .VerticalAlignment(Align.Stretch),
+        TabContentTemplateFactory = _heavyCompactTemplateFactory,
     };
 
     /// <summary>
     /// Gets a predefined tab control style with an ASCII content border.
     /// </summary>
-    public static TabControlStyle Ascii { get; } = Default with
+    public static TabControlStyle Ascii { get; } = Legacy with
     {
-        TabContentTemplateFactory = host => new Border(host)
-            .Style(BorderStyle.Ascii)
-            .HorizontalAlignment(Align.Stretch)
-            .VerticalAlignment(Align.Stretch),
+        TabContentTemplateFactory = _asciiCompactTemplateFactory,
     };
 
     /// <summary>
     /// Gets a predefined tab control style with a heavy ASCII content border.
     /// </summary>
-    public static TabControlStyle AsciiHeavy { get; } = Default with
+    public static TabControlStyle AsciiHeavy { get; } = Legacy with
     {
-        TabContentTemplateFactory = host => new Border(host)
-            .Style(BorderStyle.AsciiHeavy)
-            .HorizontalAlignment(Align.Stretch)
-            .VerticalAlignment(Align.Stretch),
+        TabContentTemplateFactory = _asciiHeavyCompactTemplateFactory,
     };
 
     /// <summary>
     /// Gets a predefined tab control style with a dashed content border.
     /// </summary>
-    public static TabControlStyle Dashed { get; } = Default with
+    public static TabControlStyle Dashed { get; } = Legacy with
     {
-        TabContentTemplateFactory = host => new Border(host)
-            .Style(BorderStyle.Dashed)
-            .HorizontalAlignment(Align.Stretch)
-            .VerticalAlignment(Align.Stretch),
+        TabContentTemplateFactory = _dashedCompactTemplateFactory,
     };
 
     /// <summary>
@@ -111,9 +154,32 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     public static StyleKey<TabControlStyle> Key { get; } = new("TabControlStyle", Default);
 
     /// <summary>
+    /// Gets the layout mode used to render the tab strip and content chrome.
+    /// </summary>
+    public TabControlLayoutMode LayoutMode { get; init; } = TabControlLayoutMode.Attached;
+
+    /// <summary>
+    /// Gets the optional line glyph set used by the attached layout.
+    /// </summary>
+    /// <remarks>
+    /// When <see langword="null"/>, the control uses <see cref="Theme.Lines"/>.
+    /// </remarks>
+    public LineGlyphs? Glyphs { get; init; }
+
+    /// <summary>
     /// Gets the padding applied around each tab header.
     /// </summary>
     public Thickness TabPadding { get; init; } = new(Left: 2, Top: 0, Right: 2, Bottom: 0);
+
+    /// <summary>
+    /// Gets the optional border style used by the attached content frame when not focused.
+    /// </summary>
+    public Style? BorderCellStyle { get; init; }
+
+    /// <summary>
+    /// Gets the optional border style used by the attached content frame when the tab control is focused.
+    /// </summary>
+    public Style? FocusedBorderCellStyle { get; init; }
 
     /// <summary>
     /// Gets the optional style for the tab strip background.
@@ -221,6 +287,22 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     public Style ResolveStripStyle(Theme theme) => StripStyle ?? theme.BaseTextStyle();
 
     /// <summary>
+    /// Resolves the line glyph set for the provided <paramref name="theme"/>.
+    /// </summary>
+    public LineGlyphs ResolveGlyphs(Theme theme) => Glyphs ?? theme.Lines;
+
+    /// <summary>
+    /// Resolves the border style for the provided <paramref name="theme"/> and focus state.
+    /// </summary>
+    public Style ResolveBorderStyle(Theme theme, bool focused)
+    {
+        ArgumentNullException.ThrowIfNull(theme);
+
+        var style = focused ? (FocusedBorderCellStyle ?? theme.BorderStyle(focused: true)) : (BorderCellStyle ?? theme.BorderStyle(focused: false));
+        return style.WithTextStyle(style.TextStyle);
+    }
+
+    /// <summary>
     /// Resolves the tab style for the provided state.
     /// </summary>
     /// <param name="theme">The current theme.</param>
@@ -233,7 +315,7 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     {
         ArgumentNullException.ThrowIfNull(theme);
 
-        var normal = TabStyle ?? theme.SurfaceStyle();
+        var normal = TabStyle ?? ResolveDefaultTabNormal(theme);
 
         if (!enabled)
         {
@@ -310,7 +392,7 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     {
         ArgumentNullException.ThrowIfNull(theme);
 
-        var normal = OverflowButtonStyle ?? TabStyle ?? theme.SurfaceStyle();
+        var normal = OverflowButtonStyle ?? TabStyle ?? ResolveDefaultTabNormal(theme);
         if (!enabled)
         {
             return OverflowButtonDisabledStyle ?? ResolveDefaultDisabled(theme, normal);
@@ -327,6 +409,12 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
         }
 
         return normal;
+    }
+
+    private Style ResolveDefaultTabNormal(Theme theme)
+    {
+        ArgumentNullException.ThrowIfNull(theme);
+        return LayoutMode == TabControlLayoutMode.Attached ? theme.ForegroundTextStyle() : theme.SurfaceStyle();
     }
 
     private static Style ResolveDefaultHovered(Theme theme, Style normal)
@@ -366,7 +454,7 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
             style = style.WithForeground(focus);
         }
 
-        return style | TextStyle.Underline;
+        return style.RemoveTextStyle(TextStyle.Underline);
     }
 
     private static Style ResolveDefaultDisabled(Theme theme, Style normal)

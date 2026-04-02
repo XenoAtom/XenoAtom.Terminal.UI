@@ -37,6 +37,7 @@ var tabs = new TabControl(
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch`
+- The default style renders attached rounded tabs over a separator line instead of boxing the selected content.
 - Tab headers stay on a single line. When they do not fit, overflow buttons appear at the far left and far right.
 
 ## Tab pages
@@ -57,25 +58,37 @@ Close lifecycle:
 
 ## Styling
 
-`TabControlStyle` controls header rendering, close buttons, overflow buttons, and the content wrapper.
+`TabControlStyle` controls header rendering, close buttons, overflow buttons, separator/frame glyphs, and the optional content wrapper.
 
 By default:
 
-- selected tabs use the accent/focus styling
+- selected tabs use accent/focus styling on the attached tab header
 - close buttons inherit the tab style, then switch to an error-toned hover/pressed state
 - overflow buttons use the tab/button surface styling
-- the selected tab content is wrapped in a border
+- the selected content is not wrapped in an extra border
+
+Use `TabControlStyle.Compact` for a tighter single-line attached look, or `TabControlStyle.Legacy` to restore the original flat strip + boxed content layout.
 
 ```csharp
 new TabControl(
     new TabPage("Status", "Ready"),
     new TabPage("Logs", "…") { ShowCloseButton = true })
-    .Style(TabControlStyle.Rounded with
+    .Style(TabControlStyle.Default with
     {
         CloseButtonRune = new Rune('x'),
         OverflowPreviousRune = new Rune('<'),
         OverflowNextRune = new Rune('>'),
     });
+
+new TabControl(
+    new TabPage("Status", "Ready"),
+    new TabPage("Logs", "…"))
+    .Style(TabControlStyle.Compact);
+
+new TabControl(
+    new TabPage("Status", "Ready"),
+    new TabPage("Logs", "…"))
+    .Style(TabControlStyle.Legacy);
 ```
 
 ## Interaction

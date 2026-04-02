@@ -2,8 +2,10 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Reflection;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Hosting;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -40,8 +42,9 @@ public sealed class TabControlFeatureTests
         using var driver = new TerminalAppTestDriver(tabs, TerminalHostKind.Fullscreen, new TerminalSize(30, 8));
         driver.Tick();
 
-        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 8, Y = 0 });
-        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 8, Y = 0 });
+        var closePoint = GetHeaderPoint(tabs, 0, closeButton: true);
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = closePoint.X, Y = closePoint.Y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = closePoint.X, Y = closePoint.Y });
         driver.TickUntil(() => tabs.Tabs.Count == 1);
 
         Assert.AreEqual(1, requestClosingCount);
@@ -69,8 +72,9 @@ public sealed class TabControlFeatureTests
         using var driver = new TerminalAppTestDriver(tabs, TerminalHostKind.Fullscreen, new TerminalSize(30, 8));
         driver.Tick();
 
-        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = 8, Y = 0 });
-        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = 8, Y = 0 });
+        var closePoint = GetHeaderPoint(tabs, 0, closeButton: true);
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = closePoint.X, Y = closePoint.Y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = closePoint.X, Y = closePoint.Y });
         driver.Tick();
 
         Assert.AreEqual(2, tabs.Tabs.Count);
@@ -140,5 +144,62 @@ public sealed class TabControlFeatureTests
         var rendered = screen.GetText();
         StringAssert.Contains(rendered, "Tab1");
         Assert.IsFalse(rendered.Contains("Tab0", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void TabControl_Style_Switch_Rebuilds_Chrome_Without_Reparenting_Content()
+    {
+        var style = new State<TabControlStyle>(TabControlStyle.Default);
+        var tabs = new TabControl(
+                new TabPage("One", new TextBlock("A")),
+                new TabPage("Two", new TextBlock("B")))
+            .Style(style);
+
+        using var driver = new TerminalAppTestDriver(tabs, TerminalHostKind.Fullscreen, new TerminalSize(30, 8));
+        driver.Tick();
+
+        style.Value = TabControlStyle.Rounded;
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(30, 8);
+        screen.Apply(driver.Backend.GetOutText());
+        Assert.IsTrue(screen.GetText().Contains("A", StringComparison.Ordinal));
+
+        style.Value = TabControlStyle.Compact;
+        driver.Tick();
+
+        screen = new AnsiTestScreen(30, 8);
+        screen.Apply(driver.Backend.GetOutText());
+        Assert.IsTrue(screen.GetText().Contains("A", StringComparison.Ordinal));
+    }
+
+    private static (int X, int Y) GetHeaderPoint(TabControl tabs, int index, bool closeButton)
+    {
+        var layouts = (System.Collections.IEnumerable)typeof(TabControl)
+            .GetField("_headerLayouts", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .GetValue(tabs)!;
+
+        foreach (var layout in layouts)
+        {
+            var layoutType = layout.GetType();
+            var candidateIndex = (int)layoutType.GetProperty("Index")!.GetValue(layout)!;
+            if (candidateIndex != index)
+            {
+                continue;
+            }
+
+            if (closeButton)
+            {
+                var closeStart = (int)layoutType.GetProperty("CloseStart")!.GetValue(layout)!;
+                var closeEnd = (int)layoutType.GetProperty("CloseEnd")!.GetValue(layout)!;
+                return ((closeStart + closeEnd - 1) / 2, 1);
+            }
+
+            var start = (int)layoutType.GetProperty("Start")!.GetValue(layout)!;
+            var end = (int)layoutType.GetProperty("End")!.GetValue(layout)!;
+            return ((start + end - 1) / 2, 1);
+        }
+
+        throw new AssertFailedException($"Unable to resolve header layout for tab index {index}.");
     }
 }
