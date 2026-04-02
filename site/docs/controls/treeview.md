@@ -114,6 +114,24 @@ var node = new TreeNode("Build pipeline")
 
 Spacing is controlled by the visuals themselves, so margins work well for separating stacked indicators and actions.
 
+If a node header is a text visual such as `TextBlock`, `Markup`, or `Paragraph`, trimming now works against the visible
+space left before the right-aligned visual group. This makes patterns like a long label plus trailing status glyphs work
+as expected:
+
+```csharp
+var node = new TreeNode(
+        new TextBlock("Release candidate build pipeline for production")
+        {
+            Trimming = TextTrimming.EndEllipsis,
+        })
+    {
+        Icon = TreeNodeIcons.FileGlyph,
+    }
+    .AddRightVisual("●");
+```
+
+When the row becomes narrower, the header trims before the trailing visual instead of drawing underneath it.
+
 ## Styling
 
 `TreeViewStyle` controls indentation, glyphs, spacing, selection colors, and a default `IconStyle`.

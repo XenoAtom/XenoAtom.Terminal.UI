@@ -308,7 +308,11 @@ public sealed partial class TreeView : Visual, IScrollable
             var isRowHovered = i == HoveredIndex;
             var rightVisualWidth = GetActiveRightVisualWidth(node, isRowHovered);
             var y = innerTop + (i - scrollOffset);
-            node.Header.Arrange(new Rectangle(innerLeft + prefix - offsetX, y, Math.Max(0, extentWidth - prefix - rightVisualWidth), 1));
+            var headerX = innerLeft + prefix - offsetX;
+            var headerVisibleWidth = innerWidth - prefix - rightVisualWidth + offsetX;
+            var headerExtentWidth = extentWidth - prefix - rightVisualWidth;
+            var headerWidth = Math.Max(0, Math.Min(headerExtentWidth, headerVisibleWidth));
+            node.Header.Arrange(new Rectangle(headerX, y, headerWidth, 1));
             ArrangeRightVisuals(node, innerLeft, innerWidth, y, isRowHovered);
         }
     }

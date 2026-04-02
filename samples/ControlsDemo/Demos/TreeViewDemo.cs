@@ -129,6 +129,65 @@ public sealed class TreeViewDemo : ControlsDemoBase
             return tree;
         }
 
+        static TreeView CreateTrimmedRightVisualTree()
+        {
+            static TreeNode TrimmedNode(string label, Rune icon, string statusGlyph, Color statusColor)
+            {
+                var node = new TreeNode(new TextBlock(label) { Trimming = TextTrimming.EndEllipsis })
+                {
+                    Data = label,
+                    Icon = icon,
+                };
+
+                var rightVisual = TreeNodeDemoExtensions.CreateStatusGlyph(statusGlyph, statusColor);
+                rightVisual.Margin = new Thickness(1, 0, 0, 0);
+                node.AddRightVisual(rightVisual);
+                return node;
+            }
+
+            var tree = new TreeView().MinHeight(7).HorizontalAlignment(Align.Stretch).VerticalAlignment(Align.Stretch);
+
+            var workspaces = TrimmedNode("Workspace services / backend / release candidate validation", NerdFont.CodFolderLibrary, "●", Colors.MediumSeaGreen);
+            workspaces.IsExpanded = true;
+            workspaces.Children.Add(TrimmedNode("Feature flag rollout configuration for customer preview", NerdFont.CodFileCode, "⚙", Colors.Goldenrod));
+            workspaces.Children.Add(TrimmedNode("Incident timeline and remediation notes for April hotfix", NerdFont.CodFile, "⚠", Colors.OrangeRed));
+            workspaces.Children.Add(TrimmedNode("Post-deployment smoke tests and production checklist", NerdFont.CodChecklist, "✓", Colors.DeepSkyBlue));
+
+            tree.Roots.Add(workspaces);
+            tree.Roots.Add(TrimmedNode("Archive / historical builds / 2026 quarterly compliance package", NerdFont.OctArchive, "○", Colors.MediumPurple));
+            return tree;
+        }
+
+        static Dialog CreateTrimmedDialog()
+        {
+            Dialog? dialog = null;
+            var tree = CreateTrimmedRightVisualTree();
+
+            dialog = new Dialog()
+                .Title("TreeView trimming with right visuals")
+                .TopRightText(new TextBlock("Resizable").Style(TextBlockStyle.Default with { Foreground = Colors.DeepSkyBlue }))
+                .BottomLeftText("Resize narrower to trigger ellipsis")
+                .BottomRightText("Drag edge")
+                .IsModal(false)
+                .Padding(1)
+                .MinWidth(38)
+                .MinHeight(10)
+                .Width(56)
+                .Height(13)
+                .Content(new VStack(
+                        DemoUi.Hint("Node headers use TextBlock.Trimming(TextTrimming.EndEllipsis)."),
+                        new Border(tree)
+                            .Padding(new Thickness(1, 0, 1, 0))
+                            .HorizontalAlignment(Align.Stretch)
+                            .VerticalAlignment(Align.Stretch),
+                        new Button("Close").Click(() => dialog!.Close()))
+                    .Spacing(1)
+                    .HorizontalAlignment(Align.Stretch)
+                    .VerticalAlignment(Align.Stretch));
+
+            return dialog;
+        }
+
         var (defaultTree, nestedNode) = CreateTree();
         var (noLinesTree, _) = CreateTree();
         noLinesTree.Style(TreeViewStyle.NoLines);
@@ -137,8 +196,9 @@ public sealed class TreeViewDemo : ControlsDemoBase
         var styledIconTree = CreateStyledIconTree();
         var actionTree = CreateActionTree(context);
         var longTree = CreateLongTree();
+        var showTrimmedDialog = new Button("Show trimming dialog").Click(() => CreateTrimmedDialog().Show());
 
-        return new VStack(
+        var root = new VStack(
                 DemoUi.Hint("Use arrows to navigate. Use Left/Right to collapse/expand."),
                 new HStack(
                         new Button("Select Nested 2").Click(() => defaultTree.TrySelectNode(nestedNode)),
@@ -158,10 +218,20 @@ public sealed class TreeViewDemo : ControlsDemoBase
                     )
                     .Spacing(2),
                 DemoUi.Hint("Hover a row in the action tree to reveal hover-only buttons; always-visible indicators stay pinned to the far right."),
+                new HStack(
+                        DemoUi.Hint("Open the dialog to test header trimming with long labels and right-aligned icons."),
+                        showTrimmedDialog)
+                    .Spacing(2),
                 DemoUi.Hint("Large trees can be hosted in a ScrollViewer."),
                 new Border(new ScrollViewer(longTree)).MinHeight(12).MaxHeight(12)
             )
             .Spacing(1);
+
+        return root.InScreenshot(context, () =>
+        {
+            var dialog = CreateTrimmedDialog();
+            dialog.Show();
+        });
     }
 }
 

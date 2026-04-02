@@ -222,6 +222,11 @@ Arrange:
 Each visible header is arranged to a 1-row rectangle at:
 - `y = Bounds.Y + (rowIndex - Scroll.OffsetY)`
 - `x = Bounds.X + prefixWidth - Scroll.OffsetX`
+- `width = min(extentWidth - prefixWidth - activeRightVisualWidth, viewportWidth - prefixWidth - activeRightVisualWidth + Scroll.OffsetX)`
+
+This width cap keeps the header inside the visible row slot that remains before the right-aligned visual group, while still
+allowing horizontal scrolling to reveal additional content from the measured extent. It also means text-based headers can
+honor trimming (`TextBlock.Trimming`, `Markup.Trimming`, etc.) instead of silently drawing underneath the trailing visuals.
 
 Right visuals are arranged against the viewport right edge for the row:
 - always-visible visuals occupy the far-right slots

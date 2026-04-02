@@ -225,6 +225,7 @@ internal static class ScreenshotExport
            string.Equals(typeName, "PopupDemo", StringComparison.Ordinal) ||
            string.Equals(typeName, "SearchReplacePopupDemo", StringComparison.Ordinal) ||
            string.Equals(typeName, "ToastDemo", StringComparison.Ordinal) ||
+           string.Equals(typeName, "TreeViewDemo", StringComparison.Ordinal) ||
            string.Equals(typeName, "TooltipDemo", StringComparison.Ordinal);
 
     private static string GetOutputSlug(string typeName, HashSet<string> taken)

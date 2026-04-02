@@ -359,6 +359,28 @@ public sealed class TreeViewTests
         Assert.IsTrue(clicked, "Clicking the right visual button should invoke its click handler.");
     }
 
+    [TestMethod]
+    public void TreeView_Trims_Header_Text_Before_RightVisuals()
+    {
+        var header = new TextBlock("Release candidate build pipeline for production")
+        {
+            Trimming = TextTrimming.EndEllipsis,
+        };
+
+        var node = new TreeNode(header) { Icon = TreeNodeIcons.FileGlyph };
+        node.AddRightVisual("!");
+
+        var tree = new TreeView();
+        tree.Roots.Add(node);
+
+        using var driver = new TerminalAppTestDriver(tree, TerminalHostKind.Fullscreen, new TerminalSize(20, 4));
+        driver.Tick();
+
+        var line = GetRenderedLine(driver, width: 20, height: 4, lineIndex: 0);
+        Assert.AreEqual('!', line[19], "Expected the right visual to stay pinned to the far right.");
+        Assert.IsTrue(line.Contains('…'), "Expected the header text to render with an ellipsis when right visuals reduce the available width.");
+    }
+
     private static (Style Style, int Index) FindRenderedRune(TerminalApp app, Rune rune)
     {
         var renderBufferField = typeof(TerminalApp).GetField("_renderBuffer", BindingFlags.Instance | BindingFlags.NonPublic);
