@@ -55,4 +55,69 @@ public sealed class DockLayoutTests
 
         Assert.AreEqual(content.DesiredSize.Width, dock.DesiredSize.Width);
     }
+
+    [TestMethod]
+    public void DockLayout_With_Null_Top_Does_Not_Reserve_Space()
+    {
+        var bottom = new TextBlock("Bottom");
+        var content = new VStack("Body").Stretch();
+
+        var dock = new DockLayout
+        {
+            Top = null,
+            Bottom = bottom,
+            Content = content,
+        };
+
+        dock.Measure(new Size(40, 6));
+        dock.Arrange(new Rectangle(0, 0, 40, 6));
+
+        Assert.AreEqual(5, bottom.Bounds.Y);
+        Assert.AreEqual(1, bottom.Bounds.Height);
+
+        Assert.AreEqual(0, content.Bounds.Y);
+        Assert.AreEqual(5, content.Bounds.Height);
+    }
+
+    [TestMethod]
+    public void DockLayout_With_Null_Bottom_Does_Not_Reserve_Space()
+    {
+        var top = new TextBlock("Top");
+        var content = new VStack("Body").Stretch();
+
+        var dock = new DockLayout
+        {
+            Top = top,
+            Bottom = null,
+            Content = content,
+        };
+
+        dock.Measure(new Size(40, 6));
+        dock.Arrange(new Rectangle(0, 0, 40, 6));
+
+        Assert.AreEqual(0, top.Bounds.Y);
+        Assert.AreEqual(1, top.Bounds.Height);
+
+        Assert.AreEqual(1, content.Bounds.Y);
+        Assert.AreEqual(5, content.Bounds.Height);
+    }
+
+    [TestMethod]
+    public void DockLayout_With_Null_Top_And_Bottom_Uses_Full_Content_Height()
+    {
+        var content = new VStack("Body").Stretch();
+
+        var dock = new DockLayout
+        {
+            Top = null,
+            Bottom = null,
+            Content = content,
+        };
+
+        dock.Measure(new Size(40, 6));
+        dock.Arrange(new Rectangle(0, 0, 40, 6));
+
+        Assert.AreEqual(0, content.Bounds.Y);
+        Assert.AreEqual(6, content.Bounds.Height);
+    }
 }
