@@ -202,8 +202,10 @@ public static class CellBufferImageExporter
                 var glyphTypeface = typefaceResolver.ResolveTypeface(text, baseFont);
                 using var glyphFont = CreateGlyphFont(glyphTypeface, baseFont, style.TextStyle, options.Font);
                 using var glyphPaint = CreateGlyphPaint(foreground, style.TextStyle, options.Font);
+                // Terminal glyphs can legally overhang their nominal cell box. Clip to the full row instead of the
+                // per-cell box so checkbox/emoji glyphs keep their horizontal bleed while still staying within the row.
                 canvas.Save();
-                canvas.ClipRect(SKRect.Create(x, y, widthPx, cellHeight));
+                canvas.ClipRect(SKRect.Create(0, y, bitmapWidth, cellHeight));
                 canvas.DrawShapedText(text, x, y + baselineOffset, SKTextAlign.Left, glyphFont, glyphPaint);
                 canvas.Restore();
 
