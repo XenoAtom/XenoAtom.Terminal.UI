@@ -7,7 +7,7 @@ title: "Text Editing"
 Text input is a first-class feature of XenoAtom.Terminal.UI: you get a shared editing engine across multiple controls,
 with selection, clipboard, undo/redo, scrolling, and integrated Find/Replace.
 
-![TextArea with Search/Replace popup](../img/controls/searchreplacepopup.svg){.terminal}
+![TextArea with Search/Replace popup](../img/controls/searchreplacepopup.png){.terminal}
 
 ## Controls built on the text infrastructure
 

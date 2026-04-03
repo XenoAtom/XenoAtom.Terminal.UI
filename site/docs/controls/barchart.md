@@ -9,7 +9,7 @@ rendered near the end of the filled portion of each bar (instead of being flush-
 
 
 
-![BarChart](../../img/controls/barchart.svg){.terminal}
+![BarChart](../../img/controls/barchart.png){.terminal}
 
 ## Basic usage
 

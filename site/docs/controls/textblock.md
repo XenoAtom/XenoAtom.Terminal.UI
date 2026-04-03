@@ -7,7 +7,7 @@ title: TextBlock
 `TextBlock` renders read-only text with optional wrapping, alignment, and trimming.
 
 
-![TextBlock](../../img/controls/textblock.svg){.terminal}
+![TextBlock](../../img/controls/textblock.png){.terminal}
 
 ## Basic usage
 

@@ -7,7 +7,7 @@ title: Grid
 `Grid` arranges children into rows and columns using explicit `GridCell` entries (no attached properties).
 
 
-![Grid](../../img/controls/grid.svg){.terminal}
+![Grid](../../img/controls/grid.png){.terminal}
 
 ## Basic usage
 

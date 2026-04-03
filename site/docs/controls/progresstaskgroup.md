@@ -7,7 +7,7 @@ title: ProgressTaskGroup
 `ProgressTaskGroup` displays a set of progress tasks as rows with configurable columns (label, progress bar, percentage, spinner…).
 
 
-![ProgressTaskGroup](../../img/controls/progresstaskgroup.svg){.terminal}
+![ProgressTaskGroup](../../img/controls/progresstaskgroup.png){.terminal}
 
 ## Basic usage
 

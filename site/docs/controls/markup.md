@@ -6,7 +6,7 @@ title: Markup
 
 `Markup` renders XenoAtom.Ansi markup text as a visual (with wrapping and styling).
 
-![Markup](../../img/controls/markup.svg){.terminal}
+![Markup](../../img/controls/markup.png){.terminal}
 
 ## Basic usage
 

@@ -10,6 +10,9 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
     <PackageVersion Include="MSTest" Version="4.1.0" />
+    <PackageVersion Include="SkiaSharp" Version="3.119.2" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="3.119.2" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="3.119.2" />
     <PackageVersion Include="Verify.DiffPlex" Version="3.1.2" />
     <PackageVersion Include="Verify.MSTest" Version="31.13.2" />
     <PackageVersion Include="XenoAtom.Terminal" Version="1.8.0" />

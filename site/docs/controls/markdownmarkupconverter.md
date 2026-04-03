@@ -17,7 +17,7 @@ It lives in the extension package:
 dotnet add package XenoAtom.Terminal.UI.Extensions.Markdown
 ```
 
-![MarkdownMarkupConverter](../../img/controls/markdownmarkupconverter.svg){.terminal}
+![MarkdownMarkupConverter](../../img/controls/markdownmarkupconverter.png){.terminal}
 
 ## Basic usage
 

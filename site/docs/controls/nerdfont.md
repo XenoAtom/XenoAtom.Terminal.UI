@@ -9,7 +9,7 @@ title: NerdFont
 The API lives in the main `XenoAtom.Terminal.UI` namespace, so the glyphs are easy to use from `TextBlock`, `Markup`,
 `Paragraph`, and string interpolation.
 
-![NerdFont](../../img/controls/nerdfont.svg){.terminal}
+![NerdFont](../../img/controls/nerdfont.png){.terminal}
 
 > [!NOTE]
 > To see the expected glyphs in your terminal, use a font that includes Nerd Fonts symbols.

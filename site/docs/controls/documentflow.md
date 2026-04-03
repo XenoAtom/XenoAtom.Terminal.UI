@@ -7,7 +7,7 @@ title: DocumentFlow
 `DocumentFlow` is a virtualized, scrollable feed of document items.
 Each item is composed from blocks (paragraphs, tables, code blocks, or any visual-backed block).
 
-![DocumentFlow](../../img/controls/documentflow.svg){.terminal}
+![DocumentFlow](../../img/controls/documentflow.png){.terminal}
 
 ## Basic usage
 

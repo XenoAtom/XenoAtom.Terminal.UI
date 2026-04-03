@@ -9,7 +9,7 @@ title: CommandBar
 It collects `Command` instances registered on the focused visual (and its parents) plus app-level commands, then renders
 them as a sequence of keycaps and labels.
 
-![CommandBar](../../img/controls/commandbar.svg){.terminal}
+![CommandBar](../../img/controls/commandbar.png){.terminal}
 
 ## Example
 

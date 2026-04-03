@@ -7,7 +7,7 @@ title: Spinner
 `Spinner` is an animated indicator control with a large set of built-in styles.
 
 
-![Spinner](../../img/controls/spinner.svg){.terminal}
+![Spinner](../../img/controls/spinner.png){.terminal}
 
 ## Basic usage
 

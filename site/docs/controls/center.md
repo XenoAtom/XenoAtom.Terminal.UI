@@ -7,7 +7,7 @@ title: Center
 `Center` centers its content within the available space.
 
 
-![Center](../../img/controls/center.svg){.terminal}
+![Center](../../img/controls/center.png){.terminal}
 
 ## Basic usage
 

@@ -7,7 +7,7 @@ title: Padder
 `Padder` adds padding around a single content visual. Use it when you want spacing without drawing any border.
 
 
-![Padder](../../img/controls/padder.svg){.terminal}
+![Padder](../../img/controls/padder.png){.terminal}
 
 ## Basic usage
 

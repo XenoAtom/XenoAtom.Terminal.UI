@@ -7,7 +7,7 @@ title: Switch
 `Switch` is a compact on/off toggle with a thumb and label.
 
 
-![Switch](../../img/controls/switch.svg){.terminal}
+![Switch](../../img/controls/switch.png){.terminal}
 
 ## Basic usage
 

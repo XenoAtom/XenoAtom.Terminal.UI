@@ -23,6 +23,7 @@
   </Folder>
   <Folder Name="/extensions/">
     <Project Path="XenoAtom.Terminal.UI.Extensions.Markdown/XenoAtom.Terminal.UI.Extensions.Markdown.csproj" />
+    <Project Path="XenoAtom.Terminal.UI.Extensions.Screenshot/XenoAtom.Terminal.UI.Extensions.Screenshot.csproj" />
   </Folder>
   <Project Path="XenoAtom.Terminal.UI.Tests/XenoAtom.Terminal.UI.Tests.csproj" />
   <Project Path="XenoAtom.Terminal.UI.SourceGen/XenoAtom.Terminal.UI.SourceGen.csproj" />

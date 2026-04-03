@@ -7,7 +7,7 @@ title: SelectionList
 `SelectionList<T>` is a multi-select list widget (checkbox-style selection in-layout).
 
 
-![SelectionList](../../img/controls/selectionlist.svg){.terminal}
+![SelectionList](../../img/controls/selectionlist.png){.terminal}
 
 ## Basic usage
 

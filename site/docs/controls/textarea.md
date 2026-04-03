@@ -7,7 +7,7 @@ title: TextArea
 `TextArea` is a multi-line text editor with soft wrapping by default.
 
 
-![TextArea](../../img/controls/textarea.svg){.terminal}
+![TextArea](../../img/controls/textarea.png){.terminal}
 
 ## Basic usage
 

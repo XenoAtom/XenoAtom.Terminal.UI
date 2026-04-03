@@ -15,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\XenoAtom.Terminal.UI\XenoAtom.Terminal.UI.csproj" />
     <ProjectReference Include="..\..\src\XenoAtom.Terminal.UI.Extensions.Markdown\XenoAtom.Terminal.UI.Extensions.Markdown.csproj" />
+    <ProjectReference Include="..\..\src\XenoAtom.Terminal.UI.Extensions.Screenshot\XenoAtom.Terminal.UI.Extensions.Screenshot.csproj" />
     <ProjectReference Include="..\..\src\XenoAtom.Terminal.UI.SourceGen\XenoAtom.Terminal.UI.SourceGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 

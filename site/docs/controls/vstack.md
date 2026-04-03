@@ -7,7 +7,7 @@ title: VStack
 `VStack` stacks children vertically.
 
 
-![VStack](../../img/controls/vstack.svg){.terminal}
+![VStack](../../img/controls/vstack.png){.terminal}
 
 ## Basic usage
 

@@ -6,7 +6,7 @@ title: Gradients
 
 `Brush` adds gradient-based coloring for selected controls without changing the core per-cell `Style` model.
 
-![Gradients](../../img/controls/gradients.svg){.terminal}
+![Gradients](../../img/controls/gradients.png){.terminal}
 
 Current controls with direct brush support:
 

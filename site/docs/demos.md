@@ -10,13 +10,13 @@ XenoAtom.Terminal.UI comes with a few runnable demos that showcase different par
 
 ## ControlsDemo
 
-![ControlsDemo (welcome screen)](../img/controls/controls-demo.svg){.terminal}
+![ControlsDemo (welcome screen)](../img/controls/controls-demo.png){.terminal}
 
 The ControlsDemo is the “living catalog” of the library:
 
 - Shows most controls with real styling and interactions
 - Includes theme switching and debug overlay usage
-- Can export the SVG screenshots used by the website documentation
+- Can export the PNG screenshots used by the website documentation
 
 **Run from source**
 

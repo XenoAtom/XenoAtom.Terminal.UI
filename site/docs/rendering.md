@@ -190,7 +190,7 @@ Blending is applied for:
 The following screenshot is generated from the ControlsDemo and shows three translucent panels overlapping. The overlap
 regions are computed by the `CellBuffer` blending algorithm:
 
-![Alpha blending demo](../img/controls/alpha-blending.svg){.terminal}
+![Alpha blending demo](../img/controls/alpha-blending.png){.terminal}
 
 You can reproduce it by running the ControlsDemo and opening the **Rendering → Alpha blending** page.
 
@@ -202,63 +202,89 @@ You can reproduce it by running the ControlsDemo and opening the **Rendering →
 
 The rendering path reuses internal buffers where possible to minimize per-frame allocations.
 
-## Capturing SVG screenshots (CellBuffer → SVG)
+## Capturing raster screenshots (CellBuffer → PNG/JPEG/WebP)
 
-XenoAtom.Terminal.UI can export the rendered `CellBuffer` to **SVG** with high fidelity (glyphs + colors + text styles).
+For pixel-accurate screenshots, use the companion package `XenoAtom.Terminal.UI.Extensions.Screenshot`.
+It renders the `CellBuffer` through SkiaSharp and ships with an embedded `CaskaydiaCoveNerdFont-Regular.ttf`
+default font so the demo screenshots include Nerd Font glyphs without requiring local font installation.
+
 This is useful for:
 
 - deterministic documentation screenshots,
-- golden-file tests,
-- embedding terminal UI snapshots in websites (exactly what this website does).
+- PNG/JPEG/WebP assets for websites and docs,
+- verifying how terminal cells snap to real pixels with a specific font configuration.
 
 > [!NOTE]
-> All SVG screenshots in these docs are **generated automatically** from the `ControlsDemo` using the same rendering
+> All control screenshots in these docs are **generated automatically** from the `ControlsDemo` using the same rendering
 > pipeline as a real app. They are not hand-made images.
 
-### TerminalApp.CaptureSvg
+Install the package:
 
-When you run a fullscreen app (or any `TerminalApp`), you can capture the last rendered frame:
+```shell
+dotnet add package XenoAtom.Terminal.UI.Extensions.Screenshot
+```
+
+### TerminalApp screenshot helpers
+
+When you run a fullscreen app (or any `TerminalApp`), you can save the last rendered frame directly:
 
 ```csharp
+using XenoAtom.Terminal.UI.Extensions.Screenshot;
+
 // After the app has rendered at least one frame:
-var svg = app.CaptureSvg();
-File.WriteAllText("screenshot.svg", svg);
+app.SaveScreenshot("screenshot.png");
 ```
 
 You can also capture a specific visual from the current frame buffer (cropped to its arranged bounds):
 
 ```csharp
-var svg = app.CaptureSvg(myControl, padding: new Thickness(1));
+using XenoAtom.Terminal.UI.Extensions.Screenshot;
+
+app.SaveScreenshot(myControl, "my-control.png", padding: new Thickness(1));
 ```
 
-### TerminalAppSnapshotRenderer (render without a real terminal)
+### TerminalAppSnapshotImageRenderer
 
-For automation (docs/tests), `TerminalAppSnapshotRenderer` renders a visual tree to an in-memory terminal backend and
-returns the resulting SVG:
+For automation (docs/tests), `TerminalAppSnapshotImageRenderer` renders a visual tree to an in-memory terminal backend
+and saves the resulting image:
 
 ```csharp
-var svg = TerminalAppSnapshotRenderer.RenderSvg(
+using XenoAtom.Terminal.UI.Extensions.Screenshot;
+
+TerminalAppSnapshotImageRenderer.Save(
     root,
+    "snapshot.png",
     width: 120,
     height: 30,
     theme: Theme.ElderberryDarkSoft);
 ```
 
-### CellBufferSvgExporter
+### CellBufferImageExporter
 
-At the lowest level, `CellBufferSvgExporter` converts any `CellBuffer` to SVG:
+At the lowest level, `CellBufferImageExporter` converts any `CellBuffer` to PNG, JPEG, or WebP:
 
 ```csharp
-var svg = CellBufferSvgExporter.Export(buffer, new CellBufferSvgExportOptions
+using XenoAtom.Terminal.UI.Extensions.Screenshot;
+
+CellBufferImageExporter.Export(buffer, "buffer.png", new CellBufferImageExportOptions
 {
     AutoCrop = true,
     Padding = new Thickness(1),
     FillBackground = true,
+    Font = new ScreenshotFontOptions
+    {
+        SizePx = 18,
+        Path = "C:/fonts/MyTerminalFont.ttf"
+    }
 });
 ```
 
-`CellBufferSvgExportOptions` supports cropping, padding, background fill, and SVG sizing parameters so you can produce
-compact screenshots that still look great.
+`CellBufferImageExportOptions` supports cropping, padding, background fill, output quality, and font/cell sizing.
+
+### SVG export
+
+The dependency-free SVG path remains available in the core package through `TerminalApp.CaptureSvg(...)`,
+`TerminalAppSnapshotRenderer.RenderSvg(...)`, and `CellBufferSvgExporter.Export(...)`.
 
 ## Writing fast custom controls
 

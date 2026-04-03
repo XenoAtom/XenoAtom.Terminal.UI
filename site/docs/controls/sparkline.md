@@ -7,7 +7,7 @@ title: Sparkline
 `Sparkline` renders an inline sparkline visualization.
 
 
-![Sparkline](../../img/controls/sparkline.svg){.terminal}
+![Sparkline](../../img/controls/sparkline.png){.terminal}
 
 ## Basic usage
 

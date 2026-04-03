@@ -7,7 +7,7 @@ title: Link
 `Link` renders a hyperlink-like visual and can be activated by keyboard/mouse.
 
 
-![Link](../../img/controls/link.svg){.terminal}
+![Link](../../img/controls/link.png){.terminal}
 
 ## Basic usage
 

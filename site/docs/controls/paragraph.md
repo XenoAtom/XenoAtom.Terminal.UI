@@ -7,7 +7,7 @@ title: Paragraph
 `Paragraph` renders display-only rich text from plain text plus style runs and hyperlink runs.
 It is intended for document-like content where `TextBlock` is too limited and `Markup` parsing is not desired.
 
-![Paragraph](../../img/controls/paragraph.svg){.terminal}
+![Paragraph](../../img/controls/paragraph.png){.terminal}
 
 ## Basic usage
 

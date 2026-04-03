@@ -34,7 +34,7 @@ Run from the `site` folder.
 
 ## Generating control screenshots
 
-The controls documentation uses auto-generated SVG screenshots rendered from the ControlsDemo.
+The controls documentation uses auto-generated PNG screenshots rendered from the ControlsDemo.
 
 Regenerate all screenshots (run from the repo root):
 
@@ -50,4 +50,3 @@ Outputs are written under `site/img/controls/**`.
   - `site/docs/menu.yml` (docs sidebar)
   - `site/docs/controls/menu.yml` (controls sidebar)
 - Prefer stable, readable URLs. Add new docs under `site/docs/**`.
-

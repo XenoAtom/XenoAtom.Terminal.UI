@@ -12,7 +12,7 @@ It lives in the extension package:
 dotnet add package XenoAtom.Terminal.UI.Extensions.Markdown
 ```
 
-![MarkdownControl](../../img/controls/markdowncontrol.svg){.terminal}
+![MarkdownControl](../../img/controls/markdowncontrol.png){.terminal}
 
 ## Basic usage
 

@@ -7,7 +7,7 @@ title: Placeholder
 `Placeholder` is a lightweight visual surface for mockups and empty states. It can render with text, without text,
 or as a gradient block using the brush model.
 
-![Placeholder](../../img/controls/placeholder.svg){.terminal}
+![Placeholder](../../img/controls/placeholder.png){.terminal}
 
 ## Basic usage
 

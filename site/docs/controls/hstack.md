@@ -7,7 +7,7 @@ title: HStack
 `HStack` stacks children horizontally.
 
 
-![HStack](../../img/controls/hstack.svg){.terminal}
+![HStack](../../img/controls/hstack.png){.terminal}
 
 ## Basic usage
 

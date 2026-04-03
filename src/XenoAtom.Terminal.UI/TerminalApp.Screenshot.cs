@@ -17,15 +17,7 @@ public sealed partial class TerminalApp
     /// <exception cref="InvalidOperationException">Thrown when no frame has been rendered yet.</exception>
     public string CaptureSvg(CellBufferSvgExportOptions? options = null)
     {
-        VerifyAccess();
-
-        var buffer = _renderBuffer;
-        if (buffer is null)
-        {
-            throw new InvalidOperationException("No rendered frame buffer is available yet. CaptureSvg requires the app to render at least one frame.");
-        }
-
-        return CellBufferSvgExporter.Export(buffer, options);
+        return CellBufferSvgExporter.Export(GetRequiredRenderBuffer(), options);
     }
 
     /// <summary>
@@ -40,16 +32,28 @@ public sealed partial class TerminalApp
     public string CaptureSvg(Visual visual, Thickness padding, CellBufferSvgExportOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(visual);
+        var buffer = GetRequiredRenderBuffer();
+        var merged = (options ?? CellBufferSvgExportOptions.Default) with { Crop = GetVisualCaptureBounds(visual), Padding = padding, AutoCrop = false };
+        return CellBufferSvgExporter.Export(buffer, merged);
+    }
+
+    internal CellBuffer GetRequiredRenderBuffer()
+    {
         VerifyAccess();
 
         var buffer = _renderBuffer;
         if (buffer is null)
         {
-            throw new InvalidOperationException("No rendered frame buffer is available yet. CaptureSvg requires the app to render at least one frame.");
+            throw new InvalidOperationException("No rendered frame buffer is available yet. The app must render at least one frame before capturing a screenshot.");
         }
 
-        var abs = visual.GetAbsoluteBounds();
-        var merged = (options ?? CellBufferSvgExportOptions.Default) with { Crop = abs, Padding = padding, AutoCrop = false };
-        return CellBufferSvgExporter.Export(buffer, merged);
+        return buffer;
+    }
+
+    internal Rectangle GetVisualCaptureBounds(Visual visual)
+    {
+        ArgumentNullException.ThrowIfNull(visual);
+        VerifyAccess();
+        return visual.GetAbsoluteBounds();
     }
 }

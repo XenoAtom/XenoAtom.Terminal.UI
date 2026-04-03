@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <IsPackable>true</IsPackable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Description>Raster screenshot export for XenoAtom.Terminal.UI powered by SkiaSharp</Description>
+    <Copyright>Alexandre Mutel</Copyright>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <Authors>Alexandre Mutel</Authors>
+    <PackageTags>terminal;console;tui;ui;screenshot;png;jpeg;image;skia;cross-platform</PackageTags>
+    <PackageProjectUrl>https://github.com/XenoAtom/XenoAtom.Terminal.UI</PackageProjectUrl>
+    <PackageLicenseExpression>BSD-2-Clause</PackageLicenseExpression>
+    <PackageReadmeFile>readme.md</PackageReadmeFile>
+    <PackageIcon>XenoAtom.Terminal.UI.png</PackageIcon>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)../../img/XenoAtom.Terminal.UI.png" Pack="true" PackagePath="/" />
+    <None Include="readme.md" Pack="true" PackagePath="/" />
+    <None Include="Assets/Fonts/CaskaydiaCoveNerdFont-LICENSE.txt" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\XenoAtom.Terminal.UI\XenoAtom.Terminal.UI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets/Fonts/CaskaydiaCoveNerdFont-Regular.ttf" LogicalName="XenoAtom.Terminal.UI.Extensions.Screenshot.Assets.Fonts.CaskaydiaCoveNerdFont-Regular.ttf" />
+  </ItemGroup>
+</Project>

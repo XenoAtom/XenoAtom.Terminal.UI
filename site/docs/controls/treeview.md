@@ -7,7 +7,7 @@ title: TreeView
 `TreeView` displays hierarchical nodes with expand/collapse interaction and selection.
 
 
-![TreeView](../../img/controls/treeview.svg){.terminal}
+![TreeView](../../img/controls/treeview.png){.terminal}
 
 ## Basic usage
 

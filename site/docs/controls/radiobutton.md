@@ -7,7 +7,7 @@ title: RadioButton
 `RadioButton` is a single-choice toggle used in groups.
 
 
-![RadioButton](../../img/controls/radiobutton.svg){.terminal}
+![RadioButton](../../img/controls/radiobutton.png){.terminal}
 
 ## Basic usage
 

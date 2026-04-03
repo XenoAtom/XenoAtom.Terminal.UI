@@ -10,7 +10,7 @@ title: Select / Dropdown
 - pressing Tab or Escape
 
 
-![Select / Dropdown](../../img/controls/select.svg){.terminal}
+![Select / Dropdown](../../img/controls/select.png){.terminal}
 
 ## Basic usage
 

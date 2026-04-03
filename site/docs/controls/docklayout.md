@@ -7,7 +7,7 @@ title: DockLayout
 `DockLayout` docks visuals to edges (Top/Bottom/Left/Right) and gives remaining space to the content area.
 
 
-![DockLayout](../../img/controls/docklayout.svg){.terminal}
+![DockLayout](../../img/controls/docklayout.png){.terminal}
 
 ## Basic usage
 

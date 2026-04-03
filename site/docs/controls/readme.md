@@ -6,13 +6,13 @@ title: Controls Reference
 
 This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 
-![Welcome](../../img/controls/controls-demo.svg){.terminal}
+![Welcome](../../img/controls/controls-demo.png){.terminal}
 
 > [!NOTE]
 > Most pages include an auto-generated screenshot from `samples/ControlsDemo`.
 >
-> The rendering on the website may differ slightly from the actual control appearance in your terminal environment, due to the fact that it is a SVG export.
-> The terminal will better represent the control visuals.
+> The website images are PNG exports rendered with the embedded Caskaydia Cove Nerd Font screenshot pipeline.
+> Your terminal can still differ slightly depending on its font, hinting, and host renderer.
 >
 > Regenerate them with `dotnet run -c Release --project samples/ControlsDemo -- --export-screenshots`.
 

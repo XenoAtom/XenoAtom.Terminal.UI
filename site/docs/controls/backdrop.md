@@ -7,7 +7,7 @@ title: Backdrop
 `Backdrop` is a full-viewport fill control typically used behind modal UI (dialogs, popups) to dim or clear the
 content underneath.
 
-![Backdrop](../../img/controls/backdrop.svg){.terminal}
+![Backdrop](../../img/controls/backdrop.png){.terminal}
 
 It renders a solid rune (space by default) across its bounds using the style resolved from `BackdropStyle`.
 

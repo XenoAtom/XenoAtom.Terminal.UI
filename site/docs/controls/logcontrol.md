@@ -7,7 +7,7 @@ title: LogControl
 `LogControl` is a high-performance scrolling log viewer intended for “tail-like” workloads (frequent appends).
 It supports selection + copy, a maximum retained capacity, optional wrapping, and built-in search UI.
 
-![LogControl](../../img/controls/logcontrol.svg){.terminal}
+![LogControl](../../img/controls/logcontrol.png){.terminal}
 
 ## Key features
 

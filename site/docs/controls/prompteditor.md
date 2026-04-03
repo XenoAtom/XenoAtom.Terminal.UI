@@ -14,7 +14,7 @@ It is designed for REPLs and terminal prompts where you want:
 - prompt-oriented accept/cancel actions,
 - optional syntax highlighting.
 
-![PromptEditor](../../img/controls/prompt-editor.svg){.terminal}
+![PromptEditor](../../img/controls/prompt-editor.png){.terminal}
 
 ## Basic usage
 

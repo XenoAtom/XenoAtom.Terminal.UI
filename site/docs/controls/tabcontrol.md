@@ -9,7 +9,7 @@ Tab headers are visuals, enabling rich header content (icons, counters, dynamic 
 `TabPage` is now a bindable model, so you can update a page's `Header`, `Content`, `IsEnabled`, `ShowCloseButton`, or `Data`
 without removing and recreating the tab.
 
-![TabControl](../../img/controls/tabcontrol.svg){.terminal}
+![TabControl](../../img/controls/tabcontrol.png){.terminal}
 
 ## Basic usage
 
