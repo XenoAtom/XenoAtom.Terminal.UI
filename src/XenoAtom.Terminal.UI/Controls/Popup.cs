@@ -148,6 +148,8 @@ public sealed partial class Popup : Visual, IModalVisual
     /// </remarks>
     public Rectangle? AnchorRect { get; set; }
 
+    internal Visual? OwnerHint { get; set; }
+
     /// <summary>
     /// Gets a value indicating whether the popup is modal.
     /// </summary>
@@ -263,7 +265,8 @@ public sealed partial class Popup : Visual, IModalVisual
         try
         {
             _isOpen = true;
-            app.ShowWindow(this);
+            var ownerWindow = app.ResolveWindowOwner(OwnerHint ?? Anchor ?? _restoreFocusTarget);
+            app.ShowWindow(this, ownerWindow);
         }
         catch
         {

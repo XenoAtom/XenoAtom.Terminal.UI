@@ -13,6 +13,7 @@ namespace XenoAtom.Terminal.UI.Controls;
 public sealed partial class WindowLayer : Visual
 {
     private readonly VisualList<Visual> _windows;
+    private readonly Dictionary<Visual, Visual?> _windowOwners;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WindowLayer"/> class.
@@ -22,6 +23,7 @@ public sealed partial class WindowLayer : Visual
         this.HorizontalAlignment(Align.Stretch);
         this.VerticalAlignment(Align.Stretch);
         _windows = new VisualList<Visual>(this, "Windows");
+        _windowOwners = new Dictionary<Visual, Visual?>();
         AddHandler(PointerPressedEvent, OnPointerPressedHandledToo, handledEventsToo: true);
     }
 
@@ -63,9 +65,27 @@ public sealed partial class WindowLayer : Visual
     /// </summary>
     /// <param name="window">The window visual.</param>
     public void AddWindow(Visual window)
+        => AddWindow(window, owner: null);
+
+    internal void AddWindow(Visual window, Visual? owner)
     {
         ArgumentNullException.ThrowIfNull(window);
-        _windows.Add(window);
+        if (owner is not null)
+        {
+            if (ReferenceEquals(owner, window))
+            {
+                throw new ArgumentException("A window cannot own itself.", nameof(owner));
+            }
+
+            if (!_windowOwners.ContainsKey(owner))
+            {
+                throw new InvalidOperationException("The owner window must already be attached to the layer.");
+            }
+        }
+
+        var index = owner is null ? _windows.Count : GetInsertionIndex(owner);
+        _windows.Insert(index, window);
+        _windowOwners[window] = owner;
     }
 
     /// <summary>
@@ -76,7 +96,36 @@ public sealed partial class WindowLayer : Visual
     public bool RemoveWindow(Visual window)
     {
         ArgumentNullException.ThrowIfNull(window);
-        return _windows.Remove(window);
+
+        if (!_windowOwners.ContainsKey(window))
+        {
+            return false;
+        }
+
+        var ownedWindows = GetOwnedWindows(window);
+        for (var i = 0; i < ownedWindows.Length; i++)
+        {
+            RemoveWindowCore(ownedWindows[i]);
+        }
+
+        return RemoveWindowCore(window);
+    }
+
+    internal Visual[] GetOwnedWindows(Visual owner)
+    {
+        ArgumentNullException.ThrowIfNull(owner);
+
+        var result = new List<Visual>();
+        for (var i = _windows.Count - 1; i >= 0; i--)
+        {
+            var candidate = _windows[i];
+            if (IsOwnedBy(candidate, owner))
+            {
+                result.Add(candidate);
+            }
+        }
+
+        return result.ToArray();
     }
 
     /// <inheritdoc />
@@ -138,12 +187,76 @@ public sealed partial class WindowLayer : Visual
 
     private void BringWindowToFront(Visual window)
     {
-        var index = _windows.IndexOf(window);
-        if (index < 0 || index == _windows.Count - 1)
+        var groupRoot = GetTopLevelOwner(window);
+        var index = _windows.IndexOf(groupRoot);
+        if (index < 0)
         {
             return;
         }
 
-        _windows.Move(index, _windows.Count - 1);
+        var groupLength = GetGroupLength(groupRoot, index);
+        if (index + groupLength >= _windows.Count)
+        {
+            return;
+        }
+
+        for (var i = 0; i < groupLength; i++)
+        {
+            _windows.Move(index, _windows.Count - 1);
+        }
+    }
+
+    private bool RemoveWindowCore(Visual window)
+    {
+        _windowOwners.Remove(window);
+        return _windows.Remove(window);
+    }
+
+    private int GetInsertionIndex(Visual owner)
+    {
+        var ownerIndex = _windows.IndexOf(owner);
+        if (ownerIndex < 0)
+        {
+            throw new InvalidOperationException("The owner window must already be attached to the layer.");
+        }
+
+        return ownerIndex + GetGroupLength(owner, ownerIndex);
+    }
+
+    private int GetGroupLength(Visual groupRoot, int groupRootIndex)
+    {
+        var end = groupRootIndex + 1;
+        while (end < _windows.Count && IsOwnedBy(_windows[end], groupRoot))
+        {
+            end++;
+        }
+
+        return end - groupRootIndex;
+    }
+
+    private Visual GetTopLevelOwner(Visual window)
+    {
+        var current = window;
+        while (_windowOwners.TryGetValue(current, out var owner) && owner is not null)
+        {
+            current = owner;
+        }
+
+        return current;
+    }
+
+    private bool IsOwnedBy(Visual window, Visual owner)
+    {
+        while (_windowOwners.TryGetValue(window, out var currentOwner) && currentOwner is not null)
+        {
+            if (ReferenceEquals(currentOwner, owner))
+            {
+                return true;
+            }
+
+            window = currentOwner;
+        }
+
+        return false;
     }
 }

@@ -52,6 +52,7 @@ public static partial class ContextMenuService
         var popup = new Popup
         {
             AnchorRect = new Rectangle(uiX, uiY, 1, 1),
+            OwnerHint = target,
             MatchAnchorWidth = false,
             Placement = PopupPlacement.Below,
             CloseOnTab = true,

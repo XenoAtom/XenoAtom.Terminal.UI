@@ -385,6 +385,48 @@ public sealed class PopupTests
         StringAssert.Contains(rendered, "Line B");
     }
 
+    [TestMethod]
+    public void Popup_Anchored_Inside_Dialog_Closes_With_Owner()
+    {
+        var anchor = new Button("Anchor");
+        var dialog = new Dialog
+        {
+            Title = "Dialog",
+            Width = 24,
+            Height = 8,
+            Left = 10,
+            Top = 4,
+            Content = new Padder(anchor).Padding(new Thickness(2, 1, 0, 0)),
+        };
+
+        using var driver = new TerminalAppTestDriver(new VStack(), TerminalHostKind.Fullscreen, new TerminalSize(50, 20));
+        driver.Tick();
+
+        dialog.Show();
+        driver.Tick();
+
+        var popup = new Popup
+        {
+            Anchor = anchor,
+            Content = new TextBlock("PopupContent"),
+            MatchAnchorWidth = false,
+            Placement = PopupPlacement.Below,
+        };
+
+        popup.Show();
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(50, 20);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "PopupContent");
+
+        dialog.Close();
+        driver.Tick();
+
+        Assert.AreEqual(0, driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Count(), "Closing the owner dialog should close anchored popups.");
+        Assert.IsNull(popup.Parent, "Closing the owner dialog should detach the popup from the window layer.");
+    }
+
     private sealed class FixedSizeVisual : Visual
     {
         private readonly int _width;

@@ -1120,6 +1120,9 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     }
 
     internal void ShowWindow(Visual window)
+        => ShowWindow(window, ownerWindow: null);
+
+    internal void ShowWindow(Visual window, Visual? ownerWindow)
     {
         ArgumentNullException.ThrowIfNull(window);
         VerifyAccess();
@@ -1141,7 +1144,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             _activeTooltipWindow = null;
         }
 
-        _windowLayer.AddWindow(window);
+        _windowLayer.AddWindow(window, ownerWindow);
 
         var focusCandidate = window.Focusable
             ? window
@@ -1169,7 +1172,8 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
 
         _activeTooltipWindow = tooltipWindow;
-        ShowWindow(tooltipWindow);
+        var ownerWindow = tooltipWindow is TooltipWindow tooltip ? ResolveWindowOwner(tooltip.Anchor) : null;
+        ShowWindow(tooltipWindow, ownerWindow);
     }
 
     internal void CloseTooltipWindow(Visual tooltipWindow)
@@ -1205,7 +1209,56 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             _activeTooltipWindow = null;
         }
 
+        CloseOwnedWindows(window);
         return _windowLayer.RemoveWindow(window);
+    }
+
+    internal Visual? ResolveWindowOwner(Visual? visual)
+    {
+        if (_windowLayer is null || visual is null)
+        {
+            return null;
+        }
+
+        for (var current = visual; current is not null; current = current.Parent)
+        {
+            if (!ReferenceEquals(current.Parent, _windowLayer))
+            {
+                continue;
+            }
+
+            return ReferenceEquals(current, _windowLayer.Content) ? null : current;
+        }
+
+        return null;
+    }
+
+    private void CloseOwnedWindows(Visual owner)
+    {
+        if (_windowLayer is null)
+        {
+            return;
+        }
+
+        var ownedWindows = _windowLayer.GetOwnedWindows(owner);
+        for (var i = 0; i < ownedWindows.Length; i++)
+        {
+            switch (ownedWindows[i])
+            {
+                case Popup popup:
+                    popup.Close();
+                    break;
+                case Dialog dialog:
+                    dialog.Close();
+                    break;
+                case TooltipWindow tooltip:
+                    CloseTooltipWindow(tooltip);
+                    break;
+                default:
+                    _windowLayer.RemoveWindow(ownedWindows[i]);
+                    break;
+            }
+        }
     }
 
     internal Popup ShowContextMenu(Visual target, IEnumerable<MenuItem> items, int uiX, int uiY)

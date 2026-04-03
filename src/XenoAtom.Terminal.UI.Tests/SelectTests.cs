@@ -124,4 +124,46 @@ public sealed class SelectTests
         Assert.AreEqual(2, select.SelectedIndex, "The control should clamp its local selected index outside guarded callbacks.");
         Assert.IsNotNull(select.Content);
     }
+
+    [TestMethod]
+    public void Select_Inside_Dialog_Opens_Interactable_Popup_And_Closing_Dialog_Removes_It()
+    {
+        var select = new Select<string>()
+            .Items(["First", "Second", "Third"]);
+
+        var dialog = new Dialog
+        {
+            Title = "Dialog",
+            Width = 24,
+            Height = 8,
+            Left = 10,
+            Top = 4,
+            Content = new Padder(select).Padding(new Thickness(2, 1, 0, 0)),
+        };
+
+        using var driver = new TerminalAppTestDriver(new VStack(), TerminalHostKind.Fullscreen, new TerminalSize(50, 20));
+        driver.Tick();
+
+        dialog.Show();
+        driver.Tick();
+
+        var clickX = select.Bounds.X + 1;
+        var clickY = select.Bounds.Y;
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = clickX, Y = clickY });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = clickX, Y = clickY });
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(50, 20);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "Second", "Opening the select inside a dialog should render the popup above the dialog.");
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = clickX + 1, Y = clickY + 3 });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = clickX + 1, Y = clickY + 3 });
+        driver.TickUntil(() => select.SelectedIndex == 1);
+
+        dialog.Close();
+        driver.Tick();
+
+        Assert.AreEqual(0, driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Count(), "Closing the dialog should also close the select popup.");
+    }
 }
