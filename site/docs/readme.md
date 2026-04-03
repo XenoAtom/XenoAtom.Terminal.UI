@@ -56,7 +56,7 @@ See also:
 - [Styling](styling.md) (Theme, styles, environment, brushes/gradients)
 - [Rendering](rendering.md) (cell buffer, diff renderer, performance)
 - [Scrolling](scrolling.md) (ScrollViewer, scroll models, scrollbars)
-- [Text Editing](text-editing.md) (TextBox/TextArea/MaskedInput and the text subsystem)
+- [Text Editing](text-editing.md) (TextBox/TextArea/PromptEditor/MaskedInput and the text subsystem)
 - [Undo/Redo](undo-redo.md) (undo/redo for text editors)
 - [Markup](markup.md) (markup syntax, semantic tokens, `MarkupTextParser`)
 - [Overlays](controls/dialog.md) (dialogs, popups, backdrops, tooltips, toasts)

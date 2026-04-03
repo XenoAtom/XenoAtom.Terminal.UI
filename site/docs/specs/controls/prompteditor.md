@@ -119,6 +119,19 @@ public enum PromptEditorEnterMode
     EnterInsertsNewLine,
 }
 
+public enum PromptEditorLineMode
+{
+    /// <summary>
+    /// Allow multiple lines of text.
+    /// </summary>
+    MultiLine,
+
+    /// <summary>
+    /// Restrict the editor to a single line and discard attempted line breaks.
+    /// </summary>
+    SingleLine,
+}
+
 public enum PromptEditorCompletionPresentation
 {
     /// <summary>Do not show UI; still raise CompletionRequested.</summary>
@@ -168,6 +181,7 @@ public partial class PromptEditor : TextEditorBase
     [Bindable] public partial string? ContinuationPromptMarkup { get; set; }
 
     // Accept/cancel and behavior
+    [Bindable] public partial PromptEditorLineMode LineMode { get; set; } = PromptEditorLineMode.MultiLine;
     [Bindable] public partial PromptEditorEnterMode EnterMode { get; set; } = PromptEditorEnterMode.EnterAccepts;
     [Bindable] public partial bool AcceptOnBlur { get; set; }
 
@@ -213,7 +227,8 @@ PromptEditor layout is conceptually:
 
 ### Measuring
 
-- Height follows `TextEditorBase` behavior (single-line vs multi-line).
+- Height follows `TextEditorBase` behavior (`LineMode.SingleLine` vs `LineMode.MultiLine`).
+- In `LineMode.SingleLine`, the default measured height SHOULD be one row to avoid implying multi-line editing.
 - PromptEditor MUST measure the prompt prefix width in terminal cells:
   - Parse `PromptMarkup` into plain text + runs (via `MarkupTextParser`).
   - Compute cell width via `TerminalTextUtility.GetWidth`.
@@ -228,6 +243,9 @@ PromptEditor layout is conceptually:
   - the prefix is shown on line 0,
   - subsequent lines use `ContinuationPromptMarkup` when set,
   - otherwise, the continuation prefix is equivalent to “spaces” that align with the prompt prefix width.
+- For single-line:
+  - the editor uses horizontal scrolling instead of multiple document rows,
+  - attempted line breaks from keyboard input, paste, or text updates are discarded.
 
 This preserves the “prompt column” look and prevents wrapped text from jumping under the prompt.
 
@@ -297,6 +315,9 @@ The accept/cancel design must avoid breaking multi-line editing.
 > [!IMPORTANT]
 > The editor document uses `\n` for line breaks internally. Even when input arrives as CR (`\r`) from Enter, PromptEditor
 > should insert `\n` when it needs to create a new line.
+>
+> When `LineMode` is `SingleLine`, PromptEditor MUST discard attempted line breaks from keyboard input, paste, and text
+> updates so the document remains a single logical line.
 
 ### Completion
 
@@ -352,6 +373,7 @@ Default gestures (v1 suggested):
 
 - `PromptEditor.Accept`: `Enter` (CR, `TerminalKey.Enter` and/or `TerminalChar.CtrlM`)
 - `PromptEditor.InsertNewLine`: `Ctrl+J` (LF, `TerminalChar.CtrlJ`)
+- `PromptEditor.InsertNewLine` SHOULD be hidden and unavailable when `LineMode` is `SingleLine`
 
 Users can swap the behavior by either:
 

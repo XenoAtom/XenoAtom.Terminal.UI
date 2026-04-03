@@ -6,6 +6,7 @@ using System.Linq;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Input;
 
@@ -106,6 +107,63 @@ public sealed class PromptEditorTests
 
         driver.Backend.PushEvent(new TerminalTextEvent { Text = "B" });
         driver.TickUntil(() => editor.Text == "A\nB");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlJ, Modifiers = TerminalModifiers.Ctrl });
+        driver.TickUntil(() => accepted);
+    }
+
+    [TestMethod]
+    public void PromptEditor_SingleLineMode_Discards_NewLines_From_Input_And_Paste()
+    {
+        var accepted = false;
+
+        var editor = new PromptEditor()
+            .LineMode(PromptEditorLineMode.SingleLine)
+            .Accepted((_, _) => accepted = true)
+            .AutoFocus(true);
+
+        var root = new VStack { editor };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "Hello" });
+        driver.TickUntil(() => editor.Text == "Hello");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlJ, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+
+        Assert.AreEqual("Hello", editor.Text);
+        Assert.IsFalse(accepted);
+
+        driver.Backend.PushEvent(new TerminalPasteEvent { Text = "\nWorld\r\n!" });
+        driver.TickUntil(() => editor.Text == "HelloWorld!");
+    }
+
+    [TestMethod]
+    public void PromptEditor_SingleLineMode_With_EnterInsertsNewLine_Discards_Enter_And_Keeps_CtrlJ_As_Accept()
+    {
+        var accepted = false;
+
+        var editor = new PromptEditor()
+            .LineMode(PromptEditorLineMode.SingleLine)
+            .EnterMode(PromptEditorEnterMode.EnterInsertsNewLine)
+            .Accepted((_, _) => accepted = true)
+            .AutoFocus(true);
+
+        var root = new VStack { editor };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "A" });
+        driver.TickUntil(() => editor.Text == "A");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
+        driver.Tick();
+
+        Assert.AreEqual("A", editor.Text);
+        Assert.IsFalse(accepted);
 
         driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlJ, Modifiers = TerminalModifiers.Ctrl });
         driver.TickUntil(() => accepted);
@@ -287,6 +345,30 @@ public sealed class PromptEditorTests
 
         AssertCommand(editor, "PromptEditor.Accept", config.AcceptCommand);
         AssertCommand(editor, "PromptEditor.InsertNewLine", config.InsertNewLineCommand);
+    }
+
+    [TestMethod]
+    public void PromptEditor_LineMode_Change_Normalizes_Existing_Text_And_Hides_InsertNewLine_Command()
+    {
+        var editor = new PromptEditor("hello\nworld")
+            .LineMode(PromptEditorLineMode.SingleLine);
+
+        Assert.AreEqual("helloworld", editor.Text);
+
+        var insertNewLineCommand = editor.Commands.First(x => string.Equals(x.Id, "PromptEditor.InsertNewLine", StringComparison.Ordinal));
+        Assert.IsFalse(insertNewLineCommand.IsVisibleFor(editor));
+        Assert.IsFalse(insertNewLineCommand.CanExecuteFor(editor));
+    }
+
+    [TestMethod]
+    public void PromptEditor_SingleLineMode_Reports_Single_Row_Default_Size()
+    {
+        var editor = new PromptEditor()
+            .LineMode(PromptEditorLineMode.SingleLine);
+
+        editor.Measure(new LayoutConstraints(0, 120, 0, 10));
+
+        Assert.AreEqual(new Size(48, 1), editor.DesiredSize);
     }
 
     private static void AssertCommand(PromptEditor editor, string id, PromptEditorCommandConfig expected)

@@ -9,7 +9,7 @@ title: PromptEditor
 It is designed for REPLs and terminal prompts where you want:
 
 - a prompt prefix (markup),
-- multi-line editing,
+- single-line or multi-line editing,
 - completion (ghost + popup/cycling),
 - prompt-oriented accept/cancel actions,
 - optional syntax highlighting.
@@ -66,6 +66,25 @@ new PromptEditor(config)
 ```
 
 `PromptEditorConfig.Default` preserves the existing command labels and shortcuts.
+
+## Single-line mode
+
+`PromptEditor` defaults to multi-line editing. If you want prompt-style behavior with a single editable line, switch the
+editor to `SingleLine` mode:
+
+```csharp
+new PromptEditor()
+    .LineMode(PromptEditorLineMode.SingleLine);
+```
+
+In single-line mode, attempted line breaks are discarded:
+
+- `Enter`/`Ctrl+J` still follow `EnterMode`, but the action that would insert a newline becomes a no-op
+- pasted line breaks are removed
+- text updates containing `\r` or `\n` are normalized back to a single line
+- the default measured height becomes one row instead of the multi-line default
+
+The `PromptEditor.InsertNewLine` command is hidden when `LineMode` is `SingleLine`.
 
 ## Syntax highlighting
 

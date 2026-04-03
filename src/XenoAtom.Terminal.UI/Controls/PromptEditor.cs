@@ -35,6 +35,22 @@ public enum PromptEditorEnterMode
 }
 
 /// <summary>
+/// Specifies whether <see cref="PromptEditor"/> edits a single line or multiple lines.
+/// </summary>
+public enum PromptEditorLineMode
+{
+    /// <summary>
+    /// Allow multiple lines of text.
+    /// </summary>
+    MultiLine = 0,
+
+    /// <summary>
+    /// Restrict the editor to a single line and discard any attempted line breaks.
+    /// </summary>
+    SingleLine = 1,
+}
+
+/// <summary>
 /// Specifies how <see cref="TerminalKey.Escape"/> is interpreted by <see cref="PromptEditor"/>.
 /// </summary>
 public enum PromptEditorEscapeBehavior
@@ -220,6 +236,7 @@ public partial class PromptEditor : TextEditorBase
 
     private int _historyIndex = -1;
     private string? _historyOriginalText;
+    private bool _normalizingTextForLineMode;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PromptEditor"/> class.
@@ -250,6 +267,7 @@ public partial class PromptEditor : TextEditorBase
 
         this.PromptMarkup("[primary]>[/] ");
         this.ContinuationPromptMarkup("[muted]·[/] ");
+        this.LineMode(PromptEditorLineMode.MultiLine);
         this.EnterMode(PromptEditorEnterMode.EnterAccepts);
         this.CompletionPresentation(PromptEditorCompletionPresentation.PopupList);
         this.EnableGhostCompletion(true);
@@ -347,6 +365,9 @@ public partial class PromptEditor : TextEditorBase
             Gesture = config.Gesture,
             Importance = CommandImportance.Secondary,
             Presentation = CommandPresentation.CommandBar,
+            IsVisible = static v => ((PromptEditor)v).IsInsertNewLineCommandVisible,
+            CanExecute = static v => ((PromptEditor)v).CanExecuteInsertNewLineCommand,
+            ConsumesGestureWhenUnavailable = false,
             Execute = static v =>
             {
                 var editor = (PromptEditor)v;
@@ -444,6 +465,12 @@ public partial class PromptEditor : TextEditorBase
     public partial string? ContinuationPromptMarkup { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the editor accepts a single line or multiple lines.
+    /// </summary>
+    [Bindable]
+    public partial PromptEditorLineMode LineMode { get; set; }
+
+    /// <summary>
     /// Gets or sets how Enter and Ctrl+J are interpreted.
     /// </summary>
     [Bindable]
@@ -532,7 +559,7 @@ public partial class PromptEditor : TextEditorBase
     protected virtual void OnCanceled(PromptEditorCanceledEventArgs e) { }
 
     /// <inheritdoc />
-    protected override bool IsSingleLine => false;
+    protected override bool IsSingleLine => LineMode == PromptEditorLineMode.SingleLine;
 
     /// <inheritdoc />
     protected override bool AcceptsReturn => false;
@@ -545,6 +572,27 @@ public partial class PromptEditor : TextEditorBase
     private bool CanExecuteCancelCommand => EscapeBehavior == PromptEditorEscapeBehavior.CancelPromptOrCompletion || HasActiveCompletion;
 
     private bool IsCancelCommandVisible => EscapeBehavior == PromptEditorEscapeBehavior.CancelPromptOrCompletion || HasActiveCompletion;
+
+    private bool CanExecuteInsertNewLineCommand => LineMode == PromptEditorLineMode.MultiLine;
+
+    private bool IsInsertNewLineCommandVisible => LineMode == PromptEditorLineMode.MultiLine;
+
+    partial void OnLineModeChanged(PromptEditorLineMode value)
+    {
+        _ = value;
+        NormalizeTextForCurrentLineMode();
+    }
+
+    partial void OnTextChanged(string? value)
+    {
+        if (_normalizingTextForLineMode)
+        {
+            return;
+        }
+
+        _ = value;
+        NormalizeTextForCurrentLineMode();
+    }
 
     /// <summary>
     /// Accepts the current text and raises <see cref="AcceptedEvent"/>.
@@ -580,6 +628,11 @@ public partial class PromptEditor : TextEditorBase
     /// </summary>
     public void InsertNewLine()
     {
+        if (LineMode == PromptEditorLineMode.SingleLine)
+        {
+            return;
+        }
+
         var args = new TextInputEventArgs { Text = "\n" };
         base.OnTextInput(args);
     }
@@ -624,6 +677,46 @@ public partial class PromptEditor : TextEditorBase
         base.OnKeyDown(e);
     }
 
+    /// <inheritdoc />
+    protected override void OnTextInput(TextInputEventArgs e)
+    {
+        var normalizedText = NormalizeTextForCurrentLineMode(e.Text);
+        if (string.IsNullOrEmpty(normalizedText))
+        {
+            e.Handled = true;
+            return;
+        }
+
+        if (!string.Equals(normalizedText, e.Text, StringComparison.Ordinal))
+        {
+            base.OnTextInput(new TextInputEventArgs { Text = normalizedText });
+            e.Handled = true;
+            return;
+        }
+
+        base.OnTextInput(e);
+    }
+
+    /// <inheritdoc />
+    protected override void OnPaste(PasteEventArgs e)
+    {
+        var normalizedText = NormalizeTextForCurrentLineMode(e.Text);
+        if (string.IsNullOrEmpty(normalizedText))
+        {
+            e.Handled = true;
+            return;
+        }
+
+        if (!string.Equals(normalizedText, e.Text, StringComparison.Ordinal))
+        {
+            base.OnPaste(new PasteEventArgs { Text = normalizedText });
+            e.Handled = true;
+            return;
+        }
+
+        base.OnPaste(e);
+    }
+
     private bool TryHandleAcceptOrNewLine(KeyEventArgs e)
     {
         // We interpret Enter/Ctrl+J outside TextEditorCore so prompt-like accept behavior does not require
@@ -656,6 +749,52 @@ public partial class PromptEditor : TextEditorBase
     }
 
     private bool CanNavigateHistory => History is { Entries.Count: > 0 };
+
+    private void NormalizeTextForCurrentLineMode()
+    {
+        var normalizedText = NormalizeTextForCurrentLineMode(Text);
+        if (string.Equals(normalizedText, Text, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _normalizingTextForLineMode = true;
+        try
+        {
+            Text = normalizedText;
+        }
+        finally
+        {
+            _normalizingTextForLineMode = false;
+        }
+    }
+
+    private string? NormalizeTextForCurrentLineMode(string? text)
+        => LineMode == PromptEditorLineMode.SingleLine ? RemoveLineBreaks(text) : text;
+
+    private static string? RemoveLineBreaks(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return text;
+        }
+
+        if (text.IndexOfAny(['\r', '\n']) < 0)
+        {
+            return text;
+        }
+
+        var builder = new StringBuilder(text.Length);
+        foreach (var ch in text)
+        {
+            if (ch is not ('\r' or '\n'))
+            {
+                builder.Append(ch);
+            }
+        }
+
+        return builder.ToString();
+    }
 
     private void HistoryPrevious()
     {
@@ -997,7 +1136,7 @@ public partial class PromptEditor : TextEditorBase
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var size = new Size(48, 5);
+        var size = new Size(48, IsSingleLine ? 1 : 5);
         return SizeHints.Fixed(constraints.Clamp(size));
     }
 

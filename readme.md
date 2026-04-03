@@ -12,7 +12,7 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
   - **Fullscreen** apps via `Terminal.Run(...)` (alternate screen + input loop)
 - **Modern control library** (60+ built-in controls):
   - Buttons, toggles, lists, tables, closable/scrollable tabs, menus, dialogs/popups, **toasts**, charts, progress, spinners, tooltips…
-  - Text editing: **TextBox**, **TextArea**, **MaskedInput**, **NumberBox** (undo/redo: `Ctrl+Z` / `Ctrl+R`)
+  - Text editing: **TextBox**, **TextArea**, **PromptEditor**, **MaskedInput**, **NumberBox** (undo/redo: `Ctrl+Z` / `Ctrl+R`)
   - Advanced widgets: **LogControl**, **CommandPalette**, **BreakdownChart**, **ColorPicker**
   - Mockup/empty-state widget: **Placeholder** (text + background surfaces, gradients)
   - Companion extension package: **XenoAtom.Terminal.UI.Extensions.Markdown** (`MarkdownControl`, `MarkdownMarkupConverter` with source-preserving highlight mode)
@@ -140,7 +140,7 @@ The library ships with a large set of built-in controls. See [Controls Reference
 
 Highlights:
 
-- Text input: `TextBox`, `TextArea`, `MaskedInput`, `NumberBox`, `ValidationPresenter`
+- Text input: `TextBox`, `TextArea`, `PromptEditor`, `MaskedInput`, `NumberBox`, `ValidationPresenter`
 - Lists: `ListBox`, `OptionList`, `SelectionList`, `Select<T>`, `TreeView`
 - Data: `Table`, `DataGridControl` (sorting, filtering, search, resizing, inline editing, direct cell activation)
 - Layout: `VStack`, `HStack`, `Grid`, `DockLayout`, `Splitters`, `Border`, `Group`, `Padder`
