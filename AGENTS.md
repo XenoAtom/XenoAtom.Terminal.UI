@@ -35,6 +35,12 @@ dotnet run -c Release --project samples/ControlsDemo -- --export-screenshots
 # outputs to site/img/controls
 ```
 
+Use the generated PNG screenshots as a verification tool, not only as website assets:
+
+- when a change affects rendering, export screenshots and inspect the relevant PNGs directly to confirm the UI looks correct
+- agents may use the screenshot export path to visually validate spacing, clipping, emoji/icon rendering, command bars, and other pixel-level regressions
+- if a rendering fix changes documented visuals, regenerate the affected screenshots before finishing
+
 ## Rules (Do/Don't)
 
 - Keep diffs focused; avoid drive-by refactors/formatting and unnecessary dependencies.
