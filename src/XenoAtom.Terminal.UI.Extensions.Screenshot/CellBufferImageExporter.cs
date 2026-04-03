@@ -1,6 +1,8 @@
+using System.Buffers;
 using System.Reflection;
 using System.Text;
 using SkiaSharp;
+using SkiaSharp.HarfBuzz;
 using XenoAtom.Ansi;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Rendering;
@@ -14,6 +16,7 @@ namespace XenoAtom.Terminal.UI.Extensions.Screenshot;
 public static class CellBufferImageExporter
 {
     private const string DefaultFontResourceName = "XenoAtom.Terminal.UI.Extensions.Screenshot.Assets.Fonts.CaskaydiaCoveNerdFont-Regular.ttf";
+    private static readonly SearchValues<char> EmojiSequenceSkippableCharacters = SearchValues.Create("\u200D\uFE0E\uFE0F\u20E3");
 
     private static readonly Lazy<byte[]> DefaultFontBytes = new(LoadDefaultFontBytes);
 
@@ -74,6 +77,9 @@ public static class CellBufferImageExporter
         Export(buffer, stream, format, options);
     }
 
+    internal static int? GetFallbackCodepointForText(string text)
+        => ScreenshotTypefaceResolver.GetFallbackCodepoint(text);
+
     private static SKImage RenderImage(CellBuffer buffer, CellBufferImageExportOptions options)
     {
         var crop = ResolveCrop(buffer, options);
@@ -83,6 +89,7 @@ public static class CellBufferImageExporter
         }
 
         using var typeface = LoadTypeface(options.Font);
+        using var typefaceResolver = new ScreenshotTypefaceResolver(typeface);
         using var baseFont = CreateBaseFont(typeface, options.Font);
         var fontMetrics = baseFont.Metrics;
         var cellWidth = Math.Max(1f, options.Font.CellWidthPx ?? MeasureCellWidth(baseFont));
@@ -192,9 +199,13 @@ public static class CellBufferImageExporter
                     ? fgColor
                     : ToSkColor(options.DefaultForeground);
 
-                using var glyphFont = CreateGlyphFont(baseFont, style.TextStyle, options.Font);
+                var glyphTypeface = typefaceResolver.ResolveTypeface(text, baseFont);
+                using var glyphFont = CreateGlyphFont(glyphTypeface, baseFont, style.TextStyle, options.Font);
                 using var glyphPaint = CreateGlyphPaint(foreground, style.TextStyle, options.Font);
-                canvas.DrawText(text, x, y + baselineOffset, SKTextAlign.Left, glyphFont, glyphPaint);
+                canvas.Save();
+                canvas.ClipRect(SKRect.Create(x, y, widthPx, cellHeight));
+                canvas.DrawShapedText(text, x, y + baselineOffset, SKTextAlign.Left, glyphFont, glyphPaint);
+                canvas.Restore();
 
                 if ((style.TextStyle & TextStyle.Underline) != 0)
                 {
@@ -224,14 +235,15 @@ public static class CellBufferImageExporter
             Hinting = SKFontHinting.Full,
         };
 
-    private static SKFont CreateGlyphFont(SKFont baseFont, TextStyle style, ScreenshotFontOptions options)
+    private static SKFont CreateGlyphFont(SKTypeface typeface, SKFont baseFont, TextStyle style, ScreenshotFontOptions options)
     {
-        var font = new SKFont(baseFont.Typeface, baseFont.Size, baseFont.ScaleX, (style & TextStyle.Italic) != 0 ? -0.2f : 0)
+        var font = new SKFont(typeface, baseFont.Size, baseFont.ScaleX, (style & TextStyle.Italic) != 0 ? -0.2f : 0)
         {
             Embolden = (style & TextStyle.Bold) != 0,
             Subpixel = options.Subpixel,
             Edging = options.Antialias ? SKFontEdging.SubpixelAntialias : SKFontEdging.Alias,
             ForceAutoHinting = true,
+            EmbeddedBitmaps = true,
             Hinting = SKFontHinting.Full,
         };
 
@@ -538,5 +550,96 @@ public static class CellBufferImageExporter
         using var memory = new MemoryStream();
         stream.CopyTo(memory);
         return memory.ToArray();
+    }
+
+    private sealed class ScreenshotTypefaceResolver : IDisposable
+    {
+        private readonly SKFontManager _fontManager;
+        private readonly SKTypeface _baseTypeface;
+        private readonly Dictionary<string, SKTypeface> _cache;
+        private bool _disposed;
+
+        public ScreenshotTypefaceResolver(SKTypeface baseTypeface)
+        {
+            _baseTypeface = baseTypeface;
+            _fontManager = SKFontManager.Default;
+            _cache = new Dictionary<string, SKTypeface>(StringComparer.Ordinal);
+        }
+
+        public SKTypeface ResolveTypeface(string text, SKFont baseFont)
+        {
+            if (string.IsNullOrEmpty(text) || baseFont.ContainsGlyphs(text))
+            {
+                return _baseTypeface;
+            }
+
+            if (_cache.TryGetValue(text, out var cached))
+            {
+                return cached;
+            }
+
+            var codepoint = GetFallbackCodepoint(text);
+            var matched = codepoint is null
+                ? null
+                : _fontManager.MatchCharacter(string.Empty, _baseTypeface.FontStyle, null, codepoint.Value)
+                  ?? _fontManager.MatchCharacter(codepoint.Value);
+
+            if (matched is null)
+            {
+                matched = _baseTypeface;
+            }
+            else
+            {
+            }
+
+            _cache[text] = matched;
+            return matched;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            foreach (var (_, typeface) in _cache)
+            {
+                if (!ReferenceEquals(typeface, _baseTypeface))
+                {
+                    typeface.Dispose();
+                }
+            }
+
+            _cache.Clear();
+            _disposed = true;
+        }
+
+        internal static int? GetFallbackCodepoint(string text)
+        {
+            for (var i = 0; i < text.Length;)
+            {
+                if (Rune.DecodeFromUtf16(text.AsSpan(i), out var rune, out var consumed) != OperationStatus.Done || consumed <= 0)
+                {
+                    i++;
+                    continue;
+                }
+
+                i += consumed;
+                if (Rune.IsControl(rune))
+                {
+                    continue;
+                }
+
+                if (rune.IsBmp && EmojiSequenceSkippableCharacters.Contains((char)rune.Value))
+                {
+                    continue;
+                }
+
+                return rune.Value;
+            }
+
+            return null;
+        }
     }
 }

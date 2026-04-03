@@ -114,4 +114,12 @@ public sealed class CellBufferImageExporterTests
         Assert.IsTrue(bitmap.Width > 0);
         Assert.IsTrue(bitmap.Height > 0);
     }
+
+    [TestMethod]
+    public void ImageExporter_FallbackCodepoint_Skips_Emoji_Modifier_Codepoints()
+    {
+        Assert.AreEqual(0x1F5C3, CellBufferImageExporter.GetFallbackCodepointForText("🗃️"));
+        Assert.AreEqual(0x1F3C3, CellBufferImageExporter.GetFallbackCodepointForText("🏃‍♀️"));
+        Assert.AreEqual('A', CellBufferImageExporter.GetFallbackCodepointForText("A"));
+    }
 }
