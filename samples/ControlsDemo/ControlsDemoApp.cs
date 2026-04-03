@@ -146,8 +146,8 @@ internal static class ControlsDemoApp
 
         layout.Content(new HSplitter(sidebar, page).Ratio(0.16))
             .Bottom(
-                new Footer().Left("Tab focus | Mouse | Resize")
-                    .Center(new HStack("🎨 Select Theme: ", colorSchemes))
+                new Footer().Left("Tab | Mouse | Resize")
+                    .Center(new HStack("Theme:", colorSchemes))
                     .Right(new CommandBar()));
 
         toastHost.Update(c =>

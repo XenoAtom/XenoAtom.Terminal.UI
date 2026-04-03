@@ -10,6 +10,8 @@ The ControlsDemo is the interactive catalog for **XenoAtom.Terminal.UI**. It sho
 dotnet run -c Release --project samples/ControlsDemo
 ```
 
+While the demo is running, press `Ctrl+F12` to copy the current app frame as a PNG screenshot to the clipboard. The command is also exposed in the footer command bar by default.
+
 ## Export website screenshots (PNG)
 
 ```shell

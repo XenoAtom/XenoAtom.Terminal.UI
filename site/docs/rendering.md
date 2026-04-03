@@ -243,6 +243,35 @@ using XenoAtom.Terminal.UI.Extensions.Screenshot;
 app.SaveScreenshot(myControl, "my-control.png", padding: new Thickness(1));
 ```
 
+You can also copy the current app frame to the clipboard as a PNG payload:
+
+```csharp
+using XenoAtom.Terminal.UI.Extensions.Screenshot;
+
+app.TryCopyScreenshotToClipboard();
+```
+
+To make this easy to use in a real app, register the built-in screenshot command. By default it binds `Ctrl+F12`,
+copies the current frame to the clipboard, and appears in the command bar and command palette:
+
+```csharp
+using XenoAtom.Terminal.UI.Extensions.Screenshot;
+
+root.RegisterClipboardScreenshotCommand();
+```
+
+If you already constructed the app manually, you can register the same command globally:
+
+```csharp
+using XenoAtom.Terminal.UI.Extensions.Screenshot;
+
+app.RegisterClipboardScreenshotCommand(new ScreenshotClipboardCommandOptions
+{
+    Gesture = new KeyGesture(TerminalKey.F10),
+    Presentation = CommandPresentation.CommandPalette
+});
+```
+
 ### TerminalAppSnapshotImageRenderer
 
 For automation (docs/tests), `TerminalAppSnapshotImageRenderer` renders a visual tree to an in-memory terminal backend

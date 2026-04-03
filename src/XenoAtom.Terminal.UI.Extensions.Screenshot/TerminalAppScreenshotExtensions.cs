@@ -1,3 +1,5 @@
+using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Geometry;
 
 namespace XenoAtom.Terminal.UI.Extensions.Screenshot;
@@ -7,6 +9,59 @@ namespace XenoAtom.Terminal.UI.Extensions.Screenshot;
 /// </summary>
 public static class TerminalAppScreenshotExtensions
 {
+    /// <summary>
+    /// Captures the current frame buffer as a PNG image and copies it to the clipboard.
+    /// </summary>
+    /// <param name="app">The source app.</param>
+    /// <param name="options">The screenshot export options.</param>
+    /// <returns><see langword="true"/> if the clipboard was updated; otherwise <see langword="false"/>.</returns>
+    public static bool TryCopyScreenshotToClipboard(this TerminalApp app, CellBufferImageExportOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+
+        var bytes = app.CaptureScreenshot(ScreenshotImageFormat.Png, options);
+        return app.Terminal.Clipboard.TrySetData(TerminalClipboardFormats.Png, bytes);
+    }
+
+    /// <summary>
+    /// Registers a global command that captures the current frame buffer as a PNG image and copies it to the clipboard.
+    /// </summary>
+    /// <param name="app">The source app.</param>
+    /// <param name="options">The command options.</param>
+    public static void RegisterClipboardScreenshotCommand(this TerminalApp app, ScreenshotClipboardCommandOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+        app.AddGlobalCommand(CreateClipboardScreenshotCommand(options ?? ScreenshotClipboardCommandOptions.Default));
+    }
+
+    /// <summary>
+    /// Registers a command on the specified visual that captures the current app frame buffer as a PNG image and copies it to the clipboard.
+    /// Register this on the root visual before running the app when you want an app-wide shortcut without manually constructing a <see cref="TerminalApp"/>.
+    /// </summary>
+    /// <param name="visual">The visual that owns the command.</param>
+    /// <param name="options">The command options.</param>
+    public static void RegisterClipboardScreenshotCommand(this Visual visual, ScreenshotClipboardCommandOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(visual);
+        var effectiveOptions = options ?? ScreenshotClipboardCommandOptions.Default;
+        visual.AddCommand(CreateClipboardScreenshotCommand(effectiveOptions));
+        TerminalApp? lastRegisteredApp = null;
+
+        void TryRegister(Visual owner)
+        {
+            if (owner.App is not { } app || ReferenceEquals(app, lastRegisteredApp))
+            {
+                return;
+            }
+
+            app.AddGlobalCommand(CreateClipboardScreenshotCommand(effectiveOptions));
+            lastRegisteredApp = app;
+        }
+
+        TryRegister(visual);
+        visual.RegisterDynamicUpdate(TryRegister);
+    }
+
     /// <summary>
     /// Captures the current frame buffer and returns the encoded screenshot bytes.
     /// </summary>
@@ -77,5 +132,31 @@ public static class TerminalAppScreenshotExtensions
         };
 
         CellBufferImageExporter.Export(app.GetRequiredRenderBuffer(), path, merged);
+    }
+
+    private static Command CreateClipboardScreenshotCommand(ScreenshotClipboardCommandOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        return new Command
+        {
+            Id = options.CommandId,
+            LabelMarkup = options.LabelMarkup,
+            Name = options.Name,
+            DescriptionMarkup = options.DescriptionMarkup,
+            SearchText = options.SearchText,
+            Gesture = options.Gesture,
+            Importance = options.Importance,
+            Presentation = options.Presentation,
+            CanExecute = static visual => visual.App?.Terminal.Clipboard.CanSetFormats == true,
+            ConsumesGestureWhenUnavailable = options.ConsumesGestureWhenUnavailable,
+            Execute = visual =>
+            {
+                if (visual.App is { } app)
+                {
+                    _ = app.TryCopyScreenshotToClipboard(options.ImageOptions);
+                }
+            },
+        };
     }
 }

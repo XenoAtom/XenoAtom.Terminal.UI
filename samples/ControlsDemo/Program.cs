@@ -1,6 +1,7 @@
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.ControlsDemo;
+using XenoAtom.Terminal.UI.Extensions.Screenshot;
 using XenoAtom.Terminal.UI.Styling;
 
 var argsList = args ?? Array.Empty<string>();
@@ -56,4 +57,5 @@ if (argsList.Length > 0 && argsList[0].Equals("--export-screenshots", StringComp
 
 using var session = Terminal.Open();
 var root = ControlsDemoApp.Build(out var onUpdate);
+root.RegisterClipboardScreenshotCommand();
 Terminal.Run(root, onUpdate);

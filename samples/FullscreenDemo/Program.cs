@@ -6,6 +6,7 @@ using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.DataGrid;
+using XenoAtom.Terminal.UI.Extensions.Screenshot;
 using XenoAtom.Terminal.UI.Figlet;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
@@ -28,6 +29,7 @@ var notes = new State<string?>(
     Welcome to the Fullscreen demo.
 
     - Ctrl+P: CommandPalette
+    - Ctrl+F12: copy a PNG screenshot to the clipboard
     - Ctrl+F/Ctrl+H (TextArea): Find/Replace
     - Ctrl+F (LogControl): Search
     - Right-click the ContextMenu sample
@@ -984,6 +986,8 @@ toastHost.AddCommand(new Command
     Presentation = CommandPresentation.CommandPalette,
     Execute = _ => ExportSvg(),
 });
+
+toastHost.RegisterClipboardScreenshotCommand();
 
 var lastTick = Stopwatch.GetTimestamp();
 var t = 0.0;
