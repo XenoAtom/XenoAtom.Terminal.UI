@@ -4,7 +4,7 @@ title: CommandBar
 
 # CommandBar
 
-`CommandBar` displays a single-row “key hints” strip for the current focus context.
+`CommandBar` displays a “key hints” strip for the current focus context.
 
 It collects `Command` instances registered on the focused visual (and its parents) plus app-level commands, then renders
 them as a sequence of keycaps and labels.
@@ -31,9 +31,24 @@ var root = new DockLayout()
 Terminal.Run(root);
 ```
 
+## Multi-line wrapping
+
+By default, `CommandBar` keeps the existing single-row behavior and clips entries that do not fit.
+
+If you want commands to wrap onto additional rows instead, enable `MultiLine`:
+
+```csharp
+var bar = new CommandBar()
+    .MultiLine(true);
+```
+
+In multi-line mode, a command entry is moved to the next row when it does not fit in the remaining space on the current row.
+The default remains `false`.
+
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Start`, `VerticalAlignment = Align.Start` 
+- `MultiLine = false`
 
 ## Styling
 Use `CommandBarStyle` to change bar/keycap colors:

@@ -18,7 +18,7 @@ This file intentionally focuses on *implementation-specific* notes for `CommandB
 
 ## Goals
 
-- Provide a lightweight, single-row “key hints” surface intended for app chrome (footer/header).
+- Provide a lightweight “key hints” surface intended for app chrome (footer/header).
 - Surface commands relevant to the current focus context and app/global commands.
 - Stay allocation-conscious and compatible with the binding dirty model.
 
@@ -36,9 +36,14 @@ This file intentionally focuses on *implementation-specific* notes for `CommandB
 
 ## Layout & rendering (current behavior)
 
-- The control measures to a single row (`Height = 1`) and to the *current* content width (focused context), while allowing clipping when the available width is smaller.
-- Render always clears the entire bar row using `CommandBarStyle.Resolve(theme).BarStyle` (chrome must not “inherit” background/attributes from content behind it).
-- When a key sequence prefix is active (`TerminalApp.PendingCommandSequenceCount > 0`), `CommandBar` renders the pending prefix + `…` before regular entries.
+- `MultiLine = false` is the default and preserves the existing single-row behavior:
+  - the control measures to a single row (`Height = 1`) and to the *current* content width (focused context), while allowing clipping when the available width is smaller
+  - render clears the entire bar row using `CommandBarStyle.Resolve(theme).BarStyle` (chrome must not “inherit” background/attributes from content behind it)
+- `MultiLine = true` allows wrapped layout:
+  - the control may measure to multiple rows when the available width is bounded
+  - command entries wrap as atomic units; if an entry does not fit in the remaining space on the current row, it starts on the next row
+  - separators are not rendered at the start of a wrapped row
+- In both modes, when a key sequence prefix is active (`TerminalApp.PendingCommandSequenceCount > 0`), `CommandBar` renders the pending prefix + `…` before regular entries.
 
 ## Command collection
 
@@ -57,6 +62,11 @@ This file intentionally focuses on *implementation-specific* notes for `CommandB
   - label style and disabled label style
   - separator text
 - Labels are rendered from `Command.LabelMarkup` via `MarkupTextParser` using the current theme markup styles.
+
+## Public API
+
+- `Presentation : CommandPresentation`
+- `MultiLine : bool` (default `false`)
 
 ## Future ideas
 
