@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Extensions.Markdown;
@@ -45,6 +46,16 @@ public sealed record MarkdownRenderOptions
     /// Gets a value indicating whether Markdown images are rendered as textual link placeholders.
     /// </summary>
     public bool RenderImagesAsLinks { get; init; } = true;
+
+    /// <summary>
+    /// Gets an optional local file-system root path used to resolve relative Markdown links into <c>file://</c> URIs.
+    /// </summary>
+    /// <remarks>
+    /// When specified, non-absolute links that are not pure fragment/query references are combined with this root path
+    /// before <see cref="MarkdownControl.BaseUri"/> is considered. Use this when Markdown documents contain local relative
+    /// file references instead of web-relative links.
+    /// </remarks>
+    public string? LocalFileRootPath { get; init; }
 
     /// <summary>
     /// Gets the default table style for Markdown tables.

@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.IO;
 using System.Text;
 using Markdig.Extensions.Alerts;
 using Markdig.Extensions.Tables;
@@ -23,6 +24,7 @@ internal sealed class MarkdownDocumentBuilder
     private readonly MarkdownStyle _style;
     private readonly MarkdownRenderOptions _options;
     private readonly Uri? _baseUri;
+    private readonly string? _localFileRootPath;
     private readonly List<DocumentFlowBlock> _blocks;
     private readonly int _headingSpacingBefore;
     private readonly int _headingSpacingAfter;
@@ -36,6 +38,7 @@ internal sealed class MarkdownDocumentBuilder
         _style = style;
         _options = options;
         _baseUri = baseUri;
+        _localFileRootPath = NormalizeLocalFileRootPath(options.LocalFileRootPath);
         _blocks = new List<DocumentFlowBlock>(64);
         _headingSpacingBefore = Math.Max(0, _options.HeadingSpacingBefore);
         _headingSpacingAfter = Math.Max(0, _options.HeadingSpacingAfter);
@@ -711,17 +714,179 @@ internal sealed class MarkdownDocumentBuilder
             return null;
         }
 
-        if (Uri.TryCreate(link, UriKind.Absolute, out var absolute))
+        var trimmed = link.Trim();
+
+        if (TryResolveLocalFileUri(trimmed, out var localFileUri))
+        {
+            return localFileUri;
+        }
+
+        if (Uri.TryCreate(trimmed, UriKind.Absolute, out var absolute))
         {
             return absolute.ToString();
         }
 
-        if (_baseUri is not null && Uri.TryCreate(_baseUri, link, out var relative))
+        if (_baseUri is not null && Uri.TryCreate(_baseUri, trimmed, out var relative))
         {
             return relative.ToString();
         }
 
-        return link;
+        return trimmed;
+    }
+
+    private bool TryResolveLocalFileUri(string link, out string? uri)
+    {
+        uri = null;
+        if (IsFragmentOrQueryOnly(link))
+        {
+            return false;
+        }
+
+        if (TryResolveAbsoluteLocalFileUri(link, out uri))
+        {
+            return true;
+        }
+
+        if (_localFileRootPath is null)
+        {
+            return false;
+        }
+
+        SplitPathAndSuffix(link, out var pathPart, out var suffix);
+        if (string.IsNullOrWhiteSpace(pathPart))
+        {
+            return false;
+        }
+
+        var normalizedRelativePath = NormalizeRelativeFilePath(pathPart);
+        var combinedPath = Path.GetFullPath(Path.Combine(_localFileRootPath, normalizedRelativePath));
+        uri = CreateFileUri(combinedPath, suffix);
+        return true;
+    }
+
+    private static string? NormalizeLocalFileRootPath(string? rootPath)
+    {
+        if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            return null;
+        }
+
+        return Path.GetFullPath(rootPath);
+    }
+
+    private static bool TryResolveAbsoluteLocalFileUri(string link, out string? uri)
+    {
+        SplitPathAndSuffix(link, out var pathPart, out var suffix);
+
+        if (IsWindowsDrivePath(pathPart))
+        {
+            uri = CreateFileUri(pathPart.Replace('/', '\\'), suffix);
+            return true;
+        }
+
+        if (IsWindowsUncPath(pathPart))
+        {
+            uri = CreateFileUri(pathPart, suffix);
+            return true;
+        }
+
+        if (IsUnixAbsolutePath(pathPart))
+        {
+            uri = CreateFileUri(pathPart, suffix);
+            return true;
+        }
+
+        uri = null;
+        return false;
+    }
+
+    private static bool IsWindowsDrivePath(string path)
+    {
+        return path.Length >= 3
+            && IsAsciiLetter(path[0])
+            && path[1] == ':'
+            && IsDirectorySeparator(path[2]);
+    }
+
+    private static bool IsWindowsUncPath(string path)
+    {
+        return path.Length >= 2 && path[0] == '\\' && path[1] == '\\';
+    }
+
+    private static bool IsUnixAbsolutePath(string path)
+    {
+        return !OperatingSystem.IsWindows() && path.Length > 0 && path[0] == '/';
+    }
+
+    private static bool IsAsciiLetter(char c)
+    {
+        c = char.ToUpperInvariant(c);
+        return c >= 'A' && c <= 'Z';
+    }
+
+    private static bool IsDirectorySeparator(char c) => c is '\\' or '/';
+
+    private static bool IsFragmentOrQueryOnly(string link) => link.Length > 0 && link[0] is '#' or '?';
+
+    private static string NormalizeRelativeFilePath(string path)
+    {
+        var normalized = path;
+        if (Path.DirectorySeparatorChar == '\\')
+        {
+            normalized = normalized.Replace('/', '\\');
+        }
+        else
+        {
+            normalized = normalized.Replace('\\', '/');
+        }
+
+        return normalized.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+    }
+
+    private static void SplitPathAndSuffix(string link, out string pathPart, out string suffix)
+    {
+        var queryIndex = link.IndexOf('?');
+        var fragmentIndex = link.IndexOf('#');
+
+        var suffixIndex = -1;
+        if (queryIndex >= 0 && fragmentIndex >= 0)
+        {
+            suffixIndex = Math.Min(queryIndex, fragmentIndex);
+        }
+        else if (queryIndex >= 0)
+        {
+            suffixIndex = queryIndex;
+        }
+        else if (fragmentIndex >= 0)
+        {
+            suffixIndex = fragmentIndex;
+        }
+
+        if (suffixIndex < 0)
+        {
+            pathPart = link;
+            suffix = string.Empty;
+            return;
+        }
+
+        pathPart = link[..suffixIndex];
+        suffix = link[suffixIndex..];
+    }
+
+    private static string CreateFileUri(string path, string suffix)
+    {
+        var fileUri = new UriBuilder(Uri.UriSchemeFile, string.Empty, -1, path).Uri;
+        if (string.IsNullOrEmpty(suffix))
+        {
+            return fileUri.AbsoluteUri;
+        }
+
+        if (Uri.TryCreate(fileUri, suffix, out var resolved))
+        {
+            return resolved.AbsoluteUri;
+        }
+
+        return string.Concat(fileUri.AbsoluteUri, suffix);
     }
 
     private readonly record struct InlineRenderResult(string Text, StyledRun[] Runs, HyperlinkRun[] Hyperlinks);

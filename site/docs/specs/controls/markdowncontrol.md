@@ -248,6 +248,8 @@ Runs MUST be merged when adjacent and identical to reduce allocations.
 - Use `HyperlinkRun(start, length, uri)` on the rendered text span.
 - Apply a link style run (underline + optional accent).
 - Resolve relative URIs against `BaseUri` when provided.
+- Absolute local file paths SHOULD be normalized to `file://` URIs.
+- Relative local file links MAY be resolved against `MarkdownRenderOptions.LocalFileRootPath` when provided. This local file root takes precedence over `BaseUri` for non-absolute, non-fragment links.
 
 Images:
 
@@ -383,4 +385,3 @@ Add a `ControlsDemo` page:
   - link styling,
   - different table presets,
   - alert styles.
-

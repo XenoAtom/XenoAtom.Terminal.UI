@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.IO;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Extensions.Markdown;
 using XenoAtom.Terminal.UI.Extensions.Markdown.Styling;
@@ -318,6 +319,54 @@ public sealed class MarkdownControlTests
         var paragraph = GetParagraph(control, 0);
         Assert.AreEqual(1, paragraph.Hyperlinks.Length);
         Assert.AreEqual("https://example.com/docs/guide/readme.md", paragraph.Hyperlinks[0].Uri);
+    }
+
+    [TestMethod]
+    public void MarkdownControl_Converts_Absolute_Windows_File_Links_To_FileUris()
+    {
+        const string path = @"C:\docs\guide.md";
+        var control = new MarkdownControl($"See [docs]({path}).");
+
+        var paragraph = GetParagraph(control, 0);
+        Assert.AreEqual(1, paragraph.Hyperlinks.Length);
+        Assert.AreEqual(CreateExpectedFileUri(path), paragraph.Hyperlinks[0].Uri);
+    }
+
+    [TestMethod]
+    public void MarkdownControl_Resolves_Relative_File_Links_With_LocalFileRootPath()
+    {
+        var localRoot = Path.Combine(Path.GetTempPath(), "markdown-local-root");
+        var control = new MarkdownControl("See [docs](guide/readme.md).")
+        {
+            BaseUri = new Uri("https://example.com/docs/"),
+            Options = MarkdownRenderOptions.Default with
+            {
+                LocalFileRootPath = localRoot,
+            },
+        };
+
+        var paragraph = GetParagraph(control, 0);
+        Assert.AreEqual(1, paragraph.Hyperlinks.Length);
+        Assert.AreEqual(
+            CreateExpectedFileUri(Path.GetFullPath(Path.Combine(localRoot, "guide", "readme.md"))),
+            paragraph.Hyperlinks[0].Uri);
+    }
+
+    [TestMethod]
+    public void MarkdownControl_Keeps_Fragment_Links_Resolvable_With_BaseUri_When_LocalFileRootPath_Is_Set()
+    {
+        var control = new MarkdownControl("See [section](#intro).")
+        {
+            BaseUri = new Uri("https://example.com/docs/page.md"),
+            Options = MarkdownRenderOptions.Default with
+            {
+                LocalFileRootPath = Path.Combine(Path.GetTempPath(), "markdown-local-root"),
+            },
+        };
+
+        var paragraph = GetParagraph(control, 0);
+        Assert.AreEqual(1, paragraph.Hyperlinks.Length);
+        Assert.AreEqual("https://example.com/docs/page.md#intro", paragraph.Hyperlinks[0].Uri);
     }
 
     [TestMethod]
@@ -850,5 +899,10 @@ public sealed class MarkdownControlTests
         var backgroundLuminance = background.GetRelativeLuminance();
         var foregroundLuminance = foreground.GetRelativeLuminance();
         return backgroundLuminance > foregroundLuminance && backgroundLuminance >= 0.55f;
+    }
+
+    private static string CreateExpectedFileUri(string path)
+    {
+        return new UriBuilder(Uri.UriSchemeFile, string.Empty, -1, path).Uri.AbsoluteUri;
     }
 }

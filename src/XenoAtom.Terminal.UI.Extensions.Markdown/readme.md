@@ -24,6 +24,18 @@ Paragraph with **bold** text and [a link](https://example.com).
 var control = new MarkdownControl(markdown);
 ```
 
+Resolve relative file links locally while still supporting standard web `BaseUri` resolution:
+
+```csharp
+var control = new MarkdownControl(markdown)
+{
+    Options = MarkdownRenderOptions.Default with
+    {
+        LocalFileRootPath = Environment.CurrentDirectory,
+    },
+};
+```
+
 Convert interpreted markdown into markup:
 
 ```csharp
@@ -44,7 +56,7 @@ var runs = converter.Highlight(markdown); // StyledRun[] over the original markd
 
 - CommonMark block and inline rendering.
 - Extensions enabled by default: pipe tables and alert blocks.
-- `MarkdownRenderOptions` for code block wrapping/height, compact spacing, and HTML/image fallbacks.
+- `MarkdownRenderOptions` for code block wrapping/height, compact spacing, HTML/image fallbacks, and local file-link resolution.
 - Theme-aware pleasant defaults (bright-yellow headings, accent strong text, bright-red inline code, semantic alerts).
 - `MarkdownStyle` for heading/link/emphasis/alert style customization.
 - `MarkdownDocumentContent` for direct usage with `DocumentFlow` feeds.

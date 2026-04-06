@@ -61,6 +61,20 @@ var control = new MarkdownControl(markdown)
 };
 ```
 
+For Markdown documents that contain local file links, use `LocalFileRootPath` to resolve relative paths into valid local `file://` URIs:
+
+```csharp
+var control = new MarkdownControl(markdown)
+{
+    Options = MarkdownRenderOptions.Default with
+    {
+        LocalFileRootPath = Environment.CurrentDirectory,
+    }
+};
+```
+
+Absolute local paths such as `C:\docs\guide.md` on Windows are also normalized to `file://` links automatically.
+
 Spacing defaults are intentionally compact for terminal density:
 
 - heading spacing before: `0`
