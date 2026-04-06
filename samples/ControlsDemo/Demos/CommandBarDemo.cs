@@ -20,7 +20,7 @@ public sealed class CommandBarDemo : ControlsDemoBase
 
         var counter = new State<int>(0);
         var enabled = new State<bool>(true);
-        var multiLine = new State<bool>(false);
+        var multiLine = new State<bool>(context.IsScreenshot);
 
         var editor = new TextBox().Placeholder("Focus me to populate the command bar…");
         editor.AutoFocus(true);
