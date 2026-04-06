@@ -147,4 +147,23 @@ public sealed class GradientRenderingTests
         Assert.IsTrue(secondGlyph.TryGetForeground(out var fgSecond));
         Assert.AreNotEqual(fgFirst.ToRgb(), fgSecond.ToRgb());
     }
+
+    [TestMethod]
+    public void TextBox_Placeholder_Renders_With_Dim_TextStyle()
+    {
+        var textBox = new TextBox()
+            .Placeholder("AB")
+            .Style(Theme.Default);
+
+        textBox.Measure(new Size(8, 1));
+        textBox.Arrange(new Rectangle(0, 0, 8, 1));
+
+        var buffer = new CellBuffer(8, 1);
+        buffer.Clear(textBox.GetTheme().BaseTextStyle());
+        textBox.RenderTree(buffer);
+
+        var firstPlaceholderGlyph = buffer.UnsafeCells[1];
+        Assert.AreEqual('A', buffer.UnsafeScalars[1]);
+        Assert.AreEqual(TextStyle.Dim, firstPlaceholderGlyph.TextStyle & TextStyle.Dim);
+    }
 }

@@ -149,7 +149,7 @@ public record TextBoxStyle : IStyle<TextBoxStyle>
         var style = BackgroundStyle(theme, focused);
         var fg = Placeholder ?? theme.Muted ?? theme.Foreground;
         if (fg is { } c) style = style.WithForeground(c);
-        return style;
+        return style | TextStyle.Dim;
     }
 
     /// <summary>
