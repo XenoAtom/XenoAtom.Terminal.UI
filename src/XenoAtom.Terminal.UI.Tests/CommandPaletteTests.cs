@@ -54,6 +54,112 @@ public sealed class CommandPaletteTests
     }
 
     [TestMethod]
+    public void CommandPalette_DefaultStyle_Shows_Command_Name_Before_Label()
+    {
+        var root = new VStack();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(80, 16));
+        driver.Tick();
+
+        var palette = new CommandPalette();
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.open",
+            Name = "open",
+            LabelMarkup = "Open File",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        palette.Show();
+        driver.Tick();
+
+        var rendered = GetRenderedText(driver, 80, 16);
+        StringAssert.Contains(rendered, "/open - Open File");
+    }
+
+    [TestMethod]
+    public void CommandPalette_DefaultStyle_Does_Not_Show_Name_Prefix_When_Command_Name_Is_Null()
+    {
+        var root = new VStack();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(80, 16));
+        driver.Tick();
+
+        var palette = new CommandPalette();
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.open",
+            LabelMarkup = "Open File",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        palette.Show();
+        driver.Tick();
+
+        var rendered = GetRenderedText(driver, 80, 16);
+        StringAssert.Contains(rendered, "Open File");
+        Assert.IsFalse(rendered.Contains("/open - Open File", StringComparison.Ordinal), "Expected commands without a name to render only their label markup.");
+    }
+
+    [TestMethod]
+    public void CommandPalette_Style_Can_Configure_Command_Name_Display()
+    {
+        var root = new VStack();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(80, 16));
+        driver.Tick();
+
+        var palette = new CommandPalette().Style(CommandPaletteStyle.Default with
+        {
+            CommandNamePrefix = ":",
+            CommandNameSeparator = " => ",
+        });
+
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.open",
+            Name = "open",
+            LabelMarkup = "Open File",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        palette.Show();
+        driver.Tick();
+
+        var rendered = GetRenderedText(driver, 80, 16);
+        StringAssert.Contains(rendered, ":open => Open File");
+    }
+
+    [TestMethod]
+    public void CommandPalette_Style_Can_Hide_Command_Name_Display()
+    {
+        var root = new VStack();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(80, 16));
+        driver.Tick();
+
+        var palette = new CommandPalette().Style(CommandPaletteStyle.Default with
+        {
+            ShowCommandName = false,
+        });
+
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.open",
+            Name = "open",
+            LabelMarkup = "Open File",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        palette.Show();
+        driver.Tick();
+
+        var rendered = GetRenderedText(driver, 80, 16);
+        StringAssert.Contains(rendered, "Open File");
+        Assert.IsFalse(rendered.Contains("/open - Open File", StringComparison.Ordinal), "Expected ShowCommandName = false to suppress the command name prefix.");
+    }
+
+    [TestMethod]
     public void CommandPalette_Invokes_Action_On_Activated_Item()
     {
         var invoked = false;
@@ -781,6 +887,14 @@ public sealed class CommandPaletteTests
 
     private static Dialog GetHostDialog(CommandPalette palette)
         => (Dialog)typeof(CommandPalette).GetField("_hostDialog", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(palette)!;
+
+    private static string GetRenderedText(TerminalAppTestDriver driver, int width, int height)
+    {
+        var outText = driver.Backend.GetOutText();
+        var screen = new AnsiTestScreen(width, height);
+        screen.Apply(outText);
+        return screen.GetText();
+    }
 
     private static T GetPrivateField<T>(object instance, string fieldName)
         where T : class

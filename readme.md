@@ -27,7 +27,7 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
 - **Input**:
   - Keyboard, mouse, resize events; focus navigation; routed events where appropriate
 - **Commands & key hints**:
-  - Context-aware commands with single-stroke gestures and multi-stroke sequences
+  - Context-aware commands with optional typed names, single-stroke gestures, and multi-stroke sequences
   - `CommandBar` control for discoverable shortcuts
 - **Rendering**:
   - Cell-buffer renderer + diffing, efficient batched output, synchronized output (DEC 2026)

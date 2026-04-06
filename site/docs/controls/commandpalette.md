@@ -22,6 +22,8 @@ title: CommandPalette
 
 Only commands marked with `CommandPresentation.CommandPalette` are shown.
 
+If a command defines `Command.Name`, the default palette template shows it before the label markup (for example `/open - Open File`). Commands without a name still render only their label.
+
 ## Typical usage
 
 Create a palette instance and register a command that opens it:
@@ -74,11 +76,15 @@ palette.Style(CommandPaletteStyle.Default with
     MaxWidth = 120,
     PopupVerticalAlignment = Align.End,
     PopupOffsetY = -2,
+    ShowCommandName = true,
+    CommandNamePrefix = "/",
+    CommandNameSeparator = " - ",
     PopupTemplateFactory = visual => new Border(visual),
 });
 ```
 
 `PopupWidthPercent` and `PopupHeightPercent` are optional viewport-relative sizing hints. Alignment (`Start`, `Center`, `End`, `Stretch`) and `PopupOffsetX` / `PopupOffsetY` still control where the popup appears after that size is resolved.
+`ShowCommandName`, `CommandNamePrefix`, and `CommandNameSeparator` affect the built-in item template only. If you provide a custom `ItemTemplate`, that template fully owns the row rendering.
 
 ## Query state
 
@@ -96,6 +102,7 @@ var palette = new CommandPalette
 
 - Default popup alignment: `PopupHorizontalAlignment = Align.Center`, `PopupVerticalAlignment = Align.Start`
 - Default query behavior: `ClearQueryOnShow = true`
+- Default command name display: `ShowCommandName = true`, `CommandNamePrefix = "/"`, `CommandNameSeparator = " - "`
 
 ## Related
 - [Commands](../commands.md)

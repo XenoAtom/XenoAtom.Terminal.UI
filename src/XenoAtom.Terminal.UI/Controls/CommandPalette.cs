@@ -297,7 +297,9 @@ public sealed partial class CommandPalette : Visual
         this.MinWidth(minWidth);
         this.MaxWidth(maxWidth);
 
-        _results.ItemTemplate = style.ItemTemplate ?? CommandPaletteStyle.CreateDefaultItemTemplate();
+        _results.ItemTemplate = CommandPaletteStyle.UsesDefaultItemTemplate(style.ItemTemplate)
+            ? CommandPaletteStyle.CreateDefaultItemTemplate(style)
+            : style.ItemTemplate!.Value;
 
         var theme = GetTheme();
         _searchBox.Style(ResolveSearchBoxStyle(theme));

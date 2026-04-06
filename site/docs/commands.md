@@ -16,6 +16,7 @@ A `Command` is an action with:
 
 - A stable `Id`
 - A user-facing `LabelMarkup` (ANSI markup supported, including theme tokens like `[primary]`)
+- An optional stable `Name` for typed-command surfaces (for example `open`, `theme.set`)
 - An optional `Gesture` (single-stroke shortcut)
 - An optional `Sequence` (`Ctrl+K Ctrl+P` style multi-stroke shortcuts)
 - Optional `CanExecute` / `IsVisible` predicates

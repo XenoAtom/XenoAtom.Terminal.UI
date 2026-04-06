@@ -26,6 +26,9 @@ public sealed class CommandPaletteDemo : ControlsDemoBase
         var offsetY = new State<int>(0);
         var clearQueryOnShow = new State<bool>(true);
         var queryText = new State<string?>(string.Empty);
+        var showCommandName = new State<bool>(true);
+        var commandNamePrefix = new State<string?>("/");
+        var commandNameSeparator = new State<string?>(" - ");
         var palette = new CommandPalette().Style(() => CommandPaletteStyle.Default with
         {
             PopupWidthPercent = Math.Clamp(widthPercent.Value, 1, 100),
@@ -35,6 +38,9 @@ public sealed class CommandPaletteDemo : ControlsDemoBase
             PopupVerticalAlignment = verticalAlignment.Value,
             PopupOffsetX = offsetX.Value,
             PopupOffsetY = offsetY.Value,
+            ShowCommandName = showCommandName.Value,
+            CommandNamePrefix = commandNamePrefix.Value ?? string.Empty,
+            CommandNameSeparator = commandNameSeparator.Value ?? string.Empty,
         })
             .QueryText(queryText)
             .ClearQueryOnShow(clearQueryOnShow);
@@ -44,9 +50,11 @@ public sealed class CommandPaletteDemo : ControlsDemoBase
             palette.Show();
         }
 
+        var focusProbe = new TextBox().Placeholder("Enter some text here to enable CTRL+P to be accessible");
+
         var host = new VStack(
             DemoUi.Title("Command palette"),
-                new TextBlock("Press Ctrl+P to open the command palette. Type to search, press Enter to run the top match, use arrows to navigate, or resize the window with the mouse.")
+                new TextBlock("Press Ctrl+P to open the command palette. Type to search, press Enter to run the top match, use arrows to navigate, or resize the window with the mouse. Some commands intentionally define a typed name so you can preview the optional name display.")
                 .Wrap(true),
                 new Group("Query state").Content(new VStack(
                         new CheckBox("Clear query on show").IsChecked(clearQueryOnShow),
@@ -74,8 +82,18 @@ public sealed class CommandPaletteDemo : ControlsDemoBase
                             .Spacing(1),
                         DemoUi.Hint("Stretch ignores percentage sizing on that axis. Offsets are applied after alignment."))
                     .Spacing(1)),
+                new Group("Command names").Content(new VStack(
+                        new CheckBox("Show command names").IsChecked(showCommandName),
+                        new HStack(
+                                "Prefix:",
+                                new TextBox(commandNamePrefix).MinWidth(8).MaxWidth(12),
+                                "Separator:",
+                                new TextBox(commandNameSeparator).MinWidth(8).MaxWidth(16))
+                            .Spacing(1),
+                        DemoUi.Hint("Only commands with Command.Name set use this prefix and separator; unnamed commands still show only their label."))
+                    .Spacing(1)),
                 new TextBlock(() => $"Popup style: {widthPercent.Value}% width, {horizontalAlignment.Value}/{verticalAlignment.Value}, offset ({offsetX.Value}, {offsetY.Value})"),
-                new TextBox().Placeholder("Enter some text here to enable CTRL+P to be accessible"),
+                focusProbe,
                 new HStack(
                         new Button("Increment").Click(() => counter.Value++),
                         new CheckBox("Enabled").IsChecked(enabled))
@@ -99,6 +117,7 @@ public sealed class CommandPaletteDemo : ControlsDemoBase
             host.AddCommand(new Command
             {
                 Id = $"Demo.Increment{i}",
+                Name = localI % 2 == 0 ? $"inc.{localI}" : null,
                 LabelMarkup = $"[primary]Increment {i}[/]",
                 DescriptionMarkup = $"[dim]Increase the counter by {i}[/]",
                 Gesture = new KeyGesture(TerminalChar.CtrlI, TerminalModifiers.Ctrl),
@@ -111,6 +130,7 @@ public sealed class CommandPaletteDemo : ControlsDemoBase
         host.AddCommand(new Command
         {
             Id = "Demo.Reset",
+            Name = "reset",
             LabelMarkup = "[warning]Reset[/]",
             DescriptionMarkup = "[dim]Reset the counter to zero[/]",
             Presentation = CommandPresentation.CommandPalette,
@@ -118,7 +138,11 @@ public sealed class CommandPaletteDemo : ControlsDemoBase
             Execute = _ => counter.Value = 0,
         });
 
-        return host.InScreenshot(context, ShowPalette);
+        return host.InScreenshot(context, () =>
+        {
+            focusProbe.App?.Focus(focusProbe);
+            ShowPalette();
+        });
     }
 }
 

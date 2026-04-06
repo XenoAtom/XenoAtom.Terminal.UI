@@ -52,7 +52,7 @@ See also:
 - [Culture](culture.md) (culture-aware value formatting)
 - [Layout](layout.md) (layout protocol, alignment, margin/padding)
 - [Input](input.md) (keyboard/mouse, focus scopes, overlay focus restore, routed events, capture)
-- [Commands](commands.md) (commands, key sequences, key hints with CommandBar)
+- [Commands](commands.md) (commands, typed names, key sequences, key hints with CommandBar)
 - [Styling](styling.md) (Theme, styles, environment, brushes/gradients)
 - [Rendering](rendering.md) (cell buffer, diff renderer, performance)
 - [Scrolling](scrolling.md) (ScrollViewer, scroll models, scrollbars)

@@ -122,15 +122,53 @@ public sealed record CommandPaletteStyle : IStyle<CommandPaletteStyle>
     /// </remarks>
     public DataTemplate<ResolvedCommand>? ItemTemplate { get; init; }
 
+    /// <summary>
+    /// Gets a value indicating whether the default item template shows <see cref="Command.Name"/> before the label markup.
+    /// </summary>
+    /// <remarks>
+    /// This setting is only used when <see cref="ItemTemplate"/> is not overridden.
+    /// </remarks>
+    public bool ShowCommandName { get; init; } = true;
+
+    /// <summary>
+    /// Gets the prefix inserted before the command name by the default item template.
+    /// </summary>
+    /// <remarks>
+    /// This setting is only used when <see cref="ItemTemplate"/> is not overridden and the command defines a non-empty <see cref="Command.Name"/>.
+    /// </remarks>
+    public string CommandNamePrefix { get; init; } = "/";
+
+    /// <summary>
+    /// Gets the separator inserted between the command name and label markup by the default item template.
+    /// </summary>
+    /// <remarks>
+    /// This setting is only used when <see cref="ItemTemplate"/> is not overridden and the command defines a non-empty <see cref="Command.Name"/>.
+    /// </remarks>
+    public string CommandNameSeparator { get; init; } = " - ";
+
     internal static DataTemplate<ResolvedCommand> CreateDefaultItemTemplate() => DefaultItemTemplate;
 
-    private static DataTemplate<ResolvedCommand> CreateDefaultItemTemplateCore(bool showDescription)
+    internal static DataTemplate<ResolvedCommand> CreateDefaultItemTemplate(CommandPaletteStyle style)
+        => CreateDefaultItemTemplateCore(
+            showDescription: true,
+            showCommandName: style.ShowCommandName,
+            commandNamePrefix: style.CommandNamePrefix,
+            commandNameSeparator: style.CommandNameSeparator);
+
+    internal static bool UsesDefaultItemTemplate(DataTemplate<ResolvedCommand>? itemTemplate)
+        => itemTemplate is null || itemTemplate.Value.Equals(DefaultItemTemplate);
+
+    private static DataTemplate<ResolvedCommand> CreateDefaultItemTemplateCore(
+        bool showDescription,
+        bool showCommandName = true,
+        string? commandNamePrefix = "/",
+        string? commandNameSeparator = " - ")
         => new(Display: (DataTemplateValue<ResolvedCommand> entryValue, in DataTemplateContext _) =>
         {
             var entry = entryValue.GetValue();
             var cmd = entry.Command;
 
-            Visual label = new Markup(cmd.LabelMarkup);
+            Visual label = CreateLabelContent(cmd, showCommandName, commandNamePrefix, commandNameSeparator);
 
             Visual? shortcut = null;
             if (cmd.Sequence is { } seq)
@@ -154,4 +192,19 @@ public sealed record CommandPaletteStyle : IStyle<CommandPaletteStyle>
 
             return item;
         }, Editor: null);
+
+    private static Visual CreateLabelContent(Command command, bool showCommandName, string? commandNamePrefix, string? commandNameSeparator)
+    {
+        if (!showCommandName || string.IsNullOrEmpty(command.Name))
+        {
+            return new Markup(command.LabelMarkup);
+        }
+
+        return new HStack(
+            new TextBlock($"{commandNamePrefix}{command.Name}{commandNameSeparator}"),
+            new Markup(command.LabelMarkup))
+        {
+            Spacing = 0,
+        };
+    }
 }
