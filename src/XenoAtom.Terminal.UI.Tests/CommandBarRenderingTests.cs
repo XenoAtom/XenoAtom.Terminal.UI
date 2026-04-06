@@ -82,6 +82,34 @@ public sealed class CommandBarRenderingTests
         Assert.IsTrue(alphaRow != betaRow || betaRow != gammaRow, "Expected wrapped commands to span multiple rows.");
     }
 
+    [TestMethod]
+    public void CommandBar_Refreshes_When_Global_Command_Is_Replaced_After_Run_Starts()
+    {
+        var probe = new CommandProbe();
+        var bar = new CommandBar();
+        var layout = new DockLayout { Content = probe, Bottom = bar };
+
+        using var driver = new TerminalAppTestDriver(layout, TerminalHostKind.Fullscreen, new TerminalSize(60, 6));
+        driver.App.Focus(probe);
+        driver.Tick();
+
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = TerminalApp.DefaultQuitCommandId,
+            LabelMarkup = "Leave",
+            Gesture = new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalKey.F4),
+            Execute = _ => { },
+        });
+
+        driver.Tick();
+
+        var rendered = string.Join('\n', GetScreenLines(driver, 60, 6));
+        StringAssert.Contains(rendered, "F4");
+        StringAssert.Contains(rendered, "Leave");
+        Assert.IsFalse(rendered.Contains("Ctrl+Q", StringComparison.Ordinal), "The command bar should stop showing the original quit gesture after replacement.");
+        Assert.IsFalse(rendered.Contains("Quit", StringComparison.Ordinal), "The command bar should stop showing the original quit label after replacement.");
+    }
+
     private static string[] GetScreenLines(TerminalAppTestDriver driver, int width, int height)
     {
         var screen = new AnsiTestScreen(width, height);

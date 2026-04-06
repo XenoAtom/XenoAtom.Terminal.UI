@@ -60,7 +60,6 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private Func<TerminalRunningContext, ValueTask<TerminalLoopResult>>? _onUpdate;
     private TerminalRunningContext? _updateContext;
     private readonly AnsiBuilder _updateOutputBuilder = new(initialCapacity: 4096);
-    private global::XenoAtom.Terminal.UI.Input.KeyGesture _exitGesture;
     private bool _inlineRemoveOnEnd;
     private Dictionary<string, AnsiStyle>? _previousMarkupStyles;
 
@@ -132,6 +131,15 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     /// Gets the predicate used to widen additional runes to two terminal cells for this app.
     /// </summary>
     public Func<Rune, bool> WideRuneResolver => _wideRuneResolver;
+
+    /// <summary>
+    /// Gets the command id used by the built-in application quit command.
+    /// </summary>
+    /// <remarks>
+    /// Applications can use this id to replace or re-register the default quit command through
+    /// <see cref="GlobalCommands"/>, <see cref="AddGlobalCommand(Command)"/>, and <see cref="RemoveGlobalCommand(string)"/>.
+    /// </remarks>
+    public static string DefaultQuitCommandId { get; } = "TerminalApp.Quit";
 
     /// <summary>
     /// Gets the global commands registered on this application.
@@ -284,14 +292,14 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             _inlineHost = new InlineInteractiveHost(_terminal);
         }
 
-        _exitGesture = _options.ExitGesture ?? GetDefaultExitGesture(_options.HostKind);
+        var exitGesture = _options.ExitGesture ?? GetDefaultExitGesture(_options.HostKind);
 
         AddGlobalCommand(new Command
         {
-            Id = "TerminalApp.Quit",
+            Id = DefaultQuitCommandId,
             LabelMarkup = "Quit",
             DescriptionMarkup = "Quit the application.",
-            Gesture = _exitGesture,
+            Gesture = exitGesture,
             Importance = CommandImportance.Primary,
             Presentation = CommandPresentation.CommandBar,
             Execute = static v => v.App?.Stop(),
@@ -2570,13 +2578,8 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
         var activeModal = FindActiveModalRoot(Root);
 
-        if (_exitGesture.Matches(keyEvent))
+        if (TryHandleAppExitGesture(keyEvent))
         {
-            // Allow controls to handle the exit gesture (e.g. close transient popups) before exiting the app.
-            if (!DispatchKeyEvent(keyEvent, routeCommands: false))
-            {
-                _cts.Cancel();
-            }
             return;
         }
 
@@ -2614,6 +2617,56 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         => hostKind == TerminalHostKind.Fullscreen
             ? new global::XenoAtom.Terminal.UI.Input.KeyGesture(TerminalChar.CtrlQ, TerminalModifiers.Ctrl)
             : new global::XenoAtom.Terminal.UI.Input.KeyGesture(TerminalKey.Escape);
+
+    private bool TryHandleAppExitGesture(TerminalKeyEvent keyEvent)
+    {
+        if (!TryGetDefaultQuitCommand(out var command))
+        {
+            return false;
+        }
+
+        if (command.Gesture is not { } gesture || !gesture.Matches(keyEvent))
+        {
+            return false;
+        }
+
+        // Allow controls to observe the raw gesture first (e.g. close a transient popup) before the app-level
+        // quit command runs. The command itself stays replaceable at runtime via GlobalCommands.
+        if (DispatchKeyEvent(keyEvent, routeCommands: false))
+        {
+            return true;
+        }
+
+        EnsureFocusInScope();
+        var target = FocusedElement ?? Root;
+        if (!command.IsVisibleFor(target) || !command.CanExecuteFor(target))
+        {
+            return command.ConsumesGestureWhenUnavailable;
+        }
+
+        command.Execute(target);
+        return true;
+    }
+
+    private bool TryGetDefaultQuitCommand(out Command command)
+    {
+        var commands = _globalCommands;
+        if (commands is not null)
+        {
+            for (var i = 0; i < commands.Count; i++)
+            {
+                var candidate = commands[i];
+                if (string.Equals(candidate.Id, DefaultQuitCommandId, StringComparison.Ordinal))
+                {
+                    command = candidate;
+                    return true;
+                }
+            }
+        }
+
+        command = null!;
+        return false;
+    }
 
     private void DispatchTextInput(string text)
     {

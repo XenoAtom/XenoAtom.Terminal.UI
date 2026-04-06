@@ -8,6 +8,8 @@ XenoAtom.Terminal.UI provides a lightweight **command system** to make keyboard 
 
 Commands are **retained-mode**, registered on visuals (local) or on the `TerminalApp` (global), and routed using the same focus → parent traversal as other keyboard handling.
 
+`TerminalApp` registers a default global quit command (`TerminalApp.DefaultQuitCommandId`, value `TerminalApp.Quit`). Replacing or removing that command after the app starts also updates the live app-exit shortcut, not just command discovery surfaces.
+
 ## What is a command?
 
 A `Command` is an action with:

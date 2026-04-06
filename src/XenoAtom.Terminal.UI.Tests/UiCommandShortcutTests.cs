@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Reflection;
 using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Hosting;
@@ -132,6 +133,79 @@ public sealed class CommandShortcutTests
 
         Assert.AreEqual(0, probe.PrimaryCount);
         Assert.AreEqual(1, probe.FallbackCount);
+    }
+
+    [TestMethod]
+    public void Replacing_Default_Quit_Command_Updates_Runtime_Gesture_Handling()
+    {
+        var root = new EmptyProbe();
+        var invoked = false;
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = TerminalApp.DefaultQuitCommandId,
+            LabelMarkup = "Leave",
+            Gesture = new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalKey.F4),
+            Execute = _ => invoked = true,
+        });
+
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlQ, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+
+        Assert.IsFalse(IsStopRequested(driver.App), "Replacing TerminalApp.Quit should disable the original built-in exit gesture.");
+        Assert.IsFalse(invoked, "The replacement exit command should not run for the old gesture.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F4 });
+        driver.Tick();
+
+        Assert.IsTrue(invoked, "The replacement exit command should run for its new gesture.");
+    }
+
+    [TestMethod]
+    public void Removing_Then_Readding_Default_Quit_Command_Updates_Runtime_Gesture_Handling()
+    {
+        var root = new EmptyProbe();
+        var invoked = false;
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        Assert.IsTrue(driver.App.RemoveGlobalCommand(TerminalApp.DefaultQuitCommandId), "Expected the default quit command to be registered.");
+
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = TerminalApp.DefaultQuitCommandId,
+            LabelMarkup = "Leave",
+            Gesture = new XenoAtom.Terminal.UI.Input.KeyGesture(TerminalKey.F4),
+            Execute = _ => invoked = true,
+        });
+
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlQ, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+
+        Assert.IsFalse(IsStopRequested(driver.App), "Removing and re-adding TerminalApp.Quit should disable the original built-in exit gesture.");
+        Assert.IsFalse(invoked, "The re-registered quit command should not run for the old gesture.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F4 });
+        driver.Tick();
+
+        Assert.IsTrue(invoked, "The re-registered quit command should run for its new gesture.");
+    }
+
+    private static bool IsStopRequested(TerminalApp app)
+    {
+        var ctsField = typeof(TerminalApp).GetField("_cts", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.IsNotNull(ctsField, "Expected TerminalApp to expose its cancellation token source field for tests.");
+        var cts = (CancellationTokenSource?)ctsField.GetValue(app);
+        Assert.IsNotNull(cts, "Expected TerminalApp to initialize its cancellation token source.");
+        return cts.IsCancellationRequested;
     }
 
     private sealed class EmptyProbe : Visual
