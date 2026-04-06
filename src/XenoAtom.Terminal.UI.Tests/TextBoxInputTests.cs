@@ -65,6 +65,34 @@ public sealed class TextBoxInputTests
     }
 
     [TestMethod]
+    public void TextBox_Keeps_Placeholder_Visible_While_Focused_Until_Text_Is_Entered()
+    {
+        var textBox = new TextBox().Placeholder("Search");
+        var root = new VStack { textBox };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(20, 4));
+        driver.Tick();
+
+        Assert.AreSame(textBox, driver.App.FocusedElement, "Expected the text box to take initial focus.");
+
+        var initialScreen = new AnsiTestScreen(20, 4);
+        initialScreen.Apply(driver.Backend.GetOutText());
+        var initialRendered = initialScreen.GetText();
+
+        StringAssert.Contains(initialRendered, "Search", "Expected the placeholder to remain visible while the empty text box is focused.");
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "a" });
+        driver.TickUntil(() => textBox.Text == "a");
+
+        var typedScreen = new AnsiTestScreen(20, 4);
+        typedScreen.Apply(driver.Backend.GetOutText());
+        var typedRendered = typedScreen.GetText();
+
+        StringAssert.Contains(typedRendered, "a", "Expected typed text to render.");
+        Assert.IsFalse(typedRendered.Contains("Search", StringComparison.Ordinal), "Expected the placeholder to disappear after text is entered.");
+    }
+
+    [TestMethod]
     public void TextBox_Supports_Ctrl_Kill_And_Yank()
     {
         var textBox = new TextBox("hello world") { CaretIndex = 6 };

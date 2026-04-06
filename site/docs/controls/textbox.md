@@ -27,6 +27,7 @@ new TextBox("Hello");
 - cursor navigation
 - selection (keyboard and mouse)
 - clipboard shortcuts (Ctrl+C/X/V) when enabled by the control mode / clipboard settings
+- placeholder text stays visible while the editor is empty, even when focused
 - overflow indicators when content is wider than the viewport
 
 ## Undo / redo

@@ -148,7 +148,7 @@ public partial class TextBox : TextEditorBase
     protected override TextAlignment Alignment => TextAlignment;
 
     /// <inheritdoc />
-    protected override bool ShowPlaceholderWhenUnfocusedOnly => true;
+    protected override bool ShowPlaceholderWhenUnfocusedOnly => false;
 
     /// <summary>
     /// Gets the style used to render the text box.

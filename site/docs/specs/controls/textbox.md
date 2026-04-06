@@ -48,7 +48,7 @@ This document captures design and implementation notes for `TextBox`.
 - `IsSingleLine = true`
 - `AcceptsReturn = false`
 - `Alignment => TextAlignment`
-- `ShowPlaceholderWhenUnfocusedOnly = true`
+- `ShowPlaceholderWhenUnfocusedOnly = false`
 - `GetTextBoxStyle()` resolves `TextBoxStyle` from the style environment.
 
 ## Layout & rendering
@@ -87,7 +87,7 @@ Rendering is split into two parts:
 ## Text editing & document binding
 
 - `TextBox` uses a `DynamicTextDocument` so the editor reads/writes through the `Text` bindable property.
-- Placeholder rendering comes from `TextEditorBase.Placeholder` and is styled with `TextBoxStyle.PlaceholderStyle(...)`.
+- Placeholder rendering comes from `TextEditorBase.Placeholder` and is styled with `TextBoxStyle.PlaceholderStyle(...)`. The placeholder stays visible while the editor is empty, including when focused.
 - Selection rendering uses `TextBoxStyle.SelectionStyle(theme)` (currently bold + selection background color).
 
 ## Password mode
