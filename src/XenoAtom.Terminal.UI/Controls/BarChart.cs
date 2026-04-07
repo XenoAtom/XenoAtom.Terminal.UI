@@ -148,12 +148,25 @@ public sealed partial class BarChart : Visual
 
         _grid.Measure(new LayoutConstraints(0, maxWidth, 0, remaining));
 
-        var naturalWidth = Math.Max(title?.DesiredSize.Width ?? 0, _grid.DesiredSize.Width);
-        var naturalHeight = titleHeight + _grid.DesiredSize.Height;
+        var titleHints = title?.MeasureHints ?? SizeHints.Fixed(Size.Zero);
+        var gridHints = _grid.MeasureHints;
 
-        var min = new Size(LayoutConstants.ClampFinite(naturalWidth), LayoutConstants.ClampFinite(naturalHeight));
-        var natural = min;
-        var max = new Size(LayoutConstants.Infinite, LayoutConstants.ClampFinite(naturalHeight));
+        var min = new Size(
+            LayoutConstants.ClampFinite(Math.Max(titleHints.Min.Width, gridHints.Min.Width)),
+            LayoutConstants.ClampFinite(titleHints.Min.Height + gridHints.Min.Height));
+
+        var natural = new Size(
+            LayoutConstants.ClampFinite(Math.Max(titleHints.Natural.Width, gridHints.Natural.Width)),
+            LayoutConstants.ClampFinite(titleHints.Natural.Height + gridHints.Natural.Height));
+
+        var maxWidthHint = LayoutConstants.IsInfinite(titleHints.Max.Width) || LayoutConstants.IsInfinite(gridHints.Max.Width)
+            ? LayoutConstants.Infinite
+            : LayoutConstants.ClampOrInfinite(Math.Max(titleHints.Max.Width, gridHints.Max.Width));
+        var maxHeightHint = LayoutConstants.IsInfinite(titleHints.Max.Height) || LayoutConstants.IsInfinite(gridHints.Max.Height)
+            ? LayoutConstants.Infinite
+            : LayoutConstants.ClampOrInfinite(titleHints.Max.Height + gridHints.Max.Height);
+        var max = new Size(maxWidthHint, maxHeightHint);
+
         return SizeHints.Flex(min, natural, max, growX: 1, growY: 0, shrinkX: 1, shrinkY: 0);
     }
 

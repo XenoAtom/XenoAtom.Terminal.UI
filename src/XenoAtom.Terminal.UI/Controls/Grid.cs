@@ -186,7 +186,7 @@ public sealed partial class Grid : Visual
             var availableForColumns = innerAvailW == LayoutConstants.Infinite
                 ? Sum(colNat)
                 : innerAvailW;
-            FlexAllocator.Allocate(availableForColumns, colMin, colNat, colMax, colGrow, colShrink, allocatedColWidths);
+            AllocateColumns(availableForColumns, colDefs, colMin, colNat, colMax, colGrow, colShrink, allocatedColWidths, widthBounded);
 
             // Re-measure for row heights using allocated column widths (wrapping, etc.).
             for (var i = 0; i < _cells.Count; i++)
@@ -353,7 +353,7 @@ public sealed partial class Grid : Visual
             NormalizeTracks(rowDefs, rowMin, rowNat, rowMax);
 
             // Allocate widths first so we can re-measure for row heights (wrapping).
-            FlexAllocator.Allocate(innerW, colMin, colNat, colMax, colGrow, colShrink, colWidths);
+            AllocateColumns(innerW, colDefs, colMin, colNat, colMax, colGrow, colShrink, colWidths, boundedAxis: true);
 
             // Re-measure for row heights using allocated widths.
             for (var i = 0; i < _cells.Count; i++)
@@ -382,7 +382,7 @@ public sealed partial class Grid : Visual
 
             NormalizeTracks(rowDefs, rowMin, rowNat, rowMax);
 
-            FlexAllocator.Allocate(innerH, rowMin, rowNat, rowMax, rowGrow, rowShrink, rowHeights);
+            AllocateRows(innerH, rowDefs, rowMin, rowNat, rowMax, rowGrow, rowShrink, rowHeights, boundedAxis: true);
 
             var x0 = finalRect.X + padding.Left;
             var y0 = finalRect.Y + padding.Top;
@@ -706,6 +706,243 @@ public sealed partial class Grid : Visual
             GridUnitType.Star => !boundedAxis,
             _ => true,
         };
+
+    private static void AllocateColumns(
+        int available,
+        ColumnDefinition[] defs,
+        ReadOnlySpan<int> min,
+        ReadOnlySpan<int> natural,
+        ReadOnlySpan<int> max,
+        ReadOnlySpan<int> grow,
+        ReadOnlySpan<int> shrink,
+        Span<int> result,
+        bool boundedAxis)
+    {
+        if (!boundedAxis || !HasTrackType(defs, GridUnitType.Star))
+        {
+            FlexAllocator.Allocate(available, min, natural, max, grow, shrink, result);
+            return;
+        }
+
+        var count = defs.Length;
+        int[]? rented = null;
+        var adjustedNatural = count <= 128
+            ? stackalloc int[count]
+            : (rented = ArrayPool<int>.Shared.Rent(count));
+
+        try
+        {
+            for (var i = 0; i < count; i++)
+            {
+                adjustedNatural[i] = defs[i].Width.Type == GridUnitType.Star ? 0 : natural[i];
+            }
+
+            FlexAllocator.Allocate(available, min, adjustedNatural, max, grow, shrink, result);
+            EnforceStarTrackMinimums(defs, min, shrink, result);
+        }
+        finally
+        {
+            if (rented is not null)
+            {
+                ArrayPool<int>.Shared.Return(rented);
+            }
+        }
+    }
+
+    private static void AllocateRows(
+        int available,
+        RowDefinition[] defs,
+        ReadOnlySpan<int> min,
+        ReadOnlySpan<int> natural,
+        ReadOnlySpan<int> max,
+        ReadOnlySpan<int> grow,
+        ReadOnlySpan<int> shrink,
+        Span<int> result,
+        bool boundedAxis)
+    {
+        if (!boundedAxis || !HasTrackType(defs, GridUnitType.Star))
+        {
+            FlexAllocator.Allocate(available, min, natural, max, grow, shrink, result);
+            return;
+        }
+
+        var count = defs.Length;
+        int[]? rented = null;
+        var adjustedNatural = count <= 128
+            ? stackalloc int[count]
+            : (rented = ArrayPool<int>.Shared.Rent(count));
+
+        try
+        {
+            for (var i = 0; i < count; i++)
+            {
+                adjustedNatural[i] = defs[i].Height.Type == GridUnitType.Star ? 0 : natural[i];
+            }
+
+            FlexAllocator.Allocate(available, min, adjustedNatural, max, grow, shrink, result);
+            EnforceStarTrackMinimums(defs, min, shrink, result);
+        }
+        finally
+        {
+            if (rented is not null)
+            {
+                ArrayPool<int>.Shared.Return(rented);
+            }
+        }
+    }
+
+    private static void EnforceStarTrackMinimums(
+        ColumnDefinition[] defs,
+        ReadOnlySpan<int> min,
+        ReadOnlySpan<int> shrink,
+        Span<int> result)
+    {
+        var deficit = 0;
+        for (var i = 0; i < defs.Length; i++)
+        {
+            if (defs[i].Width.Type != GridUnitType.Star)
+            {
+                continue;
+            }
+
+            var minWidth = Math.Max(0, min[i]);
+            if (result[i] >= minWidth)
+            {
+                continue;
+            }
+
+            deficit += minWidth - result[i];
+            result[i] = minWidth;
+        }
+
+        if (deficit > 0)
+        {
+            ShrinkAllocated(deficit, min, shrink, result);
+        }
+    }
+
+    private static void EnforceStarTrackMinimums(
+        RowDefinition[] defs,
+        ReadOnlySpan<int> min,
+        ReadOnlySpan<int> shrink,
+        Span<int> result)
+    {
+        var deficit = 0;
+        for (var i = 0; i < defs.Length; i++)
+        {
+            if (defs[i].Height.Type != GridUnitType.Star)
+            {
+                continue;
+            }
+
+            var minHeight = Math.Max(0, min[i]);
+            if (result[i] >= minHeight)
+            {
+                continue;
+            }
+
+            deficit += minHeight - result[i];
+            result[i] = minHeight;
+        }
+
+        if (deficit > 0)
+        {
+            ShrinkAllocated(deficit, min, shrink, result);
+        }
+    }
+
+    private static void ShrinkAllocated(int deficit, ReadOnlySpan<int> min, ReadOnlySpan<int> shrink, Span<int> result)
+    {
+        if (deficit <= 0)
+        {
+            return;
+        }
+
+        var totalShrink = 0;
+        for (var i = 0; i < result.Length; i++)
+        {
+            totalShrink += Math.Max(0, shrink[i]);
+        }
+
+        if (totalShrink <= 0)
+        {
+            return;
+        }
+
+        var removed = 0;
+        for (var i = 0; i < result.Length; i++)
+        {
+            var shrinkWeight = Math.Max(0, shrink[i]);
+            if (shrinkWeight <= 0)
+            {
+                continue;
+            }
+
+            var current = result[i];
+            var minValue = Math.Max(0, min[i]);
+            var cap = current - minValue;
+            if (cap <= 0)
+            {
+                continue;
+            }
+
+            var share = (deficit * shrinkWeight) / totalShrink;
+            var sub = Math.Min(cap, Math.Max(0, share));
+            if (sub <= 0)
+            {
+                continue;
+            }
+
+            result[i] = current - sub;
+            removed += sub;
+        }
+
+        var remaining = deficit - removed;
+        if (remaining <= 0)
+        {
+            return;
+        }
+
+        while (remaining > 0)
+        {
+            var progressed = false;
+            for (var i = 0; i < result.Length && remaining > 0; i++)
+            {
+                if (shrink[i] <= 0)
+                {
+                    continue;
+                }
+
+                var minValue = Math.Max(0, min[i]);
+                if (result[i] <= minValue)
+                {
+                    continue;
+                }
+
+                result[i]--;
+                remaining--;
+                progressed = true;
+            }
+
+            if (!progressed)
+            {
+                break;
+            }
+        }
+    }
+
+    private static bool HasTrackType(RowDefinition[] defs, GridUnitType type)
+    {
+        for (var i = 0; i < defs.Length; i++)
+        {
+            if (defs[i].Height.Type == type)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static int GetTrackWeight(double value)
     {

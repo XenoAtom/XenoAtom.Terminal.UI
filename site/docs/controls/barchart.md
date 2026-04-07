@@ -46,6 +46,7 @@ By default, the chart derives bounds from items (`Minimum = 0`, `Maximum = max(i
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Start` 
+- On bounded layouts, the chart keeps an intrinsic minimum width and uses the offered width as its natural size, so it can live inside star/flex grid columns without forcing them wider.
 
 ## Styling
 The chart is styled via `BarChartStyle`:

@@ -286,6 +286,45 @@ public sealed class GridLayoutTests
     }
 
     [TestMethod]
+    public void Grid_With_BarChart_In_Star_Column_Preserves_Weighted_Split()
+    {
+        var log = new LogControl().WrapText(true);
+        log.AppendLine("alpha beta gamma");
+
+        var chart = new BarChart()
+            .Minimum(0.0)
+            .Maximum(1.0)
+            .ShowValues(false)
+            .ShowPercentages(true)
+            .Items(
+                new BarChartItem("Download", 0.52),
+                new BarChartItem("Compile", 0.85),
+                new BarChartItem("Test", 0.49),
+                new BarChartItem("Package", 0.71),
+                new BarChartItem("Deploy", 0.41));
+
+        var progressStack = new VStack(chart).Spacing(1);
+
+        var left = new Group().TopLeftText("Log").Padding(1).Content(log.HorizontalAlignment(Align.Stretch)).Stretch();
+        var right = new Group().TopLeftText("Progress").Padding(1).Content(progressStack).Stretch();
+
+        var grid = new Grid()
+            .Columns(
+                new ColumnDefinition { Width = GridLength.Star(2), MinWidth = 0 },
+                new ColumnDefinition { Width = GridLength.Star(1), MinWidth = 0 })
+            .Rows(new RowDefinition { Height = GridLength.Star(1) })
+            .Cell(left, 0, 0)
+            .Cell(right, 0, 1)
+            .Stretch();
+
+        grid.Measure(new Size(60, 12));
+        grid.Arrange(new Rectangle(0, 0, 60, 12));
+
+        Assert.AreEqual(new Rectangle(0, 0, 40, 12), left.Bounds);
+        Assert.AreEqual(new Rectangle(40, 0, 20, 12), right.Bounds);
+    }
+
+    [TestMethod]
     public void Button_With_Star_Grid_Content_Uses_Bounded_Width()
     {
         var fileNameText = new Markup("This is a longfilename.txt")

@@ -59,9 +59,11 @@ This document specifies the current behavior and design of the `BarChart` contro
 
 - The chart measures `Title` (when non-null), then measures the internal grid with the remaining height.
 - The returned size hints are “flex” in X:
-  - `min/natural` width is `max(titleWidth, gridWidth)`
+  - `min` width is `max(title.Min.Width, grid.Min.Width)`
+  - `natural` width is `max(title.Natural.Width, grid.Natural.Width)`
+  - Under bounded measurement, the chart keeps its intrinsic minimum width and lets the natural width expand to the offered width when the internal star bar column stretches.
   - `max` width is infinite (allows horizontal stretching)
-  - height is fixed to `titleHeight + gridHeight`
+  - `min/natural/max` height is computed by stacking the title and grid height hints
 
 ### Arrange
 

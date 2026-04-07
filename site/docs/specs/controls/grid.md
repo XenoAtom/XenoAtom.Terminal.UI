@@ -70,7 +70,7 @@ This document specifies the current behavior and design of the `Grid` control as
 
 - `Fixed(n)`: track size is exactly `n` (after min/max clamping).
 - `Auto`: track size is derived from the maximum child size in that track (span == 1), with no extra growth.
-- `Star(weight)`: weighted remaining-space sizing. On bounded axes it starts from the track min and divides the remaining space by weight.
+- `Star(weight)`: weighted remaining-space sizing. On bounded axes it divides the available remaining space by weight and then enforces min/max constraints.
 - `FlexStar(weight)`: content-aware weighted sizing. It tracks intrinsic child size first, then participates in growth when extra space is available.
 
 ### Min/Max constraints
@@ -136,7 +136,7 @@ Then, after measuring cells:
 - For each cell with `ColumnSpan == 1`, the column's `min` is updated to the max of the cell min hint.
 - For each cell with `RowSpan == 1`, the row's `min` is updated to the max of the cell min hint.
 - `Auto` and `FlexStar` also update `natural` from child natural hints.
-- `Star` updates `natural` from child natural hints only when the measured axis is unbounded; on bounded axes it keeps `natural == min` so child natural widths/heights do not bias the ratio.
+- `Star` updates `natural` from child natural hints only when the measured axis is unbounded; on bounded axes the weighted allocation uses a zero-width baseline for `Star` tracks so child natural widths/heights and track minimums do not bias the ratio unless a min/max constraint actually binds.
 
 The grid then normalizes tracks so `natural` is clamped to `[min..max]` when max is finite.
 
@@ -146,7 +146,7 @@ parents a meaningful desired width.
 
 ### Allocation (Arrange)
 
-During arrange, `FlexAllocator.Allocate(...)` computes the final integer sizes for each track:
+During arrange, bounded `Star` axes use a star-aware allocation step before final min enforcement; other cases use `FlexAllocator.Allocate(...)`:
 
 - If there is extra space, it is distributed to Star and FlexStar tracks by their weights.
 - If space is constrained, tracks shrink toward their `min` according to `shrink` weights.

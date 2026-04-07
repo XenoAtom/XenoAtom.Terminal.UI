@@ -5,6 +5,7 @@
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Hosting;
+using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -56,5 +57,27 @@ public sealed class BarChartTests
 
         StringAssert.Contains(rendered, "Alpha");
         StringAssert.Contains(rendered, "50%");
+    }
+
+    [TestMethod]
+    public void BarChart_Bounded_Measure_Preserves_Intrinsic_MinWidth()
+    {
+        var chart = new BarChart
+        {
+            Minimum = 0,
+            Maximum = 1,
+            ShowValues = false,
+            ShowPercentages = true,
+        }
+            .Items(
+                new BarChartItem("Download", 0.52),
+                new BarChartItem("Compile", 0.85),
+                new BarChartItem("Package", 0.71));
+
+        chart.Measure(new LayoutConstraints(0, 20, 0, 6));
+
+        Assert.AreEqual(20, chart.MeasureHints.Natural.Width);
+        Assert.IsTrue(chart.MeasureHints.Min.Width < chart.MeasureHints.Natural.Width,
+            $"Expected the chart min width to stay intrinsic, but got min={chart.MeasureHints.Min.Width} and natural={chart.MeasureHints.Natural.Width}.");
     }
 }
