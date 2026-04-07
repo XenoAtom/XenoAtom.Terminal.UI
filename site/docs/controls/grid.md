@@ -13,8 +13,12 @@ title: Grid
 
 ```csharp
 new Grid()
-    .Columns(new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star))
-    .Rows(new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Auto))
+    .Columns(
+        new ColumnDefinition { Width = GridLength.Auto },
+        new ColumnDefinition { Width = GridLength.Star() })
+    .Rows(
+        new RowDefinition { Height = GridLength.Auto },
+        new RowDefinition { Height = GridLength.Auto })
     .Cell("Name:", row: 0, column: 0)
     .Cell(new TextBox("Alex"), row: 0, column: 1);
 ```
