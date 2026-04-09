@@ -118,6 +118,180 @@ public sealed class LogControlTests
     }
 
     [TestMethod]
+    public void LogControl_PageDown_To_Tail_Reenables_FollowTail_After_User_Scroll()
+    {
+        var log = new LogControl();
+
+        using var driver = new TerminalAppTestDriver(log, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        for (var i = 0; i < 30; i++)
+        {
+            log.AppendLine($"Line {i}");
+        }
+
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.PageUp });
+        driver.Tick();
+        Assert.IsFalse(log.FollowTail);
+
+        for (var i = 0; i < 20 && !log.FollowTail; i++)
+        {
+            driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.PageDown });
+            driver.Tick();
+        }
+
+        Assert.IsTrue(log.FollowTail, "Paging back to the last line should resume follow-tail.");
+
+        log.AppendLine("AfterPageDownTail");
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(40, 6);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "AfterPageDownTail");
+    }
+
+    [TestMethod]
+    public void LogControl_MouseWheel_Down_To_Tail_Reenables_FollowTail_After_User_Scroll()
+    {
+        var log = new LogControl();
+
+        using var driver = new TerminalAppTestDriver(log, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        for (var i = 0; i < 30; i++)
+        {
+            log.AppendLine($"Line {i}");
+        }
+
+        driver.Tick();
+
+        var wheelX = log.Bounds.X + 1;
+        var wheelY = log.Bounds.Y + 1;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Wheel,
+            Button = TerminalMouseButton.Wheel,
+            X = wheelX,
+            Y = wheelY,
+            WheelDelta = 1,
+        });
+        driver.Tick();
+        Assert.IsFalse(log.FollowTail);
+
+        for (var i = 0; i < 40 && !log.FollowTail; i++)
+        {
+            driver.Backend.PushEvent(new TerminalMouseEvent
+            {
+                Kind = TerminalMouseKind.Wheel,
+                Button = TerminalMouseButton.Wheel,
+                X = wheelX,
+                Y = wheelY,
+                WheelDelta = -1,
+            });
+            driver.Tick();
+        }
+
+        Assert.IsTrue(log.FollowTail, "Scrolling back to the last line with the mouse wheel should resume follow-tail.");
+
+        log.AppendLine("AfterWheelTail");
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(40, 6);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "AfterWheelTail");
+    }
+
+    [TestMethod]
+    public void LogControl_ScrollBar_To_Tail_Reenables_FollowTail_After_User_Scroll()
+    {
+        var log = new LogControl();
+
+        using var driver = new TerminalAppTestDriver(log, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        for (var i = 0; i < 30; i++)
+        {
+            log.AppendLine($"Line {i}");
+        }
+
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.PageUp });
+        driver.Tick();
+        Assert.IsFalse(log.FollowTail);
+
+        var bar = log.EnumerateVisualsDepthFirst().OfType<VScrollBar>().Single();
+        var barX = bar.Bounds.X;
+        var barY = bar.Bounds.Bottom - 1;
+        Assert.AreEqual(nameof(VScrollBar), log.HitTest(barX, barY)?.GetType().Name);
+
+        for (var i = 0; i < 20 && !log.FollowTail; i++)
+        {
+            driver.Backend.PushEvent(new TerminalMouseEvent
+            {
+                Kind = TerminalMouseKind.Down,
+                Button = TerminalMouseButton.Left,
+                X = barX,
+                Y = barY,
+            });
+            driver.Backend.PushEvent(new TerminalMouseEvent
+            {
+                Kind = TerminalMouseKind.Up,
+                Button = TerminalMouseButton.Left,
+                X = barX,
+                Y = barY,
+            });
+            driver.Tick();
+        }
+
+        Assert.IsTrue(log.FollowTail, "Moving the vertical scrollbar to the bottom should resume follow-tail.");
+
+        log.AppendLine("AfterScrollBarTail");
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(40, 6);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "AfterScrollBarTail");
+    }
+
+    [TestMethod]
+    public void LogControl_PageDown_To_Tail_Does_Not_Reenable_Programmatically_Disabled_FollowTail()
+    {
+        var log = new LogControl
+        {
+            FollowTail = false,
+        };
+
+        using var driver = new TerminalAppTestDriver(log, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        for (var i = 0; i < 30; i++)
+        {
+            log.AppendLine($"Line {i}");
+        }
+
+        driver.Tick();
+
+        for (var i = 0; i < 20 && !log.FollowTail; i++)
+        {
+            driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.PageDown });
+            driver.Tick();
+        }
+
+        Assert.IsFalse(log.FollowTail, "Paging to the bottom should not override an explicit FollowTail = false.");
+
+        log.AppendLine("AfterProgrammaticDisable");
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(40, 6);
+        screen.Apply(driver.Backend.GetOutText());
+        Assert.IsFalse(screen.GetText().Contains("AfterProgrammaticDisable", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
     public void LogControl_Trims_MaxCapacity()
     {
         var log = new LogControl
