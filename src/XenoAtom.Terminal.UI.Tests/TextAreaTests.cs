@@ -145,4 +145,88 @@ public sealed class TextAreaTests
         Assert.IsTrue(textStart >= 0, $"Expected 'Qw' to be visible on caret row. Row: `{line}`");
         Assert.AreEqual(textStart, caretX, "Rendered text is not aligned with the caret after inserting a tab.");
     }
+
+    [TestMethod]
+    public void TextArea_WrappedLine_HomeEnd_Use_TwoStep_Navigation()
+    {
+        var textArea = new TextArea("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+        var root = new VStack { textArea };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(8, 6));
+        driver.App.Focus(textArea);
+        driver.Tick();
+
+        textArea.CaretIndex = 10;
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Home });
+        driver.Tick();
+        var visualHomeIndex = textArea.CaretIndex;
+        Assert.IsTrue(visualHomeIndex >= 0 && visualHomeIndex < 10, $"Expected first Home to move to the wrapped-row start. Actual caret: {visualHomeIndex}.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Home });
+        driver.TickUntil(() => textArea.CaretIndex == 0);
+
+        textArea.CaretIndex = 10;
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.End });
+        driver.Tick();
+        var visualEndIndex = textArea.CaretIndex;
+        Assert.IsTrue(visualEndIndex > 10 && visualEndIndex < textArea.Text!.Length, $"Expected first End to move to the wrapped-row end. Actual caret: {visualEndIndex}.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.End });
+        driver.TickUntil(() => textArea.CaretIndex == textArea.Text!.Length);
+    }
+
+    [TestMethod]
+    public void TextArea_WrappedLine_HomeEnd_State_Resets_After_Other_Navigation()
+    {
+        var textArea = new TextArea("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+        var root = new VStack { textArea };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(8, 6));
+        driver.App.Focus(textArea);
+        driver.Tick();
+
+        textArea.CaretIndex = 10;
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Home });
+        driver.Tick();
+        var visualHomeIndex = textArea.CaretIndex;
+        Assert.IsTrue(visualHomeIndex >= 0 && visualHomeIndex < 10, $"Expected first Home to move to the wrapped-row start. Actual caret: {visualHomeIndex}.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right });
+        driver.Tick();
+        var movedRightIndex = textArea.CaretIndex;
+        Assert.IsTrue(movedRightIndex > visualHomeIndex, $"Expected Right to move away from the wrapped-row start. Actual caret: {movedRightIndex}, wrapped-row start: {visualHomeIndex}.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Home });
+        driver.Tick();
+        Assert.AreEqual(visualHomeIndex, textArea.CaretIndex, "Expected Home state to reset after another navigation key so the next Home returns only to the wrapped-row start.");
+    }
+
+    [TestMethod]
+    public void TextArea_WrappedLine_End_Keeps_Caret_Visible_When_It_Moves_To_Next_Row()
+    {
+        var textArea = new TextArea("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+        var root = new VStack { textArea };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(8, 6));
+        driver.App.Focus(textArea);
+        driver.Tick();
+
+        textArea.CaretIndex = 10;
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.End });
+        driver.Tick();
+
+        Assert.IsTrue(textArea.TryGetCursorCell(out var x, out var y), "Expected the caret to stay visible after End moves to the next wrapped row.");
+        Assert.IsGreaterThanOrEqualTo(0, x);
+        Assert.IsLessThan(8, x);
+        Assert.IsGreaterThanOrEqualTo(0, y);
+        Assert.IsLessThan(6, y);
+    }
 }

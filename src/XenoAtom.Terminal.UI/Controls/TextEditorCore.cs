@@ -65,6 +65,7 @@ internal sealed partial class TextEditorCore
     private bool _draggingSelection;
     private bool _hasCachedVisualPosition;
     private CachedVisualPosition _cachedVisualPosition;
+    private WrappedLineBoundaryMoveKind _wrappedLineBoundaryMove;
 
     private SearchQuery _searchQuery;
     private readonly List<TextMatch> _searchMatches = new(32);
@@ -79,6 +80,13 @@ internal sealed partial class TextEditorCore
         int TabSize,
         int Row,
         int Column);
+
+    private enum WrappedLineBoundaryMoveKind
+    {
+        None,
+        Home,
+        End,
+    }
 
     public TextEditorCore(ITextEditorHost host, ITextDocument document, ScrollModel scroll, TextUndoRedoManager undoRedo)
     {
@@ -140,6 +148,7 @@ internal sealed partial class TextEditorCore
         _caretIndex = NormalizeIndexToTextElementBoundary(text, Math.Clamp(value, 0, textLength));
         ClearSelection();
         _preferredColumn = -1;
+        ResetWrappedLineBoundaryMove();
         EnsureCaretVisible(options);
         IncrementVersion();
     }
@@ -160,6 +169,11 @@ internal sealed partial class TextEditorCore
     {
         _hasCachedVisualPosition = false;
         _cachedVisualPosition = default;
+    }
+
+    private void ResetWrappedLineBoundaryMove()
+    {
+        _wrappedLineBoundaryMove = WrappedLineBoundaryMoveKind.None;
     }
 
     private bool TryGetCachedVisualPosition(int snapshotVersion, int index, in TextEditorOptions options, out (int Row, int Column) position)
@@ -335,6 +349,7 @@ internal sealed partial class TextEditorCore
         if (_selectionEnd > textLength) _selectionEnd = textLength;
 
         InvalidateVisualPositionCache();
+        ResetWrappedLineBoundaryMove();
         Version = _version + 1;
     }
 
@@ -422,6 +437,7 @@ internal sealed partial class TextEditorCore
             return;
         }
 
+        ResetWrappedLineBoundaryMove();
         InsertText(e.Text, TextUndoRedoManager.TextUndoKind.Typing, allowCoalesce: true, options);
         e.Handled = true;
     }
@@ -433,6 +449,7 @@ internal sealed partial class TextEditorCore
             return;
         }
 
+        ResetWrappedLineBoundaryMove();
         InsertText(e.Text, TextUndoRedoManager.TextUndoKind.Paste, allowCoalesce: false, options);
         e.Handled = true;
     }
@@ -473,6 +490,7 @@ internal sealed partial class TextEditorCore
 
         _caretIndex = index;
         _preferredColumn = -1;
+        ResetWrappedLineBoundaryMove();
         EnsureCaretVisible(options);
         IncrementVersion();
         e.Handled = true;
@@ -489,6 +507,7 @@ internal sealed partial class TextEditorCore
         ExtendSelection(index);
         _caretIndex = index;
         _preferredColumn = -1;
+        ResetWrappedLineBoundaryMove();
         EnsureCaretVisible(options);
         IncrementVersion();
         e.Handled = true;
@@ -504,6 +523,7 @@ internal sealed partial class TextEditorCore
         if (_draggingSelection)
         {
             _draggingSelection = false;
+            ResetWrappedLineBoundaryMove();
             e.Handled = true;
         }
     }
@@ -515,6 +535,11 @@ internal sealed partial class TextEditorCore
 
         var ctrl = (e.Modifiers & TerminalModifiers.Ctrl) != 0;
         var shift = (e.Modifiers & TerminalModifiers.Shift) != 0;
+
+        if (!(options.WordWrap && !options.SingleLine && !ctrl && e.Key is TerminalKey.Home or TerminalKey.End))
+        {
+            ResetWrappedLineBoundaryMove();
+        }
 
         if (ctrl)
         {
@@ -1273,9 +1298,9 @@ internal sealed partial class TextEditorCore
     }
 
     private void MoveCaretTo(int index, bool extendSelection, in TextEditorOptions options)
-        => MoveCaretTo(index, extendSelection, options, row: null, column: null);
+        => MoveCaretTo(index, extendSelection, options, row: null, column: null, preserveWrappedBoundaryMove: false);
 
-    private void MoveCaretTo(int index, bool extendSelection, in TextEditorOptions options, int? row, int? column)
+    private void MoveCaretTo(int index, bool extendSelection, in TextEditorOptions options, int? row, int? column, bool preserveWrappedBoundaryMove = false)
     {
         index = NormalizeIndexToTextElementBoundary(GetText().AsSpan(), Math.Clamp(index, 0, GetText().Length));
         if (extendSelection)
@@ -1291,6 +1316,11 @@ internal sealed partial class TextEditorCore
         if (row.HasValue && column.HasValue)
         {
             CacheVisualPosition(_document.CurrentSnapshot.Version, index, options, row.Value, column.Value);
+        }
+
+        if (!preserveWrappedBoundaryMove)
+        {
+            ResetWrappedLineBoundaryMove();
         }
 
         _preferredColumn = -1;
@@ -1360,9 +1390,30 @@ internal sealed partial class TextEditorCore
             var segment = _layoutCache.GetWrapSegmentAtRow(lineIndex, GetText(), _contentWidth, options.TabSize, rowInLine);
             var segmentStart = segment.Start;
             var segmentLength = segment.Length;
-            var index = start ? lineStart + segmentStart : lineStart + segmentStart + segmentLength;
-            var column = start ? 0 : GetTextCells(text.Slice(lineStart + segmentStart, segmentLength), options.TabSize);
-            MoveCaretTo(index, extendSelection, options, row, column);
+            var visualBoundaryIndex = start ? lineStart + segmentStart : lineStart + segmentStart + segmentLength;
+            var visualBoundaryColumn = start ? 0 : GetTextCells(text.Slice(lineStart + segmentStart, segmentLength), options.TabSize);
+            var moveKind = start ? WrappedLineBoundaryMoveKind.Home : WrappedLineBoundaryMoveKind.End;
+            var moveToLogicalBoundary = _wrappedLineBoundaryMove == moveKind;
+
+            if (moveToLogicalBoundary)
+            {
+                var logicalBoundaryIndex = start ? lineStart : lineEnd;
+                MoveCaretTo(logicalBoundaryIndex, extendSelection, options, row: null, column: null, preserveWrappedBoundaryMove: true);
+            }
+            else
+            {
+                var targetRow = row;
+                var targetColumn = visualBoundaryColumn;
+                if (!start && visualBoundaryIndex < lineEnd)
+                {
+                    targetRow = row + 1;
+                    targetColumn = 0;
+                }
+
+                MoveCaretTo(visualBoundaryIndex, extendSelection, options, targetRow, targetColumn, preserveWrappedBoundaryMove: true);
+            }
+
+            _wrappedLineBoundaryMove = moveKind;
             return;
         }
 
