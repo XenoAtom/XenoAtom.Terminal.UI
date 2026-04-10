@@ -253,7 +253,7 @@ The current foundation is intentionally simple. Missing pieces include:
 - Undo/redo and edit transactions.
 - Multi-caret, rectangular selection, virtual space.
 - Auto-scroll while selecting outside the viewport.
-- Token-aware wrapping and cached layout per line.
+- Token-aware wrapping and richer classification-aware layout beyond the current cached per-line wrap metadata / sparse wrapped-row checkpoints / bounded reusable wrapped-row block cache.
 - IME/composition support (only basic text input events).
 - A classification + decoration pipeline (syntax highlighting, diagnostics, search highlights, etc.).
 - Background services with snapshot version gating.

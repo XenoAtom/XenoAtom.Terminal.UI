@@ -63,11 +63,22 @@ internal sealed partial class TextEditorCore
     private int _contentHeight;
 
     private bool _draggingSelection;
+    private bool _hasCachedVisualPosition;
+    private CachedVisualPosition _cachedVisualPosition;
 
     private SearchQuery _searchQuery;
     private readonly List<TextMatch> _searchMatches = new(32);
     private int _activeSearchMatchIndex = -1;
     private string? _searchError;
+
+    private readonly record struct CachedVisualPosition(
+        int SnapshotVersion,
+        int Index,
+        bool WordWrap,
+        int ContentWidth,
+        int TabSize,
+        int Row,
+        int Column);
 
     public TextEditorCore(ITextEditorHost host, ITextDocument document, ScrollModel scroll, TextUndoRedoManager undoRedo)
     {
@@ -95,13 +106,13 @@ internal sealed partial class TextEditorCore
             return index;
         }
 
-        var prev = TerminalTextUtility.GetPreviousTextElementIndex(text, index);
+        var prev = GetPreviousTextElementIndexFast(text, index);
         if (prev == index)
         {
             return index;
         }
 
-        var next = TerminalTextUtility.GetNextTextElementIndex(text, prev);
+        var next = GetNextTextElementIndexFast(text, prev);
         if (index == next)
         {
             return index;
@@ -115,6 +126,8 @@ internal sealed partial class TextEditorCore
     {
         _document = document;
         _cachedVersion = -1;
+        ResetLayoutCache();
+        InvalidateVisualPositionCache();
         OnDocumentChanged();
     }
 
@@ -141,6 +154,42 @@ internal sealed partial class TextEditorCore
         }
 
         return _cachedText;
+    }
+
+    private void InvalidateVisualPositionCache()
+    {
+        _hasCachedVisualPosition = false;
+        _cachedVisualPosition = default;
+    }
+
+    private bool TryGetCachedVisualPosition(int snapshotVersion, int index, in TextEditorOptions options, out (int Row, int Column) position)
+    {
+        if (!_hasCachedVisualPosition
+            || _cachedVisualPosition.SnapshotVersion != snapshotVersion
+            || _cachedVisualPosition.Index != index
+            || _cachedVisualPosition.WordWrap != options.WordWrap
+            || _cachedVisualPosition.ContentWidth != _contentWidth
+            || _cachedVisualPosition.TabSize != options.TabSize)
+        {
+            position = default;
+            return false;
+        }
+
+        position = (_cachedVisualPosition.Row, _cachedVisualPosition.Column);
+        return true;
+    }
+
+    private void CacheVisualPosition(int snapshotVersion, int index, in TextEditorOptions options, int row, int column)
+    {
+        _cachedVisualPosition = new CachedVisualPosition(
+            snapshotVersion,
+            index,
+            options.WordWrap,
+            _contentWidth,
+            options.TabSize,
+            row,
+            column);
+        _hasCachedVisualPosition = true;
     }
 
     private bool HasSelection => _selectionAnchor >= 0 && _selectionEnd >= 0 && _selectionAnchor != _selectionEnd;
@@ -263,6 +312,16 @@ internal sealed partial class TextEditorCore
     public int SelectionLength
         => HasSelection ? Math.Abs(_selectionEnd - _selectionAnchor) : 0;
 
+    internal TextEditorLineLayoutDiagnostics GetLineLayoutDiagnostics(int lineIndex, in TextEditorOptions options)
+    {
+        if (!options.SingleLine && _contentWidth > 0)
+        {
+            EnsureMultiLineLayoutCache(options);
+        }
+
+        return _layoutCache.GetLineDiagnostics(lineIndex);
+    }
+
     public void OnDocumentChanged()
     {
         var textLength = GetText().Length;
@@ -275,7 +334,14 @@ internal sealed partial class TextEditorCore
         if (_selectionAnchor > textLength) _selectionAnchor = textLength;
         if (_selectionEnd > textLength) _selectionEnd = textLength;
 
+        InvalidateVisualPositionCache();
         Version = _version + 1;
+    }
+
+    public void OnDocumentChanged(TextDocumentChangedEventArgs e)
+    {
+        NoteLayoutChange(e);
+        OnDocumentChanged();
     }
 
     public void Render(in TextEditorRenderContext context, in TextEditorOptions options)
@@ -591,7 +657,7 @@ internal sealed partial class TextEditorCore
                 var oldCaretLeft = _caretIndex;
                 _caretIndex = (e.Modifiers & TerminalModifiers.Ctrl) != 0
                     ? GetPreviousWordIndex(text, _caretIndex)
-                    : TerminalTextUtility.GetPreviousTextElementIndex(text, _caretIndex);
+                    : GetPreviousTextElementIndexFast(text, _caretIndex);
                 UpdateSelectionAfterCaretMove((e.Modifiers & TerminalModifiers.Shift) != 0, oldCaretLeft);
                 EnsureCaretVisible(options);
                 e.Handled = true;
@@ -600,7 +666,7 @@ internal sealed partial class TextEditorCore
                 var oldCaretRight = _caretIndex;
                 _caretIndex = (e.Modifiers & TerminalModifiers.Ctrl) != 0
                     ? GetNextWordIndex(text, _caretIndex)
-                    : TerminalTextUtility.GetNextTextElementIndex(text, _caretIndex);
+                    : GetNextTextElementIndexFast(text, _caretIndex);
                 UpdateSelectionAfterCaretMove((e.Modifiers & TerminalModifiers.Shift) != 0, oldCaretRight);
                 EnsureCaretVisible(options);
                 e.Handled = true;
@@ -628,7 +694,7 @@ internal sealed partial class TextEditorCore
                 {
                     var prev = (e.Modifiers & TerminalModifiers.Ctrl) != 0
                         ? GetPreviousWordIndex(text, _caretIndex)
-                        : TerminalTextUtility.GetPreviousTextElementIndex(text, _caretIndex);
+                        : GetPreviousTextElementIndexFast(text, _caretIndex);
                     ApplyReplaceWithUndo(TextUndoRedoManager.TextUndoKind.Delete, prev, _caretIndex - prev, ReadOnlySpan<char>.Empty, allowCoalesce: false, options, () =>
                     {
                         _caretIndex = prev;
@@ -648,7 +714,7 @@ internal sealed partial class TextEditorCore
                 {
                     var next = (e.Modifiers & TerminalModifiers.Ctrl) != 0
                         ? GetNextWordIndex(text, _caretIndex)
-                        : TerminalTextUtility.GetNextTextElementIndex(text, _caretIndex);
+                        : GetNextTextElementIndexFast(text, _caretIndex);
                     ApplyReplaceWithUndo(TextUndoRedoManager.TextUndoKind.Delete, _caretIndex, next - _caretIndex, ReadOnlySpan<char>.Empty, allowCoalesce: false, options, () =>
                     {
                         _preferredColumn = -1;
@@ -840,10 +906,10 @@ internal sealed partial class TextEditorCore
         }
 
         var snapshot = _document.CurrentSnapshot;
+        EnsureMultiLineLayoutCache(options);
 
         var startRow = _scroll.OffsetY;
         var endRow = startRow + _contentHeight;
-        var row = 0;
 
         var selectionStart = 0;
         var selectionEnd = 0;
@@ -853,67 +919,49 @@ internal sealed partial class TextEditorCore
             selectionEnd = Math.Max(_selectionAnchor, _selectionEnd);
         }
 
-        for (var lineIndex = 0; lineIndex < snapshot.LineCount; lineIndex++)
+        if (snapshot.LineCount == 0)
+        {
+            return;
+        }
+
+        var startInfo = _layoutCache.GetLineFromRow(startRow);
+        var lineIndex = startInfo.LineIndex;
+        var row = _layoutCache.GetLine(lineIndex).RowOffset + startInfo.RowInLine;
+
+        while (lineIndex < snapshot.LineCount && row < endRow)
         {
             var line = snapshot.GetLine(lineIndex);
             var lineSpan = text.AsSpan(line.Start, line.Length);
 
             if (!options.WordWrap)
             {
-                if (row >= endRow)
-                {
-                    return;
-                }
-
-                if (row >= startRow)
-                {
-                    RenderSingleLineSegment(
-                        context,
-                        options,
-                        lineSpan,
-                        line.Start,
-                        row - startRow,
-                        selectionStart,
-                        selectionEnd);
-                }
-
+                RenderSingleLineSegment(
+                    context,
+                    options,
+                    lineSpan,
+                    line.Start,
+                    row - startRow,
+                    selectionStart,
+                    selectionEnd);
                 row++;
+                lineIndex++;
                 continue;
             }
 
-            if (lineSpan.IsEmpty)
+            var rowInLine = lineIndex == startInfo.LineIndex ? startInfo.RowInLine : 0;
+            var rowCount = Math.Max(1, _layoutCache.GetLine(lineIndex).RowCount);
+            var currentRowInLine = rowInLine;
+            while (currentRowInLine < rowCount && row < endRow)
             {
-                if (row >= endRow)
-                {
-                    return;
-                }
+                var blockStarts = _layoutCache.GetWrapRowBlock(lineIndex, text, _contentWidth, options.TabSize, currentRowInLine, out var blockStartRow, out var blockRowCount);
+                var localRow = currentRowInLine - blockStartRow;
+                var availableRows = Math.Min(rowCount - currentRowInLine, blockRowCount - localRow);
 
-                if (row >= startRow)
+                for (var i = 0; i < availableRows && row < endRow; i++)
                 {
-                    var y = _contentY + (row - startRow);
-                    context.SegmentWriter(context.Buffer, _contentX, y, ReadOnlySpan<char>.Empty, context.TextStyle, isPlaceholder: false, textIndexStart: line.Start, startColumn: 0);
-                }
+                    var segmentStart = blockStarts[localRow + i];
+                    var segmentLength = blockStarts[localRow + i + 1] - segmentStart;
 
-                row++;
-                continue;
-            }
-
-            var segmentStart = 0;
-            while (segmentStart < lineSpan.Length)
-            {
-                var segmentLength = GetWrapSegmentLength(lineSpan, segmentStart, _contentWidth, options.TabSize);
-                if (segmentLength <= 0)
-                {
-                    break;
-                }
-
-                if (row >= endRow)
-                {
-                    return;
-                }
-
-                if (row >= startRow)
-                {
                     RenderWrappedSegment(
                         context,
                         options,
@@ -924,11 +972,13 @@ internal sealed partial class TextEditorCore
                         row - startRow,
                         selectionStart,
                         selectionEnd);
-                }
 
-                row++;
-                segmentStart += segmentLength;
+                    row++;
+                    currentRowInLine++;
+                }
             }
+
+            lineIndex++;
         }
     }
 
@@ -1057,35 +1107,10 @@ internal sealed partial class TextEditorCore
     }
     private int ComputeExtent(ITextSnapshot snapshot, in TextEditorOptions options, out int extentWidth)
     {
-        var text = GetText();
-        var maxWidth = 0;
-        var totalRows = 0;
-
-        for (var i = 0; i < snapshot.LineCount; i++)
-        {
-            var line = snapshot.GetLine(i);
-            var span = text.AsSpan(line.Start, line.Length);
-            if (options.WordWrap)
-            {
-                var lineRows = GetWrapLineCount(span, _contentWidth, options.TabSize);
-                totalRows += Math.Max(1, lineRows);
-                maxWidth = Math.Max(maxWidth, _contentWidth);
-            }
-            else
-            {
-                var width = GetTextCells(span, options.TabSize);
-                maxWidth = Math.Max(maxWidth, width);
-                totalRows++;
-            }
-        }
-
-        if (totalRows == 0)
-        {
-            totalRows = 1;
-        }
-
-        extentWidth = Math.Max(0, maxWidth);
-        return totalRows;
+        _ = snapshot;
+        EnsureMultiLineLayoutCache(options);
+        extentWidth = options.WordWrap ? Math.Max(0, _contentWidth) : Math.Max(0, _layoutCache.MaxWidth);
+        return _layoutCache.TotalRows;
     }
 
     private TextUndoRedoManager.TextEditorStateSnapshot CaptureStateSnapshot()
@@ -1218,7 +1243,7 @@ internal sealed partial class TextEditorCore
             return;
         }
 
-        var prev = TerminalTextUtility.GetPreviousTextElementIndex(text.AsSpan(), _caretIndex);
+        var prev = GetPreviousTextElementIndexFast(text.AsSpan(), _caretIndex);
         ApplyReplaceWithUndo(TextUndoRedoManager.TextUndoKind.Delete, prev, _caretIndex - prev, ReadOnlySpan<char>.Empty, allowCoalesce: false, options, () =>
         {
             _caretIndex = prev;
@@ -1240,7 +1265,7 @@ internal sealed partial class TextEditorCore
             return;
         }
 
-        var next = TerminalTextUtility.GetNextTextElementIndex(text.AsSpan(), _caretIndex);
+        var next = GetNextTextElementIndexFast(text.AsSpan(), _caretIndex);
         ApplyReplaceWithUndo(TextUndoRedoManager.TextUndoKind.Delete, _caretIndex, next - _caretIndex, ReadOnlySpan<char>.Empty, allowCoalesce: false, options, () =>
         {
             _preferredColumn = -1;
@@ -1248,6 +1273,9 @@ internal sealed partial class TextEditorCore
     }
 
     private void MoveCaretTo(int index, bool extendSelection, in TextEditorOptions options)
+        => MoveCaretTo(index, extendSelection, options, row: null, column: null);
+
+    private void MoveCaretTo(int index, bool extendSelection, in TextEditorOptions options, int? row, int? column)
     {
         index = NormalizeIndexToTextElementBoundary(GetText().AsSpan(), Math.Clamp(index, 0, GetText().Length));
         if (extendSelection)
@@ -1260,6 +1288,11 @@ internal sealed partial class TextEditorCore
         }
 
         _caretIndex = index;
+        if (row.HasValue && column.HasValue)
+        {
+            CacheVisualPosition(_document.CurrentSnapshot.Version, index, options, row.Value, column.Value);
+        }
+
         _preferredColumn = -1;
         EnsureCaretVisible(options);
         IncrementVersion();
@@ -1271,11 +1304,11 @@ internal sealed partial class TextEditorCore
         var next = _caretIndex;
         if (delta < 0)
         {
-            next = TerminalTextUtility.GetPreviousTextElementIndex(text, _caretIndex);
+            next = GetPreviousTextElementIndexFast(text, _caretIndex);
         }
         else if (delta > 0)
         {
-            next = TerminalTextUtility.GetNextTextElementIndex(text, _caretIndex);
+            next = GetNextTextElementIndexFast(text, _caretIndex);
         }
 
         MoveCaretTo(next, extendSelection, options);
@@ -1293,19 +1326,20 @@ internal sealed partial class TextEditorCore
             }
 
             var targetRow = Math.Max(0, row + deltaLines);
-            var index = GetIndexFromVisualPosition(text.AsSpan(), targetRow, _preferredColumn, options);
-            MoveCaretTo(index, extendSelection, options);
+            var index = GetIndexFromVisualPosition(text.AsSpan(), targetRow, _preferredColumn, options, out var actualCol);
+            MoveCaretTo(index, extendSelection, options, targetRow, actualCol);
             return;
         }
 
-        var (line, lineCol) = GetLineColumnForIndex(text.AsSpan(), _caretIndex);
+        var snapshot = _document.CurrentSnapshot;
+        var (line, lineCol) = GetLineColumnForIndex(snapshot, _caretIndex);
         if (_preferredColumn < 0)
         {
             _preferredColumn = lineCol;
         }
 
         var newLine = line + deltaLines;
-        var next = GetIndexForLineColumn(text.AsSpan(), newLine, _preferredColumn);
+        var next = GetIndexForLineColumn(snapshot, newLine, _preferredColumn);
         MoveCaretTo(next, extendSelection, options);
     }
 
@@ -1321,16 +1355,22 @@ internal sealed partial class TextEditorCore
                 return;
             }
 
-            var segmentStart = GetSegmentStartIndex(text.Slice(lineStart, lineEnd - lineStart), rowInLine, _contentWidth, options.TabSize);
-            var segmentLength = GetWrapSegmentLength(text.Slice(lineStart, lineEnd - lineStart), segmentStart, _contentWidth, options.TabSize);
+            EnsureMultiLineLayoutCache(options);
+            var lineIndex = _layoutCache.GetLineIndexFromPosition(lineStart);
+            var segment = _layoutCache.GetWrapSegmentAtRow(lineIndex, GetText(), _contentWidth, options.TabSize, rowInLine);
+            var segmentStart = segment.Start;
+            var segmentLength = segment.Length;
             var index = start ? lineStart + segmentStart : lineStart + segmentStart + segmentLength;
-            MoveCaretTo(index, extendSelection, options);
+            var column = start ? 0 : GetTextCells(text.Slice(lineStart + segmentStart, segmentLength), options.TabSize);
+            MoveCaretTo(index, extendSelection, options, row, column);
             return;
         }
 
-        var (line, _) = GetLineColumnForIndex(text, _caretIndex);
-        var lineStartIndex = GetLineStartIndex(text, line);
-        var lineEndIndex = GetLineEndIndex(text, line);
+        var snapshot = _document.CurrentSnapshot;
+        var (line, _) = GetLineColumnForIndex(snapshot, _caretIndex);
+        var currentLine = snapshot.GetLine(line);
+        var lineStartIndex = currentLine.Start;
+        var lineEndIndex = currentLine.End;
         MoveCaretTo(start ? lineStartIndex : lineEndIndex, extendSelection, options);
     }
 
@@ -1360,6 +1400,7 @@ internal sealed partial class TextEditorCore
             return;
         }
 
+        EnsureMultiLineLayoutCache(options);
         var (row, col) = GetVisualPosition(text, _caretIndex, options);
         var offsetX = options.WordWrap ? 0 : _scroll.OffsetX;
         var offsetY = _scroll.OffsetY;
@@ -1405,13 +1446,13 @@ internal sealed partial class TextEditorCore
             return GetIndexFromVisualPosition(text, row, localX, options);
         }
 
-        var line = Math.Clamp(row, 0, GetLineCount(text) - 1);
-        var lineStart = GetLineStartIndex(text, line);
-        var lineEnd = GetLineEndIndex(text, line);
-        var lineSpan = text.Slice(lineStart, lineEnd - lineStart);
+        var snapshot = _document.CurrentSnapshot;
+        var lineIndex = Math.Clamp(row, 0, Math.Max(0, snapshot.LineCount - 1));
+        var line = snapshot.GetLine(lineIndex);
+        var lineSpan = text.Slice(line.Start, line.Length);
         var col = localX + _scroll.OffsetX;
         var indexInLine = GetIndexAtCell(lineSpan, col, options.TabSize);
-        return lineStart + indexInLine;
+        return line.Start + indexInLine;
     }
 
     private void KillToEnd(ReadOnlySpan<char> text, in TextEditorOptions options)
@@ -1645,297 +1686,134 @@ internal sealed partial class TextEditorCore
         return end > start ? text.Slice(start, end - start) : ReadOnlySpan<char>.Empty;
     }
 
-    private static int GetLineCount(ReadOnlySpan<char> text)
+    private static (int Line, int Column) GetLineColumnForIndex(ITextSnapshot snapshot, int index)
     {
-        if (text.IsEmpty)
-        {
-            return 1;
-        }
-
-        var count = 1;
-        for (var i = 0; i < text.Length; i++)
-        {
-            var ch = text[i];
-            if (ch == '\r')
-            {
-                if (i + 1 < text.Length && text[i + 1] == '\n')
-                {
-                    i++;
-                }
-
-                count++;
-            }
-            else if (ch == '\n')
-            {
-                count++;
-            }
-        }
-
-        return count;
+        index = Math.Clamp(index, 0, snapshot.Length);
+        var lineIndex = snapshot.GetLineIndexFromPosition(index);
+        var line = snapshot.GetLine(lineIndex);
+        return (lineIndex, index - line.Start);
     }
-    private static int GetLineStartIndex(ReadOnlySpan<char> text, int line)
+
+    private static int GetIndexForLineColumn(ITextSnapshot snapshot, int line, int column)
     {
-        if (line <= 0)
+        if (snapshot.LineCount == 0)
         {
             return 0;
         }
 
-        var current = 0;
-        var index = 0;
-        while (index < text.Length)
-        {
-            var ch = text[index];
-            if (ch == '\r')
-            {
-                current++;
-                if (current == line)
-                {
-                    if (index + 1 < text.Length && text[index + 1] == '\n')
-                    {
-                        return index + 2;
-                    }
-
-                    return index + 1;
-                }
-
-                if (index + 1 < text.Length && text[index + 1] == '\n')
-                {
-                    index++;
-                }
-            }
-            else if (ch == '\n')
-            {
-                current++;
-                if (current == line)
-                {
-                    return index + 1;
-                }
-            }
-
-            index++;
-        }
-
-        return text.Length;
-    }
-
-    private static int GetLineEndIndex(ReadOnlySpan<char> text, int line)
-    {
-        var start = GetLineStartIndex(text, line);
-        for (var i = start; i < text.Length; i++)
-        {
-            var ch = text[i];
-            if (ch == '\r' || ch == '\n')
-            {
-                return i;
-            }
-        }
-
-        return text.Length;
-    }
-
-    private static (int Line, int Column) GetLineColumnForIndex(ReadOnlySpan<char> text, int index)
-    {
-        index = Math.Clamp(index, 0, text.Length);
-        var line = 0;
-        var start = 0;
-        for (var i = 0; i < index; i++)
-        {
-            var ch = text[i];
-            if (ch == '\r')
-            {
-                line++;
-                if (i + 1 < index && i + 1 < text.Length && text[i + 1] == '\n')
-                {
-                    i++;
-                    start = i + 1;
-                }
-                else
-                {
-                    start = i + 1;
-                }
-            }
-            else if (ch == '\n')
-            {
-                line++;
-                start = i + 1;
-            }
-        }
-
-        return (line, index - start);
-    }
-
-    private static int GetIndexForLineColumn(ReadOnlySpan<char> text, int line, int column)
-    {
-        line = Math.Max(0, line);
-        var start = GetLineStartIndex(text, line);
-        var end = GetLineEndIndex(text, line);
-        column = Math.Clamp(column, 0, Math.Max(0, end - start));
-        return start + column;
+        line = Math.Clamp(line, 0, snapshot.LineCount - 1);
+        var currentLine = snapshot.GetLine(line);
+        column = Math.Clamp(column, 0, currentLine.Length);
+        return currentLine.Start + column;
     }
 
     private (int Row, int Column) GetVisualPosition(ReadOnlySpan<char> text, int index, in TextEditorOptions options)
     {
         index = Math.Clamp(index, 0, text.Length);
-        var row = 0;
-        var remaining = index;
-        var lineIndex = 0;
-        var lineStart = 0;
+        var snapshot = _document.CurrentSnapshot;
 
-        while (lineStart <= text.Length)
+        if (snapshot.LineCount == 0)
         {
-            var lineEnd = GetLineEndIndex(text, lineIndex);
-            var lineLength = lineEnd - lineStart;
-
-            if (remaining <= lineLength)
-            {
-                var lineSpan = text.Slice(lineStart, lineLength);
-                if (!options.WordWrap || _contentWidth <= 0)
-                {
-                    var lineCol = GetTextCells(lineSpan[..remaining], options.TabSize);
-                    return (row, lineCol);
-                }
-
-                var (rowInLine, wrapCol) = GetWrappedPositionInLine(lineSpan, remaining, _contentWidth, options.TabSize);
-                return (row + rowInLine, wrapCol);
-            }
-
-            remaining -= lineLength + 1;
-            if (!options.WordWrap || _contentWidth <= 0)
-            {
-                row++;
-            }
-            else
-            {
-                var lineSpan = text.Slice(lineStart, lineLength);
-                row += GetWrapLineCount(lineSpan, _contentWidth, options.TabSize);
-            }
-
-            lineIndex++;
-            lineStart = lineEnd + 1;
-            if (lineStart > text.Length)
-            {
-                break;
-            }
+            return (0, 0);
         }
 
-        return (row, 0);
+        if (TryGetCachedVisualPosition(snapshot.Version, index, options, out var cachedPosition))
+        {
+            return cachedPosition;
+        }
+
+        if (options.WordWrap && _contentWidth > 0)
+        {
+            EnsureMultiLineLayoutCache(options);
+        }
+
+        var lineIndex = snapshot.GetLineIndexFromPosition(index);
+        var line = snapshot.GetLine(lineIndex);
+        var lineSpan = text.Slice(line.Start, line.Length);
+        var indexInLine = Math.Clamp(index - line.Start, 0, line.Length);
+
+        if (!options.WordWrap || _contentWidth <= 0 || _layoutCache.LineCount == 0)
+        {
+            var position = (Row: lineIndex, Column: GetCellOffsetAtIndex(lineSpan, indexInLine, options.TabSize));
+            CacheVisualPosition(snapshot.Version, index, options, position.Row, position.Column);
+            return position;
+        }
+
+        EnsureMultiLineLayoutCache(options);
+        var layout = _layoutCache.GetLine(lineIndex);
+        var segment = _layoutCache.FindWrapSegmentForIndex(lineIndex, GetText(), _contentWidth, options.TabSize, indexInLine);
+        var rowInLine = segment.RowInLine;
+        var segmentStart = segment.Start;
+        var col = GetCellOffsetAtIndex(lineSpan.Slice(segmentStart, indexInLine - segmentStart), indexInLine - segmentStart, options.TabSize);
+        var row = layout.RowOffset + rowInLine;
+        CacheVisualPosition(snapshot.Version, index, options, row, col);
+        return (row, col);
     }
 
     private int GetIndexFromVisualPosition(ReadOnlySpan<char> text, int targetRow, int targetCol, in TextEditorOptions options)
+        => GetIndexFromVisualPosition(text, targetRow, targetCol, options, out _);
+
+    private int GetIndexFromVisualPosition(ReadOnlySpan<char> text, int targetRow, int targetCol, in TextEditorOptions options, out int actualCol)
     {
-        targetRow = Math.Max(0, targetRow);
-        var row = 0;
-        var lineIndex = 0;
-        var lineStart = 0;
-
-        while (lineStart <= text.Length)
+        var snapshot = _document.CurrentSnapshot;
+        if (snapshot.LineCount == 0)
         {
-            var lineEnd = GetLineEndIndex(text, lineIndex);
-            var lineSpan = text.Slice(lineStart, lineEnd - lineStart);
-
-            if (!options.WordWrap || _contentWidth <= 0)
-            {
-                if (row == targetRow)
-                {
-                    var indexInLine = GetIndexAtCell(lineSpan, targetCol, options.TabSize);
-                    return lineStart + indexInLine;
-                }
-
-                row++;
-            }
-            else
-            {
-                var lineRows = GetWrapLineCount(lineSpan, _contentWidth, options.TabSize);
-                if (targetRow >= row && targetRow < row + lineRows)
-                {
-                    var rowInLine = targetRow - row;
-                    var segmentStart = GetSegmentStartIndex(lineSpan, rowInLine, _contentWidth, options.TabSize);
-                    var segmentLength = GetWrapSegmentLength(lineSpan, segmentStart, _contentWidth, options.TabSize);
-                    var segment = lineSpan.Slice(segmentStart, segmentLength);
-                    var indexInSegment = GetIndexAtCell(segment, targetCol, options.TabSize);
-                    return lineStart + segmentStart + indexInSegment;
-                }
-
-                row += lineRows;
-            }
-
-            lineIndex++;
-            lineStart = lineEnd + 1;
-            if (lineStart > text.Length)
-            {
-                break;
-            }
+            actualCol = 0;
+            return 0;
         }
 
-        return text.Length;
+        if (!options.WordWrap || _contentWidth <= 0 || _layoutCache.LineCount == 0)
+        {
+            var lineIndex = Math.Clamp(targetRow, 0, snapshot.LineCount - 1);
+            var line = snapshot.GetLine(lineIndex);
+            var lineSpan = text.Slice(line.Start, line.Length);
+            var indexInLine = GetIndexAtCell(lineSpan, targetCol, options.TabSize);
+            actualCol = GetCellOffsetAtIndex(lineSpan, indexInLine, options.TabSize);
+            return line.Start + indexInLine;
+        }
+
+        EnsureMultiLineLayoutCache(options);
+        var lineRowInfo = _layoutCache.GetLineFromRow(targetRow);
+        var currentLine = snapshot.GetLine(lineRowInfo.LineIndex);
+        var lineSpanCurrent = text.Slice(currentLine.Start, currentLine.Length);
+        var wrapSegment = _layoutCache.GetWrapSegmentAtRow(lineRowInfo.LineIndex, GetText(), _contentWidth, options.TabSize, lineRowInfo.RowInLine);
+        var segmentStart = wrapSegment.Start;
+        var segmentLength = wrapSegment.Length;
+        var segmentSpan = lineSpanCurrent.Slice(segmentStart, segmentLength);
+        var indexInSegment = GetIndexAtCell(segmentSpan, targetCol, options.TabSize);
+        actualCol = GetCellOffsetAtIndex(segmentSpan, indexInSegment, options.TabSize);
+        return currentLine.Start + segmentStart + indexInSegment;
     }
 
     private bool GetLineFromVisualRow(ReadOnlySpan<char> text, int targetRow, in TextEditorOptions options, out int lineStart, out int lineEnd, out int rowInLine)
     {
-        targetRow = Math.Max(0, targetRow);
-        var row = 0;
-        var lineIndex = 0;
-        lineStart = 0;
-        lineEnd = 0;
-        rowInLine = 0;
-
-        while (lineStart <= text.Length)
+        _ = text;
+        var snapshot = _document.CurrentSnapshot;
+        if (snapshot.LineCount == 0)
         {
-            lineEnd = GetLineEndIndex(text, lineIndex);
-            var lineSpan = text.Slice(lineStart, lineEnd - lineStart);
-
-            if (!options.WordWrap || _contentWidth <= 0)
-            {
-                if (row == targetRow)
-                {
-                    rowInLine = 0;
-                    return true;
-                }
-
-                row++;
-            }
-            else
-            {
-                var lineRows = GetWrapLineCount(lineSpan, _contentWidth, options.TabSize);
-                if (targetRow >= row && targetRow < row + lineRows)
-                {
-                    rowInLine = targetRow - row;
-                    return true;
-                }
-
-                row += lineRows;
-            }
-
-            lineIndex++;
-            lineStart = lineEnd + 1;
-            if (lineStart > text.Length)
-            {
-                break;
-            }
+            lineStart = 0;
+            lineEnd = 0;
+            rowInLine = 0;
+            return false;
         }
 
-        return false;
-    }
-    private static int GetSegmentStartIndex(ReadOnlySpan<char> lineSpan, int rowInLine, int wrapWidth, int tabSize)
-    {
-        if (rowInLine <= 0 || wrapWidth <= 0)
+        if (!options.WordWrap || _contentWidth <= 0 || _layoutCache.LineCount == 0)
         {
-            return 0;
+            var lineIndex = Math.Clamp(targetRow, 0, snapshot.LineCount - 1);
+            var line = snapshot.GetLine(lineIndex);
+            lineStart = line.Start;
+            lineEnd = line.End;
+            rowInLine = 0;
+            return true;
         }
 
-        var offset = 0;
-        for (var i = 0; i < rowInLine && offset < lineSpan.Length; i++)
-        {
-            var segLength = GetWrapSegmentLength(lineSpan, offset, wrapWidth, tabSize);
-            if (segLength <= 0)
-            {
-                break;
-            }
-
-            offset += segLength;
-        }
-
-        return offset;
+        EnsureMultiLineLayoutCache(options);
+        var lineRowInfo = _layoutCache.GetLineFromRow(targetRow);
+        var currentLine = snapshot.GetLine(lineRowInfo.LineIndex);
+        lineStart = currentLine.Start;
+        lineEnd = currentLine.End;
+        rowInLine = lineRowInfo.RowInLine;
+        return true;
     }
 
     private static int GetWrapSegmentLength(ReadOnlySpan<char> lineSpan, int startIndex, int wrapWidth, int tabSize)
@@ -1955,7 +1833,7 @@ internal sealed partial class TextEditorCore
         var last = i;
         while (i < lineSpan.Length)
         {
-            var next = TerminalTextUtility.GetNextTextElementIndex(lineSpan, i);
+            var next = GetNextTextElementIndexFast(lineSpan, i);
             if (next <= i)
             {
                 break;
@@ -1982,74 +1860,13 @@ internal sealed partial class TextEditorCore
         return Math.Max(0, last - startIndex);
     }
 
-    private static int GetWrapLineCount(ReadOnlySpan<char> lineSpan, int wrapWidth, int tabSize)
-    {
-        if (lineSpan.IsEmpty)
-        {
-            return 1;
-        }
-
-        var count = 0;
-        var index = 0;
-        while (index < lineSpan.Length)
-        {
-            var length = GetWrapSegmentLength(lineSpan, index, wrapWidth, tabSize);
-            if (length <= 0)
-            {
-                break;
-            }
-
-            count++;
-            index += length;
-        }
-
-        return Math.Max(1, count);
-    }
-
-    private static (int Row, int Column) GetWrappedPositionInLine(ReadOnlySpan<char> lineSpan, int indexInLine, int wrapWidth, int tabSize)
-    {
-        indexInLine = Math.Clamp(indexInLine, 0, lineSpan.Length);
-
-        var row = 0;
-        var col = 0;
-        var i = 0;
-
-        while (i < indexInLine)
-        {
-            var next = TerminalTextUtility.GetNextTextElementIndex(lineSpan, i);
-            if (next <= i)
-            {
-                break;
-            }
-
-            var width = GetTextElementCellWidth(lineSpan.Slice(i, next - i), col, tabSize);
-
-            if (wrapWidth > 0 && col + width > wrapWidth && col > 0)
-            {
-                row++;
-                col = 0;
-            }
-
-            col += width;
-            i = next;
-
-            if (wrapWidth > 0 && col >= wrapWidth)
-            {
-                row++;
-                col = 0;
-            }
-        }
-
-        return (row, col);
-    }
-
     private static int GetTextCells(ReadOnlySpan<char> text, int tabSize)
     {
         var col = 0;
         var i = 0;
         while (i < text.Length)
         {
-            var next = TerminalTextUtility.GetNextTextElementIndex(text, i);
+            var next = GetNextTextElementIndexFast(text, i);
             if (next <= i)
             {
                 break;
@@ -2069,7 +1886,7 @@ internal sealed partial class TextEditorCore
         var i = 0;
         while (i < index)
         {
-            var next = TerminalTextUtility.GetNextTextElementIndex(text, i);
+            var next = GetNextTextElementIndexFast(text, i);
             if (next <= i)
             {
                 break;
@@ -2093,7 +1910,7 @@ internal sealed partial class TextEditorCore
         var i = 0;
         while (i < text.Length)
         {
-            var next = TerminalTextUtility.GetNextTextElementIndex(text, i);
+            var next = GetNextTextElementIndexFast(text, i);
             if (next <= i)
             {
                 break;
@@ -2120,6 +1937,16 @@ internal sealed partial class TextEditorCore
             return size - (column % size);
         }
 
+        if (element.Length == 1 && element[0] <= '\u007F')
+        {
+            return 1;
+        }
+
+        if (element.Length == 2 && element[0] == '\r' && element[1] == '\n')
+        {
+            return 1;
+        }
+
         return Math.Max(1, TerminalTextUtility.GetWidth(element));
     }
 
@@ -2134,8 +1961,8 @@ internal sealed partial class TextEditorCore
         var i = caretIndex;
         while (i > 0)
         {
-            var prev = TerminalTextUtility.GetPreviousTextElementIndex(text, i);
-            if (!IsWhitespace(ReadTextElementAt(text, prev)))
+            var prev = GetPreviousTextElementIndexFast(text, i);
+            if (!IsWhitespaceAt(text, prev))
             {
                 i = prev;
                 break;
@@ -2148,11 +1975,11 @@ internal sealed partial class TextEditorCore
             return 0;
         }
 
-        var category = GetCategory(ReadTextElementAt(text, i));
+        var category = GetCategoryAt(text, i);
         while (i > 0)
         {
-            var prev = TerminalTextUtility.GetPreviousTextElementIndex(text, i);
-            if (GetCategory(ReadTextElementAt(text, prev)) != category)
+            var prev = GetPreviousTextElementIndexFast(text, i);
+            if (GetCategoryAt(text, prev) != category)
             {
                 break;
             }
@@ -2173,12 +2000,11 @@ internal sealed partial class TextEditorCore
         var i = caretIndex;
         while (i < text.Length)
         {
-            var rune = ReadTextElementAt(text, i);
-            if (!IsWhitespace(rune))
+            if (!IsWhitespaceAt(text, i))
             {
                 break;
             }
-            i = TerminalTextUtility.GetNextTextElementIndex(text, i);
+            i = GetNextTextElementIndexFast(text, i);
         }
 
         if (i >= text.Length)
@@ -2186,16 +2012,16 @@ internal sealed partial class TextEditorCore
             return text.Length;
         }
 
-        var category = GetCategory(ReadTextElementAt(text, i));
+        var category = GetCategoryAt(text, i);
         while (i < text.Length)
         {
-            var next = TerminalTextUtility.GetNextTextElementIndex(text, i);
+            var next = GetNextTextElementIndexFast(text, i);
             if (next >= text.Length)
             {
                 return text.Length;
             }
 
-            if (GetCategory(ReadTextElementAt(text, next)) != category)
+            if (GetCategoryAt(text, next) != category)
             {
                 return next;
             }
@@ -2230,6 +2056,16 @@ internal sealed partial class TextEditorCore
 
     private static bool IsWhitespace(Rune rune) => Rune.IsWhiteSpace(rune);
 
+    private static bool IsWhitespaceAt(ReadOnlySpan<char> text, int index)
+    {
+        if (TryReadAsciiTextElementAt(text, index, out var ch))
+        {
+            return char.IsWhiteSpace(ch);
+        }
+
+        return IsWhitespace(ReadTextElementAt(text, index));
+    }
+
     private static bool IsWord(Rune rune)
     {
         if (rune.Value is < 128)
@@ -2241,6 +2077,23 @@ internal sealed partial class TextEditorCore
         return Rune.IsLetterOrDigit(rune) || rune.Value == '_';
     }
 
+    private static RuneCategory GetCategoryAt(ReadOnlySpan<char> text, int index)
+    {
+        if (TryReadAsciiTextElementAt(text, index, out var ch))
+        {
+            if (char.IsWhiteSpace(ch))
+            {
+                return RuneCategory.Whitespace;
+            }
+
+            return char.IsLetterOrDigit(ch) || ch == '_'
+                ? RuneCategory.Word
+                : RuneCategory.Other;
+        }
+
+        return GetCategory(ReadTextElementAt(text, index));
+    }
+
     private static Rune ReadTextElementAt(ReadOnlySpan<char> text, int index)
     {
         if (index < 0 || index >= text.Length)
@@ -2248,7 +2101,12 @@ internal sealed partial class TextEditorCore
             return Rune.ReplacementChar;
         }
 
-        var next = TerminalTextUtility.GetNextTextElementIndex(text, index);
+        if (TryReadAsciiTextElementAt(text, index, out var ch))
+        {
+            return new Rune(ch);
+        }
+
+        var next = GetNextTextElementIndexFast(text, index);
         if (next <= index)
         {
             return Rune.ReplacementChar;
@@ -2260,6 +2118,64 @@ internal sealed partial class TextEditorCore
         }
 
         return rune;
+    }
+
+    private static int GetNextTextElementIndexFast(ReadOnlySpan<char> text, int index)
+    {
+        index = Math.Clamp(index, 0, text.Length);
+        if (index >= text.Length)
+        {
+            return text.Length;
+        }
+
+        var ch = text[index];
+        if (ch <= '\u007F')
+        {
+            return ch == '\r' && index + 1 < text.Length && text[index + 1] == '\n'
+                ? index + 2
+                : index + 1;
+        }
+
+        return TerminalTextUtility.GetNextTextElementIndex(text, index);
+    }
+
+    private static int GetPreviousTextElementIndexFast(ReadOnlySpan<char> text, int index)
+    {
+        index = Math.Clamp(index, 0, text.Length);
+        if (index == 0)
+        {
+            return 0;
+        }
+
+        var ch = text[index - 1];
+        if (ch <= '\u007F')
+        {
+            return ch == '\n' && index >= 2 && text[index - 2] == '\r'
+                ? index - 2
+                : index - 1;
+        }
+
+        return TerminalTextUtility.GetPreviousTextElementIndex(text, index);
+    }
+
+    private static bool TryReadAsciiTextElementAt(ReadOnlySpan<char> text, int index, out char ch)
+    {
+        ch = default;
+        if ((uint)index >= (uint)text.Length)
+        {
+            return false;
+        }
+
+        var current = text[index];
+        if (current > '\u007F')
+        {
+            return false;
+        }
+
+        ch = current == '\r' && index + 1 < text.Length && text[index + 1] == '\n'
+            ? '\n'
+            : current;
+        return true;
     }
 
     internal void SetSearchQuery(in SearchQuery query, in TextEditorOptions options)

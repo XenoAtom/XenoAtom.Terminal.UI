@@ -20,5 +20,5 @@ promptEditor.AddCommand(new Command()
 });
 
 Terminal.Run(
-    promptEditor,
+    promptEditor.Scrollable(),
     onUpdate: () => TerminalLoopResult.Continue);

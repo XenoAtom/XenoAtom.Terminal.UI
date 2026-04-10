@@ -80,6 +80,12 @@ The text editing stack is split into a few focused parts:
   - `DynamicTextDocument`: bridges a bindable `Text` property to the editor engine.
 - **`ScrollModel`**: viewport/extent model used by `IScrollable` controls and `ScrollViewer`.
 
+For large documents, the multi-line editor path caches per-line widths and wrap metadata, updates those caches incrementally
+after document changes, and renders only the visible rows instead of rescanning the entire document on each frame. Extremely
+long wrapped lines use sparse row checkpoints plus a small reusable cache of fixed-size wrapped-row blocks, so keyboard
+navigation, PageUp/PageDown, mouse wheel scrolling, and scrollbar drags can jump quickly without materializing every wrapped
+row offset or allocating per-row navigation state while moving through the document.
+
 The caret is rendered using the terminal cursor (not a fake reverse-video “block” cell), which keeps rendering stable and works well
 with accessibility settings in many terminals.
 

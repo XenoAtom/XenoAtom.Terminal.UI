@@ -63,5 +63,25 @@ public sealed class GraphemeEditingTests
         driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Backspace });
         driver.TickUntil(() => textArea.Text == "A\n\nB");
     }
+
+    [TestMethod]
+    public void TextArea_LeftRight_Treats_Crlf_As_Single_Text_Element()
+    {
+        var textArea = new TextArea("A\r\nB");
+        var root = new VStack { textArea };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.App.Focus(textArea);
+        driver.Tick();
+
+        textArea.CaretIndex = 1;
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right });
+        driver.TickUntil(() => textArea.CaretIndex == 3);
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left });
+        driver.TickUntil(() => textArea.CaretIndex == 1);
+    }
 }
 

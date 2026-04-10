@@ -387,6 +387,9 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     private TextEditorRenderContext BuildRenderContext(CellBuffer buffer, Rectangle contentRect, Style textStyle, Style selectionStyle, Style placeholderStyle)
         => new(buffer, contentRect, textStyle, selectionStyle, placeholderStyle, Placeholder, IsFocused, WriteTextSegment);
 
+    internal TextEditorCore.TextEditorLineLayoutDiagnostics GetLineLayoutDiagnostics(int lineIndex)
+        => _core.GetLineLayoutDiagnostics(lineIndex, BuildEditorOptions());
+
     /// <summary>
     /// Renders the editor content into the provided buffer.
     /// </summary>
@@ -465,7 +468,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     private void OnDocumentChanged(object? sender, TextDocumentChangedEventArgs e)
     {
         _undoRedo.EnsureSynchronized();
-        _core.OnDocumentChanged();
+        _core.OnDocumentChanged(e);
     }
 
     partial void OnEnableUndoChanged(bool value)
