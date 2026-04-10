@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System;
+using XenoAtom.Terminal.UI;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
@@ -60,6 +61,6 @@ public static partial class ValidationExtensions
         return new ValidationPresenter()
             .Content(content)
             .Placement(placement)
-            .Message(() => validator(value.GetValue()));
+            .Update(presenter => presenter.Message = validator(value.GetValue()));
     }
 }

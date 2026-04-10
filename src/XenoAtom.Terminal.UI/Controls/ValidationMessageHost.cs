@@ -45,9 +45,18 @@ internal sealed partial class ValidationMessageHost : Visual
         Message = message;
     }
 
+    partial void OnMessageChanged(ValidationMessage? value)
+    {
+        ApplyMessage(value);
+    }
+
     protected override void PrepareChildren()
     {
-        var message = Message;
+        ApplyMessage(Message);
+    }
+
+    private void ApplyMessage(ValidationMessage? message)
+    {
         var sameMessage =
             _lastMessage is { } last &&
             message is { } current &&
