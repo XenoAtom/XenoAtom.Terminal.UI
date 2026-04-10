@@ -455,14 +455,9 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     /// <inheritdoc />
     protected override void OnPointerWheel(PointerEventArgs e)
     {
-        if (IsSingleLine || e.WheelDelta == 0)
-        {
-            return;
-        }
-
-        var delta = e.WheelDelta > 0 ? -1 : 1;
-        _scroll.ScrollBy(0, delta);
-        e.Handled = true;
+        // Text editors do not scroll themselves on mouse-wheel input. When hosted inside a ScrollViewer,
+        // the wheel event bubbles to the container, which owns viewport scrolling behavior.
+        _ = e;
     }
 
     private void OnDocumentChanged(object? sender, TextDocumentChangedEventArgs e)

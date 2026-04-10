@@ -229,4 +229,64 @@ public sealed class TextAreaTests
         Assert.IsGreaterThanOrEqualTo(0, y);
         Assert.IsLessThan(6, y);
     }
+
+    [TestMethod]
+    public void TextArea_MouseWheel_Scroll_Does_Not_Move_Caret()
+    {
+        var textArea = new TextArea(string.Join("\n", Enumerable.Range(0, 50).Select(i => $"Line {i:00}")))
+        {
+            MinHeight = 6,
+            MaxHeight = 6,
+        };
+        var root = new VStack { textArea };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 12));
+        driver.Tick();
+
+        driver.App.Focus(textArea);
+        textArea.CaretIndex = 0;
+        driver.Tick();
+
+        var initialCaretIndex = textArea.CaretIndex;
+        var initialOffsetY = textArea.Scroll.OffsetY;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Wheel,
+            Button = TerminalMouseButton.Wheel,
+            X = textArea.Bounds.X + 1,
+            Y = textArea.Bounds.Y + 2,
+            WheelDelta = -1,
+        });
+
+        driver.Tick();
+
+        Assert.AreEqual(initialCaretIndex, textArea.CaretIndex, "Wheel scrolling should not move the text caret.");
+        Assert.AreEqual(initialOffsetY, textArea.Scroll.OffsetY, "Text editors should not scroll themselves on mouse-wheel input.");
+        Assert.AreSame(textArea, driver.App.FocusedElement, "Wheel scrolling should not change focus.");
+    }
+
+    [TestMethod]
+    public void TextArea_Down_At_Last_Wrapped_Row_Does_Not_Push_Caret_Below_Content()
+    {
+        var textArea = new TextArea("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+        var root = new VStack { textArea };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(8, 4));
+        driver.App.Focus(textArea);
+        driver.Tick();
+
+        textArea.CaretIndex = textArea.Text!.Length;
+        driver.Tick();
+
+        Assert.IsTrue(textArea.TryGetCursorCell(out var initialX, out var initialY), "Expected the caret at document end to be visible before pressing Down.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
+        driver.Tick();
+
+        Assert.AreEqual(textArea.Text!.Length, textArea.CaretIndex, "Down at the last wrapped row should keep the caret at document end.");
+        Assert.IsTrue(textArea.TryGetCursorCell(out var afterX, out var afterY), "Down at the last wrapped row should not move the caret below the visible content.");
+        Assert.AreEqual(initialX, afterX, "Caret column should remain stable at document end.");
+        Assert.AreEqual(initialY, afterY, "Caret row should remain on the last visible wrapped row.");
+    }
 }

@@ -161,7 +161,7 @@ The editor sets:
 
 - viewport size from the arranged editor rectangle
 - extent based on text + wrap mode
-- offsets updated by caret movement, wheel scrolling, or scrollbars
+- offsets updated by caret movement, or by hosting scroll viewers / scrollbars
 
 `ScrollModel.ScrollToMakeVisible(...)` is used to keep the caret visible.
 

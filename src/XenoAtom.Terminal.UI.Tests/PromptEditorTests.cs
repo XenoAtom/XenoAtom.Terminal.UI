@@ -371,6 +371,44 @@ public sealed class PromptEditorTests
         Assert.AreEqual(new Size(48, 1), editor.DesiredSize);
     }
 
+    [TestMethod]
+    public void PromptEditor_MouseWheel_Does_Not_Move_Caret_Or_Scroll()
+    {
+        var editor = new PromptEditor()
+            .PromptMarkup("> ")
+            .ContinuationPromptMarkup("| ")
+            .Text(string.Join("\n", Enumerable.Range(0, 30).Select(i => $"Line {i:00}")))
+            .MinHeight(5)
+            .MaxHeight(5);
+
+        var root = new VStack { editor };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        driver.App.Focus(editor);
+        editor.CaretIndex = 0;
+        driver.Tick();
+
+        var initialCaretIndex = editor.CaretIndex;
+        var initialOffsetY = editor.Scroll.OffsetY;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Wheel,
+            Button = TerminalMouseButton.Wheel,
+            X = editor.Bounds.X + 1,
+            Y = editor.Bounds.Y + 2,
+            WheelDelta = -1,
+        });
+
+        driver.Tick();
+
+        Assert.AreEqual(initialCaretIndex, editor.CaretIndex, "Wheel scrolling should not move the prompt editor caret.");
+        Assert.AreEqual(initialOffsetY, editor.Scroll.OffsetY, "PromptEditor should not scroll itself on mouse-wheel input.");
+        Assert.AreSame(editor, driver.App.FocusedElement, "Wheel scrolling should not change focus.");
+    }
+
     private static void AssertCommand(PromptEditor editor, string id, PromptEditorCommandConfig expected)
     {
         var command = editor.Commands.FirstOrDefault(x => string.Equals(x.Id, id, StringComparison.Ordinal));

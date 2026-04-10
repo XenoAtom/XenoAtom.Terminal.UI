@@ -86,6 +86,9 @@ long wrapped lines use sparse row checkpoints plus a small reusable cache of fix
 navigation, PageUp/PageDown, mouse wheel scrolling, and scrollbar drags can jump quickly without materializing every wrapped
 row offset or allocating per-row navigation state while moving through the document.
 
+Mouse-wheel scrolling is handled by hosting scrolling containers such as `ScrollViewer`; text editors themselves do not
+consume wheel input directly.
+
 The caret is rendered using the terminal cursor (not a fake reverse-video “block” cell), which keeps rendering stable and works well
 with accessibility settings in many terminals.
 

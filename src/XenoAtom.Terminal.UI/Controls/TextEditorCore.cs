@@ -1349,13 +1349,15 @@ internal sealed partial class TextEditorCore
         var text = GetText();
         if (options.WordWrap)
         {
+            EnsureMultiLineLayoutCache(options);
             var (row, visualCol) = GetVisualPosition(text.AsSpan(), _caretIndex, options);
             if (_preferredColumn < 0)
             {
                 _preferredColumn = visualCol;
             }
 
-            var targetRow = Math.Max(0, row + deltaLines);
+            var maxRow = Math.Max(0, _layoutCache.TotalRows - 1);
+            var targetRow = Math.Clamp(row + deltaLines, 0, maxRow);
             var index = GetIndexFromVisualPosition(text.AsSpan(), targetRow, _preferredColumn, options, out var actualCol);
             MoveCaretTo(index, extendSelection, options, targetRow, actualCol);
             return;
