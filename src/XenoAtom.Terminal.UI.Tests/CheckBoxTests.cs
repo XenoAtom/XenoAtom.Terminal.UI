@@ -28,6 +28,26 @@ public sealed class CheckBoxTests
     }
 
     [TestMethod]
+    public void CheckBox_Raises_ValueChanged_When_IsChecked_Changes()
+    {
+        var checkBox = new CheckBox("A", isChecked: false);
+        var oldValue = true;
+        var newValue = false;
+
+        checkBox.ValueChanged((_, e) =>
+        {
+            oldValue = e.OldValue;
+            newValue = e.NewValue;
+        });
+
+        checkBox.IsChecked = true;
+
+        Assert.IsTrue(checkBox.IsChecked);
+        Assert.IsFalse(oldValue);
+        Assert.IsTrue(newValue);
+    }
+
+    [TestMethod]
     public void CheckBox_Renders_Space_Between_Glyph_And_Text()
     {
         var checkBox = new CheckBox("A", isChecked: true);

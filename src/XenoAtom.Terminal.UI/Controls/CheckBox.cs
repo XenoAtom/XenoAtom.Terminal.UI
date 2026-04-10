@@ -16,6 +16,8 @@ namespace XenoAtom.Terminal.UI.Controls;
 /// </summary>
 public sealed partial class CheckBox : Visual
 {
+    private bool _oldValueForEvent;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CheckBox"/> class.
     /// </summary>
@@ -88,6 +90,16 @@ public sealed partial class CheckBox : Visual
     /// </summary>
     [Bindable]
     public partial bool IsChecked { get; set; }
+
+    partial void OnIsCheckedChanging(ref bool value) => _oldValueForEvent = _isChecked;
+
+    partial void OnIsCheckedChanged(bool value)
+    {
+        if (_oldValueForEvent != value)
+        {
+            RaiseEvent(ValueChangedEvent, new ValueChangedEventArgs<bool>(_oldValueForEvent, value));
+        }
+    }
 
     /// <inheritdoc/>
     protected override int ChildrenCount => _text is null ? 0 : 1;
@@ -188,4 +200,7 @@ public sealed partial class CheckBox : Visual
         IsChecked = !IsChecked;
         e.Handled = true;
     }
+
+    [RoutedEvent(RoutingStrategy.Bubble)]
+    private void OnValueChanged(ValueChangedEventArgs<bool> e) { }
 }

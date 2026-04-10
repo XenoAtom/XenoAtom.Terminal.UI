@@ -18,6 +18,13 @@ new CheckBox("Accept terms")
     .IsChecked(accepted);
 ```
 
+To react imperatively when the value changes, use the routed `ValueChanged` event:
+
+```csharp
+new CheckBox("Accept terms")
+    .ValueChanged((_, e) => Console.WriteLine($"Checked: {e.NewValue}"));
+```
+
 ## Content & spacing
 
 The label can be a `Visual`, and spacing between glyph and label is controlled by `CheckBoxStyle`.
@@ -26,6 +33,7 @@ The label can be a `Visual`, and spacing between glyph and label is controlled b
 
 - `Space` / `Enter`: toggle when focused.
 - Mouse click: toggle.
+- `ValueChanged`: raised when `IsChecked` changes.
 
 ## Defaults
 
