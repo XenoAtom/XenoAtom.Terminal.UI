@@ -261,6 +261,82 @@ public sealed partial class MenuBar : Visual
         _openPopups.Remove(popup);
     }
 
+    internal void CloseDescendantMenus()
+    {
+        Popup? rootPopup = null;
+        for (var i = 0; i < _openPopups.Count; i++)
+        {
+            if (_openPopups[i].Anchor is MenuBarItem)
+            {
+                rootPopup = _openPopups[i];
+                break;
+            }
+        }
+
+        if (rootPopup is null)
+        {
+            CloseAllMenus();
+            return;
+        }
+
+        _closingAllMenus = true;
+        try
+        {
+            var copy = _openPopups.ToArray();
+            for (var i = copy.Length - 1; i >= 0; i--)
+            {
+                if (!ReferenceEquals(copy[i], rootPopup))
+                {
+                    copy[i].Close();
+                }
+            }
+        }
+        finally
+        {
+            _closingAllMenus = false;
+        }
+    }
+
+    internal Visual? HitTestMenuInteraction(int x, int y)
+    {
+        for (var i = _openPopups.Count - 1; i >= 0; i--)
+        {
+            var popup = _openPopups[i];
+            if (!popup.PopupRect.Contains(x, y))
+            {
+                continue;
+            }
+
+            var hit = FindMenuList(popup) ?? popup.ScrollHost.HitTest(x, y);
+            if (hit is not null)
+            {
+                return hit;
+            }
+        }
+
+        EnsurePresenters();
+        for (var i = _presenters.Count - 1; i >= 0; i--)
+        {
+            if (_presenters[i].Bounds.Contains(x, y))
+            {
+                return _presenters[i];
+            }
+        }
+
+        return null;
+    }
+
+    private static MenuList? FindMenuList(Popup popup)
+    {
+        var content = popup.Content;
+        if (content is null)
+        {
+            return null;
+        }
+
+        return content.EnumerateVisualsDepthFirst().OfType<MenuList>().FirstOrDefault();
+    }
+
     private void EnsurePresenters()
     {
         var items = _items;
@@ -499,7 +575,14 @@ public sealed partial class MenuBar : Visual
 
             if (bar._openIndex == _index)
             {
-                bar.CloseAllMenus();
+                if (bar._openPopups.Count > 1)
+                {
+                    bar.CloseDescendantMenus();
+                }
+                else
+                {
+                    bar.CloseAllMenus();
+                }
             }
             else
             {
@@ -528,6 +611,7 @@ public sealed partial class MenuBar : Visual
         private partial int HoveredIndex { get; set; }
 
         private Rectangle _innerRect;
+        private int _maxRowWidth;
         private int _submenuColumnWidth;
 
         public MenuList(MenuBar owner, IReadOnlyList<MenuItem> items, MenuList? parent, Visual target)
@@ -548,6 +632,8 @@ public sealed partial class MenuBar : Visual
             HoveredIndex = -1;
         }
 
+        public bool HasOpenSubmenu => _submenuPopup is not null;
+
         protected override int ChildrenCount => _rows.Count;
 
         protected override Visual GetChild(int index) => _rows[index];
@@ -556,7 +642,18 @@ public sealed partial class MenuBar : Visual
         {
             var style = GetStyle<MenuListStyle>();
             var padding = style.Padding;
+            EnsureRowMetrics(style);
 
+            var width = padding.Horizontal + _maxRowWidth + _submenuColumnWidth;
+            var height = padding.Vertical + _items.Count;
+
+            width = Math.Max(1, width);
+            height = Math.Max(1, height);
+            return SizeHints.Fixed(constraints.Clamp(new Size(width, height)));
+        }
+
+        private void EnsureRowMetrics(MenuListStyle style)
+        {
             var maxRowWidth = 0;
             var submenuWidth = 0;
 
@@ -572,14 +669,8 @@ public sealed partial class MenuBar : Visual
                 }
             }
 
+            _maxRowWidth = maxRowWidth;
             _submenuColumnWidth = submenuWidth;
-
-            var width = padding.Horizontal + maxRowWidth + submenuWidth;
-            var height = padding.Vertical + _items.Count;
-
-            width = Math.Max(1, width);
-            height = Math.Max(1, height);
-            return SizeHints.Fixed(constraints.Clamp(new Size(width, height)));
         }
 
         protected override void ArrangeCore(in Rectangle finalRect)
@@ -593,11 +684,9 @@ public sealed partial class MenuBar : Visual
                 Math.Max(0, finalRect.Width - padding.Horizontal),
                 Math.Max(0, finalRect.Height - padding.Vertical));
 
-            var rowWidth = Math.Max(0, _innerRect.Width - _submenuColumnWidth);
-
             for (var i = 0; i < _rows.Count; i++)
             {
-                var rowRect = new Rectangle(_innerRect.X, _innerRect.Y + i, rowWidth, 1);
+                var rowRect = new Rectangle(_innerRect.X, _innerRect.Y + i, _innerRect.Width, 1);
                 _rows[i].Arrange(rowRect);
             }
         }
@@ -649,7 +738,7 @@ public sealed partial class MenuBar : Visual
                 if (HasVisibleSubmenu(item) && _submenuColumnWidth > 0)
                 {
                     var arrowX = inner.X + inner.Width - Math.Max(1, TerminalTextUtility.GetRuneWidth(style.SubmenuGlyph));
-                    buffer.SetCell(arrowX, y, style.SubmenuGlyph, rowStyle | TextStyle.Dim);
+                    buffer.SetCell(arrowX, y, style.SubmenuGlyph, rowStyle);
                 }
             }
         }
@@ -678,6 +767,12 @@ public sealed partial class MenuBar : Visual
             var index = TryGetIndexAtPoint(e.UiX, e.UiY);
             if (index < 0)
             {
+                if (HasOpenSubmenu)
+                {
+                    CloseSubmenu();
+                    e.Handled = true;
+                }
+
                 return;
             }
 
@@ -688,6 +783,15 @@ public sealed partial class MenuBar : Visual
             }
 
             SelectedIndex = index;
+            HoveredIndex = index;
+
+            if (HasOpenSubmenu)
+            {
+                CloseSubmenu();
+                e.Handled = true;
+                return;
+            }
+
             InvokeOrOpen(SelectedIndex);
             e.Handled = true;
         }
@@ -879,6 +983,7 @@ public sealed partial class MenuBar : Visual
             var list = new MenuList(_owner, visibleItems, parent: this, target: _target);
             var menuListStyle = GetStyle<MenuListStyle>();
             var popupContent = menuListStyle.PopupTemplateFactory?.Invoke(list) ?? list;
+            var submenuOffsetX = GetSubmenuOffsetX(index);
 
             var popup = new Popup
             {
@@ -886,28 +991,17 @@ public sealed partial class MenuBar : Visual
                 Content = popupContent,
                 MatchAnchorWidth = false,
                 Placement = PopupPlacement.Right,
+                OffsetX = submenuOffsetX,
             }.Style(PopupStyle.Default with { Padding = Thickness.Zero });
             _owner.RegisterPopup(popup);
 
-            popup.Closed((_, closeArgs) =>
+            popup.Closed((_, _) =>
             {
                 list.ReleaseVisuals();
                 _submenuPopup = null;
                 _owner.UnregisterPopup(popup);
 
-                // If the submenu was dismissed by an outside click that still lands inside
-                // this parent menu list, keep the parent menu open so users can step back.
-                if (!_programmaticSubmenuClose
-                    && !_owner._closingAllMenus
-                    && closeArgs.Reason == PopupCloseReason.OutsidePointerPress
-                    && closeArgs.OutsidePointerX is int outsideX
-                    && closeArgs.OutsidePointerY is int outsideY
-                    && Bounds.Contains(outsideX, outsideY))
-                {
-                    return;
-                }
-
-                if (!_programmaticSubmenuClose && !_owner._closingAllMenus)
+                if (!IsProgrammaticCloseRequested() && !_owner._closingAllMenus)
                 {
                     _owner.CloseAllMenus();
                 }
@@ -917,7 +1011,19 @@ public sealed partial class MenuBar : Visual
             popup.Show();
         }
 
-        private void CloseSubmenu()
+        private int GetSubmenuOffsetX(int index)
+        {
+            EnsureRowMetrics(GetStyle<MenuListStyle>());
+            var rowWidth = _rows[index].DesiredSize.Width;
+            var fullRowWidth = _maxRowWidth + _submenuColumnWidth;
+
+            // Popup anchors are based on the row visual bounds, which track the content width rather
+            // than the full menu-row surface. Extend by the remaining row width so submenus always
+            // connect from the parent popup border area instead of the menu-item text width.
+            return Math.Max(0, fullRowWidth - rowWidth);
+        }
+
+        internal void CloseSubmenu()
         {
             if (_submenuPopup is null)
             {
@@ -934,6 +1040,19 @@ public sealed partial class MenuBar : Visual
             {
                 _programmaticSubmenuClose = false;
             }
+        }
+
+        private bool IsProgrammaticCloseRequested()
+        {
+            for (var current = this; current is not null; current = current._parent)
+            {
+                if (current._programmaticSubmenuClose)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void CloseSelf()
@@ -971,6 +1090,16 @@ public sealed partial class MenuBar : Visual
             for (var parent = Parent; parent is not null; parent = parent.Parent)
             {
                 if (parent is Popup popup)
+                {
+                    return popup;
+                }
+            }
+
+            for (var i = 0; i < _owner._openPopups.Count; i++)
+            {
+                var popup = _owner._openPopups[i];
+                var content = popup.Content;
+                if (content is not null && content.EnumerateVisualsDepthFirst().Any(visual => ReferenceEquals(visual, this)))
                 {
                     return popup;
                 }

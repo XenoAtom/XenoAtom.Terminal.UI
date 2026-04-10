@@ -2695,6 +2695,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private void DispatchMouseEvent(TerminalMouseEvent mouseEvent)
     {
         var inputRoot = GetInputRoot();
+        var activeMenuBar = inputRoot is Popup popup ? ResolveOwningMenuBar(popup) : null;
 
         if (_pointerCapture is not null && !IsInScope(_pointerCapture, inputRoot))
         {
@@ -2715,6 +2716,15 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         {
             hitTarget = inputRoot.HitTest(mouseEvent.X, mouseEvent.Y);
             target = _pointerCapture ?? hitTarget;
+
+            if (_pointerCapture is null
+                && activeMenuBar is not null
+                && TryResolveMenuPopupHitTarget(activeMenuBar, mouseEvent.X, mouseEvent.Y, out var menuHitTarget)
+                && menuHitTarget is not null)
+            {
+                hitTarget = menuHitTarget;
+                target = menuHitTarget;
+            }
         }
         else
         {
@@ -2843,6 +2853,30 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 target.RaiseEvent(Visual.PointerWheelEvent, args);
                 break;
         }
+    }
+
+    private bool TryResolveMenuPopupHitTarget(Controls.MenuBar menuBar, int uiX, int uiY, out Visual? hitTarget)
+    {
+        hitTarget = menuBar.HitTestMenuInteraction(uiX, uiY);
+        return hitTarget is not null;
+    }
+
+    private static Controls.MenuBar? ResolveOwningMenuBar(Popup popup)
+    {
+        for (var current = popup.Anchor; current is not null; current = current.Parent)
+        {
+            if (current is Controls.MenuBar menuBar)
+            {
+                return menuBar;
+            }
+
+            if (current is Popup parentPopup)
+            {
+                return ResolveOwningMenuBar(parentPopup);
+            }
+        }
+
+        return null;
     }
 
     private void TryShowContextMenu(Visual hitTarget, int uiX, int uiY)

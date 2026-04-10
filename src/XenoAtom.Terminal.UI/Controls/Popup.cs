@@ -309,6 +309,8 @@ public sealed partial class Popup : Visual, IModalVisual
         set => _restoreFocusTarget = value;
     }
 
+    internal Rectangle PopupRect => _popupRect;
+
     /// <inheritdoc/>
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {

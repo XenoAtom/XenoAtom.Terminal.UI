@@ -215,7 +215,7 @@ public static partial class ContextMenuService
                 if (HasVisibleSubmenu(item) && _submenuColumnWidth > 0)
                 {
                     var arrowX = inner.X + inner.Width - Math.Max(1, TerminalTextUtility.GetRuneWidth(style.SubmenuGlyph));
-                    buffer.SetCell(arrowX, y, style.SubmenuGlyph, rowStyle | TextStyle.Dim);
+                    buffer.SetCell(arrowX, y, style.SubmenuGlyph, rowStyle);
                 }
             }
         }

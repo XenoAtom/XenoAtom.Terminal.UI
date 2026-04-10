@@ -1,5 +1,8 @@
 using System.Globalization;
 using System.Text;
+using XenoAtom.Terminal;
+using XenoAtom.Terminal.Backends;
+using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.ControlsDemo;
 using XenoAtom.Terminal.UI.Extensions.Screenshot;
@@ -184,12 +187,31 @@ internal static class ScreenshotExport
                 {
                     // Some visuals rely on TerminalApp (window layer, focus, commands). Use a lightweight in-memory app snapshot.
                     Func<Visual, bool>? hover = null;
+                    Action<TerminalApp, InMemoryTerminalBackend>? beforeCapture = null;
                     if (string.Equals(typeName, "TooltipDemo", StringComparison.Ordinal))
                     {
                         hover = static v => v is TooltipHost th && th.ShowDelayMilliseconds == 0;
                     }
 
-                    TerminalAppSnapshotImageRenderer.Save(root, path, width, maxHeight, theme, hover, imageOptions);
+                    if (string.Equals(typeName, "MenuBarDemo", StringComparison.Ordinal))
+                    {
+                        beforeCapture = static (app, backend) =>
+                        {
+                            var menuBar = app.Root.EnumerateVisualsDepthFirst().OfType<MenuBar>().FirstOrDefault();
+                            if (menuBar is null)
+                            {
+                                return;
+                            }
+
+                            app.Focus(menuBar);
+                            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
+                            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
+                            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right });
+                            backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right });
+                        };
+                    }
+
+                    TerminalAppSnapshotImageRenderer.Save(root, path, width, maxHeight, theme, hover, beforeCapture, imageOptions);
                 }
                 else
                 {
@@ -221,6 +243,7 @@ internal static class ScreenshotExport
            string.Equals(typeName, "CommandPaletteDemo", StringComparison.Ordinal) ||
            string.Equals(typeName, "ContextMenuDemo", StringComparison.Ordinal) ||
            string.Equals(typeName, "DialogDemo", StringComparison.Ordinal) ||
+           string.Equals(typeName, "MenuBarDemo", StringComparison.Ordinal) ||
            string.Equals(typeName, "PopupDemo", StringComparison.Ordinal) ||
            string.Equals(typeName, "SearchReplacePopupDemo", StringComparison.Ordinal) ||
            string.Equals(typeName, "ToastDemo", StringComparison.Ordinal) ||
