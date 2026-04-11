@@ -248,6 +248,12 @@ public sealed partial class LogControl : Visual, ISelectionOwner
     [Bindable]
     internal partial int InteractionVersion { get; set; }
 
+    internal LogEntryLayoutDiagnostics GetEntryLayoutDiagnostics(int entryIndex)
+        => _content.GetEntryLayoutDiagnostics(entryIndex);
+
+    internal LogLayoutCacheDiagnostics GetLayoutCacheDiagnostics()
+        => _content.GetLayoutCacheDiagnostics();
+
     /// <summary>
     /// Appends a plain text log entry.
     /// </summary>
@@ -297,6 +303,7 @@ public sealed partial class LogControl : Visual, ISelectionOwner
         }
 
         _entries.Clear();
+        _content.ResetLayoutCache();
         ClearSelection();
         RebuildMatches();
         _scrollViewer.VerticalOffset = 0;
@@ -411,11 +418,18 @@ public sealed partial class LogControl : Visual, ISelectionOwner
         var style = GetStyle<LogControlStyle>();
         var padding = style.Padding;
 
+        var innerMaxWidth = constraints.IsWidthBounded
+            ? Math.Max(0, constraints.MaxWidth - padding.Horizontal)
+            : LayoutConstants.Infinite;
+        var innerMaxHeight = constraints.IsHeightBounded
+            ? Math.Max(0, constraints.MaxHeight - padding.Vertical)
+            : LayoutConstants.Infinite;
+
         var innerConstraints = new LayoutConstraints(
             0,
-            Math.Max(0, constraints.MaxWidth - padding.Horizontal),
+            innerMaxWidth,
             0,
-            Math.Max(0, constraints.MaxHeight - padding.Vertical));
+            innerMaxHeight);
         _scrollViewer.Measure(innerConstraints);
 
         // Add padding back for the control.
@@ -735,7 +749,9 @@ public sealed partial class LogControl : Visual, ISelectionOwner
 
     private void AppendEntry(string text, StyledRun[]? runs)
     {
-        _entries.Add(new LogEntry(text, runs));
+        var entry = new LogEntry(text, runs);
+        _entries.Add(entry);
+        _content.OnEntryAdded(entry);
     }
 
     private void TrimToCapacity()
@@ -763,9 +779,9 @@ public sealed partial class LogControl : Visual, ISelectionOwner
             var removedRows = 0;
             var wrap = WrapText;
             var width = _content.LastWrapWidth;
-            for (var i = 0; i < excess; i++)
+            if (width > 0 || !wrap)
             {
-                removedRows += _entries[i].GetRowCount(wrap, width);
+                removedRows = _content.GetPrefixRowCount(excess, wrap, width);
             }
 
             if (removedRows > 0)
@@ -774,10 +790,8 @@ public sealed partial class LogControl : Visual, ISelectionOwner
             }
         }
 
-        for (var i = 0; i < excess; i++)
-        {
-            _entries.RemoveAt(0);
-        }
+        _entries.RemoveRange(0, excess);
+        _content.OnEntriesRemoved(0, excess);
 
         ClearSelection();
         RebuildMatches();
@@ -1128,34 +1142,7 @@ public sealed partial class LogControl : Visual, ISelectionOwner
         return list is { Count: > 0 };
     }
 
-    private sealed record LogEntry(string Text, StyledRun[]? Runs)
-    {
-        private int _cachedWrapWidth;
-        private bool _cachedWrap;
-        private int _cachedRowCount = 1;
-
-        public int GetRowCount(bool wrap, int wrapWidth)
-        {
-            if (!wrap)
-            {
-                _cachedWrap = false;
-                _cachedWrapWidth = 0;
-                _cachedRowCount = 1;
-                return 1;
-            }
-
-            wrapWidth = Math.Max(1, wrapWidth);
-            if (_cachedWrap && _cachedWrapWidth == wrapWidth)
-            {
-                return _cachedRowCount;
-            }
-
-            _cachedWrap = true;
-            _cachedWrapWidth = wrapWidth;
-            _cachedRowCount = Math.Max(1, LogContentVisual.CountWrappedLines(Text.AsSpan(), wrapWidth));
-            return _cachedRowCount;
-        }
-    }
+    private sealed record LogEntry(string Text, StyledRun[]? Runs);
 
     private readonly record struct LogMatch(int EntryIndex, int Start, int Length);
 
@@ -1224,10 +1211,9 @@ public sealed partial class LogControl : Visual, ISelectionOwner
         public string? GetErrorText() => _owner.GetSearchErrorText();
     }
 
-    private sealed class LogContentVisual : Visual
+    private sealed partial class LogContentVisual : Visual
     {
         private readonly LogControl _owner;
-        private int[]? _rowPrefix;
         private int _lastWrapWidth;
         private int _extentHeight;
         private int _extentWidth;
@@ -1252,39 +1238,25 @@ public sealed partial class LogControl : Visual, ISelectionOwner
             var maxWidth = Math.Max(0, constraints.MaxWidth);
             var maxHeight = Math.Max(0, constraints.MaxHeight);
 
-            _lastWrapWidth = constraints.IsWidthBounded ? Math.Max(1, maxWidth) : Math.Max(1, maxWidth);
+            var hasFiniteWrapWidth = wrap && constraints.IsWidthBounded;
+            _lastWrapWidth = hasFiniteWrapWidth
+                ? Math.Max(1, maxWidth)
+                : GetPreferredWrapWidth();
 
             _ = _owner._entries.Version;
             _ = _owner.InteractionVersion;
 
-            var entries = _owner._entries;
-            var count = entries.Count;
-
-            var maxLineCells = 0;
-            for (var i = 0; i < count; i++)
+            if (hasFiniteWrapWidth)
             {
-                var w = MeasureCellWidth(entries[i].Text.AsSpan());
-                maxLineCells = Math.Max(maxLineCells, w);
+                EnsureLayoutCache(wrap, _lastWrapWidth);
             }
-            _extentWidth = maxLineCells;
-
-            var rowPrefix = _rowPrefix;
-            if (rowPrefix is null || rowPrefix.Length != count + 1)
+            else if (!_layoutCacheInitialized)
             {
-                rowPrefix = new int[count + 1];
-                _rowPrefix = rowPrefix;
+                RebuildLayoutCache(wrap: false, wrapWidth: 0);
             }
 
-            var totalRows = 0;
-            rowPrefix[0] = 0;
-            for (var i = 0; i < count; i++)
-            {
-                var rows = wrap ? entries[i].GetRowCount(wrap: true, _lastWrapWidth) : 1;
-                totalRows += rows;
-                rowPrefix[i + 1] = totalRows;
-            }
-
-            _extentHeight = totalRows;
+            var maxLineCells = _extentWidth;
+            var totalRows = _extentHeight;
 
             var desiredWidth = constraints.IsWidthBounded ? Math.Min(maxWidth, maxLineCells) : maxLineCells;
             var desiredHeight = constraints.IsHeightBounded ? Math.Min(maxHeight, totalRows) : totalRows;
@@ -1318,6 +1290,7 @@ public sealed partial class LogControl : Visual, ISelectionOwner
 
             var wrap = _owner.WrapText;
             var wrapWidth = Math.Max(1, rect.Width);
+            EnsureLayoutCache(wrap, wrapWidth);
 
             var theme = GetTheme();
             var logStyle = GetStyle<LogControlStyle>();
@@ -1333,16 +1306,10 @@ public sealed partial class LogControl : Visual, ISelectionOwner
             var firstContentRow = Math.Max(0, firstScreenY - rect.Y);
             var lastContentRow = Math.Min(_extentHeight, lastScreenY - rect.Y);
 
-            if (_rowPrefix is null || _rowPrefix.Length != count + 1)
-            {
-                return;
-            }
-
-            var rowPrefix = _rowPrefix;
             var row = firstContentRow;
             var screenY = rect.Y + row;
 
-            if (!TryMapRowToEntry(rowPrefix, row, out var entryIndex, out var rowInEntry))
+            if (!TryMapRowToEntry(row, out var entryIndex, out var rowInEntry))
             {
                 return;
             }
@@ -1365,7 +1332,9 @@ public sealed partial class LogControl : Visual, ISelectionOwner
                 var sliceEnd = lineText.Length;
                 if (wrap)
                 {
-                    GetWrapSliceForRow(lineText, wrapWidth, rowInEntry, out sliceStart, out sliceEnd);
+                    var segment = GetWrapSegmentAtRow(entryIndex, lineText, rowInEntry, wrapWidth);
+                    sliceStart = segment.Start;
+                    sliceEnd = segment.Start + segment.Length;
                 }
 
                 var fillStartX = Math.Max(0, rect.X);
@@ -1384,7 +1353,7 @@ public sealed partial class LogControl : Visual, ISelectionOwner
 
                 if (wrap)
                 {
-                    var rowCount = entry.GetRowCount(wrap, wrapWidth);
+                    var rowCount = GetEntryRowCount(entryIndex);
                     if (rowInEntry >= rowCount)
                     {
                         entryIndex++;
@@ -1460,11 +1429,6 @@ public sealed partial class LogControl : Visual, ISelectionOwner
                 return false;
             }
 
-            if (_rowPrefix is null || _rowPrefix.Length != entries.Count + 1)
-            {
-                return false;
-            }
-
             var contentRow = localY;
             if (contentRow < 0 || contentRow >= _extentHeight)
             {
@@ -1477,7 +1441,7 @@ public sealed partial class LogControl : Visual, ISelectionOwner
                 contentRow = Math.Clamp(contentRow, 0, _extentHeight - 1);
             }
 
-            if (!TryMapRowToEntry(_rowPrefix, contentRow, out var entryIndex, out var rowInEntry))
+            if (!TryMapRowToEntry(contentRow, out var entryIndex, out var rowInEntry))
             {
                 return false;
             }
@@ -1486,12 +1450,15 @@ public sealed partial class LogControl : Visual, ISelectionOwner
             var text = entry.Text.AsSpan();
             var wrap = _owner.WrapText;
             var wrapWidth = Math.Max(1, Bounds.Width);
+            EnsureLayoutCache(wrap, wrapWidth);
 
             var sliceStart = 0;
             var sliceEnd = text.Length;
             if (wrap)
             {
-                GetWrapSliceForRow(text, wrapWidth, rowInEntry, out sliceStart, out sliceEnd);
+                var segment = GetWrapSegmentAtRow(entryIndex, text, rowInEntry, wrapWidth);
+                sliceStart = segment.Start;
+                sliceEnd = segment.Start + segment.Length;
             }
 
             var slice = text.Slice(sliceStart, Math.Max(0, sliceEnd - sliceStart));
@@ -1509,23 +1476,18 @@ public sealed partial class LogControl : Visual, ISelectionOwner
                 return false;
             }
 
-            if (_rowPrefix is null || _rowPrefix.Length != entries.Count + 1)
-            {
-                return false;
-            }
-
             var wrap = _owner.WrapText;
+            EnsureLayoutCache(wrap, Math.Max(1, Bounds.Width));
             if (!wrap)
             {
                 row = match.EntryIndex;
                 return true;
             }
 
-            var rect = Bounds;
-            var wrapWidth = Math.Max(1, rect.Width);
+            var wrapWidth = Math.Max(1, Bounds.Width);
             var entry = entries[match.EntryIndex];
-            var localRow = GetRowIndexForTextIndex(entry.Text.AsSpan(), wrapWidth, match.Start);
-            row = _rowPrefix[match.EntryIndex] + localRow;
+            var segment = FindWrapSegmentForIndex(entryIndex: match.EntryIndex, text: entry.Text.AsSpan(), wrapWidth, textIndex: match.Start);
+            row = GetEntryRowOffset(match.EntryIndex) + segment.RowInEntry;
             return true;
         }
 
@@ -1729,132 +1691,6 @@ public sealed partial class LogControl : Visual, ISelectionOwner
                 posX += MeasureCellWidth(span);
                 pos = nextBoundary;
             }
-        }
-
-        private static bool TryMapRowToEntry(int[] rowPrefix, int row, out int entryIndex, out int rowInEntry)
-        {
-            entryIndex = 0;
-            rowInEntry = 0;
-            if (rowPrefix.Length <= 1 || row < 0)
-            {
-                return false;
-            }
-
-            // Binary search for the first prefix > row.
-            var lo = 0;
-            var hi = rowPrefix.Length - 1;
-            while (lo < hi)
-            {
-                var mid = (lo + hi) / 2;
-                if (rowPrefix[mid] <= row)
-                {
-                    lo = mid + 1;
-                }
-                else
-                {
-                    hi = mid;
-                }
-            }
-
-            entryIndex = Math.Max(0, lo - 1);
-            rowInEntry = row - rowPrefix[entryIndex];
-            return entryIndex >= 0 && entryIndex < rowPrefix.Length - 1;
-        }
-
-        private static int GetRowIndexForTextIndex(ReadOnlySpan<char> text, int wrapWidth, int textIndex)
-        {
-            if (textIndex <= 0)
-            {
-                return 0;
-            }
-
-            wrapWidth = Math.Max(1, wrapWidth);
-            var row = 0;
-            var start = 0;
-            while (start < text.Length)
-            {
-                if (!TryGetNextWrapSlice(text, start, wrapWidth, out var end, out var next))
-                {
-                    break;
-                }
-
-                if (textIndex >= start && textIndex < end)
-                {
-                    return row;
-                }
-
-                row++;
-                start = next;
-            }
-
-            return row;
-        }
-
-        private static void GetWrapSliceForRow(ReadOnlySpan<char> text, int width, int rowInEntry, out int start, out int end)
-        {
-            start = 0;
-            end = text.Length;
-
-            if (rowInEntry <= 0)
-            {
-                if (TryGetNextWrapSlice(text, 0, width, out end, out _))
-                {
-                    start = 0;
-                }
-                return;
-            }
-
-            var current = 0;
-            var index = 0;
-            while (index < text.Length)
-            {
-                if (!TryGetNextWrapSlice(text, index, width, out var sliceEnd, out var next))
-                {
-                    break;
-                }
-
-                if (current == rowInEntry)
-                {
-                    start = index;
-                    end = sliceEnd;
-                    return;
-                }
-
-                current++;
-                index = next;
-            }
-
-            start = text.Length;
-            end = text.Length;
-        }
-
-        internal static int CountWrappedLines(ReadOnlySpan<char> text, int width)
-        {
-            if (text.IsEmpty)
-            {
-                return 1;
-            }
-
-            width = Math.Max(1, width);
-            var count = 0;
-            var start = 0;
-            while (start < text.Length)
-            {
-                if (!TryGetNextWrapSlice(text, start, width, out _, out var next))
-                {
-                    break;
-                }
-
-                count++;
-                if (next <= start)
-                {
-                    break;
-                }
-
-                start = next;
-            }
-
-            return Math.Max(1, count);
         }
 
         private static bool TryGetNextWrapSlice(ReadOnlySpan<char> text, int start, int width, out int endExclusive, out int nextStart)
@@ -2061,6 +1897,21 @@ public sealed partial class LogControl : Visual, ISelectionOwner
         }
     }
 }
+
+internal readonly record struct LogEntryLayoutDiagnostics(
+    int RowCount,
+    int WrapRowCheckpointCount,
+    int ActiveWrapRowBlockCount,
+    int MaxCachedWrapRowStartCount,
+    int MaxWrapRowBlockCacheEntries);
+
+internal readonly record struct LogLayoutCacheDiagnostics(
+    bool IsInitialized,
+    bool IsWrapCached,
+    int CachedWrapWidth,
+    int EntryCount,
+    int ExtentWidth,
+    int ExtentHeight);
 
 /// <summary>
 /// Specifies which search behaviors are enabled for <see cref="LogControl"/>.

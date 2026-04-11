@@ -271,6 +271,39 @@ public class BindableList<T> : IList<T>, IReadOnlyList<T>, IDynamicUpdateResetta
     }
 
     /// <summary>
+    /// Removes a range of items from the list.
+    /// </summary>
+    /// <param name="index">The zero-based index of the first item to remove.</param>
+    /// <param name="count">The number of items to remove.</param>
+    public void RemoveRange(int index, int count)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(index);
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+
+        if (count == 0)
+        {
+            return;
+        }
+
+        if (index > _items.Count - count)
+        {
+            throw new ArgumentException("The specified index and count do not denote a valid range.", nameof(count));
+        }
+
+        TrackMutation();
+        if (_onRemoving is not null)
+        {
+            for (var i = 0; i < count; i++)
+            {
+                _onRemoving(_items[index + i]);
+            }
+        }
+
+        _items.RemoveRange(index, count);
+        BindingManager.Current.NotifyValueChanged(_owner, _accessor);
+    }
+
+    /// <summary>
     /// Moves an item from one index to another.
     /// </summary>
     /// <param name="oldIndex">The old index.</param>
