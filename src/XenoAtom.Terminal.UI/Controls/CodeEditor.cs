@@ -386,6 +386,8 @@ public sealed partial class CodeEditor : TextEditorBase
     private int _pendingSyntaxSnapshotVersion = -1;
     private CancellationTokenSource? _syntaxUpdateCts;
     private int _lastVisibleLineRequestCount;
+    private Rectangle _lastArrangeRect;
+    private bool _hasArrangedOnce;
 
     private sealed record LineHighlightCacheEntry(int LineStart, int LineLength, StyledRun[] Runs);
 
@@ -545,6 +547,7 @@ public sealed partial class CodeEditor : TextEditorBase
     {
         var style = GetStyle<CodeEditorStyle>();
         var padding = style.Padding;
+        var preserveScrollOffset = _hasArrangedOnce && _lastArrangeRect.Equals(finalRect);
 
         _contentRect = new Rectangle(
             finalRect.X + padding.Left,
@@ -565,7 +568,7 @@ public sealed partial class CodeEditor : TextEditorBase
             Math.Max(0, _contentRect.Width - _leftMarginWidth - _rightMarginWidth),
             _contentRect.Height);
 
-        UpdateEditorLayout(_editorRect);
+        UpdateEditorLayoutPreservingScrollOffset(_editorRect, preserveScrollOffset);
         BuildVisibleLines(_editorRect, includeScrollOffset: false);
 
         var measuredLeft = MeasureMargins(_leftMargins, style, _contentRect);
@@ -581,13 +584,15 @@ public sealed partial class CodeEditor : TextEditorBase
                 _contentRect.Y,
                 Math.Max(0, _contentRect.Width - _leftMarginWidth - _rightMarginWidth),
                 _contentRect.Height);
-            UpdateEditorLayout(_editorRect);
+            UpdateEditorLayoutPreservingScrollOffset(_editorRect, preserveScrollOffset);
             BuildVisibleLines(_editorRect, includeScrollOffset: false);
             _ = MeasureMargins(_leftMargins, style, _contentRect);
             _ = MeasureMargins(_rightMargins, style, _contentRect);
         }
 
         _searchPopup.ArrangeWithin(_editorRect);
+        _lastArrangeRect = finalRect;
+        _hasArrangedOnce = true;
     }
 
     /// <inheritdoc />
@@ -798,6 +803,30 @@ public sealed partial class CodeEditor : TextEditorBase
 
     private void BuildVisibleLines()
         => BuildVisibleLines(_editorRect, includeScrollOffset: false);
+
+    private void UpdateEditorLayoutPreservingScrollOffset(Rectangle editorRect, bool preserveScrollOffset)
+    {
+        var previousOffsetX = Scroll.OffsetX;
+        var previousOffsetY = Scroll.OffsetY;
+
+        UpdateEditorLayout(editorRect);
+        if (!preserveScrollOffset)
+        {
+            return;
+        }
+
+        var maxOffsetX = Math.Max(0, Scroll.ExtentWidth - Scroll.ViewportWidth);
+        var maxOffsetY = Math.Max(0, Scroll.ExtentHeight - Scroll.ViewportHeight);
+        var targetOffsetX = Math.Clamp(previousOffsetX, 0, maxOffsetX);
+        var targetOffsetY = Math.Clamp(previousOffsetY, 0, maxOffsetY);
+        if (targetOffsetX == Scroll.OffsetX && targetOffsetY == Scroll.OffsetY)
+        {
+            return;
+        }
+
+        Scroll.SetOffset(targetOffsetX, targetOffsetY);
+        RefreshVisibleRows();
+    }
 
     private void BuildVisibleLines(Rectangle sourceRect, bool includeScrollOffset)
     {

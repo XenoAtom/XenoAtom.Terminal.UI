@@ -47,7 +47,7 @@ viewport clipping/offsetting automatically.
 
 - Mouse wheel scrolls the closest `ScrollViewer` under the pointer.
 - `Shift + wheel` (when supported by the host) scrolls horizontally.
-- Scrollbars can be clicked/dragged; they can be focused for keyboard interaction.
+- Scrollbars can be clicked to jump to a position or dragged continuously; they can be focused for keyboard interaction.
 
 ## Layout behavior (viewport vs extent)
 

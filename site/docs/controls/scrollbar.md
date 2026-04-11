@@ -27,7 +27,7 @@ manual offset math.
 
 ## Behavior and interaction
 
-- Clicking the track pages up/down (or left/right).
+- Clicking the track jumps the thumb to the pointer position and starts a drag.
 - Dragging the thumb sets the value proportionally.
 - Scrollbars can be focused to enable keyboard interaction (arrow keys/page keys).
 

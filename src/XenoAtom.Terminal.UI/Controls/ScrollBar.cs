@@ -17,9 +17,9 @@ namespace XenoAtom.Terminal.UI.Controls;
 public abstract partial class ScrollBar : Visual
 {
     private bool _dragging;
-    private int _dragStartUiX;
-    private int _dragStartUiY;
-    private int _dragStartValue;
+    private int _dragPointerOffsetInThumb;
+    private int _dragCurrentUiX;
+    private int _dragCurrentUiY;
     private int _oldValueForEvent;
 
     /// <summary>
@@ -82,11 +82,31 @@ public abstract partial class ScrollBar : Visual
     [Bindable]
     public partial int LargeChange { get; set; }
 
+    internal bool IsDragging => _dragging;
+
     partial void OnViewportSizeChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
 
     partial void OnSmallChangeChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
 
     partial void OnLargeChangeChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
+
+    partial void OnMinimumChanged(int value)
+    {
+        _ = value;
+        UpdateDraggedValueFromPointer();
+    }
+
+    partial void OnMaximumChanged(int value)
+    {
+        _ = value;
+        UpdateDraggedValueFromPointer();
+    }
+
+    partial void OnViewportSizeChanged(int value)
+    {
+        _ = value;
+        UpdateDraggedValueFromPointer();
+    }
 
     partial void OnValueChanging(ref int value)
     {
@@ -267,22 +287,19 @@ public abstract partial class ScrollBar : Visual
 
         if (local >= thumbStart && local < thumbStart + thumbLength)
         {
-            _dragging = true;
-            _dragStartUiX = e.UiX;
-            _dragStartUiY = e.UiY;
-            _dragStartValue = Value;
+            _dragCurrentUiX = e.UiX;
+            _dragCurrentUiY = e.UiY;
+            BeginDragging(local - thumbStart);
             e.Handled = true;
             return;
         }
 
-        // Page.
-        var page = LargeChange;
-        if (page <= 0)
-        {
-            page = Math.Max(1, ViewportSize);
-        }
-
-        Value = local < thumbStart ? Value - page : Value + page;
+        Value = GetValueFromTrackPosition(local, trackLength, thumbLength);
+        var (updatedThumbStart, updatedThumbLength) = GetThumbMetrics(trackLength);
+        var dragOffset = Math.Clamp(local - updatedThumbStart, 0, Math.Max(0, updatedThumbLength - 1));
+        _dragCurrentUiX = e.UiX;
+        _dragCurrentUiY = e.UiY;
+        BeginDragging(dragOffset);
         e.Handled = true;
     }
 
@@ -301,6 +318,25 @@ public abstract partial class ScrollBar : Visual
             return;
         }
 
+        var (_, thumbLength) = GetThumbMetrics(trackLength);
+        _dragCurrentUiX = e.UiX;
+        _dragCurrentUiY = e.UiY;
+        var local = Orientation == Orientation.Vertical ? e.UiY - rect.Y : e.UiX - rect.X;
+        Value = GetValueFromThumbStart(local - _dragPointerOffsetInThumb, trackLength, thumbLength);
+        e.Handled = true;
+    }
+
+    private void BeginDragging(int pointerOffsetInThumb)
+    {
+        _dragging = true;
+        _dragPointerOffsetInThumb = Math.Max(0, pointerOffsetInThumb);
+    }
+
+    private int GetValueFromTrackPosition(int local, int trackLength, int thumbLength)
+        => GetValueFromThumbStart(local - (thumbLength / 2), trackLength, thumbLength);
+
+    private int GetValueFromThumbStart(int desiredThumbStart, int trackLength, int thumbLength)
+    {
         var min = Minimum;
         var max = Maximum;
         if (max < min)
@@ -311,16 +347,32 @@ public abstract partial class ScrollBar : Visual
         var range = max - min;
         if (range <= 0)
         {
+            return min;
+        }
+
+        var trackAvail = Math.Max(1, trackLength - thumbLength);
+        desiredThumbStart = Math.Clamp(desiredThumbStart, 0, trackAvail);
+        var offset = (int)Math.Round((double)desiredThumbStart * range / trackAvail);
+        return Math.Clamp(min + offset, min, max);
+    }
+
+    private void UpdateDraggedValueFromPointer()
+    {
+        if (!_dragging)
+        {
+            return;
+        }
+
+        var rect = Bounds;
+        var trackLength = Orientation == Orientation.Vertical ? rect.Height : rect.Width;
+        if (trackLength <= 0)
+        {
             return;
         }
 
         var (_, thumbLength) = GetThumbMetrics(trackLength);
-        var trackAvail = Math.Max(1, trackLength - thumbLength);
-
-        var delta = Orientation == Orientation.Vertical ? (e.UiY - _dragStartUiY) : (e.UiX - _dragStartUiX);
-        var deltaValue = (int)Math.Round((double)delta * range / trackAvail);
-        Value = Math.Clamp(_dragStartValue + deltaValue, min, max);
-        e.Handled = true;
+        var local = Orientation == Orientation.Vertical ? _dragCurrentUiY - rect.Y : _dragCurrentUiX - rect.X;
+        Value = GetValueFromThumbStart(local - _dragPointerOffsetInThumb, trackLength, thumbLength);
     }
 
     /// <inheritdoc/>

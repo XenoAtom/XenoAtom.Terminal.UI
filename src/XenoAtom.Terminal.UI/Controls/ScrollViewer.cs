@@ -430,13 +430,19 @@ public sealed partial class ScrollViewer : Visual
             _verticalBar.Minimum = 0;
             _verticalBar.Maximum = maxVerticalOffset;
             _verticalBar.ViewportSize = modelViewportHeight;
-            SetBarValue(_verticalBar, v);
+            if (!_verticalBar.IsDragging)
+            {
+                SetBarValue(_verticalBar, v);
+            }
             _verticalBar.IsVisible = _showVerticalBar;
 
             _horizontalBar.Minimum = 0;
             _horizontalBar.Maximum = maxHorizontalOffset;
             _horizontalBar.ViewportSize = modelViewportWidth;
-            SetBarValue(_horizontalBar, hOffset);
+            if (!_horizontalBar.IsDragging)
+            {
+                SetBarValue(_horizontalBar, hOffset);
+            }
             _horizontalBar.IsVisible = _showHorizontalBar;
         }
         else

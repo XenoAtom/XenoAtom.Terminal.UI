@@ -73,4 +73,109 @@ public sealed class ScrollBarTests
 
         Assert.AreEqual(6, bar.Value);
     }
+
+    [TestMethod]
+    public void VScrollBar_Clicking_Track_Jumps_To_Clicked_Position()
+    {
+        var bar = new VScrollBar
+        {
+            Minimum = 0,
+            Maximum = 90,
+            Value = 0,
+            ViewportSize = 10,
+            MinHeight = 10,
+            MaxHeight = 10,
+        };
+
+        using var driver = new TerminalAppTestDriver(bar, TerminalHostKind.Fullscreen, new TerminalSize(5, 12));
+        driver.Tick();
+
+        var x = bar.Bounds.X;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Down,
+            Button = TerminalMouseButton.Left,
+            X = x,
+            Y = bar.Bounds.Bottom - 1,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Up,
+            Button = TerminalMouseButton.Left,
+            X = x,
+            Y = bar.Bounds.Bottom - 1,
+        });
+        driver.Tick();
+
+        Assert.AreEqual(bar.Maximum, bar.Value, "Clicking near the bottom of the track should jump the thumb to the end.");
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Down,
+            Button = TerminalMouseButton.Left,
+            X = x,
+            Y = bar.Bounds.Y,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Up,
+            Button = TerminalMouseButton.Left,
+            X = x,
+            Y = bar.Bounds.Y,
+        });
+        driver.Tick();
+
+        Assert.AreEqual(bar.Minimum, bar.Value, "Clicking near the top of the track should jump the thumb back to the start.");
+    }
+
+    [TestMethod]
+    public void VScrollBar_Drag_Uses_Current_Range_When_Track_Changes()
+    {
+        var bar = new VScrollBar
+        {
+            Minimum = 0,
+            Maximum = 90,
+            Value = 0,
+            ViewportSize = 10,
+            MinHeight = 10,
+            MaxHeight = 10,
+        };
+
+        using var driver = new TerminalAppTestDriver(bar, TerminalHostKind.Fullscreen, new TerminalSize(5, 12));
+        driver.Tick();
+
+        var x = bar.Bounds.X;
+        var thumbY = bar.Bounds.Y;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Down,
+            Button = TerminalMouseButton.Left,
+            X = x,
+            Y = thumbY,
+        });
+        driver.Tick();
+
+        bar.Maximum = 190;
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Drag,
+            Button = TerminalMouseButton.Left,
+            X = x,
+            Y = bar.Bounds.Bottom - 1,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Up,
+            Button = TerminalMouseButton.Left,
+            X = x,
+            Y = bar.Bounds.Bottom - 1,
+        });
+        driver.Tick();
+
+        Assert.AreEqual(bar.Maximum, bar.Value, "Dragging should honor the current range even if the scroll extent changes while the thumb is captured.");
+    }
 }

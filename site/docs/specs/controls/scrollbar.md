@@ -86,9 +86,7 @@ The algorithm is designed to be stable for small tracks (track length `<= 1` alw
 ### Pointer
 
 - **Click on thumb**: begins drag capture and stores the starting UI coordinate + starting value.
-- **Click on track outside thumb**: performs a “page” operation:
-  - page size = `LargeChange` if `> 0`, else `max(1, ViewportSize)`
-  - clicks before the thumb page up/left; after the thumb page down/right
+- **Click on track outside thumb**: jumps the thumb so the clicked position becomes the new anchor point, then begins a drag.
 - **Drag**: maps pointer delta to value delta using the usable track length (`trackLength - thumbLength`).
 - **Wheel**: increments/decrements by `SmallChange` (min 1).
 
@@ -128,4 +126,4 @@ Scroll bars use `Theme.ScrollBars.Track` and `Theme.ScrollBars.Thumb` glyphs for
 ## Future / v2 ideas
 
 - Optional “arrow buttons” at ends (classic scrollbar affordance) if desired.
-- Support for click-to-jump mode (jump thumb to pointer position) as an alternative paging behavior.
+- Configurable track-click behavior (for example, restoring page-by-page stepping as an alternative to jump-to-pointer).

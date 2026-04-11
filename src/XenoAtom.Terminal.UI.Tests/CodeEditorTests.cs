@@ -449,6 +449,163 @@ public sealed class CodeEditorTests
         StringAssert.Contains(row, "xyz", "Expected the scrolled viewport to show the tail of the long line.");
     }
 
+    [TestMethod]
+    public void CodeEditor_ScrollViewer_ScrollBar_Click_Jumps_To_Clicked_Position()
+    {
+        var editor = new CodeEditor(string.Join('\n', Enumerable.Range(0, 60).Select(i => $"Line {i:00}")))
+        {
+            MinHeight = 8,
+            MaxHeight = 8,
+        };
+
+        var scrollViewer = new ScrollViewer(editor)
+        {
+            MinHeight = 8,
+            MaxHeight = 8,
+        };
+
+        using var driver = new TerminalAppTestDriver(scrollViewer, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        var verticalBar = scrollViewer.EnumerateVisualsDepthFirst().OfType<VScrollBar>().Single();
+        Assert.IsTrue(verticalBar.IsVisible, "Expected the wrapped CodeEditor to expose a vertical scrollbar.");
+
+        var barX = verticalBar.Bounds.X;
+        var barBottom = verticalBar.Bounds.Bottom - 1;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Down,
+            Button = TerminalMouseButton.Left,
+            X = barX,
+            Y = barBottom,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Up,
+            Button = TerminalMouseButton.Left,
+            X = barX,
+            Y = barBottom,
+        });
+        driver.TickUntil(() => editor.Scroll.OffsetY == editor.Scroll.ExtentHeight - editor.Scroll.ViewportHeight);
+
+        Assert.AreEqual(editor.Scroll.ExtentHeight - editor.Scroll.ViewportHeight, editor.Scroll.OffsetY, "Clicking the lower end of the scrollbar track should move the editor to the bottom.");
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Down,
+            Button = TerminalMouseButton.Left,
+            X = barX,
+            Y = verticalBar.Bounds.Y,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Up,
+            Button = TerminalMouseButton.Left,
+            X = barX,
+            Y = verticalBar.Bounds.Y,
+        });
+        driver.TickUntil(() => editor.Scroll.OffsetY == 0);
+
+        Assert.AreEqual(0, editor.Scroll.OffsetY, "Clicking the upper end of the scrollbar track should move the editor back to the top.");
+    }
+
+    [TestMethod]
+    public void CodeEditor_ScrollViewer_ScrollBar_Drag_Reaches_Full_Range_With_Adaptive_Gutter()
+    {
+        var longLine = "public static void RenderCurrentLineBackground(CellBuffer buffer, Theme theme, CodeEditorStyle style, bool focused)";
+        var text = string.Join('\n', Enumerable.Range(0, 1800).Select(i => $"{longLine} // {i:0000}"));
+        var editor = new CodeEditor(text)
+        {
+            MinHeight = 8,
+            MaxHeight = 8,
+        };
+
+        var scrollViewer = new ScrollViewer(editor)
+        {
+            MinHeight = 8,
+            MaxHeight = 8,
+            MaxWidth = 30,
+        };
+
+        using var driver = new TerminalAppTestDriver(scrollViewer, TerminalHostKind.Fullscreen, new TerminalSize(30, 10));
+        driver.Tick();
+
+        var verticalBar = scrollViewer.EnumerateVisualsDepthFirst().OfType<VScrollBar>().Single();
+        Assert.IsTrue(verticalBar.IsVisible, "Expected the wrapped CodeEditor to expose a vertical scrollbar.");
+
+        var barX = verticalBar.Bounds.X;
+        var barTop = verticalBar.Bounds.Y;
+        var barBottom = verticalBar.Bounds.Bottom - 1;
+        Assert.AreEqual(nameof(VScrollBar), scrollViewer.HitTest(barX, barTop)?.GetType().Name, "Expected the drag to start on the scrollbar thumb.");
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Down,
+            Button = TerminalMouseButton.Left,
+            X = barX,
+            Y = barTop,
+        });
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Drag,
+            Button = TerminalMouseButton.Left,
+            X = barX,
+            Y = barBottom,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Up,
+            Button = TerminalMouseButton.Left,
+            X = barX,
+            Y = barBottom,
+        });
+        var expectedBottomOffset = -1;
+        for (var i = 0; i < 50; i++)
+        {
+            driver.Tick();
+            expectedBottomOffset = editor.Scroll.ExtentHeight - editor.Scroll.ViewportHeight;
+            if (editor.Scroll.OffsetY == expectedBottomOffset)
+            {
+                break;
+            }
+        }
+
+        Assert.AreEqual(
+            expectedBottomOffset,
+            editor.Scroll.OffsetY,
+            $"Dragging the CodeEditor scrollbar to the bottom should reach the full scroll range even when the gutter width changes. actual={editor.Scroll.OffsetY}, expected={expectedBottomOffset}, extent={editor.Scroll.ExtentHeight}, viewport={editor.Scroll.ViewportHeight}, barValue={verticalBar.Value}, barMax={verticalBar.Maximum}, barViewport={verticalBar.ViewportSize}");
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Down,
+            Button = TerminalMouseButton.Left,
+            X = barX,
+            Y = barBottom,
+        });
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Drag,
+            Button = TerminalMouseButton.Left,
+            X = barX,
+            Y = barTop,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Up,
+            Button = TerminalMouseButton.Left,
+            X = barX,
+            Y = barTop,
+        });
+        driver.TickUntil(() => editor.Scroll.OffsetY == 0);
+
+        Assert.AreEqual(0, editor.Scroll.OffsetY, "Dragging the CodeEditor scrollbar back to the top should restore the initial position.");
+    }
+
     private static Style GetCellStyle(CellBuffer buffer, int x, int y)
     {
         var cells = buffer.UnsafeCells;
