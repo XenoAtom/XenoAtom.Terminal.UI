@@ -34,6 +34,12 @@ internal readonly record struct TextEditorRenderContext(
     bool IsFocused,
     TextSegmentWriter SegmentWriter);
 
+internal readonly record struct TextEditorSearchState(
+    SearchQuery Query,
+    IReadOnlyList<TextEditorSearchMatchInfo> Matches,
+    int ActiveMatchIndex,
+    string? Error);
+
 internal interface ITextEditorHost
 {
     TerminalApp? App { get; }
@@ -334,6 +340,96 @@ internal sealed partial class TextEditorCore
         }
 
         return _layoutCache.GetLineDiagnostics(lineIndex);
+    }
+
+    internal IReadOnlyList<TextEditorVisibleRowInfo> GetVisibleRows(in TextEditorOptions options)
+    {
+        if (options.SingleLine || _contentWidth <= 0 || _contentHeight <= 0)
+        {
+            return Array.Empty<TextEditorVisibleRowInfo>();
+        }
+
+        var snapshot = _document.CurrentSnapshot;
+        if (snapshot.LineCount == 0)
+        {
+            return Array.Empty<TextEditorVisibleRowInfo>();
+        }
+
+        EnsureMultiLineLayoutCache(options);
+        var text = GetText();
+
+        var startRow = _scroll.OffsetY;
+        var endRow = startRow + _contentHeight;
+        if (startRow >= endRow)
+        {
+            return Array.Empty<TextEditorVisibleRowInfo>();
+        }
+
+        var rows = new List<TextEditorVisibleRowInfo>(Math.Max(4, _contentHeight));
+        var startInfo = _layoutCache.GetLineFromRow(startRow);
+        var lineIndex = startInfo.LineIndex;
+        var row = _layoutCache.GetLine(lineIndex).RowOffset + startInfo.RowInLine;
+
+        while (lineIndex < snapshot.LineCount && row < endRow)
+        {
+            var line = snapshot.GetLine(lineIndex);
+            if (!options.WordWrap)
+            {
+                rows.Add(new TextEditorVisibleRowInfo(
+                    VisualRow: row,
+                    LineIndex: lineIndex,
+                    LineStart: line.Start,
+                    LineLength: line.Length,
+                    RowInLine: 0,
+                    SegmentStart: 0,
+                    SegmentLength: line.Length));
+                row++;
+                lineIndex++;
+                continue;
+            }
+
+            var rowInLine = lineIndex == startInfo.LineIndex ? startInfo.RowInLine : 0;
+            var rowCount = Math.Max(1, _layoutCache.GetLine(lineIndex).RowCount);
+            var currentRowInLine = rowInLine;
+            while (currentRowInLine < rowCount && row < endRow)
+            {
+                var blockStarts = _layoutCache.GetWrapRowBlock(lineIndex, text, _contentWidth, options.TabSize, currentRowInLine, out var blockStartRow, out var blockRowCount);
+                var localRow = currentRowInLine - blockStartRow;
+                var availableRows = Math.Min(rowCount - currentRowInLine, blockRowCount - localRow);
+
+                for (var i = 0; i < availableRows && row < endRow; i++)
+                {
+                    var segmentStart = blockStarts[localRow + i];
+                    var segmentLength = blockStarts[localRow + i + 1] - segmentStart;
+                    rows.Add(new TextEditorVisibleRowInfo(
+                        VisualRow: row,
+                        LineIndex: lineIndex,
+                        LineStart: line.Start,
+                        LineLength: line.Length,
+                        RowInLine: currentRowInLine,
+                        SegmentStart: segmentStart,
+                        SegmentLength: segmentLength));
+                    row++;
+                    currentRowInLine++;
+                }
+            }
+
+            lineIndex++;
+        }
+
+        return rows;
+    }
+
+    internal TextEditorSearchState GetSearchState()
+    {
+        var matches = new TextEditorSearchMatchInfo[_searchMatches.Count];
+        for (var i = 0; i < _searchMatches.Count; i++)
+        {
+            var match = _searchMatches[i];
+            matches[i] = new TextEditorSearchMatchInfo(match.Start, match.Length, i == _activeSearchMatchIndex);
+        }
+
+        return new TextEditorSearchState(_searchQuery, matches, _activeSearchMatchIndex, _searchError);
     }
 
     public void OnDocumentChanged()

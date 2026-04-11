@@ -4,6 +4,7 @@
 
 using System.Text;
 using XenoAtom.Terminal.UI;
+using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
@@ -31,6 +32,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     private readonly ScrollModel _scroll;
     private readonly TextEditorCore _core;
     private readonly TextUndoRedoManager _undoRedo;
+    private readonly BindableList<TextEditorVisibleRowInfo> _visibleRows;
     private bool _canUndo;
     private bool _canRedo;
     private int _requestedCaretIndex;
@@ -47,12 +49,13 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
         _undoRedo = new TextUndoRedoManager();
         _undoRedo.Attach(_document);
         _undoRedo.StateChanged += OnUndoRedoStateChanged;
+        _visibleRows = new BindableList<TextEditorVisibleRowInfo>(this, $"{nameof(TextEditorBase)}.{nameof(VisibleRows)}");
 
         this.EnableUndo(true);
         this.MaxUndoEntries(200);
 
         _core = new TextEditorCore(this, _document, _scroll, _undoRedo);
-        _document.Changed += OnDocumentChanged;
+        _document.Changed += HandleDocumentChanged;
         OnUndoRedoStateChanged();
 
         // Expose the document through a bindable property so controls/templates can bind to it.
@@ -162,11 +165,11 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
             return;
         }
 
-        _document.Changed -= OnDocumentChanged;
+        _document.Changed -= HandleDocumentChanged;
         _document = desired;
 
         _undoRedo.Attach(_document);
-        _document.Changed += OnDocumentChanged;
+        _document.Changed += HandleDocumentChanged;
         _core.SetDocument(_document);
 
         OnUndoRedoStateChanged();
@@ -390,6 +393,17 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     internal TextEditorCore.TextEditorLineLayoutDiagnostics GetLineLayoutDiagnostics(int lineIndex)
         => _core.GetLineLayoutDiagnostics(lineIndex, BuildEditorOptions());
 
+    internal IReadOnlyList<TextEditorVisibleRowInfo> VisibleRows => _visibleRows;
+
+    internal TextEditorSearchState GetSearchState() => _core.GetSearchState();
+
+    internal void RefreshVisibleRows()
+    {
+        var rows = _core.GetVisibleRows(BuildEditorOptions());
+        _visibleRows.Clear();
+        _visibleRows.AddRange(rows);
+    }
+
     /// <summary>
     /// Renders the editor content into the provided buffer.
     /// </summary>
@@ -408,6 +422,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     {
         _ = _core.Version;
         _core.UpdateLayout(contentRect, BuildEditorOptions());
+        RefreshVisibleRows();
     }
 
     /// <inheritdoc />
@@ -460,10 +475,20 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
         _ = e;
     }
 
-    private void OnDocumentChanged(object? sender, TextDocumentChangedEventArgs e)
+    /// <summary>
+    /// Called after the current document changes.
+    /// </summary>
+    /// <param name="e">The document change information.</param>
+    protected virtual void OnDocumentChanged(TextDocumentChangedEventArgs e)
+    {
+        _ = e;
+    }
+
+    private void HandleDocumentChanged(object? sender, TextDocumentChangedEventArgs e)
     {
         _undoRedo.EnsureSynchronized();
         _core.OnDocumentChanged(e);
+        OnDocumentChanged(e);
     }
 
     partial void OnEnableUndoChanged(bool value)

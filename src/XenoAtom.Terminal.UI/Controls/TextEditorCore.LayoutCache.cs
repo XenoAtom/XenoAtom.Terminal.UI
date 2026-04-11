@@ -8,6 +8,20 @@ using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.Controls;
 
+internal readonly record struct TextEditorVisibleRowInfo(
+    int VisualRow,
+    int LineIndex,
+    int LineStart,
+    int LineLength,
+    int RowInLine,
+    int SegmentStart,
+    int SegmentLength)
+{
+    public bool IsFirstRowOfLine => RowInLine == 0;
+}
+
+internal readonly record struct TextEditorSearchMatchInfo(int Start, int Length, bool IsActive);
+
 internal sealed partial class TextEditorCore
 {
     private const int WrapRowCheckpointStride = 64;

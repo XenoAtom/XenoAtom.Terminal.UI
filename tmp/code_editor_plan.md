@@ -11,115 +11,115 @@ This checklist translates `site/docs/specs/code_editor_specs.md` into an impleme
 
 ## 1. Core public API skeleton
 
-- [ ] Add `CodeEditor : TextEditorBase` in `src/XenoAtom.Terminal.UI/Controls/`.
-- [ ] Add XML docs for all public types and members.
-- [ ] Add initial bindable properties:
-  - [ ] `ShowLineNumbers`
-  - [ ] `MinLineNumberDigits`
-  - [ ] `HighlightCurrentLine`
-- [ ] Add the simple highlighter hook:
-  - [ ] `CodeEditorLineHighlightRequest`
-  - [ ] `CodeEditorLineHighlighter`
-  - [ ] `Highlighter` bindable delegator
-- [ ] Add the advanced syntax-highlighting contracts:
-  - [ ] `CodeEditorSyntaxState`
-  - [ ] `CodeEditorSyntaxHighlighter`
-  - [ ] optional async interface (`IAsyncCodeEditorSyntaxHighlighter` or equivalent)
-  - [ ] syntax build/update request structs
-  - [ ] line-runs request struct
-- [ ] Add margin contracts:
-  - [ ] `CodeEditorMarginSide`
-  - [ ] `CodeEditorVisibleLine`
-  - [ ] `CodeEditorMargin`
-  - [ ] margin measure/render/pointer context types
-- [ ] Add left/right margin collections:
-  - [ ] `LeftMargins`
-  - [ ] `RightMargins`
+- [x] Add `CodeEditor : TextEditorBase` in `src/XenoAtom.Terminal.UI/Controls/`.
+- [x] Add XML docs for all public types and members.
+- [x] Add initial bindable properties:
+  - [x] `ShowLineNumbers`
+  - [x] `MinLineNumberDigits`
+  - [x] `HighlightCurrentLine`
+- [x] Add the simple highlighter hook:
+  - [x] `CodeEditorLineHighlightRequest`
+  - [x] `CodeEditorLineHighlighter`
+  - [x] `Highlighter` bindable delegator
+- [x] Add the advanced syntax-highlighting contracts:
+  - [x] `CodeEditorSyntaxState`
+  - [x] `CodeEditorSyntaxHighlighter`
+  - [x] optional async interface (`IAsyncCodeEditorSyntaxHighlighter` or equivalent)
+  - [x] syntax build/update request structs
+  - [x] line-runs request struct
+- [x] Add margin contracts:
+  - [x] `CodeEditorMarginSide`
+  - [x] `CodeEditorVisibleLine`
+  - [x] `CodeEditorMargin`
+  - [x] margin measure/render/pointer context types
+- [x] Add left/right margin collections:
+  - [x] `LeftMargins`
+  - [x] `RightMargins`
 
 ## 2. Styling infrastructure
 
-- [ ] Add `CodeEditorStyle` under `src/XenoAtom.Terminal.UI/Styling/`.
-- [ ] Cover baseline styles:
-  - [ ] editor background
-  - [ ] text style
-  - [ ] selection style reuse / integration
-  - [ ] current-line style
-  - [ ] margin background
-  - [ ] line-number style
-  - [ ] current-line line-number style
-  - [ ] optional margin separator style
-- [ ] Add sensible defaults consistent with existing editor controls.
+- [x] Add `CodeEditorStyle` under `src/XenoAtom.Terminal.UI/Styling/`.
+- [x] Cover baseline styles:
+  - [x] editor background
+  - [x] text style
+  - [x] selection style reuse / integration
+  - [x] current-line style
+  - [x] margin background
+  - [x] line-number style
+  - [x] current-line line-number style
+  - [x] optional margin separator style
+- [x] Add sensible defaults consistent with existing editor controls.
 
 ## 3. Basic control shell and layout
 
-- [ ] Implement `MeasureCore` for `CodeEditor`.
-- [ ] Implement `ArrangeCore` for `CodeEditor`.
-- [ ] Split arranged bounds into:
-  - [ ] left margin strip
-  - [ ] text surface
-  - [ ] right margin strip
-- [ ] Ensure the text surface width is the only width passed into the text editor layout engine.
-- [ ] Ensure margins do not horizontally scroll with the editor text.
-- [ ] Ensure margins remain vertically aligned with visible wrapped rows.
+- [x] Implement `MeasureCore` for `CodeEditor`.
+- [x] Implement `ArrangeCore` for `CodeEditor`.
+- [x] Split arranged bounds into:
+  - [x] left margin strip
+  - [x] text surface
+  - [x] right margin strip
+- [x] Ensure the text surface width is the only width passed into the text editor layout engine.
+- [x] Ensure margins do not horizontally scroll with the editor text.
+- [x] Ensure margins remain vertically aligned with visible wrapped rows.
 
 ## 4. Default left line-number margin
 
-- [ ] Implement a built-in line-number margin.
-- [ ] Enable line numbers by default.
-- [ ] Render numbers only on the first wrapped row of a logical line.
-- [ ] Render continuation wrapped rows as blank by default.
-- [ ] Add current-line emphasis for the active line number.
-- [ ] Implement adaptive width based on the **visible** line range.
-- [ ] Add `MinLineNumberDigits` support.
-- [ ] Ensure width changes only when the visible digit bucket changes.
+- [x] Implement a built-in line-number margin.
+- [x] Enable line numbers by default.
+- [x] Render numbers only on the first wrapped row of a logical line.
+- [x] Render continuation wrapped rows as blank by default.
+- [x] Add current-line emphasis for the active line number.
+- [x] Implement adaptive width based on the **visible** line range.
+- [x] Add `MinLineNumberDigits` support.
+- [x] Ensure width changes only when the visible digit bucket changes.
 - [ ] Ensure line-number width changes trigger only the minimal required layout refresh.
 
 ## 5. Margin infrastructure
 
-- [ ] Implement ordered margin rendering for the left side.
-- [ ] Implement ordered margin rendering for the right side.
-- [ ] Make margin contexts expose enough information for external extensions:
-  - [ ] visible wrapped row mapping
-  - [ ] owning logical line
-  - [ ] first-row-of-line flag
-  - [ ] current-line / focus state
-  - [ ] theme / style access
-- [ ] Add pointer routing support for margins.
-- [ ] Verify margins can be implemented from another assembly without requiring them to be `Visual`s.
-- [ ] Add at least one sample/test custom margin beyond line numbers.
+- [x] Implement ordered margin rendering for the left side.
+- [x] Implement ordered margin rendering for the right side.
+- [x] Make margin contexts expose enough information for external extensions:
+  - [x] visible wrapped row mapping
+  - [x] owning logical line
+  - [x] first-row-of-line flag
+  - [x] current-line / focus state
+  - [x] theme / style access
+- [x] Add pointer routing support for margins.
+- [x] Verify margins can be implemented from another assembly without requiring them to be `Visual`s.
+- [x] Add at least one sample/test custom margin beyond line numbers.
 
 ## 6. Integrate with `TextEditorCore.LayoutCache`
 
-- [ ] Identify the minimal additional data `CodeEditor` needs from `TextEditorCore`.
-- [ ] Expose row-to-line mapping needed by margins without duplicating wrap logic.
-- [ ] Expose wrapped-segment lookup needed for visible rendering without rescanning full lines.
-- [ ] Ensure `CodeEditor` never reimplements row wrapping outside `TextEditorCore.LayoutCache`.
+- [x] Identify the minimal additional data `CodeEditor` needs from `TextEditorCore`.
+- [x] Expose row-to-line mapping needed by margins without duplicating wrap logic.
+- [x] Expose wrapped-segment lookup needed for visible rendering without rescanning full lines.
+- [x] Ensure `CodeEditor` never reimplements row wrapping outside `TextEditorCore.LayoutCache`.
 - [ ] Ensure viewport width changes refresh wrap layout but do not invalidate unrelated syntax state.
 - [ ] Add diagnostics/hooks for tests if needed (similar to current layout diagnostics patterns).
 
 ## 7. Simple syntax-highlighting path
 
-- [ ] Implement the simple `Highlighter` delegate path first.
-- [ ] Define highlight runs relative to logical lines, not wrapped rows.
-- [ ] Normalize/merge overlapping runs where needed.
-- [ ] Apply highlighting only to visible wrapped segments.
+- [x] Implement the simple `Highlighter` delegate path first.
+- [x] Define highlight runs relative to logical lines, not wrapped rows.
+- [x] Normalize/merge overlapping runs where needed.
+- [x] Apply highlighting only to visible wrapped segments.
 - [ ] Ensure syntax styles compose correctly with:
-  - [ ] selection
+  - [x] selection
   - [ ] search highlights
-  - [ ] current-line background
-- [ ] Keep the render path allocation-conscious.
+  - [x] current-line background
+- [x] Keep the render path allocation-conscious.
 - [ ] Verify scrolling does not recompute simple highlighting outside visible lines.
 
 ## 8. Advanced incremental syntax-highlighting infrastructure
 
-- [ ] Add persistent syntax-state storage on the editor.
-- [ ] Track syntax-state snapshot version.
-- [ ] Integrate document change notifications with syntax-state update scheduling.
-- [ ] Define diff/update input using document change information.
+- [x] Add persistent syntax-state storage on the editor.
+- [x] Track syntax-state snapshot version.
+- [x] Integrate document change notifications with syntax-state update scheduling.
+- [x] Define diff/update input using document change information.
 - [ ] Implement the rule: start from the first affected line and continue until line state stabilizes.
-- [ ] Add line-run lookup by logical line using cached syntax state.
-- [ ] Ensure pure scrolling never triggers a full syntax rebuild.
-- [ ] Add fallback behavior when no syntax state is yet available.
+- [x] Add line-run lookup by logical line using cached syntax state.
+- [x] Ensure pure scrolling never triggers a full syntax rebuild.
+- [x] Add fallback behavior when no syntax state is yet available.
 
 ## 9. Optional async highlighter support
 
@@ -131,13 +131,13 @@ This checklist translates `site/docs/specs/code_editor_specs.md` into an impleme
 
 ## 10. Current-line rendering
 
-- [ ] Add current-line background rendering in the text surface.
-- [ ] Add current-line emphasis in the line-number margin.
-- [ ] Ensure current-line styling composes correctly with syntax highlighting and selection.
+- [x] Add current-line background rendering in the text surface.
+- [x] Add current-line emphasis in the line-number margin.
+- [x] Ensure current-line styling composes correctly with syntax highlighting and selection.
 
 ## 11. Search / inherited editor features validation
 
-- [ ] Verify `TextEditorBase` search popup integration still behaves correctly under `CodeEditor` chrome.
+- [x] Verify `TextEditorBase` search popup integration still behaves correctly under `CodeEditor` chrome.
 - [ ] Verify clipboard operations still behave correctly.
 - [ ] Verify undo/redo still behaves correctly.
 - [ ] Verify cursor placement stays correct when margins are present.
@@ -175,10 +175,10 @@ This checklist translates `site/docs/specs/code_editor_specs.md` into an impleme
 
 ### Phase 1
 
-- [ ] `CodeEditor` shell
-- [ ] line numbers
-- [ ] left/right margin infrastructure
-- [ ] simple synchronous highlighter
+- [x] `CodeEditor` shell
+- [x] line numbers
+- [x] left/right margin infrastructure
+- [x] simple synchronous highlighter
 
 ### Phase 2
 
