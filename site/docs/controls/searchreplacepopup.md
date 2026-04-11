@@ -4,7 +4,7 @@ title: SearchReplacePopup
 
 # SearchReplacePopup
 
-`SearchReplacePopup` is a reusable Find / Find-and-Replace popup used by controls such as `TextArea` and `LogControl`.
+`SearchReplacePopup` is a reusable Find / Find-and-Replace popup used by controls such as `TextArea`, `CodeEditor`, and `LogControl`.
 
 
 ![SearchReplacePopup](../../img/controls/searchreplacepopup.png){.terminal}
@@ -55,4 +55,5 @@ The popup UI is rendered using `Popup` in the app window layer, while `SearchRep
 - [Input](../input.md)
 - [Popup](popup.md)
 - [TextArea](textarea.md)
+- [CodeEditor](codeeditor.md)
 - [SearchReplacePopup Specs](../specs/controls/searchreplacepopup.md)

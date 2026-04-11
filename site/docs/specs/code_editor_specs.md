@@ -4,7 +4,7 @@ title: CodeEditor Control Specs
 
 # CodeEditor Control Specs
 
-This document specifies a future `CodeEditor` control for **XenoAtom.Terminal.UI**.
+This document specifies the `CodeEditor` control for **XenoAtom.Terminal.UI**.
 
 `CodeEditor` is intended to be the code-oriented editor surface built into the core `XenoAtom.Terminal.UI` package,
 implemented on top of the existing `TextEditorBase` / `TextEditorCore` infrastructure and explicitly designed to keep the
@@ -193,7 +193,7 @@ The provider MUST NOT be responsible for:
 
 ## Proposed public surface (v1/vNext direction)
 
-The exact API names may still evolve, but the control should roughly expose the following concepts.
+The current API follows these concepts closely.
 
 ```csharp
 namespace XenoAtom.Terminal.UI.Controls;

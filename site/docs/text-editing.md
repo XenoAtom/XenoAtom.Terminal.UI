@@ -5,7 +5,7 @@ title: "Text Editing"
 # Text Editing
 
 Text input is a first-class feature of XenoAtom.Terminal.UI: you get a shared editing engine across multiple controls,
-with selection, clipboard, undo/redo, scrolling, and integrated Find/Replace.
+with selection, clipboard, undo/redo, scrolling, integrated Find/Replace, and code-oriented syntax-highlighting hooks.
 
 ![TextArea with Search/Replace popup](../img/controls/searchreplacepopup.png){.terminal}
 
@@ -15,13 +15,14 @@ These controls share the same editing engine and most of the same user experienc
 
 - [TextBox](controls/textbox.md) — single-line editor, password mode, overflow indicators
 - [TextArea](controls/textarea.md) — multi-line editor, soft wrapping, Find/Replace popup
+- [CodeEditor](controls/codeeditor.md) — multi-line code editor with line numbers, pluggable margins, and syntax highlighting
 - [MaskedInput](controls/maskedinput.md) — structured templates (credit cards, dates, IDs, etc.)
 - [NumberBox](controls/numberbox.md) — numeric value binding with inline validation
 - [PromptEditor](controls/prompteditor.md) — prompt-style editor with single-line or multi-line modes and configurable command hints for accept/new-line workflows
 
 Other controls also *use* the same infrastructure for parts of their UX:
 
-- [SearchReplacePopup](controls/searchreplacepopup.md) — reusable Find / Replace UI (hosted by TextArea and LogControl)
+- [SearchReplacePopup](controls/searchreplacepopup.md) — reusable Find / Replace UI (hosted by TextArea, CodeEditor, and LogControl)
 - [LogControl](controls/logcontrol.md) — selection/copy + Find (Ctrl+F)
 - [DataGridControl](controls/datagrid.md) — in-place editing uses text editors (e.g. TextBox/NumberBox)
 
@@ -50,7 +51,7 @@ See [Undo/Redo](undo-redo.md).
 
 ## Find / Replace
 
-`TextArea` includes a built-in Find / Replace UI powered by the reusable [SearchReplacePopup](controls/searchreplacepopup.md):
+`TextArea` and `CodeEditor` include a built-in Find / Replace UI powered by the reusable [SearchReplacePopup](controls/searchreplacepopup.md):
 
 - `Ctrl+F`: Find
 - `Ctrl+H`: Replace
@@ -75,6 +76,7 @@ The text editing stack is split into a few focused parts:
 
 - **`TextEditorBase`**: shared control base for editors (focus, commands, cursor integration).
 - **`TextEditorCore`**: editing behavior (navigation, selection, word operations, clipboard, undo/redo, search matches).
+- **`CodeEditor`**: code-oriented chrome built on the same engine, adding margins, line numbers, current-line treatment, and line-relative syntax highlighting.
 - **`ITextDocument`**: document abstraction for storage and edits.
   - `TextDocument`: a simple document implementation.
   - `DynamicTextDocument`: bridges a bindable `Text` property to the editor engine.
@@ -96,6 +98,7 @@ with accessibility settings in many terminals.
 
 - [TextBox](controls/textbox.md)
 - [TextArea](controls/textarea.md)
+- [CodeEditor](controls/codeeditor.md)
 - [MaskedInput](controls/maskedinput.md)
 - [NumberBox](controls/numberbox.md)
 - [PromptEditor](controls/prompteditor.md)

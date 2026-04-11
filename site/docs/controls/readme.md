@@ -22,6 +22,7 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 
 - [TextBox](textbox.md)
 - [TextArea](textarea.md)
+- [CodeEditor](codeeditor.md)
 - [PromptEditor](prompteditor.md)
 - [SearchReplacePopup](searchreplacepopup.md)
 - [MaskedInput](maskedinput.md)

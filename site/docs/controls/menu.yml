@@ -3,6 +3,7 @@ controls:
   - {title: "<i class='bi bi-keyboard xenoatom-icon xenoatom-icon--input' aria-hidden='true'></i> Text input", separator: true}
   - {path: textbox.md, title: TextBox}
   - {path: textarea.md, title: TextArea}
+  - {path: codeeditor.md, title: CodeEditor}
   - {path: prompteditor.md, title: PromptEditor}
   - {path: maskedinput.md, title: MaskedInput}
   - {path: numberbox.md, title: NumberBox}

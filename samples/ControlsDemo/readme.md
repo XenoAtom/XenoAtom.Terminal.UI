@@ -2,6 +2,8 @@
 
 The ControlsDemo is the interactive catalog for **XenoAtom.Terminal.UI**. It showcases controls, theming, and common interactions.
 
+Notable text-editing demos include `TextArea`, `PromptEditor`, `Search / Replace`, and `CodeEditor`.
+
 ![ControlsDemo welcome screen](https://raw.githubusercontent.com/XenoAtom/XenoAtom.Terminal.UI/main/site/img/controls/controls-demo.png)
 
 ## Run from source

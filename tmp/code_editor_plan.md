@@ -145,31 +145,31 @@ This checklist translates `site/docs/specs/code_editor_specs.md` into an impleme
 
 ## 12. Performance validation for large files / long lines
 
-- [ ] Add tests for very large documents with many logical lines.
-- [ ] Add tests for a single extremely long wrapped line.
-- [ ] Add tests that scrolling only touches visible lines plus bounded cache windows.
-- [ ] Add tests that syntax-highlighting does not re-highlight the whole document on scroll.
+- [x] Add tests for very large documents with many logical lines.
+- [x] Add tests for a single extremely long wrapped line.
+- [x] Add tests that scrolling only touches visible lines plus bounded cache windows.
+- [x] Add tests that syntax-highlighting does not re-highlight the whole document on scroll.
 - [x] Add tests that viewport width changes reuse syntax state and only refresh wrapping.
-- [ ] Add tests that line-number width does not reserve large width near the start of a huge file.
-- [ ] Add tests that crossing a digit bucket updates margin width correctly.
-- [ ] Add tests for custom left/right margins with wrapped lines.
+- [x] Add tests that line-number width does not reserve large width near the start of a huge file.
+- [x] Add tests that crossing a digit bucket updates margin width correctly.
+- [x] Add tests for custom left/right margins with wrapped lines.
 
 ## 13. Samples
 
-- [ ] Add a small `CodeEditor` sample to `samples/ControlsDemo` or another suitable sample.
-- [ ] Demonstrate:
-  - [ ] line numbers
-  - [ ] a simple custom margin
-  - [ ] a simple syntax highlighter
-  - [ ] very large document scrolling
+- [x] Add a small `CodeEditor` sample to `samples/ControlsDemo` or another suitable sample.
+- [x] Demonstrate:
+  - [x] line numbers
+  - [x] a simple custom margin
+  - [x] a simple syntax highlighter
+  - [x] very large document scrolling
 - [ ] Optionally add a playground/demo scenario specifically for long files.
 
 ## 14. Documentation
 
-- [ ] Update end-user docs when the control exists.
-- [ ] Add a user-facing control page under `site/docs/controls/`.
-- [ ] Update `site/docs/readme.md` controls/spec references as needed.
-- [ ] Keep `site/docs/specs/code_editor_specs.md` aligned with the implemented API.
+- [x] Update end-user docs when the control exists.
+- [x] Add a user-facing control page under `site/docs/controls/`.
+- [x] Update `site/docs/readme.md` controls/spec references as needed.
+- [x] Keep `site/docs/specs/code_editor_specs.md` aligned with the implemented API.
 
 ## 15. Possible phase cuts
 
@@ -201,11 +201,11 @@ This checklist translates `site/docs/specs/code_editor_specs.md` into an impleme
 
 ## Completion criteria for the first shippable version
 
-- [ ] `CodeEditor` exists as a supported control in `XenoAtom.Terminal.UI`.
-- [ ] It derives from `TextEditorBase` and reuses `TextEditorCore`.
-- [ ] Line numbers are enabled by default and adapt to the visible range.
-- [ ] Margins are pluggable on both left and right.
-- [ ] A simple syntax highlighter can be plugged in.
-- [ ] The infrastructure for advanced incremental syntax highlighting is public and usable.
-- [ ] Large-file / very-long-line behavior remains aligned with current text editor performance optimizations.
-- [ ] Tests cover correctness and core performance regression scenarios.
+- [x] `CodeEditor` exists as a supported control in `XenoAtom.Terminal.UI`.
+- [x] It derives from `TextEditorBase` and reuses `TextEditorCore`.
+- [x] Line numbers are enabled by default and adapt to the visible range.
+- [x] Margins are pluggable on both left and right.
+- [x] A simple syntax highlighter can be plugged in.
+- [x] The infrastructure for advanced incremental syntax highlighting is public and usable.
+- [x] Large-file / very-long-line behavior remains aligned with current text editor performance optimizations.
+- [x] Tests cover correctness and core performance regression scenarios.

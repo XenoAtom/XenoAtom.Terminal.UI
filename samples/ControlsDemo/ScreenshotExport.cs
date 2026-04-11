@@ -28,6 +28,7 @@ internal static class ScreenshotExport
         ["ColorPickerDemo"] = "colorpicker",
         ["CommandBarDemo"] = "commandbar",
         ["CommandPaletteDemo"] = "commandpalette",
+        ["CodeEditorDemo"] = "codeeditor",
         ["ContextMenuDemo"] = "contextmenu",
         ["DataGridDemo"] = "datagrid",
         ["DocumentFlowDemo"] = "documentflow",
@@ -241,6 +242,7 @@ internal static class ScreenshotExport
     private static bool RequiresAppSnapshot(string typeName)
         => string.Equals(typeName, "CommandBarDemo", StringComparison.Ordinal) ||
            string.Equals(typeName, "CommandPaletteDemo", StringComparison.Ordinal) ||
+           string.Equals(typeName, "CodeEditorDemo", StringComparison.Ordinal) ||
            string.Equals(typeName, "ContextMenuDemo", StringComparison.Ordinal) ||
            string.Equals(typeName, "DialogDemo", StringComparison.Ordinal) ||
            string.Equals(typeName, "MenuBarDemo", StringComparison.Ordinal) ||
