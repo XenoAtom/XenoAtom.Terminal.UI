@@ -30,6 +30,7 @@ They are useful when you want to understand *why* a feature behaves a certain wa
 - [Brushes & Gradients](brushes_and_gradients_specs.md)
 - [Commands](command_specs.md)
 - [Data Templates](data_template_specs.md)
+- [Code Editor](code_editor_specs.md)
 - [Text Editor](text_editor_specs.md)
 - [Undo/Redo](undo_redo_specs.md)
 

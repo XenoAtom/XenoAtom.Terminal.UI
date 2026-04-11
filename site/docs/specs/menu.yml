@@ -11,6 +11,7 @@ specs:
   - {path: brushes_and_gradients_specs.md, title: "<i class='bi bi-palette' aria-hidden='true'></i> Brushes & Gradients"}
   - {path: command_specs.md, title: "<i class='bi bi-terminal' aria-hidden='true'></i> Commands"}
   - {path: data_template_specs.md, title: "<i class='bi bi-puzzle' aria-hidden='true'></i> Data Templates"}
+  - {path: code_editor_specs.md, title: "<i class='bi bi-code-slash' aria-hidden='true'></i> Code Editor"}
   - {path: text_editor_specs.md, title: "<i class='bi bi-pencil-square' aria-hidden='true'></i> Text Editor"}
   - {path: undo_redo_specs.md, title: "<i class='bi bi-arrow-counterclockwise' aria-hidden='true'></i> Undo/Redo"}
 
