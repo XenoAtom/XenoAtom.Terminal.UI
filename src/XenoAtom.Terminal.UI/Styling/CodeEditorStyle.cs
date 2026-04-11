@@ -37,6 +37,16 @@ public sealed record CodeEditorStyle : IStyle<CodeEditorStyle>
     public Color? Selection { get; init; }
 
     /// <summary>
+    /// Gets the optional background color used for non-active search matches.
+    /// </summary>
+    public Color? SearchMatchBackground { get; init; }
+
+    /// <summary>
+    /// Gets the optional background color used for the active search match.
+    /// </summary>
+    public Color? ActiveSearchMatchBackground { get; init; }
+
+    /// <summary>
     /// Gets the optional placeholder foreground color.
     /// </summary>
     public Color? PlaceholderForeground { get; init; }
@@ -105,6 +115,26 @@ public sealed record CodeEditorStyle : IStyle<CodeEditorStyle>
         }
 
         style |= TextStyle.Bold;
+        return style;
+    }
+
+    /// <summary>
+    /// Resolves the style used for search match overlays.
+    /// </summary>
+    /// <param name="theme">The active theme.</param>
+    /// <param name="isActive">Whether the match is the currently active search result.</param>
+    public Style SearchMatchStyle(Theme theme, bool isActive)
+    {
+        var style = Style.None;
+        var color = isActive
+            ? ActiveSearchMatchBackground ?? theme.Warning ?? theme.Accent ?? theme.Selection
+            : SearchMatchBackground ?? theme.Accent?.WithAlpha(0x46) ?? theme.Selection;
+
+        if (color is { } c)
+        {
+            style = style.WithBackground(c);
+        }
+
         return style;
     }
 

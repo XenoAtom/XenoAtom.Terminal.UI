@@ -5,6 +5,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using System.Text;
+using System.Linq;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Commands;
@@ -356,7 +357,7 @@ public sealed partial class CodeEditor : TextEditorBase
     private readonly List<StyledRun> _normalizedHighlightRuns = new(64);
     private readonly Dictionary<int, LineHighlightCacheEntry> _lineHighlightCache = new();
     private readonly List<(CodeEditorMargin Margin, Rectangle Bounds)> _orderedMargins = new();
-    private readonly CancellationTokenSource _syntaxUpdateCts = new();
+    private readonly List<StyledRun> _composedHighlightRuns = new(64);
 
     private Rectangle _contentRect;
     private Rectangle _editorRect;
@@ -365,7 +366,6 @@ public sealed partial class CodeEditor : TextEditorBase
     private int _leftMarginWidth;
     private int _rightMarginWidth;
     private int _lineNumberDigits;
-    private int _lastMeasuredViewportHeight;
     private int _cachedHighlightSnapshotVersion = -1;
     private Theme? _cachedHighlightTheme;
     private CodeEditorLineHighlighter? _cachedHighlighter;
@@ -373,10 +373,19 @@ public sealed partial class CodeEditor : TextEditorBase
     private int _cachedHighlightCaretIndex;
     private int _cachedHighlightSelectionStart;
     private int _cachedHighlightSelectionLength;
+    private int _cachedHighlightScrollOffsetY = -1;
+    private int _cachedHighlightVisibleLineCount = -1;
+    private int _cachedFirstVisibleLineIndex = -1;
+    private int _cachedLastVisibleLineIndex = -1;
+    private SearchQuery _cachedSearchQuery;
+    private int _cachedSearchActiveMatchIndex = -1;
+    private int _cachedSearchMatchCount = -1;
     private TextDocumentChangedEventArgs? _lastDocumentChange;
     private CodeEditorSyntaxState? _syntaxState;
-    private int _pendingSyntaxVersion = -1;
-    private int _asyncBuildVersion = -1;
+    private int _syntaxRequestId;
+    private int _pendingSyntaxSnapshotVersion = -1;
+    private CancellationTokenSource? _syntaxUpdateCts;
+    private int _lastVisibleLineRequestCount;
 
     private sealed record LineHighlightCacheEntry(int LineStart, int LineLength, StyledRun[] Runs);
 
@@ -764,11 +773,18 @@ public sealed partial class CodeEditor : TextEditorBase
     partial void OnSyntaxHighlighterChanged(CodeEditorSyntaxHighlighter? value)
     {
         _ = value;
+        CancelPendingSyntaxWork();
         _syntaxState = null;
-        _pendingSyntaxVersion = -1;
-        _asyncBuildVersion = -1;
+        _lastDocumentChange = null;
         InvalidateHighlightCache();
         TriggerSyntaxRefresh();
+    }
+
+    /// <inheritdoc />
+    protected override void OnDetachedFromApp(TerminalApp app)
+    {
+        CancelPendingSyntaxWork();
+        base.OnDetachedFromApp(app);
     }
 
     private void AttachMargin(CodeEditorMargin margin) => margin.Attach(this);
@@ -822,7 +838,6 @@ public sealed partial class CodeEditor : TextEditorBase
         }
 
         _lineNumberDigits = digits;
-        _lastMeasuredViewportHeight = viewportHeight;
     }
 
     private int MeasureMargins(BindableList<CodeEditorMargin> margins, CodeEditorStyle style, Rectangle bounds)
@@ -1019,36 +1034,69 @@ public sealed partial class CodeEditor : TextEditorBase
         var caretIndex = CaretIndex;
         var selectionStart = SelectionStart;
         var selectionLength = SelectionLength;
+        var searchState = GetSearchState();
 
-        if (_cachedHighlightSnapshotVersion == version
-            && ReferenceEquals(_cachedHighlightTheme, theme)
-            && Equals(_cachedHighlighter, highlighter)
-            && ReferenceEquals(_cachedSyntaxHighlighter, syntaxHighlighter)
-            && _cachedHighlightCaretIndex == caretIndex
-            && _cachedHighlightSelectionStart == selectionStart
-            && _cachedHighlightSelectionLength == selectionLength)
+        var requiresMetadataRefresh = _cachedHighlightSnapshotVersion != version
+            || !ReferenceEquals(_cachedHighlightTheme, theme)
+            || !Equals(_cachedHighlighter, highlighter)
+            || !ReferenceEquals(_cachedSyntaxHighlighter, syntaxHighlighter)
+            || _cachedHighlightCaretIndex != caretIndex
+            || _cachedHighlightSelectionStart != selectionStart
+            || _cachedHighlightSelectionLength != selectionLength
+            || !_cachedSearchQuery.Equals(searchState.Query)
+            || _cachedSearchActiveMatchIndex != searchState.ActiveMatchIndex
+            || _cachedSearchMatchCount != searchState.Matches.Count;
+
+        var firstVisibleLineIndex = _visibleLines.Count > 0 ? _visibleLines[0].LineIndex : -1;
+        var lastVisibleLineIndex = _visibleLines.Count > 0 ? _visibleLines[^1].LineIndex : -1;
+        var visibleLinesChanged = _cachedHighlightScrollOffsetY != Scroll.OffsetY
+            || _cachedHighlightVisibleLineCount != _visibleLines.Count
+            || _cachedFirstVisibleLineIndex != firstVisibleLineIndex
+            || _cachedLastVisibleLineIndex != lastVisibleLineIndex;
+
+        if (requiresMetadataRefresh)
+        {
+            _cachedHighlightSnapshotVersion = version;
+            _cachedHighlightTheme = theme;
+            _cachedHighlighter = highlighter;
+            _cachedSyntaxHighlighter = syntaxHighlighter;
+            _cachedHighlightCaretIndex = caretIndex;
+            _cachedHighlightSelectionStart = selectionStart;
+            _cachedHighlightSelectionLength = selectionLength;
+            _cachedSearchQuery = searchState.Query;
+            _cachedSearchActiveMatchIndex = searchState.ActiveMatchIndex;
+            _cachedSearchMatchCount = searchState.Matches.Count;
+            _lineHighlightCache.Clear();
+            EnsureSyntaxRefresh();
+        }
+
+        _cachedHighlightScrollOffsetY = Scroll.OffsetY;
+        _cachedHighlightVisibleLineCount = _visibleLines.Count;
+        _cachedFirstVisibleLineIndex = firstVisibleLineIndex;
+        _cachedLastVisibleLineIndex = lastVisibleLineIndex;
+
+        if (!requiresMetadataRefresh && !visibleLinesChanged)
         {
             return;
         }
 
-        _cachedHighlightSnapshotVersion = version;
-        _cachedHighlightTheme = theme;
-        _cachedHighlighter = highlighter;
-        _cachedSyntaxHighlighter = syntaxHighlighter;
-        _cachedHighlightCaretIndex = caretIndex;
-        _cachedHighlightSelectionStart = selectionStart;
-        _cachedHighlightSelectionLength = selectionLength;
-        TriggerSyntaxRefresh();
+        var visibleLineIndices = GetVisibleLogicalLineIndices();
+        PruneHighlightCache(visibleLineIndices);
+        _lastVisibleLineRequestCount = 0;
 
-        for (var i = 0; i < _visibleLines.Count; i++)
+        for (var i = 0; i < visibleLineIndices.Count; i++)
         {
-            var visible = _visibleLines[i];
-            if (_lineHighlightCache.ContainsKey(visible.LineIndex))
+            var lineIndex = visibleLineIndices[i];
+            var visible = GetVisibleLineForLogicalLine(lineIndex);
+
+            if (_lineHighlightCache.TryGetValue(lineIndex, out var cachedEntry)
+                && cachedEntry.LineStart == visible.LineStart
+                && cachedEntry.LineLength == visible.LineLength)
             {
                 continue;
             }
 
-            var workingRuns = GetOrCreateWorkingRuns(visible.LineIndex);
+            var workingRuns = GetOrCreateWorkingRuns(lineIndex);
             workingRuns.Clear();
             if (_syntaxState is not null && syntaxHighlighter is not null)
             {
@@ -1062,8 +1110,10 @@ public sealed partial class CodeEditor : TextEditorBase
                 highlighter(new CodeEditorLineHighlightRequest(snapshot, theme, visible.LineIndex, visible.LineStart, visible.LineLength, caretIndex, selectionStart, selectionLength), workingRuns);
             }
 
+            _lastVisibleLineRequestCount++;
+            ComposeSearchHighlightRuns(workingRuns, theme, searchState, visible.LineStart, visible.LineLength);
             NormalizeHighlightRuns(workingRuns, visible.LineLength);
-            _lineHighlightCache[visible.LineIndex] = new LineHighlightCacheEntry(visible.LineStart, visible.LineLength, workingRuns.ToArray());
+            _lineHighlightCache[lineIndex] = new LineHighlightCacheEntry(visible.LineStart, visible.LineLength, workingRuns.ToArray());
         }
     }
 
@@ -1072,6 +1122,7 @@ public sealed partial class CodeEditor : TextEditorBase
         var syntaxHighlighter = SyntaxHighlighter;
         if (syntaxHighlighter is null)
         {
+            CancelPendingSyntaxWork();
             return;
         }
 
@@ -1081,21 +1132,25 @@ public sealed partial class CodeEditor : TextEditorBase
             return;
         }
 
-        var theme = GetTheme();
-        var buildContext = new CodeEditorSyntaxBuildContext(snapshot, theme, CaretIndex, SelectionStart, SelectionLength);
-        if (syntaxHighlighter is IAsyncCodeEditorSyntaxHighlighter asyncHighlighter && CheckAccess())
+        if (_pendingSyntaxSnapshotVersion == snapshot.Version)
         {
-            _pendingSyntaxVersion = snapshot.Version;
-            _ = ApplySyntaxStateAsync(asyncHighlighter, syntaxHighlighter, buildContext, snapshot.Version, _lastDocumentChange, _syntaxState);
             return;
         }
 
+        var theme = GetTheme();
+        if (syntaxHighlighter is IAsyncCodeEditorSyntaxHighlighter asyncHighlighter && CheckAccess())
+        {
+            ScheduleAsyncSyntaxRefresh(asyncHighlighter, syntaxHighlighter, snapshot, theme);
+            return;
+        }
+
+        CancelPendingSyntaxWork();
+
+        var buildContext = new CodeEditorSyntaxBuildContext(snapshot, theme, CaretIndex, SelectionStart, SelectionLength);
+
         if (_syntaxState is not null && _lastDocumentChange is not null)
         {
-            var startLine = snapshot.GetLineIndexFromPosition(Math.Clamp(_lastDocumentChange.Position, 0, snapshot.Length));
-            var endPosition = Math.Min(snapshot.Length, _lastDocumentChange.Position + _lastDocumentChange.InsertedLength);
-            var endLine = snapshot.GetLineIndexFromPosition(endPosition);
-            _syntaxState = syntaxHighlighter.Update(_syntaxState, new CodeEditorSyntaxUpdateContext(snapshot, theme, _lastDocumentChange, startLine, endLine, CaretIndex, SelectionStart, SelectionLength));
+            _syntaxState = syntaxHighlighter.Update(_syntaxState, CreateUpdateContext(snapshot, theme, _lastDocumentChange, CaretIndex, SelectionStart, SelectionLength));
             _lastDocumentChange = null;
         }
         else
@@ -1104,33 +1159,72 @@ public sealed partial class CodeEditor : TextEditorBase
         }
     }
 
-    private async Task ApplySyntaxStateAsync(
+    private void EnsureSyntaxRefresh()
+    {
+        if (!CheckAccess())
+        {
+            Dispatcher.InvokeAsync(TriggerSyntaxRefresh).GetAwaiter().GetResult();
+            return;
+        }
+
+        TriggerSyntaxRefresh();
+    }
+
+    private void ScheduleAsyncSyntaxRefresh(
         IAsyncCodeEditorSyntaxHighlighter asyncHighlighter,
         CodeEditorSyntaxHighlighter syntaxHighlighter,
-        CodeEditorSyntaxBuildContext buildContext,
-        int version,
-        TextDocumentChangedEventArgs? change,
-        CodeEditorSyntaxState? previousState)
+        ITextSnapshot snapshot,
+        Theme theme)
     {
-        _asyncBuildVersion = version;
-        CodeEditorSyntaxState? state = null;
+        var requestId = ++_syntaxRequestId;
+        var buildContext = new CodeEditorSyntaxBuildContext(snapshot, theme, CaretIndex, SelectionStart, SelectionLength);
+        var previousState = _syntaxState;
+        var change = _lastDocumentChange;
+        var useUpdate = previousState is not null && change is not null;
+        var updateContext = useUpdate
+            ? CreateUpdateContext(snapshot, theme, change!, buildContext.CaretIndex, buildContext.SelectionStart, buildContext.SelectionLength)
+            : default;
+
+        CancelPendingSyntaxWork();
+        var cts = new CancellationTokenSource();
+        _syntaxUpdateCts = cts;
+        _pendingSyntaxSnapshotVersion = snapshot.Version;
+        var operation = useUpdate && previousState is not null
+            ? asyncHighlighter.UpdateAsync(previousState, updateContext, cts.Token)
+            : asyncHighlighter.BuildAsync(buildContext, cts.Token);
+
+        operation.AsTask().ContinueWith(
+            task => HandleAsyncSyntaxCompletion(task, syntaxHighlighter, buildContext, requestId, cts),
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+    }
+
+    private void HandleAsyncSyntaxCompletion(
+        Task<CodeEditorSyntaxState> task,
+        CodeEditorSyntaxHighlighter syntaxHighlighter,
+        CodeEditorSyntaxBuildContext buildContext,
+        int requestId,
+        CancellationTokenSource cts)
+    {
+        if (task.IsCanceled || cts.IsCancellationRequested)
+        {
+            return;
+        }
+
+        if (task.IsFaulted)
+        {
+            return;
+        }
+
+        CodeEditorSyntaxState? state;
         try
         {
-            if (previousState is not null && change is not null)
-            {
-                var snapshot = buildContext.Snapshot;
-                var startLine = snapshot.GetLineIndexFromPosition(Math.Clamp(change.Position, 0, snapshot.Length));
-                var endPosition = Math.Min(snapshot.Length, change.Position + change.InsertedLength);
-                var endLine = snapshot.GetLineIndexFromPosition(endPosition);
-                state = await asyncHighlighter.UpdateAsync(previousState, new CodeEditorSyntaxUpdateContext(snapshot, buildContext.Theme, change, startLine, endLine, buildContext.CaretIndex, buildContext.SelectionStart, buildContext.SelectionLength), _syntaxUpdateCts.Token).ConfigureAwait(false);
-            }
-            else
-            {
-                state = await asyncHighlighter.BuildAsync(buildContext, _syntaxUpdateCts.Token).ConfigureAwait(false);
-            }
+            state = task.Result;
         }
-        catch (OperationCanceledException)
+        catch (Exception ex)
         {
+            _ = ex;
             return;
         }
 
@@ -1139,18 +1233,57 @@ public sealed partial class CodeEditor : TextEditorBase
             return;
         }
 
-        await Dispatcher.InvokeAsync(() =>
+        var app = App;
+        if (app is null)
         {
-            if (TextDocument.CurrentSnapshot.Version != version || _asyncBuildVersion != version)
+            return;
+        }
+
+        app.Post(() =>
+        {
+            if (!ReferenceEquals(_syntaxUpdateCts, cts)
+                || cts.IsCancellationRequested
+                || !ReferenceEquals(SyntaxHighlighter, syntaxHighlighter)
+                || TextDocument.CurrentSnapshot.Version != buildContext.Snapshot.Version
+                || requestId < _syntaxRequestId)
             {
                 return;
             }
 
             _syntaxState = state;
             _lastDocumentChange = null;
+            _pendingSyntaxSnapshotVersion = -1;
             InvalidateHighlightCache();
-            App?.RequestRender();
-        }).ConfigureAwait(false);
+            app.RequestRender();
+        });
+    }
+
+    private static CodeEditorSyntaxUpdateContext CreateUpdateContext(ITextSnapshot snapshot, Theme theme, TextDocumentChangedEventArgs change, int caretIndex, int selectionStart, int selectionLength)
+    {
+        var startLine = snapshot.GetLineIndexFromPosition(Math.Clamp(change.Position, 0, snapshot.Length));
+        var endPosition = Math.Min(snapshot.Length, change.Position + change.InsertedLength);
+        var endLine = snapshot.GetLineIndexFromPosition(endPosition);
+        return new CodeEditorSyntaxUpdateContext(snapshot, theme, change, startLine, endLine, caretIndex, selectionStart, selectionLength);
+    }
+
+    private void CancelPendingSyntaxWork()
+    {
+        var cts = _syntaxUpdateCts;
+        _syntaxUpdateCts = null;
+        _pendingSyntaxSnapshotVersion = -1;
+        if (cts is null)
+        {
+            return;
+        }
+
+        try
+        {
+            cts.Cancel();
+        }
+        finally
+        {
+            cts.Dispose();
+        }
     }
 
     private void InvalidateHighlightCache()
@@ -1159,8 +1292,131 @@ public sealed partial class CodeEditor : TextEditorBase
         _cachedHighlightTheme = null;
         _cachedHighlighter = null;
         _cachedSyntaxHighlighter = null;
+        _cachedHighlightScrollOffsetY = -1;
+        _cachedHighlightVisibleLineCount = -1;
+        _cachedFirstVisibleLineIndex = -1;
+        _cachedLastVisibleLineIndex = -1;
+        _cachedSearchQuery = default;
+        _cachedSearchActiveMatchIndex = -1;
+        _cachedSearchMatchCount = -1;
+        _lastVisibleLineRequestCount = 0;
         _lineHighlightCache.Clear();
     }
+
+    private void ComposeSearchHighlightRuns(List<StyledRun> workingRuns, Theme theme, TextEditorSearchState searchState, int lineStart, int lineLength)
+    {
+        if (lineLength <= 0)
+        {
+            return;
+        }
+
+        if (string.IsNullOrEmpty(searchState.Query.Text) || searchState.Matches.Count == 0)
+        {
+            return;
+        }
+
+        var lineEnd = lineStart + lineLength;
+        var composed = _composedHighlightRuns;
+        composed.Clear();
+        composed.AddRange(workingRuns);
+        var style = GetStyle<CodeEditorStyle>();
+
+        for (var i = 0; i < searchState.Matches.Count; i++)
+        {
+            var match = searchState.Matches[i];
+            var matchStart = match.Start;
+            var matchEnd = match.Start + match.Length;
+            if (match.Length <= 0 || matchEnd <= lineStart || matchStart >= lineEnd)
+            {
+                continue;
+            }
+
+            var start = Math.Max(matchStart, lineStart) - lineStart;
+            var end = Math.Min(matchEnd, lineEnd) - lineStart;
+            if (end <= start)
+            {
+                continue;
+            }
+
+            composed.Add(new StyledRun(start, end - start, style.SearchMatchStyle(theme, match.IsActive)));
+        }
+
+        workingRuns.Clear();
+        workingRuns.AddRange(composed);
+    }
+
+    private List<int> GetVisibleLogicalLineIndices()
+    {
+        var result = new List<int>(_visibleLines.Count);
+        var last = -1;
+        for (var i = 0; i < _visibleLines.Count; i++)
+        {
+            var lineIndex = _visibleLines[i].LineIndex;
+            if (lineIndex == last)
+            {
+                continue;
+            }
+
+            result.Add(lineIndex);
+            last = lineIndex;
+        }
+
+        return result;
+    }
+
+    private CodeEditorVisibleLine GetVisibleLineForLogicalLine(int lineIndex)
+    {
+        for (var i = 0; i < _visibleLines.Count; i++)
+        {
+            if (_visibleLines[i].LineIndex == lineIndex)
+            {
+                return _visibleLines[i];
+            }
+        }
+
+        throw new InvalidOperationException($"Unable to locate visible line {lineIndex}.");
+    }
+
+    private void PruneHighlightCache(IReadOnlyCollection<int> visibleLineIndices)
+    {
+        if (_lineHighlightCache.Count == 0)
+        {
+            return;
+        }
+
+        List<int>? toRemove = null;
+        foreach (var key in _lineHighlightCache.Keys)
+        {
+            if (visibleLineIndices.Contains(key))
+            {
+                continue;
+            }
+
+            toRemove ??= new List<int>();
+            toRemove.Add(key);
+        }
+
+        if (toRemove is null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < toRemove.Count; i++)
+        {
+            _lineHighlightCache.Remove(toRemove[i]);
+        }
+    }
+
+    internal int GetCachedHighlightLineCountForTests() => _lineHighlightCache.Count;
+
+    internal int GetLastVisibleLineRequestCountForTests() => _lastVisibleLineRequestCount;
+
+    internal StyledRun[]? GetHighlightRunsForTests(int lineIndex)
+        => _lineHighlightCache.TryGetValue(lineIndex, out var entry) ? entry.Runs : null;
+
+    internal int GetSyntaxStateSnapshotVersionForTests() => _syntaxState?.SnapshotVersion ?? -1;
+
+    internal TextEditorSearchState GetSearchStateForTests() => GetSearchState();
 
     private List<StyledRun> GetOrCreateWorkingRuns(int lineIndex)
     {

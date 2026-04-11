@@ -94,8 +94,8 @@ This checklist translates `site/docs/specs/code_editor_specs.md` into an impleme
 - [x] Expose row-to-line mapping needed by margins without duplicating wrap logic.
 - [x] Expose wrapped-segment lookup needed for visible rendering without rescanning full lines.
 - [x] Ensure `CodeEditor` never reimplements row wrapping outside `TextEditorCore.LayoutCache`.
-- [ ] Ensure viewport width changes refresh wrap layout but do not invalidate unrelated syntax state.
-- [ ] Add diagnostics/hooks for tests if needed (similar to current layout diagnostics patterns).
+- [x] Ensure viewport width changes refresh wrap layout but do not invalidate unrelated syntax state.
+- [x] Add diagnostics/hooks for tests if needed (similar to current layout diagnostics patterns).
 
 ## 7. Simple syntax-highlighting path
 
@@ -105,10 +105,10 @@ This checklist translates `site/docs/specs/code_editor_specs.md` into an impleme
 - [x] Apply highlighting only to visible wrapped segments.
 - [ ] Ensure syntax styles compose correctly with:
   - [x] selection
-  - [ ] search highlights
+  - [x] search highlights
   - [x] current-line background
 - [x] Keep the render path allocation-conscious.
-- [ ] Verify scrolling does not recompute simple highlighting outside visible lines.
+- [x] Verify scrolling does not recompute simple highlighting outside visible lines.
 
 ## 8. Advanced incremental syntax-highlighting infrastructure
 
@@ -123,11 +123,11 @@ This checklist translates `site/docs/specs/code_editor_specs.md` into an impleme
 
 ## 9. Optional async highlighter support
 
-- [ ] Define version-gated async application of syntax state.
-- [ ] Ensure stale async results are discarded.
-- [ ] Ensure typing/scrolling is responsive while async work is running.
-- [ ] Define cancellation or replacement policy for outdated async tasks.
-- [ ] Add tests for version gating and stale result discard.
+- [x] Define version-gated async application of syntax state.
+- [x] Ensure stale async results are discarded.
+- [x] Ensure typing/scrolling is responsive while async work is running.
+- [x] Define cancellation or replacement policy for outdated async tasks.
+- [x] Add tests for version gating and stale result discard.
 
 ## 10. Current-line rendering
 
@@ -138,10 +138,10 @@ This checklist translates `site/docs/specs/code_editor_specs.md` into an impleme
 ## 11. Search / inherited editor features validation
 
 - [x] Verify `TextEditorBase` search popup integration still behaves correctly under `CodeEditor` chrome.
-- [ ] Verify clipboard operations still behave correctly.
-- [ ] Verify undo/redo still behaves correctly.
-- [ ] Verify cursor placement stays correct when margins are present.
-- [ ] Verify horizontal scrolling behavior when wrapping is disabled.
+- [x] Verify clipboard operations still behave correctly.
+- [x] Verify undo/redo still behaves correctly.
+- [x] Verify cursor placement stays correct when margins are present.
+- [x] Verify horizontal scrolling behavior when wrapping is disabled.
 
 ## 12. Performance validation for large files / long lines
 
@@ -149,7 +149,7 @@ This checklist translates `site/docs/specs/code_editor_specs.md` into an impleme
 - [ ] Add tests for a single extremely long wrapped line.
 - [ ] Add tests that scrolling only touches visible lines plus bounded cache windows.
 - [ ] Add tests that syntax-highlighting does not re-highlight the whole document on scroll.
-- [ ] Add tests that viewport width changes reuse syntax state and only refresh wrapping.
+- [x] Add tests that viewport width changes reuse syntax state and only refresh wrapping.
 - [ ] Add tests that line-number width does not reserve large width near the start of a huge file.
 - [ ] Add tests that crossing a digit bucket updates margin width correctly.
 - [ ] Add tests for custom left/right margins with wrapped lines.
@@ -182,9 +182,9 @@ This checklist translates `site/docs/specs/code_editor_specs.md` into an impleme
 
 ### Phase 2
 
-- [ ] advanced incremental syntax-highlighting state
-- [ ] async provider support
-- [ ] stronger performance diagnostics/tests
+- [x] advanced incremental syntax-highlighting state
+- [x] async provider support
+- [x] stronger performance diagnostics/tests
 
 ### Phase 3
 
