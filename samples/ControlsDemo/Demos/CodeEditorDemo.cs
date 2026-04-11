@@ -28,7 +28,6 @@ public sealed class CodeEditorDemo : ControlsDemoBase
         var editor = new CodeEditor(BuildDemoSource())
             .Placeholder("Type C# code here…")
             .MinHeight(14)
-            .MaxHeight(14)
             .ShowLineNumbers(showLineNumbers)
             .HighlightCurrentLine(highlightCurrentLine)
             .WordWrap(wordWrap)
@@ -100,13 +99,20 @@ public sealed class CodeEditorDemo : ControlsDemoBase
             "[bold green]CodeEditor[/] shares the text engine with TextArea, then adds [cyan]line numbers[/], [cyan]margins[/], [cyan]search overlays[/], and [cyan]syntax highlighting[/]. [dim]Try Ctrl+F / Ctrl+H, Ctrl+Z / Ctrl+R, or scroll through the long sample file.[/]")
             .Wrap(true);
 
-        var root = new VStack(
-                help,
-                controls,
-                new Border(editor.Scrollable()).Stretch(),
+        var topPanel = new VStack(help, controls)
+            .Spacing(1)
+            .HorizontalAlignment(Align.Stretch);
+
+        var bottomPanel = new VStack(
                 new TextBlock(() => statusText.Value),
                 DemoUi.Hint("The left diff margin is implemented through the public CodeEditorMargin contract. Toggle Advanced syntax to switch between the simple delegate and persistent syntax-state pipelines."))
             .Spacing(1)
+            .HorizontalAlignment(Align.Stretch);
+
+        var root = new DockLayout()
+            .Top(topPanel)
+            .Content(new Border(editor.Stretch().Scrollable()).Stretch())
+            .Bottom(bottomPanel)
             .HorizontalAlignment(Align.Stretch)
             .VerticalAlignment(Align.Stretch);
 
