@@ -178,4 +178,41 @@ public sealed class ScrollBarTests
 
         Assert.AreEqual(bar.Maximum, bar.Value, "Dragging should honor the current range even if the scroll extent changes while the thumb is captured.");
     }
+
+    [TestMethod]
+    public void VScrollBar_Changing_Maximum_While_Dragging_Does_Not_Read_Then_Write_Value_In_Tracking_Context()
+    {
+        var bar = new VScrollBar
+        {
+            Minimum = 0,
+            Maximum = 40,
+            Value = 20,
+            ViewportSize = 10,
+            MinHeight = 10,
+            MaxHeight = 10,
+        };
+
+        using var driver = new TerminalAppTestDriver(bar, TerminalHostKind.Fullscreen, new TerminalSize(5, 12));
+        driver.Tick();
+
+        var x = bar.Bounds.X;
+        var thumbY = bar.Bounds.Y + 4;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Down,
+            Button = TerminalMouseButton.Left,
+            X = x,
+            Y = thumbY,
+        });
+        driver.Tick();
+
+        using (BindingManager.Current.StartTracking())
+        {
+            bar.Maximum = 90;
+        }
+
+        Assert.AreEqual(90, bar.Maximum);
+        Assert.AreEqual(40, bar.Value, "Changing the range while the thumb is captured should recompute the dragged value without tripping dependency tracking.");
+    }
 }
