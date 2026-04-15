@@ -40,7 +40,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
         _items = new BindableList<DocumentFlowItem>(this, "DocumentFlow.Items", onAdding: OnItemAdded);
         _content = new DocumentFlowContentVisual(this);
         _scrollViewer = new ScrollViewer(_content, focusable: false);
-        _scrollViewer.UserScrollRouted += OnScrollViewerUserScroll;
+        _scrollViewer.OffsetChangedRouted += OnScrollViewerOffsetChanged;
         _content.Scroll.Changed += OnContentScrollChanged;
 
         this.ItemPadding(new Thickness(1));
@@ -357,7 +357,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
         TryApplyPendingScrollRequest();
     }
 
-    private void OnScrollViewerUserScroll(object? sender, ScrollValueChangedEventArgs e)
+    private void OnScrollViewerOffsetChanged(object? sender, ScrollValueChangedEventArgs e)
     {
         _ = sender;
         if (e.Orientation != Orientation.Vertical)
@@ -563,6 +563,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
 
             _scroll.SetViewport(finalRect.Width, finalRect.Height);
             _scroll.SetExtent(finalRect.Width, _extentHeight);
+            _owner.TryApplyPendingScrollRequest();
 
             RealizeVisibleBlocks(finalRect);
         }

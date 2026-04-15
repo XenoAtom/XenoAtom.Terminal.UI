@@ -25,6 +25,7 @@ public sealed partial class TreeView : Visual, IScrollable
     private readonly ScrollModel _scroll;
     private readonly List<VisibleRow> _visible = new(64);
     private bool _ensureSelectedVisible;
+    private int _selectedIndexCache = -1;
     private TreeNode? _selectedNodeCache;
 
     private readonly record struct VisibleRow(TreeNode Node, int Depth, ulong ContinuationMask, bool IsLastSibling);
@@ -88,6 +89,7 @@ public sealed partial class TreeView : Visual, IScrollable
 
     partial void OnSelectedIndexChanged(int value)
     {
+        _selectedIndexCache = value;
         UpdateSelectedNodeFromSelectedIndex(value);
         _ensureSelectedVisible = true;
 
@@ -678,9 +680,7 @@ public sealed partial class TreeView : Visual, IScrollable
             candidate = candidate.Parent;
         }
 
-        // Use the generated backing field directly so PrepareChildren can reconcile selection
-        // without recording a read dependency on SelectedIndex before writing it back.
-        return Math.Clamp(_selectedIndex, 0, _visible.Count - 1);
+        return Math.Clamp(_selectedIndexCache, 0, _visible.Count - 1);
     }
 
     private void UpdateSelectedNodeFromSelectedIndex(int selectedIndex)

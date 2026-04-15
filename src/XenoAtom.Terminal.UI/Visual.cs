@@ -1658,6 +1658,12 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         ArgumentNullException.ThrowIfNull(routedEvent);
         ArgumentNullException.ThrowIfNull(args);
 
+        if (BindingManager.Current.IsTracking)
+        {
+            BindingManager.Current.RunAfterTracking(() => RaiseEvent(routedEvent, args));
+            return;
+        }
+
         if (args is RoutedEventArgs routedArgs)
         {
             routedArgs.OriginalSource ??= this;

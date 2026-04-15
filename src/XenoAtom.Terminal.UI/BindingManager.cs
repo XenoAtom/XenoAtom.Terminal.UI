@@ -38,9 +38,16 @@ public sealed class BindingManager
     private TrackingContext? _tracking;
     private TrackingContext? _freeList;
     private readonly ConditionalWeakTable<object, SourceOwnerSubscriptions> _boundSubscriptions = new();
+    private Queue<Action>? _deferredActions;
+    private bool _isFlushingDeferredActions;
 
     private int _suppressReadTrackingCount;
     private int _suppressWriteTrackingCount;
+
+    /// <summary>
+    /// Gets a value indicating whether a dependency-tracking scope is currently active.
+    /// </summary>
+    public bool IsTracking => _tracking is not null;
 
     /// <summary>
     /// Gets the current value of a bindable property.
@@ -134,6 +141,28 @@ public sealed class BindingManager
         context.Next = _freeList;
         _freeList = context;
         _tracking = previous;
+
+        if (_tracking is null)
+        {
+            FlushDeferredActions();
+        }
+    }
+
+    /// <summary>
+    /// Runs an action immediately when no tracking scope is active, or defers it until the outermost tracking scope completes.
+    /// </summary>
+    /// <param name="action">The action to run.</param>
+    public void RunAfterTracking(Action action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        if (!IsTracking)
+        {
+            action();
+            return;
+        }
+
+        (_deferredActions ??= new Queue<Action>()).Enqueue(action);
     }
 
     /// <summary>
@@ -374,6 +403,32 @@ public sealed class BindingManager
             if (Interlocked.CompareExchange(ref counter, current - 1, current) == current)
             {
                 return;
+            }
+        }
+    }
+
+    private void FlushDeferredActions()
+    {
+        if (_isFlushingDeferredActions || _deferredActions is null || _deferredActions.Count == 0)
+        {
+            return;
+        }
+
+        _isFlushingDeferredActions = true;
+        try
+        {
+            while (_tracking is null && _deferredActions.Count > 0)
+            {
+                var action = _deferredActions.Dequeue();
+                action();
+            }
+        }
+        finally
+        {
+            _isFlushingDeferredActions = false;
+            if (_deferredActions is not null && _deferredActions.Count == 0)
+            {
+                _deferredActions = null;
             }
         }
     }

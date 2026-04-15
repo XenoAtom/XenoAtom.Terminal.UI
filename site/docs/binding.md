@@ -70,6 +70,7 @@ To support this, `BindingManager` exposes two scoped suppression helpers:
 
 - `BindingManager.Current.SuppressReadTracking()` — disables dependency recording for bindable reads in the scope.
 - `BindingManager.Current.SuppressWriteTracking()` — suppresses write notifications (`ValueChanged`) in the scope.
+- `BindingManager.Current.RunAfterTracking(action)` — runs `action` immediately when no tracking scope is active, or defers it until the outermost tracking scope completes.
 
 > [!IMPORTANT]
 > Suppression affects **all** bindable reads/writes within the scope. Keep the scope small and always use `using` so tracking is restored.
@@ -105,6 +106,29 @@ Notes:
 - `SuppressReadTracking` is useful for reading state that you intentionally do not want to become a dependency.
 - `SuppressWriteTracking` is for *internal bookkeeping* updates where you do not want to trigger invalidation.
   Avoid suppressing writes for user-visible state that other visuals should react to.
+- `RunAfterTracking` is useful when an operation must not happen during layout/render/input tracking itself
+  (for example, dispatching a routed event or synchronizing derived state after clamping with local variables).
+
+## Deferred work after tracking
+
+Some operations should never run *inside* a tracking context, even if they are logically caused by work happening there.
+Common examples are:
+
+- raising routed events while layout/render/input dependency tracking is active
+- mirroring a clamped/effective layout value back into a public bindable property
+- firing change notifications that would otherwise run arbitrary user code during tracking
+
+In those cases, keep the tracking-time computation local, then schedule the follow-up work with:
+
+```csharp
+BindingManager.Current.RunAfterTracking(() =>
+{
+    // Safe: runs after the outermost tracking context completes.
+});
+```
+
+This keeps layout/render/input passes pure from follow-up side effects while still allowing state and notifications to
+be synchronized immediately after tracking finishes.
 
 ## Bindable properties
 
@@ -270,6 +294,8 @@ This pattern is also useful for “measured values” that are computed in `Meas
 > [!IMPORTANT]
 > Avoid clamping or “fixing up” a public bindable value from `PrepareChildren`, `Measure`, `Arrange`, or `Render`.
 > Read the public value, compute a safe local/clamped value, and use that local value for layout/rendering instead.
+> If you must publish the derived result or notify listeners, schedule that work with `RunAfterTracking(...)` so it
+> happens after the tracking context completes.
 
 > [!TIP]
 > If you need a derived/computed value for layout, prefer an internal bindable property like `MeasuredContentWidth`

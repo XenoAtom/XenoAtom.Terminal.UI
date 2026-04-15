@@ -34,6 +34,11 @@ public sealed partial class ScrollViewer : Visual
     private bool _showVerticalBar;
     private ScrollBarStyle? _internalScrollBarStyle;
     private bool _syncingOffsets;
+    private bool _offsetSyncQueuedAfterTracking;
+    private int _pendingSyncedHorizontalOffset;
+    private int _pendingSyncedVerticalOffset;
+    private int _oldHorizontalOffsetForEvent;
+    private int _oldVerticalOffsetForEvent;
 
     /// <summary>
     /// Gets the width of the scroll viewer viewport (the visible content area excluding scroll bars).
@@ -78,8 +83,8 @@ public sealed partial class ScrollViewer : Visual
         _corner = new ScrollCornerVisual(this);
         _contentScrollModelChanged = OnContentScrollModelChanged;
 
-        _verticalBar.ValueChanged(OnVerticalBarValueChanged);
-        _horizontalBar.ValueChanged(OnHorizontalBarValueChanged);
+        _verticalBar.ValueChangedRouted += OnVerticalBarValueChanged;
+        _horizontalBar.ValueChangedRouted += OnHorizontalBarValueChanged;
 
         AttachChild(_contentHost);
         AttachChild(_verticalBar);
@@ -190,7 +195,7 @@ public sealed partial class ScrollViewer : Visual
     /// Gets or sets a value indicating whether horizontal scrolling is enabled.
     /// </summary>
     /// <remarks>
-    /// When disabled, the horizontal scroll bar is never shown and <see cref="HorizontalOffset"/> is forced to <c>0</c>.
+    /// When disabled, the horizontal scroll bar is never shown and the effective horizontal offset is treated as <c>0</c>.
     /// This is commonly used for document-like content that should wrap to the viewport width.
     /// </remarks>
     [Bindable]
@@ -200,7 +205,7 @@ public sealed partial class ScrollViewer : Visual
     /// Gets or sets a value indicating whether vertical scrolling is enabled.
     /// </summary>
     /// <remarks>
-    /// When disabled, the vertical scroll bar is never shown and <see cref="VerticalOffset"/> is forced to <c>0</c>.
+    /// When disabled, the vertical scroll bar is never shown and the effective vertical offset is treated as <c>0</c>.
     /// </remarks>
     [Bindable]
     public partial bool VerticalScrollEnabled { get; set; }
@@ -225,65 +230,55 @@ public sealed partial class ScrollViewer : Visual
     private partial int HorizontalOffsetFromPrepare { get; set; }
 
     [RoutedEvent(RoutingStrategy.Bubble)]
-    private void OnUserScroll(ScrollValueChangedEventArgs e) { }
+    private void OnOffsetChanged(ScrollValueChangedEventArgs e) { }
 
     partial void OnHorizontalScrollEnabledChanged(bool value)
     {
-        if (!value)
-        {
-            HorizontalOffset = 0;
-        }
+        _ = value;
     }
+
+    partial void OnHorizontalOffsetChanging(ref int value) => _oldHorizontalOffsetForEvent = _horizontalOffset;
 
     partial void OnVerticalScrollEnabledChanged(bool value)
     {
-        if (!value)
-        {
-            VerticalOffset = 0;
-        }
+        _ = value;
     }
+
+    partial void OnVerticalOffsetChanging(ref int value) => _oldVerticalOffsetForEvent = _verticalOffset;
 
     partial void OnVerticalOffsetChanged(int value)
     {
-        if (_syncingOffsets)
-        {
-            return;
-        }
-
-        if (!VerticalScrollEnabled)
-        {
-            if (value != 0)
-            {
-                _verticalOffset = 0;
-            }
-            return;
-        }
-
-        if (_contentScrollModel is not null)
+        if (!_syncingOffsets && VerticalScrollEnabled && _contentScrollModel is not null)
         {
             _contentScrollModel.SetOffset(_contentScrollModel.OffsetX, value);
+        }
+
+        if (_oldVerticalOffsetForEvent != value)
+        {
+            RaiseEvent(OffsetChangedEvent, new ScrollValueChangedEventArgs
+            {
+                Orientation = Orientation.Vertical,
+                OldValue = _oldVerticalOffsetForEvent,
+                NewValue = value,
+            });
         }
     }
 
     partial void OnHorizontalOffsetChanged(int value)
     {
-        if (_syncingOffsets)
-        {
-            return;
-        }
-
-        if (!HorizontalScrollEnabled)
-        {
-            if (value != 0)
-            {
-                _horizontalOffset = 0;
-            }
-            return;
-        }
-
-        if (_contentScrollModel is not null)
+        if (!_syncingOffsets && HorizontalScrollEnabled && _contentScrollModel is not null)
         {
             _contentScrollModel.SetOffset(value, _contentScrollModel.OffsetY);
+        }
+
+        if (_oldHorizontalOffsetForEvent != value)
+        {
+            RaiseEvent(OffsetChangedEvent, new ScrollValueChangedEventArgs
+            {
+                Orientation = Orientation.Horizontal,
+                OldValue = _oldHorizontalOffsetForEvent,
+                NewValue = value,
+            });
         }
     }
 
@@ -428,7 +423,7 @@ public sealed partial class ScrollViewer : Visual
                 scrollModel.SetOffset(hOffset, v);
             }
 
-            SyncOffsetsFromScrollModel();
+            RequestOffsetStateSync(hOffset, v);
 
             _verticalBar.Minimum = 0;
             _verticalBar.Maximum = maxVerticalOffset;
@@ -512,8 +507,7 @@ public sealed partial class ScrollViewer : Visual
 
             v = verticalScrollEnabled ? Math.Clamp(verticalOffset, 0, maxVerticalOffset) : 0;
             hOffset = horizontalScrollEnabled ? Math.Clamp(horizontalOffset, 0, maxHorizontalOffset) : 0;
-            VerticalOffset = v;
-            HorizontalOffset = hOffset;
+            RequestOffsetStateSync(hOffset, v);
 
             _verticalBar.Minimum = 0;
             _verticalBar.Maximum = maxVerticalOffset;
@@ -595,45 +589,81 @@ public sealed partial class ScrollViewer : Visual
         switch (e.Key)
         {
             case TerminalKey.Up:
+            {
                 if (!VerticalScrollEnabled) return;
-                RaiseUserScrollIfChanged(Orientation.Vertical, VerticalOffset, Math.Max(0, VerticalOffset - 1), static (owner, value) => owner.VerticalOffset = value);
+                var currentVerticalOffset = VerticalOffset;
+                ApplyOffsetIfChanged(
+                    currentVerticalOffset,
+                    Math.Max(0, currentVerticalOffset - 1),
+                    static (owner, value) => owner.VerticalOffset = value);
                 e.Handled = true;
                 return;
+            }
             case TerminalKey.Down:
+            {
                 if (!VerticalScrollEnabled) return;
-                RaiseUserScrollIfChanged(Orientation.Vertical, VerticalOffset, Math.Min(maxVerticalOffset, VerticalOffset + 1), static (owner, value) => owner.VerticalOffset = value);
+                var currentVerticalOffset = VerticalOffset;
+                ApplyOffsetIfChanged(
+                    currentVerticalOffset,
+                    Math.Min(maxVerticalOffset, currentVerticalOffset + 1),
+                    static (owner, value) => owner.VerticalOffset = value);
                 e.Handled = true;
                 return;
+            }
             case TerminalKey.PageUp:
+            {
                 if (!VerticalScrollEnabled) return;
-                RaiseUserScrollIfChanged(Orientation.Vertical, VerticalOffset, Math.Max(0, VerticalOffset - viewportHeight), static (owner, value) => owner.VerticalOffset = value);
+                var currentVerticalOffset = VerticalOffset;
+                ApplyOffsetIfChanged(
+                    currentVerticalOffset,
+                    Math.Max(0, currentVerticalOffset - viewportHeight),
+                    static (owner, value) => owner.VerticalOffset = value);
                 e.Handled = true;
                 return;
+            }
             case TerminalKey.PageDown:
+            {
                 if (!VerticalScrollEnabled) return;
-                RaiseUserScrollIfChanged(Orientation.Vertical, VerticalOffset, Math.Min(maxVerticalOffset, VerticalOffset + viewportHeight), static (owner, value) => owner.VerticalOffset = value);
+                var currentVerticalOffset = VerticalOffset;
+                ApplyOffsetIfChanged(
+                    currentVerticalOffset,
+                    Math.Min(maxVerticalOffset, currentVerticalOffset + viewportHeight),
+                    static (owner, value) => owner.VerticalOffset = value);
                 e.Handled = true;
                 return;
+            }
             case TerminalKey.Home:
                 if (!VerticalScrollEnabled) return;
-                RaiseUserScrollIfChanged(Orientation.Vertical, VerticalOffset, 0, static (owner, value) => owner.VerticalOffset = value);
+                ApplyOffsetIfChanged(VerticalOffset, 0, static (owner, value) => owner.VerticalOffset = value);
                 e.Handled = true;
                 return;
             case TerminalKey.End:
                 if (!VerticalScrollEnabled) return;
-                RaiseUserScrollIfChanged(Orientation.Vertical, VerticalOffset, maxVerticalOffset, static (owner, value) => owner.VerticalOffset = value);
+                ApplyOffsetIfChanged(VerticalOffset, maxVerticalOffset, static (owner, value) => owner.VerticalOffset = value);
                 e.Handled = true;
                 return;
             case TerminalKey.Left:
+            {
                 if (!HorizontalScrollEnabled) return;
-                RaiseUserScrollIfChanged(Orientation.Horizontal, HorizontalOffset, Math.Max(0, HorizontalOffset - 1), static (owner, value) => owner.HorizontalOffset = value);
+                var currentHorizontalOffset = HorizontalOffset;
+                ApplyOffsetIfChanged(
+                    currentHorizontalOffset,
+                    Math.Max(0, currentHorizontalOffset - 1),
+                    static (owner, value) => owner.HorizontalOffset = value);
                 e.Handled = true;
                 return;
+            }
             case TerminalKey.Right:
+            {
                 if (!HorizontalScrollEnabled) return;
-                RaiseUserScrollIfChanged(Orientation.Horizontal, HorizontalOffset, Math.Min(maxHorizontalOffset, HorizontalOffset + 1), static (owner, value) => owner.HorizontalOffset = value);
+                var currentHorizontalOffset = HorizontalOffset;
+                ApplyOffsetIfChanged(
+                    currentHorizontalOffset,
+                    Math.Min(maxHorizontalOffset, currentHorizontalOffset + 1),
+                    static (owner, value) => owner.HorizontalOffset = value);
                 e.Handled = true;
                 return;
+            }
         }
     }
 
@@ -663,8 +693,9 @@ public sealed partial class ScrollViewer : Visual
                 return;
             }
 
-            var nextOffset = e.WheelDelta > 0 ? Math.Max(0, HorizontalOffset - 1) : Math.Min(maxOffset, HorizontalOffset + 1);
-            RaiseUserScrollIfChanged(Orientation.Horizontal, HorizontalOffset, nextOffset, static (owner, value) => owner.HorizontalOffset = value);
+            var oldOffset = HorizontalOffset;
+            var nextOffset = e.WheelDelta > 0 ? Math.Max(0, oldOffset - 1) : Math.Min(maxOffset, oldOffset + 1);
+            ApplyOffsetIfChanged(oldOffset, nextOffset, static (owner, value) => owner.HorizontalOffset = value);
         }
         else
         {
@@ -677,8 +708,9 @@ public sealed partial class ScrollViewer : Visual
                 return;
             }
 
-            var nextOffset = e.WheelDelta > 0 ? Math.Max(0, VerticalOffset - 1) : Math.Min(maxOffset, VerticalOffset + 1);
-            RaiseUserScrollIfChanged(Orientation.Vertical, VerticalOffset, nextOffset, static (owner, value) => owner.VerticalOffset = value);
+            var oldOffset = VerticalOffset;
+            var nextOffset = e.WheelDelta > 0 ? Math.Max(0, oldOffset - 1) : Math.Min(maxOffset, oldOffset + 1);
+            ApplyOffsetIfChanged(oldOffset, nextOffset, static (owner, value) => owner.VerticalOffset = value);
         }
 
         e.Handled = true;
@@ -715,46 +747,31 @@ public sealed partial class ScrollViewer : Visual
             return;
         }
 
-        _syncingOffsets = true;
-        try
-        {
-            VerticalOffset = _contentScrollModel.OffsetY;
-            HorizontalOffset = _contentScrollModel.OffsetX;
-        }
-        finally
-        {
-            _syncingOffsets = false;
-        }
+        var horizontalOffset = HorizontalScrollEnabled ? _contentScrollModel.OffsetX : 0;
+        var verticalOffset = VerticalScrollEnabled ? _contentScrollModel.OffsetY : 0;
+        RequestOffsetStateSync(horizontalOffset, verticalOffset);
     }
 
     private void OnVerticalBarValueChanged(object? sender, ScrollValueChangedEventArgs e)
     {
+        _ = sender;
         if (_syncingOffsets)
         {
             return;
         }
 
-        var oldValue = VerticalOffset;
         VerticalOffset = e.NewValue;
-        if (e.IsUserInitiated)
-        {
-            RaiseUserScrollEvent(Orientation.Vertical, oldValue, VerticalOffset);
-        }
     }
 
     private void OnHorizontalBarValueChanged(object? sender, ScrollValueChangedEventArgs e)
     {
+        _ = sender;
         if (_syncingOffsets)
         {
             return;
         }
 
-        var oldValue = HorizontalOffset;
         HorizontalOffset = e.NewValue;
-        if (e.IsUserInitiated)
-        {
-            RaiseUserScrollEvent(Orientation.Horizontal, oldValue, HorizontalOffset);
-        }
     }
 
     private void SetBarValue(ScrollBar bar, int value)
@@ -770,26 +787,60 @@ public sealed partial class ScrollViewer : Visual
         }
     }
 
-    private void RaiseUserScrollIfChanged(Orientation orientation, int oldValue, int newValue, Action<ScrollViewer, int> applyValue)
-    {
-        applyValue(this, newValue);
-        RaiseUserScrollEvent(orientation, oldValue, orientation == Orientation.Vertical ? VerticalOffset : HorizontalOffset);
-    }
-
-    private void RaiseUserScrollEvent(Orientation orientation, int oldValue, int newValue)
+    private void ApplyOffsetIfChanged(int oldValue, int newValue, Action<ScrollViewer, int> applyValue)
     {
         if (oldValue == newValue)
         {
             return;
         }
 
-        RaiseEvent(UserScrollEvent, new ScrollValueChangedEventArgs
+        applyValue(this, newValue);
+    }
+
+    private void RequestOffsetStateSync(int horizontalOffset, int verticalOffset)
+    {
+        _pendingSyncedHorizontalOffset = horizontalOffset;
+        _pendingSyncedVerticalOffset = verticalOffset;
+
+        if (_offsetSyncQueuedAfterTracking)
         {
-            Orientation = orientation,
-            OldValue = oldValue,
-            NewValue = newValue,
-            IsUserInitiated = true,
-        });
+            return;
+        }
+
+        var bindingManager = BindingManager.Current;
+        if (bindingManager.IsTracking)
+        {
+            _offsetSyncQueuedAfterTracking = true;
+            bindingManager.RunAfterTracking(() =>
+            {
+                _offsetSyncQueuedAfterTracking = false;
+                ApplyOffsetStateSync(_pendingSyncedHorizontalOffset, _pendingSyncedVerticalOffset);
+            });
+            return;
+        }
+
+        ApplyOffsetStateSync(horizontalOffset, verticalOffset);
+    }
+
+    private void ApplyOffsetStateSync(int horizontalOffset, int verticalOffset)
+    {
+        var currentHorizontalOffset = HorizontalOffset;
+        var currentVerticalOffset = VerticalOffset;
+        if (currentHorizontalOffset == horizontalOffset && currentVerticalOffset == verticalOffset)
+        {
+            return;
+        }
+
+        _syncingOffsets = true;
+        try
+        {
+            HorizontalOffset = horizontalOffset;
+            VerticalOffset = verticalOffset;
+        }
+        finally
+        {
+            _syncingOffsets = false;
+        }
     }
 
     private sealed partial class ContentViewportHost : Visual

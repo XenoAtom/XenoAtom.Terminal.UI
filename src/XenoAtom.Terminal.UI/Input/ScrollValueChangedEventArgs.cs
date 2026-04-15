@@ -24,8 +24,4 @@ public sealed class ScrollValueChangedEventArgs : RoutedEventArgs
     /// </summary>
     public int NewValue { get; init; }
 
-    /// <summary>
-    /// Gets a value indicating whether the change was caused by user interaction.
-    /// </summary>
-    public bool IsUserInitiated { get; init; }
 }

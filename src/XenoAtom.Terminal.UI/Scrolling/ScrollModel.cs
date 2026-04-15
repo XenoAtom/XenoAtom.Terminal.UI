@@ -15,6 +15,8 @@ namespace XenoAtom.Terminal.UI.Scrolling;
 /// </remarks>
 public sealed partial class ScrollModel : IVisualElement
 {
+    private bool _changedQueuedAfterTracking;
+
     /// <summary>
     /// Initializes a new instance of the ScrollModel class with the specified visual owner.
     /// </summary>
@@ -171,6 +173,22 @@ public sealed partial class ScrollModel : IVisualElement
     private void OnChanged()
     {
         UpdateVersion();
+        if (BindingManager.Current.IsTracking)
+        {
+            if (_changedQueuedAfterTracking)
+            {
+                return;
+            }
+
+            _changedQueuedAfterTracking = true;
+            BindingManager.Current.RunAfterTracking(() =>
+            {
+                _changedQueuedAfterTracking = false;
+                Changed?.Invoke();
+            });
+            return;
+        }
+
         Changed?.Invoke();
     }
 

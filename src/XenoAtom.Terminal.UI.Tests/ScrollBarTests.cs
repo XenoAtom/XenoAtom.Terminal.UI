@@ -180,6 +180,44 @@ public sealed class ScrollBarTests
     }
 
     [TestMethod]
+    public void VScrollBar_Clicking_Bottom_Edge_Reaches_Maximum_When_Thumb_Is_Already_Snapped_To_End()
+    {
+        var bar = new VScrollBar
+        {
+            Minimum = 0,
+            Maximum = 231,
+            Value = 224,
+            ViewportSize = 7,
+            MinHeight = 8,
+            MaxHeight = 8,
+        };
+
+        using var driver = new TerminalAppTestDriver(bar, TerminalHostKind.Fullscreen, new TerminalSize(5, 10));
+        driver.Tick();
+
+        var x = bar.Bounds.X;
+        var y = bar.Bounds.Bottom - 1;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Down,
+            Button = TerminalMouseButton.Left,
+            X = x,
+            Y = y,
+        });
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Up,
+            Button = TerminalMouseButton.Left,
+            X = x,
+            Y = y,
+        });
+        driver.Tick();
+
+        Assert.AreEqual(bar.Maximum, bar.Value, "Clicking the last track cell should still reach the true maximum even when the thumb is already visually snapped to the bottom.");
+    }
+
+    [TestMethod]
     public void VScrollBar_Changing_Maximum_While_Dragging_Does_Not_Read_Then_Write_Value_In_Tracking_Context()
     {
         var bar = new VScrollBar

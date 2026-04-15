@@ -70,7 +70,7 @@ public sealed partial class LogControl : Visual, ISelectionOwner
 
         // LogControl owns focus/key handling. The internal ScrollViewer provides scrollbars and translates content.
         _scrollViewer = new ScrollViewer(_content, focusable: false);
-        _scrollViewer.UserScrollRouted += OnScrollViewerUserScroll;
+        _scrollViewer.OffsetChangedRouted += OnScrollViewerOffsetChanged;
 
         // Default behavior: wrap long lines to the viewport width.
         this.WrapText(true);
@@ -1016,8 +1016,9 @@ public sealed partial class LogControl : Visual, ISelectionOwner
         InteractionVersion++;
     }
 
-    private void OnScrollViewerUserScroll(object? sender, ScrollValueChangedEventArgs e)
+    private void OnScrollViewerOffsetChanged(object? sender, ScrollValueChangedEventArgs e)
     {
+        _ = sender;
         if (e.Orientation != Orientation.Vertical)
         {
             return;

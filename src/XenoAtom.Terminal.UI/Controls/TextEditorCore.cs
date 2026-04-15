@@ -56,6 +56,7 @@ internal sealed partial class TextEditorCore
 
     private string _cachedText = string.Empty;
     private int _cachedVersion = -1;
+    private int _versionCounter;
 
     private int _caretIndex;
     private int _selectionAnchor = -1;
@@ -107,9 +108,8 @@ internal sealed partial class TextEditorCore
 
     private void IncrementVersion()
     {
-        // `Version++` would read+write the bindable property in the same tracking context, which the binding system
-        // forbids to prevent dependency loops. Use the generated backing field directly instead.
-        Version = unchecked(_version + 1);
+        _versionCounter = unchecked(_versionCounter + 1);
+        Version = _versionCounter;
     }
 
     private static int NormalizeIndexToTextElementBoundary(ReadOnlySpan<char> text, int index)
@@ -446,7 +446,7 @@ internal sealed partial class TextEditorCore
 
         InvalidateVisualPositionCache();
         ResetWrappedLineBoundaryMove();
-        Version = _version + 1;
+        IncrementVersion();
     }
 
     public void OnDocumentChanged(TextDocumentChangedEventArgs e)
