@@ -128,13 +128,62 @@ public sealed class DocumentFlowTests
         Assert.AreEqual(pinnedOffset, flow.Scroll.OffsetY, "Appending while FollowTail is false should not advance the viewport.");
 
         flow.FollowTail = true;
-        driver.Tick();
         Assert.IsTrue(flow.FollowTail);
-        Assert.AreEqual(Math.Max(0, flow.Scroll.ExtentHeight - flow.Scroll.ViewportHeight), flow.Scroll.OffsetY);
+        Assert.AreEqual(pinnedOffset, flow.Scroll.OffsetY, "Re-enabling FollowTail alone should not immediately jump the viewport.");
 
         flow.Items.Add(CreateItem("Item 41"));
         driver.Tick();
         Assert.AreEqual(Math.Max(0, flow.Scroll.ExtentHeight - flow.Scroll.ViewportHeight), flow.Scroll.OffsetY);
+    }
+
+    [TestMethod]
+    public void DocumentFlow_ScrollBar_To_Tail_Reenables_FollowTail_After_User_Scroll()
+    {
+        var flow = new DocumentFlow();
+        for (var i = 0; i < 60; i++)
+        {
+            flow.Items.Add(CreateItem($"Item {i}"));
+        }
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(40, 8));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.PageUp });
+        driver.Tick();
+        Assert.IsFalse(flow.FollowTail);
+
+        var bar = flow.EnumerateVisualsDepthFirst().OfType<VScrollBar>().Single();
+        var barX = bar.Bounds.X;
+        var barY = bar.Bounds.Bottom - 1;
+        Assert.AreEqual(nameof(VScrollBar), flow.HitTest(barX, barY)?.GetType().Name);
+
+        for (var i = 0; i < 20 && !flow.FollowTail; i++)
+        {
+            driver.Backend.PushEvent(new TerminalMouseEvent
+            {
+                Kind = TerminalMouseKind.Down,
+                Button = TerminalMouseButton.Left,
+                X = barX,
+                Y = barY,
+            });
+            driver.Backend.PushEvent(new TerminalMouseEvent
+            {
+                Kind = TerminalMouseKind.Up,
+                Button = TerminalMouseButton.Left,
+                X = barX,
+                Y = barY,
+            });
+            driver.Tick();
+        }
+
+        Assert.IsTrue(flow.FollowTail, "Moving the vertical scrollbar to the bottom should resume follow-tail.");
+
+        flow.Items.Add(CreateItem("AfterScrollBarTail"));
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(40, 8);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "AfterScrollBarTail");
     }
 
     [TestMethod]

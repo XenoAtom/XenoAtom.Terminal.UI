@@ -607,7 +607,8 @@ Tests should focus on determinism and virtualization behavior:
 - **Follow tail**:
   - append while `FollowTail` is enabled scrolls to bottom,
   - setting `FollowTail = false` disables auto-follow even if the viewport is already at the tail,
-  - `ScrollToTail()` or `FollowTail = true` restores it.
+  - `ScrollToTail()` restores it immediately,
+  - `FollowTail = true` re-enables it for subsequent appends.
 - **Alignment**:
   - left/right aligned bubbles are arranged within the viewport width and do not overlap.
 - **Width change**:

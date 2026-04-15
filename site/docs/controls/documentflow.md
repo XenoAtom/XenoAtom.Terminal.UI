@@ -66,12 +66,13 @@ var document = new FlowDocument()
 
 ```csharp
 flow.FollowTail = false;   // disable auto-follow, even if the viewport is already at the tail
-flow.FollowTail = true;    // re-enable auto-follow and pin to the current tail
+flow.FollowTail = true;    // re-enable auto-follow for subsequent appends
 flow.ScrollToTail();       // enable follow-tail and jump to the end
 flow.ScrollToTail(false);  // disable follow-tail (keeps current viewport)
 ```
 
 When `FollowTail` is `false`, appending new items keeps the current viewport stable instead of advancing to the new tail.
+Use `ScrollToTail()` when you want to immediately jump to the current tail and keep following afterwards.
 
 ## Scroll to a specific item
 

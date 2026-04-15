@@ -22,10 +22,10 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     private readonly DocumentFlowContentVisual _content;
     private readonly BindableList<DocumentFlowItem> _items;
 
-    private int _lastItemsVersion = -1;
-    private int _lastItemCount;
-    private bool _isTailFollowed = true;
     private bool _pendingFollowTailScroll;
+    private bool _resumeFollowTailAtTail;
+    private bool _preserveFollowTailResumeState;
+    private bool _applyingPendingScrollRequest;
     private int _pendingScrollToItemIndex = -1;
 
     /// <summary>
@@ -37,9 +37,11 @@ public sealed partial class DocumentFlow : Visual, IScrollable
         HorizontalAlignment = Align.Stretch;
         VerticalAlignment = Align.Stretch;
 
-        _items = new BindableList<DocumentFlowItem>(this, "DocumentFlow.Items");
+        _items = new BindableList<DocumentFlowItem>(this, "DocumentFlow.Items", onAdding: OnItemAdded);
         _content = new DocumentFlowContentVisual(this);
         _scrollViewer = new ScrollViewer(_content, focusable: false);
+        _scrollViewer.UserScrollRouted += OnScrollViewerUserScroll;
+        _content.Scroll.Changed += OnContentScrollChanged;
 
         this.ItemPadding(new Thickness(1));
         this.ItemSpacing(1);
@@ -107,15 +109,15 @@ public sealed partial class DocumentFlow : Visual, IScrollable
         VerifyAccess();
 
         _pendingScrollToItemIndex = -1;
+        _pendingFollowTailScroll = false;
+        _resumeFollowTailAtTail = false;
         FollowTail = followTail;
         if (!followTail)
         {
-            _pendingFollowTailScroll = false;
             return;
         }
 
-        _pendingFollowTailScroll = true;
-        ApplyFollowTailIfNeeded();
+        QueueFollowTailScroll();
     }
 
     /// <summary>
@@ -156,33 +158,21 @@ public sealed partial class DocumentFlow : Visual, IScrollable
         if (!value)
         {
             _pendingFollowTailScroll = false;
+            if (!_preserveFollowTailResumeState)
+            {
+                _resumeFollowTailAtTail = false;
+            }
             return;
         }
 
         _pendingScrollToItemIndex = -1;
-        _pendingFollowTailScroll = true;
-        ApplyFollowTailIfNeeded();
+        _resumeFollowTailAtTail = false;
     }
 
     /// <inheritdoc />
     protected override void PrepareChildren()
     {
         TrimToCapacity();
-
-        var itemsVersion = _items.Version;
-        if (itemsVersion == _lastItemsVersion)
-        {
-            return;
-        }
-
-        var itemCount = _items.Count;
-        if (FollowTail && itemCount > _lastItemCount)
-        {
-            _pendingFollowTailScroll = true;
-        }
-
-        _lastItemsVersion = itemsVersion;
-        _lastItemCount = itemCount;
     }
 
     /// <inheritdoc />
@@ -207,74 +197,44 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     protected override void ArrangeCore(in Rectangle finalRect)
     {
         _scrollViewer.Arrange(finalRect);
-        var requiresRearrange = false;
-        if (ApplyFollowTailIfNeeded())
-        {
-            requiresRearrange = true;
-        }
-
-        if (ApplyPendingScrollToItemIfNeeded())
-        {
-            requiresRearrange = true;
-        }
-
-        if (requiresRearrange)
-        {
-            _scrollViewer.Arrange(finalRect);
-        }
-
-        UpdateTailFollowedState();
     }
 
     /// <inheritdoc />
     protected override void OnKeyDown(KeyEventArgs e)
     {
-        var viewportHeight = Math.Max(1, _scrollViewer.ViewportHeight);
-        var maxVerticalOffset = Math.Max(0, _content.ExtentHeight - viewportHeight);
+        var viewportHeight = Math.Max(1, Scroll.ViewportHeight);
+        var maxVerticalOffset = Math.Max(0, Scroll.ExtentHeight - viewportHeight);
         var page = Math.Max(1, viewportHeight - 1);
 
         switch (e.Key)
         {
             case TerminalKey.Up:
-                _scrollViewer.VerticalOffset = Math.Max(0, _scrollViewer.VerticalOffset - 1);
-                FollowTail = false;
-                UpdateTailFollowedState(maxVerticalOffset);
+                Scroll.ScrollBy(0, -1);
+                UpdateFollowTailFromViewportInteraction(maxVerticalOffset);
                 e.Handled = true;
                 return;
             case TerminalKey.Down:
-                _scrollViewer.VerticalOffset = Math.Min(maxVerticalOffset, _scrollViewer.VerticalOffset + 1);
-                UpdateTailFollowedState(maxVerticalOffset);
-                if (!_isTailFollowed)
-                {
-                    FollowTail = false;
-                }
+                Scroll.ScrollBy(0, 1);
+                UpdateFollowTailFromViewportInteraction(maxVerticalOffset);
                 e.Handled = true;
                 return;
             case TerminalKey.PageUp:
-                _scrollViewer.VerticalOffset = Math.Max(0, _scrollViewer.VerticalOffset - page);
-                FollowTail = false;
-                UpdateTailFollowedState(maxVerticalOffset);
+                Scroll.ScrollBy(0, -page);
+                UpdateFollowTailFromViewportInteraction(maxVerticalOffset);
                 e.Handled = true;
                 return;
             case TerminalKey.PageDown:
-                _scrollViewer.VerticalOffset = Math.Min(maxVerticalOffset, _scrollViewer.VerticalOffset + page);
-                UpdateTailFollowedState(maxVerticalOffset);
-                if (!_isTailFollowed)
-                {
-                    FollowTail = false;
-                }
+                Scroll.ScrollBy(0, page);
+                UpdateFollowTailFromViewportInteraction(maxVerticalOffset);
                 e.Handled = true;
                 return;
             case TerminalKey.Home:
-                _scrollViewer.VerticalOffset = 0;
-                FollowTail = false;
-                UpdateTailFollowedState(maxVerticalOffset);
+                Scroll.SetOffset(Scroll.OffsetX, 0);
+                UpdateFollowTailFromViewportInteraction(maxVerticalOffset);
                 e.Handled = true;
                 return;
             case TerminalKey.End:
-                _scrollViewer.VerticalOffset = maxVerticalOffset;
-                FollowTail = true;
-                UpdateTailFollowedState(maxVerticalOffset);
+                ScrollToTail();
                 e.Handled = true;
                 return;
         }
@@ -288,50 +248,93 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             return;
         }
 
-        var viewportHeight = Math.Max(1, _scrollViewer.ViewportHeight);
-        var maxVerticalOffset = Math.Max(0, _content.ExtentHeight - viewportHeight);
+        var viewportHeight = Math.Max(1, Scroll.ViewportHeight);
+        var maxVerticalOffset = Math.Max(0, Scroll.ExtentHeight - viewportHeight);
         if (maxVerticalOffset == 0)
         {
             return;
         }
 
         var step = Math.Max(1, Math.Abs(e.WheelDelta));
-        var nextOffset = e.WheelDelta > 0
-            ? Math.Max(0, _scrollViewer.VerticalOffset - step)
-            : Math.Min(maxVerticalOffset, _scrollViewer.VerticalOffset + step);
+        Scroll.ScrollBy(0, e.WheelDelta > 0 ? -step : step);
+        UpdateFollowTailFromViewportInteraction(maxVerticalOffset);
+        e.Handled = true;
+    }
 
-        if (nextOffset == _scrollViewer.VerticalOffset)
+    private void OnItemAdded(DocumentFlowItem item)
+    {
+        _ = item;
+        if (!FollowTail)
         {
             return;
         }
 
-        _scrollViewer.VerticalOffset = nextOffset;
-        UpdateTailFollowedState(maxVerticalOffset);
-        if (!_isTailFollowed)
-        {
-            FollowTail = false;
-        }
-        e.Handled = true;
+        _pendingScrollToItemIndex = -1;
+        _pendingFollowTailScroll = true;
     }
 
-    private bool ApplyFollowTailIfNeeded()
+    private void QueueFollowTailScroll()
     {
-        if (!_pendingFollowTailScroll || !FollowTail)
+        _pendingFollowTailScroll = true;
+        TryApplyPendingScrollRequest();
+    }
+
+    private bool TryApplyPendingScrollRequest()
+    {
+        if (_applyingPendingScrollRequest)
         {
             return false;
         }
 
-        var viewportHeight = _scrollViewer.ViewportHeight;
-        if (viewportHeight <= 0)
+        if (_pendingScrollToItemIndex < 0 && (!_pendingFollowTailScroll || !FollowTail))
         {
             return false;
         }
 
-        var target = Math.Max(0, _content.ExtentHeight - viewportHeight);
-        _scrollViewer.VerticalOffset = target;
-        _pendingFollowTailScroll = false;
-        _isTailFollowed = true;
-        return true;
+        var viewportWidth = Scroll.ViewportWidth;
+        var viewportHeight = Scroll.ViewportHeight;
+        if (viewportWidth <= 0 || viewportHeight <= 0)
+        {
+            return false;
+        }
+
+        _applyingPendingScrollRequest = true;
+        try
+        {
+            if (_pendingScrollToItemIndex >= 0)
+            {
+                var itemIndex = _pendingScrollToItemIndex;
+                if ((uint)itemIndex >= (uint)_items.Count)
+                {
+                    _pendingScrollToItemIndex = -1;
+                    return false;
+                }
+
+                if (!_content.TryGetItemRange(itemIndex, viewportWidth, out var itemTop, out _))
+                {
+                    return false;
+                }
+
+                var maxVerticalOffset = Math.Max(0, Scroll.ExtentHeight - viewportHeight);
+                var target = Math.Clamp(itemTop, 0, maxVerticalOffset);
+                _pendingScrollToItemIndex = -1;
+                Scroll.SetOffset(Scroll.OffsetX, target);
+                return true;
+            }
+
+            if (!_pendingFollowTailScroll || !FollowTail)
+            {
+                return false;
+            }
+
+            _pendingFollowTailScroll = false;
+            Scroll.SetOffset(Scroll.OffsetX, int.MaxValue);
+            return true;
+        }
+        finally
+        {
+            _applyingPendingScrollRequest = false;
+        }
     }
 
     private bool TryScrollToItemCore(int itemIndex)
@@ -341,60 +344,66 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             return false;
         }
 
-        FollowTail = false;
         _pendingFollowTailScroll = false;
-        _isTailFollowed = false;
         _pendingScrollToItemIndex = itemIndex;
-        ApplyPendingScrollToItemIfNeeded();
+        _resumeFollowTailAtTail = false;
+        FollowTail = false;
+        TryApplyPendingScrollRequest();
         return true;
     }
 
-    private bool ApplyPendingScrollToItemIfNeeded()
+    private void OnContentScrollChanged()
     {
-        if (_pendingScrollToItemIndex < 0)
-        {
-            return false;
-        }
-
-        var itemIndex = _pendingScrollToItemIndex;
-        if ((uint)itemIndex >= (uint)_items.Count)
-        {
-            _pendingScrollToItemIndex = -1;
-            return false;
-        }
-
-        var viewportWidth = _scrollViewer.ViewportWidth;
-        var viewportHeight = _scrollViewer.ViewportHeight;
-        if (viewportWidth <= 0 || viewportHeight <= 0)
-        {
-            return false;
-        }
-
-        if (!_content.TryGetItemRange(itemIndex, viewportWidth, out var itemTop, out _))
-        {
-            _pendingScrollToItemIndex = -1;
-            return false;
-        }
-
-        var maxVerticalOffset = Math.Max(0, _content.ExtentHeight - viewportHeight);
-        var target = Math.Clamp(itemTop, 0, maxVerticalOffset);
-        var changed = _scrollViewer.VerticalOffset != target;
-        _scrollViewer.VerticalOffset = target;
-        _pendingScrollToItemIndex = -1;
-        UpdateTailFollowedState(maxVerticalOffset);
-        return changed;
+        TryApplyPendingScrollRequest();
     }
 
-    private void UpdateTailFollowedState()
+    private void OnScrollViewerUserScroll(object? sender, ScrollValueChangedEventArgs e)
     {
-        var viewportHeight = Math.Max(1, _scrollViewer.ViewportHeight);
-        var maxVerticalOffset = Math.Max(0, _content.ExtentHeight - viewportHeight);
-        UpdateTailFollowedState(maxVerticalOffset);
+        _ = sender;
+        if (e.Orientation != Orientation.Vertical)
+        {
+            return;
+        }
+
+        UpdateFollowTailFromViewportInteraction();
     }
 
-    private void UpdateTailFollowedState(int maxVerticalOffset)
+    private void UpdateFollowTailFromViewportInteraction()
     {
-        _isTailFollowed = _scrollViewer.VerticalOffset >= maxVerticalOffset;
+        var viewportHeight = Math.Max(1, Scroll.ViewportHeight);
+        var maxVerticalOffset = Math.Max(0, Scroll.ExtentHeight - viewportHeight);
+        UpdateFollowTailFromViewportInteraction(maxVerticalOffset);
+    }
+
+    private void UpdateFollowTailFromViewportInteraction(int maxVerticalOffset)
+    {
+        if (Scroll.OffsetY >= maxVerticalOffset)
+        {
+            if (_resumeFollowTailAtTail)
+            {
+                _resumeFollowTailAtTail = false;
+                FollowTail = true;
+            }
+
+            return;
+        }
+
+        if (!FollowTail)
+        {
+            return;
+        }
+
+        _pendingFollowTailScroll = false;
+        _resumeFollowTailAtTail = true;
+        _preserveFollowTailResumeState = true;
+        try
+        {
+            FollowTail = false;
+        }
+        finally
+        {
+            _preserveFollowTailResumeState = false;
+        }
     }
 
     private void TrimToCapacity()
