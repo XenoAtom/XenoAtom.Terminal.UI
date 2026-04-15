@@ -147,7 +147,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     {
         var args = new KeyEventArgs { RawEvent = keyEvent };
         _core.OnKeyDown(args, BuildEditorOptions());
-        _requestedCaretIndex = _core.CaretIndex;
+        SyncEditorStateFromCore();
     }
 
     /// <summary>
@@ -177,7 +177,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
         // Re-apply the last requested caret position after swapping documents. This makes object initializers work
         // (e.g. new TextBox("...") { CaretIndex = 6 }) and keeps the caret stable when a bound document changes.
         _core.SetCaretIndex(_requestedCaretIndex, BuildEditorOptions());
-        _requestedCaretIndex = _core.CaretIndex;
+        SyncEditorStateFromCore();
     }
 
     /// <summary>
@@ -259,6 +259,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
         {
             _requestedCaretIndex = value;
             _core.SetCaretIndex(value, BuildEditorOptions());
+            SyncEditorStateFromCore();
         }
     }
 
@@ -429,42 +430,42 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     protected override void OnKeyDown(KeyEventArgs e)
     {
         _core.OnKeyDown(e, BuildEditorOptions());
-        _requestedCaretIndex = _core.CaretIndex;
+        SyncEditorStateFromCore();
     }
 
     /// <inheritdoc />
     protected override void OnTextInput(TextInputEventArgs e)
     {
         _core.OnTextInput(e, BuildEditorOptions());
-        _requestedCaretIndex = _core.CaretIndex;
+        SyncEditorStateFromCore();
     }
 
     /// <inheritdoc />
     protected override void OnPaste(PasteEventArgs e)
     {
         _core.OnPaste(e, BuildEditorOptions());
-        _requestedCaretIndex = _core.CaretIndex;
+        SyncEditorStateFromCore();
     }
 
     /// <inheritdoc />
     protected override void OnPointerPressed(PointerEventArgs e)
     {
         _core.OnPointerPressed(e, BuildEditorOptions());
-        _requestedCaretIndex = _core.CaretIndex;
+        SyncEditorStateFromCore();
     }
 
     /// <inheritdoc />
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         _core.OnPointerMoved(e, BuildEditorOptions());
-        _requestedCaretIndex = _core.CaretIndex;
+        SyncEditorStateFromCore();
     }
 
     /// <inheritdoc />
     protected override void OnPointerReleased(PointerEventArgs e)
     {
         _core.OnPointerReleased(e);
-        _requestedCaretIndex = _core.CaretIndex;
+        SyncEditorStateFromCore();
     }
 
     /// <inheritdoc />
@@ -484,10 +485,22 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
         _ = e;
     }
 
+    /// <summary>
+    /// Called after the editor core updates caret-dependent state.
+    /// </summary>
+    /// <remarks>
+    /// Derived controls can override this to synchronize additional bindable state, such as readable line/column
+    /// properties that mirror the current caret location.
+    /// </remarks>
+    protected virtual void OnEditorStateChanged()
+    {
+    }
+
     private void HandleDocumentChanged(object? sender, TextDocumentChangedEventArgs e)
     {
         _undoRedo.EnsureSynchronized();
         _core.OnDocumentChanged(e);
+        SyncEditorStateFromCore();
         OnDocumentChanged(e);
     }
 
@@ -536,12 +549,20 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     /// <summary>
     /// Attempts to undo the last edit.
     /// </summary>
-    public void Undo() => _core.Undo(BuildEditorOptions());
+    public void Undo()
+    {
+        _core.Undo(BuildEditorOptions());
+        SyncEditorStateFromCore();
+    }
 
     /// <summary>
     /// Attempts to redo the last undone edit.
     /// </summary>
-    public void Redo() => _core.Redo(BuildEditorOptions());
+    public void Redo()
+    {
+        _core.Redo(BuildEditorOptions());
+        SyncEditorStateFromCore();
+    }
 
     /// <summary>
     /// Attempts to open the integrated find UI for this editor.
@@ -568,6 +589,12 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     public bool TryGetCursorCell(out int x, out int y)
         => _core.TryGetCursorCell(BuildEditorOptions(), out x, out y);
 
+    private void SyncEditorStateFromCore()
+    {
+        _requestedCaretIndex = _core.CaretIndex;
+        OnEditorStateChanged();
+    }
+
     private void OnUndoRedoStateChanged()
     {
         CanUndo = _undoRedo.CanUndo;
@@ -589,19 +616,36 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
         public bool SupportsReplace => !_owner.IsSingleLine;
 
         public void SetQuery(in SearchQuery query)
-            => _owner._core.SetSearchQuery(query, _owner.BuildEditorOptions());
+        {
+            _owner._core.SetSearchQuery(query, _owner.BuildEditorOptions());
+            _owner.SyncEditorStateFromCore();
+        }
 
         public void NextMatch()
-            => _owner._core.GoToNextSearchMatch(_owner.BuildEditorOptions());
+        {
+            _owner._core.GoToNextSearchMatch(_owner.BuildEditorOptions());
+            _owner.SyncEditorStateFromCore();
+        }
 
         public void PreviousMatch()
-            => _owner._core.GoToPreviousSearchMatch(_owner.BuildEditorOptions());
+        {
+            _owner._core.GoToPreviousSearchMatch(_owner.BuildEditorOptions());
+            _owner.SyncEditorStateFromCore();
+        }
 
         public int ReplaceCurrent(string replacement)
-            => _owner._core.ReplaceCurrentSearchMatch(replacement, _owner.BuildEditorOptions());
+        {
+            var result = _owner._core.ReplaceCurrentSearchMatch(replacement, _owner.BuildEditorOptions());
+            _owner.SyncEditorStateFromCore();
+            return result;
+        }
 
         public int ReplaceAll(string replacement)
-            => _owner._core.ReplaceAllSearchMatches(replacement, _owner.BuildEditorOptions());
+        {
+            var result = _owner._core.ReplaceAllSearchMatches(replacement, _owner.BuildEditorOptions());
+            _owner.SyncEditorStateFromCore();
+            return result;
+        }
 
         public string GetStatusText() => _owner._core.GetSearchStatusText();
 

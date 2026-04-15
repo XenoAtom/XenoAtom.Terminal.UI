@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Text;
 using System.Linq;
 using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Collections;
 using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Geometry;
@@ -388,6 +389,8 @@ public sealed partial class CodeEditor : TextEditorBase
     private int _lastVisibleLineRequestCount;
     private Rectangle _lastArrangeRect;
     private bool _hasArrangedOnce;
+    private int _line = 1;
+    private int _column = 1;
 
     private sealed record LineHighlightCacheEntry(int LineStart, int LineLength, StyledRun[] Runs);
 
@@ -502,6 +505,26 @@ public sealed partial class CodeEditor : TextEditorBase
     public partial CodeEditorSyntaxHighlighter? SyntaxHighlighter { get; set; }
 
     /// <summary>
+    /// Gets the current caret line using a one-based line number suitable for display in editor status bars.
+    /// </summary>
+    [Bindable]
+    public int Line
+    {
+        get => BindingManager.Current.GetValue(this, ref _line, __Line__BindingAccessor.Instance);
+        private set => BindingManager.Current.SetValue(this, ref _line, value, __Line__BindingAccessor.Instance);
+    }
+
+    /// <summary>
+    /// Gets the current caret column using a one-based column number suitable for display in editor status bars.
+    /// </summary>
+    [Bindable]
+    public int Column
+    {
+        get => BindingManager.Current.GetValue(this, ref _column, __Column__BindingAccessor.Instance);
+        private set => BindingManager.Current.SetValue(this, ref _column, value, __Column__BindingAccessor.Instance);
+    }
+
+    /// <summary>
     /// Gets the ordered left-side margins.
     /// </summary>
     public BindableList<CodeEditorMargin> LeftMargins => _leftMargins;
@@ -519,6 +542,74 @@ public sealed partial class CodeEditor : TextEditorBase
 
     /// <inheritdoc />
     protected override bool ShowPlaceholderWhenUnfocusedOnly => false;
+
+    /// <summary>
+    /// Moves the caret to the specified one-based line number.
+    /// </summary>
+    /// <remarks>
+    /// The requested line is clamped to the current document range. The caret moves to column 1 of the resolved line.
+    /// </remarks>
+    /// <param name="line">The one-based line number to navigate to.</param>
+    public void GoToLine(int line)
+        => GoToLine(line, 1);
+
+    /// <summary>
+    /// Moves the caret to the specified one-based column on the current caret line.
+    /// </summary>
+    /// <remarks>
+    /// The requested column is clamped to the current logical line length.
+    /// </remarks>
+    /// <param name="column">The one-based column number to navigate to.</param>
+    public void GoToColumn(int column)
+    {
+        var snapshot = TextDocument.CurrentSnapshot;
+        if (snapshot.LineCount == 0)
+        {
+            CaretIndex = 0;
+            return;
+        }
+
+        var line = snapshot.GetLineIndexFromPosition(Math.Clamp(CaretIndex, 0, snapshot.Length)) + 1;
+        GoToLine(line, column);
+    }
+
+    /// <summary>
+    /// Moves the caret to the specified one-based line and column.
+    /// </summary>
+    /// <remarks>
+    /// The requested line and column are clamped to the current document bounds.
+    /// </remarks>
+    /// <param name="line">The one-based line number to navigate to.</param>
+    /// <param name="column">The one-based column number to navigate to.</param>
+    public void GoToLine(int line, int column)
+    {
+        var snapshot = TextDocument.CurrentSnapshot;
+        if (snapshot.LineCount == 0)
+        {
+            CaretIndex = 0;
+            return;
+        }
+
+        var lineIndex = Math.Clamp(line - 1, 0, snapshot.LineCount - 1);
+        var textLine = snapshot.GetLine(lineIndex);
+        var columnIndex = Math.Clamp(column - 1, 0, textLine.Length);
+        CaretIndex = textLine.Start + columnIndex;
+    }
+
+    /// <summary>
+    /// Moves the caret to the specified zero-based UTF-16 document position.
+    /// </summary>
+    /// <remarks>
+    /// The requested position is clamped to the current document length.
+    /// </remarks>
+    /// <param name="position">The zero-based UTF-16 document position.</param>
+    public void GoToPosition(int position) => CaretIndex = position;
+
+    /// <summary>
+    /// Moves the caret to the specified zero-based UTF-16 document position.
+    /// </summary>
+    /// <param name="position">The document position to navigate to.</param>
+    public void GoToPosition(TextPosition position) => GoToPosition(position.Index);
 
     /// <inheritdoc/>
     protected override int ChildrenCount => 1;
@@ -747,6 +838,13 @@ public sealed partial class CodeEditor : TextEditorBase
         _lastDocumentChange = e;
         InvalidateHighlightCache();
         base.OnDocumentChanged(e);
+    }
+
+    /// <inheritdoc />
+    protected override void OnEditorStateChanged()
+    {
+        SyncCaretLocation();
+        base.OnEditorStateChanged();
     }
 
     partial void OnMinLineNumberDigitsChanged(int value)
@@ -1027,6 +1125,24 @@ public sealed partial class CodeEditor : TextEditorBase
         }
 
         return false;
+    }
+
+    private void SyncCaretLocation()
+    {
+        var snapshot = TextDocument.CurrentSnapshot;
+        if (snapshot.LineCount == 0)
+        {
+            Line = 1;
+            Column = 1;
+            return;
+        }
+
+        var caretIndex = Math.Clamp(CaretIndex, 0, snapshot.Length);
+        var lineIndex = snapshot.GetLineIndexFromPosition(caretIndex);
+        var textLine = snapshot.GetLine(lineIndex);
+
+        Line = lineIndex + 1;
+        Column = (caretIndex - textLine.Start) + 1;
     }
 
     private int GetCaretLineIndex()

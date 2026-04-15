@@ -23,7 +23,10 @@ public sealed class CodeEditorDemo : ControlsDemoBase
         var highlightCurrentLine = new State<bool>(true);
         var showDiffMargin = new State<bool>(true);
         var useSyntaxHighlighter = new State<bool>(true);
-        var statusText = new State<string>("Ready");
+        var goToLine = new State<int>(12);
+        var goToColumn = new State<int>(5);
+        var goToPosition = new State<int>(0);
+        var caretLocationText = new State<string?>("Ln 1, Col 1");
 
         var editor = new CodeEditor(BuildDemoSource())
             .Placeholder("Type C# code here…")
@@ -80,7 +83,7 @@ public sealed class CodeEditorDemo : ControlsDemoBase
 
         editor.Update(_ =>
         {
-            statusText.Value = $"Version {editor.TextDocument.CurrentSnapshot.Version} • length {editor.TextDocument.CurrentSnapshot.Length} • scroll ({editor.Scroll.OffsetX}, {editor.Scroll.OffsetY})";
+            caretLocationText.Value = $"Ln {editor.Line}, Col {editor.Column}";
         });
 
         var controls = new HStack(
@@ -95,16 +98,38 @@ public sealed class CodeEditorDemo : ControlsDemoBase
                 new Button("Reset view").Click(() => editor.Scroll.SetOffset(0, 0)))
             .Spacing(1);
 
+        var navigationRow = new HStack(
+                "Line",
+                new NumberBox<int>().Value(goToLine).MinWidth(4).MaxWidth(6),
+                "Column",
+                new NumberBox<int>().Value(goToColumn).MinWidth(4).MaxWidth(6),
+                new Button("Go line").Click(() => editor.GoToLine(goToLine.Value)),
+                new Button("Go column").Click(() => editor.GoToColumn(goToColumn.Value)),
+                new Button("Go line + column").Click(() => editor.GoToLine(goToLine.Value, goToColumn.Value)))
+            .Spacing(1);
+
+        var positionRow = new HStack(
+                "Position",
+                new NumberBox<int>().Value(goToPosition).MinWidth(6).MaxWidth(8),
+                new Button("Go position").Click(() => editor.GoToPosition(goToPosition.Value)),
+                DemoUi.Hint("The footer below binds directly to editor.Line and editor.Column."))
+            .Spacing(1);
+
         var help = new Markup(
-            "[bold green]CodeEditor[/] shares the text engine with TextArea, then adds [cyan]line numbers[/], [cyan]margins[/], [cyan]search overlays[/], and [cyan]syntax highlighting[/]. [dim]Try Ctrl+F / Ctrl+H, Ctrl+Z / Ctrl+R, or scroll through the long sample file.[/]")
+            "[bold green]CodeEditor[/] shares the text engine with TextArea, then adds [cyan]line numbers[/], [cyan]margins[/], [cyan]search overlays[/], [cyan]syntax highlighting[/], and now programmatic [cyan]Go To Line / Column / Position[/]. [dim]Try Ctrl+F / Ctrl+H, Ctrl+Z / Ctrl+R, or use the jump controls below.[/]")
             .Wrap(true);
 
-        var topPanel = new VStack(help, controls)
+        var topPanel = new VStack(help, controls, navigationRow, positionRow)
             .Spacing(1)
             .HorizontalAlignment(Align.Stretch);
 
+        var locationFooter = new Footer()
+            .Left(new TextBlock(caretLocationText))
+            .Center(new TextBlock(() => $"Targets: line {goToLine.Value}, column {goToColumn.Value}, position {goToPosition.Value}"))
+            .Right(new Markup("[dim]Ctrl+F Find • Ctrl+H Replace[/]") { Wrap = false });
+
         var bottomPanel = new VStack(
-                new TextBlock(() => statusText.Value),
+                locationFooter,
                 DemoUi.Hint("The left diff margin is implemented through the public CodeEditorMargin contract. Toggle Advanced syntax to switch between the simple delegate and persistent syntax-state pipelines."))
             .Spacing(1)
             .HorizontalAlignment(Align.Stretch);

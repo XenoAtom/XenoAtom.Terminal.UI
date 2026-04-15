@@ -410,6 +410,169 @@ public sealed class CodeEditorTests
     }
 
     [TestMethod]
+    public void CodeEditor_GoToLine_Column_And_Position_MoveCaret_And_UpdateReadableLocation()
+    {
+        var text = string.Join("\n", Enumerable.Range(1, 120).Select(i => $"Line {i:000}"));
+        var editor = new CodeEditor(text)
+        {
+            MinHeight = 5,
+            MaxHeight = 5,
+        };
+
+        using var driver = new TerminalAppTestDriver(new VStack { editor }, TerminalHostKind.Fullscreen, new TerminalSize(24, 8));
+        driver.Tick();
+        driver.App.Focus(editor);
+
+        driver.App.Post(() => editor.GoToLine(80));
+        driver.TickUntil(() => editor.Line == 80);
+
+        Assert.AreEqual(80, editor.Line, "Expected GoToLine to use one-based line numbers.");
+        Assert.AreEqual(1, editor.Column, "Expected GoToLine(line) to move to the first column of the resolved line.");
+        Assert.IsTrue(editor.Scroll.OffsetY > 0, "Expected GoToLine to scroll the caret into view.");
+
+        driver.App.Post(() => editor.GoToColumn(6));
+        driver.TickUntil(() => editor.Column == 6);
+
+        Assert.AreEqual(80, editor.Line, "Expected GoToColumn to stay on the current caret line.");
+        Assert.AreEqual(6, editor.Column, "Expected GoToColumn to use one-based columns.");
+
+        var lineThree = editor.TextDocument.CurrentSnapshot.GetLine(2);
+        driver.App.Post(() => editor.GoToLine(3, 6));
+        driver.TickUntil(() => editor.Line == 3 && editor.Column == 6);
+
+        Assert.AreEqual(lineThree.Start + 5, editor.CaretIndex, "Expected GoToLine(line, column) to resolve to the requested position.");
+
+        var line120Position = text.IndexOf("Line 120", StringComparison.Ordinal) + 5;
+        driver.App.Post(() => editor.GoToPosition(line120Position));
+        driver.TickUntil(() => editor.Line == 120 && editor.Column == 6);
+
+        Assert.AreEqual(120, editor.Line, "Expected GoToPosition(int) to move the caret to the matching line.");
+        Assert.AreEqual(6, editor.Column, "Expected GoToPosition(int) to update the readable column.");
+
+        driver.App.Post(() => editor.GoToPosition(new XenoAtom.Terminal.UI.Text.TextPosition(0)));
+        driver.TickUntil(() => editor.Line == 1 && editor.Column == 1);
+
+        Assert.AreEqual(1, editor.Line, "Expected GoToPosition(TextPosition) to support the typed overload.");
+        Assert.AreEqual(1, editor.Column, "Expected GoToPosition(TextPosition) to move back to the document start.");
+    }
+
+    [TestMethod]
+    public void CodeEditor_Line_And_Column_BindableProperties_Can_Drive_A_StatusBar()
+    {
+        var editor = new CodeEditor("alpha\nbeta")
+        {
+            MinHeight = 4,
+            MaxHeight = 4,
+        };
+
+        var status = new TextBlock(() => $"Ln {editor.Line}, Col {editor.Column}");
+
+        using var driver = new TerminalAppTestDriver(new VStack(editor, status), TerminalHostKind.Fullscreen, new TerminalSize(24, 8));
+        driver.Tick();
+
+        var initialScreen = new AnsiTestScreen(24, 8);
+        initialScreen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(initialScreen.GetText(), "Ln 1, Col 1", "Expected the status bar binding to show the initial caret location.");
+
+        driver.App.Post(() => editor.GoToLine(2, 3));
+        driver.TickUntil(() => editor.Line == 2 && editor.Column == 3);
+
+        var updatedScreen = new AnsiTestScreen(24, 8);
+        updatedScreen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(updatedScreen.GetText(), "Ln 2, Col 3", "Expected the status bar binding to update when the caret moves.");
+    }
+
+    [TestMethod]
+    public void CodeEditor_Line_And_Column_BindableProperties_Update_When_Navigating_With_Keyboard()
+    {
+        var editor = new CodeEditor("alpha\nbeta")
+        {
+            MinHeight = 4,
+            MaxHeight = 4,
+        };
+
+        var status = new Footer()
+            .Left(new TextBlock(() => $"Ln {editor.Line}, Col {editor.Column}"));
+
+        using var driver = new TerminalAppTestDriver(new DockLayout().Content(editor).Bottom(status), TerminalHostKind.Fullscreen, new TerminalSize(24, 8));
+        driver.Tick();
+        driver.App.Focus(editor);
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right });
+        driver.TickUntil(() => editor.Line == 2 && editor.Column == 3);
+
+        var screen = new AnsiTestScreen(24, 8);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "Ln 2, Col 3", "Expected keyboard caret navigation to update the bound status footer.");
+    }
+
+    [TestMethod]
+    public void CodeEditor_Line_And_Column_Computed_Status_Still_Updates_When_Built_Under_Suppressed_Tracking()
+    {
+        CodeEditor editor;
+        Footer status;
+        using (BindingManager.Current.SuppressReadTracking())
+        using (BindingManager.Current.SuppressWriteTracking())
+        {
+            editor = new CodeEditor("alpha\nbeta")
+            {
+                MinHeight = 4,
+                MaxHeight = 4,
+            };
+
+            status = new Footer()
+                .Left(new TextBlock(() => $"Ln {editor.Line}, Col {editor.Column}"));
+        }
+
+        using var driver = new TerminalAppTestDriver(new DockLayout().Content(editor).Bottom(status), TerminalHostKind.Fullscreen, new TerminalSize(24, 8));
+        driver.Tick();
+        driver.App.Focus(editor);
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right });
+        driver.TickUntil(() => editor.Line == 2 && editor.Column == 3);
+
+        var screen = new AnsiTestScreen(24, 8);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "Ln 2, Col 3", "Expected computed status text to keep tracking editor.Line/editor.Column even when created under suppressed tracking.");
+    }
+
+    [TestMethod]
+    public void CodeEditor_Line_And_Column_Can_Drive_A_StateBacked_Demo_Status_Footer_When_Navigating_With_Keyboard()
+    {
+        var editor = new CodeEditor("alpha\nbeta")
+        {
+            MinHeight = 4,
+            MaxHeight = 4,
+        };
+
+        var caretLocationText = new State<string?>("Ln 1, Col 1");
+        editor.Update(_ =>
+        {
+            caretLocationText.Value = $"Ln {editor.Line}, Col {editor.Column}";
+        });
+
+        var status = new Footer()
+            .Left(new TextBlock(caretLocationText));
+
+        using var driver = new TerminalAppTestDriver(new DockLayout().Content(editor).Bottom(status), TerminalHostKind.Fullscreen, new TerminalSize(24, 8));
+        driver.Tick();
+        driver.App.Focus(editor);
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right });
+        driver.TickUntil(() => editor.Line == 2 && editor.Column == 3);
+
+        var screen = new AnsiTestScreen(24, 8);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "Ln 2, Col 3", "Expected a demo-style state-backed footer to update from editor.Line/editor.Column during keyboard navigation.");
+    }
+
+    [TestMethod]
     public void CodeEditor_Cursor_Placement_Accounts_For_Margins()
     {
         var editor = new CodeEditor("hello") { CaretIndex = 2 };

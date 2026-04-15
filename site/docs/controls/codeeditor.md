@@ -45,6 +45,30 @@ new CodeEditor()
 
 This means `CodeEditor` behaves like a specialized `TextArea`, not a separate editing subsystem.
 
+## Go To Line / Column / Position
+
+`CodeEditor` exposes programmatic navigation helpers:
+
+```csharp
+editor.GoToLine(42);          // one-based line, column 1
+editor.GoToColumn(8);         // one-based column on the current line
+editor.GoToLine(42, 8);       // one-based line + column
+editor.GoToPosition(128);     // zero-based UTF-16 document position
+editor.GoToPosition(new TextPosition(128));
+```
+
+Line and column navigation use one-based values because they are intended to match the numbers users typically see in
+editor gutters and status bars. Requests are clamped to the current document bounds.
+
+For status bars and other bindings, `CodeEditor` also exposes readable bindable caret-location properties:
+
+```csharp
+new Footer()
+    .Left(new TextBlock(() => $"Ln {editor.Line}, Col {editor.Column}"));
+```
+
+`Line` and `Column` are one-based and update automatically as the caret moves.
+
 ## Line numbers
 
 Line numbers are enabled by default:
