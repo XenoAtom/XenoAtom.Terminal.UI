@@ -46,9 +46,9 @@ public sealed partial class LogControl : Visual, ISelectionOwner
 
     private LogTextPosition? _selectionAnchor;
     private LogTextPosition? _selectionActive;
-    private bool _isTailFollowed = true;
-    private bool _pendingFollowTailScroll;
     private bool _resumeFollowTailAtTail;
+    private bool _clearSelectionOnNextFollowTailAppend;
+    private bool _preserveFollowTailResumeState;
     private bool _bulkUpdatingSearchFlags;
 
     /// <summary>
@@ -70,6 +70,7 @@ public sealed partial class LogControl : Visual, ISelectionOwner
 
         // LogControl owns focus/key handling. The internal ScrollViewer provides scrollbars and translates content.
         _scrollViewer = new ScrollViewer(_content, focusable: false);
+        _scrollViewer.UserScrollRouted += OnScrollViewerUserScroll;
 
         // Default behavior: wrap long lines to the viewport width.
         this.WrapText(true);
@@ -224,11 +225,10 @@ public sealed partial class LogControl : Visual, ISelectionOwner
     {
         VerifyAccess();
         ClearSelection();
+        _clearSelectionOnNextFollowTailAppend = false;
+        _resumeFollowTailAtTail = false;
         FollowTail = true;
-        _pendingFollowTailScroll = true;
-
-        // Try to apply immediately when we have a known viewport; otherwise, the pending flag will be applied on the next Arrange.
-        ApplyFollowTailIfNeeded();
+        _scrollViewer.VerticalOffset = int.MaxValue;
     }
 
     /// <summary>
@@ -307,7 +307,8 @@ public sealed partial class LogControl : Visual, ISelectionOwner
         ClearSelection();
         RebuildMatches();
         _scrollViewer.VerticalOffset = 0;
-        _pendingFollowTailScroll = false;
+        _clearSelectionOnNextFollowTailAppend = false;
+        _resumeFollowTailAtTail = false;
     }
 
     /// <summary>
@@ -390,15 +391,17 @@ public sealed partial class LogControl : Visual, ISelectionOwner
     {
         if (!value)
         {
-            _pendingFollowTailScroll = false;
-            _resumeFollowTailAtTail = false;
+            if (!_preserveFollowTailResumeState)
+            {
+                _resumeFollowTailAtTail = false;
+            }
+
+            _clearSelectionOnNextFollowTailAppend = false;
             return;
         }
 
-        ClearSelection();
         _resumeFollowTailAtTail = false;
-        _pendingFollowTailScroll = true;
-        ApplyFollowTailIfNeeded();
+        _clearSelectionOnNextFollowTailAppend = HasSelection;
     }
 
     /// <inheritdoc/>
@@ -464,15 +467,6 @@ public sealed partial class LogControl : Visual, ISelectionOwner
 
         // Anchor search popup to the top-right inside the padded viewport.
         _searchPopup.ArrangeWithin(innerRect);
-
-        if (ApplyFollowTailIfNeeded())
-        {
-            // Follow-tail can change the ScrollViewer offset after it was arranged; ensure the content host is re-arranged
-            // in the same pass so the view updates immediately (without relying on a second layout tick).
-            _scrollViewer.Arrange(innerRect);
-        }
-
-        SyncFollowTailWithViewport();
     }
 
     /// <inheritdoc/>
@@ -550,33 +544,31 @@ public sealed partial class LogControl : Visual, ISelectionOwner
         {
             case TerminalKey.Up:
                 _scrollViewer.VerticalOffset = Math.Max(0, _scrollViewer.VerticalOffset - 1);
-                SyncFollowTailWithViewport(maxOffset);
+                UpdateFollowTailFromViewportInteraction(maxOffset);
                 e.Handled = true;
                 return;
             case TerminalKey.Down:
                 _scrollViewer.VerticalOffset = Math.Min(maxOffset, _scrollViewer.VerticalOffset + 1);
-                SyncFollowTailWithViewport(maxOffset);
+                UpdateFollowTailFromViewportInteraction(maxOffset);
                 e.Handled = true;
                 return;
             case TerminalKey.PageUp:
                 _scrollViewer.VerticalOffset = Math.Max(0, _scrollViewer.VerticalOffset - page);
-                SyncFollowTailWithViewport(maxOffset);
+                UpdateFollowTailFromViewportInteraction(maxOffset);
                 e.Handled = true;
                 return;
             case TerminalKey.PageDown:
                 _scrollViewer.VerticalOffset = Math.Min(maxOffset, _scrollViewer.VerticalOffset + page);
-                SyncFollowTailWithViewport(maxOffset);
+                UpdateFollowTailFromViewportInteraction(maxOffset);
                 e.Handled = true;
                 return;
             case TerminalKey.Home:
                 _scrollViewer.VerticalOffset = 0;
-                SyncFollowTailWithViewport(maxOffset);
+                UpdateFollowTailFromViewportInteraction(maxOffset);
                 e.Handled = true;
                 return;
             case TerminalKey.End:
-                _scrollViewer.VerticalOffset = maxOffset;
-                FollowTail = true;
-                SyncFollowTailWithViewport(maxOffset);
+                ScrollToTail();
                 e.Handled = true;
                 return;
         }
@@ -613,7 +605,7 @@ public sealed partial class LogControl : Visual, ISelectionOwner
         }
 
         _scrollViewer.VerticalOffset = nextOffset;
-        SyncFollowTailWithViewport(maxOffset);
+        UpdateFollowTailFromViewportInteraction(maxOffset);
         e.Handled = true;
     }
 
@@ -659,10 +651,18 @@ public sealed partial class LogControl : Visual, ISelectionOwner
         }
 
         TrimToCapacity();
-        if (FollowTail && !HasSelection)
+        if (FollowTail)
         {
-            _pendingFollowTailScroll = true;
-            _scrollViewer.VerticalOffset = int.MaxValue;
+            if (_clearSelectionOnNextFollowTailAppend && HasSelection)
+            {
+                ClearSelection();
+            }
+
+            _clearSelectionOnNextFollowTailAppend = false;
+            if (!HasSelection)
+            {
+                _scrollViewer.VerticalOffset = int.MaxValue;
+            }
         }
 
         if (!string.IsNullOrEmpty(SearchText))
@@ -797,79 +797,37 @@ public sealed partial class LogControl : Visual, ISelectionOwner
         RebuildMatches();
     }
 
-    private bool ApplyFollowTailIfNeeded()
-    {
-        if (!_pendingFollowTailScroll || !FollowTail || HasSelection)
-        {
-            return false;
-        }
-
-        var viewportHeight = Math.Max(1, _scrollViewer.ViewportHeight);
-        var maxOffset = Math.Max(0, _content.ExtentHeight - viewportHeight);
-        _pendingFollowTailScroll = false;
-
-        if (_scrollViewer.VerticalOffset == maxOffset)
-        {
-            _isTailFollowed = true;
-            return false;
-        }
-
-        _scrollViewer.VerticalOffset = maxOffset;
-        _isTailFollowed = true;
-        return true;
-    }
-
-    private void UpdateTailFollowedState()
+    private void UpdateFollowTailFromViewportInteraction(int maxOffset)
     {
         if (HasSelection)
         {
-            _isTailFollowed = false;
             return;
         }
 
-        var viewportHeight = Math.Max(1, _scrollViewer.ViewportHeight);
-        var maxOffset = Math.Max(0, _content.ExtentHeight - viewportHeight);
-        UpdateTailFollowedState(maxOffset);
-    }
-
-    private void UpdateTailFollowedState(int maxOffset)
-    {
-        _isTailFollowed = _scrollViewer.VerticalOffset >= maxOffset;
-    }
-
-    private void SyncFollowTailWithViewport()
-    {
-        if (HasSelection)
-        {
-            _isTailFollowed = false;
-            return;
-        }
-
-        var viewportHeight = Math.Max(1, _scrollViewer.ViewportHeight);
-        var maxOffset = Math.Max(0, _content.ExtentHeight - viewportHeight);
-        SyncFollowTailWithViewport(maxOffset);
-    }
-
-    private void SyncFollowTailWithViewport(int maxOffset)
-    {
-        UpdateTailFollowedState(maxOffset);
-
-        if (_isTailFollowed)
+        var isAtTail = _scrollViewer.VerticalOffset >= maxOffset;
+        if (isAtTail)
         {
             if (_resumeFollowTailAtTail)
             {
+                _resumeFollowTailAtTail = false;
                 FollowTail = true;
             }
 
             return;
         }
 
-        // Read the generated backing field directly here so we can safely transition the bindable FollowTail
-        // property while layout tracking is active (scrollbar drags can move the viewport during Arrange).
-        if (_followTail && !_pendingFollowTailScroll)
+        if (FollowTail)
         {
-            FollowTail = false;
             _resumeFollowTailAtTail = true;
+            _preserveFollowTailResumeState = true;
+            try
+            {
+                FollowTail = false;
+            }
+            finally
+            {
+                _preserveFollowTailResumeState = false;
+            }
         }
     }
 
@@ -1040,6 +998,8 @@ public sealed partial class LogControl : Visual, ISelectionOwner
         _selectionAnchor = new LogTextPosition(0, 0);
         var lastIndex = _entries.Count - 1;
         _selectionActive = new LogTextPosition(lastIndex, _entries[lastIndex].Text.Length);
+        _resumeFollowTailAtTail = false;
+        _clearSelectionOnNextFollowTailAppend = false;
         FollowTail = false;
         InteractionVersion++;
     }
@@ -1054,6 +1014,18 @@ public sealed partial class LogControl : Visual, ISelectionOwner
         _selectionAnchor = null;
         _selectionActive = null;
         InteractionVersion++;
+    }
+
+    private void OnScrollViewerUserScroll(object? sender, ScrollValueChangedEventArgs e)
+    {
+        if (e.Orientation != Orientation.Vertical)
+        {
+            return;
+        }
+
+        var viewportHeight = Math.Max(1, _scrollViewer.ViewportHeight);
+        var maxOffset = Math.Max(0, _content.ExtentHeight - viewportHeight);
+        UpdateFollowTailFromViewportInteraction(maxOffset);
     }
 
     private void CopySelectionToClipboard()

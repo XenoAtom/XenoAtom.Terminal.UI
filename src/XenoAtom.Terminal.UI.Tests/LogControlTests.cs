@@ -102,12 +102,7 @@ public sealed class LogControlTests
         Assert.IsFalse(rendered.Contains("AfterDisable", StringComparison.Ordinal), "Disabling FollowTail at the tail should keep newly appended lines out of view.");
 
         log.FollowTail = true;
-        driver.Tick();
         Assert.IsTrue(log.FollowTail);
-
-        screen.Apply(driver.Backend.GetOutText());
-        rendered = screen.GetText();
-        StringAssert.Contains(rendered, "AfterDisable");
 
         log.AppendLine("AfterReenable");
         driver.Tick();
@@ -255,6 +250,39 @@ public sealed class LogControlTests
         var screen = new AnsiTestScreen(40, 6);
         screen.Apply(driver.Backend.GetOutText());
         StringAssert.Contains(screen.GetText(), "AfterScrollBarTail");
+    }
+
+    [TestMethod]
+    public void LogControl_FollowTail_Reenabled_Before_Append_Clears_Selection_And_Does_Not_Throw()
+    {
+        var log = new LogControl();
+
+        using var driver = new TerminalAppTestDriver(log, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        for (var i = 0; i < 20; i++)
+        {
+            log.AppendLine($"Line {i}");
+        }
+
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlA, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+
+        Assert.IsTrue(log.HasSelection);
+        Assert.IsFalse(log.FollowTail);
+
+        log.FollowTail = true;
+        log.AppendLine("AfterSelection");
+        driver.Tick();
+
+        Assert.IsFalse(log.HasSelection, "Re-enabling FollowTail before an append should clear the active selection when tail following is applied.");
+        Assert.IsTrue(log.FollowTail);
+
+        var screen = new AnsiTestScreen(40, 6);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "AfterSelection");
     }
 
     [TestMethod]

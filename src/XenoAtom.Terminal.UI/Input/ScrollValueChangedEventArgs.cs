@@ -10,6 +10,11 @@ namespace XenoAtom.Terminal.UI.Input;
 public sealed class ScrollValueChangedEventArgs : RoutedEventArgs
 {
     /// <summary>
+    /// Gets the scroll orientation whose value changed.
+    /// </summary>
+    public Orientation Orientation { get; init; }
+
+    /// <summary>
     /// Gets the previous value.
     /// </summary>
     public int OldValue { get; init; }
@@ -18,4 +23,9 @@ public sealed class ScrollValueChangedEventArgs : RoutedEventArgs
     /// Gets the new value.
     /// </summary>
     public int NewValue { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the change was caused by user interaction.
+    /// </summary>
+    public bool IsUserInitiated { get; init; }
 }

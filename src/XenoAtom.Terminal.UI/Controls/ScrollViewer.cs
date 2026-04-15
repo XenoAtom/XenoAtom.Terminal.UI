@@ -224,6 +224,9 @@ public sealed partial class ScrollViewer : Visual
     [Bindable]
     private partial int HorizontalOffsetFromPrepare { get; set; }
 
+    [RoutedEvent(RoutingStrategy.Bubble)]
+    private void OnUserScroll(ScrollValueChangedEventArgs e) { }
+
     partial void OnHorizontalScrollEnabledChanged(bool value)
     {
         if (!value)
@@ -593,42 +596,42 @@ public sealed partial class ScrollViewer : Visual
         {
             case TerminalKey.Up:
                 if (!VerticalScrollEnabled) return;
-                VerticalOffset = Math.Max(0, VerticalOffset - 1);
+                RaiseUserScrollIfChanged(Orientation.Vertical, VerticalOffset, Math.Max(0, VerticalOffset - 1), static (owner, value) => owner.VerticalOffset = value);
                 e.Handled = true;
                 return;
             case TerminalKey.Down:
                 if (!VerticalScrollEnabled) return;
-                VerticalOffset = Math.Min(maxVerticalOffset, VerticalOffset + 1);
+                RaiseUserScrollIfChanged(Orientation.Vertical, VerticalOffset, Math.Min(maxVerticalOffset, VerticalOffset + 1), static (owner, value) => owner.VerticalOffset = value);
                 e.Handled = true;
                 return;
             case TerminalKey.PageUp:
                 if (!VerticalScrollEnabled) return;
-                VerticalOffset = Math.Max(0, VerticalOffset - viewportHeight);
+                RaiseUserScrollIfChanged(Orientation.Vertical, VerticalOffset, Math.Max(0, VerticalOffset - viewportHeight), static (owner, value) => owner.VerticalOffset = value);
                 e.Handled = true;
                 return;
             case TerminalKey.PageDown:
                 if (!VerticalScrollEnabled) return;
-                VerticalOffset = Math.Min(maxVerticalOffset, VerticalOffset + viewportHeight);
+                RaiseUserScrollIfChanged(Orientation.Vertical, VerticalOffset, Math.Min(maxVerticalOffset, VerticalOffset + viewportHeight), static (owner, value) => owner.VerticalOffset = value);
                 e.Handled = true;
                 return;
             case TerminalKey.Home:
                 if (!VerticalScrollEnabled) return;
-                VerticalOffset = 0;
+                RaiseUserScrollIfChanged(Orientation.Vertical, VerticalOffset, 0, static (owner, value) => owner.VerticalOffset = value);
                 e.Handled = true;
                 return;
             case TerminalKey.End:
                 if (!VerticalScrollEnabled) return;
-                VerticalOffset = maxVerticalOffset;
+                RaiseUserScrollIfChanged(Orientation.Vertical, VerticalOffset, maxVerticalOffset, static (owner, value) => owner.VerticalOffset = value);
                 e.Handled = true;
                 return;
             case TerminalKey.Left:
                 if (!HorizontalScrollEnabled) return;
-                HorizontalOffset = Math.Max(0, HorizontalOffset - 1);
+                RaiseUserScrollIfChanged(Orientation.Horizontal, HorizontalOffset, Math.Max(0, HorizontalOffset - 1), static (owner, value) => owner.HorizontalOffset = value);
                 e.Handled = true;
                 return;
             case TerminalKey.Right:
                 if (!HorizontalScrollEnabled) return;
-                HorizontalOffset = Math.Min(maxHorizontalOffset, HorizontalOffset + 1);
+                RaiseUserScrollIfChanged(Orientation.Horizontal, HorizontalOffset, Math.Min(maxHorizontalOffset, HorizontalOffset + 1), static (owner, value) => owner.HorizontalOffset = value);
                 e.Handled = true;
                 return;
         }
@@ -660,7 +663,8 @@ public sealed partial class ScrollViewer : Visual
                 return;
             }
 
-            HorizontalOffset = e.WheelDelta > 0 ? Math.Max(0, HorizontalOffset - 1) : Math.Min(maxOffset, HorizontalOffset + 1);
+            var nextOffset = e.WheelDelta > 0 ? Math.Max(0, HorizontalOffset - 1) : Math.Min(maxOffset, HorizontalOffset + 1);
+            RaiseUserScrollIfChanged(Orientation.Horizontal, HorizontalOffset, nextOffset, static (owner, value) => owner.HorizontalOffset = value);
         }
         else
         {
@@ -673,7 +677,8 @@ public sealed partial class ScrollViewer : Visual
                 return;
             }
 
-            VerticalOffset = e.WheelDelta > 0 ? Math.Max(0, VerticalOffset - 1) : Math.Min(maxOffset, VerticalOffset + 1);
+            var nextOffset = e.WheelDelta > 0 ? Math.Max(0, VerticalOffset - 1) : Math.Min(maxOffset, VerticalOffset + 1);
+            RaiseUserScrollIfChanged(Orientation.Vertical, VerticalOffset, nextOffset, static (owner, value) => owner.VerticalOffset = value);
         }
 
         e.Handled = true;
@@ -729,7 +734,12 @@ public sealed partial class ScrollViewer : Visual
             return;
         }
 
+        var oldValue = VerticalOffset;
         VerticalOffset = e.NewValue;
+        if (e.IsUserInitiated)
+        {
+            RaiseUserScrollEvent(Orientation.Vertical, oldValue, VerticalOffset);
+        }
     }
 
     private void OnHorizontalBarValueChanged(object? sender, ScrollValueChangedEventArgs e)
@@ -739,7 +749,12 @@ public sealed partial class ScrollViewer : Visual
             return;
         }
 
+        var oldValue = HorizontalOffset;
         HorizontalOffset = e.NewValue;
+        if (e.IsUserInitiated)
+        {
+            RaiseUserScrollEvent(Orientation.Horizontal, oldValue, HorizontalOffset);
+        }
     }
 
     private void SetBarValue(ScrollBar bar, int value)
@@ -753,6 +768,28 @@ public sealed partial class ScrollViewer : Visual
         {
             _syncingOffsets = false;
         }
+    }
+
+    private void RaiseUserScrollIfChanged(Orientation orientation, int oldValue, int newValue, Action<ScrollViewer, int> applyValue)
+    {
+        applyValue(this, newValue);
+        RaiseUserScrollEvent(orientation, oldValue, orientation == Orientation.Vertical ? VerticalOffset : HorizontalOffset);
+    }
+
+    private void RaiseUserScrollEvent(Orientation orientation, int oldValue, int newValue)
+    {
+        if (oldValue == newValue)
+        {
+            return;
+        }
+
+        RaiseEvent(UserScrollEvent, new ScrollValueChangedEventArgs
+        {
+            Orientation = orientation,
+            OldValue = oldValue,
+            NewValue = newValue,
+            IsUserInitiated = true,
+        });
     }
 
     private sealed partial class ContentViewportHost : Visual
