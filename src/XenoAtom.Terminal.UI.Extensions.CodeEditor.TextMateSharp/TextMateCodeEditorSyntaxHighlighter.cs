@@ -253,7 +253,8 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
         private readonly int _speculativeWindowLineCount;
         private readonly int _speculativeCheckpointSearchLineCount;
         private readonly Dictionary<int, IStateStack?> _checkpointStates;
-        private readonly Dictionary<int, TextMateTokenizedLine> _speculativeTokenizedLines;
+        private readonly TextMateTokenizedLine?[] _speculativeTokenizedLines;
+        private readonly List<int> _speculativeTokenizedLineIndices;
         private readonly bool _allowSynchronousTokenization;
         private readonly bool _isLargeDocument;
         private char[] _lineTextBuffer;
@@ -295,7 +296,8 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
             _speculativeWindowLineCount = Math.Max(1, speculativeWindowLineCount);
             _speculativeCheckpointSearchLineCount = Math.Max(0, speculativeCheckpointSearchLineCount);
             _checkpointStates = new Dictionary<int, IStateStack?>();
-            _speculativeTokenizedLines = new Dictionary<int, TextMateTokenizedLine>();
+            _speculativeTokenizedLines = new TextMateTokenizedLine?[lineStartStates.Length];
+            _speculativeTokenizedLineIndices = new List<int>();
             if (lineStartStates.Length > 0)
             {
                 _checkpointStates[0] = null;
@@ -341,7 +343,7 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
 
             if (!_allowSynchronousTokenization)
             {
-                return _speculativeTokenizedLines.TryGetValue(lineIndex, out var speculative) ? speculative : null;
+                return Volatile.Read(ref _speculativeTokenizedLines[lineIndex]);
             }
 
             lock (_syncRoot)
@@ -351,7 +353,8 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
                     return cached;
                 }
 
-                if (_speculativeTokenizedLines.TryGetValue(lineIndex, out var speculative))
+                var speculative = Volatile.Read(ref _speculativeTokenizedLines[lineIndex]);
+                if (speculative is not null)
                 {
                     return speculative;
                 }
@@ -401,7 +404,7 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
                 var hasMissingLine = false;
                 for (var lineIndex = firstVisibleLineIndex; lineIndex <= lastVisibleLineIndex; lineIndex++)
                 {
-                    if (TokenizedLines[lineIndex] is null && !_speculativeTokenizedLines.ContainsKey(lineIndex))
+                    if (TokenizedLines[lineIndex] is null && Volatile.Read(ref _speculativeTokenizedLines[lineIndex]) is null)
                     {
                         hasMissingLine = true;
                         break;
@@ -445,6 +448,8 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
                 }
             }
 
+            CopySpeculativeLines(previousState, change);
+
             if (change is null)
             {
                 CopyApproximateSuffix(previousState, sourceStartLine: prefixLineCount, destinationStartLine: prefixLineCount);
@@ -472,10 +477,7 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
                 return true;
             }
 
-            lock (_syncRoot)
-            {
-                return TokenizedLines[lineIndex] is not null || _speculativeTokenizedLines.ContainsKey(lineIndex);
-            }
+            return TokenizedLines[lineIndex] is not null || Volatile.Read(ref _speculativeTokenizedLines[lineIndex]) is not null;
         }
 
         private void EnsureTokenizedThrough(int lineIndex)
@@ -505,7 +507,7 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
             var nextState = result.RuleStack;
             LineEndStates[lineIndex] = nextState;
             TokenizedLines[lineIndex] = TextMateTokenizedLine.Create(line.Length, result.Tokens);
-            _speculativeTokenizedLines.Remove(lineIndex);
+            ClearSpeculativeTokenizedLine(lineIndex);
             if (lineIndex == _validLineCount)
             {
                 _validLineCount = lineIndex + 1;
@@ -523,14 +525,11 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
 
             firstVisibleLineIndex = Math.Clamp(firstVisibleLineIndex, 0, LineCount - 1);
             lastVisibleLineIndex = Math.Clamp(lastVisibleLineIndex, firstVisibleLineIndex, LineCount - 1);
-            lock (_syncRoot)
+            for (var lineIndex = firstVisibleLineIndex; lineIndex <= lastVisibleLineIndex; lineIndex++)
             {
-                for (var lineIndex = firstVisibleLineIndex; lineIndex <= lastVisibleLineIndex; lineIndex++)
+                if (TokenizedLines[lineIndex] is null && Volatile.Read(ref _speculativeTokenizedLines[lineIndex]) is null)
                 {
-                    if (TokenizedLines[lineIndex] is null && !_speculativeTokenizedLines.ContainsKey(lineIndex))
-                    {
-                        return true;
-                    }
+                    return true;
                 }
             }
 
@@ -554,19 +553,27 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
             var oldLine = previousState.Snapshot.GetLine(oldLineIndex);
             var newLine = Snapshot.GetLine(newLineIndex);
             if (oldLineIndex != newLineIndex
-                || oldLine.LineBreakLength != newLine.LineBreakLength
-                || previousState.TokenizedLines[oldLineIndex] is not { } oldTokenizedLine)
+                || oldLine.LineBreakLength != newLine.LineBreakLength)
+            {
+                TryCopyApproximateLineBreakEdit(previousState, change, oldLineIndex);
+                return;
+            }
+
+            var oldTokenizedLine = previousState.GetBestAvailableLineTokens(oldLineIndex);
+            if (oldTokenizedLine is null)
             {
                 return;
             }
 
             var changeStartInLine = Math.Clamp(change.Position - oldLine.Start, 0, oldLine.Length);
-            TokenizedLines[newLineIndex] = TextMateTokenizedLine.ShiftForIntraLineEdit(
+            SetSpeculativeTokenizedLine(
+                newLineIndex,
+                TextMateTokenizedLine.ShiftForIntraLineEdit(
                 oldTokenizedLine,
                 changeStartInLine,
                 change.RemovedLength,
                 change.InsertedLength,
-                newLine.Length);
+                newLine.Length));
         }
 
         private void CopyApproximateSuffix(TextMateCodeEditorSyntaxState previousState, int sourceStartLine, int destinationStartLine)
@@ -580,9 +587,11 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
             var destinationLine = destinationStartLine;
             while (sourceLine < previousState.LineCount && destinationLine < LineCount)
             {
-                if (TokenizedLines[destinationLine] is null && previousState.TokenizedLines[sourceLine] is { } tokenizedLine)
+                if (TokenizedLines[destinationLine] is null
+                    && Volatile.Read(ref _speculativeTokenizedLines[destinationLine]) is null
+                    && previousState.GetBestAvailableLineTokens(sourceLine) is { } tokenizedLine)
                 {
-                    TokenizedLines[destinationLine] = tokenizedLine;
+                    SetSpeculativeTokenizedLine(destinationLine, tokenizedLine);
                 }
 
                 sourceLine++;
@@ -592,17 +601,24 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
 
         private void BuildSpeculativeWindow(int firstVisibleLineIndex, int lastVisibleLineIndex, CancellationToken cancellationToken)
         {
-            var targetLineIndex = firstVisibleLineIndex;
-            var startLine = Math.Max(0, firstVisibleLineIndex - _speculativeLookBehindLineCount);
-            IStateStack? state = null;
-
-            if (TryFindNearbyCheckpoint(targetLineIndex, out var checkpointLine, out var checkpointState))
+            int startLine;
+            int endLineExclusive;
+            IStateStack? state;
+            lock (_syncRoot)
             {
-                startLine = checkpointLine;
-                state = checkpointState;
+                var targetLineIndex = firstVisibleLineIndex;
+                startLine = Math.Max(0, firstVisibleLineIndex - _speculativeLookBehindLineCount);
+                state = null;
+
+                if (TryFindNearbyCheckpoint(targetLineIndex, out var checkpointLine, out var checkpointState))
+                {
+                    startLine = checkpointLine;
+                    state = checkpointState;
+                }
+
+                endLineExclusive = Math.Min(LineCount, Math.Max(lastVisibleLineIndex + 1, startLine + _speculativeWindowLineCount));
             }
 
-            var endLineExclusive = Math.Min(LineCount, Math.Max(lastVisibleLineIndex + 1, startLine + _speculativeWindowLineCount));
             for (var lineIndex = startLine; lineIndex < endLineExclusive; lineIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -611,24 +627,115 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
                 state = result.RuleStack;
                 if (TokenizedLines[lineIndex] is null)
                 {
-                    _speculativeTokenizedLines[lineIndex] = TextMateTokenizedLine.Create(line.Length, result.Tokens);
+                    SetSpeculativeTokenizedLine(lineIndex, TextMateTokenizedLine.Create(line.Length, result.Tokens));
                 }
             }
 
-            var maxCachedLines = Math.Max(_speculativeWindowLineCount * 4, 256);
-            if (_speculativeTokenizedLines.Count <= maxCachedLines)
+            TrimSpeculativeWindow(firstVisibleLineIndex, lastVisibleLineIndex);
+        }
+
+        private void CopySpeculativeLines(TextMateCodeEditorSyntaxState previousState, TextDocumentChangedEventArgs? change)
+        {
+            int[] speculativeLineIndices;
+            lock (previousState._syncRoot)
             {
-                return;
+                speculativeLineIndices = previousState._speculativeTokenizedLineIndices.ToArray();
             }
 
-            var focusLine = (firstVisibleLineIndex + lastVisibleLineIndex) / 2;
-            var minLine = Math.Max(0, focusLine - maxCachedLines / 2);
-            var maxLine = Math.Min(LineCount - 1, focusLine + maxCachedLines / 2);
-            var linesToRemove = _speculativeTokenizedLines.Keys.Where(line => line < minLine || line > maxLine).ToArray();
-            for (var i = 0; i < linesToRemove.Length; i++)
+            for (var i = 0; i < speculativeLineIndices.Length; i++)
             {
-                _speculativeTokenizedLines.Remove(linesToRemove[i]);
+                var lineIndex = speculativeLineIndices[i];
+                var tokenizedLine = Volatile.Read(ref previousState._speculativeTokenizedLines[lineIndex]);
+                if (tokenizedLine is null)
+                {
+                    continue;
+                }
+
+                if (TryMapSpeculativeLine(previousState, change, lineIndex, tokenizedLine, out var newLineIndex, out var mappedLine))
+                {
+                    SetSpeculativeTokenizedLine(newLineIndex, mappedLine);
+                }
             }
+        }
+
+        private bool TryMapSpeculativeLine(
+            TextMateCodeEditorSyntaxState previousState,
+            TextDocumentChangedEventArgs? change,
+            int oldLineIndex,
+            TextMateTokenizedLine tokenizedLine,
+            out int newLineIndex,
+            out TextMateTokenizedLine mappedLine)
+        {
+            newLineIndex = -1;
+            mappedLine = TextMateTokenizedLine.Empty;
+
+            if (change is null)
+            {
+                if ((uint)oldLineIndex >= (uint)LineCount)
+                {
+                    return false;
+                }
+
+                newLineIndex = oldLineIndex;
+                mappedLine = tokenizedLine;
+                return true;
+            }
+
+            var oldLine = previousState.Snapshot.GetLine(oldLineIndex);
+            var deltaLines = change.NewLineCount - change.OldLineCount;
+            var oldAffectedEndPosition = Math.Min(previousState.Snapshot.Length, change.Position + change.RemovedLength);
+
+            if (oldLine.EndIncludingBreak <= change.Position)
+            {
+                if ((uint)oldLineIndex >= (uint)LineCount)
+                {
+                    return false;
+                }
+
+                newLineIndex = oldLineIndex;
+                mappedLine = tokenizedLine;
+                return true;
+            }
+
+            if (oldLine.Start >= oldAffectedEndPosition)
+            {
+                var shiftedLineIndex = oldLineIndex + deltaLines;
+                if ((uint)shiftedLineIndex >= (uint)LineCount)
+                {
+                    return false;
+                }
+
+                newLineIndex = shiftedLineIndex;
+                mappedLine = tokenizedLine;
+                return true;
+            }
+
+            if (change.OldLineCount == change.NewLineCount)
+            {
+                if ((uint)oldLineIndex >= (uint)LineCount)
+                {
+                    return false;
+                }
+
+                var newLine = Snapshot.GetLine(oldLineIndex);
+                var changeStartInLine = Math.Clamp(change.Position - oldLine.Start, 0, oldLine.Length);
+                newLineIndex = oldLineIndex;
+                mappedLine = TextMateTokenizedLine.ShiftForIntraLineEdit(
+                    tokenizedLine,
+                    changeStartInLine,
+                    change.RemovedLength,
+                    change.InsertedLength,
+                    newLine.Length);
+                return true;
+            }
+
+            return TextMateTokenizedLine.TryMapLineBreakInsertion(
+                tokenizedLine,
+                oldLine,
+                Snapshot,
+                change,
+                out newLineIndex,
+                out mappedLine);
         }
 
         private bool TryFindNearbyCheckpoint(int targetLineIndex, out int checkpointLine, out IStateStack? checkpointState)
@@ -660,6 +767,114 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
             }
 
             return false;
+        }
+
+        private TextMateTokenizedLine? GetBestAvailableLineTokens(int lineIndex)
+        {
+            if ((uint)lineIndex >= (uint)LineCount)
+            {
+                return null;
+            }
+
+            return TokenizedLines[lineIndex] ?? Volatile.Read(ref _speculativeTokenizedLines[lineIndex]);
+        }
+
+        private void SetSpeculativeTokenizedLine(int lineIndex, TextMateTokenizedLine tokenizedLine)
+        {
+            if ((uint)lineIndex >= (uint)LineCount || tokenizedLine.Segments.Length == 0 || TokenizedLines[lineIndex] is not null)
+            {
+                return;
+            }
+
+            lock (_syncRoot)
+            {
+                if ((uint)lineIndex >= (uint)LineCount || TokenizedLines[lineIndex] is not null)
+                {
+                    return;
+                }
+
+                if (_speculativeTokenizedLines[lineIndex] is null)
+                {
+                    _speculativeTokenizedLineIndices.Add(lineIndex);
+                }
+
+                Volatile.Write(ref _speculativeTokenizedLines[lineIndex], tokenizedLine);
+            }
+        }
+
+        private void ClearSpeculativeTokenizedLine(int lineIndex)
+        {
+            if ((uint)lineIndex >= (uint)LineCount)
+            {
+                return;
+            }
+
+            lock (_syncRoot)
+            {
+                if ((uint)lineIndex >= (uint)LineCount || _speculativeTokenizedLines[lineIndex] is null)
+                {
+                    return;
+                }
+
+                Volatile.Write(ref _speculativeTokenizedLines[lineIndex], null);
+                _speculativeTokenizedLineIndices.Remove(lineIndex);
+            }
+        }
+
+        private void TrimSpeculativeWindow(int firstVisibleLineIndex, int lastVisibleLineIndex)
+        {
+            var maxCachedLines = Math.Max(_speculativeWindowLineCount * 4, 256);
+            lock (_syncRoot)
+            {
+                if (_speculativeTokenizedLineIndices.Count <= maxCachedLines)
+                {
+                    return;
+                }
+
+                var focusLine = (firstVisibleLineIndex + lastVisibleLineIndex) / 2;
+                var minLine = Math.Max(0, focusLine - maxCachedLines / 2);
+                var maxLine = Math.Min(LineCount - 1, focusLine + maxCachedLines / 2);
+                for (var i = _speculativeTokenizedLineIndices.Count - 1; i >= 0; i--)
+                {
+                    var lineIndex = _speculativeTokenizedLineIndices[i];
+                    if (lineIndex >= minLine && lineIndex <= maxLine)
+                    {
+                        continue;
+                    }
+
+                    _speculativeTokenizedLineIndices.RemoveAt(i);
+                    Volatile.Write(ref _speculativeTokenizedLines[lineIndex], null);
+                }
+            }
+        }
+
+        private void TryCopyApproximateLineBreakEdit(TextMateCodeEditorSyntaxState previousState, TextDocumentChangedEventArgs change, int oldLineIndex)
+        {
+            if (change.RemovedLength != 0
+                || string.IsNullOrEmpty(change.InsertedTextHint)
+                || change.NewLineCount != change.OldLineCount + 1)
+            {
+                return;
+            }
+
+            var oldTokenizedLine = previousState.GetBestAvailableLineTokens(oldLineIndex);
+            if (oldTokenizedLine is null)
+            {
+                return;
+            }
+
+            if (!TextMateTokenizedLine.TryMapLineBreakInsertion(
+                    oldTokenizedLine,
+                    previousState.Snapshot.GetLine(oldLineIndex),
+                    Snapshot,
+                    change,
+                    out var mappedLineIndex,
+                    out var mappedLine))
+            {
+                return;
+            }
+
+            SetSpeculativeTokenizedLine(mappedLineIndex, mappedLine);
         }
 
         private LineText GetLineText(TextLine line, bool includeLineBreak)

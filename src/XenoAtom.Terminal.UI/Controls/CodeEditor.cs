@@ -461,6 +461,7 @@ public sealed partial class CodeEditor : TextEditorBase
     private int _pendingVisibleSyntaxLastLine = -1;
     private CancellationTokenSource? _visibleSyntaxUpdateCts;
     private int _lastVisibleLineRequestCount;
+    private int _preservedHighlightCacheSnapshotVersion = -1;
     private Rectangle _lastArrangeRect;
     private bool _hasArrangedOnce;
     private int _line = 1;
@@ -913,7 +914,13 @@ public sealed partial class CodeEditor : TextEditorBase
     protected override void OnDocumentChanged(TextDocumentChangedEventArgs e)
     {
         _lastDocumentChange = e;
-        InvalidateHighlightCache();
+        var preservedHighlightCache = TryPreserveVisibleHighlightCacheForDocumentChange(e);
+        InvalidateHighlightCache(preserveLineCache: preservedHighlightCache);
+        if (preservedHighlightCache)
+        {
+            _preservedHighlightCacheSnapshotVersion = e.NewVersion;
+        }
+
         base.OnDocumentChanged(e);
     }
 
@@ -1261,18 +1268,31 @@ public sealed partial class CodeEditor : TextEditorBase
         var searchState = GetSearchState();
         var syntaxVisualVersion = SyntaxVisualVersion;
         var dependsOnCaretOrSelection = highlighter is not null || syntaxHighlighter?.DependsOnCaretOrSelection != false;
+        var syntaxCompatibilityStamp = syntaxHighlighter?.GetCompatibilityStamp(theme) ?? 0;
+        var renderableSyntaxState = GetRenderableSyntaxState(version, syntaxHighlighter, syntaxCompatibilityStamp);
 
-        var requiresMetadataRefresh = _cachedHighlightSnapshotVersion != version
-            || !ReferenceEquals(_cachedHighlightTheme, theme)
-            || !Equals(_cachedHighlighter, highlighter)
-            || !ReferenceEquals(_cachedSyntaxHighlighter, syntaxHighlighter)
-            || _cachedSyntaxVisualVersion != syntaxVisualVersion
-            || (dependsOnCaretOrSelection && _cachedHighlightCaretIndex != caretIndex)
-            || (dependsOnCaretOrSelection && _cachedHighlightSelectionStart != selectionStart)
-            || (dependsOnCaretOrSelection && _cachedHighlightSelectionLength != selectionLength)
-            || !_cachedSearchQuery.Equals(searchState.Query)
-            || _cachedSearchActiveMatchIndex != searchState.ActiveMatchIndex
-            || _cachedSearchMatchCount != searchState.Matches.Count;
+        var snapshotChanged = _cachedHighlightSnapshotVersion != version;
+        var themeChanged = !ReferenceEquals(_cachedHighlightTheme, theme);
+        var highlighterChanged = !Equals(_cachedHighlighter, highlighter);
+        var syntaxHighlighterChanged = !ReferenceEquals(_cachedSyntaxHighlighter, syntaxHighlighter);
+        var syntaxVisualChanged = _cachedSyntaxVisualVersion != syntaxVisualVersion;
+        var caretChanged = dependsOnCaretOrSelection && _cachedHighlightCaretIndex != caretIndex;
+        var selectionStartChanged = dependsOnCaretOrSelection && _cachedHighlightSelectionStart != selectionStart;
+        var selectionLengthChanged = dependsOnCaretOrSelection && _cachedHighlightSelectionLength != selectionLength;
+        var searchQueryChanged = !_cachedSearchQuery.Equals(searchState.Query);
+        var searchActiveMatchChanged = _cachedSearchActiveMatchIndex != searchState.ActiveMatchIndex;
+        var searchMatchCountChanged = _cachedSearchMatchCount != searchState.Matches.Count;
+        var requiresMetadataRefresh = snapshotChanged
+            || themeChanged
+            || highlighterChanged
+            || syntaxHighlighterChanged
+            || syntaxVisualChanged
+            || caretChanged
+            || selectionStartChanged
+            || selectionLengthChanged
+            || searchQueryChanged
+            || searchActiveMatchChanged
+            || searchMatchCountChanged;
 
         var firstVisibleLineIndex = _visibleLines.Count > 0 ? _visibleLines[0].LineIndex : -1;
         var lastVisibleLineIndex = _visibleLines.Count > 0 ? _visibleLines[^1].LineIndex : -1;
@@ -1294,8 +1314,26 @@ public sealed partial class CodeEditor : TextEditorBase
             _cachedSearchQuery = searchState.Query;
             _cachedSearchActiveMatchIndex = searchState.ActiveMatchIndex;
             _cachedSearchMatchCount = searchState.Matches.Count;
-            _lineHighlightCache.Clear();
+            var preserveLineCache = snapshotChanged
+                && !themeChanged
+                && !highlighterChanged
+                && !syntaxHighlighterChanged
+                && !syntaxVisualChanged
+                && !caretChanged
+                && !selectionStartChanged
+                && !selectionLengthChanged
+                && !searchQueryChanged
+                && !searchActiveMatchChanged
+                && !searchMatchCountChanged
+                && _preservedHighlightCacheSnapshotVersion == version;
+            if (!preserveLineCache)
+            {
+                _lineHighlightCache.Clear();
+            }
+
+            _preservedHighlightCacheSnapshotVersion = -1;
             EnsureSyntaxRefresh();
+            renderableSyntaxState = GetRenderableSyntaxState(version, syntaxHighlighter, syntaxCompatibilityStamp);
         }
 
         _cachedHighlightScrollOffsetY = Scroll.OffsetY;
@@ -1327,13 +1365,11 @@ public sealed partial class CodeEditor : TextEditorBase
 
             var workingRuns = GetOrCreateWorkingRuns(lineIndex);
             workingRuns.Clear();
-            if (_syntaxState is not null
-                && syntaxHighlighter is not null
-                && _syntaxState.SnapshotVersion == version
-                && _syntaxState.CompatibilityStamp == syntaxHighlighter.GetCompatibilityStamp(theme))
+            if (renderableSyntaxState is not null
+                && syntaxHighlighter is not null)
             {
                 syntaxHighlighter.GetLineRuns(
-                    _syntaxState,
+                    renderableSyntaxState,
                     new CodeEditorLineSyntaxRequest(snapshot, theme, visible.LineIndex, visible.LineStart, visible.LineLength, caretIndex, selectionStart, selectionLength),
                     workingRuns);
             }
@@ -1342,7 +1378,7 @@ public sealed partial class CodeEditor : TextEditorBase
                 highlighter(new CodeEditorLineHighlightRequest(snapshot, theme, visible.LineIndex, visible.LineStart, visible.LineLength, caretIndex, selectionStart, selectionLength), workingRuns);
             }
 
-            if (syntaxHighlighter is not null && !HasUsableSyntaxCoverage(_syntaxState, lineIndex))
+            if (syntaxHighlighter is not null && !HasUsableSyntaxCoverage(renderableSyntaxState, lineIndex))
             {
                 missingVisibleSyntax = true;
             }
@@ -1858,7 +1894,231 @@ public sealed partial class CodeEditor : TextEditorBase
         }
     }
 
-    private void InvalidateHighlightCache()
+    private bool TryPreserveVisibleHighlightCacheForDocumentChange(TextDocumentChangedEventArgs change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+
+        if (_lineHighlightCache.Count == 0)
+        {
+            return false;
+        }
+
+        if (!Highlighter.IsEmpty)
+        {
+            return false;
+        }
+
+        var syntaxHighlighter = SyntaxHighlighter;
+        if (syntaxHighlighter is null || syntaxHighlighter.DependsOnCaretOrSelection)
+        {
+            return false;
+        }
+
+        var searchState = GetSearchState();
+        if (!string.IsNullOrEmpty(searchState.Query.Text) || searchState.Matches.Count != 0)
+        {
+            return false;
+        }
+
+        var snapshot = TextDocument.CurrentSnapshot;
+        if (snapshot.Version != change.NewVersion)
+        {
+            return false;
+        }
+
+        Dictionary<int, LineHighlightCacheEntry>? preservedEntries = null;
+        foreach (var pair in _lineHighlightCache)
+        {
+            if (!TryCreatePreservedHighlightCacheEntry(snapshot, pair.Key, pair.Value, change, out var newLineIndex, out var preservedEntry))
+            {
+                continue;
+            }
+
+            preservedEntries ??= new Dictionary<int, LineHighlightCacheEntry>(_lineHighlightCache.Count);
+            preservedEntries[newLineIndex] = preservedEntry;
+        }
+
+        if (preservedEntries is null || preservedEntries.Count == 0)
+        {
+            return false;
+        }
+
+        _lineHighlightCache.Clear();
+        foreach (var pair in preservedEntries)
+        {
+            _lineHighlightCache[pair.Key] = pair.Value;
+        }
+
+        return true;
+    }
+
+    private static bool TryCreatePreservedHighlightCacheEntry(
+        ITextSnapshot snapshot,
+        int oldLineIndex,
+        LineHighlightCacheEntry entry,
+        TextDocumentChangedEventArgs change,
+        out int newLineIndex,
+        out LineHighlightCacheEntry preservedEntry)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(change);
+
+        newLineIndex = -1;
+        preservedEntry = default!;
+
+        var deltaChars = change.InsertedLength - change.RemovedLength;
+        var deltaLines = change.NewLineCount - change.OldLineCount;
+        var oldLineStart = entry.LineStart;
+        var oldLineEnd = entry.LineStart + entry.LineLength;
+        var oldAffectedEnd = change.Position + change.RemovedLength;
+
+        if (oldLineEnd <= change.Position)
+        {
+            newLineIndex = oldLineIndex;
+            return TryCreatePreservedHighlightCacheEntry(snapshot, newLineIndex, entry.Runs, expectedLineStart: oldLineStart, expectedLineLength: entry.LineLength, out preservedEntry);
+        }
+
+        if (oldLineStart >= oldAffectedEnd)
+        {
+            newLineIndex = oldLineIndex + deltaLines;
+            var newLineStart = oldLineStart + deltaChars;
+            return TryCreatePreservedHighlightCacheEntry(snapshot, newLineIndex, entry.Runs, expectedLineStart: newLineStart, expectedLineLength: entry.LineLength, out preservedEntry);
+        }
+
+        if (change.OldLineCount == change.NewLineCount)
+        {
+            newLineIndex = oldLineIndex;
+            var newLineLength = Math.Max(0, entry.LineLength + deltaChars);
+            var changeStartInLine = Math.Clamp(change.Position - oldLineStart, 0, entry.LineLength);
+            var shiftedRuns = ShiftStyledRunsForIntraLineEdit(entry.Runs, changeStartInLine, change.RemovedLength, change.InsertedLength, newLineLength);
+            return TryCreatePreservedHighlightCacheEntry(snapshot, newLineIndex, shiftedRuns, expectedLineStart: oldLineStart, expectedLineLength: newLineLength, out preservedEntry);
+        }
+
+        return false;
+    }
+
+    private static bool TryCreatePreservedHighlightCacheEntry(
+        ITextSnapshot snapshot,
+        int lineIndex,
+        StyledRun[] runs,
+        int expectedLineStart,
+        int expectedLineLength,
+        out LineHighlightCacheEntry entry)
+    {
+        entry = default!;
+        if ((uint)lineIndex >= (uint)snapshot.LineCount)
+        {
+            return false;
+        }
+
+        var line = snapshot.GetLine(lineIndex);
+        if (line.Start != expectedLineStart || line.Length != expectedLineLength)
+        {
+            return false;
+        }
+
+        entry = new LineHighlightCacheEntry(line.Start, line.Length, runs);
+        return true;
+    }
+
+    private static StyledRun[] ShiftStyledRunsForIntraLineEdit(StyledRun[] runs, int changeStart, int removedLength, int insertedLength, int newLineLength)
+    {
+        ArgumentNullException.ThrowIfNull(runs);
+
+        if (runs.Length == 0 || newLineLength <= 0)
+        {
+            return Array.Empty<StyledRun>();
+        }
+
+        changeStart = Math.Clamp(changeStart, 0, newLineLength);
+        removedLength = Math.Max(0, removedLength);
+        insertedLength = Math.Max(0, insertedLength);
+
+        var oldChangeEnd = changeStart + removedLength;
+        var delta = insertedLength - removedLength;
+        var rebuilt = new List<StyledRun>(runs.Length + 2);
+        Style? insertedStyle = null;
+
+        for (var i = 0; i < runs.Length; i++)
+        {
+            var run = runs[i];
+            var runStart = run.Start;
+            var runEnd = run.Start + run.Length;
+
+            if (runEnd <= changeStart)
+            {
+                AddShiftedStyledRun(rebuilt, runStart, runEnd, run.Style, newLineLength);
+                if (runEnd == changeStart)
+                {
+                    insertedStyle = run.Style;
+                }
+
+                continue;
+            }
+
+            if (runStart >= oldChangeEnd)
+            {
+                AddShiftedStyledRun(rebuilt, runStart + delta, runEnd + delta, run.Style, newLineLength);
+                continue;
+            }
+
+            if (runStart < changeStart)
+            {
+                AddShiftedStyledRun(rebuilt, runStart, changeStart, run.Style, newLineLength);
+                insertedStyle = run.Style;
+            }
+            else if (insertedStyle is null)
+            {
+                insertedStyle = run.Style;
+            }
+
+            if (runEnd > oldChangeEnd)
+            {
+                AddShiftedStyledRun(rebuilt, changeStart + insertedLength, runEnd + delta, run.Style, newLineLength);
+            }
+        }
+
+        if (insertedLength > 0)
+        {
+            if (insertedStyle is null && rebuilt.Count > 0)
+            {
+                insertedStyle = rebuilt[^1].Style;
+            }
+
+            if (insertedStyle is Style style)
+            {
+                AddShiftedStyledRun(rebuilt, changeStart, changeStart + insertedLength, style, newLineLength);
+            }
+        }
+
+        return rebuilt.Count == 0 ? Array.Empty<StyledRun>() : rebuilt.ToArray();
+    }
+
+    private static void AddShiftedStyledRun(List<StyledRun> destination, int start, int end, Style style, int lineLength)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+
+        start = Math.Clamp(start, 0, lineLength);
+        end = Math.Clamp(end, 0, lineLength);
+        if (end <= start)
+        {
+            return;
+        }
+
+        if (destination.Count > 0)
+        {
+            var previous = destination[^1];
+            if (previous.Start + previous.Length == start && previous.Style == style)
+            {
+                destination[^1] = new StyledRun(previous.Start, previous.Length + (end - start), previous.Style);
+                return;
+            }
+        }
+
+        destination.Add(new StyledRun(start, end - start, style));
+    }
+
+    private void InvalidateHighlightCache(bool preserveLineCache = false)
     {
         _cachedHighlightSnapshotVersion = -1;
         _cachedHighlightTheme = null;
@@ -1873,7 +2133,11 @@ public sealed partial class CodeEditor : TextEditorBase
         _cachedSearchActiveMatchIndex = -1;
         _cachedSearchMatchCount = -1;
         _lastVisibleLineRequestCount = 0;
-        _lineHighlightCache.Clear();
+        _preservedHighlightCacheSnapshotVersion = -1;
+        if (!preserveLineCache)
+        {
+            _lineHighlightCache.Clear();
+        }
     }
 
     private void NotifySyntaxVisualStateChanged()
@@ -1883,6 +2147,19 @@ public sealed partial class CodeEditor : TextEditorBase
         {
             SyntaxVisualVersion++;
         });
+    }
+
+    private CodeEditorSyntaxState? GetRenderableSyntaxState(int snapshotVersion, CodeEditorSyntaxHighlighter? syntaxHighlighter, long compatibilityStamp)
+    {
+        if (_syntaxState is null || syntaxHighlighter is null)
+        {
+            return null;
+        }
+
+        return _syntaxState.SnapshotVersion == snapshotVersion
+            && _syntaxState.CompatibilityStamp == compatibilityStamp
+            ? _syntaxState
+            : null;
     }
 
     private static bool HasUsableSyntaxCoverage(CodeEditorSyntaxState? syntaxState, int lineIndex)

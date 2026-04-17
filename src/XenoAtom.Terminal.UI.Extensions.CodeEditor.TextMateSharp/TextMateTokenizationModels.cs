@@ -118,6 +118,92 @@ internal sealed class TextMateTokenizedLine
         return rebuilt.Count == 0 ? Empty : new TextMateTokenizedLine(rebuilt.ToArray());
     }
 
+    public static bool TryMapLineBreakInsertion(
+        TextMateTokenizedLine source,
+        TextLine oldLine,
+        ITextSnapshot newSnapshot,
+        TextDocumentChangedEventArgs change,
+        out int newLineIndex,
+        out TextMateTokenizedLine mappedLine)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(newSnapshot);
+        ArgumentNullException.ThrowIfNull(change);
+
+        newLineIndex = -1;
+        mappedLine = Empty;
+
+        if (change.RemovedLength != 0
+            || string.IsNullOrEmpty(change.InsertedTextHint)
+            || !ContainsLineBreak(change.InsertedTextHint))
+        {
+            return false;
+        }
+
+        var changeStartInLine = change.Position - oldLine.Start;
+        if (changeStartInLine < 0 || changeStartInLine > oldLine.Length)
+        {
+            return false;
+        }
+
+        var lineIndex = newSnapshot.GetLineIndexFromPosition(Math.Clamp(change.Position, 0, newSnapshot.Length));
+        if ((uint)lineIndex >= (uint)newSnapshot.LineCount)
+        {
+            return false;
+        }
+
+        var newLine = newSnapshot.GetLine(lineIndex);
+        if (newLine.Start != oldLine.Start || newLine.Length != changeStartInLine)
+        {
+            return false;
+        }
+
+        newLineIndex = lineIndex;
+        mappedLine = Slice(source, 0, changeStartInLine);
+        return true;
+    }
+
+    public static TextMateTokenizedLine Slice(TextMateTokenizedLine source, int start, int length)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        if (length <= 0 || source.Segments.Length == 0)
+        {
+            return Empty;
+        }
+
+        start = Math.Max(0, start);
+        var end = start + length;
+        var rebuilt = new List<TextMateTokenizedSegment>(source.Segments.Length);
+        for (var i = 0; i < source.Segments.Length; i++)
+        {
+            var segment = source.Segments[i];
+            var segmentStart = Math.Max(segment.Start, start);
+            var segmentEnd = Math.Min(segment.End, end);
+            if (segmentEnd <= segmentStart)
+            {
+                continue;
+            }
+
+            AddSegment(rebuilt, segmentStart - start, segmentEnd - start, segment.Metadata, length);
+        }
+
+        return rebuilt.Count == 0 ? Empty : new TextMateTokenizedLine(rebuilt.ToArray());
+    }
+
+    private static bool ContainsLineBreak(string text)
+    {
+        for (var i = 0; i < text.Length; i++)
+        {
+            if (text[i] is '\r' or '\n')
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static void AddSegment(List<TextMateTokenizedSegment> segments, int start, int end, int metadata, int contentLength)
     {
         start = Math.Clamp(start, 0, contentLength);

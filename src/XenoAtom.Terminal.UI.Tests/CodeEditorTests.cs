@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Rendering;
@@ -434,6 +435,67 @@ public sealed class CodeEditorTests
 
         highlighter.UpdateRequests[0].Complete(new TestSyntaxState(editor.TextDocument.CurrentSnapshot.Version));
         driver.TickUntil(() => editor.GetSyntaxStateSnapshotVersionForTests() == editor.TextDocument.CurrentSnapshot.Version);
+    }
+
+    [TestMethod]
+    public async Task TextMate_LargeDocument_Update_Preserves_Prepared_Visible_Line_Highlighting()
+    {
+        var text = string.Join('\n', Enumerable.Range(0, 220).Select(i => $"var value{i:0000} = \"text{i:0000}\";"));
+        var highlighter = new TextMateCodeEditorSyntaxHighlighter(
+            new TextMateCodeEditorOptions
+            {
+                LanguageId = "csharp",
+                LargeDocumentLineThreshold = 1,
+                LargeDocumentCharacterThreshold = 1,
+                BackgroundTokenizationLineBudget = 1,
+                CheckpointLineInterval = 64,
+                SpeculativeLookBehindLineCount = 8,
+                SpeculativeWindowLineCount = 24,
+                SpeculativeCheckpointSearchLineCount = 32,
+            });
+
+        var theme = Theme.Default;
+        var document = new TextDocument(text);
+        var snapshot = document.CurrentSnapshot;
+        var visibleLine = snapshot.LineCount - 2;
+        var firstVisibleLine = Math.Max(0, visibleLine - 3);
+        var lastVisibleLine = snapshot.LineCount - 1;
+
+        var state = await highlighter.BuildAsync(new CodeEditorSyntaxBuildContext(snapshot, theme, 0, 0, 0));
+        state = await highlighter.PrepareVisibleRangeAsync(
+            state,
+            new CodeEditorSyntaxVisibleRangeContext(snapshot, theme, firstVisibleLine, lastVisibleLine, 0, 0, 0));
+
+        var initialRuns = new List<StyledRun>();
+        var initialLine = snapshot.GetLine(visibleLine);
+        highlighter.GetLineRuns(
+            state,
+            new CodeEditorLineSyntaxRequest(snapshot, theme, visibleLine, initialLine.Start, initialLine.Length, 0, 0, 0),
+            initialRuns);
+        Assert.IsTrue(initialRuns.Count > 0, "Expected the prepared visible range to provide non-empty TextMate runs before editing.");
+
+        TextDocumentChangedEventArgs? change = null;
+        document.Changed += (_, args) => change = args;
+        document.Insert(document.CurrentSnapshot.Length, "\n");
+
+        Assert.IsNotNull(change, "Expected the document edit to raise change metadata for the incremental TextMate update.");
+
+        var updatedSnapshot = document.CurrentSnapshot;
+        var startLine = updatedSnapshot.GetLineIndexFromPosition(Math.Clamp(change.Position, 0, updatedSnapshot.Length));
+        var endPosition = Math.Min(updatedSnapshot.Length, change.Position + change.InsertedLength);
+        var endLine = updatedSnapshot.GetLineIndexFromPosition(endPosition);
+
+        var updatedState = await highlighter.UpdateAsync(
+            state,
+            new CodeEditorSyntaxUpdateContext(updatedSnapshot, theme, change, startLine, endLine, updatedSnapshot.Length, updatedSnapshot.Length, 0));
+
+        var updatedRuns = new List<StyledRun>();
+        var updatedLine = updatedSnapshot.GetLine(visibleLine);
+        highlighter.GetLineRuns(
+            updatedState,
+            new CodeEditorLineSyntaxRequest(updatedSnapshot, theme, visibleLine, updatedLine.Start, updatedLine.Length, updatedSnapshot.Length, updatedSnapshot.Length, 0),
+            updatedRuns);
+        Assert.IsTrue(updatedRuns.Count > 0, "Expected the incremental TextMate update to preserve the already prepared visible-line highlighting instead of dropping back to white.");
     }
 
     [TestMethod]
@@ -1096,6 +1158,8 @@ public sealed class CodeEditorTests
 
         public int LastAppliedStateVersion { get; private set; } = -1;
 
+        public override bool DependsOnCaretOrSelection => false;
+
         public override CodeEditorSyntaxState Build(in CodeEditorSyntaxBuildContext context) => new TestSyntaxState(context.Snapshot.Version);
 
         public override CodeEditorSyntaxState Update(CodeEditorSyntaxState previousState, in CodeEditorSyntaxUpdateContext context)
@@ -1358,7 +1422,7 @@ public sealed class CodeEditorTests
         }
     }
 
-    private sealed class ViewportSyntaxState : CodeEditorSyntaxState
+    private sealed class ViewportSyntaxState : CodeEditorSyntaxState, ICodeEditorSyntaxCoverageState
     {
         public ViewportSyntaxState(int snapshotVersion, int preparedFirstLine = -1, int preparedLastLine = -1)
         {
@@ -1372,6 +1436,9 @@ public sealed class CodeEditorTests
         public int PreparedFirstLine { get; }
 
         public int PreparedLastLine { get; }
+
+        public bool HasLineCoverage(int lineIndex)
+            => lineIndex >= PreparedFirstLine && lineIndex <= PreparedLastLine;
     }
 
     private sealed class PendingRequest
