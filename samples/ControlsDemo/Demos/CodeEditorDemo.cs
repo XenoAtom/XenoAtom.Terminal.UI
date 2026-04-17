@@ -289,6 +289,9 @@ public sealed class CodeEditorDemo : ControlsDemoBase
         public override CodeEditorSyntaxState Update(CodeEditorSyntaxState previousState, in CodeEditorSyntaxUpdateContext context)
             => _inner.Update(previousState, context);
 
+        public override long GetCompatibilityStamp(Theme theme)
+            => _inner.GetCompatibilityStamp(theme);
+
         public override void GetLineRuns(CodeEditorSyntaxState state, in CodeEditorLineSyntaxRequest request, List<StyledRun> runs)
             => _inner.GetLineRuns(state, request, runs);
     }

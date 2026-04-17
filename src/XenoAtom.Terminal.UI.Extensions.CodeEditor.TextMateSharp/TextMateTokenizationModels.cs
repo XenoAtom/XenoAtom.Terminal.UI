@@ -2,13 +2,11 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using System.Linq;
-using TextMateSharp.Grammars;
 using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp;
 
-internal readonly record struct TextMateTokenizedSegment(int Start, int End, string[] Scopes, string ScopeKey);
+internal readonly record struct TextMateTokenizedSegment(int Start, int End, int Metadata);
 
 internal sealed class TextMateTokenizedLine
 {
@@ -21,48 +19,125 @@ internal sealed class TextMateTokenizedLine
 
     public TextMateTokenizedSegment[] Segments { get; }
 
-    public static TextMateTokenizedLine Create(int contentLength, IToken[] tokens)
+    public static TextMateTokenizedLine Create(int contentLength, int[] binaryTokens)
     {
-        ArgumentNullException.ThrowIfNull(tokens);
+        ArgumentNullException.ThrowIfNull(binaryTokens);
 
-        if (contentLength <= 0)
+        if (contentLength <= 0 || binaryTokens.Length < 2)
         {
             return Empty;
         }
 
-        if (tokens.Length == 0)
+        var pairCount = binaryTokens.Length / 2;
+        var segments = new List<TextMateTokenizedSegment>(pairCount);
+        for (var pairIndex = 0; pairIndex < pairCount; pairIndex++)
         {
-            return new TextMateTokenizedLine(Array.Empty<TextMateTokenizedSegment>());
-        }
-
-        var segments = new List<TextMateTokenizedSegment>(tokens.Length);
-        for (var index = 0; index < tokens.Length; index++)
-        {
-            var token = tokens[index];
-            var start = Math.Clamp(token.StartIndex, 0, contentLength);
-            var end = index + 1 < tokens.Length
-                ? Math.Clamp(tokens[index + 1].StartIndex, 0, contentLength)
+            var tokenIndex = pairIndex * 2;
+            var start = Math.Clamp(binaryTokens[tokenIndex], 0, contentLength);
+            var end = pairIndex + 1 < pairCount
+                ? Math.Clamp(binaryTokens[tokenIndex + 2], 0, contentLength)
                 : contentLength;
             if (end <= start)
             {
                 continue;
             }
 
-            var scopes = token.Scopes.ToArray();
-            segments.Add(new TextMateTokenizedSegment(start, end, scopes, CreateScopeKey(scopes)));
+            segments.Add(new TextMateTokenizedSegment(start, end, binaryTokens[tokenIndex + 1]));
         }
 
         return segments.Count == 0 ? Empty : new TextMateTokenizedLine(segments.ToArray());
     }
 
-    private static string CreateScopeKey(string[] scopes)
+    public static TextMateTokenizedLine ShiftForIntraLineEdit(TextMateTokenizedLine source, int changeStart, int removedLength, int insertedLength, int newContentLength)
     {
-        if (scopes.Length == 0)
+        ArgumentNullException.ThrowIfNull(source);
+
+        if (source.Segments.Length == 0 || newContentLength <= 0)
         {
-            return string.Empty;
+            return Empty;
         }
 
-        return string.Join('\u001f', scopes);
+        changeStart = Math.Clamp(changeStart, 0, newContentLength);
+        removedLength = Math.Max(0, removedLength);
+        insertedLength = Math.Max(0, insertedLength);
+
+        var oldChangeEnd = changeStart + removedLength;
+        var delta = insertedLength - removedLength;
+        var rebuilt = new List<TextMateTokenizedSegment>(source.Segments.Length + 2);
+        var insertedMetadata = -1;
+
+        for (var i = 0; i < source.Segments.Length; i++)
+        {
+            var segment = source.Segments[i];
+            if (segment.End <= changeStart)
+            {
+                AddSegment(rebuilt, segment.Start, segment.End, segment.Metadata, newContentLength);
+                if (segment.End == changeStart)
+                {
+                    insertedMetadata = segment.Metadata;
+                }
+
+                continue;
+            }
+
+            if (segment.Start >= oldChangeEnd)
+            {
+                AddSegment(rebuilt, segment.Start + delta, segment.End + delta, segment.Metadata, newContentLength);
+                continue;
+            }
+
+            if (segment.Start < changeStart)
+            {
+                AddSegment(rebuilt, segment.Start, changeStart, segment.Metadata, newContentLength);
+                insertedMetadata = segment.Metadata;
+            }
+            else if (insertedMetadata < 0)
+            {
+                insertedMetadata = segment.Metadata;
+            }
+
+            if (segment.End > oldChangeEnd)
+            {
+                AddSegment(rebuilt, changeStart + insertedLength, segment.End + delta, segment.Metadata, newContentLength);
+            }
+        }
+
+        if (insertedLength > 0)
+        {
+            if (insertedMetadata < 0 && rebuilt.Count > 0)
+            {
+                insertedMetadata = rebuilt[^1].Metadata;
+            }
+
+            if (insertedMetadata >= 0)
+            {
+                AddSegment(rebuilt, changeStart, changeStart + insertedLength, insertedMetadata, newContentLength);
+            }
+        }
+
+        return rebuilt.Count == 0 ? Empty : new TextMateTokenizedLine(rebuilt.ToArray());
+    }
+
+    private static void AddSegment(List<TextMateTokenizedSegment> segments, int start, int end, int metadata, int contentLength)
+    {
+        start = Math.Clamp(start, 0, contentLength);
+        end = Math.Clamp(end, 0, contentLength);
+        if (end <= start)
+        {
+            return;
+        }
+
+        if (segments.Count > 0)
+        {
+            var previous = segments[^1];
+            if (previous.End == start && previous.Metadata == metadata)
+            {
+                segments[^1] = previous with { End = end };
+                return;
+            }
+        }
+
+        segments.Add(new TextMateTokenizedSegment(start, end, metadata));
     }
 }
 
@@ -83,7 +158,7 @@ internal static class TextMateRunBuilder
                 continue;
             }
 
-            var style = palette.GetStyle(segment);
+            var style = palette.GetStyle(segment.Metadata);
             if (style == Style.None)
             {
                 continue;

@@ -48,8 +48,8 @@ public sealed class TextMateMarkdownCodeBlockRenderer : IMarkdownCodeBlockRender
             return null;
         }
 
-        var session = _catalog.CreateSession(scopeName);
         var themeName = TextMateThemePalette.IsLightTheme(context.Theme) ? Options.LightTheme : Options.DarkTheme;
+        var session = _catalog.CreateSession(scopeName, themeName);
         var palette = _catalog.GetPalette(themeName);
 
         var log = new LogControl
@@ -117,7 +117,7 @@ public sealed class TextMateMarkdownCodeBlockRenderer : IMarkdownCodeBlockRender
             var lineText = tokenLength > 0
                 ? code.AsMemory(lineStart, tokenLength)
                 : ReadOnlyMemory<char>.Empty;
-            var result = session.TokenizeLine(lineText, currentState);
+            var result = session.TokenizeLine2(lineText, currentState);
             var tokenizedLine = TextMateTokenizedLine.Create(contentLength, result.Tokens);
             TextMateRunBuilder.AddStyledRuns(runs, baseOffset, tokenizedLine.Segments, palette);
             currentState = result.RuleStack;

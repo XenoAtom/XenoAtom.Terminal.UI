@@ -10,28 +10,30 @@ namespace XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp;
 
 internal sealed class TextMateLanguageCatalog
 {
-    private readonly RegistryOptions _registryOptions;
+    private readonly RegistryOptions _discoveryRegistryOptions;
     private readonly Dictionary<string, string> _scopesByLanguage;
     private readonly Dictionary<string, string> _scopesByExtension;
+    private readonly Dictionary<TextMateThemeName, RegistryOptions> _registryOptionsByTheme;
     private readonly Dictionary<TextMateThemeName, TextMateThemePalette> _palettes;
 
     public static TextMateLanguageCatalog Default { get; } = new();
 
     private TextMateLanguageCatalog()
     {
-        _registryOptions = new RegistryOptions(TextMateThemeName.DarkPlus);
+        _discoveryRegistryOptions = new RegistryOptions(TextMateThemeName.DarkPlus);
         _scopesByLanguage = new Dictionary<string, string>(StringComparer.Ordinal);
         _scopesByExtension = new Dictionary<string, string>(StringComparer.Ordinal);
+        _registryOptionsByTheme = new Dictionary<TextMateThemeName, RegistryOptions>();
         _palettes = new Dictionary<TextMateThemeName, TextMateThemePalette>();
 
-        foreach (var language in _registryOptions.GetAvailableLanguages())
+        foreach (var language in _discoveryRegistryOptions.GetAvailableLanguages())
         {
             if (string.IsNullOrWhiteSpace(language.Id))
             {
                 continue;
             }
 
-            var scopeName = _registryOptions.GetScopeByLanguageId(language.Id);
+            var scopeName = _discoveryRegistryOptions.GetScopeByLanguageId(language.Id);
             if (string.IsNullOrWhiteSpace(scopeName))
             {
                 continue;
@@ -56,8 +58,8 @@ internal sealed class TextMateLanguageCatalog
         }
     }
 
-    public TextMateTokenizationSession CreateSession(string scopeName)
-        => new(scopeName, _registryOptions);
+    public TextMateTokenizationSession CreateSession(string scopeName, TextMateThemeName themeName)
+        => new(scopeName, GetRegistryOptions(themeName));
 
     public TextMateThemePalette GetPalette(TextMateThemeName themeName)
     {
@@ -65,7 +67,7 @@ internal sealed class TextMateLanguageCatalog
         {
             if (!_palettes.TryGetValue(themeName, out var palette))
             {
-                palette = new TextMateThemePalette(_registryOptions, themeName);
+                palette = new TextMateThemePalette(GetRegistryOptions(themeName), themeName);
                 _palettes.Add(themeName, palette);
             }
 
@@ -193,5 +195,19 @@ internal sealed class TextMateLanguageCatalog
         }
 
         return value.ToLowerInvariant();
+    }
+
+    private RegistryOptions GetRegistryOptions(TextMateThemeName themeName)
+    {
+        lock (_registryOptionsByTheme)
+        {
+            if (!_registryOptionsByTheme.TryGetValue(themeName, out var registryOptions))
+            {
+                registryOptions = new RegistryOptions(themeName);
+                _registryOptionsByTheme.Add(themeName, registryOptions);
+            }
+
+            return registryOptions;
+        }
     }
 }

@@ -3,19 +3,23 @@
 // See license.txt file in the project root for full license information.
 
 using TextMateSharp.Grammars;
+using TextMateSharp.Internal.Grammars;
 using TextMateSharp.Themes;
-using TextMateThemeName = TextMateSharp.Grammars.ThemeName;
-using TextMateFontStyle = TextMateSharp.Themes.FontStyle;
-using XenoAtom.Terminal.UI.Styling;
 using TextMateTheme = TextMateSharp.Themes.Theme;
+using TextMateThemeName = TextMateSharp.Grammars.ThemeName;
+using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp;
 
 internal sealed class TextMateThemePalette
 {
+    private const string TextMateFallbackForeground = "#000000";
+    private const string TextMateFallbackBackground = "#ffffff";
+
     private readonly TextMateTheme _theme;
-    private readonly Dictionary<string, Style> _stylesByScopeKey;
+    private readonly Dictionary<int, Style> _stylesByMetadata;
     private readonly object _sync;
+    private readonly string _defaultTokenForeground;
 
     public TextMateThemePalette(RegistryOptions registryOptions, TextMateThemeName themeName)
     {
@@ -24,18 +28,24 @@ internal sealed class TextMateThemePalette
         var rawTheme = registryOptions.LoadTheme(themeName)
             ?? throw new InvalidOperationException($"Unable to load the bundled TextMate theme `{themeName}`.");
         _theme = TextMateTheme.CreateFromRawTheme(rawTheme, registryOptions);
-        _stylesByScopeKey = new Dictionary<string, Style>(StringComparer.Ordinal);
+        _stylesByMetadata = new Dictionary<int, Style>();
         _sync = new object();
+        (_defaultTokenForeground, _) = ResolveDefaultTokenColors(rawTheme, registryOptions);
     }
 
-    public Style GetStyle(TextMateTokenizedSegment segment)
+    public Style GetStyle(int metadata)
     {
+        if (metadata == 0)
+        {
+            return Style.None;
+        }
+
         lock (_sync)
         {
-            if (!_stylesByScopeKey.TryGetValue(segment.ScopeKey, out var style))
+            if (!_stylesByMetadata.TryGetValue(metadata, out var style))
             {
-                style = ResolveStyle(segment.Scopes);
-                _stylesByScopeKey.Add(segment.ScopeKey, style);
+                style = ResolveStyle(metadata);
+                _stylesByMetadata.Add(metadata, style);
             }
 
             return style;
@@ -58,74 +68,129 @@ internal sealed class TextMateThemePalette
         return backgroundLuminance > foregroundLuminance && backgroundLuminance >= 0.55f;
     }
 
-    private Style ResolveStyle(string[] scopes)
+    private Style ResolveStyle(int metadata)
     {
-        var matches = _theme.Match(scopes);
-        if (matches.Count == 0)
-        {
-            return Style.None;
-        }
-
-        var fontStyle = TextMateFontStyle.NotSet;
-        var foregroundId = 0;
-        var backgroundId = 0;
-
-        for (var index = 0; index < matches.Count; index++)
-        {
-            var match = matches[index];
-            if (match.fontStyle != TextMateFontStyle.NotSet)
-            {
-                fontStyle = match.fontStyle;
-            }
-
-            if (match.foreground != 0)
-            {
-                foregroundId = match.foreground;
-            }
-
-            if (match.background != 0)
-            {
-                backgroundId = match.background;
-            }
-        }
-
-        if (fontStyle == TextMateFontStyle.NotSet)
-        {
-            fontStyle = TextMateFontStyle.None;
-        }
-
         var style = Style.None;
-        if (foregroundId != 0 && TryParseColor(_theme.GetColor(foregroundId), out var foreground))
+
+        var foregroundId = EncodedTokenAttributes.GetForeground(metadata);
+        if (foregroundId != 0
+            && !IsDefaultTokenForeground(foregroundId)
+            && TryParseColor(_theme.GetColor(foregroundId), out var foreground))
         {
             style = style.WithForeground(foreground);
         }
 
-        if (backgroundId != 0 && TryParseColor(_theme.GetColor(backgroundId), out var background))
-        {
-            style = style.WithBackground(background);
-        }
-
-        if ((fontStyle & TextMateFontStyle.Bold) != 0)
+        // Binary TextMate metadata bakes an inherited default background into every token, but the host
+        // CodeEditor/Markdown surface owns the actual background fill. Applying token backgrounds here causes
+        // large opaque blocks that regress rendering, so only the foreground/font-style decorations are used.
+        var fontStyle = EncodedTokenAttributes.GetFontStyle(metadata);
+        if ((fontStyle & FontStyle.Bold) != 0)
         {
             style |= TextStyle.Bold;
         }
 
-        if ((fontStyle & TextMateFontStyle.Italic) != 0)
+        if ((fontStyle & FontStyle.Italic) != 0)
         {
             style |= TextStyle.Italic;
         }
 
-        if ((fontStyle & TextMateFontStyle.Underline) != 0)
+        if ((fontStyle & FontStyle.Underline) != 0)
         {
             style |= TextStyle.Underline;
         }
 
-        if ((fontStyle & TextMateFontStyle.Strikethrough) != 0)
+        if ((fontStyle & FontStyle.Strikethrough) != 0)
         {
             style |= TextStyle.Strikethrough;
         }
 
         return style;
+    }
+
+    private bool IsDefaultTokenForeground(int foregroundId)
+        => string.Equals(_theme.GetColor(foregroundId), _defaultTokenForeground, StringComparison.OrdinalIgnoreCase);
+
+    private static (string Foreground, string Background) ResolveDefaultTokenColors(IRawTheme rawTheme, RegistryOptions registryOptions)
+    {
+        var foreground = TextMateFallbackForeground;
+        var background = TextMateFallbackBackground;
+        var visitedThemes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        ApplyDefaultTokenColors(rawTheme, registryOptions, visitedThemes, ref foreground, ref background);
+        return (foreground, background);
+    }
+
+    private static void ApplyDefaultTokenColors(IRawTheme rawTheme, RegistryOptions registryOptions, HashSet<string> visitedThemes, ref string foreground, ref string background)
+    {
+        ArgumentNullException.ThrowIfNull(rawTheme);
+        ArgumentNullException.ThrowIfNull(registryOptions);
+        ArgumentNullException.ThrowIfNull(visitedThemes);
+
+        var include = rawTheme.GetInclude();
+        if (!string.IsNullOrWhiteSpace(include) && visitedThemes.Add(include))
+        {
+            var includedTheme = registryOptions.GetTheme(include);
+            if (includedTheme is not null)
+            {
+                ApplyDefaultTokenColors(includedTheme, registryOptions, visitedThemes, ref foreground, ref background);
+            }
+        }
+
+        ApplyDefaultTokenColors(rawTheme.GetSettings(), ref foreground, ref background);
+        ApplyDefaultTokenColors(rawTheme.GetTokenColors(), ref foreground, ref background);
+    }
+
+    private static void ApplyDefaultTokenColors(ICollection<IRawThemeSetting>? settings, ref string foreground, ref string background)
+    {
+        if (settings is null)
+        {
+            return;
+        }
+
+        foreach (var entry in settings)
+        {
+            if (entry is null || !HasDefaultScope(entry.GetScope()))
+            {
+                continue;
+            }
+
+            var themeSetting = entry.GetSetting();
+            if (themeSetting is null)
+            {
+                continue;
+            }
+
+            var entryForeground = themeSetting.GetForeground();
+            if (IsValidHexColor(entryForeground))
+            {
+                foreground = entryForeground!;
+            }
+
+            var entryBackground = themeSetting.GetBackground();
+            if (IsValidHexColor(entryBackground))
+            {
+                background = entryBackground!;
+            }
+        }
+    }
+
+    private static bool HasDefaultScope(object? scope)
+    {
+        return scope switch
+        {
+            null => true,
+            string text => string.IsNullOrWhiteSpace(text),
+            _ => false,
+        };
+    }
+
+    private static bool IsValidHexColor(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value[0] != '#')
+        {
+            return false;
+        }
+
+        return value.Length is 7 or 9;
     }
 
     private static bool TryParseColor(string? value, out Color color)

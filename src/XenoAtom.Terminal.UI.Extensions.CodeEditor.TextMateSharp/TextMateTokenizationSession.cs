@@ -28,9 +28,9 @@ internal sealed class TextMateTokenizationSession
 
     internal int TokenizeLineCallCount => Volatile.Read(ref _tokenizeLineCallCount);
 
-    public ITokenizeLineResult TokenizeLine(LineText lineText, IStateStack? previousState)
+    public ITokenizeLineResult2 TokenizeLine2(LineText lineText, IStateStack? previousState)
     {
         Interlocked.Increment(ref _tokenizeLineCallCount);
-        return _grammar.TokenizeLine(lineText, previousState, TimeSpan.MaxValue);
+        return _grammar.TokenizeLine2(lineText, previousState, TimeSpan.MaxValue);
     }
 }

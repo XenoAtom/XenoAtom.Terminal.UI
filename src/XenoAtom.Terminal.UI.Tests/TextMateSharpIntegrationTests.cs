@@ -2,8 +2,10 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp;
+using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Extensions.Markdown;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
@@ -52,6 +54,36 @@ public sealed class TextMateSharpIntegrationTests
 
         var classNameStyle = FindStyleCovering(runs, startIndex: "public sealed class ".Length, length: "Sample".Length);
         Assert.AreNotEqual(keywordStyle, classNameStyle, "Expected keywords and type identifiers to receive different TextMate styles.");
+    }
+
+    [TestMethod]
+    public void CodeEditor_TextMateSyntaxHighlighter_Does_Not_Override_Editor_Default_Colors_For_Punctuation()
+    {
+        const string source = "using System.Collections.Generic;";
+
+        var editor = new CodeEditor(source);
+        var snapshot = editor.TextDocument.CurrentSnapshot;
+        var line = snapshot.GetLine(0);
+        var highlighter = new TextMateCodeEditorSyntaxHighlighter(
+            new TextMateCodeEditorOptions
+            {
+                LanguageId = "csharp",
+            });
+
+        var state = highlighter.Build(new CodeEditorSyntaxBuildContext(snapshot, Theme.Default, 0, 0, 0));
+        var runs = new List<StyledRun>();
+        highlighter.GetLineRuns(
+            state,
+            new CodeEditorLineSyntaxRequest(snapshot, Theme.Default, 0, line.Start, line.Length, 0, 0, 0),
+            runs);
+
+        Assert.IsTrue(runs.Count > 0, "Expected TextMateSharp to produce syntax runs for the C# source line.");
+
+        var punctuationIndex = source.IndexOf(';');
+        Assert.IsTrue(punctuationIndex >= 0, "Expected the test source to contain a semicolon.");
+        Assert.IsFalse(
+            runs.Any(run => run.Start <= punctuationIndex && run.Start + run.Length > punctuationIndex),
+            "Expected punctuation that only carries the TextMate default colors to keep the host CodeEditor foreground/background instead of receiving an explicit token style.");
     }
 
     [TestMethod]
@@ -199,7 +231,11 @@ public sealed class TextMateSharpIntegrationTests
                 0,
                 0));
 
-        Assert.AreEqual(8, highlighter.GetTokenizeLineCallCountForTests(), "Expected the incremental update step to invalidate cached suffix state without retokenizing the full document.");
+        var afterUpdateTokenizeCount = highlighter.GetTokenizeLineCallCountForTests();
+        Assert.IsLessThanOrEqualTo(
+            8 + highlighter.GetCheckpointLineIntervalForTests(),
+            afterUpdateTokenizeCount,
+            "Expected the incremental update step to limit retokenization to a small prefix while rebuilding sparse checkpoint state.");
 
         var updatedRuns = new List<StyledRun>();
         var updatedLine = updatedSnapshot.GetLine(7);
@@ -209,7 +245,241 @@ public sealed class TextMateSharpIntegrationTests
             updatedRuns);
 
         Assert.IsTrue(updatedRuns.Count > 0, "Expected TextMate to re-highlight the visible prefix after editing the start of the document.");
-        Assert.AreEqual(16, highlighter.GetTokenizeLineCallCountForTests(), "Expected re-highlighting after a start-of-document edit to retokenize only the visible prefix instead of the entire file.");
+        Assert.IsLessThanOrEqualTo(
+            afterUpdateTokenizeCount + 8,
+            highlighter.GetTokenizeLineCallCountForTests(),
+            "Expected re-highlighting after a start-of-document edit to retokenize only the visible prefix instead of the entire file.");
+    }
+
+    [TestMethod]
+    public async Task TextMateSyntaxHighlighter_Async_Update_Keeps_Far_Line_Requests_NonBlocking()
+    {
+        const int farLineIndex = 4096;
+        var source = string.Join('\n', Enumerable.Range(0, 6_000).Select(i => $"public sealed class C{i:000000} {{ }}"));
+        var document = new TextDocument(source);
+        var highlighter = new TextMateCodeEditorSyntaxHighlighter(
+            new TextMateCodeEditorOptions
+            {
+                LanguageId = "csharp",
+            });
+
+        var initialSnapshot = document.CurrentSnapshot;
+        var initialState = await highlighter.BuildAsync(new CodeEditorSyntaxBuildContext(initialSnapshot, Theme.Default, 0, 0, 0));
+        Assert.IsFalse(initialState.IsComplete, "Expected async TextMate builds to produce a partial state first so the editor can stay responsive.");
+        Assert.AreEqual(0, highlighter.GetCompletedLineCountForTests(initialState), "Expected the initial async build to apply an immediate partial state before any background chunk runs.");
+
+        TextDocumentChangedEventArgs? change = null;
+        document.Changed += (_, args) => change = args;
+        document.Insert(0, "x");
+
+        Assert.IsNotNull(change, "Expected the document edit to raise a change event.");
+        var edit = change!;
+        var snapshotAfterEdit = document.CurrentSnapshot;
+        var updatedState = await highlighter.UpdateAsync(
+            initialState,
+            new CodeEditorSyntaxUpdateContext(
+                snapshotAfterEdit,
+                Theme.Default,
+                edit,
+                snapshotAfterEdit.GetLineIndexFromPosition(edit.Position),
+                snapshotAfterEdit.GetLineIndexFromPosition(Math.Min(snapshotAfterEdit.Length, edit.Position + edit.InsertedLength)),
+                0,
+                0,
+                0));
+
+        var afterUpdateTokenizeCount = highlighter.GetTokenizeLineCallCountForTests();
+        Assert.IsFalse(updatedState.IsComplete, "Expected async updates after an edit to remain progressive.");
+        Assert.IsLessThanOrEqualTo(
+            1,
+            afterUpdateTokenizeCount,
+            "Expected the immediate async edit refresh to avoid eagerly retokenizing the document before the editor can render again.");
+
+        var updatedRuns = new List<StyledRun>();
+        var updatedFarLine = snapshotAfterEdit.GetLine(farLineIndex);
+        highlighter.GetLineRuns(
+            updatedState,
+            new CodeEditorLineSyntaxRequest(snapshotAfterEdit, Theme.Default, farLineIndex, updatedFarLine.Start, updatedFarLine.Length, 0, 0, 0),
+            updatedRuns);
+
+        Assert.AreEqual(0, updatedRuns.Count, "Expected a far-away line request on an async partial state not to block the caller by tokenizing on the UI thread.");
+        Assert.AreEqual(
+            afterUpdateTokenizeCount,
+            highlighter.GetTokenizeLineCallCountForTests(),
+            "Expected requesting a far-away line from an async partial state not to trigger synchronous speculative tokenization.");
+    }
+
+    [TestMethod]
+    public void CodeEditor_TextMateSyntaxHighlighter_Allows_Far_Scroll_During_Background_Rehighlight()
+    {
+        var source = string.Join('\n', Enumerable.Range(0, 6_000).Select(i => $"public sealed class C{i:000000} {{ }}"));
+        var highlighter = new TextMateCodeEditorSyntaxHighlighter(
+            new TextMateCodeEditorOptions
+            {
+                LanguageId = "csharp",
+            });
+        var editor = new CodeEditor(source)
+        {
+            MinHeight = 8,
+            MaxHeight = 8,
+            SyntaxHighlighter = highlighter,
+        };
+
+        using var driver = new TerminalAppTestDriver(new VStack { editor }, TerminalHostKind.Fullscreen, new TerminalSize(48, 10));
+        driver.Tick();
+        driver.App.Focus(editor);
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "x" });
+        driver.TickUntil(() => editor.Text is not null && editor.Text.StartsWith("x", StringComparison.Ordinal));
+
+        driver.App.Post(() => editor.Scroll.SetOffset(0, 5_000));
+        driver.Tick();
+
+        Assert.AreEqual(5_000, editor.Scroll.OffsetY, "Expected far scrolling to remain responsive while TextMate is still rebuilding syntax state in the background.");
+        Assert.IsTrue(
+            editor.GetCachedHighlightLineCountForTests() <= editor.Scroll.ViewportHeight + 1,
+            "Expected deep scrolling to keep the visible highlight cache bounded to the viewport while asynchronous highlighting catches up.");
+    }
+
+    [TestMethod]
+    public void CodeEditor_TextMateSyntaxHighlighter_Live_Mode_Colors_Visible_Text()
+    {
+        const string source = """
+            public sealed class Sample
+            {
+                public string Render() => "ok";
+            }
+            """;
+
+        var editor = new CodeEditor(source)
+        {
+            MinHeight = 6,
+            MaxHeight = 6,
+            SyntaxHighlighter = new TextMateCodeEditorSyntaxHighlighter(
+                new TextMateCodeEditorOptions
+                {
+                    LanguageId = "csharp",
+                }),
+        };
+
+        using var driver = new TerminalAppTestDriver(new VStack { editor }, TerminalHostKind.Fullscreen, new TerminalSize(60, 8));
+        driver.Tick();
+        driver.Tick();
+
+        var runs = editor.GetHighlightRunsForTests(0);
+        Assert.IsNotNull(
+            runs,
+            $"Expected the live TextMate highlighter to populate visible-line syntax runs. stateVersion={editor.GetSyntaxStateSnapshotVersionForTests()}, cachedLines={editor.GetCachedHighlightLineCountForTests()}, visible=[{string.Join(',', editor.GetVisibleLogicalLineIndicesForTests())}]");
+        Assert.IsTrue(runs.Length > 0, "Expected the live TextMate highlighter to produce non-empty syntax runs for the first visible line.");
+
+        var keywordRun = runs.FirstOrDefault(run => run.Start == 0 && run.Length >= "public".Length);
+        Assert.AreNotEqual(default, keywordRun, "Expected the `public` keyword to be covered by a syntax-highlight run.");
+        Assert.IsTrue(keywordRun.Style.TryGetForeground(out var foreground), "Expected the syntax-highlight run to carry a foreground color.");
+        Assert.AreNotEqual(Theme.Default.Foreground?.ToRgb() ?? Color.Default, foreground, "Expected live TextMate highlighting to color the keyword differently from the default editor foreground.");
+    }
+
+    public async Task TextMateSyntaxHighlighter_PrepareVisibleRangeAsync_Populates_Far_Line_Without_Blocking_GetLineRuns()
+    {
+        const int farLineIndex = 4096;
+        var source = string.Join('\n', Enumerable.Range(0, 6_000).Select(i => $"public sealed class C{i:000000} {{ }}"));
+        var highlighter = new TextMateCodeEditorSyntaxHighlighter(
+            new TextMateCodeEditorOptions
+            {
+                LanguageId = "csharp",
+            });
+
+        var document = new TextDocument(source);
+        var snapshot = document.CurrentSnapshot;
+        var partialState = await highlighter.BuildAsync(new CodeEditorSyntaxBuildContext(snapshot, Theme.Default, 0, 0, 0));
+
+        var initialFarRuns = new List<StyledRun>();
+        var farLine = snapshot.GetLine(farLineIndex);
+        highlighter.GetLineRuns(
+            partialState,
+            new CodeEditorLineSyntaxRequest(snapshot, Theme.Default, farLineIndex, farLine.Start, farLine.Length, 0, 0, 0),
+            initialFarRuns);
+        Assert.AreEqual(0, initialFarRuns.Count, "Expected a far line request on a fresh async partial state not to block by tokenizing synchronously.");
+
+        var afterInitialRequests = highlighter.GetTokenizeLineCallCountForTests();
+        var preparedState = await ((IAsyncCodeEditorSyntaxHighlighter)highlighter).PrepareVisibleRangeAsync(
+            partialState,
+            new CodeEditorSyntaxVisibleRangeContext(snapshot, Theme.Default, farLineIndex, farLineIndex + 8, 0, 0, 0));
+
+        var preparedRuns = new List<StyledRun>();
+        highlighter.GetLineRuns(
+            preparedState,
+            new CodeEditorLineSyntaxRequest(snapshot, Theme.Default, farLineIndex, farLine.Start, farLine.Length, 0, 0, 0),
+            preparedRuns);
+
+        Assert.IsTrue(preparedRuns.Count > 0, "Expected asynchronous visible-range preparation to provide syntax highlighting for the far visible line.");
+        Assert.IsLessThanOrEqualTo(
+            afterInitialRequests + 160,
+            highlighter.GetTokenizeLineCallCountForTests(),
+            "Expected visible-range preparation to tokenize only a bounded local window.");
+    }
+
+    [TestMethod]
+    public async Task TextMateSyntaxHighlighter_Async_Update_Reuses_Previous_Tokens_Immediately_After_IntraLine_Edit()
+    {
+        var source = string.Join('\n', Enumerable.Range(0, 128).Select(i => $"public sealed class C{i:000000} {{ }}"));
+        var document = new TextDocument(source);
+        var highlighter = new TextMateCodeEditorSyntaxHighlighter(
+            new TextMateCodeEditorOptions
+            {
+                LanguageId = "csharp",
+            });
+
+        var initialSnapshot = document.CurrentSnapshot;
+        var exactState = highlighter.Build(new CodeEditorSyntaxBuildContext(initialSnapshot, Theme.Default, 0, 0, 0));
+
+        var exactRuns = new List<StyledRun>();
+        var exactChangedLine = initialSnapshot.GetLine(0);
+        highlighter.GetLineRuns(
+            exactState,
+            new CodeEditorLineSyntaxRequest(initialSnapshot, Theme.Default, 0, exactChangedLine.Start, exactChangedLine.Length, 0, 0, 0),
+            exactRuns);
+
+        exactRuns.Clear();
+        var exactUnaffectedLine = initialSnapshot.GetLine(10);
+        highlighter.GetLineRuns(
+            exactState,
+            new CodeEditorLineSyntaxRequest(initialSnapshot, Theme.Default, 10, exactUnaffectedLine.Start, exactUnaffectedLine.Length, 0, 0, 0),
+            exactRuns);
+
+        TextDocumentChangedEventArgs? change = null;
+        document.Changed += (_, args) => change = args;
+        document.Insert(0, "x");
+        Assert.IsNotNull(change);
+
+        var updatedSnapshot = document.CurrentSnapshot;
+        var partialUpdatedState = await highlighter.UpdateAsync(
+            exactState,
+            new CodeEditorSyntaxUpdateContext(
+                updatedSnapshot,
+                Theme.Default,
+                change!,
+                updatedSnapshot.GetLineIndexFromPosition(change!.Position),
+                updatedSnapshot.GetLineIndexFromPosition(Math.Min(updatedSnapshot.Length, change.Position + change.InsertedLength)),
+                0,
+                0,
+                0));
+
+        Assert.IsFalse(partialUpdatedState.IsComplete, "Expected the edit to apply an immediate partial syntax state while exact background retokenization continues.");
+
+        var changedLineRuns = new List<StyledRun>();
+        var updatedChangedLine = updatedSnapshot.GetLine(0);
+        highlighter.GetLineRuns(
+            partialUpdatedState,
+            new CodeEditorLineSyntaxRequest(updatedSnapshot, Theme.Default, 0, updatedChangedLine.Start, updatedChangedLine.Length, 0, 0, 0),
+            changedLineRuns);
+        Assert.IsTrue(changedLineRuns.Count > 0, "Expected the edited line to keep an approximate shifted tokenization instead of flashing white.");
+
+        var unaffectedLineRuns = new List<StyledRun>();
+        var updatedUnaffectedLine = updatedSnapshot.GetLine(10);
+        highlighter.GetLineRuns(
+            partialUpdatedState,
+            new CodeEditorLineSyntaxRequest(updatedSnapshot, Theme.Default, 10, updatedUnaffectedLine.Start, updatedUnaffectedLine.Length, 0, 0, 0),
+            unaffectedLineRuns);
+        Assert.IsTrue(unaffectedLineRuns.Count > 0, "Expected unaffected lines after a small edit to immediately reuse their previous tokenization.");
     }
 
     private static Style FindStyleCovering(List<StyledRun> runs, int startIndex, int length)
