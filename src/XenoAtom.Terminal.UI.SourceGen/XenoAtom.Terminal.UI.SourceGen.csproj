@@ -8,6 +8,7 @@
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <PublishAot>false</PublishAot>
     <PackageLicenseExpression>BSD-2-Clause</PackageLicenseExpression>
+    <NoWarn>$(NoWarn);NU1603</NoWarn>
     <!-- Shipped inside XenoAtom.Terminal.UI as an embedded analyzer. -->
     <IsPackable>false</IsPackable>
   </PropertyGroup>
