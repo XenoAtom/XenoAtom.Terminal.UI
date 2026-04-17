@@ -1,6 +1,7 @@
 using System.Text;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp;
 using XenoAtom.Terminal.UI.Extensions.Markdown;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
@@ -24,6 +25,7 @@ public sealed class MarkdownControlDemo : ControlsDemoBase
             VerticalAlignment = Align.Stretch,
             Options = MarkdownRenderOptions.Default with
             {
+                CodeBlockRenderer = new TextMateMarkdownCodeBlockRenderer(),
                 MaxCodeBlockHeight = context.IsScreenshot ? 8 : 14,
                 WrapCodeBlocks = false,
             },

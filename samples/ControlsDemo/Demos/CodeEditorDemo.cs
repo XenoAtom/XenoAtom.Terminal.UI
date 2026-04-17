@@ -2,14 +2,20 @@ using System.Text;
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
-[Demo("CodeEditor", "Input", Description = "Code-oriented editor with line numbers, pluggable margins, search/replace, and async-ready syntax highlighting.")]
+[Demo("CodeEditor", "Input", Description = "Code-oriented editor with line numbers, pluggable margins, search/replace, and TextMateSharp-backed syntax highlighting.")]
 public sealed class CodeEditorDemo : ControlsDemoBase
 {
+    private static readonly TextMateCodeEditorSyntaxHighlighter TextMateSyntaxHighlighter =
+        new(new TextMateCodeEditorOptions { LanguageId = "csharp" });
+    private static readonly CodeEditorSyntaxHighlighter ScreenshotTextMateSyntaxHighlighter =
+        new SynchronousTextMateSyntaxHighlighter(TextMateSyntaxHighlighter);
+
     public CodeEditorDemo() : base(DemoSource.Get())
     {
     }
@@ -70,7 +76,9 @@ public sealed class CodeEditorDemo : ControlsDemoBase
 
         editor.Update(_ =>
         {
-            editor.SyntaxHighlighter = useSyntaxHighlighter.Value ? DemoSyntaxHighlighter.Instance : null;
+            editor.SyntaxHighlighter = useSyntaxHighlighter.Value
+                ? (context.IsScreenshot ? ScreenshotTextMateSyntaxHighlighter : TextMateSyntaxHighlighter)
+                : null;
             if (!useSyntaxHighlighter.Value)
             {
                 editor.Highlighter(HighlightLine);
@@ -91,12 +99,12 @@ public sealed class CodeEditorDemo : ControlsDemoBase
                 new CheckBox("Line numbers").IsChecked(showLineNumbers),
                 new CheckBox("Current line").IsChecked(highlightCurrentLine),
                 new CheckBox("Diff margin").IsChecked(showDiffMargin),
-                new CheckBox("Advanced syntax").IsChecked(useSyntaxHighlighter),
+                new CheckBox("TextMate syntax").IsChecked(useSyntaxHighlighter),
                 new Button("Find").Click(() => editor.OpenFind("CodeEditor")),
                 new Button("Replace").Click(() => editor.OpenReplace("return")),
                 new Button("Jump deep").Click(() => editor.Scroll.SetOffset(0, 20)),
                 new Button("Reset view").Click(() => editor.Scroll.SetOffset(0, 0)))
-            .Spacing(1);
+            .Spacing(context.IsScreenshot ? 0 : 1);
 
         var navigationRow = new HStack(
                 "Line",
@@ -130,7 +138,7 @@ public sealed class CodeEditorDemo : ControlsDemoBase
 
         var bottomPanel = new VStack(
                 locationFooter,
-                DemoUi.Hint("The left diff margin is implemented through the public CodeEditorMargin contract. Toggle Advanced syntax to switch between the simple delegate and persistent syntax-state pipelines."))
+                DemoUi.Hint("The left diff margin is implemented through the public CodeEditorMargin contract. Toggle TextMate syntax to switch between the simple delegate and the persistent TextMateSharp-backed syntax-state pipeline."))
             .Spacing(1)
             .HorizontalAlignment(Align.Stretch);
 
@@ -266,47 +274,22 @@ public sealed class CodeEditorDemo : ControlsDemoBase
         }
     }
 
-    private sealed class DemoSyntaxHighlighter : CodeEditorSyntaxHighlighter
+    private sealed class SynchronousTextMateSyntaxHighlighter : CodeEditorSyntaxHighlighter
     {
-        public static DemoSyntaxHighlighter Instance { get; } = new();
+        private readonly TextMateCodeEditorSyntaxHighlighter _inner;
 
-        private DemoSyntaxHighlighter()
+        public SynchronousTextMateSyntaxHighlighter(TextMateCodeEditorSyntaxHighlighter inner)
         {
+            _inner = inner ?? throw new ArgumentNullException(nameof(inner));
         }
 
         public override CodeEditorSyntaxState Build(in CodeEditorSyntaxBuildContext context)
-            => new DemoSyntaxState(context.Snapshot.Version);
+            => _inner.Build(context);
 
         public override CodeEditorSyntaxState Update(CodeEditorSyntaxState previousState, in CodeEditorSyntaxUpdateContext context)
-        {
-            _ = previousState;
-            return new DemoSyntaxState(context.Snapshot.Version);
-        }
+            => _inner.Update(previousState, context);
 
         public override void GetLineRuns(CodeEditorSyntaxState state, in CodeEditorLineSyntaxRequest request, List<StyledRun> runs)
-        {
-            _ = state;
-            HighlightLine(new CodeEditorLineHighlightRequest(request.Snapshot, request.Theme, request.LineIndex, request.LineStart, request.LineLength, request.CaretIndex, request.SelectionStart, request.SelectionLength), runs);
-        }
-
-        private static void HighlightLine(in CodeEditorLineHighlightRequest request, List<StyledRun> runs)
-        {
-            var lineText = SnapshotLineText(request.Snapshot, request.LineIndex);
-            AddWordRuns(lineText, "public", Style.None.WithForeground(Colors.DeepSkyBlue) | TextStyle.Bold, runs);
-            AddWordRuns(lineText, "class", Style.None.WithForeground(Colors.DeepSkyBlue) | TextStyle.Bold, runs);
-            AddWordRuns(lineText, "return", Style.None.WithForeground(Colors.HotPink) | TextStyle.Bold, runs);
-            AddQuotedRuns(lineText, Style.None.WithForeground(Colors.Gold), runs);
-            AddCommentRuns(lineText, Style.None.WithForeground(Colors.LimeGreen) | TextStyle.Dim, runs);
-        }
-    }
-
-    private sealed class DemoSyntaxState : CodeEditorSyntaxState
-    {
-        public DemoSyntaxState(int snapshotVersion)
-        {
-            SnapshotVersion = snapshotVersion;
-        }
-
-        public override int SnapshotVersion { get; }
+            => _inner.GetLineRuns(state, request, runs);
     }
 }

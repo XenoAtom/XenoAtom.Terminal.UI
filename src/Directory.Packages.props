@@ -10,13 +10,15 @@
     <PackageVersion Include="Markdig" Version="1.1.2" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.0.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
-    <PackageVersion Include="MSTest" Version="4.1.0" />
+    <PackageVersion Include="MSTest" Version="4.2.1" />
     <PackageVersion Include="SkiaSharp" Version="3.119.2" />
     <PackageVersion Include="SkiaSharp.HarfBuzz" Version="3.119.2" />
     <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="3.119.2" />
     <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="3.119.2" />
+    <PackageVersion Include="TextMateSharp" Version="2.0.3" />
+    <PackageVersion Include="TextMateSharp.Grammars" Version="2.0.3" />
     <PackageVersion Include="Verify.DiffPlex" Version="3.1.2" />
-    <PackageVersion Include="Verify.MSTest" Version="31.15.0" />
+    <PackageVersion Include="Verify.MSTest" Version="31.16.1" />
     <PackageVersion Include="XenoAtom.Terminal" Version="2.0.0" />
   </ItemGroup>
 </Project>

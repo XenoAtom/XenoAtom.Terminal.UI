@@ -18,6 +18,11 @@ public sealed record MarkdownRenderOptions
     public static MarkdownRenderOptions Default { get; } = new();
 
     /// <summary>
+    /// Gets an optional renderer used to customize Markdown code-block visuals.
+    /// </summary>
+    public IMarkdownCodeBlockRenderer? CodeBlockRenderer { get; init; }
+
+    /// <summary>
     /// Gets a value indicating whether paragraph-like text wraps to available width.
     /// </summary>
     public bool WrapText { get; init; } = true;

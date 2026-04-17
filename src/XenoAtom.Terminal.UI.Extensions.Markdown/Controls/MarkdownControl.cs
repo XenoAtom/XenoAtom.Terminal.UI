@@ -191,7 +191,8 @@ public sealed partial class MarkdownControl : Visual, IScrollable
             Pipeline,
             BaseUri,
             Options,
-            style);
+            style,
+            theme);
 
         var item = new DocumentFlowItem
         {

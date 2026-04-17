@@ -22,6 +22,7 @@
     <Project Path="../tools/NerdFontCodeGenApp/NerdFontCodeGenApp.csproj" />
   </Folder>
   <Folder Name="/extensions/">
+    <Project Path="XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp/XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp.csproj" />
     <Project Path="XenoAtom.Terminal.UI.Extensions.Markdown/XenoAtom.Terminal.UI.Extensions.Markdown.csproj" />
     <Project Path="XenoAtom.Terminal.UI.Extensions.Screenshot/XenoAtom.Terminal.UI.Extensions.Screenshot.csproj" />
   </Folder>

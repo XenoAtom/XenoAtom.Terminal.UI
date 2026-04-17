@@ -1337,12 +1337,63 @@ public sealed partial class CodeEditor : TextEditorBase
         var operation = useUpdate && previousState is not null
             ? asyncHighlighter.UpdateAsync(previousState, updateContext, cts.Token)
             : asyncHighlighter.BuildAsync(buildContext, cts.Token);
+        var task = operation.AsTask();
 
-        operation.AsTask().ContinueWith(
+        if (TryApplyCompletedAsyncSyntaxOperation(task, syntaxHighlighter, buildContext, requestId, cts))
+        {
+            return;
+        }
+
+        task.ContinueWith(
             task => HandleAsyncSyntaxCompletion(task, syntaxHighlighter, buildContext, requestId, cts),
             CancellationToken.None,
             TaskContinuationOptions.ExecuteSynchronously,
             TaskScheduler.Default);
+    }
+
+    private bool TryApplyCompletedAsyncSyntaxOperation(
+        Task<CodeEditorSyntaxState> task,
+        CodeEditorSyntaxHighlighter syntaxHighlighter,
+        CodeEditorSyntaxBuildContext buildContext,
+        int requestId,
+        CancellationTokenSource cts)
+    {
+        if (!task.IsCompleted)
+        {
+            return false;
+        }
+
+        try
+        {
+            if (!task.IsCompletedSuccessfully
+                || !ReferenceEquals(_syntaxUpdateCts, cts)
+                || cts.IsCancellationRequested
+                || !ReferenceEquals(SyntaxHighlighter, syntaxHighlighter)
+                || TextDocument.CurrentSnapshot.Version != buildContext.Snapshot.Version
+                || requestId < _syntaxRequestId)
+            {
+                return true;
+            }
+
+            _syntaxState = task.Result;
+            _lastDocumentChange = null;
+            _pendingSyntaxSnapshotVersion = -1;
+            _syntaxUpdateCts = null;
+            cts.Dispose();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _ = ex;
+            _pendingSyntaxSnapshotVersion = -1;
+            if (ReferenceEquals(_syntaxUpdateCts, cts))
+            {
+                _syntaxUpdateCts = null;
+            }
+
+            cts.Dispose();
+            return true;
+        }
     }
 
     private void HandleAsyncSyntaxCompletion(

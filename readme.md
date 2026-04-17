@@ -16,6 +16,7 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
   - Advanced widgets: **LogControl**, **CommandPalette**, **BreakdownChart**, **ColorPicker**
   - Mockup/empty-state widget: **Placeholder** (text + background surfaces, gradients)
   - Companion extension package: **XenoAtom.Terminal.UI.Extensions.Markdown** (`MarkdownControl`, `MarkdownMarkupConverter` with source-preserving highlight mode)
+  - Companion extension package: **XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp** (TextMateSharp-backed syntax highlighting for `CodeEditor` and fenced Markdown code blocks)
   - Companion extension package: **XenoAtom.Terminal.UI.Extensions.Screenshot** (SkiaSharp-powered PNG/JPEG/WebP export, clipboard screenshot commands, and an embedded Nerd Font-capable default font)
 - **Binding-first UI**:
   - Bindable properties, `State<T>`, automatic dependency tracking, minimal boilerplate

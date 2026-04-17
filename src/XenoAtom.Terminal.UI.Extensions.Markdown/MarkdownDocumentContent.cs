@@ -24,20 +24,21 @@ public sealed class MarkdownDocumentContent : IDocumentFlowContent
     /// <param name="baseUri">Optional base URI used to resolve relative links.</param>
     /// <param name="options">Optional render options.</param>
     public MarkdownDocumentContent(string markdown, MarkdownPipeline? pipeline = null, Uri? baseUri = null, MarkdownRenderOptions? options = null)
-        : this(markdown, pipeline, baseUri, options, style: null)
+        : this(markdown, pipeline, baseUri, options, style: null, theme: Theme.Default)
     {
     }
 
-    internal MarkdownDocumentContent(string markdown, MarkdownPipeline? pipeline, Uri? baseUri, MarkdownRenderOptions? options, MarkdownStyle? style)
+    internal MarkdownDocumentContent(string markdown, MarkdownPipeline? pipeline, Uri? baseUri, MarkdownRenderOptions? options, MarkdownStyle? style, Theme theme)
     {
         markdown ??= string.Empty;
         var effectivePipeline = pipeline ?? MarkdownDefaults.Pipeline;
         var effectiveOptions = options ?? MarkdownRenderOptions.Default;
         var effectiveSourceStyle = style ?? MarkdownStyle.Default;
-        var effectiveStyle = MarkdownDefaults.ResolveStyle(Theme.Default, effectiveSourceStyle);
+        var effectiveTheme = theme ?? Theme.Default;
+        var effectiveStyle = MarkdownDefaults.ResolveStyle(effectiveTheme, effectiveSourceStyle);
 
         var document = Markdig.Markdown.Parse(markdown, effectivePipeline);
-        var builder = new MarkdownDocumentBuilder(effectiveStyle, effectiveOptions, baseUri);
+        var builder = new MarkdownDocumentBuilder(effectiveTheme, effectiveStyle, effectiveOptions, baseUri);
         _blocks = builder.Build(document);
     }
 

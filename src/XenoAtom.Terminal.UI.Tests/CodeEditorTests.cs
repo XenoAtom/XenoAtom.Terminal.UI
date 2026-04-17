@@ -363,6 +363,35 @@ public sealed class CodeEditorTests
     }
 
     [TestMethod]
+    public void CodeEditor_Async_SyntaxHighlighter_Can_Apply_Synchronously_Completed_Update_During_Edit_Render()
+    {
+        var highlighter = new InlineCompletingAsyncSyntaxHighlighter();
+        var editor = new CodeEditor("alphabeta")
+        {
+            MinHeight = 4,
+            MaxHeight = 4,
+            SyntaxHighlighter = highlighter,
+        };
+
+        using var driver = new TerminalAppTestDriver(new VStack { editor }, TerminalHostKind.Fullscreen, new TerminalSize(20, 6));
+        driver.Tick();
+        driver.App.Focus(editor);
+        driver.App.Post(() => editor.CaretIndex = 5);
+        driver.TickUntil(() => editor.CaretIndex == 5);
+
+        Assert.AreEqual(editor.TextDocument.CurrentSnapshot.Version, editor.GetSyntaxStateSnapshotVersionForTests(), "Expected the initial completed async build to apply immediately.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
+        driver.TickUntil(() => editor.Text == "alpha\nbeta");
+
+        Assert.AreEqual(editor.TextDocument.CurrentSnapshot.Version, editor.GetSyntaxStateSnapshotVersionForTests(), "Expected a synchronously completed async update to apply during the edit render.");
+
+        var runs = editor.GetHighlightRunsForTests(1);
+        Assert.IsNotNull(runs, "Expected the newly inserted logical line to be highlighted without requiring extra navigation.");
+        Assert.IsTrue(runs.Any(run => run.Start == 0 && run.Length > 0), "Expected the new logical line to receive highlight runs immediately after pressing Enter.");
+    }
+
+    [TestMethod]
     public void CodeEditor_Clipboard_Cut_Copy_And_Paste_Work()
     {
         var editor = new CodeEditor();
@@ -900,6 +929,50 @@ public sealed class CodeEditorTests
             UpdateRequests.Add(request);
             return new ValueTask<CodeEditorSyntaxState>(request.Task);
         }
+    }
+
+    private sealed class InlineCompletingAsyncSyntaxHighlighter : CodeEditorSyntaxHighlighter, IAsyncCodeEditorSyntaxHighlighter
+    {
+        public override CodeEditorSyntaxState Build(in CodeEditorSyntaxBuildContext context)
+            => new TestSyntaxState(context.Snapshot.Version);
+
+        public override CodeEditorSyntaxState Update(CodeEditorSyntaxState previousState, in CodeEditorSyntaxUpdateContext context)
+        {
+            _ = previousState;
+            return new TestSyntaxState(context.Snapshot.Version);
+        }
+
+        public override void GetLineRuns(CodeEditorSyntaxState state, in CodeEditorLineSyntaxRequest request, List<StyledRun> runs)
+        {
+            if (state is not InlineSyntaxState inlineState || request.LineLength <= 0 || request.LineIndex >= inlineState.LineCount)
+            {
+                return;
+            }
+
+            runs.Add(new StyledRun(0, Math.Min(4, request.LineLength), Style.None.WithForeground(Color.Basic16(6))));
+        }
+
+        public ValueTask<CodeEditorSyntaxState> BuildAsync(in CodeEditorSyntaxBuildContext context, CancellationToken cancellationToken = default)
+            => new(new InlineSyntaxState(context.Snapshot.Version, context.Snapshot.LineCount));
+
+        public ValueTask<CodeEditorSyntaxState> UpdateAsync(CodeEditorSyntaxState previousState, in CodeEditorSyntaxUpdateContext context, CancellationToken cancellationToken = default)
+        {
+            _ = previousState;
+            return new(new InlineSyntaxState(context.Snapshot.Version, context.Snapshot.LineCount));
+        }
+    }
+
+    private sealed class InlineSyntaxState : CodeEditorSyntaxState
+    {
+        public InlineSyntaxState(int snapshotVersion, int lineCount)
+        {
+            SnapshotVersion = snapshotVersion;
+            LineCount = lineCount;
+        }
+
+        public override int SnapshotVersion { get; }
+
+        public int LineCount { get; }
     }
 
     private sealed class PendingRequest

@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\XenoAtom.Terminal.UI\XenoAtom.Terminal.UI.csproj" />
+    <ProjectReference Include="..\XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp\XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp.csproj" />
     <ProjectReference Include="..\XenoAtom.Terminal.UI.SourceGen\XenoAtom.Terminal.UI.SourceGen.csproj" />
     <ProjectReference Include="..\XenoAtom.Terminal.UI.Extensions.Markdown\XenoAtom.Terminal.UI.Extensions.Markdown.csproj" />
     <ProjectReference Include="..\XenoAtom.Terminal.UI.Extensions.Screenshot\XenoAtom.Terminal.UI.Extensions.Screenshot.csproj" />

@@ -67,6 +67,7 @@ See also:
 
 - [Controls Reference](controls/readme.md)
 - [CodeEditor](controls/codeeditor.md) (code-oriented editor with line numbers, pluggable margins, and syntax highlighting)
+- [MarkdownControl](controls/markdowncontrol.md) (Markdig-powered document rendering with configurable fenced-code rendering)
 - [NerdFont](controls/nerdfont.md) (generated icon helpers for use with text controls)
 
 ## Samples

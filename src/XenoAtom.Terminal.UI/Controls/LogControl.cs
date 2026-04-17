@@ -271,6 +271,36 @@ public sealed partial class LogControl : Visual, ISelectionOwner
     }
 
     /// <summary>
+    /// Appends a plain-text log entry with explicit styling runs.
+    /// </summary>
+    /// <param name="message">The message to append. Newlines are split into multiple entries.</param>
+    /// <param name="runs">Optional runs relative to <paramref name="message"/>.</param>
+    public void AppendLine(string message, StyledRun[]? runs)
+    {
+        VerifyAccess();
+        AppendParsedTextAsLines(message ?? string.Empty, runs);
+        TrimToCapacity();
+        if (FollowTail)
+        {
+            if (_clearSelectionOnNextFollowTailAppend && HasSelection)
+            {
+                ClearSelection();
+            }
+
+            _clearSelectionOnNextFollowTailAppend = false;
+            if (!HasSelection)
+            {
+                _scrollViewer.VerticalOffset = int.MaxValue;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(SearchText))
+        {
+            RebuildMatches();
+        }
+    }
+
+    /// <summary>
     /// Appends a markup-formatted log entry.
     /// </summary>
     /// <param name="markup">The markup text to append. Newlines are split into multiple entries.</param>
@@ -1551,6 +1581,15 @@ public sealed partial class LogControl : Visual, ISelectionOwner
                 if (segEnd <= segStart)
                 {
                     continue;
+                }
+
+                if (cursor < segStart)
+                {
+                    var plainSpan = text.Slice(cursor, segStart - cursor);
+                    WriteWithHighlights(buffer, posX, y, baseStyle, selectionStyle, matchStyle, activeMatchStyle,
+                        entryIndex, cursor, segStart, text, matches, matchListIndex, owner);
+                    posX += MeasureCellWidth(plainSpan);
+                    cursor = segStart;
                 }
 
                 var effective = run.Style.MergeUnspecified(baseStyle);

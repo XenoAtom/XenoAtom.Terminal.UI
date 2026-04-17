@@ -21,6 +21,7 @@ namespace XenoAtom.Terminal.UI.Extensions.Markdown;
 
 internal sealed class MarkdownDocumentBuilder
 {
+    private readonly Theme _theme;
     private readonly MarkdownStyle _style;
     private readonly MarkdownRenderOptions _options;
     private readonly Uri? _baseUri;
@@ -33,8 +34,9 @@ internal sealed class MarkdownDocumentBuilder
     private readonly int _quoteSpacingAfter;
     private readonly int _listSpacingAfter;
 
-    public MarkdownDocumentBuilder(MarkdownStyle style, MarkdownRenderOptions options, Uri? baseUri)
+    public MarkdownDocumentBuilder(Theme theme, MarkdownStyle style, MarkdownRenderOptions options, Uri? baseUri)
     {
+        _theme = theme;
         _style = style;
         _options = options;
         _baseUri = baseUri;
@@ -430,6 +432,18 @@ internal sealed class MarkdownDocumentBuilder
     private Visual CreateCodeVisual(CodeBlock block)
     {
         var code = NormalizeLeafText(block);
+        var fenceInfo = block is FencedCodeBlock fencedBlock ? fencedBlock.Info?.Trim() : null;
+        var language = ParseFenceLanguage(fenceInfo);
+        var renderer = _options.CodeBlockRenderer;
+        if (renderer is not null)
+        {
+            var customVisual = renderer.CreateVisual(new MarkdownCodeBlockRenderContext(code, fenceInfo, language, block is FencedCodeBlock, _theme, _style, _options));
+            if (customVisual is not null)
+            {
+                return customVisual;
+            }
+        }
+
         var log = new LogControl
         {
             WrapText = _options.WrapCodeBlocks,
@@ -447,12 +461,11 @@ internal sealed class MarkdownDocumentBuilder
             log.AppendLine(code);
         }
 
-        if (block is not FencedCodeBlock fenced || string.IsNullOrWhiteSpace(fenced.Info))
+        if (string.IsNullOrWhiteSpace(language))
         {
             return log;
         }
 
-        var language = fenced.Info!.Trim();
         var header = new TextBlock(language);
         header.SetStyle(TextBlockStyle.Default with { TextStyle = TextStyle.Bold });
 
@@ -461,6 +474,23 @@ internal sealed class MarkdownDocumentBuilder
             Spacing = 0,
             HorizontalAlignment = Align.Stretch,
         };
+    }
+
+    private static string? ParseFenceLanguage(string? fenceInfo)
+    {
+        if (string.IsNullOrWhiteSpace(fenceInfo))
+        {
+            return null;
+        }
+
+        fenceInfo = fenceInfo.Trim();
+        var end = 0;
+        while (end < fenceInfo.Length && !char.IsWhiteSpace(fenceInfo[end]))
+        {
+            end++;
+        }
+
+        return end == 0 ? null : fenceInfo[..end];
     }
 
     private Visual CreateTableVisual(Markdig.Extensions.Tables.Table table)

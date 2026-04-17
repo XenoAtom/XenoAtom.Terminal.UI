@@ -152,6 +152,43 @@ Key points:
 
 If your highlighter can work off the UI thread, also implement `IAsyncCodeEditorSyntaxHighlighter`.
 
+## TextMateSharp integration
+
+For full grammar-based highlighting, use the companion package:
+
+```shell
+dotnet add package XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp
+```
+
+Then attach the bundled TextMateSharp-backed highlighter:
+
+```csharp
+using XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp;
+
+var editor = new CodeEditor(source)
+{
+    SyntaxHighlighter = new TextMateCodeEditorSyntaxHighlighter(
+        new TextMateCodeEditorOptions
+        {
+            LanguageId = "csharp",
+        }),
+};
+```
+
+You can also resolve grammars from a file name or extension:
+
+```csharp
+var highlighter = new TextMateCodeEditorSyntaxHighlighter(
+    new TextMateCodeEditorOptions
+    {
+        FileName = "program.cs",
+    });
+```
+
+The TextMateSharp integration keeps incremental per-line tokenizer state so edits only need to recompute the affected
+suffix of the document, while rendering colors are resolved from bundled light and dark TextMate themes according to
+the active terminal UI theme.
+
 ## Pluggable margins
 
 Margins are non-visual extension points that render beside the text surface:

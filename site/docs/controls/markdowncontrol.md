@@ -82,6 +82,62 @@ Spacing defaults are intentionally compact for terminal density:
 - paragraph spacing: `1`
 - block spacing (tables/code/rules/alerts): `1`
 
+## Custom fenced-code rendering
+
+`MarkdownControl` exposes a code-block extension point through `MarkdownRenderOptions.CodeBlockRenderer`.
+This lets you replace the default plain `LogControl` rendering for fenced or indented code blocks:
+
+```csharp
+public sealed class MyCodeBlockRenderer : IMarkdownCodeBlockRenderer
+{
+    public Visual? CreateVisual(in MarkdownCodeBlockRenderContext context)
+    {
+        if (!string.Equals(context.Language, "demo", StringComparison.OrdinalIgnoreCase))
+        {
+            return null; // fall back to the built-in renderer
+        }
+
+        return new TextBlock("custom renderer");
+    }
+}
+
+var control = new MarkdownControl(markdown)
+{
+    Options = MarkdownRenderOptions.Default with
+    {
+        CodeBlockRenderer = new MyCodeBlockRenderer(),
+    },
+};
+```
+
+Returning `null` delegates back to the built-in Markdown code-block visual.
+
+## TextMateSharp fenced-code highlighting
+
+To syntax-highlight fenced code blocks with bundled TextMate grammars and themes, install the companion package:
+
+```shell
+dotnet add package XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp
+```
+
+Then configure the Markdown renderer:
+
+```csharp
+using XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp;
+
+var control = new MarkdownControl(markdown)
+{
+    Options = MarkdownRenderOptions.Default with
+    {
+        CodeBlockRenderer = new TextMateMarkdownCodeBlockRenderer(),
+        WrapCodeBlocks = false,
+    },
+};
+```
+
+The TextMate-backed renderer understands fenced language identifiers such as `csharp`, `json`, or `markdown`, and it
+automatically selects bundled light or dark TextMate themes to match the active terminal UI theme.
+
 ## Styling markdown
 
 Use `RenderStyle` for role-based customization (headings, links, emphasis, alerts):
