@@ -6,11 +6,11 @@ title: Toast / Notification Control Specs
 
 This document specifies a **toast/notification** system for XenoAtom.Terminal.UI:
 
-- `Toast` — the individual notification visual
-- `ToastHost` — the container that manages toast positioning and lifecycle
-- `ToastService` — the API for showing toasts from anywhere in the app
+- `Toast` - the individual notification visual
+- `ToastHost` - the container that manages toast positioning and lifecycle
+- `ToastService` - the API for showing toasts from anywhere in the app
 
-The goal is to provide non-blocking, auto-dismissing feedback messages that don't interrupt user workflow — a modern UX pattern missing from most terminal UI frameworks.
+The goal is to provide non-blocking, auto-dismissing feedback messages that don't interrupt user workflow - a modern UX pattern missing from most terminal UI frameworks.
 
 Design goals:
 
@@ -374,9 +374,9 @@ For v1, instant appear/disappear is acceptable. Animation can be added in v1.1.
 
 When `visibleToasts.Count >= MaxVisible`:
 
-Option A (recommended): **Dismiss oldest** — auto-dismiss the oldest toast to make room
-Option B: **Queue** — new toasts wait until a slot opens
-Option C: **Reject** — `Show()` returns `null`, toast not displayed
+Option A (recommended): **Dismiss oldest** - auto-dismiss the oldest toast to make room
+Option B: **Queue** - new toasts wait until a slot opens
+Option C: **Reject** - `Show()` returns `null`, toast not displayed
 
 Default SHOULD be Option A for best UX.
 

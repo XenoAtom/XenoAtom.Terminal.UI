@@ -105,9 +105,9 @@ The bar draws a single line of segment cells.
 
 From `BreakdownStyle`:
 
-- `FillRune` (default: space) — the rune stamped in segment cells
-- `SegmentGap` (default: `1`) — empty cells between segments
-- `BarStyle` — base style used for the bar (defaults to `theme.ControlFillStyle()`)
+- `FillRune` (default: space) - the rune stamped in segment cells
+- `SegmentGap` (default: `1`) - empty cells between segments
+- `BarStyle` - base style used for the bar (defaults to `theme.ControlFillStyle()`)
 
 From each `BreakdownSegment`:
 

@@ -1,4 +1,4 @@
-# XenoAtom.Terminal.UI — Agent Instructions
+# XenoAtom.Terminal.UI - Agent Instructions
 
 XenoAtom.Terminal.UI is a modern, reactive retained-mode terminal UI framework for .NET.
 

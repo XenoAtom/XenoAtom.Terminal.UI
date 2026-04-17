@@ -45,7 +45,7 @@ og_type: website
         <div class="card-header display-6"><i class="bi bi-ui-checks-grid lunet-feature-icon lunet-icon--controls"></i> Composable controls</div>
         <div class="card-body">
           <p class="card-text">
-            Inputs, layout containers, menus, overlays, charts, and more — all composable and styleable.
+            Inputs, layout containers, menus, overlays, charts, and more - all composable and styleable.
           </p>
 
 [Controls Reference](docs/controls/readme.md)
@@ -58,7 +58,7 @@ og_type: website
         <div class="card-header display-6"><i class="bi bi-pencil-square lunet-feature-icon lunet-icon--editing"></i> Text editing</div>
         <div class="card-body">
           <p class="card-text">
-            TextBox/TextArea with selection, scrolling, clipboard, and Find/Replace — powered by a shared text subsystem.
+            TextBox/TextArea with selection, scrolling, clipboard, and Find/Replace - powered by a shared text subsystem.
           </p>
 
 [Text Editing](docs/text-editing.md)

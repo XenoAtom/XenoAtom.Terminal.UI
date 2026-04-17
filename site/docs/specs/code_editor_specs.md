@@ -719,7 +719,7 @@ Persistent state should be cached by:
 
 ## Phased implementation plan
 
-### Phase 1 — code-editor shell
+### Phase 1 - code-editor shell
 
 - Add `CodeEditor : TextEditorBase`.
 - Add `CodeEditorStyle`.
@@ -727,20 +727,20 @@ Persistent state should be cached by:
 - Add left/right margin collections.
 - Keep behavior otherwise close to `TextArea`.
 
-### Phase 2 — simple highlighting parity
+### Phase 2 - simple highlighting parity
 
 - Add a `PromptEditor`-style simple highlighter delegate.
 - Support line-relative `StyledRun`s.
 - Render visible highlighted text without breaking current text-editor performance work.
 
-### Phase 3 — advanced incremental highlighting
+### Phase 3 - advanced incremental highlighting
 
 - Add persistent syntax-state abstraction.
 - Add diff-aware update contexts.
 - Add version-gated async support.
 - Add tests proving no full-document re-highlight on scroll.
 
-### Phase 4 — ecosystem package
+### Phase 4 - ecosystem package
 
 - Create a separate language/highlighting package using the public contracts defined here.
 - Add reusable tokenizers / adapters there, not in the core UI package.

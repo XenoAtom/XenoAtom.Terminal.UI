@@ -68,9 +68,9 @@ factory and potentially reinitializing the subtree (often resulting in surprisin
 
 To support this, `BindingManager` exposes two scoped suppression helpers:
 
-- `BindingManager.Current.SuppressReadTracking()` — disables dependency recording for bindable reads in the scope.
-- `BindingManager.Current.SuppressWriteTracking()` — suppresses write notifications (`ValueChanged`) in the scope.
-- `BindingManager.Current.RunAfterTracking(action)` — runs `action` immediately when no tracking scope is active, or defers it until the outermost tracking scope completes.
+- `BindingManager.Current.SuppressReadTracking()` - disables dependency recording for bindable reads in the scope.
+- `BindingManager.Current.SuppressWriteTracking()` - suppresses write notifications (`ValueChanged`) in the scope.
+- `BindingManager.Current.RunAfterTracking(action)` - runs `action` immediately when no tracking scope is active, or defers it until the outermost tracking scope completes.
 
 > [!IMPORTANT]
 > Suppression affects **all** bindable reads/writes within the scope. Keep the scope small and always use `using` so tracking is restored.

@@ -127,7 +127,7 @@ Terminal.UI themes rely on:
 - RGBA colors internally (alpha blending)
 
 When truecolor is unavailable, XenoAtom.Terminal approximates colors to the closest supported palette so things still render
-correctly — but subtle gradients/overlays will look flatter.
+correctly - but subtle gradients/overlays will look flatter.
 
 ## References
 

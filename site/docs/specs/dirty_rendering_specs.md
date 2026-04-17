@@ -56,7 +56,7 @@ updates**, not only “dirty flags”.
 
 ## Options
 
-### Option A — Full-frame repaint (current behavior)
+### Option A - Full-frame repaint (current behavior)
 
 **Summary**: Always clear the full buffer and render the full tree.
 
@@ -68,7 +68,7 @@ updates**, not only “dirty flags”.
 **Cons**
 - Tree traversal + rendering runs for every render request.
 
-### Option B — Incremental rendering into a persistent buffer (recommended)
+### Option B - Incremental rendering into a persistent buffer (recommended)
 
 **Summary**: Keep the render buffer as “current frame”, and on each render only repaint *dirty rectangles* by:
 
@@ -84,7 +84,7 @@ updates**, not only “dirty flags”.
 - Requires tracking dirty rectangles (at least a union rect).
 - Requires correctness rules for “layout changes” (old/new bounds).
 
-### Option C — Only render dirty subtrees (not recommended)
+### Option C - Only render dirty subtrees (not recommended)
 
 **Summary**: Render only the dirty visual and its children directly into the existing buffer.
 
@@ -93,7 +93,7 @@ many controls (e.g., `TextBlock` typically paints glyphs only), so stale pixels 
 
 This option is not recommended unless the framework enforces a “fully paints bounds” rule.
 
-### Option D — Retained sub-buffer per visual (“layers”)
+### Option D - Retained sub-buffer per visual (“layers”)
 
 **Summary**: Each visual renders into its own buffer and is composited into the parent.
 

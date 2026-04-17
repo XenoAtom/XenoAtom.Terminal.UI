@@ -10,7 +10,7 @@ try
 {
     using var session = Terminal.Open();
 
-    Terminal.WriteMarkupLine("[bold]XenoAtom.Terminal.UI — Inline / Live demo[/]");
+    Terminal.WriteMarkupLine("[bold]XenoAtom.Terminal.UI - Inline / Live demo[/]");
     Terminal.WriteLine();
 
     Terminal.Write(new VStack(
@@ -133,5 +133,5 @@ try
 catch (OperationCanceledException)
 {
     Terminal.WriteLine();
-    Terminal.WriteMarkupLine("[yellow]You canceled the prompt. Exiting the demo — see you![/]");
+    Terminal.WriteMarkupLine("[yellow]You canceled the prompt. Exiting the demo - see you![/]");
 }

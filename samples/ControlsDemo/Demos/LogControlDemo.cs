@@ -42,7 +42,7 @@ public sealed class LogControlDemo : ControlsDemoBase
                 }
                 else
                 {
-                    log.AppendLine($"Message {id} — The quick brown fox jumps over the lazy dog.");
+                    log.AppendLine($"Message {id} - The quick brown fox jumps over the lazy dog.");
                 }
             }
         }

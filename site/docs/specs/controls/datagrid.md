@@ -55,9 +55,9 @@ The design is inspired by modern terminal UI patterns and spreadsheet/datagrid e
 
 `DataGridControl` is split into three layers:
 
-1) **`IDataGridDocument`** — owns data and mutations (similar to `ITextDocument`).
-2) **`IDataGridView`** — provides a sorted/filtered projection over a document (optional but recommended).
-3) **`DataGridControl`** — the visual control; handles input, rendering, selection, and editing.
+1) **`IDataGridDocument`** - owns data and mutations (similar to `ITextDocument`).
+2) **`IDataGridView`** - provides a sorted/filtered projection over a document (optional but recommended).
+3) **`DataGridControl`** - the visual control; handles input, rendering, selection, and editing.
 
 The control MUST be able to operate with:
 

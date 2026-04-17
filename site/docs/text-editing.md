@@ -13,18 +13,18 @@ with selection, clipboard, undo/redo, scrolling, integrated Find/Replace, and co
 
 These controls share the same editing engine and most of the same user experience:
 
-- [TextBox](controls/textbox.md) — single-line editor, password mode, overflow indicators
-- [TextArea](controls/textarea.md) — multi-line editor, soft wrapping, Find/Replace popup
-- [CodeEditor](controls/codeeditor.md) — multi-line code editor with line numbers, pluggable margins, and syntax highlighting
-- [MaskedInput](controls/maskedinput.md) — structured templates (credit cards, dates, IDs, etc.)
-- [NumberBox](controls/numberbox.md) — numeric value binding with inline validation
-- [PromptEditor](controls/prompteditor.md) — prompt-style editor with single-line or multi-line modes and configurable command hints for accept/new-line workflows
+- [TextBox](controls/textbox.md) - single-line editor, password mode, overflow indicators
+- [TextArea](controls/textarea.md) - multi-line editor, soft wrapping, Find/Replace popup
+- [CodeEditor](controls/codeeditor.md) - multi-line code editor with line numbers, pluggable margins, and syntax highlighting
+- [MaskedInput](controls/maskedinput.md) - structured templates (credit cards, dates, IDs, etc.)
+- [NumberBox](controls/numberbox.md) - numeric value binding with inline validation
+- [PromptEditor](controls/prompteditor.md) - prompt-style editor with single-line or multi-line modes and configurable command hints for accept/new-line workflows
 
 Other controls also *use* the same infrastructure for parts of their UX:
 
-- [SearchReplacePopup](controls/searchreplacepopup.md) — reusable Find / Replace UI (hosted by TextArea, CodeEditor, and LogControl)
-- [LogControl](controls/logcontrol.md) — selection/copy + Find (Ctrl+F)
-- [DataGridControl](controls/datagrid.md) — in-place editing uses text editors (e.g. TextBox/NumberBox)
+- [SearchReplacePopup](controls/searchreplacepopup.md) - reusable Find / Replace UI (hosted by TextArea, CodeEditor, and LogControl)
+- [LogControl](controls/logcontrol.md) - selection/copy + Find (Ctrl+F)
+- [DataGridControl](controls/datagrid.md) - in-place editing uses text editors (e.g. TextBox/NumberBox)
 
 ## Editing features
 

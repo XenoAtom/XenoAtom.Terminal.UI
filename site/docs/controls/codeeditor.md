@@ -6,7 +6,7 @@ title: CodeEditor
 
 `CodeEditor` is a code-oriented multi-line editor built on top of the shared `TextEditorBase` / `TextEditorCore` stack.
 
-It keeps the core text-editing behavior of `TextArea`—selection, clipboard, undo/redo, scrolling, and Find/Replace—then adds:
+It keeps the core text-editing behavior of `TextArea`-selection, clipboard, undo/redo, scrolling, and Find/Replace-then adds:
 
 - adaptive line numbers enabled by default,
 - pluggable left/right margins,

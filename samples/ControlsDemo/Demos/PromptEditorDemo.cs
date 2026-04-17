@@ -40,7 +40,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
         };
 
         var help = new Markup("""
-                              [bold green]PromptEditor[/] — prompt-style editor demo
+                              [bold green]PromptEditor[/] - prompt-style editor demo
 
                               [gray]Try:[/]
                                • Type [bold red]error[/], [bold yellow]warn[/], [bold green]info[/] to see syntax highlighting.
@@ -99,7 +99,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
         var continuationMarkup = new TextBox(continuationMarkupText);
         var checkedVisualGutter = new CheckBox("Visual Gutter").IsChecked(visualGutter);
         var configLine = new HStack(checkedVisualGutter, checkedAutoPrompt, "Prompt Markup:", promptMarkup, "Continuation Markup:", continuationMarkup).Spacing(1);
-        
+
         // Callbacks (accept/cancel/completion/highlighting).
         promptEditor.Accepted((_, e) =>
         {
@@ -259,7 +259,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
 
             var hint = matches.Count > 10 ? new Markup($"[dim]+{matches.Count - 10} more…[/]") : null;
             var details = matches.Count == 1
-                ? new Markup($"[dim]↳[/] [primary]{matches[0].Command}[/] [dim]— {EscapeMarkup(matches[0].Description)}[/]")
+                ? new Markup($"[dim]↳[/] [primary]{matches[0].Command}[/] [dim]- {EscapeMarkup(matches[0].Description)}[/]")
                 : new Markup($"[dim]↳ Press[/] [cyan]Tab[/] [dim]to complete. Prefix:[/] [primary]{EscapeMarkup(prefixText)}[/]");
 
             var wrap = new WrapHStack(chipVisuals.ToArray()).Spacing(1).RunSpacing(0);
