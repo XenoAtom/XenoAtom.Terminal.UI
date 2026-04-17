@@ -287,7 +287,6 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     void ISelectionOwner.ClearSelection()
     {
         _core.ClearSelectionForSelectionOwner();
-        App?.RequestRender();
     }
 
     /// <inheritdoc />
@@ -607,7 +606,6 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     {
         CanUndo = _undoRedo.CanUndo;
         CanRedo = _undoRedo.CanRedo;
-        App?.RequestRender();
     }
 
     private sealed class TextEditorSearchTarget : ISearchReplaceTarget

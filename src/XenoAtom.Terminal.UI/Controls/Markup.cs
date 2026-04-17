@@ -121,6 +121,9 @@ public sealed partial class Markup : Visual, ISelectionOwner
     [Bindable]
     public partial bool IsSelectable { get; set; }
 
+    [Bindable]
+    private partial int InteractionVersion { get; set; }
+
     /// <inheritdoc />
     public bool HasSelection => _selectionAnchor >= 0 && _selectionActive >= 0 && _selectionAnchor != _selectionActive;
 
@@ -192,6 +195,7 @@ public sealed partial class Markup : Visual, ISelectionOwner
     /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
+        _ = InteractionVersion;
         EnsureParsed();
 
         var rect = Bounds;
@@ -519,7 +523,7 @@ public sealed partial class Markup : Visual, ISelectionOwner
 
         _selectionAnchor = normalizedAnchor;
         _selectionActive = normalizedActive;
-        App?.RequestRender();
+        InteractionVersion++;
     }
 
     private void ClearSelection()
@@ -535,7 +539,7 @@ public sealed partial class Markup : Visual, ISelectionOwner
         _selectionActive = -1;
         _pendingPointerSelection = false;
         _dragSelecting = false;
-        App?.RequestRender();
+        InteractionVersion++;
     }
 
     private bool TryGetOrderedSelection(int textLength, out int start, out int end)

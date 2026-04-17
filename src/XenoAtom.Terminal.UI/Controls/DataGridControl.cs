@@ -522,7 +522,6 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
 
         IsTableSelected = false;
         SelectedRow = -1;
-        App?.RequestRender();
     }
 
     /// <inheritdoc />

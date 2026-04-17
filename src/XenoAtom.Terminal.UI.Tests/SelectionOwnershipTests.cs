@@ -71,6 +71,23 @@ public sealed class SelectionOwnershipTests
     }
 
     [TestMethod]
+    public void TextBlock_MouseDragSelection_TriggersRenderThroughBindableInteractionState()
+    {
+        var textBlock = new TextBlock("hello world").HorizontalAlignment(Align.Stretch);
+
+        using var driver = new TerminalAppTestDriver(textBlock, TerminalHostKind.Fullscreen, new TerminalSize(30, 4));
+        driver.Tick();
+
+        var initialLength = driver.Backend.GetOutText().Length;
+
+        DragSelectToken(driver, textBlock, "world");
+
+        Assert.IsTrue(
+            driver.Backend.GetOutText().Length > initialLength,
+            "Expected selection changes to invalidate rendering through bindable interaction state.");
+    }
+
+    [TestMethod]
     public void TextBlock_CanSelect_LastCharacter_When_Dragging_Past_RightEdge()
     {
         var textBlock = new TextBlock("ab").HorizontalAlignment(Align.Stretch);
@@ -143,6 +160,23 @@ public sealed class SelectionOwnershipTests
         driver.Tick();
 
         Assert.AreEqual("world", driver.Terminal.Clipboard.Text);
+    }
+
+    [TestMethod]
+    public void Markup_MouseDragSelection_TriggersRenderThroughBindableInteractionState()
+    {
+        var markup = new Markup("[bold]hello[/] [red]world[/]").HorizontalAlignment(Align.Stretch);
+
+        using var driver = new TerminalAppTestDriver(markup, TerminalHostKind.Fullscreen, new TerminalSize(30, 3));
+        driver.Tick();
+
+        var initialLength = driver.Backend.GetOutText().Length;
+
+        DragSelectToken(driver, markup, "world");
+
+        Assert.IsTrue(
+            driver.Backend.GetOutText().Length > initialLength,
+            "Expected selection changes to invalidate rendering through bindable interaction state.");
     }
 
     private static void Click(TerminalAppTestDriver driver, Visual visual)

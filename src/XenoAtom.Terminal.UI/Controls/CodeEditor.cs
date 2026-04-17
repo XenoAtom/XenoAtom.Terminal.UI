@@ -935,26 +935,22 @@ public sealed partial class CodeEditor : TextEditorBase
     {
         _ = value;
         _lineNumberDigits = 0;
-        App?.RequestRender();
     }
 
     partial void OnShowLineNumbersChanged(bool value)
     {
         _ = value;
-        App?.RequestRender();
     }
 
     partial void OnHighlightCurrentLineChanged(bool value)
     {
         _ = value;
-        App?.RequestRender();
     }
 
     partial void OnHighlighterChanged(Delegator<CodeEditorLineHighlighter> value)
     {
         _ = value;
         InvalidateHighlightCache();
-        App?.RequestRender();
     }
 
     partial void OnSyntaxHighlighterChanged(CodeEditorSyntaxHighlighter? value)

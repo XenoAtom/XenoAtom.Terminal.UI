@@ -7,6 +7,7 @@ using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Threading;
+using System.Reflection;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -50,7 +51,7 @@ public sealed class TerminalAppLoopWakeTests
 
         Assert.IsTrue(waitBackend.WaitEntered.Wait(TimeSpan.FromSeconds(2)), "The app did not enter the blocking wait.");
 
-        app.RequestRender();
+        RequestRender(app);
 
         Assert.IsTrue(
             SpinWait.SpinUntil(() => waitBackend.WaitCount >= 2, TimeSpan.FromSeconds(2)),
@@ -58,6 +59,13 @@ public sealed class TerminalAppLoopWakeTests
 
         app.Stop();
         await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    private static void RequestRender(TerminalApp app)
+    {
+        typeof(TerminalApp)
+            .GetMethod("RequestRender", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .Invoke(app, []);
     }
 
     [TestMethod]

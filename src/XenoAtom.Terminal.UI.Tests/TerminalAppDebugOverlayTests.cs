@@ -74,7 +74,7 @@ public sealed class TerminalAppDebugOverlayTests
         typeof(TerminalApp)
             .GetMethod("AddRenderDirtyRect", BindingFlags.NonPublic | BindingFlags.Instance)!
             .Invoke(driver.App, [button]);
-        driver.App.RequestRender();
+        RequestRender(driver.App);
         driver.Tick();
 
         Assert.IsFalse(metrics.SceneFullRepaint, "The overlay should not convert local scene invalidation into a full repaint.");
@@ -119,7 +119,7 @@ public sealed class TerminalAppDebugOverlayTests
         typeof(TerminalApp)
             .GetMethod("AddRenderDirtyRect", BindingFlags.NonPublic | BindingFlags.Instance)!
             .Invoke(driver.App, [button]);
-        driver.App.RequestRender();
+        RequestRender(driver.App);
         driver.Tick();
 
         Assert.IsTrue(metrics.HasLastSceneUpdate, "Expected the scene update to be remembered.");
@@ -139,5 +139,12 @@ public sealed class TerminalAppDebugOverlayTests
         Assert.AreEqual(lastRepaintRect, metrics.LastSceneRepaintRect);
         Assert.AreEqual(lastDirtyRect, metrics.LastSceneDirtyRect);
         Assert.AreEqual(lastSceneTimestamp, metrics.LastSceneUpdateTimestamp);
+    }
+
+    private static void RequestRender(TerminalApp app)
+    {
+        typeof(TerminalApp)
+            .GetMethod("RequestRender", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .Invoke(app, []);
     }
 }

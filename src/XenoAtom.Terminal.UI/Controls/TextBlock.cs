@@ -89,6 +89,9 @@ public sealed partial class TextBlock : Visual, ISelectionOwner
     [Bindable]
     public partial bool IsSelectable { get; set; }
 
+    [Bindable]
+    private partial int InteractionVersion { get; set; }
+
     /// <inheritdoc />
     public bool HasSelection => _selectionAnchor >= 0 && _selectionActive >= 0 && _selectionAnchor != _selectionActive;
 
@@ -157,6 +160,7 @@ public sealed partial class TextBlock : Visual, ISelectionOwner
     /// <inheritdoc />
     protected override void RenderOverride(CellBuffer buffer)
     {
+        _ = InteractionVersion;
         var text = Text ?? string.Empty;
         var rect = Bounds;
         if (rect.Width <= 0 || rect.Height <= 0)
@@ -471,7 +475,7 @@ public sealed partial class TextBlock : Visual, ISelectionOwner
 
         _selectionAnchor = normalizedAnchor;
         _selectionActive = normalizedActive;
-        App?.RequestRender();
+        InteractionVersion++;
     }
 
     private void ClearSelection()
@@ -487,7 +491,7 @@ public sealed partial class TextBlock : Visual, ISelectionOwner
         _selectionActive = -1;
         _pendingPointerSelection = false;
         _dragSelecting = false;
-        App?.RequestRender();
+        InteractionVersion++;
     }
 
     private bool TryGetOrderedSelection(int textLength, out int start, out int end)

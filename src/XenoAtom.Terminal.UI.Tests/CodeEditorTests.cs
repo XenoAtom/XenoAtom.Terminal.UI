@@ -41,6 +41,36 @@ public sealed class CodeEditorTests
     }
 
     [TestMethod]
+    public void CodeEditor_TogglingLineNumbers_Rerenders_Through_Bindable_State()
+    {
+        var editor = new CodeEditor("Alpha\nBeta")
+        {
+            MinHeight = 3,
+            MaxHeight = 3,
+            ShowLineNumbers = false,
+        };
+
+        var root = new VStack { editor };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(14, 5));
+        driver.Tick();
+
+        var withoutNumbers = new AnsiTestScreen(14, 5);
+        withoutNumbers.Apply(driver.Backend.GetOutText());
+        Assert.IsFalse(
+            withoutNumbers.GetText().Split('\n').Any(line => line.Contains("1│", StringComparison.Ordinal)),
+            "Did not expect line-number gutter before enabling the bindable property.");
+
+        editor.ShowLineNumbers = true;
+        driver.Tick();
+
+        var withNumbers = new AnsiTestScreen(14, 5);
+        withNumbers.Apply(driver.Backend.GetOutText());
+        Assert.IsTrue(
+            withNumbers.GetText().Split('\n').Any(line => line.Contains("1│", StringComparison.Ordinal)),
+            "Expected the editor to rerender after toggling ShowLineNumbers without manual render requests.");
+    }
+
+    [TestMethod]
     public void CodeEditor_LineNumberWidth_Adapts_To_Visible_Range()
     {
         var text = string.Join("\n", Enumerable.Range(1, 150).Select(i => $"Line {i:000}"));

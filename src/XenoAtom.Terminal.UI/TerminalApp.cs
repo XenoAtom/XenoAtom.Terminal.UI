@@ -971,7 +971,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         _updateOutputBuilder.Clear();
     }
 
-    internal void RequestRender()
+    private void RequestRender()
     {
         _renderRequested = true;
         SignalWakeUp(TerminalLoopWakeReason.Render);
