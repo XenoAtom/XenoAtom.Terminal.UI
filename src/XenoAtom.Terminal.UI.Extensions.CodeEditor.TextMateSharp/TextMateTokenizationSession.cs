@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Threading;
 using TextMateSharp.Grammars;
 using TextMateSharp.Registry;
 
@@ -10,6 +11,7 @@ namespace XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp;
 internal sealed class TextMateTokenizationSession
 {
     private readonly IGrammar _grammar;
+    private int _tokenizeLineCallCount;
 
     public TextMateTokenizationSession(string scopeName, RegistryOptions registryOptions)
     {
@@ -24,6 +26,11 @@ internal sealed class TextMateTokenizationSession
 
     public string ScopeName { get; }
 
-    public ITokenizeLineResult TokenizeLine(string lineText, IStateStack? previousState)
-        => _grammar.TokenizeLine(lineText ?? string.Empty, previousState, TimeSpan.MaxValue);
+    internal int TokenizeLineCallCount => Volatile.Read(ref _tokenizeLineCallCount);
+
+    public ITokenizeLineResult TokenizeLine(LineText lineText, IStateStack? previousState)
+    {
+        Interlocked.Increment(ref _tokenizeLineCallCount);
+        return _grammar.TokenizeLine(lineText, previousState, TimeSpan.MaxValue);
+    }
 }

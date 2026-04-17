@@ -7,6 +7,7 @@ using XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp;
 using XenoAtom.Terminal.UI.Extensions.Markdown;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -150,6 +151,65 @@ public sealed class TextMateSharpIntegrationTests
         Assert.AreEqual("txt", renderer.LastContext.Language);
         Assert.IsTrue(renderer.LastContext.IsFenced);
         Assert.AreEqual("hello", renderer.LastContext.Code);
+    }
+
+    [TestMethod]
+    public void TextMateSyntaxHighlighter_Builds_And_Updates_Lazily_For_Large_Documents()
+    {
+        var source = string.Join('\n', Enumerable.Range(0, 20_000).Select(i => $"public sealed class C{i:000000} {{ }}"));
+        var document = new TextDocument(source);
+        var highlighter = new TextMateCodeEditorSyntaxHighlighter(
+            new TextMateCodeEditorOptions
+            {
+                LanguageId = "csharp",
+            });
+
+        var initialSnapshot = document.CurrentSnapshot;
+        var state = highlighter.Build(new CodeEditorSyntaxBuildContext(initialSnapshot, Theme.Default, 0, 0, 0));
+
+        Assert.AreEqual(0, highlighter.GetTokenizeLineCallCountForTests(), "Expected the initial syntax state build to defer TextMate tokenization until lines are requested.");
+
+        var initialRuns = new List<StyledRun>();
+        var initialLine = initialSnapshot.GetLine(7);
+        highlighter.GetLineRuns(
+            state,
+            new CodeEditorLineSyntaxRequest(initialSnapshot, Theme.Default, 7, initialLine.Start, initialLine.Length, 0, 0, 0),
+            initialRuns);
+
+        Assert.IsTrue(initialRuns.Count > 0, "Expected TextMate to highlight the requested visible prefix.");
+        Assert.AreEqual(8, highlighter.GetTokenizeLineCallCountForTests(), "Expected requesting line 7 to tokenize only the prefix needed to reach that line.");
+
+        TextDocumentChangedEventArgs? change = null;
+        document.Changed += (_, args) => change = args;
+        document.Insert(0, "x");
+
+        Assert.IsNotNull(change, "Expected the document edit to raise a change event.");
+        var edit = change!;
+
+        var updatedSnapshot = document.CurrentSnapshot;
+        var updatedState = highlighter.Update(
+            state,
+            new CodeEditorSyntaxUpdateContext(
+                updatedSnapshot,
+                Theme.Default,
+                edit,
+                updatedSnapshot.GetLineIndexFromPosition(edit.Position),
+                updatedSnapshot.GetLineIndexFromPosition(Math.Min(updatedSnapshot.Length, edit.Position + edit.InsertedLength)),
+                0,
+                0,
+                0));
+
+        Assert.AreEqual(8, highlighter.GetTokenizeLineCallCountForTests(), "Expected the incremental update step to invalidate cached suffix state without retokenizing the full document.");
+
+        var updatedRuns = new List<StyledRun>();
+        var updatedLine = updatedSnapshot.GetLine(7);
+        highlighter.GetLineRuns(
+            updatedState,
+            new CodeEditorLineSyntaxRequest(updatedSnapshot, Theme.Default, 7, updatedLine.Start, updatedLine.Length, 0, 0, 0),
+            updatedRuns);
+
+        Assert.IsTrue(updatedRuns.Count > 0, "Expected TextMate to re-highlight the visible prefix after editing the start of the document.");
+        Assert.AreEqual(16, highlighter.GetTokenizeLineCallCountForTests(), "Expected re-highlighting after a start-of-document edit to retokenize only the visible prefix instead of the entire file.");
     }
 
     private static Style FindStyleCovering(List<StyledRun> runs, int startIndex, int length)

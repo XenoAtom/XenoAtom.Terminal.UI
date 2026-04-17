@@ -112,9 +112,13 @@ public sealed class TextMateMarkdownCodeBlockRenderer : IMarkdownCodeBlockRender
                 lineEnd = code.Length;
             }
 
-            var lineText = lineEnd > lineStart ? code[lineStart..lineEnd] : string.Empty;
+            var contentLength = Math.Max(0, lineEnd - lineStart);
+            var tokenLength = contentLength + (hasLineBreak ? 1 : 0);
+            var lineText = tokenLength > 0
+                ? code.AsMemory(lineStart, tokenLength)
+                : ReadOnlyMemory<char>.Empty;
             var result = session.TokenizeLine(lineText, currentState);
-            var tokenizedLine = TextMateTokenizedLine.Create(lineText, result.Tokens);
+            var tokenizedLine = TextMateTokenizedLine.Create(contentLength, result.Tokens);
             TextMateRunBuilder.AddStyledRuns(runs, baseOffset, tokenizedLine.Segments, palette);
             currentState = result.RuleStack;
 
@@ -123,7 +127,7 @@ public sealed class TextMateMarkdownCodeBlockRenderer : IMarkdownCodeBlockRender
                 break;
             }
 
-            baseOffset += lineText.Length + 1;
+            baseOffset += tokenLength;
             lineStart = lineEnd + 1;
         }
 

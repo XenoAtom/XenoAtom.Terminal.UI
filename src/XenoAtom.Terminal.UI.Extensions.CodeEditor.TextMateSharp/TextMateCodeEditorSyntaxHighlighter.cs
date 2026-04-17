@@ -96,8 +96,8 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
     /// <inheritdoc />
     public ValueTask<CodeEditorSyntaxState> BuildAsync(in CodeEditorSyntaxBuildContext context, CancellationToken cancellationToken = default)
     {
-        var snapshot = context.Snapshot;
-        return new(Task.Run<CodeEditorSyntaxState>(() => BuildState(snapshot, cancellationToken), cancellationToken));
+        cancellationToken.ThrowIfCancellationRequested();
+        return new ValueTask<CodeEditorSyntaxState>(BuildState(context.Snapshot, cancellationToken));
     }
 
     /// <inheritdoc />
@@ -121,24 +121,25 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
         var lineCount = snapshot.LineCount;
         if (lineCount == 0)
         {
-            return new TextMateCodeEditorSyntaxState(snapshot.Version, _session, Array.Empty<IStateStack?>(), Array.Empty<IStateStack?>(), Array.Empty<TextMateTokenizedLine?>());
+            return new TextMateCodeEditorSyntaxState(
+                snapshot.Version,
+                _session,
+                string.Empty,
+                Array.Empty<IStateStack?>(),
+                Array.Empty<IStateStack?>(),
+                Array.Empty<TextMateTokenizedLine?>(),
+                validLineCount: 0);
         }
 
-        var lineStartStates = new IStateStack?[lineCount];
-        var lineEndStates = new IStateStack?[lineCount];
-        var tokenizedLines = new TextMateTokenizedLine?[lineCount];
-        IStateStack? currentState = null;
-
-        for (var lineIndex = 0; lineIndex < lineCount; lineIndex++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            lineStartStates[lineIndex] = currentState;
-            var result = _session.TokenizeLine(GetLineText(snapshot, lineIndex), currentState);
-            currentState = result.RuleStack;
-            lineEndStates[lineIndex] = currentState;
-        }
-
-        return new TextMateCodeEditorSyntaxState(snapshot.Version, _session, lineStartStates, lineEndStates, tokenizedLines);
+        cancellationToken.ThrowIfCancellationRequested();
+        return new TextMateCodeEditorSyntaxState(
+            snapshot.Version,
+            _session,
+            GetSnapshotText(snapshot),
+            new IStateStack?[lineCount],
+            new IStateStack?[lineCount],
+            new TextMateTokenizedLine?[lineCount],
+            validLineCount: 0);
     }
 
     private TextMateCodeEditorSyntaxState UpdateState(TextMateCodeEditorSyntaxState previousState, in CodeEditorSyntaxUpdateContext context, CancellationToken cancellationToken)
@@ -148,7 +149,14 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
         var snapshot = context.Snapshot;
         if (snapshot.LineCount == 0)
         {
-            return new TextMateCodeEditorSyntaxState(snapshot.Version, _session, Array.Empty<IStateStack?>(), Array.Empty<IStateStack?>(), Array.Empty<TextMateTokenizedLine?>());
+            return new TextMateCodeEditorSyntaxState(
+                snapshot.Version,
+                _session,
+                string.Empty,
+                Array.Empty<IStateStack?>(),
+                Array.Empty<IStateStack?>(),
+                Array.Empty<TextMateTokenizedLine?>(),
+                validLineCount: 0);
         }
 
         var change = context.Change;
@@ -162,7 +170,7 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
         var lineEndStates = new IStateStack?[lineCount];
         var tokenizedLines = new TextMateTokenizedLine?[lineCount];
         var startLine = Math.Clamp(context.AffectedStartLine, 0, lineCount - 1);
-        var prefixCount = Math.Min(startLine, Math.Min(previousState.LineCount, lineCount));
+        var prefixCount = Math.Min(startLine, Math.Min(previousState.ValidLineCount, Math.Min(previousState.LineCount, lineCount)));
         if (prefixCount > 0)
         {
             Array.Copy(previousState.LineStartStates, 0, lineStartStates, 0, prefixCount);
@@ -170,81 +178,54 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
             Array.Copy(previousState.TokenizedLines, 0, tokenizedLines, 0, prefixCount);
         }
 
-        var lineDelta = change.NewLineCount - change.OldLineCount;
-        var currentState = startLine == 0 ? null : lineEndStates[startLine - 1];
-
-        for (var lineIndex = startLine; lineIndex < lineCount; lineIndex++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            lineStartStates[lineIndex] = currentState;
-
-            var lineText = GetLineText(snapshot, lineIndex);
-            var result = _session.TokenizeLine(lineText, currentState);
-            currentState = result.RuleStack;
-            lineEndStates[lineIndex] = currentState;
-
-            var oldEquivalentLineIndex = lineIndex - lineDelta;
-            if (lineIndex > context.AffectedEndLine
-                && (uint)oldEquivalentLineIndex < (uint)previousState.LineCount
-                && StatesEqual(lineStartStates[lineIndex], previousState.LineStartStates[oldEquivalentLineIndex])
-                && previousState.TokenizedLines[oldEquivalentLineIndex] is { } cachedLine
-                && string.Equals(cachedLine.Text, lineText, StringComparison.Ordinal))
-            {
-                tokenizedLines[lineIndex] = cachedLine;
-            }
-
-            var oldNextStartIndex = (lineIndex + 1) - lineDelta;
-            if (lineIndex >= context.AffectedEndLine
-                && (uint)oldNextStartIndex < (uint)previousState.LineCount
-                && StatesEqual(currentState, previousState.LineStartStates[oldNextStartIndex]))
-            {
-                var tailCount = Math.Min(lineCount - (lineIndex + 1), previousState.LineCount - oldNextStartIndex);
-                if (tailCount > 0)
-                {
-                    Array.Copy(previousState.LineStartStates, oldNextStartIndex, lineStartStates, lineIndex + 1, tailCount);
-                    Array.Copy(previousState.LineEndStates, oldNextStartIndex, lineEndStates, lineIndex + 1, tailCount);
-                    Array.Copy(previousState.TokenizedLines, oldNextStartIndex, tokenizedLines, lineIndex + 1, tailCount);
-                }
-
-                break;
-            }
-        }
-
-        return new TextMateCodeEditorSyntaxState(snapshot.Version, _session, lineStartStates, lineEndStates, tokenizedLines);
+        cancellationToken.ThrowIfCancellationRequested();
+        return new TextMateCodeEditorSyntaxState(
+            snapshot.Version,
+            _session,
+            GetSnapshotText(snapshot),
+            lineStartStates,
+            lineEndStates,
+            tokenizedLines,
+            prefixCount);
     }
 
-    private static bool StatesEqual(IStateStack? left, IStateStack? right)
-        => left is null ? right is null : left.Equals(right);
-
-    private static string GetLineText(ITextSnapshot snapshot, int lineIndex)
+    private static string GetSnapshotText(ITextSnapshot snapshot)
     {
-        var line = snapshot.GetLine(lineIndex);
-        if (line.Length == 0)
+        ArgumentNullException.ThrowIfNull(snapshot);
+
+        if (snapshot.Length == 0)
         {
             return string.Empty;
         }
 
-        return string.Create(
-            line.Length,
-            (Snapshot: snapshot, Start: line.Start),
-            static (span, state) => state.Snapshot.CopyTo(state.Start, span));
+        return string.Create(snapshot.Length, snapshot, static (destination, currentSnapshot) =>
+        {
+            currentSnapshot.CopyTo(0, destination);
+        });
     }
 
     private sealed class TextMateCodeEditorSyntaxState : CodeEditorSyntaxState
     {
+        private readonly object _syncRoot = new();
+        private readonly string _snapshotText;
+        private int _validLineCount;
+
         public TextMateCodeEditorSyntaxState(
             int snapshotVersion,
             TextMateTokenizationSession session,
+            string snapshotText,
             IStateStack?[] lineStartStates,
             IStateStack?[] lineEndStates,
-            TextMateTokenizedLine?[] tokenizedLines)
+            TextMateTokenizedLine?[] tokenizedLines,
+            int validLineCount)
         {
             SnapshotVersion = snapshotVersion;
             Session = session;
+            _snapshotText = snapshotText ?? string.Empty;
             LineStartStates = lineStartStates;
             LineEndStates = lineEndStates;
             TokenizedLines = tokenizedLines;
+            _validLineCount = Math.Clamp(validLineCount, 0, lineStartStates.Length);
         }
 
         public override int SnapshotVersion { get; }
@@ -259,6 +240,8 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
 
         internal int LineCount => LineStartStates.Length;
 
+        internal int ValidLineCount => Volatile.Read(ref _validLineCount);
+
         internal TextMateTokenizedLine GetOrCreateLineTokens(ITextSnapshot snapshot, int lineIndex)
         {
             if (TokenizedLines[lineIndex] is { } existing)
@@ -266,10 +249,64 @@ public sealed class TextMateCodeEditorSyntaxHighlighter : CodeEditorSyntaxHighli
                 return existing;
             }
 
-            var lineText = GetLineText(snapshot, lineIndex);
-            var tokenized = TextMateTokenizedLine.Create(lineText, Session.TokenizeLine(lineText, LineStartStates[lineIndex]).Tokens);
-            TokenizedLines[lineIndex] = tokenized;
-            return tokenized;
+            lock (_syncRoot)
+            {
+                if (TokenizedLines[lineIndex] is { } cached)
+                {
+                    return cached;
+                }
+
+                EnsureTokenizedThrough(snapshot, lineIndex);
+                if (TokenizedLines[lineIndex] is { } tokenized)
+                {
+                    return tokenized;
+                }
+
+                var startState = lineIndex == 0 ? null : LineEndStates[lineIndex - 1];
+                var line = snapshot.GetLine(lineIndex);
+                var result = Session.TokenizeLine(GetLineText(line, includeLineBreak: true), startState);
+                tokenized = TextMateTokenizedLine.Create(line.Length, result.Tokens);
+                TokenizedLines[lineIndex] = tokenized;
+                LineStartStates[lineIndex] = startState;
+                LineEndStates[lineIndex] = result.RuleStack;
+                if (lineIndex == _validLineCount)
+                {
+                    _validLineCount = lineIndex + 1;
+                }
+
+                return tokenized;
+            }
+        }
+
+        private void EnsureTokenizedThrough(ITextSnapshot snapshot, int lineIndex)
+        {
+            if (lineIndex < _validLineCount)
+            {
+                return;
+            }
+
+            var currentState = _validLineCount == 0 ? null : LineEndStates[_validLineCount - 1];
+            for (var currentLine = _validLineCount; currentLine <= lineIndex; currentLine++)
+            {
+                var line = snapshot.GetLine(currentLine);
+                LineStartStates[currentLine] = currentState;
+                var result = Session.TokenizeLine(GetLineText(line, includeLineBreak: true), currentState);
+                currentState = result.RuleStack;
+                LineEndStates[currentLine] = currentState;
+                TokenizedLines[currentLine] = TextMateTokenizedLine.Create(line.Length, result.Tokens);
+            }
+
+            _validLineCount = lineIndex + 1;
+        }
+
+        private LineText GetLineText(TextLine line, bool includeLineBreak)
+        {
+            var length = line.Length + (includeLineBreak ? line.LineBreakLength : 0);
+            return length <= 0
+                ? ReadOnlyMemory<char>.Empty
+                : _snapshotText.AsMemory(line.Start, length);
         }
     }
+
+    internal int GetTokenizeLineCallCountForTests() => _session.TokenizeLineCallCount;
 }

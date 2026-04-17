@@ -12,41 +12,37 @@ internal readonly record struct TextMateTokenizedSegment(int Start, int End, str
 
 internal sealed class TextMateTokenizedLine
 {
-    public static readonly TextMateTokenizedLine Empty = new(string.Empty, Array.Empty<TextMateTokenizedSegment>());
+    public static readonly TextMateTokenizedLine Empty = new(Array.Empty<TextMateTokenizedSegment>());
 
-    public TextMateTokenizedLine(string text, TextMateTokenizedSegment[] segments)
+    public TextMateTokenizedLine(TextMateTokenizedSegment[] segments)
     {
-        Text = text;
         Segments = segments;
     }
 
-    public string Text { get; }
-
     public TextMateTokenizedSegment[] Segments { get; }
 
-    public static TextMateTokenizedLine Create(string text, IToken[] tokens)
+    public static TextMateTokenizedLine Create(int contentLength, IToken[] tokens)
     {
-        ArgumentNullException.ThrowIfNull(text);
         ArgumentNullException.ThrowIfNull(tokens);
 
-        if (text.Length == 0)
+        if (contentLength <= 0)
         {
             return Empty;
         }
 
         if (tokens.Length == 0)
         {
-            return new TextMateTokenizedLine(text, Array.Empty<TextMateTokenizedSegment>());
+            return new TextMateTokenizedLine(Array.Empty<TextMateTokenizedSegment>());
         }
 
         var segments = new List<TextMateTokenizedSegment>(tokens.Length);
         for (var index = 0; index < tokens.Length; index++)
         {
             var token = tokens[index];
-            var start = Math.Clamp(token.StartIndex, 0, text.Length);
+            var start = Math.Clamp(token.StartIndex, 0, contentLength);
             var end = index + 1 < tokens.Length
-                ? Math.Clamp(tokens[index + 1].StartIndex, 0, text.Length)
-                : text.Length;
+                ? Math.Clamp(tokens[index + 1].StartIndex, 0, contentLength)
+                : contentLength;
             if (end <= start)
             {
                 continue;
@@ -56,7 +52,7 @@ internal sealed class TextMateTokenizedLine
             segments.Add(new TextMateTokenizedSegment(start, end, scopes, CreateScopeKey(scopes)));
         }
 
-        return segments.Count == 0 ? Empty : new TextMateTokenizedLine(text, segments.ToArray());
+        return segments.Count == 0 ? Empty : new TextMateTokenizedLine(segments.ToArray());
     }
 
     private static string CreateScopeKey(string[] scopes)
