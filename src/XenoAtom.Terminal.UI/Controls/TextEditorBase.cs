@@ -591,7 +591,15 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
 
     private void SyncEditorStateFromCore()
     {
-        _requestedCaretIndex = _core.CaretIndex;
+        // Preserve an explicitly requested caret position until the currently bound TextDocument has actually been
+        // attached to the editor core. This keeps object initializers such as
+        // `new TextBox("hello") { CaretIndex = 2 }` stable even though the control starts with a placeholder
+        // document in the base constructor and swaps to its real document during PrepareChildren().
+        if (ReferenceEquals(_document, TextDocument))
+        {
+            _requestedCaretIndex = _core.CaretIndex;
+        }
+
         OnEditorStateChanged();
     }
 
