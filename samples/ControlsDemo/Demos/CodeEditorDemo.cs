@@ -9,13 +9,8 @@ using XenoAtom.Terminal.UI.Text;
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
 [Demo("CodeEditor", "Input", Description = "Code-oriented editor with line numbers, pluggable margins, search/replace, and TextMateSharp-backed syntax highlighting.")]
-public sealed class CodeEditorDemo : ControlsDemoBase
+public sealed partial class CodeEditorDemo : ControlsDemoBase
 {
-    private static readonly TextMateCodeEditorSyntaxHighlighter TextMateSyntaxHighlighter =
-        new(new TextMateCodeEditorOptions { LanguageId = "csharp" });
-    private static readonly CodeEditorSyntaxHighlighter ScreenshotTextMateSyntaxHighlighter =
-        new SynchronousTextMateSyntaxHighlighter(TextMateSyntaxHighlighter);
-
     public CodeEditorDemo() : base(DemoSource.Get())
     {
     }
@@ -29,13 +24,22 @@ public sealed class CodeEditorDemo : ControlsDemoBase
         var highlightCurrentLine = new State<bool>(true);
         var showDiffMargin = new State<bool>(true);
         var useSyntaxHighlighter = new State<bool>(true);
-        var goToLine = new State<int>(12);
-        var goToColumn = new State<int>(5);
-        var goToPosition = new State<int>(0);
+        var selectedLanguageIndex = new State<int>(DefaultSampleIndex);
+        var selectedLanguageLabel = new State<string>(DefaultSample.DisplayName);
+        var findText = new State<string>(DefaultSample.FindText);
+        var replaceText = new State<string>(DefaultSample.ReplaceText);
+        var goToLine = new State<int>(DefaultSample.GoToLine);
+        var goToColumn = new State<int>(DefaultSample.GoToColumn);
+        var goToPosition = new State<int>(DefaultSample.GetCaretIndex());
         var caretLocationText = new State<string?>("Ln 1, Col 1");
+        var sampleLanguageText = new State<string>($"TextMate grammar: {DefaultSample.DisplayName}");
 
-        var editor = new CodeEditor(BuildDemoSource())
-            .Placeholder("Type C# code here…")
+        var liveTextMateHighlighters = new Dictionary<string, TextMateCodeEditorSyntaxHighlighter>(StringComparer.Ordinal);
+        var screenshotTextMateHighlighters = new Dictionary<string, CodeEditorSyntaxHighlighter>(StringComparer.Ordinal);
+        CodeEditorLanguageSample? appliedSample = null;
+
+        var editor = new CodeEditor(DefaultSample.Source)
+            .Placeholder("Choose a language sample or type here…")
             .MinHeight(14)
             .ShowLineNumbers(showLineNumbers)
             .HighlightCurrentLine(highlightCurrentLine)
@@ -45,6 +49,28 @@ public sealed class CodeEditorDemo : ControlsDemoBase
                 SearchMatchBackground = (context.Theme.Accent ?? context.Theme.Selection)?.WithAlpha(0x40),
                 ActiveSearchMatchBackground = context.Theme.Warning ?? context.Theme.Selection,
             });
+
+        editor.Update(_ =>
+        {
+            var sample = GetSampleByIndex(selectedLanguageIndex.Value);
+            if (appliedSample == sample)
+            {
+                return;
+            }
+
+            appliedSample = sample;
+            selectedLanguageLabel.Value = sample.DisplayName;
+            sampleLanguageText.Value = $"TextMate grammar: {sample.DisplayName}";
+            findText.Value = sample.FindText;
+            replaceText.Value = sample.ReplaceText;
+            goToLine.Value = sample.GoToLine;
+            goToColumn.Value = sample.GoToColumn;
+
+            editor.TextDocument = new TextDocument(sample.Source);
+            editor.CaretIndex = sample.GetCaretIndex();
+            goToPosition.Value = sample.GetCaretIndex();
+            editor.Scroll.SetOffset(0, 0);
+        });
 
         var diffMargin = CodeEditor.CreateDiffIndicatorMargin(
             glyphProvider: static lineIndex => lineIndex switch
@@ -76,8 +102,9 @@ public sealed class CodeEditorDemo : ControlsDemoBase
 
         editor.Update(_ =>
         {
+            var sample = appliedSample ?? GetSampleByIndex(selectedLanguageIndex.Value);
             editor.SyntaxHighlighter = useSyntaxHighlighter.Value
-                ? (context.IsScreenshot ? ScreenshotTextMateSyntaxHighlighter : TextMateSyntaxHighlighter)
+                ? GetTextMateHighlighter(sample.LanguageId)
                 : null;
             if (!useSyntaxHighlighter.Value)
             {
@@ -94,15 +121,27 @@ public sealed class CodeEditorDemo : ControlsDemoBase
             caretLocationText.Value = $"Ln {editor.Line}, Col {editor.Column}";
         });
 
+        var languageSelect = new Select<string>()
+            .Items(LanguageDisplayNames)
+            .SelectedIndex(selectedLanguageIndex)
+            .MinWidth(18)
+            .MaxWidth(22);
+
+        var languageRow = new HStack(
+                "Language",
+                languageSelect,
+                new TextBlock(() => sampleLanguageText.Value))
+            .Spacing(1);
+
         var controls = new HStack(
                 new CheckBox("Wrap").IsChecked(wordWrap),
                 new CheckBox("Line numbers").IsChecked(showLineNumbers),
                 new CheckBox("Current line").IsChecked(highlightCurrentLine),
                 new CheckBox("Diff margin").IsChecked(showDiffMargin),
                 new CheckBox("TextMate syntax").IsChecked(useSyntaxHighlighter),
-                new Button("Find").Click(() => editor.OpenFind("CodeEditor")),
-                new Button("Replace").Click(() => editor.OpenReplace("return")),
-                new Button("Jump deep").Click(() => editor.Scroll.SetOffset(0, 20)),
+                new Button("Find").Click(() => editor.OpenFind(findText.Value)),
+                new Button("Replace").Click(() => editor.OpenReplace(replaceText.Value)),
+                new Button("Jump deep").Click(() => editor.Scroll.SetOffset(0, Math.Min(20, Math.Max(0, editor.Scroll.ExtentHeight - 1)))),
                 new Button("Reset view").Click(() => editor.Scroll.SetOffset(0, 0)))
             .Spacing(context.IsScreenshot ? 0 : 1);
 
@@ -124,21 +163,21 @@ public sealed class CodeEditorDemo : ControlsDemoBase
             .Spacing(1);
 
         var help = new Markup(
-            "[bold green]CodeEditor[/] shares the text engine with TextArea, then adds [cyan]line numbers[/], [cyan]margins[/], [cyan]search overlays[/], [cyan]syntax highlighting[/], and now programmatic [cyan]Go To Line / Column / Position[/]. [dim]Try Ctrl+F / Ctrl+H, Ctrl+Z / Ctrl+R, or use the jump controls below.[/]")
+            "[bold green]CodeEditor[/] shares the text engine with TextArea, then adds [cyan]line numbers[/], [cyan]margins[/], [cyan]search overlays[/], [cyan]syntax highlighting[/], and now programmatic [cyan]Go To Line / Column / Position[/]. [dim]Switch the sample language to preview multiple TextMateSharp grammars, then try Ctrl+F / Ctrl+H, Ctrl+Z / Ctrl+R, or the jump controls below.[/]")
             .Wrap(true);
 
-        var topPanel = new VStack(help, controls, navigationRow, positionRow)
+        var topPanel = new VStack(help, languageRow, controls, navigationRow, positionRow)
             .Spacing(1)
             .HorizontalAlignment(Align.Stretch);
 
         var locationFooter = new Footer()
             .Left(new TextBlock(caretLocationText))
-            .Center(new TextBlock(() => $"Targets: line {goToLine.Value}, column {goToColumn.Value}, position {goToPosition.Value}"))
+            .Center(new TextBlock(() => $"{selectedLanguageLabel.Value} • Targets: line {goToLine.Value}, column {goToColumn.Value}, position {goToPosition.Value}"))
             .Right(new Markup("[dim]Ctrl+F Find • Ctrl+H Replace[/]") { Wrap = false });
 
         var bottomPanel = new VStack(
                 locationFooter,
-                DemoUi.Hint("The left diff margin is implemented through the public CodeEditorMargin contract. Toggle TextMate syntax to switch between the simple delegate and the persistent TextMateSharp-backed syntax-state pipeline."))
+                DemoUi.Hint("The left diff margin is implemented through the public CodeEditorMargin contract. The language picker swaps both the sample document and the TextMateSharp grammar without cluttering the main demo file."))
             .Spacing(1)
             .HorizontalAlignment(Align.Stretch);
 
@@ -151,12 +190,34 @@ public sealed class CodeEditorDemo : ControlsDemoBase
 
         return root.InScreenshot(context, () =>
         {
-            var editorText = editor.Text ?? string.Empty;
-            var caretIndex = editorText.IndexOf("CodeEditorDemo", StringComparison.Ordinal);
-            editor.CaretIndex = Math.Min(editor.TextDocument.CurrentSnapshot.Length, Math.Max(0, caretIndex));
-            editor.OpenFind("CodeEditor");
-            editor.Scroll.SetOffset(0, 7);
+            var defaultSample = DefaultSample;
+            editor.CaretIndex = defaultSample.GetCaretIndex();
+            goToPosition.Value = defaultSample.GetCaretIndex();
+            editor.OpenFind(defaultSample.FindText);
+            editor.Scroll.SetOffset(0, defaultSample.ScreenshotScrollOffset);
         });
+
+        CodeEditorSyntaxHighlighter GetTextMateHighlighter(string languageId)
+        {
+            if (!liveTextMateHighlighters.TryGetValue(languageId, out var liveHighlighter))
+            {
+                liveHighlighter = new TextMateCodeEditorSyntaxHighlighter(new TextMateCodeEditorOptions { LanguageId = languageId });
+                liveTextMateHighlighters.Add(languageId, liveHighlighter);
+            }
+
+            if (!context.IsScreenshot)
+            {
+                return liveHighlighter;
+            }
+
+            if (!screenshotTextMateHighlighters.TryGetValue(languageId, out var screenshotHighlighter))
+            {
+                screenshotHighlighter = new SynchronousTextMateSyntaxHighlighter(liveHighlighter);
+                screenshotTextMateHighlighters.Add(languageId, screenshotHighlighter);
+            }
+
+            return screenshotHighlighter;
+        }
 
         static void HighlightLine(in CodeEditorLineHighlightRequest request, List<StyledRun> runs)
         {
@@ -167,43 +228,6 @@ public sealed class CodeEditorDemo : ControlsDemoBase
             AddQuotedRuns(lineText, Style.None.WithForeground(Colors.Gold), runs);
             AddCommentRuns(lineText, Style.None.WithForeground(Colors.LimeGreen) | TextStyle.Dim, runs);
         }
-    }
-
-    private static string BuildDemoSource()
-    {
-        var builder = new StringBuilder();
-        builder.AppendLine("using System.Collections.Generic;");
-        builder.AppendLine("using XenoAtom.Terminal.UI.Controls;");
-        builder.AppendLine();
-        builder.AppendLine("namespace Demo;");
-        builder.AppendLine();
-        builder.AppendLine("public sealed class CodeEditorDemo");
-        builder.AppendLine("{");
-        builder.AppendLine("    public string Render(int count)");
-        builder.AppendLine("    {");
-        builder.AppendLine("        // Search for CodeEditor or toggle Wrap in the demo toolbar.");
-        builder.AppendLine("        if (count <= 0)");
-        builder.AppendLine("        {");
-        builder.AppendLine("            return \"empty\";");
-        builder.AppendLine("        }");
-        builder.AppendLine();
-        builder.AppendLine("        var lines = new List<string>();");
-        builder.AppendLine("        for (var i = 0; i < count; i++)");
-        builder.AppendLine("        {");
-        builder.AppendLine("            lines.Add($\"CodeEditor sample line {i:000}\");");
-        builder.AppendLine("        }");
-        builder.AppendLine();
-        builder.AppendLine("        return string.Join(\"\\n\", lines);");
-        builder.AppendLine("    }");
-        builder.AppendLine("}");
-        builder.AppendLine();
-
-        for (var i = 0; i < 40; i++)
-        {
-            builder.AppendLine($"// region sample-{i:00} :: public static string Label{i:00} => \"CodeEditor line {i:00}\";");
-        }
-
-        return builder.ToString();
     }
 
     private static string SnapshotLineText(ITextSnapshot snapshot, int lineIndex)
