@@ -904,6 +904,40 @@ public sealed class CodeEditorTests
     }
 
     [TestMethod]
+    public void CodeEditor_Visible_Syntax_Preparation_Refreshes_Viewport_When_Same_State_Gains_Visible_Coverage()
+    {
+        var highlighter = new ProgressiveViewportPreparationSyntaxHighlighter();
+        var text = string.Join("\n", Enumerable.Range(0, 240).Select(i => $"Line {i:000}"));
+        var editor = new CodeEditor(text)
+        {
+            MinHeight = 4,
+            MaxHeight = 4,
+            SyntaxHighlighter = highlighter,
+        };
+
+        using var driver = new TerminalAppTestDriver(new VStack { editor }, TerminalHostKind.Fullscreen, new TerminalSize(24, 6));
+        driver.Tick();
+
+        var initialState = new ProgressiveViewportSyntaxState(editor.TextDocument.CurrentSnapshot.Version, editor.TextDocument.CurrentSnapshot.LineCount, completedLineCount: 0);
+        highlighter.BuildRequests[0].Complete(initialState);
+        driver.TickUntil(() => editor.GetSyntaxStateSnapshotVersionForTests() == editor.TextDocument.CurrentSnapshot.Version);
+        driver.TickUntil(() => highlighter.VisibleRangeRequests.Count == 1);
+        highlighter.VisibleRangeRequests.Clear();
+
+        driver.App.Post(() => editor.Scroll.SetOffset(0, 190));
+        driver.TickUntil(() => highlighter.VisibleRangeRequests.Count == 1);
+
+        var runsBeforePreparation = editor.GetHighlightRunsForTests(190);
+        Assert.IsTrue(runsBeforePreparation is null || runsBeforePreparation.Length == 0, "Expected the far viewport to remain unhighlighted until visible-range preparation completes.");
+
+        highlighter.VisibleRangeRequests[0].CompletePreparedRange();
+        driver.TickUntil(() => editor.GetHighlightRunsForTests(190) is { Length: > 0 });
+
+        var runsAfterPreparation = editor.GetHighlightRunsForTests(190);
+        Assert.IsTrue(runsAfterPreparation is not null && runsAfterPreparation.Length > 0, "Expected visible-range preparation to populate instant highlighting even when it reuses and mutates the same syntax state instance.");
+    }
+
+    [TestMethod]
     public void CodeEditor_Clipboard_Cut_Copy_And_Paste_Work()
     {
         var editor = new CodeEditor();
@@ -1702,6 +1736,102 @@ public sealed class CodeEditorTests
             => lineIndex >= PreparedFirstLine && lineIndex <= PreparedLastLine;
     }
 
+    private sealed class ProgressiveViewportPreparationSyntaxHighlighter : CodeEditorSyntaxHighlighter, IAsyncCodeEditorSyntaxHighlighter
+    {
+        public List<PendingRequest> BuildRequests { get; } = new();
+
+        public List<PendingPreparedViewportRequest> VisibleRangeRequests { get; } = new();
+
+        public override bool DependsOnCaretOrSelection => false;
+
+        public override CodeEditorSyntaxState Build(in CodeEditorSyntaxBuildContext context)
+            => new ProgressiveViewportSyntaxState(context.Snapshot.Version, context.Snapshot.LineCount, context.Snapshot.LineCount);
+
+        public override CodeEditorSyntaxState Update(CodeEditorSyntaxState previousState, in CodeEditorSyntaxUpdateContext context)
+        {
+            _ = previousState;
+            return new ProgressiveViewportSyntaxState(context.Snapshot.Version, context.Snapshot.LineCount, context.Snapshot.LineCount);
+        }
+
+        public override void GetLineRuns(CodeEditorSyntaxState state, in CodeEditorLineSyntaxRequest request, List<StyledRun> runs)
+        {
+            if (state is not ProgressiveViewportSyntaxState viewportState || request.LineLength <= 0)
+            {
+                return;
+            }
+
+            if (!viewportState.HasLineCoverage(request.LineIndex))
+            {
+                return;
+            }
+
+            runs.Add(new StyledRun(0, Math.Min(4, request.LineLength), Style.None.WithForeground(Color.Basic16(5))));
+        }
+
+        public ValueTask<CodeEditorSyntaxState> BuildAsync(in CodeEditorSyntaxBuildContext context, CancellationToken cancellationToken = default)
+        {
+            var request = new PendingRequest(context.Snapshot.Version);
+            BuildRequests.Add(request);
+            return new ValueTask<CodeEditorSyntaxState>(request.Task);
+        }
+
+        public ValueTask<CodeEditorSyntaxState> UpdateAsync(CodeEditorSyntaxState previousState, in CodeEditorSyntaxUpdateContext context, CancellationToken cancellationToken = default)
+        {
+            _ = previousState;
+            return new ValueTask<CodeEditorSyntaxState>(new ProgressiveViewportSyntaxState(context.Snapshot.Version, context.Snapshot.LineCount, context.Snapshot.LineCount));
+        }
+
+        public ValueTask<CodeEditorSyntaxState> PrepareVisibleRangeAsync(CodeEditorSyntaxState state, in CodeEditorSyntaxVisibleRangeContext context, CancellationToken cancellationToken = default)
+        {
+            var viewportState = AssertState(state, context.Snapshot.Version);
+            var request = new PendingPreparedViewportRequest(viewportState, context.FirstVisibleLineIndex, context.LastVisibleLineIndex);
+            VisibleRangeRequests.Add(request);
+            return new ValueTask<CodeEditorSyntaxState>(request.Task);
+        }
+
+        private static ProgressiveViewportSyntaxState AssertState(CodeEditorSyntaxState state, int snapshotVersion)
+        {
+            Assert.IsInstanceOfType<ProgressiveViewportSyntaxState>(state);
+            var viewportState = (ProgressiveViewportSyntaxState)state;
+            Assert.AreEqual(snapshotVersion, viewportState.SnapshotVersion, "Expected visible-range preparation to keep operating on the current snapshot state.");
+            return viewportState;
+        }
+    }
+
+    private sealed class ProgressiveViewportSyntaxState : CodeEditorSyntaxState, IProgressiveCodeEditorSyntaxState, ICodeEditorSyntaxCoverageState
+    {
+        private readonly HashSet<int> _preparedLines;
+
+        public ProgressiveViewportSyntaxState(int snapshotVersion, int lineCount, int completedLineCount)
+        {
+            SnapshotVersion = snapshotVersion;
+            LineCount = lineCount;
+            CompletedLineCount = completedLineCount;
+            _preparedLines = new HashSet<int>();
+        }
+
+        public override int SnapshotVersion { get; }
+
+        public int LineCount { get; }
+
+        public int CompletedLineCount { get; set; }
+
+        public void PrepareRange(int firstLineIndex, int lastLineIndex)
+        {
+            var start = Math.Clamp(firstLineIndex, 0, Math.Max(0, LineCount - 1));
+            var end = Math.Clamp(lastLineIndex, start, Math.Max(0, LineCount - 1));
+            for (var lineIndex = start; lineIndex <= end; lineIndex++)
+            {
+                _preparedLines.Add(lineIndex);
+            }
+        }
+
+        public bool HasLineCoverage(int lineIndex)
+            => lineIndex >= 0
+                && lineIndex < LineCount
+                && (lineIndex < CompletedLineCount || _preparedLines.Contains(lineIndex));
+    }
+
     private sealed class PendingRequest
     {
         private readonly TaskCompletionSource<CodeEditorSyntaxState> _tcs = new();
@@ -1740,6 +1870,31 @@ public sealed class CodeEditorTests
         public Task<CodeEditorSyntaxState> Task => _tcs.Task;
 
         public void Complete(CodeEditorSyntaxState state) => _tcs.TrySetResult(state);
+    }
+
+    private sealed class PendingPreparedViewportRequest
+    {
+        private readonly TaskCompletionSource<CodeEditorSyntaxState> _tcs = new();
+        private readonly ProgressiveViewportSyntaxState _state;
+
+        public PendingPreparedViewportRequest(ProgressiveViewportSyntaxState state, int firstVisibleLineIndex, int lastVisibleLineIndex)
+        {
+            _state = state;
+            FirstVisibleLineIndex = firstVisibleLineIndex;
+            LastVisibleLineIndex = lastVisibleLineIndex;
+        }
+
+        public int FirstVisibleLineIndex { get; }
+
+        public int LastVisibleLineIndex { get; }
+
+        public Task<CodeEditorSyntaxState> Task => _tcs.Task;
+
+        public void CompletePreparedRange()
+        {
+            _state.PrepareRange(FirstVisibleLineIndex, LastVisibleLineIndex);
+            _tcs.TrySetResult(_state);
+        }
     }
 
     private static bool RunsEqual(StyledRun[]? left, StyledRun[]? right)

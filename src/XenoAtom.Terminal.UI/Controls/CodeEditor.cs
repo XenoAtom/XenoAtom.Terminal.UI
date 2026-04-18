@@ -1452,7 +1452,7 @@ public sealed partial class CodeEditor : TextEditorBase
 
         if (missingVisibleSyntax
             && syntaxHighlighter is IAsyncCodeEditorSyntaxHighlighter asyncHighlighter
-            && _syntaxState is not null)
+            && _syntaxState is ICodeEditorSyntaxCoverageState)
         {
             ScheduleAsyncVisibleSyntaxRefresh(asyncHighlighter, syntaxHighlighter, snapshot, theme);
         }
