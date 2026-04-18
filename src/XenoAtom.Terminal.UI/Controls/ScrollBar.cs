@@ -391,17 +391,24 @@ public abstract partial class ScrollBar : Visual
             return;
         }
 
-        var rect = Bounds;
-        var trackLength = Orientation == Orientation.Vertical ? rect.Height : rect.Width;
-        if (trackLength <= 0)
+        // This method runs from Minimum/Maximum/ViewportSize change callbacks while a drag is active.
+        // Recomputing the captured value reads those bindables again, but those internal reads should not
+        // become dependencies of the outer layout/input tracking scope; otherwise a later write to another
+        // drag metric in the same scope can trigger a read-then-write loop exception.
+        using (BindingManager.Current.SuppressReadTracking())
         {
-            return;
-        }
+            var rect = Bounds;
+            var trackLength = Orientation == Orientation.Vertical ? rect.Height : rect.Width;
+            if (trackLength <= 0)
+            {
+                return;
+            }
 
-        var currentValue = _currentValueForLayout;
-        var (_, thumbLength) = GetThumbMetrics(trackLength, currentValue);
-        var local = Orientation == Orientation.Vertical ? _dragCurrentUiY - rect.Y : _dragCurrentUiX - rect.X;
-        ApplyValue(GetValueFromThumbStart(local - _dragPointerOffsetInThumb, trackLength, thumbLength));
+            var currentValue = _currentValueForLayout;
+            var (_, thumbLength) = GetThumbMetrics(trackLength, currentValue);
+            var local = Orientation == Orientation.Vertical ? _dragCurrentUiY - rect.Y : _dragCurrentUiX - rect.X;
+            ApplyValue(GetValueFromThumbStart(local - _dragPointerOffsetInThumb, trackLength, thumbLength));
+        }
     }
 
     /// <inheritdoc/>
