@@ -12,7 +12,7 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
   - **Fullscreen** apps via `Terminal.Run(...)` (alternate screen + input loop)
 - **Modern control library** (60+ built-in controls):
   - Buttons, toggles, lists, tables, closable/scrollable tabs, menus, dialogs/popups, **toasts**, charts, progress, spinners, tooltips…
-  - Text editing: **TextBox**, **TextArea**, **CodeEditor**, **PromptEditor**, **MaskedInput**, **NumberBox** (undo/redo: `Ctrl+Z` / `Ctrl+R`)
+  - Text editing: **TextBox**, **TextArea**, **CodeEditor**, **PromptEditor**, **MaskedInput**, **NumberBox** (undo/redo: `Ctrl+Z` / `Ctrl+R`, `CodeEditor` Find/Replace: `Ctrl+F` / `Ctrl+H`, Go To Line: `Ctrl+G`)
   - Advanced widgets: **LogControl**, **CommandPalette**, **BreakdownChart**, **ColorPicker**
   - Mockup/empty-state widget: **Placeholder** (text + background surfaces, gradients)
   - Companion extension package: **XenoAtom.Terminal.UI.Extensions.Markdown** (`MarkdownControl`, `MarkdownMarkupConverter` with source-preserving highlight mode)

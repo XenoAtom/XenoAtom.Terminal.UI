@@ -3,6 +3,7 @@
 // See license.txt file in the project root for full license information.
 
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using XenoAtom.Terminal;
@@ -10,6 +11,7 @@ using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Hosting;
+using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 
@@ -220,6 +222,229 @@ public sealed class CodeEditorTests
 
         var popup = editor.EnumerateVisualsDepthFirst().OfType<SearchReplacePopup>().Single();
         Assert.IsTrue(popup.IsOpen, "Expected Ctrl+F to open the code editor find popup.");
+    }
+
+    [TestMethod]
+    public void CodeEditor_CtrlG_Opens_GoToLine_Popup_Centered_On_Editor()
+    {
+        var editor = new CodeEditor("one\ntwo\nthree\nfour\nfive")
+        {
+            MinHeight = 5,
+            MaxHeight = 5,
+        };
+
+        using var driver = new TerminalAppTestDriver(new VStack { editor }, TerminalHostKind.Fullscreen, new TerminalSize(40, 12));
+        driver.Tick();
+        driver.App.Focus(editor);
+
+        SendCtrlGesture(driver, TerminalChar.CtrlG);
+        driver.Tick();
+
+        var popup = driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Single();
+        var editorRect = GetEditorRect(editor);
+        var expectedLeft = editorRect.X + Math.Max(0, (editorRect.Width - popup.PopupRect.Width) / 2);
+        var expectedTop = editorRect.Y + Math.Max(0, (editorRect.Height - popup.PopupRect.Height) / 2);
+
+        Assert.AreEqual(expectedLeft, popup.PopupRect.X, "Expected Ctrl+G to center the Go To Line popup horizontally inside the code editor surface.");
+        Assert.AreEqual(expectedTop, popup.PopupRect.Y, "Expected Ctrl+G to center the Go To Line popup vertically inside the code editor surface.");
+        Assert.IsInstanceOfType<NumberBox<int>>(driver.App.FocusedElement, "Expected the Go To Line number box to receive focus when the popup opens.");
+    }
+
+    [TestMethod]
+    public void CodeEditor_GoToLine_Popup_Enter_Navigates_To_Requested_Line()
+    {
+        var editor = new CodeEditor(string.Join('\n', Enumerable.Range(1, 12).Select(i => $"Line {i:00}")))
+        {
+            MinHeight = 5,
+            MaxHeight = 5,
+        };
+
+        using var driver = new TerminalAppTestDriver(new VStack { editor }, TerminalHostKind.Fullscreen, new TerminalSize(40, 12));
+        driver.Tick();
+        driver.App.Focus(editor);
+
+        SendCtrlGesture(driver, TerminalChar.CtrlG);
+        driver.Tick();
+
+        var numberBox = driver.App.Root.EnumerateVisualsDepthFirst().OfType<NumberBox<int>>().Single();
+        numberBox.Value = 9;
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
+        driver.TickUntil(() => driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Count() == 0);
+
+        Assert.AreEqual(9, editor.Line, "Expected Enter in the Go To Line popup to move the caret to the requested line.");
+        Assert.AreEqual(0, driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Count(), "Expected the Go To Line popup to close after a successful navigation.");
+        Assert.AreSame(editor, driver.App.FocusedElement, "Expected focus to return to the editor after closing the Go To Line popup.");
+    }
+
+    [TestMethod]
+    public void CodeEditor_GoToLine_Popup_Typed_Enter_Closes_And_Input_Returns_To_Editor()
+    {
+        var editor = new CodeEditor(string.Join('\n', Enumerable.Range(1, 12).Select(i => $"Line {i:00}")))
+        {
+            MinHeight = 5,
+            MaxHeight = 5,
+        };
+
+        using var driver = new TerminalAppTestDriver(new VStack { editor }, TerminalHostKind.Fullscreen, new TerminalSize(40, 12));
+        driver.Tick();
+        driver.App.Focus(editor);
+
+        SendCtrlGesture(driver, TerminalChar.CtrlG);
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "9" });
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
+        driver.TickUntil(() => driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Count() == 0);
+
+        Assert.AreEqual(9, editor.Line, "Expected typing a line number then pressing Enter to move the caret to that line.");
+        Assert.AreSame(editor, driver.App.FocusedElement, "Expected focus to return to the editor after the typed Go To Line workflow completes.");
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "X" });
+        driver.TickUntil(() => editor.Text!.Contains("X", StringComparison.Ordinal));
+        Assert.AreSame(editor, driver.App.FocusedElement, "Expected subsequent input to go back to the editor instead of remaining trapped in the popup.");
+    }
+
+    [TestMethod]
+    public void CodeEditor_GoToLine_Popup_Can_Reopen_After_A_Successful_Navigation()
+    {
+        var editor = new CodeEditor(string.Join('\n', Enumerable.Range(1, 12).Select(i => $"Line {i:00}")))
+        {
+            MinHeight = 5,
+            MaxHeight = 5,
+        };
+
+        using var driver = new TerminalAppTestDriver(new VStack { editor }, TerminalHostKind.Fullscreen, new TerminalSize(40, 12));
+        driver.Tick();
+        driver.App.Focus(editor);
+
+        SendCtrlGesture(driver, TerminalChar.CtrlG);
+        driver.Tick();
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "9" });
+        driver.Tick();
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
+        driver.TickUntil(() => driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Count() == 0);
+
+        Assert.AreEqual(9, editor.Line, "Expected the first Go To Line interaction to navigate successfully.");
+
+        SendCtrlGesture(driver, TerminalChar.CtrlG);
+        driver.Tick();
+        Assert.AreEqual(1, driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Count(), "Expected the Go To Line popup to reopen after a previous successful close.");
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "3" });
+        driver.Tick();
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
+        driver.TickUntil(() => driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Count() == 0);
+
+        Assert.AreEqual(3, editor.Line, "Expected the reopened Go To Line popup to close cleanly and navigate again.");
+        Assert.AreSame(editor, driver.App.FocusedElement, "Expected focus to return to the editor after reopening and closing Go To Line again.");
+    }
+
+    [TestMethod]
+    public void CodeEditor_GoToLine_Popup_Escape_Restores_Previous_Caret()
+    {
+        var editor = new CodeEditor(string.Join('\n', Enumerable.Range(1, 10).Select(i => $"Line {i:00}")))
+        {
+            MinHeight = 5,
+            MaxHeight = 5,
+        };
+
+        using var driver = new TerminalAppTestDriver(new VStack { editor }, TerminalHostKind.Fullscreen, new TerminalSize(40, 12));
+        driver.Tick();
+
+        editor.GoToLine(6, 3);
+        driver.Tick();
+        var originalCaret = editor.CaretIndex;
+
+        driver.App.Focus(editor);
+
+        SendCtrlGesture(driver, TerminalChar.CtrlG);
+        driver.Tick();
+
+        editor.GoToLine(2, 1);
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        driver.TickUntil(() => driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Count() == 0);
+
+        Assert.AreEqual(originalCaret, editor.CaretIndex, "Expected Escape in the Go To Line popup to restore the caret position captured when the popup opened.");
+        Assert.AreEqual(0, driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Count(), "Expected Escape to close the Go To Line popup.");
+        Assert.AreSame(editor, driver.App.FocusedElement, "Expected focus to return to the editor after cancelling Go To Line.");
+    }
+
+    [TestMethod]
+    public void CodeEditor_GoToLine_Config_Can_Customize_Gesture_Text_And_Alignment()
+    {
+        var config = new CodeEditorConfig
+        {
+            GoToLine = new CodeEditorGoToLineConfig
+            {
+                Command = new CodeEditorCommandConfig(
+                    "Jump",
+                    "Jump to a line.",
+                    new KeyGesture(TerminalChar.CtrlL, TerminalModifiers.Ctrl)),
+                PromptText = "Line #:",
+                PopupHorizontalAlignment = Align.End,
+                PopupVerticalAlignment = Align.End,
+                PopupOffsetX = -2,
+                PopupOffsetY = -1,
+            },
+        };
+
+        var editor = new CodeEditor("one\ntwo\nthree\nfour\nfive", config)
+        {
+            MinHeight = 5,
+            MaxHeight = 5,
+        };
+
+        using var driver = new TerminalAppTestDriver(new VStack { editor }, TerminalHostKind.Fullscreen, new TerminalSize(40, 12));
+        driver.Tick();
+        driver.App.Focus(editor);
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlG, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+        Assert.AreEqual(0, driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Count(), "Expected the default Ctrl+G gesture to stop working when a custom Go To Line gesture is configured.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlL, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+
+        var popup = driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Single();
+        var prompt = driver.App.Root.EnumerateVisualsDepthFirst().OfType<TextBlock>().Single(tb => tb.Text == "Line #:");
+        var editorRect = GetEditorRect(editor);
+        var expectedLeft = Math.Max(editorRect.X, editorRect.Right - popup.PopupRect.Width - 2);
+        var expectedTop = Math.Max(editorRect.Y, editorRect.Bottom - popup.PopupRect.Height - 1);
+
+        Assert.AreEqual(expectedLeft, popup.PopupRect.X, "Expected the configured horizontal alignment and offset to move the Go To Line popup.");
+        Assert.AreEqual(expectedTop, popup.PopupRect.Y, "Expected the configured vertical alignment and offset to move the Go To Line popup.");
+        Assert.AreEqual("Line #:", prompt.Text, "Expected the configured Go To Line prompt text to be shown inside the popup.");
+    }
+
+    [TestMethod]
+    public void CodeEditor_GoToLine_Can_Be_Disabled_At_Init_Time()
+    {
+        var editor = new CodeEditor(
+            "one\ntwo\nthree",
+            new CodeEditorConfig
+            {
+                GoToLine = CodeEditorGoToLineConfig.Disabled,
+            })
+        {
+            MinHeight = 5,
+            MaxHeight = 5,
+        };
+
+        using var driver = new TerminalAppTestDriver(new VStack { editor }, TerminalHostKind.Fullscreen, new TerminalSize(40, 12));
+        driver.Tick();
+        driver.App.Focus(editor);
+
+        SendCtrlGesture(driver, TerminalChar.CtrlG);
+        driver.Tick();
+
+        Assert.AreEqual(0, driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Count(), "Expected Ctrl+G to do nothing when Go To Line is disabled in the immutable CodeEditor configuration.");
+        Assert.IsFalse(editor.OpenGoToLine(), "Expected OpenGoToLine to report that the feature is unavailable when disabled at initialization.");
     }
 
     [TestMethod]
@@ -1156,6 +1381,12 @@ public sealed class CodeEditorTests
             }
         }
     }
+
+    private static Rectangle GetEditorRect(CodeEditor editor)
+        => (Rectangle)typeof(CodeEditor).GetField("_editorRect", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(editor)!;
+
+    private static void SendCtrlGesture(TerminalAppTestDriver driver, char gesture)
+        => driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = gesture, Modifiers = TerminalModifiers.Ctrl });
 
     private sealed class StableCountingSyntaxHighlighter : CountingSyntaxHighlighter
     {

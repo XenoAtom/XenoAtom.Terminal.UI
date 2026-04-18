@@ -150,6 +150,9 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
         SyncEditorStateFromCore();
     }
 
+    internal void SelectAllText()
+        => ExecuteEditorShortcut(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlA, Modifiers = TerminalModifiers.Ctrl });
+
     /// <summary>
     /// Gets or sets the text document backing this editor.
     /// </summary>

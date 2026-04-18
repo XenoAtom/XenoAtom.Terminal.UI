@@ -41,6 +41,7 @@ new CodeEditor()
 - clipboard shortcuts (`Ctrl+C`, `Ctrl+X`, `Ctrl+V`),
 - undo/redo (`Ctrl+Z`, `Ctrl+R`),
 - integrated Find/Replace (`Ctrl+F`, `Ctrl+H`),
+- integrated Go To Line (`Ctrl+G`),
 - scroll integration through `IScrollable` / `ScrollModel`.
 
 This means `CodeEditor` behaves like a specialized `TextArea`, not a separate editing subsystem.
@@ -59,6 +60,14 @@ editor.GoToPosition(new TextPosition(128));
 
 Line and column navigation use one-based values because they are intended to match the numbers users typically see in
 editor gutters and status bars. Requests are clamped to the current document bounds.
+
+In fullscreen apps, `CodeEditor` also exposes a built-in Go To Line popup:
+
+- `Ctrl+G`: open the popup
+- `Enter`: navigate to the requested line
+- `Escape`: close the popup and restore the caret captured when the popup opened
+
+The popup is centered inside the editor surface by default.
 
 For status bars and other bindings, `CodeEditor` also exposes readable bindable caret-location properties:
 
@@ -101,6 +110,41 @@ editor.OpenReplace("var");
 ```
 
 Search matches are rendered as overlays on top of the syntax-highlighted text.
+
+## Go To Line configuration
+
+The Go To Line popup is configured at initialization time through the immutable `CodeEditorConfig`:
+
+```csharp
+var editor = new CodeEditor(
+    source,
+    new CodeEditorConfig
+    {
+        GoToLine = new CodeEditorGoToLineConfig
+        {
+            Command = new CodeEditorCommandConfig(
+                "Jump",
+                "Open the line navigation popup.",
+                new KeyGesture(TerminalChar.CtrlL, TerminalModifiers.Ctrl)),
+            PromptText = "Line #:",
+            PopupHorizontalAlignment = Align.End,
+            PopupVerticalAlignment = Align.End,
+            PopupOffsetX = -2,
+            PopupOffsetY = -1,
+        },
+    });
+```
+
+To disable the feature entirely:
+
+```csharp
+var editor = new CodeEditor(
+    source,
+    new CodeEditorConfig
+    {
+        GoToLine = CodeEditorGoToLineConfig.Disabled,
+    });
+```
 
 ## Simple syntax highlighting
 

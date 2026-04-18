@@ -63,6 +63,17 @@ The same popup component is also used by other controls (for example, `LogContro
 > Find/Replace is hosted by the editor control and rendered as a window-layer popup in fullscreen apps. The host keeps the popup
 > anchored to the editor and forwards query/navigation updates through an `ISearchReplaceTarget`.
 
+## CodeEditor Go To Line
+
+`CodeEditor` also includes a built-in Go To Line popup:
+
+- `Ctrl+G`: open the line-number popup
+- `Enter`: navigate to the requested one-based line
+- `Escape`: close the popup and restore the caret captured when it opened
+
+The popup is centered inside the editor surface by default and can be configured or disabled through the immutable
+constructor-only `CodeEditorConfig`.
+
 ## Scroll integration
 
 Text editors that can extend beyond their viewport implement `IScrollable`, so they integrate naturally with `ScrollViewer`:

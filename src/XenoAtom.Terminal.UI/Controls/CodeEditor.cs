@@ -414,6 +414,7 @@ internal sealed class CodeEditorLineNumberMargin : CodeEditorMargin
 public sealed partial class CodeEditor : TextEditorBase
 {
     private readonly SearchReplacePopup _searchPopup;
+    private readonly CodeEditorGoToLinePopup? _goToLinePopup;
     private readonly BindableList<CodeEditorMargin> _leftMargins;
     private readonly BindableList<CodeEditorMargin> _rightMargins;
     private readonly Dictionary<CodeEditorMargin, int> _marginWidths = new();
@@ -472,8 +473,22 @@ public sealed partial class CodeEditor : TextEditorBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CodeEditor"/> class.
     /// </summary>
-    public CodeEditor()
+    public CodeEditor() : this((CodeEditorConfig?)null)
     {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CodeEditor"/> class with optional init-time configuration.
+    /// </summary>
+    /// <param name="config">
+    /// Optional immutable configuration used to register commands and optional popup features.
+    /// When <see langword="null"/>, <see cref="CodeEditorConfig.Default"/> is used.
+    /// </param>
+    public CodeEditor(CodeEditorConfig? config)
+    {
+        var resolvedConfig = config ?? CodeEditorConfig.Default;
+        var goToLineConfig = resolvedConfig.GoToLine;
+
         this.AcceptTab(true);
         this.WordWrap(true);
         this.HorizontalAlignment(Align.Stretch);
@@ -495,6 +510,22 @@ public sealed partial class CodeEditor : TextEditorBase
             ClearQueryOnClose = true,
         };
         AttachChild(_searchPopup);
+
+        if (goToLineConfig.IsEnabled)
+        {
+            _goToLinePopup = new CodeEditorGoToLinePopup(this, goToLineConfig);
+
+            AddCommand(new Command
+            {
+                Id = "TextEditor.GoToLine",
+                LabelMarkup = goToLineConfig.Command.LabelMarkup,
+                DescriptionMarkup = goToLineConfig.Command.DescriptionMarkup,
+                Gesture = goToLineConfig.Command.Gesture,
+                Importance = CommandImportance.Secondary,
+                Presentation = CommandPresentation.CommandBar,
+                Execute = static v => _ = ((CodeEditor)v).OpenGoToLine(),
+            });
+        }
 
         AddCommand(new Command
         {
@@ -522,7 +553,16 @@ public sealed partial class CodeEditor : TextEditorBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CodeEditor"/> class with initial text.
     /// </summary>
-    public CodeEditor(string? text) : this()
+    public CodeEditor(string? text) : this(text, null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CodeEditor"/> class with initial text and optional init-time configuration.
+    /// </summary>
+    /// <param name="text">The initial text content.</param>
+    /// <param name="config">The optional init-time configuration.</param>
+    public CodeEditor(string? text, CodeEditorConfig? config) : this(config)
     {
         this.Text(text);
     }
@@ -530,7 +570,16 @@ public sealed partial class CodeEditor : TextEditorBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CodeEditor"/> class with dynamic text.
     /// </summary>
-    public CodeEditor(Func<string?> text) : this()
+    public CodeEditor(Func<string?> text) : this(text, null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CodeEditor"/> class with dynamic text and optional init-time configuration.
+    /// </summary>
+    /// <param name="text">A delegate returning the current text content.</param>
+    /// <param name="config">The optional init-time configuration.</param>
+    public CodeEditor(Func<string?> text, CodeEditorConfig? config) : this(config)
     {
         this.Text(text);
     }
@@ -538,7 +587,16 @@ public sealed partial class CodeEditor : TextEditorBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CodeEditor"/> class with bound text.
     /// </summary>
-    public CodeEditor(Binding<string?> text) : this()
+    public CodeEditor(Binding<string?> text) : this(text, null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CodeEditor"/> class with bound text and optional init-time configuration.
+    /// </summary>
+    /// <param name="text">A binding that supplies the text content.</param>
+    /// <param name="config">The optional init-time configuration.</param>
+    public CodeEditor(Binding<string?> text, CodeEditorConfig? config) : this(config)
     {
         this.BindText(text);
     }
@@ -689,6 +747,12 @@ public sealed partial class CodeEditor : TextEditorBase
     /// <param name="position">The document position to navigate to.</param>
     public void GoToPosition(TextPosition position) => GoToPosition(position.Index);
 
+    /// <summary>
+    /// Attempts to open the Go To Line popup for this editor.
+    /// </summary>
+    /// <returns><see langword="true"/> if the popup was opened; otherwise <see langword="false"/>.</returns>
+    public bool OpenGoToLine() => _goToLinePopup?.Open() ?? false;
+
     /// <inheritdoc/>
     protected override int ChildrenCount => 1;
 
@@ -760,6 +824,7 @@ public sealed partial class CodeEditor : TextEditorBase
         }
 
         _searchPopup.ArrangeWithin(_editorRect);
+        _goToLinePopup?.ArrangeWithin(_editorRect);
         _lastArrangeRect = finalRect;
         _hasArrangedOnce = true;
     }
