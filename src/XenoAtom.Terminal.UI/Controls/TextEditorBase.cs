@@ -94,7 +94,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
             LabelMarkup = string.Empty,
             Gesture = new Input.KeyGesture(TerminalChar.CtrlA, TerminalModifiers.Ctrl),
             Presentation = CommandPresentation.None,
-            Execute = static v => ((TextEditorBase)v).ExecuteEditorShortcut(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlA, Modifiers = TerminalModifiers.Ctrl }),
+            Execute = static v => ((TextEditorBase)v).SelectAllText(),
         });
 
         AddCommand(new Command
@@ -103,7 +103,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
             LabelMarkup = string.Empty,
             Gesture = new Input.KeyGesture(TerminalChar.CtrlC, TerminalModifiers.Ctrl),
             Presentation = CommandPresentation.None,
-            Execute = static v => ((TextEditorBase)v).ExecuteEditorShortcut(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlC, Modifiers = TerminalModifiers.Ctrl }),
+            Execute = static v => ((TextEditorBase)v).CopySelectionToClipboard(),
         });
 
         AddCommand(new Command
@@ -112,7 +112,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
             LabelMarkup = string.Empty,
             Gesture = new Input.KeyGesture(TerminalChar.CtrlV, TerminalModifiers.Ctrl),
             Presentation = CommandPresentation.None,
-            Execute = static v => ((TextEditorBase)v).ExecuteEditorShortcut(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlV, Modifiers = TerminalModifiers.Ctrl }),
+            Execute = static v => ((TextEditorBase)v).PasteFromClipboard(),
         });
 
         AddCommand(new Command
@@ -121,7 +121,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
             LabelMarkup = string.Empty,
             Gesture = new Input.KeyGesture(TerminalChar.CtrlX, TerminalModifiers.Ctrl),
             Presentation = CommandPresentation.None,
-            Execute = static v => ((TextEditorBase)v).ExecuteEditorShortcut(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlX, Modifiers = TerminalModifiers.Ctrl }),
+            Execute = static v => ((TextEditorBase)v).CutSelectionToClipboard(),
         });
 
         AddCommand(new Command
@@ -130,7 +130,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
             LabelMarkup = string.Empty,
             Gesture = new Input.KeyGesture(TerminalKey.Home, TerminalModifiers.Ctrl),
             Presentation = CommandPresentation.None,
-            Execute = static v => ((TextEditorBase)v).ExecuteEditorShortcut(new TerminalKeyEvent { Key = TerminalKey.Home, Modifiers = TerminalModifiers.Ctrl }),
+            Execute = static v => ((TextEditorBase)v).MoveCaretToDocumentStart(),
         });
 
         AddCommand(new Command
@@ -139,19 +139,42 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
             LabelMarkup = string.Empty,
             Gesture = new Input.KeyGesture(TerminalKey.End, TerminalModifiers.Ctrl),
             Presentation = CommandPresentation.None,
-            Execute = static v => ((TextEditorBase)v).ExecuteEditorShortcut(new TerminalKeyEvent { Key = TerminalKey.End, Modifiers = TerminalModifiers.Ctrl }),
+            Execute = static v => ((TextEditorBase)v).MoveCaretToDocumentEnd(),
         });
     }
 
-    private void ExecuteEditorShortcut(TerminalKeyEvent keyEvent)
+    internal void SelectAllText()
     {
-        var args = new KeyEventArgs { RawEvent = keyEvent };
-        _core.OnKeyDown(args, BuildEditorOptions());
+        _core.SelectAll(BuildEditorOptions());
         SyncEditorStateFromCore();
     }
 
-    internal void SelectAllText()
-        => ExecuteEditorShortcut(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlA, Modifiers = TerminalModifiers.Ctrl });
+    private void CopySelectionToClipboard()
+        => _core.CopySelectionToClipboard();
+
+    private void PasteFromClipboard()
+    {
+        _core.PasteFromClipboard(BuildEditorOptions());
+        SyncEditorStateFromCore();
+    }
+
+    private void CutSelectionToClipboard()
+    {
+        _core.CutSelectionToClipboard(BuildEditorOptions());
+        SyncEditorStateFromCore();
+    }
+
+    private void MoveCaretToDocumentStart()
+    {
+        _core.MoveCaretToDocumentStart(extendSelection: false, BuildEditorOptions());
+        SyncEditorStateFromCore();
+    }
+
+    private void MoveCaretToDocumentEnd()
+    {
+        _core.MoveCaretToDocumentEnd(extendSelection: false, BuildEditorOptions());
+        SyncEditorStateFromCore();
+    }
 
     /// <summary>
     /// Gets or sets the text document backing this editor.

@@ -658,18 +658,14 @@ internal sealed partial class TextEditorCore
         {
             if (e.Char is TerminalChar.CtrlF)
             {
-                var selection = GetSelectedTextSpan(text.AsSpan());
-                var initial = selection.IsEmpty ? null : selection.ToString();
-                _host.TryOpenSearchReplacePopup(SearchReplaceMode.Find, initial);
+                OpenSearchReplacePopup(SearchReplaceMode.Find);
                 e.Handled = true;
                 return;
             }
 
             if (e.Char is TerminalChar.CtrlH)
             {
-                var selection = GetSelectedTextSpan(text.AsSpan());
-                var initial = selection.IsEmpty ? null : selection.ToString();
-                _host.TryOpenSearchReplacePopup(SearchReplaceMode.Replace, initial);
+                OpenSearchReplacePopup(SearchReplaceMode.Replace);
                 e.Handled = true;
                 return;
             }
@@ -685,76 +681,56 @@ internal sealed partial class TextEditorCore
         {
             if (e.Char is TerminalChar.CtrlA)
             {
-                SelectAll();
-                EnsureCaretVisible(options);
+                SelectAll(options);
                 e.Handled = true;
                 return;
             }
 
             if (e.Char is TerminalChar.CtrlV)
             {
-                var clip = _host.App?.Terminal.Clipboard.Text;
-                if (!string.IsNullOrEmpty(clip))
-                {
-                    InsertText(clip, TextUndoRedoManager.TextUndoKind.Paste, allowCoalesce: false, options);
-                }
+                PasteFromClipboard(options);
                 e.Handled = true;
                 return;
             }
 
             if (e.Char is TerminalChar.CtrlC)
             {
-                var span = GetSelectedTextSpan(text.AsSpan());
-                if (!span.IsEmpty)
-                {
-                    _host.App?.Terminal.Clipboard.TrySetText(span);
-                }
+                CopySelectionToClipboard();
                 e.Handled = true;
                 return;
             }
 
             if (e.Char is TerminalChar.CtrlX)
             {
-                if (HasSelection)
-                {
-                    var span = GetSelectedTextSpan(text.AsSpan());
-                    if (!span.IsEmpty)
-                    {
-                        _host.App?.Terminal.Clipboard.TrySetText(span);
-                    }
-                    DeleteSelection(TextUndoRedoManager.TextUndoKind.Delete, options);
-                }
+                CutSelectionToClipboard(options);
                 e.Handled = true;
                 return;
             }
 
             if (e.Char is TerminalChar.CtrlK)
             {
-                KillToEnd(text.AsSpan(), options);
+                KillToEnd(options);
                 e.Handled = true;
                 return;
             }
 
             if (e.Char is TerminalChar.CtrlU)
             {
-                KillToStart(text.AsSpan(), options);
+                KillToStart(options);
                 e.Handled = true;
                 return;
             }
 
             if (e.Char is TerminalChar.CtrlW)
             {
-                KillPreviousWord(text.AsSpan(), options);
+                KillPreviousWord(options);
                 e.Handled = true;
                 return;
             }
 
             if (e.Char is TerminalChar.CtrlY)
             {
-                if (!string.IsNullOrEmpty(_killBuffer))
-                {
-                    InsertText(_killBuffer, TextUndoRedoManager.TextUndoKind.Paste, allowCoalesce: false, options);
-                }
+                Yank(options);
                 e.Handled = true;
                 return;
             }
@@ -886,7 +862,7 @@ internal sealed partial class TextEditorCore
             case TerminalKey.Home:
                 if (ctrl)
                 {
-                    MoveCaretTo(0, (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                    MoveCaretToDocumentStart((e.Modifiers & TerminalModifiers.Shift) != 0, options);
                 }
                 else
                 {
@@ -897,7 +873,7 @@ internal sealed partial class TextEditorCore
             case TerminalKey.End:
                 if (ctrl)
                 {
-                    MoveCaretTo(text.Length, (e.Modifiers & TerminalModifiers.Shift) != 0, options);
+                    MoveCaretToDocumentEnd((e.Modifiers & TerminalModifiers.Shift) != 0, options);
                 }
                 else
                 {
@@ -1604,8 +1580,66 @@ internal sealed partial class TextEditorCore
         return line.Start + indexInLine;
     }
 
-    private void KillToEnd(ReadOnlySpan<char> text, in TextEditorOptions options)
+    internal void OpenSearchReplacePopup(SearchReplaceMode mode)
     {
+        var selection = GetSelectedTextSpan(GetText().AsSpan());
+        var initial = selection.IsEmpty ? null : selection.ToString();
+        _host.TryOpenSearchReplacePopup(mode, initial);
+    }
+
+    internal void SelectAll(in TextEditorOptions options)
+    {
+        var text = GetText();
+        if (text.Length == 0)
+        {
+            return;
+        }
+
+        _selectionAnchor = 0;
+        _selectionEnd = text.Length;
+        _caretIndex = text.Length;
+        EnsureCaretVisible(options);
+        IncrementVersion();
+    }
+
+    internal void CopySelectionToClipboard()
+    {
+        var span = GetSelectedTextSpan(GetText().AsSpan());
+        if (!span.IsEmpty)
+        {
+            _host.App?.Terminal.Clipboard.TrySetText(span);
+        }
+    }
+
+    internal void PasteFromClipboard(in TextEditorOptions options)
+    {
+        var clip = _host.App?.Terminal.Clipboard.Text;
+        if (!string.IsNullOrEmpty(clip))
+        {
+            InsertText(clip, TextUndoRedoManager.TextUndoKind.Paste, allowCoalesce: false, options);
+        }
+    }
+
+    internal void CutSelectionToClipboard(in TextEditorOptions options)
+    {
+        if (!HasSelection)
+        {
+            return;
+        }
+
+        CopySelectionToClipboard();
+        DeleteSelection(TextUndoRedoManager.TextUndoKind.Delete, options);
+    }
+
+    internal void MoveCaretToDocumentStart(bool extendSelection, in TextEditorOptions options)
+        => MoveCaretTo(0, extendSelection, options);
+
+    internal void MoveCaretToDocumentEnd(bool extendSelection, in TextEditorOptions options)
+        => MoveCaretTo(GetText().Length, extendSelection, options);
+
+    internal void KillToEnd(in TextEditorOptions options)
+    {
+        var text = GetText().AsSpan();
         if (HasSelection)
         {
             _killBuffer = GetSelectedTextSpan(text).ToString();
@@ -1620,8 +1654,9 @@ internal sealed partial class TextEditorCore
         }
     }
 
-    private void KillToStart(ReadOnlySpan<char> text, in TextEditorOptions options)
+    internal void KillToStart(in TextEditorOptions options)
     {
+        var text = GetText().AsSpan();
         if (HasSelection)
         {
             _killBuffer = GetSelectedTextSpan(text).ToString();
@@ -1640,8 +1675,9 @@ internal sealed partial class TextEditorCore
         }
     }
 
-    private void KillPreviousWord(ReadOnlySpan<char> text, in TextEditorOptions options)
+    internal void KillPreviousWord(in TextEditorOptions options)
     {
+        var text = GetText().AsSpan();
         if (HasSelection)
         {
             _killBuffer = GetSelectedTextSpan(text).ToString();
@@ -1660,6 +1696,14 @@ internal sealed partial class TextEditorCore
         {
             _caretIndex = prev;
         });
+    }
+
+    internal void Yank(in TextEditorOptions options)
+    {
+        if (!string.IsNullOrEmpty(_killBuffer))
+        {
+            InsertText(_killBuffer, TextUndoRedoManager.TextUndoKind.Paste, allowCoalesce: false, options);
+        }
     }
 
     private void ClearSelection()
@@ -1776,20 +1820,6 @@ internal sealed partial class TextEditorCore
             RebuildSearchMatches();
         }
 
-        IncrementVersion();
-    }
-
-    private void SelectAll()
-    {
-        var text = GetText();
-        if (text.Length == 0)
-        {
-            return;
-        }
-
-        _selectionAnchor = 0;
-        _selectionEnd = text.Length;
-        _caretIndex = text.Length;
         IncrementVersion();
     }
 
