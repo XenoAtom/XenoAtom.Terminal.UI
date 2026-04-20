@@ -35,6 +35,9 @@ public sealed partial class TabControl : Visual
     private Func<Visual, ContentVisual?>? _contentTemplateFactory;
     private TabControlLayoutMode _contentLayoutMode;
 
+    private int _oldSelectedIndexForEvent = -1;
+    private TabPage? _oldSelectedPageForEvent;
+
     [Bindable]
     internal partial int HoveredIndex { get; set; }
 
@@ -103,12 +106,17 @@ public sealed partial class TabControl : Visual
     [Bindable]
     public partial int FirstVisibleIndex { get; set; }
 
-    partial void OnSelectedIndexChanging(ref int value) => value = Math.Max(0, value);
+    partial void OnSelectedIndexChanging(ref int value)
+    {
+        CaptureSelectedTabForEvent(out _oldSelectedIndexForEvent, out _oldSelectedPageForEvent);
+        value = Math.Max(0, value);
+    }
 
     partial void OnSelectedIndexChanged(int value)
     {
         _ = value;
         SyncFirstVisibleIndexToSelection();
+        RaiseSelectionChangedIfNeeded(_oldSelectedIndexForEvent, _oldSelectedPageForEvent);
     }
 
     partial void OnFirstVisibleIndexChanging(ref int value) => value = Math.Max(0, value);
@@ -153,7 +161,10 @@ public sealed partial class TabControl : Visual
     public void AddTab(TabPage page)
     {
         ArgumentNullException.ThrowIfNull(page);
+
+        CaptureSelectedTabForEvent(out var oldIndex, out var oldPage);
         _tabs.Add(page);
+        RaiseSelectionChangedIfNeeded(oldIndex, oldPage);
     }
 
     /// <summary>
@@ -593,6 +604,8 @@ public sealed partial class TabControl : Visual
             return false;
         }
 
+        CaptureSelectedTabForEvent(out var oldIndex, out var oldPage);
+
         var page = _tabs[index];
         if (!page.RaiseRequestClosing(this, index, reason))
         {
@@ -609,6 +622,7 @@ public sealed partial class TabControl : Visual
             _contentHost.Content = null;
             SelectedIndex = 0;
             FirstVisibleIndex = 0;
+            RaiseSelectionChangedIfNeeded(oldIndex, oldPage);
             return true;
         }
 
@@ -618,7 +632,34 @@ public sealed partial class TabControl : Visual
         }
 
         SyncFirstVisibleIndexToSelection();
+        RaiseSelectionChangedIfNeeded(oldIndex, oldPage);
         return true;
+    }
+
+    private void CaptureSelectedTabForEvent(out int selectedIndex, out TabPage? selectedPage)
+    {
+        using var _ = global::XenoAtom.Terminal.UI.BindingManager.Current.SuppressReadTracking();
+
+        if (_tabs.Count == 0)
+        {
+            selectedIndex = -1;
+            selectedPage = null;
+            return;
+        }
+
+        selectedIndex = Math.Clamp(SelectedIndex, 0, _tabs.Count - 1);
+        selectedPage = _tabs[selectedIndex];
+    }
+
+    private void RaiseSelectionChangedIfNeeded(int oldIndex, TabPage? oldPage)
+    {
+        CaptureSelectedTabForEvent(out var newIndex, out var newPage);
+        if (oldIndex == newIndex && ReferenceEquals(oldPage, newPage))
+        {
+            return;
+        }
+
+        RaiseEvent(SelectionChangedEvent, new TabSelectionChangedEventArgs(oldIndex, newIndex, oldPage, newPage));
     }
 
     private int ResolveSelectedIndexAfterRemoval(int removedIndex)
@@ -1264,4 +1305,48 @@ public sealed partial class TabControl : Visual
         protected override void RenderOverride(CellBuffer buffer)
             => _owner.RenderAttachedContentChrome(buffer, Bounds);
     }
+
+    [RoutedEvent(RoutingStrategy.Bubble)]
+    private void OnSelectionChanged(TabSelectionChangedEventArgs e) { }
+}
+
+/// <summary>
+/// Provides data for the <see cref="TabControl.SelectionChangedEvent"/> event.
+/// </summary>
+public sealed class TabSelectionChangedEventArgs : RoutedEventArgs
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TabSelectionChangedEventArgs"/> class.
+    /// </summary>
+    /// <param name="oldIndex">The previously selected tab index, or -1 when no tab was selected.</param>
+    /// <param name="newIndex">The newly selected tab index, or -1 when no tab is selected.</param>
+    /// <param name="oldPage">The previously selected tab page, if any.</param>
+    /// <param name="newPage">The newly selected tab page, if any.</param>
+    public TabSelectionChangedEventArgs(int oldIndex, int newIndex, TabPage? oldPage, TabPage? newPage)
+    {
+        OldIndex = oldIndex;
+        NewIndex = newIndex;
+        OldPage = oldPage;
+        NewPage = newPage;
+    }
+
+    /// <summary>
+    /// Gets the previously selected tab index, or -1 when no tab was selected.
+    /// </summary>
+    public int OldIndex { get; }
+
+    /// <summary>
+    /// Gets the newly selected tab index, or -1 when no tab is selected.
+    /// </summary>
+    public int NewIndex { get; }
+
+    /// <summary>
+    /// Gets the previously selected tab page, if any.
+    /// </summary>
+    public TabPage? OldPage { get; }
+
+    /// <summary>
+    /// Gets the newly selected tab page, if any.
+    /// </summary>
+    public TabPage? NewPage { get; }
 }

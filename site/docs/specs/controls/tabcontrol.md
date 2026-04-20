@@ -43,6 +43,7 @@ This document captures design and implementation notes for `TabControl`.
 - `TabCloseReason`
 - `TabPageClosingEventArgs`
 - `TabPageClosedEventArgs`
+- `TabSelectionChangedEventArgs`
 - `TabControlLayoutMode`
 
 ### Layout defaults (TabControl constructor)
@@ -67,6 +68,13 @@ This document captures design and implementation notes for `TabControl`.
 - `AddTab(TabPage page)`
 - `TryCloseTab(int index)`
 - `TryCloseTab(TabPage page)`
+
+### Routed events
+
+- `SelectionChanged`
+  - raised whenever the effective selected tab changes
+  - includes both index information and `TabPage` references
+  - can report an unchanged numeric index when the selected page changed because the previously selected tab was removed
 
 ### TabPage
 
@@ -206,6 +214,7 @@ Close requests:
 - `TabPage.RequestClosing` is raised first and may set `Cancel = true`
 - if not cancelled, the page is removed and `TabPage.Closed` is raised
 - `TabControl.TryCloseTab(...)` uses the same lifecycle
+- `SelectionChanged` is raised after the effective selection changes, including close scenarios where the selected page changes without a different `SelectedIndex` value being assigned
 
 ## Styling
 
@@ -266,6 +275,7 @@ Default overflow button behavior:
   - disabled-tab interaction
   - in-place page mutation
   - overflow scrolling
+  - selection-changed routed event behavior
 
 ## Notes
 

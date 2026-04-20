@@ -97,6 +97,17 @@ new TabControl(
 - Clicking a close button requests tab closure and may be cancelled by the page.
 - When tabs overflow, left/right overflow buttons scroll the visible header window.
 - `Left` / `Right` arrow keys switch between enabled tabs when the control is focused.
+- `SelectionChanged` is raised whenever the effective selected tab changes, including when closing the active tab changes the selected page without changing the numeric index.
+
+```csharp
+tabs.SelectionChanged((_, e) =>
+{
+    if (e.NewPage is not null)
+    {
+        StartLoadingForTab(e.NewPage);
+    }
+});
+```
 
 ## Related
 

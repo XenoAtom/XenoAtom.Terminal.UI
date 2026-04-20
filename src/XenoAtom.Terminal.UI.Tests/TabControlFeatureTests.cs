@@ -123,6 +123,53 @@ public sealed class TabControlFeatureTests
     }
 
     [TestMethod]
+    public void TabControl_SelectedIndex_Change_Raises_SelectionChanged()
+    {
+        var first = new TabPage("One", new TextBlock("A"));
+        var second = new TabPage("Two", new TextBlock("B"));
+        var tabs = new TabControl(first, second);
+
+        TabSelectionChangedEventArgs? selectionChanged = null;
+        tabs.SelectionChanged((_, e) => selectionChanged = e);
+
+        using var driver = new TerminalAppTestDriver(tabs, TerminalHostKind.Fullscreen, new TerminalSize(30, 8));
+        driver.Tick();
+
+        tabs.SelectedIndex = 1;
+
+        Assert.IsNotNull(selectionChanged, "Expected changing SelectedIndex to raise SelectionChanged.");
+        Assert.AreEqual(0, selectionChanged.OldIndex);
+        Assert.AreEqual(1, selectionChanged.NewIndex);
+        Assert.AreSame(first, selectionChanged.OldPage);
+        Assert.AreSame(second, selectionChanged.NewPage);
+    }
+
+    [TestMethod]
+    public void TabControl_Closing_Selected_Tab_Raises_SelectionChanged_When_Page_Changes_At_Same_Index()
+    {
+        var first = new TabPage("One", new TextBlock("A"))
+        {
+            ShowCloseButton = true,
+        };
+        var second = new TabPage("Two", new TextBlock("B"));
+        var tabs = new TabControl(first, second);
+
+        TabSelectionChangedEventArgs? selectionChanged = null;
+        tabs.SelectionChanged((_, e) => selectionChanged = e);
+
+        using var driver = new TerminalAppTestDriver(tabs, TerminalHostKind.Fullscreen, new TerminalSize(30, 8));
+        driver.Tick();
+
+        Assert.IsTrue(tabs.TryCloseTab(0));
+
+        Assert.IsNotNull(selectionChanged, "Expected closing the selected tab to raise SelectionChanged.");
+        Assert.AreEqual(0, selectionChanged.OldIndex);
+        Assert.AreEqual(0, selectionChanged.NewIndex);
+        Assert.AreSame(first, selectionChanged.OldPage);
+        Assert.AreSame(second, selectionChanged.NewPage);
+    }
+
+    [TestMethod]
     public void TabControl_Overflow_Buttons_Scroll_Visible_Window()
     {
         var tabs = new TabControl(
