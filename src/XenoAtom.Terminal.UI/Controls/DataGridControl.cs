@@ -130,7 +130,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
     private IDataGridViewSnapshot? _lastSnapshot;
     private int _lastSnapshotVersion = -1;
     private int _lastSnapshotColumnCount = -1;
-    private int _lastColumnsKey;
+    private int _lastColumnsKey = -1;
 
     private int[] _resolvedColumnWidths = Array.Empty<int>();
     private int[] _resolvedColumnStarts = Array.Empty<int>();
@@ -760,6 +760,8 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         {
             SourceVersion = 0;
         }
+
+        InvalidateDataSourceCaches();
     }
 
     partial void OnViewChanged(IDataGridView? value)
@@ -775,10 +777,16 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             _appliedView.Changed += OnViewChangedEvent;
             SourceVersion = _appliedView.CurrentSnapshot.Version;
         }
+        else if (Document is not null)
+        {
+            SourceVersion = Document.Version;
+        }
+        else
+        {
+            SourceVersion = 0;
+        }
 
-        HoveredSortColumnIndex = -1;
-        PressedSortColumnIndex = -1;
-        IsSortPressedInside = false;
+        InvalidateDataSourceCaches();
         ConfigureSortComparers();
     }
 
@@ -792,6 +800,33 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
     {
         _ = sender;
         SourceVersion = e.NewVersion;
+    }
+
+    private void InvalidateDataSourceCaches()
+    {
+        _lastSnapshot = null;
+        _lastSnapshotVersion = -1;
+        _lastSnapshotColumnCount = -1;
+        _lastColumnsKey = -1;
+
+        _cachedResolvedColumns.Clear();
+        _visibleColumnToSnapshotColumn = Array.Empty<int>();
+        _resolvedColumnWidths = Array.Empty<int>();
+        _resolvedColumnStarts = Array.Empty<int>();
+
+        _matches.Clear();
+        _activeMatchIndex = -1;
+        _lastMatchesKey = 0;
+        _searchError = null;
+
+        _lastFilterHash = int.MinValue;
+
+        HoveredResizeColumnIndex = -1;
+        HoveredSortColumnIndex = -1;
+        PressedSortColumnIndex = -1;
+        IsSortPressedInside = false;
+
+        CloseEditor();
     }
 
     /// <inheritdoc />

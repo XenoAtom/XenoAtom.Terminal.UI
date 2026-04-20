@@ -2,14 +2,15 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using XenoAtom.Terminal.UI.Controls;
+using System.Data;
+using System.Linq;
 using XenoAtom.Terminal.UI.Commands;
+using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.DataGrid;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Templating;
-using System.Linq;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -47,6 +48,47 @@ public sealed class DataGridRenderingTests
         StringAssert.Contains(outText, "swimmer");
         StringAssert.Contains(outText, "Joseph");
         StringAssert.Contains(outText, "Michael");
+    }
+
+    [TestMethod]
+    public void DataGrid_Switching_To_New_View_With_Same_Version_Does_Not_Reuse_Stale_DataTable_Accessors()
+    {
+        using var firstTableDocument = new DataGridDataTableDocument(CreateTable("Messages", ("MessageId", typeof(int)), ("Body", typeof(string))));
+        firstTableDocument.Table.Rows.Add(1, "hello");
+
+        using var firstView = new DataGridDocumentView(firstTableDocument);
+
+        var grid = new DataGridControl { View = firstView, ShowRowAnchor = false };
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        using var secondTableDocument = new DataGridDataTableDocument(CreateTable("Bar", ("Id", typeof(int)), ("Name", typeof(string))));
+        secondTableDocument.Table.Rows.Add(2, "world");
+
+        using var secondView = new DataGridDocumentView(secondTableDocument);
+
+        grid.View = secondView;
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(40, 6);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText();
+
+        StringAssert.Contains(rendered, "Id");
+        StringAssert.Contains(rendered, "Name");
+        StringAssert.Contains(rendered, "world");
+        Assert.IsFalse(rendered.Contains("MessageId", StringComparison.Ordinal), "Expected the grid to render the replacement view without reusing stale schema accessors.");
+
+        static DataTable CreateTable(string tableName, params (string Name, Type Type)[] columns)
+        {
+            var table = new DataTable(tableName);
+            foreach (var (name, type) in columns)
+            {
+                table.Columns.Add(name, type);
+            }
+
+            return table;
+        }
     }
 
     [TestMethod]
