@@ -139,7 +139,12 @@ public sealed record CollapsibleStyle : IStyle<CollapsibleStyle>
 
     private static Style ResolveDefaultFocused(Theme theme, Style normal)
     {
-        if (theme.FocusBorder is { } fg)
+        if ((theme.Selection ?? theme.ControlFillPressed ?? theme.ControlFillHover ?? theme.SurfaceAlt) is { } bg)
+        {
+            normal = normal.WithBackground(bg);
+        }
+
+        if ((theme.FocusBorder ?? theme.Accent) is { } fg)
         {
             normal = normal.WithForeground(fg);
         }

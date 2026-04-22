@@ -279,7 +279,7 @@ public sealed partial class Collapsible : Visual
 
         var theme = GetTheme();
         var style = GetStyle<CollapsibleStyle>();
-        var isFocused = HasFocusWithin;
+        var isFocused = IsHeaderFocused();
         var headerStyle = style.ResolveHeader(theme, IsEnabled, isFocused, IsHeaderHovered, IsHeaderPressed);
 
         // Header surface.
@@ -298,6 +298,8 @@ public sealed partial class Collapsible : Visual
             buffer.SetCell(_headerRect.X, _headerRect.Y, glyph, headerStyle);
         }
     }
+
+    private bool IsHeaderFocused() => HasFocus || HasFocusWithin;
 
     /// <inheritdoc/>
     protected override void OnKeyDown(KeyEventArgs e)
@@ -358,6 +360,15 @@ public sealed partial class Collapsible : Visual
         if (wasPressed)
         {
             e.Handled = true;
+        }
+    }
+
+    /// <inheritdoc/>
+    protected override void OnHoveredChanged(bool value)
+    {
+        if (!value)
+        {
+            IsHeaderHovered = false;
         }
     }
 

@@ -223,6 +223,8 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     [Bindable]
     public partial bool IsHovered { get; internal set; }
 
+    partial void OnIsHoveredChanged(bool value) => OnHoveredChanged(value);
+
     partial void OnMinWidthChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
 
     partial void OnMinHeightChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
@@ -1766,6 +1768,12 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// </summary>
     [RoutedEvent(RoutingStrategy.Bubble)]
     protected virtual void OnKeyDown(KeyEventArgs e) { }
+
+    /// <summary>
+    /// Called when the hovered state of this visual changes.
+    /// </summary>
+    /// <param name="value">The new hovered state.</param>
+    protected virtual void OnHoveredChanged(bool value) { }
 
     /// <summary>
     /// Called when text input is routed to this visual.
