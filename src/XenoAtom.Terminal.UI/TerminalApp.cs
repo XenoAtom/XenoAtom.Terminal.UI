@@ -4,6 +4,7 @@
 
 using System.Text;
 using System.Diagnostics;
+using System.Runtime.ExceptionServices;
 using System.Threading.Channels;
 using XenoAtom.Ansi;
 using XenoAtom.Terminal;
@@ -96,6 +97,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private readonly System.Collections.Concurrent.ConcurrentQueue<TerminalEvent> _pendingTerminalEvents = new();
     private CancellationTokenSource? _inputRelayCts;
     private Task? _inputRelayTask;
+    private ExceptionDispatchInfo? _inputRelayFailure;
     private IDisposable? _wideRuneResolverScope;
 
     private readonly record struct PendingAction(Action Action, bool CaptureFlowOutput);
@@ -600,6 +602,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     /// Runs the app until it is stopped or the token is canceled.
     /// </summary>
     /// <param name="cancellationToken">A cancellation token to stop the run.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the terminal input relay terminates unexpectedly while the app is running.</exception>
     public Task RunAsync(CancellationToken cancellationToken = default)
     {
         Run(cancellationToken);
@@ -644,6 +647,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     {
         VerifyAccess();
         Interlocked.Exchange(ref _wakeRequested, 0);
+        ThrowIfInputRelayFailed();
 
         _lastTickTimestamp = timestamp ?? _loopClock.GetTimestamp();
         var metrics = _debugOverlayMetrics;
@@ -779,6 +783,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     /// Runs the terminal app synchronously on the current thread.
     /// </summary>
     /// <param name="cancellationToken">A cancellation token to stop the run.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the terminal input relay terminates unexpectedly while the app is running.</exception>
     public void Run(CancellationToken cancellationToken = default)
     {
         if (_runTask is not null)
@@ -876,6 +881,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         _pendingUpdateTask = null;
         _nextActiveUpdateTick = long.MaxValue;
         _updateOutputBuilder.Clear();
+        _inputRelayFailure = null;
 
         if (!_terminal.IsInputRunning)
         {
@@ -1000,6 +1006,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             return;
         }
 
+        _inputRelayFailure = null;
         _inputRelayCts = CancellationTokenSource.CreateLinkedTokenSource(token);
         var relayToken = _inputRelayCts.Token;
         _inputRelayTask = Task.Run(async () =>
@@ -1013,9 +1020,12 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                     SignalWakeUp(TerminalLoopWakeReason.Input);
                 }
             }
-            catch (Exception ex) when (ex is OperationCanceledException or ChannelClosedException)
+            catch (Exception ex)
             {
-                // Ignore shutdown races while stopping the relay.
+                if (!relayToken.IsCancellationRequested)
+                {
+                    FailInputRelay(ex);
+                }
             }
         }, CancellationToken.None);
     }
@@ -1043,6 +1053,26 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         while (_pendingTerminalEvents.TryDequeue(out _))
         {
         }
+    }
+
+    private void FailInputRelay(Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        Interlocked.CompareExchange(ref _inputRelayFailure, ExceptionDispatchInfo.Capture(exception), comparand: null);
+        SignalWakeUp(TerminalLoopWakeReason.Input);
+    }
+
+    private void ThrowIfInputRelayFailed()
+    {
+        var failure = Interlocked.Exchange(ref _inputRelayFailure, null);
+        if (failure is null)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            "The terminal input relay terminated unexpectedly, so the application can no longer receive terminal events.",
+            failure.SourceException);
     }
 
     private void AttachPendingUpdateWake(Task<TerminalLoopResult> pendingTask)
