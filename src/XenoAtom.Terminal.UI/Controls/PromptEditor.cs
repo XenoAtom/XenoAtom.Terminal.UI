@@ -223,6 +223,7 @@ public partial class PromptEditor : TextEditorBase
     private readonly List<StyledRun> _highlightRuns = new(64);
     private readonly List<int> _highlightBoundaryPoints = new(128);
     private readonly List<StyledRun> _normalizedHighlightRuns = new(64);
+    private Style _activeSelectionStyle;
 
     private bool _completionActive;
     private int _completionReplaceStart;
@@ -1199,6 +1200,7 @@ public partial class PromptEditor : TextEditorBase
         var backgroundStyle = style.BackgroundStyle(theme, isFocused);
         var promptSidebarBackgroundStyle = style.PromptSidebarBackgroundStyle(theme, isFocused);
         var selectionStyle = style.SelectionStyle(theme);
+        _activeSelectionStyle = selectionStyle;
         var placeholderStyle = style.PlaceholderStyle(theme, isFocused);
 
         if (_promptRect.Width > 0 && _promptRect.Height > 0)
@@ -1590,7 +1592,7 @@ public partial class PromptEditor : TextEditorBase
             }
 
             var slice2 = text.Slice(localIndex, len2);
-            base.WriteTextSegment(buffer, cellX, y, slice2, style | run.Style, isPlaceholder, segmentStart + localIndex, col);
+            base.WriteTextSegment(buffer, cellX, y, slice2, ComposeHighlightStyle(style, run.Style), isPlaceholder, segmentStart + localIndex, col);
             var width2 = GetTextCells(slice2, col, TabSize);
             col += width2;
             cellX += width2;
@@ -1624,6 +1626,26 @@ public partial class PromptEditor : TextEditorBase
         }
 
         return result;
+    }
+
+    private Style ComposeHighlightStyle(Style baseStyle, Style highlightStyle)
+    {
+        if (baseStyle != _activeSelectionStyle)
+        {
+            return baseStyle | highlightStyle;
+        }
+
+        if (baseStyle.TryGetBackground(out _))
+        {
+            highlightStyle = highlightStyle.ClearBackground();
+        }
+
+        if (baseStyle.TryGetForeground(out _))
+        {
+            highlightStyle = highlightStyle.ClearForeground();
+        }
+
+        return baseStyle | highlightStyle;
     }
 
     private static int GetTextCells(ReadOnlySpan<char> text, int startColumn, int tabSize)

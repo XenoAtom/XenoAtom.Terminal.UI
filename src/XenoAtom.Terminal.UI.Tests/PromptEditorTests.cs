@@ -2,13 +2,20 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using XenoAtom.Terminal;
+using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Extensions.Markdown;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Input;
+using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Text;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -409,6 +416,65 @@ public sealed class PromptEditorTests
         Assert.AreSame(editor, driver.App.FocusedElement, "Wheel scrolling should not change focus.");
     }
 
+    [TestMethod]
+    public void PromptEditor_MarkdownSelection_RemainsVisible_On_Code_Syntax()
+    {
+        var markdown = """
+            Inline `code`
+            ```cs
+            int x = 1;
+            ```
+            """;
+
+        var theme = Theme.FromScheme(ColorScheme.ElderberryDarkSoft);
+        var converter = new MarkdownMarkupConverter
+        {
+            Theme = theme,
+        };
+
+        var editor = new PromptEditor()
+            .PromptMarkup(string.Empty)
+            .ContinuationPromptMarkup(string.Empty)
+            .Text(markdown)
+            .Highlighter((in PromptEditorHighlightRequest request, List<StyledRun> runs) =>
+                converter.Highlight(GetSnapshotText(request.Snapshot), runs));
+
+        var root = new VStack { editor }
+            .Style(theme);
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 8));
+        driver.Tick();
+
+        driver.App.Focus(editor);
+        driver.Tick();
+
+        var bufferBeforeSelection = GetRenderBuffer(driver.App);
+        var inlineCodeStyleBeforeSelection = GetStyleAtText(bufferBeforeSelection, "Inline `code`", 'c');
+        Assert.IsTrue(inlineCodeStyleBeforeSelection.TryGetBackground(out var inlineCodeBackground), "Expected markdown inline code to render with an explicit background.");
+
+        var selectionStyle = editor.GetStyle<PromptEditorStyle>().SelectionStyle(theme);
+        Assert.IsTrue(selectionStyle.TryGetBackground(out var selectionBackground), "Expected prompt editor selection to define a background.");
+        Assert.AreNotEqual(selectionBackground.ToRgb(), inlineCodeBackground.ToRgb(), "Test requires inline code and selection backgrounds to differ.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlA, Modifiers = TerminalModifiers.Ctrl });
+        driver.TickUntil(() => editor.HasSelection);
+
+        var buffer = GetRenderBuffer(driver.App);
+
+        var selectedPlainTextStyle = GetStyleAtText(buffer, "Inline `code`", 'I');
+        var inlineBacktickStyle = GetStyleAtText(buffer, "Inline `code`", '`');
+        var inlineCodeStyle = GetStyleAtText(buffer, "Inline `code`", 'c');
+        var fencedCodeStyle = GetStyleAtText(buffer, "int x = 1;", 'i');
+        var fenceMarkerStyle = GetStyleAtText(buffer, "```cs", '`');
+
+        var expectedSelectionBackground = GetBackground(selectedPlainTextStyle, "Expected selected plain text to render with a background.");
+
+        AssertBackgroundEquals(expectedSelectionBackground, inlineBacktickStyle, "Expected inline code markers to keep the selection background.");
+        AssertBackgroundEquals(expectedSelectionBackground, inlineCodeStyle, "Expected inline code content to keep the selection background.");
+        AssertBackgroundEquals(expectedSelectionBackground, fenceMarkerStyle, "Expected fenced code markers to keep the selection background.");
+        AssertBackgroundEquals(expectedSelectionBackground, fencedCodeStyle, "Expected fenced code content to keep the selection background.");
+    }
+
     private static void AssertCommand(PromptEditor editor, string id, PromptEditorCommandConfig expected)
     {
         var command = editor.Commands.FirstOrDefault(x => string.Equals(x.Id, id, StringComparison.Ordinal));
@@ -416,5 +482,66 @@ public sealed class PromptEditorTests
         Assert.AreEqual(expected.LabelMarkup, command.LabelMarkup);
         Assert.AreEqual(expected.DescriptionMarkup, command.DescriptionMarkup);
         Assert.AreEqual(expected.Gesture, command.Gesture);
+    }
+
+    private static CellBuffer GetRenderBuffer(TerminalApp app)
+        => (CellBuffer)typeof(TerminalApp).GetField("_renderBuffer", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(app)!;
+
+    private static Style GetStyleAtText(CellBuffer buffer, string rowTextFragment, char target)
+    {
+        for (var y = 0; y < buffer.Height; y++)
+        {
+            var row = SnapshotRow(buffer, y);
+            var rowIndex = row.IndexOf(rowTextFragment, StringComparison.Ordinal);
+            if (rowIndex < 0)
+            {
+                continue;
+            }
+
+            var targetOffset = rowTextFragment.IndexOf(target);
+            Assert.IsTrue(targetOffset >= 0, $"Could not find target character `{target}` inside fragment `{rowTextFragment}`.");
+            return GetCellStyle(buffer, rowIndex + targetOffset, y);
+        }
+
+        Assert.Fail($"Could not find rendered fragment `{rowTextFragment}`.");
+        return Style.None;
+    }
+
+    private static Style GetCellStyle(CellBuffer buffer, int x, int y)
+        => buffer.UnsafeCells[(y * buffer.Width) + x];
+
+    private static string SnapshotRow(CellBuffer buffer, int y)
+    {
+        var scalars = buffer.UnsafeScalars;
+        var chars = new char[buffer.Width];
+        for (var x = 0; x < buffer.Width; x++)
+        {
+            chars[x] = (char)scalars[(y * buffer.Width) + x];
+        }
+
+        return new string(chars);
+    }
+
+    private static string GetSnapshotText(ITextSnapshot snapshot)
+    {
+        if (snapshot.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var chars = new char[snapshot.Length];
+        snapshot.CopyTo(0, chars);
+        return new string(chars);
+    }
+
+    private static Color GetBackground(Style style, string message)
+    {
+        Assert.IsTrue(style.TryGetBackground(out var background), $"{message} Expected an explicit background.");
+        return background;
+    }
+
+    private static void AssertBackgroundEquals(Color expected, Style actualStyle, string message)
+    {
+        Assert.AreEqual(expected.ToRgb(), GetBackground(actualStyle, message).ToRgb(), message);
     }
 }
