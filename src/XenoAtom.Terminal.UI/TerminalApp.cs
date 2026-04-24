@@ -923,7 +923,16 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             _nextActiveUpdateTick = long.MaxValue;
             _updateOutputBuilder.Clear();
 
-            _terminal.MarkupStyles = _previousMarkupStyles;
+            try
+            {
+                // Could fail if the terminal was disposed
+                _terminal.MarkupStyles = _previousMarkupStyles;
+            }
+            catch
+            {
+                // ignore
+            }
+
             _previousMarkupStyles = null;
 
             _wideRuneResolverScope?.Dispose();
