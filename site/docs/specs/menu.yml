@@ -9,6 +9,7 @@ specs:
   - {path: dirty_rendering_specs.md, title: "<i class='bi bi-brush' aria-hidden='true'></i> Dirty Rendering"}
   - {path: ui_loop_specs.md, title: "<i class='bi bi-stopwatch' aria-hidden='true'></i> UI Loop & Frame Pacing"}
   - {path: brushes_and_gradients_specs.md, title: "<i class='bi bi-palette' aria-hidden='true'></i> Brushes & Gradients"}
+  - {path: terminal_graphics_specs.md, title: "<i class='bi bi-image' aria-hidden='true'></i> Terminal Graphics"}
   - {path: command_specs.md, title: "<i class='bi bi-terminal' aria-hidden='true'></i> Commands"}
   - {path: data_template_specs.md, title: "<i class='bi bi-puzzle' aria-hidden='true'></i> Data Templates"}
   - {path: code_editor_specs.md, title: "<i class='bi bi-code-slash' aria-hidden='true'></i> Code Editor"}

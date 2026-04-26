@@ -28,6 +28,7 @@ They are useful when you want to understand *why* a feature behaves a certain wa
 - [Dirty Rendering](dirty_rendering_specs.md)
 - [UI Loop & Frame Pacing](ui_loop_specs.md)
 - [Brushes & Gradients](brushes_and_gradients_specs.md)
+- [Terminal Graphics and Inline Images](terminal_graphics_specs.md)
 - [Commands](command_specs.md)
 - [Data Templates](data_template_specs.md)
 - [Code Editor](code_editor_specs.md)
