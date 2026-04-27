@@ -17,12 +17,12 @@ internal sealed class TerminalAppTestDriver : IDisposable
     private long _timestamp;
     private readonly long _tickStep;
 
-    public TerminalAppTestDriver(Visual root, TerminalHostKind hostKind = TerminalHostKind.Fullscreen, TerminalSize? size = null, TerminalAppOptions? appOptions = null)
+    public TerminalAppTestDriver(Visual root, TerminalHostKind hostKind = TerminalHostKind.Fullscreen, TerminalSize? size = null, TerminalAppOptions? appOptions = null, TerminalOptions? terminalOptions = null)
     {
         ArgumentNullException.ThrowIfNull(root);
 
         _backend = new InMemoryTerminalBackend(size ?? new TerminalSize(80, 25));
-        _session = global::XenoAtom.Terminal.Terminal.Open(_backend, new TerminalOptions { ImplicitStartInput = true }, force: true);
+        _session = global::XenoAtom.Terminal.Terminal.Open(_backend, terminalOptions ?? new TerminalOptions { ImplicitStartInput = true }, force: true);
         var effectiveOptions = new TerminalAppOptions
         {
             HostKind = hostKind,
@@ -36,6 +36,7 @@ internal sealed class TerminalAppTestDriver : IDisposable
             InitialFocusMode = appOptions?.InitialFocusMode ?? InitialFocusMode.FirstFocusable,
             Culture = appOptions?.Culture ?? System.Globalization.CultureInfo.InvariantCulture,
             LoopMode = appOptions?.LoopMode ?? TerminalLoopMode.Auto,
+            GraphicsPresenter = appOptions?.GraphicsPresenter,
             UpdateWaitDuration = appOptions?.UpdateWaitDuration ?? TimeSpan.FromMilliseconds(1),
             WideRuneResolver = appOptions?.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
         };

@@ -1,4 +1,6 @@
+using XenoAtom.Terminal.Graphics;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Graphics;
 using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo;
@@ -32,4 +34,13 @@ public sealed class DemoContext
     public required Theme Theme { get; init; }
 
     public ToastHost? ToastHost { get; init; }
+
+    public DemoGraphicsOptions? Graphics { get; init; }
+}
+
+public sealed class DemoGraphicsOptions
+{
+    public required TerminalImageGraphicsPresenter Presenter { get; init; }
+
+    public required TerminalSixelEncoderOptions SixelOptions { get; init; }
 }

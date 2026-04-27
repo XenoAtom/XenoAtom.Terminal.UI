@@ -31,6 +31,23 @@ internal sealed class DebugOverlayMetrics : ICellBufferDiffMetricsSink
     internal long RenderTreeTicks;
     internal long RenderHostTicks;
     internal long RenderTotalTicks;
+    internal long LastRenderMeasureTicks { get; private set; }
+    internal long LastRenderArrangeTicks { get; private set; }
+    internal long LastRenderTreeTicks { get; private set; }
+    internal long LastRenderHostTicks { get; private set; }
+    internal long LastRenderTotalTicks { get; private set; }
+
+    internal int GraphicsCommandCount { get; private set; }
+    internal bool GraphicsPresenterConfigured { get; private set; }
+    internal bool GraphicsPresenterBuffered { get; private set; }
+    internal bool GraphicsHasPendingOutput { get; private set; }
+    internal string? GraphicsPresenterName { get; private set; }
+    internal long GraphicsCollectTicks { get; private set; }
+    internal long GraphicsHasPendingTicks { get; private set; }
+    internal long GraphicsPresentTicks { get; private set; }
+    internal long LastGraphicsPresentTicks { get; private set; }
+    internal bool HasGraphicsPresenterDiagnostics { get; private set; }
+    internal TerminalGraphicsPresenterDiagnostics GraphicsPresenterDiagnostics { get; private set; }
 
     internal StageStats DynamicUpdate => new(_dynamicUpdateCalls, _dynamicUpdateTicks);
     internal StageStats PrepareChildren => new(_prepareChildrenCalls, _prepareChildrenTicks);
@@ -146,6 +163,16 @@ internal sealed class DebugOverlayMetrics : ICellBufferDiffMetricsSink
         RenderTreeTicks = 0;
         RenderHostTicks = 0;
         RenderTotalTicks = 0;
+        GraphicsCommandCount = 0;
+        GraphicsPresenterConfigured = false;
+        GraphicsPresenterBuffered = false;
+        GraphicsHasPendingOutput = false;
+        GraphicsPresenterName = null;
+        GraphicsCollectTicks = 0;
+        GraphicsHasPendingTicks = 0;
+        GraphicsPresentTicks = 0;
+        HasGraphicsPresenterDiagnostics = false;
+        GraphicsPresenterDiagnostics = default;
         OverlayVisible = false;
         OverlayComposited = false;
         OverlayOnlyFrame = false;
@@ -185,6 +212,12 @@ internal sealed class DebugOverlayMetrics : ICellBufferDiffMetricsSink
     public void EndRenderFrame(long startTimestamp, long endTimestamp)
     {
         RenderTotalTicks = Math.Max(0, endTimestamp - startTimestamp);
+        LastRenderMeasureTicks = RenderMeasureTicks;
+        LastRenderArrangeTicks = RenderArrangeTicks;
+        LastRenderTreeTicks = RenderTreeTicks;
+        LastRenderHostTicks = RenderHostTicks;
+        LastRenderTotalTicks = RenderTotalTicks;
+        LastGraphicsPresentTicks = GraphicsPresentTicks;
 
         if (_lastFrameTimestamp != 0)
         {
@@ -279,6 +312,45 @@ internal sealed class DebugOverlayMetrics : ICellBufferDiffMetricsSink
     }
 
     public void RecordRenderClipSkip() => _renderClipSkips++;
+
+    public void RecordGraphicsCommandCollection(int commandCount, long elapsedTicks)
+    {
+        GraphicsCommandCount = commandCount;
+        GraphicsCollectTicks = elapsedTicks;
+    }
+
+    public void RecordGraphicsPresenter(ITerminalGraphicsPresenter? presenter, bool buffered)
+    {
+        GraphicsPresenterConfigured = presenter is not null;
+        GraphicsPresenterBuffered = buffered;
+        GraphicsPresenterName = presenter?.GetType().Name;
+        HasGraphicsPresenterDiagnostics = false;
+        GraphicsPresenterDiagnostics = default;
+
+        if (presenter is not ITerminalGraphicsPresenterDiagnostics diagnosticsProvider)
+        {
+            return;
+        }
+
+        var diagnostics = diagnosticsProvider.GetDiagnosticsSnapshot();
+        GraphicsPresenterDiagnostics = diagnostics;
+        HasGraphicsPresenterDiagnostics = true;
+        if (!string.IsNullOrWhiteSpace(diagnostics.Name))
+        {
+            GraphicsPresenterName = diagnostics.Name;
+        }
+    }
+
+    public void RecordGraphicsHasPendingOutput(bool hasPendingOutput, long elapsedTicks)
+    {
+        GraphicsHasPendingOutput = hasPendingOutput;
+        GraphicsHasPendingTicks = elapsedTicks;
+    }
+
+    public void RecordGraphicsPresentation(long elapsedTicks)
+    {
+        GraphicsPresentTicks += elapsedTicks;
+    }
 
     public void RecordWake(TerminalLoopWakeReason wakeReason)
     {

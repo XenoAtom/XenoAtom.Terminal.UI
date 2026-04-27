@@ -15,6 +15,7 @@ XenoAtom.Terminal.UI comes with a few runnable demos that showcase different par
 The ControlsDemo is the “living catalog” of the library:
 
 - Shows most controls with real styling and interactions
+- Includes an **Images & Graphics** page that uses `XenoAtom.Terminal.UI.Graphics.Image` to render `Assets/snow_photo.jpg` and a live SkiaSharp-generated animation through terminal graphics protocols
 - Includes theme switching and debug overlay usage
 - Can export the PNG screenshots used by the website documentation
 

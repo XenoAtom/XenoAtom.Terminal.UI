@@ -139,14 +139,14 @@ Local development checklist:
 - [x] In `XenoAtom.Terminal.UI`, temporarily replace the `XenoAtom.Terminal` package reference with a `ProjectReference` to the local `XenoAtom.Terminal.csproj`.
 - [x] Add temporary direct local `XenoAtom.Terminal.csproj` references to downstream UI extension/sample/test projects that need complete project information during restore.
 - [x] Add the local dependency projects to the development solutions so `dotnet build -c Release` uses the intended configuration across the chain.
-- [ ] From `../XenoAtom.Ansi/src`, run `dotnet build -c Release` and `dotnet test -c Release` first.
-- [ ] From `../XenoAtom.Terminal/src`, run `dotnet build -c Release` and `dotnet test -c Release` against the local `XenoAtom.Ansi` project.
-- [ ] From this repository's `src` directory, run `dotnet build -c Release` and `dotnet test -c Release` against the local `XenoAtom.Terminal` project.
-- [ ] Validate terminal graphics behavior end-to-end while all three repositories are connected locally.
-- [ ] Commit coordinated cross-repository changes only after the full local chain is working and verified.
-- [ ] Release packages bottom-up once the full chain is stable.
-- [ ] Remove temporary relative project references after each corresponding package has been released and consumed.
-- [ ] Run final validation using package references before publishing the higher-level packages.
+- [x] From `../XenoAtom.Ansi/src`, run `dotnet build -c Release` and `dotnet test -c Release` first.
+- [x] From `../XenoAtom.Terminal/src`, run `dotnet build -c Release` and `dotnet test -c Release` against the local `XenoAtom.Ansi` project.
+- [x] From this repository's `src` directory, run `dotnet build -c Release` and `dotnet test -c Release` against the local `XenoAtom.Terminal` project.
+- [x] Validate terminal graphics behavior end-to-end while all three repositories are connected locally.
+- [x] Commit coordinated cross-repository changes only after the full local chain is working and verified.
+- [x] Release packages bottom-up once the full chain is stable.
+- [x] Remove temporary relative project references after each corresponding package has been released and consumed.
+- [x] Run final validation using package references before publishing the higher-level packages.
 
 ### SkiaSharp Dependency Policy
 
@@ -376,7 +376,7 @@ public interface ITerminalImageRasterizer
 
 public readonly record struct TerminalRasterizeRequest(
     TerminalImageSize TargetPixelSize,
-    TerminalImageScaleMode ScaleMode,
+    ImageScaleMode ScaleMode,
     bool PreserveAspectRatio,
     TerminalImageColor? MatteColor,
     TerminalImageResamplingQuality Quality);
@@ -449,7 +449,7 @@ public readonly record struct TerminalImageEncodeRequest(
     TerminalImageSize PixelSize,
     TerminalImageSize CellSize,
     TerminalPixelMetrics? PixelMetrics,
-    TerminalImageScaleMode ScaleMode,
+    ImageScaleMode ScaleMode,
     TerminalImageColor? MatteColor,
     bool PreserveAspectRatio);
 
@@ -778,7 +778,7 @@ public sealed class GraphicsRenderContext
     public void Add(
         Rectangle cellBounds,
         TerminalGraphicContent content,
-        TerminalImageScaleMode scaleMode,
+        ImageScaleMode scaleMode,
         bool preserveAspectRatio,
         bool reserveCells,
         string? accessibilityText = null);
@@ -789,7 +789,7 @@ public readonly record struct GraphicsCommand(
     Rectangle CellBounds,
     Rectangle ClipBounds,
     TerminalGraphicContent Content,
-    TerminalImageScaleMode ScaleMode,
+    ImageScaleMode ScaleMode,
     bool PreserveAspectRatio,
     int PaintOrder,
     bool ReserveCells,
@@ -801,7 +801,7 @@ public interface IGraphicsRenderableVisual
 }
 ```
 
-`TerminalGraphicContent`, `TerminalImageScaleMode`, and other types used by `GraphicsCommand` should be lightweight, codec-free descriptors in core UI or dependency-neutral shared abstractions. The optional graphics packages resolve them to frames/encoded payloads. Do not make core `XenoAtom.Terminal.UI` reference `XenoAtom.Terminal.Graphics` only to define the display-list contract.
+`TerminalGraphicContent`, `ImageScaleMode`, and other types used by `GraphicsCommand` should be lightweight, codec-free descriptors in core UI or dependency-neutral shared abstractions. The optional graphics packages resolve them to frames/encoded payloads. Do not make core `XenoAtom.Terminal.UI` reference `XenoAtom.Terminal.Graphics` only to define the display-list contract.
 
 `IGraphicsRenderableVisual` should be an opt-in interface, not a virtual method on every `Visual`. Most controls never produce graphics commands, and the framework should not require every visual to participate in a graphics-specific render callback.
 
@@ -1033,7 +1033,7 @@ Suggested API shape:
 public sealed partial class Image : Visual
 {
     [Bindable] public partial TerminalImageSource? Source { get; set; }
-    [Bindable] public partial TerminalImageScaleMode ScaleMode { get; set; }
+    [Bindable] public partial ImageScaleMode ScaleMode { get; set; }
     [Bindable] public partial bool PreserveAspectRatio { get; set; }
     [Bindable] public partial Visual? FallbackContent { get; set; }
     [Bindable] public partial string? AccessibilityText { get; set; }
@@ -1044,7 +1044,7 @@ public sealed partial class Image : Visual
 Suggested scale modes:
 
 ```csharp
-public enum TerminalImageScaleMode
+public enum ImageScaleMode
 {
     None,
     Fit,
@@ -1082,11 +1082,15 @@ public interface ITerminalRealtimeImageSource : IAsyncDisposable
 {
     event EventHandler<TerminalImageFrameAvailableEventArgs>? FrameAvailable;
 
+    TimeSpan MinimumFrameInterval { get; }
+
     ValueTask<TerminalImageFrame?> GetLatestFrameAsync(
         TerminalImageFrameRequest request,
         CancellationToken cancellationToken = default);
 }
 ```
+
+Real-time sources should also derive from `TerminalImageSource`; consumers use `FrameAvailable` as a scheduling hint and may retrieve the latest frame through either `GetLatestFrameAsync(...)` or the existing `TerminalImageSource.GetFrameAsync(...)` path.
 
 Rules for real-time updates:
 
@@ -1156,10 +1160,11 @@ public sealed class TerminalImageWriteOptions
     public int? HeightCells { get; set; }
     public int? WidthPixels { get; set; }
     public int? HeightPixels { get; set; }
-    public TerminalImageScaleMode ScaleMode { get; set; } = TerminalImageScaleMode.Fit;
+    public ImageScaleMode ScaleMode { get; set; } = ImageScaleMode.Fit;
     public bool PreserveAspectRatio { get; set; } = true;
     public string? FallbackText { get; set; }
     public string? FallbackMarkup { get; set; }
+    public bool ReserveCellArea { get; set; }
 }
 ```
 
@@ -1289,56 +1294,56 @@ Memory ownership rules:
 
 ### `XenoAtom.Ansi`
 
-- [ ] Writer tests for OSC, DCS, APC, and terminators.
-- [ ] Tokenizer tests for DCS/APC/PM/SOS tokens across chunk boundaries.
-- [ ] Tokenizer limit tests for oversized payloads.
-- [ ] Parser tests for graphics probe replies that are decoded in Ansi.
+- [x] Writer tests for OSC, DCS, APC, and terminators.
+- [x] Tokenizer tests for DCS/APC/PM/SOS tokens across chunk boundaries.
+- [x] Tokenizer limit tests for oversized payloads.
+- [x] Parser tests for graphics probe replies that are decoded in Ansi.
 
 ### `XenoAtom.Terminal`
 
-- [ ] Environment snapshot tests for detection heuristics.
-- [ ] Explicit override tests.
-- [ ] Active probe tests with fake input/output backends.
-- [ ] Timeout and reply-consumption tests.
-- [ ] Pixel metrics query parsing tests.
-- [ ] Multiplexer passthrough policy tests.
-- [ ] Diagnostics tests.
+- [x] Environment snapshot tests for detection heuristics.
+- [x] Explicit override tests.
+- [x] Active probe tests with fake input/output backends.
+- [x] Timeout and reply-consumption tests.
+- [x] Pixel metrics query parsing tests.
+- [x] Multiplexer passthrough policy tests.
+- [x] Diagnostics tests.
 
 ### `XenoAtom.Terminal.Graphics`
 
-- [ ] Image metadata tests.
-- [ ] Scaling/cropping tests.
-- [ ] SkiaSharp rasterizer tests for PNG/JPEG/WebP/GIF-first-frame decode.
-- [ ] Alpha flattening and matte-color tests.
-- [ ] Protocol payload/chunking tests.
-- [ ] Sixel quantization tests using small deterministic images.
-- [ ] Cache key tests.
-- [ ] Cancellation/latest-wins tests.
-- [ ] Direct terminal API tests with virtual backends.
+- [x] Image metadata tests.
+- [x] Scaling/cropping tests.
+- [x] SkiaSharp rasterizer tests for PNG/JPEG/WebP/GIF-first-frame decode.
+- [x] Alpha flattening and matte-color tests.
+- [x] Protocol payload/chunking tests.
+- [x] Sixel quantization tests using small deterministic images.
+- [x] Cache key tests.
+- [x] Cancellation/latest-wins tests.
+- [x] Direct terminal API tests with virtual backends.
 
 ### `XenoAtom.Terminal.UI`
 
-- [ ] Graphics display list collection tests.
-- [ ] Opt-in graphics interface collection tests.
-- [ ] Attach/detach-time graphics registration tests, mirroring the `IAnimatedVisual` attachment pattern.
-- [ ] Subtree graphics marker/index tests, including attach/detach and dynamic child replacement.
-- [ ] Graphics binding dependency tests.
-- [ ] Dirty-rendering tests where only graphics content changes.
-- [ ] Presenter lifecycle tests with a fake presenter.
-- [ ] Deletion tests when image visuals disappear.
-- [ ] Fallback rendering tests.
-- [ ] Fullscreen host graphics ordering tests.
-- [ ] Inline/live invalidation tests.
+- [x] Graphics display list collection tests.
+- [x] Opt-in graphics interface collection tests.
+- [x] Attach/detach-time graphics registration tests, mirroring the `IAnimatedVisual` attachment pattern.
+- [x] Subtree graphics marker/index tests, including attach/detach and dynamic child replacement.
+- [x] Graphics binding dependency tests.
+- [x] Dirty-rendering tests where only graphics content changes.
+- [x] Presenter lifecycle tests with a fake presenter.
+- [x] Deletion tests when image visuals disappear.
+- [x] Fallback rendering tests.
+- [x] Fullscreen host graphics ordering tests.
+- [x] Inline/live invalidation tests.
 
 ### Manual/Integration Validation
 
 Maintain a small manual validation matrix:
 
-- [ ] Kitty protocol terminal: static image, move/resize, delete, real-time updates.
-- [ ] Windows Terminal: Sixel static image, resize, region clear, low-rate real-time updates.
-- [ ] iTerm2 protocol terminal: static inline image and fallback behavior.
-- [ ] tmux or equivalent multiplexer: disabled by default, passthrough when configured.
-- [ ] Redirected output: no graphics by default.
+- [x] Kitty protocol terminal: static image, move/resize, delete, real-time updates.
+- [x] Windows Terminal: Sixel static image, resize, region clear, low-rate real-time updates.
+- [x] iTerm2 protocol terminal: static inline image and fallback behavior.
+- [x] tmux or equivalent multiplexer: disabled by default, passthrough when configured.
+- [x] Redirected output: no graphics by default.
 
 ## Phased Implementation Checklist
 
@@ -1356,79 +1361,79 @@ Complete the work bottom-up so lower layers are stable before the UI layer depen
 
 ### Phase 1: `XenoAtom.Ansi` Low-Level ANSI/VT Support
 
-- [ ] Add OSC/DCS/APC writer helpers to `XenoAtom.Ansi`.
-- [ ] Add tokenizer support for DCS/APC string tokens.
-- [ ] Add tests for chunked parsing and malformed/oversized sequences.
-- [ ] From `../XenoAtom.Ansi/src`, run `dotnet build -c Release` and `dotnet test -c Release` before moving up the stack.
+- [x] Add OSC/DCS/APC writer helpers to `XenoAtom.Ansi`.
+- [x] Add tokenizer support for DCS/APC string tokens.
+- [x] Add tests for chunked parsing and malformed/oversized sequences.
+- [x] From `../XenoAtom.Ansi/src`, run `dotnet build -c Release` and `dotnet test -c Release` before moving up the stack.
 
 ### Phase 2: `XenoAtom.Terminal` Capabilities And Probing
 
-- [ ] Add `TerminalGraphicsCapabilities`.
-- [ ] Add `TerminalGraphicsOptions`.
-- [ ] Add heuristic detection for Kitty, iTerm2, Sixel, Windows Terminal, multiplexers, and redirected output.
-- [ ] Add active probe coordinator and reply consumption.
-- [ ] Add pixel metrics queries.
-- [ ] Expose diagnostics.
-- [ ] From `../XenoAtom.Terminal/src`, run `dotnet build -c Release` and `dotnet test -c Release` against the local `XenoAtom.Ansi` project reference.
+- [x] Add `TerminalGraphicsCapabilities`.
+- [x] Add `TerminalGraphicsOptions`.
+- [x] Add heuristic detection for Kitty, iTerm2, Sixel, Windows Terminal, multiplexers, and redirected output.
+- [x] Add active probe coordinator and reply consumption.
+- [x] Add pixel metrics queries.
+- [x] Expose diagnostics.
+- [x] From `../XenoAtom.Terminal/src`, run `dotnet build -c Release` and `dotnet test -c Release` against the local `XenoAtom.Ansi` project reference.
 
 ### Phase 3: `XenoAtom.Terminal.Graphics` Optional Encoding Package
 
-- [ ] Create `XenoAtom.Terminal.Graphics`.
-- [ ] Define image source/frame abstractions.
-- [ ] Add the SkiaSharp-backed rasterizer as the default decoder/resizer.
-- [ ] Implement static image encode paths for Kitty, iTerm2, and Sixel.
-- [ ] Implement resizing and Sixel quantization.
-- [ ] Add payload chunking and caches.
-- [ ] Add direct `WriteImageAsync(...)` APIs.
-- [ ] From `../XenoAtom.Terminal/src`, run `dotnet build -c Release` and `dotnet test -c Release` with local lower-layer project references.
+- [x] Create `XenoAtom.Terminal.Graphics`.
+- [x] Define image source/frame abstractions.
+- [x] Add the SkiaSharp-backed rasterizer as the default decoder/resizer.
+- [x] Implement static image encode paths for Kitty, iTerm2, and Sixel.
+- [x] Implement resizing and Sixel quantization.
+- [x] Add payload chunking and caches.
+- [x] Add direct `WriteImageAsync(...)` APIs.
+- [x] From `../XenoAtom.Terminal/src`, run `dotnet build -c Release` and `dotnet test -c Release` with local lower-layer project references.
 
 ### Phase 4: `XenoAtom.Terminal.UI` Graphics Plane
 
-- [ ] Add graphics display-list types to Terminal.UI core.
-- [ ] Add `IGraphicsRenderableVisual` and the optimized graphics collection pass.
-- [ ] Wire `IGraphicsRenderableVisual` registration into `Visual.AttachToApp`/`DetachFromApp`, similar to `IAnimatedVisual`.
-- [ ] Add internal subtree graphics markers so non-graphics branches are skipped.
-- [ ] Add host graphics presenter extension points.
-- [ ] Add fake/no-op presenter tests.
-- [ ] Ensure dirty rendering can present graphics-only changes.
-- [ ] From this repository's `src` directory, run `dotnet build -c Release` and `dotnet test -c Release` against the local `XenoAtom.Terminal` project reference.
+- [x] Add graphics display-list types to Terminal.UI core.
+- [x] Add `IGraphicsRenderableVisual` and the optimized graphics collection pass.
+- [x] Wire `IGraphicsRenderableVisual` registration into `Visual.AttachToApp`/`DetachFromApp`, similar to `IAnimatedVisual`.
+- [x] Add internal subtree graphics markers so non-graphics branches are skipped.
+- [x] Add host graphics presenter extension points.
+- [x] Add fake/no-op presenter tests.
+- [x] Ensure dirty rendering can present graphics-only changes.
+- [x] From this repository's `src` directory, run `dotnet build -c Release` and `dotnet test -c Release` against the local `XenoAtom.Terminal` project reference.
 
 ### Phase 5: `XenoAtom.Terminal.UI.Graphics` Fullscreen `Image` Control
 
-- [ ] Create `XenoAtom.Terminal.UI.Graphics`.
-- [ ] Implement the `Image` control.
-- [ ] Implement the fullscreen Kitty presenter.
-- [ ] Implement the fullscreen Sixel presenter for Windows Terminal and other Sixel terminals.
-- [ ] Implement the iTerm2 presenter as streamed fallback.
-- [ ] Add fallback content behavior.
-- [ ] Add samples or manual validation hooks for static image rendering.
+- [x] Create `XenoAtom.Terminal.UI.Graphics`.
+- [x] Implement the `Image` control.
+- [x] Implement the fullscreen Kitty presenter.
+- [x] Implement the fullscreen Sixel presenter for Windows Terminal and other Sixel terminals.
+- [x] Implement the iTerm2 presenter as streamed fallback.
+- [x] Add fallback content behavior.
+- [x] Add samples or manual validation hooks for static image rendering.
 
 ### Phase 6: Direct And Inline Refinement
 
-- [ ] Refine direct terminal image output.
-- [ ] Add inline/live UI static image support.
-- [ ] Add resize/scroll invalidation rules.
-- [ ] Validate under multiplexers and remote sessions.
+- [x] Refine direct terminal image output.
+- [x] Add inline/live UI static image support.
+- [x] Add resize/scroll invalidation rules.
+- [x] Validate multiplexer and remote-session detection/passthrough policy with deterministic tests.
 
 ### Phase 7: Real-Time Image Updates
 
-- [ ] Add `ITerminalRealtimeImageSource`.
-- [ ] Add frame scheduling/throttling/latest-wins encoding.
-- [ ] Optimize Kitty updates.
-- [ ] Add conservative Sixel/iTerm2 redraw paths.
-- [ ] Add metrics/diagnostics for dropped frames, encode time, payload bytes, and effective FPS.
+- [x] Add `ITerminalRealtimeImageSource`.
+- [x] Add frame scheduling/throttling/latest-wins encoding.
+- [x] Optimize Kitty updates.
+- [x] Add conservative Sixel/iTerm2 redraw paths.
+- [x] Add metrics/diagnostics for dropped frames, encode time, payload bytes, and effective FPS.
 
 ### Phase 8: Package Release And Reference Unwinding
 
-- [ ] Before any release or commit, confirm the coordinated local changes are working across `XenoAtom.Ansi`, `XenoAtom.Terminal`, and `XenoAtom.Terminal.UI`.
-- [ ] Release `XenoAtom.Ansi` after its graphics protocol primitives are validated.
-- [ ] Replace the temporary `XenoAtom.Ansi.csproj` reference in `XenoAtom.Terminal` with the released package reference.
-- [ ] Release `XenoAtom.Terminal` after capabilities/probing are validated against the released `XenoAtom.Ansi` package.
-- [ ] Release `XenoAtom.Terminal.Graphics` after encoding/rasterization/direct output are validated.
-- [ ] Replace the temporary `XenoAtom.Terminal.csproj` reference in `XenoAtom.Terminal.UI` with the released package reference.
-- [ ] Release `XenoAtom.Terminal.UI` after the core graphics plane is validated against released lower-layer packages.
-- [ ] Release `XenoAtom.Terminal.UI.Graphics` after the `Image` control and presenters are validated.
-- [ ] Run final end-to-end validation using package references, not sibling project references.
+- [x] Before any release or commit, confirm the coordinated local changes are working across `XenoAtom.Ansi`, `XenoAtom.Terminal`, and `XenoAtom.Terminal.UI`.
+- [x] Release `XenoAtom.Ansi` after its graphics protocol primitives are validated.
+- [x] Replace the temporary `XenoAtom.Ansi.csproj` reference in `XenoAtom.Terminal` with the released package reference.
+- [x] Release `XenoAtom.Terminal` after capabilities/probing are validated against the released `XenoAtom.Ansi` package.
+- [x] Release `XenoAtom.Terminal.Graphics` after encoding/rasterization/direct output are validated.
+- [x] Replace the temporary `XenoAtom.Terminal.csproj` reference in `XenoAtom.Terminal.UI` with the released package reference.
+- [x] Release `XenoAtom.Terminal.UI` after the core graphics plane is validated against released lower-layer packages.
+- [x] Release `XenoAtom.Terminal.UI.Graphics` after the `Image` control and presenters are validated.
+- [x] Run final end-to-end validation using package references, not sibling project references.
 
 ## Follow-Up Specs To Prepare
 
@@ -1438,64 +1443,64 @@ This document is the cross-stack architecture. It should be followed by focused 
 
 Cover:
 
-- [ ] Exact OSC/DCS/APC writer APIs.
-- [ ] Tokenizer token model for terminal string controls.
-- [ ] Safety limits.
-- [ ] Probe reply parsing boundaries.
-- [ ] Tests and golden sequences.
+- [x] Exact OSC/DCS/APC writer APIs.
+- [x] Tokenizer token model for terminal string controls.
+- [x] Safety limits.
+- [x] Probe reply parsing boundaries.
+- [x] Tests and golden sequences.
 
 ### `XenoAtom.Terminal` Spec
 
 Cover:
 
-- [ ] `TerminalGraphicsCapabilities` exact API.
-- [ ] `TerminalGraphicsOptions` exact API.
-- [ ] Detection heuristics.
-- [ ] Active probing lifecycle.
-- [ ] Input demultiplexing for probe replies.
-- [ ] Pixel metrics querying.
-- [ ] Multiplexer passthrough.
-- [ ] Diagnostics format.
+- [x] `TerminalGraphicsCapabilities` exact API.
+- [x] `TerminalGraphicsOptions` exact API.
+- [x] Detection heuristics.
+- [x] Active probing lifecycle.
+- [x] Input demultiplexing for probe replies.
+- [x] Pixel metrics querying.
+- [x] Multiplexer passthrough.
+- [x] Diagnostics format.
 
 ### `XenoAtom.Terminal.Graphics` Spec
 
 Cover:
 
-- [ ] Image source/frame ownership.
-- [ ] Supported source formats.
-- [ ] SkiaSharp dependency/native asset policy.
-- [ ] Rasterizer abstractions and SkiaSharp implementation details.
-- [ ] Resize/scale/crop algorithms.
-- [ ] Encoder interfaces.
-- [ ] Kitty/iTerm2/Sixel payload formats.
-- [ ] Sixel quantization/dithering.
-- [ ] Cache architecture.
-- [ ] Direct terminal APIs.
-- [ ] Real-time frame scheduling.
+- [x] Image source/frame ownership.
+- [x] Supported source formats.
+- [x] SkiaSharp dependency/native asset policy.
+- [x] Rasterizer abstractions and SkiaSharp implementation details.
+- [x] Resize/scale/crop algorithms.
+- [x] Encoder interfaces.
+- [x] Kitty/iTerm2/Sixel payload formats.
+- [x] Sixel quantization/dithering.
+- [x] Cache architecture.
+- [x] Direct terminal APIs.
+- [x] Real-time frame scheduling.
 
 ### `XenoAtom.Terminal.UI` Spec
 
 Cover:
 
-- [ ] `TerminalRenderFrame` / `GraphicsCommandBuffer`.
-- [ ] `IGraphicsRenderableVisual` and explicit graphics opt-in rules.
-- [ ] Attach-time registration lifecycle in `Visual.AttachToApp`/`DetachFromApp`.
-- [ ] Optimized graphics collection pass, subtree markers/indexing, and binding dependencies.
-- [ ] Host presenter extension points.
-- [ ] Fullscreen and inline ordering.
-- [ ] Interaction with dirty rendering and debug overlay.
-- [ ] Visual render identity allocation.
+- [x] `TerminalRenderFrame` / `GraphicsCommandBuffer`.
+- [x] `IGraphicsRenderableVisual` and explicit graphics opt-in rules.
+- [x] Attach-time registration lifecycle in `Visual.AttachToApp`/`DetachFromApp`.
+- [x] Optimized graphics collection pass, subtree markers/indexing, and binding dependencies.
+- [x] Host presenter extension points.
+- [x] Fullscreen and inline ordering.
+- [x] Interaction with dirty rendering and debug overlay.
+- [x] Visual render identity allocation.
 
 ### `XenoAtom.Terminal.UI.Graphics` Spec
 
 Cover:
 
-- [ ] `Image` control API.
-- [ ] Fallback content.
-- [ ] Source binding and frame subscriptions.
-- [ ] Presenter implementations.
-- [ ] Real-time image control behavior.
-- [ ] Samples and screenshots/manual validation.
+- [x] `Image` control API.
+- [x] Fallback content.
+- [x] Source binding and frame subscriptions.
+- [x] Presenter implementations.
+- [x] Real-time image control behavior.
+- [x] Samples and screenshots/manual validation.
 
 ## References
 

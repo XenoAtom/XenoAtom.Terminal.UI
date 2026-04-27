@@ -40,6 +40,7 @@ internal static class ScreenshotExport
         ["GroupDemo"] = "group",
         ["HeaderDemo"] = "header",
         ["HStackDemo"] = "hstack",
+        ["GraphicsImageDemo"] = "image",
         ["LineChartDemo"] = "linechart",
         ["LinkDemo"] = "link",
         ["ListBoxDemo"] = "listbox",

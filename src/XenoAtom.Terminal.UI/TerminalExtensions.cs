@@ -84,6 +84,14 @@ public static partial class TerminalExtensions
         public static TerminalInstance Write(Visual visual) => XenoAtom.Terminal.Terminal.Instance.Write(visual);
 
         /// <summary>
+        /// Writes a visual once to the default terminal instance.
+        /// </summary>
+        /// <param name="visual">The visual to write.</param>
+        /// <param name="options">The write options.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="visual"/> or <paramref name="options"/> is <see langword="null"/>.</exception>
+        public static TerminalInstance Write(Visual visual, TerminalWriteOptions options) => XenoAtom.Terminal.Terminal.Instance.Write(visual, options);
+
+        /// <summary>
         /// Runs an inline live region on the default terminal instance.
         /// </summary>
         public static TerminalInstance Live(Visual visual, Func<TerminalLoopResult> onUpdate) => XenoAtom.Terminal.Terminal.Instance.Live(visual, onUpdate);
@@ -314,6 +322,22 @@ public static partial class TerminalExtensions
         }
 
         /// <summary>
+        /// Writes a visual once to this terminal instance.
+        /// </summary>
+        /// <param name="visual">The visual to write.</param>
+        /// <param name="options">The write options.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="instance"/>, <paramref name="visual"/>, or <paramref name="options"/> is <see langword="null"/>.</exception>
+        public TerminalInstance Write(Visual visual, TerminalWriteOptions options)
+        {
+            ArgumentNullException.ThrowIfNull(instance);
+            ArgumentNullException.ThrowIfNull(visual);
+            ArgumentNullException.ThrowIfNull(options);
+
+            TerminalVisualWriter.Write(instance, visual, options);
+            return instance;
+        }
+
+        /// <summary>
         /// Runs an inline live region on this terminal instance.
         /// </summary>
         public TerminalInstance Live(Visual visual, Func<TerminalLoopResult> onUpdate)
@@ -352,6 +376,7 @@ public static partial class TerminalExtensions
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
                 EnableMouse = options.EnableMouse,
                 MouseMode = options.MouseMode,
+                GraphicsPresenter = options.GraphicsPresenter,
                 LoopMode = options.LoopMode,
                 UpdateWaitDuration = options.UpdateWaitDuration,
                 WideRuneResolver = options.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
@@ -424,6 +449,7 @@ public static partial class TerminalExtensions
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
                 EnableMouse = options.EnableMouse,
                 MouseMode = options.MouseMode,
+                GraphicsPresenter = options.GraphicsPresenter,
                 LoopMode = options.LoopMode,
                 UpdateWaitDuration = options.UpdateWaitDuration,
                 WideRuneResolver = options.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
@@ -445,6 +471,7 @@ public static partial class TerminalExtensions
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
                 EnableMouse = options.EnableMouse,
                 MouseMode = options.MouseMode,
+                GraphicsPresenter = options.GraphicsPresenter,
                 LoopMode = options.LoopMode,
                 UpdateWaitDuration = options.UpdateWaitDuration,
                 WideRuneResolver = options.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
@@ -471,6 +498,7 @@ public static partial class TerminalExtensions
                 HostKind = TerminalHostKind.Fullscreen,
                 ExitGesture = options.ExitGesture,
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
+                GraphicsPresenter = options.GraphicsPresenter,
                 LoopMode = options.LoopMode,
                 UpdateWaitDuration = options.UpdateWaitDuration,
                 WideRuneResolver = options.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
@@ -500,6 +528,7 @@ public static partial class TerminalExtensions
                 HostKind = TerminalHostKind.Fullscreen,
                 ExitGesture = options.ExitGesture,
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
+                GraphicsPresenter = options.GraphicsPresenter,
                 LoopMode = options.LoopMode,
                 UpdateWaitDuration = options.UpdateWaitDuration,
                 WideRuneResolver = options.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
@@ -526,6 +555,7 @@ public static partial class TerminalExtensions
                 HostKind = TerminalHostKind.Fullscreen,
                 ExitGesture = options.ExitGesture,
                 Culture = options.Culture ?? CultureInfo.InvariantCulture,
+                GraphicsPresenter = options.GraphicsPresenter,
                 LoopMode = options.LoopMode,
                 UpdateWaitDuration = options.UpdateWaitDuration,
                 WideRuneResolver = options.WideRuneResolver ?? TerminalWideRuneResolvers.Default,

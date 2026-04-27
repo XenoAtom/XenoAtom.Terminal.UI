@@ -11,11 +11,15 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <PackageReference Include="Verify.DiffPlex" />
     <PackageReference Include="Verify.MSTest" />
+    <PackageReference Include="XenoAtom.Ansi" />
+    <PackageReference Include="XenoAtom.Terminal" />
+    <PackageReference Include="XenoAtom.Terminal.Graphics" />
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\XenoAtom.Terminal.UI\XenoAtom.Terminal.UI.csproj" />
+    <ProjectReference Include="..\XenoAtom.Terminal.UI.Graphics\XenoAtom.Terminal.UI.Graphics.csproj" />
     <ProjectReference Include="..\XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp\XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp.csproj" />
     <ProjectReference Include="..\XenoAtom.Terminal.UI.SourceGen\XenoAtom.Terminal.UI.SourceGen.csproj" />
     <ProjectReference Include="..\XenoAtom.Terminal.UI.Extensions.Markdown\XenoAtom.Terminal.UI.Extensions.Markdown.csproj" />

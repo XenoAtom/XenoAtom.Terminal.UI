@@ -36,6 +36,9 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private Visual? _activeTooltipWindow;
     private readonly InlineInteractiveHost? _inlineHost;
     private readonly FullscreenHost? _fullscreenHost;
+    private readonly GraphicsCommandBuffer _graphicsCommands = new();
+    private readonly GraphicsRenderContext _graphicsRenderContext;
+    private readonly Dictionary<Visual, IGraphicsRenderableVisual> _graphicsRenderableVisuals = new();
     private readonly AsyncAutoResetEvent _wakeUp = new();
     private readonly AutoResetEvent _wakeSignal = new(false);
     private readonly CancellationTokenSource _cts = new();
@@ -86,6 +89,9 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private bool _pendingRenderDirtyRectValid;
     private Rectangle _pendingRenderDirtyRect;
     private bool _forceNextFullRepaint;
+    private bool _isRendering;
+    private bool _deferredFullRepaintRequest;
+    private bool _graphicsDisplayListDirty;
 
     private int _lastRenderWidth;
     private int _lastRenderHeight;
@@ -109,6 +115,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         Measure = 2,
         Arrange = 3,
         Render = 4,
+        GraphicsRender = 5,
     }
 
     private enum SceneRenderMode
@@ -125,6 +132,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private readonly BindingDependencyIndex _measureIndex = new();
     private readonly BindingDependencyIndex _arrangeIndex = new();
     private readonly BindingDependencyIndex _renderIndex = new();
+    private readonly BindingDependencyIndex _graphicsRenderIndex = new();
 
     TerminalApp? IVisualElement.App => this;
     internal DebugOverlayMetrics? DebugOverlayMetrics => _debugOverlayMetrics;
@@ -243,6 +251,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         _wideRuneResolver = _options.WideRuneResolver ?? TerminalWideRuneResolvers.Default;
         _loopClock = loopClock ?? StopwatchTerminalLoopClock.Instance;
         _loopWaitBackend = loopWaitBackend ?? TerminalLoopWaitBackendFactory.CreateDefault(_loopClock);
+        _graphicsRenderContext = new GraphicsRenderContext(_graphicsCommands);
         if (_options.UpdateWaitDuration < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(options), "The update wait duration cannot be negative.");
@@ -322,6 +331,26 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     /// Gets the user-provided content root visual.
     /// </summary>
     public Visual ContentRoot { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether this app has a graphics presenter that can present for the current terminal.
+    /// </summary>
+    /// <remarks>
+    /// Graphics-capable visuals can use this value to decide whether to render fallback text/content instead of emitting
+    /// graphics display-list commands.
+    /// </remarks>
+    public bool IsGraphicsPresentationEnabled
+    {
+        get
+        {
+            var presenter = _options.GraphicsPresenter;
+            return presenter is not null && presenter.CanPresent(_terminal.Graphics.Capabilities);
+        }
+    }
+
+    internal GraphicsCommandBuffer GraphicsCommands => _graphicsCommands;
+
+    internal int GraphicsRenderableVisualCount => _graphicsRenderableVisuals.Count;
 
     internal void SetUpdateCallback(Func<TerminalRunningContext, TerminalLoopResult> onUpdate)
     {
@@ -520,6 +549,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
         _inlineHost?.Dispose();
         _fullscreenHost?.Dispose();
+        _options.GraphicsPresenter?.Dispose();
         _loopWaitBackend.Dispose();
         _wakeSignal.Dispose();
         _cts.Dispose();
@@ -873,6 +903,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         _previousMarkupStyles = _terminal.MarkupStyles;
         _terminal.MarkupStyles = Root.GetTheme().GetMarkupStyles();
         _wideRuneResolverScope = TerminalTextUtility.PushWideRuneResolver(_wideRuneResolver);
+        _options.GraphicsPresenter?.Reset();
 
         Root.AttachToApp(this);
         BindingManager.Current.ValueChanged += OnValueChanged;
@@ -935,6 +966,8 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
             _previousMarkupStyles = null;
 
+            _options.GraphicsPresenter?.Reset();
+
             _wideRuneResolverScope?.Dispose();
             _wideRuneResolverScope = null;
 
@@ -990,6 +1023,43 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     {
         _renderRequested = true;
         SignalWakeUp(TerminalLoopWakeReason.Render);
+    }
+
+    /// <summary>
+    /// Requests a render pass so graphics-only visuals can refresh their display-list commands.
+    /// </summary>
+    /// <remarks>
+    /// This does not invalidate layout or mark any text cells dirty. It is intended for real-time graphics sources whose
+    /// latest frame changed while their cell footprint stayed the same.
+    /// </remarks>
+    public void RequestGraphicsRender()
+    {
+        VerifyAccess();
+        _graphicsDisplayListDirty = true;
+        RequestRender();
+    }
+
+    /// <summary>
+    /// Requests a full text repaint on the next render pass.
+    /// </summary>
+    /// <remarks>
+    /// Graphics presenters can use this after clearing streamed graphics regions so the underlying text/background cells
+    /// are restored on the following frame.
+    /// </remarks>
+    public void RequestFullRender()
+    {
+        VerifyAccess();
+        _fullscreenHost?.Reset();
+        if (_isRendering)
+        {
+            _deferredFullRepaintRequest = true;
+        }
+        else
+        {
+            _forceNextFullRepaint = true;
+        }
+
+        RequestRender();
     }
 
     internal void RequestAnimation()
@@ -1374,6 +1444,44 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         _nextAnimationTick = 0;
     }
 
+    internal void RegisterGraphicsRenderableVisual(Visual visual, IGraphicsRenderableVisual graphics)
+    {
+        ArgumentNullException.ThrowIfNull(visual);
+        ArgumentNullException.ThrowIfNull(graphics);
+
+        if (!_graphicsRenderableVisuals.TryAdd(visual, graphics))
+        {
+            return;
+        }
+
+        for (var current = visual; current is not null; current = current.Parent)
+        {
+            current.IncrementGraphicsRenderableSubtreeCount();
+        }
+
+        _graphicsDisplayListDirty = true;
+    }
+
+    internal void UnregisterGraphicsRenderableVisual(Visual visual, IGraphicsRenderableVisual graphics)
+    {
+        ArgumentNullException.ThrowIfNull(visual);
+        ArgumentNullException.ThrowIfNull(graphics);
+
+        if (!_graphicsRenderableVisuals.TryGetValue(visual, out var registered) || !ReferenceEquals(registered, graphics))
+        {
+            return;
+        }
+
+        _graphicsRenderableVisuals.Remove(visual);
+        for (var current = visual; current is not null; current = current.Parent)
+        {
+            current.DecrementGraphicsRenderableSubtreeCount();
+        }
+
+        _graphicsRenderIndex.Remove(visual);
+        _graphicsDisplayListDirty = true;
+    }
+
     private void AdvanceAnimations(long? timestamp = null)
     {
         if (_animatedVisuals.Count == 0)
@@ -1458,6 +1566,9 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             case DependencyKind.Render:
                 _renderIndex.UpdateBindingReadsForVisual(visual, reads);
                 break;
+            case DependencyKind.GraphicsRender:
+                _graphicsRenderIndex.UpdateBindingReadsForVisual(visual, reads);
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(kind));
         }
@@ -1471,6 +1582,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         _measureIndex.Remove(visual);
         _arrangeIndex.Remove(visual);
         _renderIndex.Remove(visual);
+        _graphicsRenderIndex.Remove(visual);
     }
 
     private void ProcessBindingWrites()
@@ -1527,6 +1639,11 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                     AddRenderDirtyRect(v);
                 }
             }
+
+            if (_graphicsRenderIndex.TryGetVisuals(binding, out var graphicsVisuals))
+            {
+                _graphicsDisplayListDirty |= graphicsVisuals.Count > 0;
+            }
         }
 
         _pendingBindingWrites.Clear();
@@ -1561,6 +1678,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
     private void Render()
     {
+        _isRendering = true;
         EnsureFocusInScope();
 
         _inlineLiveRegionTopRow = null;
@@ -1630,6 +1748,12 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             metrics?.SetOverlayFrame(_debugOverlayVisible, overlayOnlyFrame: _debugOverlayVisible && sceneRenderMode == SceneRenderMode.None);
 
             RenderScene(buffer, baseStyle, metrics, sceneRenderMode, dirtyRect);
+            var viewportBounds = new Rectangle(0, 0, width, height);
+            CollectGraphicsCommands(viewportBounds, metrics);
+            var textRepaintBounds = GetTextRepaintBounds(sceneRenderMode, viewportBounds, dirtyRect);
+            var graphicsContext = CreateGraphicsPresentContext(viewportBounds, TerminalHostKind.Fullscreen, sceneRenderMode, textRepaintBounds);
+            var bufferedGraphicsPresenter = _options.GraphicsPresenter as IBufferedTerminalGraphicsPresenter;
+            var hasGraphicsFrameOutput = HasPendingGraphicsOutput(bufferedGraphicsPresenter, graphicsContext, metrics);
 
             var overlayComposited = _debugOverlayVisible && ComposeDebugOverlay(buffer, metrics);
             try
@@ -1637,13 +1761,21 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 if (metrics is not null)
                 {
                     var t0 = Stopwatch.GetTimestamp();
-                    _fullscreenHost!.Render(buffer, wantsCursor, cursorX, cursorY);
+                    _fullscreenHost!.Render(buffer, wantsCursor, cursorX, cursorY, hasGraphicsFrameOutput, writer => PresentGraphicsCommands(bufferedGraphicsPresenter!, graphicsContext, writer, metrics));
+                    if (bufferedGraphicsPresenter is null)
+                    {
+                        PresentGraphicsCommands(graphicsContext, metrics);
+                    }
                     metrics.RenderHostTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
                     metrics.EndRenderFrame(renderStartTimestamp, Stopwatch.GetTimestamp());
                 }
                 else
                 {
-                    _fullscreenHost!.Render(buffer, wantsCursor, cursorX, cursorY);
+                    _fullscreenHost!.Render(buffer, wantsCursor, cursorX, cursorY, hasGraphicsFrameOutput, writer => PresentGraphicsCommands(bufferedGraphicsPresenter!, graphicsContext, writer, metrics: null));
+                    if (bufferedGraphicsPresenter is null)
+                    {
+                        PresentGraphicsCommands(graphicsContext, metrics: null);
+                    }
                 }
             }
             finally
@@ -1656,7 +1788,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
             _pendingRenderHasLayoutImpact = false;
             _pendingRenderDirtyRectValid = false;
-            _forceNextFullRepaint = false;
+            CompleteRenderInvalidationState();
             return;
         }
 
@@ -1725,6 +1857,13 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             metrics?.SetOverlayFrame(_debugOverlayVisible, overlayOnlyFrame: _debugOverlayVisible && sceneRenderMode == SceneRenderMode.None);
 
             RenderScene(buffer, baseStyle, metrics, sceneRenderMode, dirtyRect);
+            var viewportBounds = new Rectangle(0, 0, width, buffer.Height);
+            CollectGraphicsCommands(viewportBounds, metrics);
+            var textRepaintBounds = GetTextRepaintBounds(sceneRenderMode, viewportBounds, dirtyRect);
+            var graphicsViewportBounds = new Rectangle(0, _inlineHost!.LiveRegionTopRow.GetValueOrDefault(), width, buffer.Height);
+            var graphicsContext = CreateGraphicsPresentContext(graphicsViewportBounds, TerminalHostKind.Inline, sceneRenderMode, textRepaintBounds);
+            var bufferedGraphicsPresenter = _options.GraphicsPresenter as IBufferedTerminalGraphicsPresenter;
+            var hasGraphicsFrameOutput = HasPendingGraphicsOutput(bufferedGraphicsPresenter, graphicsContext, metrics);
 
             var overlayComposited = _debugOverlayVisible && ComposeDebugOverlay(buffer, metrics);
             try
@@ -1732,13 +1871,21 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 if (metrics is not null)
                 {
                     var t0 = Stopwatch.GetTimestamp();
-                    _inlineHost!.Render(buffer, wantsCursor, cursorX, cursorY);
+                    _inlineHost.Render(buffer, wantsCursor, cursorX, cursorY, hasGraphicsFrameOutput, writer => PresentGraphicsCommands(bufferedGraphicsPresenter!, graphicsContext, writer, metrics));
+                    if (bufferedGraphicsPresenter is null)
+                    {
+                        PresentGraphicsCommands(graphicsContext, metrics);
+                    }
                     metrics.RenderHostTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
                     metrics.EndRenderFrame(renderStartTimestamp, Stopwatch.GetTimestamp());
                 }
                 else
                 {
-                    _inlineHost!.Render(buffer, wantsCursor, cursorX, cursorY);
+                    _inlineHost.Render(buffer, wantsCursor, cursorX, cursorY, hasGraphicsFrameOutput, writer => PresentGraphicsCommands(bufferedGraphicsPresenter!, graphicsContext, writer, metrics: null));
+                    if (bufferedGraphicsPresenter is null)
+                    {
+                        PresentGraphicsCommands(graphicsContext, metrics: null);
+                    }
                 }
             }
             finally
@@ -1753,8 +1900,17 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
             _pendingRenderHasLayoutImpact = false;
             _pendingRenderDirtyRectValid = false;
-            _forceNextFullRepaint = false;
+            CompleteRenderInvalidationState();
         }
+
+        _isRendering = false;
+    }
+
+    private void CompleteRenderInvalidationState()
+    {
+        _forceNextFullRepaint = _deferredFullRepaintRequest;
+        _deferredFullRepaintRequest = false;
+        _isRendering = false;
     }
 
     private static SceneRenderMode DetermineSceneRenderMode(bool fullRepaint, in Rectangle dirtyRect)
@@ -1817,6 +1973,191 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 buffer.PopClip();
             }
         }
+    }
+
+    private void CollectGraphicsCommands(in Rectangle viewportBounds, DebugOverlayMetrics? metrics)
+    {
+        _graphicsRenderContext.BeginFrame();
+
+        if (Root.GraphicsRenderableSubtreeCount <= 0)
+        {
+            _graphicsDisplayListDirty = false;
+            metrics?.RecordGraphicsCommandCollection(0, 0);
+            return;
+        }
+
+        if (metrics is not null)
+        {
+            var t0 = Stopwatch.GetTimestamp();
+            CollectGraphicsCommandsRecursive(Root, viewportBounds);
+            metrics.RecordGraphicsCommandCollection(_graphicsCommands.Count, Math.Max(0, Stopwatch.GetTimestamp() - t0));
+        }
+        else
+        {
+            CollectGraphicsCommandsRecursive(Root, viewportBounds);
+        }
+
+        _graphicsDisplayListDirty = false;
+    }
+
+    private void CollectGraphicsCommandsRecursive(Visual visual, in Rectangle clipBounds)
+    {
+        if (visual.GraphicsRenderableSubtreeCount <= 0)
+        {
+            return;
+        }
+
+        if (!visual.IsVisible)
+        {
+            return;
+        }
+
+        var bounds = visual.Bounds;
+        var effectiveClip = Intersect(clipBounds, bounds);
+        if (effectiveClip.Width <= 0 || effectiveClip.Height <= 0)
+        {
+            return;
+        }
+
+        var childrenCount = visual.GetChildrenCount();
+
+        if (_graphicsRenderableVisuals.TryGetValue(visual, out var graphics))
+        {
+            using var session = BindingManager.Current.StartTracking();
+            _graphicsRenderContext.BeginVisual(visual.GraphicsRenderId, effectiveClip);
+            graphics.RenderGraphics(_graphicsRenderContext);
+            visual.UpdateGraphicsRenderDependencies(session.Reads);
+        }
+
+        for (var i = 0; i < childrenCount; i++)
+        {
+            var child = visual.GetChildUnsafe(i);
+            CollectGraphicsCommandsRecursive(child, effectiveClip);
+        }
+    }
+
+    private TerminalGraphicsPresentContext CreateGraphicsPresentContext(in Rectangle viewportBounds, TerminalHostKind hostKind, SceneRenderMode sceneRenderMode, in Rectangle textRepaintBounds)
+        => new(
+            this,
+            _terminal,
+            hostKind,
+            viewportBounds,
+            _renderFrameIndex,
+            textRepaintBounds,
+            ToGraphicsTextFrameKind(sceneRenderMode));
+
+    private bool HasPendingGraphicsOutput(IBufferedTerminalGraphicsPresenter? presenter, TerminalGraphicsPresentContext context, DebugOverlayMetrics? metrics)
+    {
+        metrics?.RecordGraphicsPresenter(_options.GraphicsPresenter, presenter is not null);
+        if (presenter is null)
+        {
+            metrics?.RecordGraphicsHasPendingOutput(false, 0);
+            return false;
+        }
+
+        if (metrics is null)
+        {
+            return presenter.HasPendingOutput(_graphicsCommands, context);
+        }
+
+        var t0 = Stopwatch.GetTimestamp();
+        var hasPendingOutput = presenter.HasPendingOutput(_graphicsCommands, context);
+        metrics.RecordGraphicsHasPendingOutput(hasPendingOutput, Math.Max(0, Stopwatch.GetTimestamp() - t0));
+        metrics.RecordGraphicsPresenter(_options.GraphicsPresenter, buffered: true);
+        return hasPendingOutput;
+    }
+
+    private void PresentGraphicsCommands(TerminalGraphicsPresentContext context, DebugOverlayMetrics? metrics)
+    {
+        var presenter = _options.GraphicsPresenter;
+        if (presenter is null)
+        {
+            return;
+        }
+
+        var cancellationToken = _cts.IsCancellationRequested ? CancellationToken.None : _cts.Token;
+        var t0 = metrics is not null ? Stopwatch.GetTimestamp() : 0;
+        try
+        {
+            var presentTask = presenter.PresentAsync(_graphicsCommands, context, cancellationToken);
+            if (presentTask.IsCompletedSuccessfully)
+            {
+                presentTask.GetAwaiter().GetResult();
+            }
+            else
+            {
+                presentTask.AsTask().GetAwaiter().GetResult();
+            }
+        }
+        catch (OperationCanceledException) when (_cts.IsCancellationRequested || cancellationToken.IsCancellationRequested)
+        {
+            // The app is stopping or disposing. Graphics presentation is best-effort during shutdown and must not turn a
+            // normal exit into an unhandled exception.
+        }
+        finally
+        {
+            if (metrics is not null)
+            {
+                metrics.RecordGraphicsPresentation(Math.Max(0, Stopwatch.GetTimestamp() - t0));
+                metrics.RecordGraphicsPresenter(presenter, buffered: false);
+            }
+        }
+    }
+
+    private void PresentGraphicsCommands(IBufferedTerminalGraphicsPresenter presenter, TerminalGraphicsPresentContext context, AnsiWriter writer, DebugOverlayMetrics? metrics)
+    {
+        var cancellationToken = _cts.IsCancellationRequested ? CancellationToken.None : _cts.Token;
+        var t0 = metrics is not null ? Stopwatch.GetTimestamp() : 0;
+        try
+        {
+            var presentTask = presenter.PresentAsync(_graphicsCommands, context, writer, cancellationToken);
+            if (presentTask.IsCompletedSuccessfully)
+            {
+                presentTask.GetAwaiter().GetResult();
+            }
+            else
+            {
+                presentTask.AsTask().GetAwaiter().GetResult();
+            }
+        }
+        catch (OperationCanceledException) when (_cts.IsCancellationRequested || cancellationToken.IsCancellationRequested)
+        {
+            // The app is stopping or disposing. Graphics presentation is best-effort during shutdown and must not turn a
+            // normal exit into an unhandled exception.
+        }
+        finally
+        {
+            if (metrics is not null)
+            {
+                metrics.RecordGraphicsPresentation(Math.Max(0, Stopwatch.GetTimestamp() - t0));
+                metrics.RecordGraphicsPresenter(presenter, buffered: true);
+            }
+        }
+    }
+
+    private static TerminalGraphicsTextFrameKind ToGraphicsTextFrameKind(SceneRenderMode sceneRenderMode) => sceneRenderMode switch
+    {
+        SceneRenderMode.None => TerminalGraphicsTextFrameKind.None,
+        SceneRenderMode.Dirty => TerminalGraphicsTextFrameKind.Dirty,
+        SceneRenderMode.Full => TerminalGraphicsTextFrameKind.Full,
+        _ => throw new ArgumentOutOfRangeException(nameof(sceneRenderMode)),
+    };
+
+    private static Rectangle GetTextRepaintBounds(SceneRenderMode sceneRenderMode, Rectangle viewportBounds, Rectangle dirtyRect) => sceneRenderMode switch
+    {
+        SceneRenderMode.None => default,
+        SceneRenderMode.Dirty => dirtyRect,
+        SceneRenderMode.Full => new Rectangle(0, 0, viewportBounds.Width, viewportBounds.Height),
+        _ => throw new ArgumentOutOfRangeException(nameof(sceneRenderMode)),
+    };
+
+    private static Rectangle Intersect(in Rectangle a, in Rectangle b)
+    {
+        var x0 = Math.Max(a.X, b.X);
+        var y0 = Math.Max(a.Y, b.Y);
+        var x1 = Math.Min(a.Right, b.Right);
+        var y1 = Math.Min(a.Bottom, b.Bottom);
+        return new Rectangle(x0, y0, Math.Max(0, x1 - x0), Math.Max(0, y1 - y0));
     }
 
     private static Rectangle ClampToViewport(Rectangle rect, int width, int height)
@@ -1889,7 +2230,30 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
         static double ToMs(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
         static string FormatMs(long ticks) => ToMs(ticks).ToString("0.0", global::System.Globalization.CultureInfo.InvariantCulture).PadLeft(6);
+        static string FormatDurationMs(TimeSpan duration) => duration.TotalMilliseconds.ToString("0.0", global::System.Globalization.CultureInfo.InvariantCulture).PadLeft(6);
         static string FormatFps(double fps) => fps <= 0 ? "-" : fps.ToString("0.0", global::System.Globalization.CultureInfo.InvariantCulture);
+        static string YesNo(bool value) => value ? "yes" : "no";
+        static string FormatBytes(long bytes)
+        {
+            const double Kib = 1024.0;
+            var value = (double)Math.Max(0, bytes);
+            var suffix = "B";
+            if (value >= Kib * Kib)
+            {
+                value /= Kib * Kib;
+                suffix = "MiB";
+            }
+            else if (value >= Kib)
+            {
+                value /= Kib;
+                suffix = "KiB";
+            }
+
+            return value >= 10 || suffix == "B"
+                ? value.ToString("0", global::System.Globalization.CultureInfo.InvariantCulture) + suffix
+                : value.ToString("0.0", global::System.Globalization.CultureInfo.InvariantCulture) + suffix;
+        }
+
         static string FormatAge(long elapsedTicks)
         {
             var seconds = Math.Max(0, elapsedTicks) / (double)Stopwatch.Frequency;
@@ -1956,16 +2320,38 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 lastSceneText = $"Scene: Last {lastRepaintText}  {lastDirtyText}  full={(metrics.LastSceneFullRepaint ? "yes" : "no")}  {FormatAge(overlayNowTimestamp - metrics.LastSceneUpdateTimestamp)}";
             }
 
-            return
-            [
+            var lines = new List<string>
+            {
                 $"Frame: {_renderFrameIndex}  FPS: {FormatFps(metrics?.Fps ?? 0)}",
                 $"Tick: {FormatMs(metrics?.TickTotalTicks ?? 0)}ms  Update: {FormatMs(metrics?.TickUserUpdateTicks ?? 0)}ms",
                 $"Loop: {waitDiagnostics.BackendName}  YieldWin {FormatMs(waitDiagnostics.YieldWindowTicks)}ms  Overshoot avg/p95 {FormatMs(waitDiagnostics.AverageOvershootTicks)}/{FormatMs(waitDiagnostics.P95OvershootTicks)}ms",
                 $"Loop: Yield avg {FormatMs(waitDiagnostics.AverageYieldTicks)}ms  Late {(metrics?.LateDeadlineCount ?? 0)}",
                 $"Wake64: deadline {(metrics?.WakeDeadlineCount ?? 0)}  input {(metrics?.WakeInputCount ?? 0)}  render {(metrics?.WakeRenderCount ?? 0)}  anim {(metrics?.WakeAnimationCount ?? 0)}",
                 $"Wake64: post {(metrics?.WakePostCount ?? 0)}  async {(metrics?.WakeAsyncUpdateCount ?? 0)}  stop {(metrics?.WakeShutdownCount ?? 0)}",
-                $"Top: Measure {FormatMs(metrics?.RenderMeasureTicks ?? 0)}ms  Arrange {FormatMs(metrics?.RenderArrangeTicks ?? 0)}ms  Render {FormatMs(metrics?.RenderTreeTicks ?? 0)}ms",
-                $"Top: Overlay {FormatMs(metrics?.OverlayRenderTicks ?? 0)}ms  Host {FormatMs(metrics?.RenderHostTicks ?? 0)}ms  Total {FormatMs(metrics?.RenderTotalTicks ?? 0)}ms",
+            };
+
+            if (metrics is not null && (metrics.GraphicsPresenterConfigured || metrics.GraphicsCommandCount > 0 || metrics.GraphicsCollectTicks > 0 || metrics.LastGraphicsPresentTicks > 0))
+            {
+                var presenterName = metrics.GraphicsPresenterConfigured
+                    ? (metrics.GraphicsPresenterName ?? "<unknown>")
+                    : "<none>";
+                var pendingText = metrics.GraphicsPresenterBuffered
+                    ? $"{YesNo(metrics.GraphicsHasPendingOutput)}/{FormatMs(metrics.GraphicsHasPendingTicks)}ms"
+                    : "n/a";
+                lines.Add($"Gfx: {presenterName}  buffered={YesNo(metrics.GraphicsPresenterBuffered)}  cmds {metrics.GraphicsCommandCount}  collect {FormatMs(metrics.GraphicsCollectTicks)}ms  pending {pendingText}  present(prev) {FormatMs(metrics.LastGraphicsPresentTicks)}ms");
+
+                if (metrics.HasGraphicsPresenterDiagnostics)
+                {
+                    var diagnostics = metrics.GraphicsPresenterDiagnostics;
+                    var protocol = diagnostics.Protocol == TerminalGraphicsProtocol.None ? "-" : diagnostics.Protocol.ToString();
+                    lines.Add($"GfxImg: {protocol}  last pres {FormatDurationMs(diagnostics.LastPresentationDuration)}ms  enc {diagnostics.LastEncodedFrameCount} in {FormatDurationMs(diagnostics.LastEncodeDuration)}ms  payload {FormatBytes(diagnostics.LastPayloadByteCount)}  drop {diagnostics.LastDroppedFrameCount}  cache h/m {diagnostics.LastCacheHitCount}/{diagnostics.LastCacheMissCount}");
+                    lines.Add($"GfxImg: total pres {diagnostics.PresentationCount}  enc {diagnostics.EncodedFrameCount} total {FormatDurationMs(diagnostics.TotalEncodeDuration)}ms avg {FormatDurationMs(diagnostics.AverageEncodeDuration)}ms  encfps {FormatFps(diagnostics.EffectiveFramesPerSecond)}  payload {FormatBytes(diagnostics.PayloadByteCount)}  drop {diagnostics.DroppedFrameCount}  cache h/m/s {diagnostics.CacheHitCount}/{diagnostics.CacheMissCount}/{diagnostics.CacheStoreCount}");
+                }
+            }
+
+            lines.AddRange([
+                $"Top(prev): Measure {FormatMs(metrics?.LastRenderMeasureTicks ?? 0)}ms  Arrange {FormatMs(metrics?.LastRenderArrangeTicks ?? 0)}ms  Render {FormatMs(metrics?.LastRenderTreeTicks ?? 0)}ms",
+                $"Top(prev): Overlay {FormatMs(metrics?.OverlayRenderTicks ?? 0)}ms  Host {FormatMs(metrics?.LastRenderHostTicks ?? 0)}ms  Total {FormatMs(metrics?.LastRenderTotalTicks ?? 0)}ms",
                 $"Calls: DynamicUpdate {(metrics?.DynamicUpdate.Calls ?? 0)} ({FormatMs(metrics?.DynamicUpdate.Ticks ?? 0)}ms)",
                 $"Calls: Prepare {(metrics?.PrepareChildren.Calls ?? 0)} ({FormatMs(metrics?.PrepareChildren.Ticks ?? 0)}ms)",
                 $"Calls: Measure {(metrics?.Measure.Calls ?? 0)} ({FormatMs(metrics?.Measure.Ticks ?? 0)}ms)  Cache {(metrics?.MeasureCacheHits ?? 0)}",
@@ -1979,7 +2365,9 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 $"HostDiff: {(metrics?.DiffOutputChars ?? 0)} chars  {(metrics?.DiffCellsTouched ?? 0)} cells  full={((metrics?.DiffForceFull ?? false) ? "yes" : "no")}",
                 $"Focus: {(focus is null ? "<none>" : focus.GetType().Name)}",
                 $"Hover: {(hover is null ? "<none>" : hover.GetType().Name)}",
-            ];
+            ]);
+
+            return lines;
         }
 
         Rectangle overlayRect = default;

@@ -55,6 +55,7 @@ See also:
 - [Commands](commands.md) (commands, typed names, key sequences, key hints with CommandBar)
 - [Styling](styling.md) (Theme, styles, environment, brushes/gradients)
 - [Rendering](rendering.md) (cell buffer, diff renderer, performance)
+- [Image](controls/image.md) (optional terminal graphics control for fullscreen, inline/live, and one-shot flow output)
 - [Scrolling](scrolling.md) (ScrollViewer, scroll models, scrollbars)
 - [Text Editing](text-editing.md) (TextBox/TextArea/CodeEditor/PromptEditor/MaskedInput and the text subsystem)
 - [Undo/Redo](undo-redo.md) (undo/redo for text editors)
@@ -69,6 +70,7 @@ See also:
 - [CodeEditor](controls/codeeditor.md) (code-oriented editor with line numbers, pluggable margins, and syntax highlighting)
 - [MarkdownControl](controls/markdowncontrol.md) (Markdig-powered document rendering with configurable fenced-code rendering)
 - [NerdFont](controls/nerdfont.md) (generated icon helpers for use with text controls)
+- [Image](controls/image.md) (optional terminal graphics package)
 
 ## Samples
 
@@ -77,7 +79,7 @@ The `samples` folder contains end-to-end demos:
 - [Demos](demos.md) (screenshots, videos, and GitHub links)
 - `samples/FullscreenDemo`: fullscreen UI showcase.
 - `samples/ControlsDemo`: catalog-style demo.
-- `samples/InlineLiveDemo`: inline/live example (interactive).
+- `samples/InlineLiveDemo`: inline/live example (interactive), including one-shot image output.
 
 ## Specs and design notes
 

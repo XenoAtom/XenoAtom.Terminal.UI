@@ -2,11 +2,14 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Reflection;
+using XenoAtom.Ansi;
 using XenoAtom.Terminal;
+using XenoAtom.Terminal.Graphics;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Layout;
-using System.Reflection;
+using ImageControl = XenoAtom.Terminal.UI.Graphics.Image;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -141,10 +144,117 @@ public sealed class TerminalAppDebugOverlayTests
         Assert.AreEqual(lastSceneTimestamp, metrics.LastSceneUpdateTimestamp);
     }
 
+    [TestMethod]
+    public void DebugOverlay_ReportsGraphicsPresenterDiagnostics()
+    {
+        var presenter = new DiagnosticsBufferedGraphicsPresenter();
+        var image = new ImageControl(CreateRedPixelSource())
+        {
+            CellWidth = 2,
+            CellHeight = 1,
+        };
+
+        using var driver = new TerminalAppTestDriver(
+            image,
+            TerminalHostKind.Fullscreen,
+            new TerminalSize(120, 30),
+            new TerminalAppOptions { GraphicsPresenter = presenter });
+
+        driver.Tick();
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F12 });
+        driver.Tick();
+
+        var metrics = driver.App.DebugOverlayMetrics;
+        Assert.IsNotNull(metrics, "Expected the debug overlay to be enabled after F12.");
+        Assert.IsTrue(metrics.GraphicsPresenterConfigured);
+        Assert.IsTrue(metrics.GraphicsPresenterBuffered);
+        Assert.AreEqual("diagnostic-image", metrics.GraphicsPresenterName);
+        Assert.AreEqual(1, metrics.GraphicsCommandCount);
+        Assert.IsTrue(metrics.GraphicsHasPendingOutput);
+        Assert.IsTrue(metrics.HasGraphicsPresenterDiagnostics);
+        Assert.AreEqual(TerminalGraphicsProtocol.Sixel, metrics.GraphicsPresenterDiagnostics.Protocol);
+        Assert.AreEqual(1, metrics.GraphicsPresenterDiagnostics.LastEncodedFrameCount);
+        Assert.AreEqual(2048, metrics.GraphicsPresenterDiagnostics.LastPayloadByteCount);
+        Assert.IsTrue(presenter.PresentCalls > 0);
+
+        var output = driver.Backend.GetOutText();
+        StringAssert.Contains(output, "Gfx: diagnostic-image");
+        StringAssert.Contains(output, "GfxImg: Sixel");
+        StringAssert.Contains(output, "payload 2.0KiB");
+    }
+
     private static void RequestRender(TerminalApp app)
     {
         typeof(TerminalApp)
             .GetMethod("RequestRender", BindingFlags.NonPublic | BindingFlags.Instance)!
             .Invoke(app, []);
+    }
+
+    private static TerminalImageSource CreateRedPixelSource()
+        => TerminalImageSource.FromRgba32(new byte[] { 255, 0, 0, 255 }, 1, 1, "red-pixel");
+
+    private sealed class DiagnosticsBufferedGraphicsPresenter : IBufferedTerminalGraphicsPresenter, ITerminalGraphicsPresenterDiagnostics
+    {
+        private int _lastCommandCount;
+
+        public int PresentCalls { get; private set; }
+
+        public TerminalGraphicsCapabilities Capabilities => TerminalGraphicsCapabilities.None;
+
+        public bool HasPendingOutput(GraphicsCommandBuffer current, TerminalGraphicsPresentContext context)
+        {
+            _ = context;
+            _lastCommandCount = current.Count;
+            return current.Count > 0;
+        }
+
+        public ValueTask PresentAsync(GraphicsCommandBuffer current, TerminalGraphicsPresentContext context, CancellationToken cancellationToken = default)
+        {
+            _ = context;
+            cancellationToken.ThrowIfCancellationRequested();
+            _lastCommandCount = current.Count;
+            PresentCalls++;
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask PresentAsync(GraphicsCommandBuffer current, TerminalGraphicsPresentContext context, AnsiWriter writer, CancellationToken cancellationToken = default)
+        {
+            _ = context;
+            _ = writer;
+            cancellationToken.ThrowIfCancellationRequested();
+            _lastCommandCount = current.Count;
+            PresentCalls++;
+            return ValueTask.CompletedTask;
+        }
+
+        public TerminalGraphicsPresenterDiagnostics GetDiagnosticsSnapshot()
+        {
+            return new TerminalGraphicsPresenterDiagnostics
+            {
+                Name = "diagnostic-image",
+                Protocol = TerminalGraphicsProtocol.Sixel,
+                PresentationCount = PresentCalls,
+                LastCommandCount = _lastCommandCount,
+                LastPresentationDuration = TimeSpan.FromMilliseconds(1.5),
+                EncodedFrameCount = 4,
+                LastEncodedFrameCount = 1,
+                TotalEncodeDuration = TimeSpan.FromMilliseconds(8),
+                AverageEncodeDuration = TimeSpan.FromMilliseconds(2),
+                LastEncodeDuration = TimeSpan.FromMilliseconds(1.25),
+                PayloadByteCount = 8192,
+                LastPayloadByteCount = 2048,
+                DroppedFrameCount = 3,
+                LastDroppedFrameCount = 1,
+                EffectiveFramesPerSecond = 42.0,
+            };
+        }
+
+        public void Reset()
+        {
+        }
+
+        public void Dispose()
+        {
+        }
     }
 }

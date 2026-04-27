@@ -26,6 +26,7 @@
     <Project Path="XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp/XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp.csproj" />
     <Project Path="XenoAtom.Terminal.UI.Extensions.Markdown/XenoAtom.Terminal.UI.Extensions.Markdown.csproj" />
     <Project Path="XenoAtom.Terminal.UI.Extensions.Screenshot/XenoAtom.Terminal.UI.Extensions.Screenshot.csproj" />
+    <Project Path="XenoAtom.Terminal.UI.Graphics/XenoAtom.Terminal.UI.Graphics.csproj" />
   </Folder>
   <Project Path="XenoAtom.Terminal.UI.Tests/XenoAtom.Terminal.UI.Tests.csproj" />
   <Project Path="XenoAtom.Terminal.UI.SourceGen/XenoAtom.Terminal.UI.SourceGen.csproj" />

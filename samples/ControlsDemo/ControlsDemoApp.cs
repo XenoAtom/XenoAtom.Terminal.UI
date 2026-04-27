@@ -8,7 +8,7 @@ namespace XenoAtom.Terminal.UI.ControlsDemo;
 
 internal static class ControlsDemoApp
 {
-    public static Visual Build(out Func<TerminalLoopResult> onUpdate)
+    public static Visual Build(out Func<TerminalLoopResult> onUpdate, DemoGraphicsOptions? graphics = null)
     {
         var demos = DemoRegistry.Load();
 
@@ -137,6 +137,7 @@ internal static class ControlsDemoApp
                         Runtime = runtime,
                         Theme = theme,
                         ToastHost = toastHost,
+                        Graphics = graphics,
                     });
 
                 return visual;

@@ -19,6 +19,8 @@
     <PackageVersion Include="TextMateSharp.Grammars" Version="2.0.3" />
     <PackageVersion Include="Verify.DiffPlex" Version="3.1.2" />
     <PackageVersion Include="Verify.MSTest" Version="31.16.2" />
-    <PackageVersion Include="XenoAtom.Terminal" Version="2.0.1" />
+    <PackageVersion Include="XenoAtom.Ansi" Version="1.7.0" />
+    <PackageVersion Include="XenoAtom.Terminal" Version="2.1.0" />
+    <PackageVersion Include="XenoAtom.Terminal.Graphics" Version="2.1.0" />
   </ItemGroup>
 </Project>

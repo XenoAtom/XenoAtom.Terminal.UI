@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -10,6 +10,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\XenoAtom.Terminal.UI\XenoAtom.Terminal.UI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="XenoAtom.Terminal" Version="2.1.0" />
   </ItemGroup>
 
 </Project>

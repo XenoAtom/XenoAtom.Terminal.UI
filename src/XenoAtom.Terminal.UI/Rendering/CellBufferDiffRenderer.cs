@@ -53,6 +53,16 @@ public sealed class CellBufferDiffRenderer : IDisposable
     /// <param name="cursorX">The cursor X position.</param>
     /// <param name="cursorY">The cursor Y position.</param>
     public void RenderFullscreen(TerminalInstance terminal, CellBuffer buffer, bool wantsCursor, int cursorX, int cursorY)
+        => RenderFullscreen(terminal, buffer, wantsCursor, cursorX, cursorY, hasFrameOutput: false, appendFrameOutput: null);
+
+    internal void RenderFullscreen(
+        TerminalInstance terminal,
+        CellBuffer buffer,
+        bool wantsCursor,
+        int cursorX,
+        int cursorY,
+        bool hasFrameOutput,
+        Action<AnsiWriter>? appendFrameOutput)
     {
         ArgumentNullException.ThrowIfNull(terminal);
         ArgumentNullException.ThrowIfNull(buffer);
@@ -234,7 +244,7 @@ public sealed class CellBufferDiffRenderer : IDisposable
             }
         }
 
-        if (!anyCellChanges && !cursorChanged)
+        if (!anyCellChanges && !cursorChanged && !hasFrameOutput)
         {
             if (collectMetrics)
             {
@@ -254,6 +264,11 @@ public sealed class CellBufferDiffRenderer : IDisposable
         if (currentStyle != AnsiStyle.Default)
         {
             writer.StyleTransition(currentStyle, AnsiStyle.Default);
+        }
+
+        if (hasFrameOutput)
+        {
+            appendFrameOutput?.Invoke(writer);
         }
 
         if (wantsCursor)

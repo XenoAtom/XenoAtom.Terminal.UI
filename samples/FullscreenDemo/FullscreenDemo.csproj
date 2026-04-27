@@ -16,4 +16,8 @@
     <ProjectReference Include="..\..\src\XenoAtom.Terminal.UI\XenoAtom.Terminal.UI.csproj" />
     <ProjectReference Include="..\..\src\XenoAtom.Terminal.UI.Extensions.Screenshot\XenoAtom.Terminal.UI.Extensions.Screenshot.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="XenoAtom.Terminal" Version="2.1.0" />
+  </ItemGroup>
 </Project>

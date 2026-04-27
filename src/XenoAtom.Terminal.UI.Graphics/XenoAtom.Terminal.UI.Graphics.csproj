@@ -2,17 +2,18 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
     <IsPackable>true</IsPackable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <PropertyGroup>
-    <Description>Markdown rendering for XenoAtom.Terminal.UI (powered by Markdig)</Description>
+    <Description>Terminal image controls and presenters for XenoAtom.Terminal.UI</Description>
     <Copyright>Alexandre Mutel</Copyright>
     <NeutralLanguage>en-US</NeutralLanguage>
     <Authors>Alexandre Mutel</Authors>
-    <PackageTags>terminal;console;tui;ui;markdown;markdig;commonmark;rendering;ansi;cross-platform</PackageTags>
+    <PackageTags>terminal;console;tui;ui;graphics;images;kitty;sixel;iterm2;cross-platform</PackageTags>
     <PackageProjectUrl>https://github.com/XenoAtom/XenoAtom.Terminal.UI</PackageProjectUrl>
     <PackageLicenseExpression>BSD-2-Clause</PackageLicenseExpression>
     <PackageReadmeFile>readme.md</PackageReadmeFile>
@@ -32,8 +33,9 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Markdig" />
+    <PackageReference Include="XenoAtom.Ansi" />
     <PackageReference Include="XenoAtom.Terminal" />
+    <PackageReference Include="XenoAtom.Terminal.Graphics" />
   </ItemGroup>
 
   <ItemGroup>

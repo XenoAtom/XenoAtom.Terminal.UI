@@ -64,6 +64,7 @@ controls:
   - {path: logcontrol.md, title: LogControl}
   - {path: documentflow.md, title: DocumentFlow}
   - {path: markdowncontrol.md, title: MarkdownControl}
+  - {path: image.md, title: Image}
   - {path: progressbar.md, title: ProgressBar}
   - {path: progresstaskgroup.md, title: ProgressTaskGroup}
   - {path: spinner.md, title: Spinner}

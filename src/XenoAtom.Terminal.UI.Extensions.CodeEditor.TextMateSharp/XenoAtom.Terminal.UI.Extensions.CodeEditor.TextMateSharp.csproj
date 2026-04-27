@@ -34,6 +34,7 @@
     </PackageReference>
     <PackageReference Include="TextMateSharp" />
     <PackageReference Include="TextMateSharp.Grammars" />
+    <PackageReference Include="XenoAtom.Terminal" />
   </ItemGroup>
 
   <ItemGroup>

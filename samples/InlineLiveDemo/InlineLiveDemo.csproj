@@ -14,5 +14,17 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\XenoAtom.Terminal.UI\XenoAtom.Terminal.UI.csproj" />
+    <ProjectReference Include="..\..\src\XenoAtom.Terminal.UI.Graphics\XenoAtom.Terminal.UI.Graphics.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="XenoAtom.Terminal" Version="2.1.0" />
+    <PackageReference Include="XenoAtom.Terminal.Graphics" Version="2.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\ControlsDemo\Assets\snow_photo.jpg" Link="Assets\snow_photo.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>

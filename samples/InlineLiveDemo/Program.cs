@@ -1,10 +1,13 @@
 using System.Diagnostics;
 using XenoAtom.Terminal;
+using XenoAtom.Terminal.Graphics;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Figlet;
+using XenoAtom.Terminal.UI.Graphics;
 using XenoAtom.Terminal.UI.Prompts;
 using XenoAtom.Terminal.UI.Styling;
+using ImageControl = XenoAtom.Terminal.UI.Graphics.Image;
 
 try
 {
@@ -42,6 +45,21 @@ try
                 }),
             new Markup("[dim]This demo shows prompts, state binding, and a live inline dashboard.[/]"))
         .Spacing(1));
+
+    Terminal.WriteLine();
+    Terminal.WriteMarkupLine("[bold]Static output: terminal graphics image[/]");
+    Terminal.WriteMarkupLine("[dim]The image below is written directly with Terminal.Write(new Image(...)).[/]");
+    Terminal.WriteLine();
+
+    Terminal.Write(new ImageControl(TerminalImageSource.FromFile(ResolveSnowPhotoPath()))
+    {
+        CellWidth = 28,
+        CellHeight = 10,
+        ScaleMode = ImageScaleMode.Fit,
+        PreserveAspectRatio = true,
+        AccessibilityText = "Snow photo rendered through terminal graphics",
+        FallbackContent = new TextBlock("Terminal graphics unavailable: Assets/snow_photo.jpg"),
+    });
 
     Terminal.WriteLine();
     var name = Terminal.Ask("What’s your name?", prompt =>
@@ -134,4 +152,24 @@ catch (OperationCanceledException)
 {
     Terminal.WriteLine();
     Terminal.WriteMarkupLine("[yellow]You canceled the prompt. Exiting the demo - see you![/]");
+}
+
+static string ResolveSnowPhotoPath()
+{
+    var candidates = new[]
+    {
+        Path.Combine(AppContext.BaseDirectory, "Assets", "snow_photo.jpg"),
+        Path.Combine(Directory.GetCurrentDirectory(), "Assets", "snow_photo.jpg"),
+        Path.Combine(Directory.GetCurrentDirectory(), "samples", "ControlsDemo", "Assets", "snow_photo.jpg"),
+    };
+
+    for (var i = 0; i < candidates.Length; i++)
+    {
+        if (File.Exists(candidates[i]))
+        {
+            return candidates[i];
+        }
+    }
+
+    return candidates[0];
 }

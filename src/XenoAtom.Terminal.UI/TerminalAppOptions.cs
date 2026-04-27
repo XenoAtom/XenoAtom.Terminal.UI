@@ -85,6 +85,16 @@ public sealed class TerminalAppOptions
     public TerminalLoopMode LoopMode { get; init; } = TerminalLoopMode.Auto;
 
     /// <summary>
+    /// Gets the optional presenter used to turn collected graphics commands into terminal protocol output.
+    /// </summary>
+    /// <remarks>
+    /// When this value is <see langword="null"/>, graphics-capable visuals are still allowed to emit display-list
+    /// commands, but no protocol output is written by the core UI host. A non-null presenter is reset when the app starts
+    /// and ends, and disposed when the app is disposed.
+    /// </remarks>
+    public ITerminalGraphicsPresenter? GraphicsPresenter { get; init; }
+
+    /// <summary>
     /// Gets the maximum coarse wait slice used in <see cref="TerminalLoopMode.Polling"/>.
     /// </summary>
     /// <remarks>

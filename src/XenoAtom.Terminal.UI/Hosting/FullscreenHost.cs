@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using XenoAtom.Ansi;
 using XenoAtom.Terminal.UI.Rendering;
 
 namespace XenoAtom.Terminal.UI.Hosting;
@@ -38,9 +39,12 @@ public sealed class FullscreenHost : IDisposable
     /// <param name="cursorX">The cursor X position.</param>
     /// <param name="cursorY">The cursor Y position.</param>
     public void Render(CellBuffer buffer, bool wantsCursor, int cursorX, int cursorY)
+        => Render(buffer, wantsCursor, cursorX, cursorY, hasFrameOutput: false, appendFrameOutput: null);
+
+    internal void Render(CellBuffer buffer, bool wantsCursor, int cursorX, int cursorY, bool hasFrameOutput, Action<AnsiWriter>? appendFrameOutput)
     {
         ArgumentNullException.ThrowIfNull(buffer);
-        _renderer.RenderFullscreen(_terminal, buffer, wantsCursor, cursorX, cursorY);
+        _renderer.RenderFullscreen(_terminal, buffer, wantsCursor, cursorX, cursorY, hasFrameOutput, appendFrameOutput);
     }
 
     internal void SetMetricsSink(ICellBufferDiffMetricsSink? sink) => _renderer.MetricsSink = sink;

@@ -221,6 +221,9 @@ public sealed class InlineInteractiveHost : IDisposable
     /// <param name="cursorX">The cursor X position.</param>
     /// <param name="cursorY">The cursor Y position.</param>
     public void Render(CellBuffer buffer, bool wantsCursor, int cursorX, int cursorY)
+        => Render(buffer, wantsCursor, cursorX, cursorY, hasFrameOutput: false, appendFrameOutput: null);
+
+    internal void Render(CellBuffer buffer, bool wantsCursor, int cursorX, int cursorY, bool hasFrameOutput, Action<AnsiWriter>? appendFrameOutput)
     {
         ArgumentNullException.ThrowIfNull(buffer);
 
@@ -306,7 +309,7 @@ public sealed class InlineInteractiveHost : IDisposable
 
             if (!anyCellChanged)
             {
-                if (!cursorChanged)
+                if (!cursorChanged && !hasFrameOutput)
                 {
                     if (collectMetrics)
                     {
@@ -330,6 +333,11 @@ public sealed class InlineInteractiveHost : IDisposable
                     }
 
                     writerLocal.RestoreCursor();
+
+                    if (hasFrameOutput)
+                    {
+                        appendFrameOutput?.Invoke(writerLocal);
+                    }
 
                     if (wantsCursor)
                     {
@@ -625,6 +633,11 @@ public sealed class InlineInteractiveHost : IDisposable
         {
             writer.EndLink();
             currentHyperlink = 0;
+        }
+
+        if (hasFrameOutput)
+        {
+            appendFrameOutput?.Invoke(writer);
         }
 
         if (wantsCursor)

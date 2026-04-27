@@ -31,6 +31,9 @@ namespace XenoAtom.Terminal.UI;
 /// </remarks>
 public abstract partial class Visual : DispatcherObject, IVisualElement
 {
+    private static long s_nextGraphicsRenderId;
+
+    private readonly ulong _graphicsRenderId = (ulong)Interlocked.Increment(ref s_nextGraphicsRenderId);
     private Dictionary<object, Delegate?>? _handlers;
     private Dictionary<object, Delegate?>? _handledEventHandlers;
     private BindableList<Command>? _commands;
@@ -51,6 +54,8 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     private HashSet<Binding>? _measureDeps;
     private HashSet<Binding>? _arrangeDeps;
     private HashSet<Binding>? _renderDeps;
+    private HashSet<Binding>? _graphicsRenderDeps;
+    private int _graphicsRenderableSubtreeCount;
 
     private bool _hasLastMeasure;
     private LayoutConstraints _lastMeasureConstraints;
@@ -82,6 +87,10 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// Gets the owning <see cref="TerminalApp"/> when this visual is attached to an application.
     /// </summary>
     public TerminalApp? App { get; private set; }
+
+    internal ulong GraphicsRenderId => _graphicsRenderId;
+
+    internal int GraphicsRenderableSubtreeCount => _graphicsRenderableSubtreeCount;
 
     /// <summary>
     /// Gets a value indicating whether this visual can receive focus.
@@ -730,12 +739,18 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             _arrangeDeps = null;
             _prepareChildrenDeps = null;
             _renderDeps = null;
+            _graphicsRenderDeps = null;
 
             OnAttachedToApp(app);
 
             if (this is IAnimatedVisual animated)
             {
                 app.RegisterAnimatedVisual(animated);
+            }
+
+            if (this is IGraphicsRenderableVisual graphics)
+            {
+                app.RegisterGraphicsRenderableVisual(this, graphics);
             }
 
             for (var i = 0; i < ChildrenCount; i++)
@@ -789,6 +804,12 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             _measureDeps = null;
             _arrangeDeps = null;
             _renderDeps = null;
+            _graphicsRenderDeps = null;
+
+            if (this is IGraphicsRenderableVisual graphics)
+            {
+                app.UnregisterGraphicsRenderableVisual(this, graphics);
+            }
 
             if (this is IAnimatedVisual animated)
             {
@@ -1488,6 +1509,27 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             changed |= target.Add(dep);
         }
         return changed;
+    }
+
+    internal void UpdateGraphicsRenderDependencies(IReadOnlyCollection<Binding> dependencies)
+    {
+        if (ReplaceDependencies(ref _graphicsRenderDeps, dependencies) && App is not null)
+        {
+            App.UpdateBindingReadsForVisual(this, TerminalApp.DependencyKind.GraphicsRender, _graphicsRenderDeps!);
+        }
+    }
+
+    internal void IncrementGraphicsRenderableSubtreeCount()
+    {
+        _graphicsRenderableSubtreeCount++;
+    }
+
+    internal void DecrementGraphicsRenderableSubtreeCount()
+    {
+        if (_graphicsRenderableSubtreeCount > 0)
+        {
+            _graphicsRenderableSubtreeCount--;
+        }
     }
 
     internal void MarkDynamicUpdateDirty()

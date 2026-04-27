@@ -38,7 +38,8 @@ If `Update` is high, you’re likely doing too much work in your update loop (I/
 
 ### Top timings
 
-These are top-level timings for the render pipeline:
+These are top-level timings for the previous completed render frame. The overlay is drawn before the host writes the
+current frame, so host/total timings are intentionally shown with the `Top(prev)` label.
 
 - `Measure`: total time spent measuring the visual tree.
 - `Arrange`: total time spent arranging the visual tree.
@@ -46,6 +47,23 @@ These are top-level timings for the render pipeline:
 - `Overlay`: time spent composing the debug overlay on top of the scene buffer.
 - `Host`: time spent diffing + writing output to the terminal.
 - `Total`: total render frame time.
+
+### Graphics presentation
+
+When a graphics presenter is configured, the overlay adds graphics lines before the visual-call counters:
+
+- `Gfx`: presenter name, whether it is buffered into the host frame, collected graphics command count, command collection
+  time, buffered pending-output check time (`n/a` for non-buffered presenters), and the previous frame's graphics
+  presentation time.
+- `GfxImg: ... last`: image presenter protocol, latest presentation duration, number of encoded image frames, encode time,
+  encoded payload bytes, and dropped real-time source frame versions for the latest presentation.
+- `GfxImg: ... total`: cumulative image presentations, encoded frames, total and average encode time, effective
+  encoded-frame rate (`encfps`), total payload bytes, and dropped frame versions.
+
+Use these lines when a UI that appears visually static still has low FPS. For static images, `pending no` with non-zero
+last/total image metrics usually means the expensive image work happened during an earlier presentation and current frames
+are being driven by text/overlay diffing. For animated or real-time images, high `enc`/`payload` values point at graphics
+encoding or terminal output volume rather than `CellBuffer` rendering.
 
 ### Calls and caches
 

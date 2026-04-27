@@ -40,7 +40,8 @@ internal static class DemoPage
             NavigateToDemoId = context.NavigateToDemoId,
             Runtime = context.Runtime,
             Theme = context.Theme,
-            ToastHost = context.ToastHost
+            ToastHost = context.ToastHost,
+            Graphics = context.Graphics,
         };
 
         var content = demo.Build(demoContext);

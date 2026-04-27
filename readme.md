@@ -18,6 +18,7 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
   - Companion extension package: **XenoAtom.Terminal.UI.Extensions.Markdown** (`MarkdownControl`, `MarkdownMarkupConverter` with source-preserving highlight mode)
   - Companion extension package: **XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp** (TextMateSharp-backed syntax highlighting for `CodeEditor` and fenced Markdown code blocks)
   - Companion extension package: **XenoAtom.Terminal.UI.Extensions.Screenshot** (SkiaSharp-powered PNG/JPEG/WebP export, clipboard screenshot commands, and an embedded Nerd Font-capable default font)
+  - Companion extension package: **XenoAtom.Terminal.UI.Graphics** (`Image` control with Kitty, Sixel, and iTerm2 presenters, encoded image caching, and Sixel palette/dither options)
 - **Binding-first UI**:
   - Bindable properties, `State<T>`, automatic dependency tracking, minimal boilerplate
 - **Layout system**: consistent measure/arrange protocol (integer cell UI), panels and containers
@@ -36,7 +37,7 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
 - **Generated glyph helpers**:
   - `NerdFont` exposes the official Nerd Fonts catalog as `Rune` properties for easy use in `TextBlock`, `Markup`, and string interpolation
 - **Debug overlay**:
-  - Built-in performance overlay (toggle with `F12`) to inspect frame timings, invalidation, and diff output
+  - Built-in performance overlay (toggle with `F12`) to inspect frame timings, invalidation, diff output, and graphics/image presentation metrics
 - **Cross-platform + AOT-friendly**: `net10.0` and NativeAOT-oriented design (built on XenoAtom.Terminal)
 
 ![XenoAtom.Terminal.UI Fullscreen Demo](https://raw.githubusercontent.com/XenoAtom/XenoAtom.Terminal.UI/main/site/img/theming.png)
@@ -149,6 +150,7 @@ Highlights:
 - Toasts: `Toast`, `ToastHost` (overlay notifications)
 - Visualization: `BarChart`, `LineChart`, `Sparkline`, `Canvas`, `BreakdownChart`, `TextFiglet`, `Placeholder`
 - Progress: `ProgressBar`, `ProgressTaskGroup`, `Spinner`
+- Optional terminal graphics: `XenoAtom.Terminal.UI.Graphics.Image` with `TerminalImageGraphicsPresenter` for fullscreen/inline/static flow output (`Terminal.Write(new Image(...))`) and real-time frame sources.
 
 
 ## 📖 User guide
@@ -157,9 +159,9 @@ For details, see the dedicated [website](https://xenoatom.github.io/terminal).
 
 ## 🧪 Samples
 
-- `samples/ControlsDemo`: catalog-style demo of controls and styles.
+- `samples/ControlsDemo`: catalog-style demo of controls and styles, including the **Images & Graphics** page for `snow_photo.jpg` and live SkiaSharp image frames via `XenoAtom.Terminal.UI.Graphics`.
 - `samples/FullscreenDemo`: fullscreen UI showcase.
-- `samples/InlineLiveDemo`: inline/live demo (interactive).
+- `samples/InlineLiveDemo`: inline/live demo (interactive), including one-shot terminal image output.
 
 ## 🪪 License
 

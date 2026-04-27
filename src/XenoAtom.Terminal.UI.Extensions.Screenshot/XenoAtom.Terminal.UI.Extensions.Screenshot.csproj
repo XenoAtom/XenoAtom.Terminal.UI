@@ -39,6 +39,8 @@
     <PackageReference Include="SkiaSharp.HarfBuzz" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
     <PackageReference Include="SkiaSharp.NativeAssets.Win32" />
+    <PackageReference Include="XenoAtom.Ansi" />
+    <PackageReference Include="XenoAtom.Terminal" />
   </ItemGroup>
 
   <ItemGroup>

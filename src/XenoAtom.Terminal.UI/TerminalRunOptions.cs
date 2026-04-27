@@ -29,6 +29,14 @@ public readonly record struct TerminalRunOptions()
     public global::XenoAtom.Terminal.UI.Input.KeyGesture? ExitGesture { get; init; }
 
     /// <summary>
+    /// Gets the optional presenter used to emit terminal graphics commands after each text frame.
+    /// </summary>
+    /// <remarks>
+    /// Leave this value <see langword="null"/> when the application does not use graphics-renderable visuals.
+    /// </remarks>
+    public ITerminalGraphicsPresenter? GraphicsPresenter { get; init; }
+
+    /// <summary>
     /// Gets the host loop mode.
     /// </summary>
     public TerminalLoopMode LoopMode { get; init; } = TerminalLoopMode.Auto;

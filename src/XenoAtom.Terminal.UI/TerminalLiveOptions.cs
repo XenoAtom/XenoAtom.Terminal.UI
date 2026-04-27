@@ -36,6 +36,14 @@ public readonly record struct TerminalLiveOptions()
     public TerminalMouseMode MouseMode { get; init; } = TerminalMouseMode.Move;
 
     /// <summary>
+    /// Gets the optional presenter used to emit terminal graphics commands after each live-region text frame.
+    /// </summary>
+    /// <remarks>
+    /// Leave this value <see langword="null"/> when the live region does not use graphics-renderable visuals.
+    /// </remarks>
+    public ITerminalGraphicsPresenter? GraphicsPresenter { get; init; }
+
+    /// <summary>
     /// Gets the host loop mode.
     /// </summary>
     public TerminalLoopMode LoopMode { get; init; } = TerminalLoopMode.Auto;

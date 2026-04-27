@@ -90,6 +90,7 @@ This section documents the built-in controls provided by XenoAtom.Terminal.UI.
 - [LogControl](logcontrol.md)
 - [DocumentFlow](documentflow.md)
 - [MarkdownControl](markdowncontrol.md)
+- [Image](image.md) (optional terminal graphics package)
 - [ProgressBar](progressbar.md)
 - [ProgressTaskGroup](progresstaskgroup.md)
 - [Spinner](spinner.md)

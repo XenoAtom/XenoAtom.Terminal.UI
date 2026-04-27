@@ -1,7 +1,9 @@
 using XenoAtom.Terminal;
+using XenoAtom.Terminal.Graphics;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.ControlsDemo;
 using XenoAtom.Terminal.UI.Extensions.Screenshot;
+using XenoAtom.Terminal.UI.Graphics;
 using XenoAtom.Terminal.UI.Styling;
 
 var argsList = args ?? Array.Empty<string>();
@@ -56,6 +58,18 @@ if (argsList.Length > 0 && argsList[0].Equals("--export-screenshots", StringComp
 }
 
 using var session = Terminal.Open();
-var root = ControlsDemoApp.Build(out var onUpdate);
+var sixelOptions = new TerminalSixelEncoderOptions();
+var graphicsPresenter = new TerminalImageGraphicsPresenter(new TerminalImageGraphicsPresenterOptions
+{
+    SixelOptions = sixelOptions,
+});
+var root = ControlsDemoApp.Build(out var onUpdate, new DemoGraphicsOptions
+{
+    Presenter = graphicsPresenter,
+    SixelOptions = sixelOptions,
+});
 root.RegisterClipboardScreenshotCommand();
-Terminal.Run(root, onUpdate);
+Terminal.Run(root, _ => onUpdate(), new TerminalRunOptions
+{
+    GraphicsPresenter = graphicsPresenter,
+});
