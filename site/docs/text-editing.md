@@ -41,6 +41,29 @@ Across the editors above you typically get:
 > [!TIP]
 > Most controls expose their shortcuts as commands, so a focused editor can be discoverable via a `CommandBar`.
 
+## Clipboard paste interception
+
+Text editors can inspect clipboard content before a `Ctrl+V` paste is inserted by setting `TextEditorBase.ClipboardPasteHandler`.
+The handler receives a `TextEditorClipboardPasteContext` containing clipboard text, advertised formats, and captured raw data
+for those formats. This is useful when the clipboard contains non-text payloads such as images and the editor should insert a
+text reference instead:
+
+```csharp
+new PromptEditor()
+    .ClipboardPasteHandler(context =>
+    {
+        if (context.TryGetData(TerminalClipboardFormats.Png, out var png))
+        {
+            SavePasteImage(png.Span);
+            return "![pasted image](paste.png)";
+        }
+
+        return null; // fall back to the clipboard text when available
+    });
+```
+
+Return a non-null string to replace the pasted content, `null` to keep the normal text paste, or `string.Empty` to suppress insertion.
+
 ## Undo / redo
 
 Text editors support undo/redo:

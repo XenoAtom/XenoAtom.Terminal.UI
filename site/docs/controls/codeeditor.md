@@ -38,7 +38,7 @@ new CodeEditor()
 `CodeEditor` inherits the shared editor behavior from `TextEditorBase`:
 
 - caret navigation and selection,
-- clipboard shortcuts (`Ctrl+C`, `Ctrl+X`, `Ctrl+V`),
+- clipboard shortcuts (`Ctrl+C`, `Ctrl+X`, `Ctrl+V`) plus `ClipboardPasteHandler` for replacing non-text clipboard payloads with text,
 - undo/redo (`Ctrl+Z`, `Ctrl+R`),
 - integrated Find/Replace (`Ctrl+F`, `Ctrl+H`),
 - integrated Go To Line (`Ctrl+G`),

@@ -259,6 +259,16 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     public partial bool AcceptTab { get; set; }
 
     /// <summary>
+    /// Gets or sets the optional handler invoked before Ctrl+V inserts clipboard content.
+    /// </summary>
+    /// <remarks>
+    /// The handler receives a snapshot of the clipboard text, advertised formats, and available raw data. Return non-null
+    /// text to replace the clipboard content inserted by the editor, or <see langword="null"/> to keep the default text paste.
+    /// </remarks>
+    [Bindable]
+    public partial Delegator<TextEditorClipboardPasteHandler> ClipboardPasteHandler { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether word-wrapping is enabled.
     /// </summary>
     /// <remarks>
@@ -541,6 +551,8 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     partial void OnMaxUndoEntriesChanged(int value) => _undoRedo.MaxEntries = Math.Max(0, value);
 
     bool ITextEditorHost.IsFocused => HasFocus;
+
+    TextEditorClipboardPasteHandler? ITextEditorHost.ClipboardPasteHandler => ClipboardPasteHandler.Invoke;
 
     bool ITextEditorHost.TryOpenSearchReplacePopup(SearchReplaceMode mode, string? initialSearchText)
         => TryOpenSearchReplacePopup(mode, initialSearchText);

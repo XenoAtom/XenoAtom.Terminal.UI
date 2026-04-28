@@ -44,6 +44,7 @@ internal interface ITextEditorHost
 {
     TerminalApp? App { get; }
     bool IsFocused { get; }
+    TextEditorClipboardPasteHandler? ClipboardPasteHandler { get; }
     bool TryOpenSearchReplacePopup(SearchReplaceMode mode, string? initialSearchText);
 }
 
@@ -540,14 +541,10 @@ internal sealed partial class TextEditorCore
 
     public void OnPaste(PasteEventArgs e, in TextEditorOptions options)
     {
-        if (string.IsNullOrEmpty(e.Text))
+        if (PasteText(e.Text, options))
         {
-            return;
+            e.Handled = true;
         }
-
-        ResetWrappedLineBoundaryMove();
-        InsertText(e.Text, TextUndoRedoManager.TextUndoKind.Paste, allowCoalesce: false, options);
-        e.Handled = true;
     }
     public void OnPointerPressed(PointerEventArgs e, in TextEditorOptions options)
     {
@@ -1613,11 +1610,37 @@ internal sealed partial class TextEditorCore
 
     internal void PasteFromClipboard(in TextEditorOptions options)
     {
-        var clip = _host.App?.Terminal.Clipboard.Text;
-        if (!string.IsNullOrEmpty(clip))
+        var clipboard = _host.App?.Terminal.Clipboard;
+        if (clipboard is null)
         {
-            InsertText(clip, TextUndoRedoManager.TextUndoKind.Paste, allowCoalesce: false, options);
+            return;
         }
+
+        string? clip;
+        var handler = _host.ClipboardPasteHandler;
+        if (handler is not null)
+        {
+            var context = TextEditorClipboardPasteContext.Capture(clipboard);
+            clip = handler(context) ?? context.Text;
+        }
+        else
+        {
+            clip = clipboard.Text;
+        }
+
+        PasteText(clip, options);
+    }
+
+    private bool PasteText(string? text, in TextEditorOptions options)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return false;
+        }
+
+        ResetWrappedLineBoundaryMove();
+        InsertText(text, TextUndoRedoManager.TextUndoKind.Paste, allowCoalesce: false, options);
+        return true;
     }
 
     internal void CutSelectionToClipboard(in TextEditorOptions options)

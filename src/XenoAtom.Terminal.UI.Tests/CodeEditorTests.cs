@@ -963,6 +963,68 @@ public sealed class CodeEditorTests
     }
 
     [TestMethod]
+    public void CodeEditor_ClipboardPasteHandler_Captures_Image_And_Replaces_With_Text()
+    {
+        var imageBytes = new byte[] { 0x89, 0x50, 0x4E, 0x47 };
+        TextEditorClipboardPasteContext? captured = null;
+
+        var editor = new CodeEditor
+        {
+            ClipboardPasteHandler = (TextEditorClipboardPasteHandler)(context =>
+            {
+                captured = context;
+
+                Assert.IsFalse(context.HasText);
+                Assert.IsTrue(context.HasImage);
+                Assert.IsTrue(context.HasNonTextFormats);
+                Assert.IsTrue(context.TryGetData(TerminalClipboardFormats.Png, out var pngData));
+                CollectionAssert.AreEqual(imageBytes, pngData.ToArray());
+
+                return "![image](paste.png)";
+            }),
+        };
+
+        using var driver = new TerminalAppTestDriver(new VStack { editor }, TerminalHostKind.Fullscreen, new TerminalSize(24, 6));
+        driver.Tick();
+        driver.App.Focus(editor);
+
+        Assert.IsTrue(driver.Terminal.Clipboard.TrySetData(TerminalClipboardFormats.Png, imageBytes));
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlV, Modifiers = TerminalModifiers.Ctrl });
+        driver.TickUntil(() => editor.Text == "![image](paste.png)");
+
+        Assert.IsNotNull(captured);
+        CollectionAssert.Contains(captured!.Formats.ToArray(), TerminalClipboardFormats.Png);
+    }
+
+    [TestMethod]
+    public void CodeEditor_ClipboardPasteHandler_Returning_Null_Falls_Back_To_Text()
+    {
+        TextEditorClipboardPasteContext? captured = null;
+        var editor = new CodeEditor
+        {
+            ClipboardPasteHandler = (TextEditorClipboardPasteHandler)(context =>
+            {
+                captured = context;
+                return null;
+            }),
+        };
+
+        using var driver = new TerminalAppTestDriver(new VStack { editor }, TerminalHostKind.Fullscreen, new TerminalSize(24, 6));
+        driver.Tick();
+        driver.App.Focus(editor);
+
+        driver.Terminal.Clipboard.Text = "plain text";
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlV, Modifiers = TerminalModifiers.Ctrl });
+        driver.TickUntil(() => editor.Text == "plain text");
+
+        Assert.IsNotNull(captured);
+        Assert.AreEqual("plain text", captured!.Text);
+        Assert.IsTrue(captured.HasText);
+    }
+
+    [TestMethod]
     public void CodeEditor_Undo_And_Redo_Work()
     {
         var editor = new CodeEditor();

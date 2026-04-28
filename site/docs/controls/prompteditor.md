@@ -169,7 +169,8 @@ When `Prompt` is set, it takes precedence over `PromptMarkup` on the first visua
 
 Use `PromptEditorConfig` when you need those command hints to reflect a custom enter/new-line workflow.
 
-It also inherits `TextEditor.*` commands from `TextEditorBase` (undo/redo/copy/paste/select-all, etc.).
+It also inherits `TextEditor.*` commands from `TextEditorBase` (undo/redo/copy/paste/select-all, etc.), including
+`ClipboardPasteHandler` for inspecting non-text clipboard formats and returning replacement text for `Ctrl+V`.
 
 ## Defaults
 
