@@ -35,7 +35,7 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
   - Cell-buffer renderer + diffing, efficient batched output, synchronized output (DEC 2026)
   - Alpha-aware colors (`RGBA`) with blending support for modern UI effects
 - **Generated glyph helpers**:
-  - `NerdFont` exposes the official Nerd Fonts catalog as `Rune` properties for easy use in `TextBlock`, `Markup`, and string interpolation
+  - `NerdFont` exposes the official Nerd Fonts catalog as `Rune` properties, plus lookup by original glyph name, for easy use in `TextBlock`, `Markup`, and string interpolation
 - **Debug overlay**:
   - Built-in performance overlay (toggle with `F12`) to inspect frame timings, invalidation, diff output, and graphics/image presentation metrics
 - **Cross-platform + AOT-friendly**: `net10.0` and NativeAOT-oriented design (built on XenoAtom.Terminal)
@@ -130,6 +130,16 @@ Nerd Font glyph example:
 Terminal.Write(
     new Markup($"[accent]{NerdFont.MdHome}[/] Home  [primary]{NerdFont.PlBranch}[/] main  [success]{NerdFont.WeatherDaySunny}[/] Ready")
 );
+
+if (NerdFont.TryGetRune("cod-account", out var accountIcon))
+{
+    Terminal.Write(new TextBlock($"{accountIcon} Account"));
+}
+
+foreach (var name in NerdFont.Names)
+{
+    // Original Nerd Fonts glyph names such as "cod-account".
+}
 ```
 
 If your terminal/font combination renders Nerd Font glyphs as double-width, set

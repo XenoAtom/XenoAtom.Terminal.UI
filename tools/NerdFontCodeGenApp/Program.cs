@@ -130,6 +130,7 @@ internal static class Program
         }
 
         File.WriteAllText(Path.Combine(outputDir, "NerdFont.gen.cs"), GenerateBaseFile(model), Utf8NoBom);
+        File.WriteAllText(Path.Combine(outputDir, "NerdFont.Lookup.gen.cs"), GenerateLookupFile(model), Utf8NoBom);
         File.WriteAllText(Path.Combine(outputDir, "NerdFont.Width.gen.cs"), GenerateWidthSupportFile(model), Utf8NoBom);
 
         foreach (var group in model.Entries.GroupBy(static x => x.FamilyName, StringComparer.Ordinal))
@@ -143,6 +144,7 @@ internal static class Program
     {
         var sb = new StringBuilder();
         AppendHeader(sb);
+        sb.AppendLine("using System.Collections.Generic;");
         sb.AppendLine("using System.Text;");
         sb.AppendLine();
         sb.AppendLine("namespace XenoAtom.Terminal.UI;");
@@ -164,6 +166,81 @@ internal static class Program
         sb.AppendLine("/// </remarks>");
         sb.AppendLine("public static partial class NerdFont");
         sb.AppendLine("{");
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// Gets the original Nerd Fonts glyph names available for lookup.");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    public static IReadOnlyList<string> Names => NerdFontLookup.Names;");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// Gets the glyph rune for an original Nerd Fonts glyph name.");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    /// <param name=\"name\">The original Nerd Fonts glyph name, for example <c>cod-account</c>.</param>");
+        sb.AppendLine("    /// <param name=\"rune\">When this method returns, contains the glyph rune if <paramref name=\"name\"/> was found; otherwise, the default value.</param>");
+        sb.AppendLine("    /// <returns><c>true</c> if <paramref name=\"name\"/> was found; otherwise, <c>false</c>.</returns>");
+        sb.AppendLine("    public static bool TryGetRune(string name, out Rune rune)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        if (name is null)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            rune = default;");
+        sb.AppendLine("            return false;");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        return NerdFontLookup.TryGetRune(name, out rune);");
+        sb.AppendLine("    }");
+        sb.AppendLine("}");
+        return sb.ToString();
+    }
+
+    private static string GenerateLookupFile(NerdFontModel model)
+    {
+        var sb = new StringBuilder();
+        AppendHeader(sb);
+        sb.AppendLine("using System;");
+        sb.AppendLine("using System.Collections.Generic;");
+        sb.AppendLine("using System.Text;");
+        sb.AppendLine();
+        sb.AppendLine("namespace XenoAtom.Terminal.UI;");
+        sb.AppendLine();
+        sb.AppendLine("internal static class NerdFontLookup");
+        sb.AppendLine("{");
+        sb.AppendLine("    internal static IReadOnlyList<string> Names => NamesHolder.Names;");
+        sb.AppendLine();
+        sb.AppendLine("    internal static bool TryGetRune(string name, out Rune rune)");
+        sb.AppendLine("        => RunesByNameHolder.RunesByName.TryGetValue(name, out rune);");
+        sb.AppendLine();
+        sb.AppendLine("    private static class NamesHolder");
+        sb.AppendLine("    {");
+        sb.AppendLine("        internal static readonly IReadOnlyList<string> Names = Array.AsReadOnly<string>(");
+        sb.AppendLine("        [");
+
+        foreach (var entry in model.Entries)
+        {
+            sb.Append("            ");
+            sb.Append(ToCSharpStringLiteral(entry.OriginalName));
+            sb.AppendLine(",");
+        }
+
+        sb.AppendLine("        ]);");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    private static class RunesByNameHolder");
+        sb.AppendLine("    {");
+        sb.Append("        internal static readonly Dictionary<string, Rune> RunesByName = new(");
+        sb.Append(model.Entries.Count.ToString(CultureInfo.InvariantCulture));
+        sb.AppendLine(", StringComparer.Ordinal)");
+        sb.AppendLine("        {");
+
+        foreach (var entry in model.Entries)
+        {
+            sb.Append("            [");
+            sb.Append(ToCSharpStringLiteral(entry.OriginalName));
+            sb.Append("] = new(0x");
+            sb.Append(entry.CodePoint.ToString("X", CultureInfo.InvariantCulture));
+            sb.AppendLine("),");
+        }
+
+        sb.AppendLine("        };");
+        sb.AppendLine("    }");
         sb.AppendLine("}");
         return sb.ToString();
     }
@@ -242,6 +319,63 @@ internal static class Program
             .Replace("&", "&amp;", StringComparison.Ordinal)
             .Replace("<", "&lt;", StringComparison.Ordinal)
             .Replace(">", "&gt;", StringComparison.Ordinal);
+
+    private static string ToCSharpStringLiteral(string text)
+    {
+        var sb = new StringBuilder(text.Length + 2);
+        sb.Append('\"');
+
+        foreach (var ch in text)
+        {
+            switch (ch)
+            {
+                case '\\':
+                    sb.Append("\\\\");
+                    break;
+                case '\"':
+                    sb.Append("\\\"");
+                    break;
+                case '\0':
+                    sb.Append("\\0");
+                    break;
+                case '\a':
+                    sb.Append("\\a");
+                    break;
+                case '\b':
+                    sb.Append("\\b");
+                    break;
+                case '\f':
+                    sb.Append("\\f");
+                    break;
+                case '\n':
+                    sb.Append("\\n");
+                    break;
+                case '\r':
+                    sb.Append("\\r");
+                    break;
+                case '\t':
+                    sb.Append("\\t");
+                    break;
+                case '\v':
+                    sb.Append("\\v");
+                    break;
+                default:
+                    if (char.IsControl(ch))
+                    {
+                        sb.Append("\\u");
+                        sb.Append(((int)ch).ToString("X4", CultureInfo.InvariantCulture));
+                    }
+                    else
+                    {
+                        sb.Append(ch);
+                    }
+                    break;
+            }
+        }
+
+        sb.Append('\"');
+        return sb.ToString();
+    }
 
     private static string ToPascalIdentifier(string value)
     {

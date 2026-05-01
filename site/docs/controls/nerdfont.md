@@ -25,6 +25,20 @@ var title = new TextBlock($"{NerdFont.CodAccount}  Account settings");
 var branch = new TextBlock($"{NerdFont.PlBranch} main");
 ```
 
+If you have the original Nerd Fonts glyph name at runtime, use `TryGetRune`:
+
+```csharp
+if (NerdFont.TryGetRune("cod-account", out var accountIcon))
+{
+    var account = new TextBlock($"{accountIcon} Account settings");
+}
+
+foreach (var name in NerdFont.Names)
+{
+    // Original Nerd Fonts glyph names such as "cod-account".
+}
+```
+
 ## With Markup
 
 `Rune` properties also work naturally inside markup strings:
@@ -74,6 +88,10 @@ Property names follow the family prefix from the official Nerd Fonts metadata:
 
 Internally the generated code is split across multiple partial files for maintainability, but the public API is a single
 `NerdFont` class.
+
+For runtime lookup, pass the original metadata name (including the family prefix, dashes, underscores, and casing) to
+`NerdFont.TryGetRune`, for example `cod-account` or `md-language_csharp`. Use `NerdFont.Names` to enumerate all names
+available for lookup.
 
 ## Source and coverage
 
