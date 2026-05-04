@@ -110,6 +110,30 @@ public sealed class TabControlRenderingTests
     }
 
     [TestMethod]
+    public void TabControl_Style_Factory_Switch_Updates_Content_Border_Glyphs()
+    {
+        var useDouble = new State<bool>(false);
+        var tabControl = new TabControl(
+                new TabPage("One", new TextBlock("A")),
+                new TabPage("Two", new TextBlock("B")))
+            .Style(() => useDouble.Value ? TabControlStyle.Double : TabControlStyle.Rounded);
+
+        using var driver = new TerminalAppTestDriver(tabControl, TerminalHostKind.Fullscreen, new TerminalSize(30, 8));
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(30, 8);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), char.ConvertFromUtf32(LineGlyphs.Rounded.TopLeft.Value));
+
+        useDouble.Value = true;
+        driver.Tick();
+
+        screen = new AnsiTestScreen(30, 8);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), char.ConvertFromUtf32(LineGlyphs.Double.TopLeft.Value));
+    }
+
+    [TestMethod]
     public void TabControl_Selected_First_Visible_Tab_Uses_Rounded_Left_Join_When_Overflow_Is_Shown()
     {
         var tabControl = new TabControl(

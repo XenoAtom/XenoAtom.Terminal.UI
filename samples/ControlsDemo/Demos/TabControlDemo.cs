@@ -11,10 +11,14 @@ public sealed class TabControlDemo : ControlsDemoBase
     {
         Default,
         Compact,
-        Legacy,
+        LegacySingleBox,
+        NoBorder,
         RoundedBox,
-        SingleBox,
         DoubleBox,
+        HeavyBox,
+        AsciiBox,
+        AsciiHeavyBox,
+        DashedBox,
     }
 
     public TabControlDemo() : base(DemoSource.Get())
@@ -141,10 +145,14 @@ public sealed class TabControlDemo : ControlsDemoBase
         {
             TabStylePreset.Default => "Default: attached rounded tabs with unwrapped content.",
             TabStylePreset.Compact => "Compact: tighter attached tabs with single-line glyphs.",
-            TabStylePreset.Legacy => "Legacy: the original flat strip with boxed content.",
+            TabStylePreset.LegacySingleBox => "LegacySingleBox: the original flat strip with a single-line content border.",
+            TabStylePreset.NoBorder => "NoBorder: legacy flat strip with no additional content wrapper.",
             TabStylePreset.RoundedBox => "RoundedBox: legacy strip with a rounded content border.",
-            TabStylePreset.SingleBox => "SingleBox: legacy strip with a single-line content border.",
             TabStylePreset.DoubleBox => "DoubleBox: legacy strip with a double-line content border.",
+            TabStylePreset.HeavyBox => "HeavyBox: legacy strip with a heavy content border.",
+            TabStylePreset.AsciiBox => "AsciiBox: legacy strip with an ASCII content border.",
+            TabStylePreset.AsciiHeavyBox => "AsciiHeavyBox: legacy strip with a heavy ASCII content border.",
+            TabStylePreset.DashedBox => "DashedBox: legacy strip with a dashed content border.",
             _ => "Tab style preset.",
         };
 
@@ -153,10 +161,14 @@ public sealed class TabControlDemo : ControlsDemoBase
         {
             TabStylePreset.Default => TabControlStyle.Default,
             TabStylePreset.Compact => TabControlStyle.Compact,
-            TabStylePreset.Legacy => TabControlStyle.Legacy,
+            TabStylePreset.LegacySingleBox => TabControlStyle.Legacy,
+            TabStylePreset.NoBorder => TabControlStyle.NoBorder,
             TabStylePreset.RoundedBox => TabControlStyle.Rounded,
-            TabStylePreset.SingleBox => TabControlStyle.Single,
             TabStylePreset.DoubleBox => TabControlStyle.Double,
+            TabStylePreset.HeavyBox => TabControlStyle.Heavy,
+            TabStylePreset.AsciiBox => TabControlStyle.Ascii,
+            TabStylePreset.AsciiHeavyBox => TabControlStyle.AsciiHeavy,
+            TabStylePreset.DashedBox => TabControlStyle.Dashed,
             _ => TabControlStyle.Default,
         };
 }
