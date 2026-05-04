@@ -55,6 +55,7 @@ Close lifecycle:
 - `RequestClosing` lets a page cancel a close request.
 - `Closed` is raised after the page has been removed.
 - `TabControl.TryCloseTab(...)` closes a page programmatically and uses the same lifecycle as the close button.
+- `TabControl.MoveTab(...)` / `TryMoveTab(...)` reorders existing pages while keeping the same selected page selected.
 
 ## Styling
 

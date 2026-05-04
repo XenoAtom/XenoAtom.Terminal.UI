@@ -26,6 +26,7 @@ public sealed class TabControlDemo : ControlsDemoBase
         var progress = context.Runtime.Progress01;
         var renameCount = new State<int>(1);
         var closeAttempts = new State<int>(0);
+        var addedTabCount = new State<int>(0);
         var stylePreset = new State<TabStylePreset>(TabStylePreset.Default);
 
         var statusPage = new TabPage(
@@ -110,6 +111,20 @@ public sealed class TabControlDemo : ControlsDemoBase
                         {
                             renameCount.Value++;
                             logsPage.Header = new TextBlock($"Logs v{renameCount.Value}");
+                        }),
+                        new Button("Add Tab").Click(() =>
+                        {
+                            addedTabCount.Value++;
+                            var tabNumber = addedTabCount.Value;
+                            tabs.AddTab(new TabPage(
+                                $"Tab-{tabNumber:00}",
+                                new VStack(
+                                        DemoUi.Hint("Add enough tabs, scroll the strip, then select a visible tab to verify the strip keeps its current window."),
+                                        new TextBlock($"Dynamic tab #{tabNumber}"))
+                                    .Spacing(1))
+                            {
+                                ShowCloseButton = true,
+                            });
                         }),
                         new Button("Toggle Metrics Close").Click(() => metricsPage.ShowCloseButton = !metricsPage.ShowCloseButton),
                         new Button("Disable Metrics").Click(() => metricsPage.IsEnabled = !metricsPage.IsEnabled))

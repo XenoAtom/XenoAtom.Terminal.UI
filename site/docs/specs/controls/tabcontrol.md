@@ -66,6 +66,10 @@ This document captures design and implementation notes for `TabControl`.
 
 - `AddTab(Visual header, Visual content)`
 - `AddTab(TabPage page)`
+- `MoveTab(int oldIndex, int newIndex)`
+- `MoveTab(TabPage page, int newIndex)`
+- `TryMoveTab(int oldIndex, int newIndex)`
+- `TryMoveTab(TabPage page, int newIndex)`
 - `TryCloseTab(int index)`
 - `TryCloseTab(TabPage page)`
 

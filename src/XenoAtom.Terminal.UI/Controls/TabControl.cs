@@ -34,6 +34,7 @@ public sealed partial class TabControl : Visual
     private Visual? _contentRoot;
     private Func<Visual, ContentVisual?>? _contentTemplateFactory;
     private TabControlLayoutMode _contentLayoutMode;
+    private bool _suppressSelectionChangedEvents;
 
     private int _oldSelectedIndexForEvent = -1;
     private TabPage? _oldSelectedPageForEvent;
@@ -115,6 +116,11 @@ public sealed partial class TabControl : Visual
     partial void OnSelectedIndexChanged(int value)
     {
         _ = value;
+        if (_suppressSelectionChangedEvents)
+        {
+            return;
+        }
+
         SyncFirstVisibleIndexToSelection();
         RaiseSelectionChangedIfNeeded(_oldSelectedIndexForEvent, _oldSelectedPageForEvent);
     }
@@ -165,6 +171,78 @@ public sealed partial class TabControl : Visual
         CaptureSelectedTabForEvent(out var oldIndex, out var oldPage);
         _tabs.Add(page);
         RaiseSelectionChangedIfNeeded(oldIndex, oldPage);
+    }
+
+    /// <summary>
+    /// Moves a tab page to a new index.
+    /// </summary>
+    /// <param name="oldIndex">The current zero-based tab index.</param>
+    /// <param name="newIndex">The destination zero-based tab index.</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="oldIndex"/> or <paramref name="newIndex"/> is outside the bounds of <see cref="Tabs"/>.
+    /// </exception>
+    public void MoveTab(int oldIndex, int newIndex)
+    {
+        if (!TryMoveTab(oldIndex, newIndex))
+        {
+            ThrowMoveTabIndexOutOfRange(oldIndex, newIndex, _tabs.Count);
+        }
+    }
+
+    /// <summary>
+    /// Moves a tab page to a new index.
+    /// </summary>
+    /// <param name="page">The tab page to move.</param>
+    /// <param name="newIndex">The destination zero-based tab index.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="page"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="page"/> does not belong to this control.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="newIndex"/> is outside the bounds of <see cref="Tabs"/>.</exception>
+    public void MoveTab(TabPage page, int newIndex)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+        var oldIndex = _tabs.IndexOf(page);
+        if (oldIndex < 0)
+        {
+            throw new ArgumentException("The tab page does not belong to this TabControl.", nameof(page));
+        }
+
+        if ((uint)newIndex >= (uint)_tabs.Count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(newIndex), newIndex, "The destination tab index must refer to an existing tab.");
+        }
+
+        MoveTabCore(oldIndex, newIndex);
+    }
+
+    /// <summary>
+    /// Attempts to move a tab page to a new index.
+    /// </summary>
+    /// <param name="oldIndex">The current zero-based tab index.</param>
+    /// <param name="newIndex">The destination zero-based tab index.</param>
+    /// <returns><see langword="true"/> when both indexes are valid; otherwise, <see langword="false"/>.</returns>
+    public bool TryMoveTab(int oldIndex, int newIndex)
+    {
+        if ((uint)oldIndex >= (uint)_tabs.Count || (uint)newIndex >= (uint)_tabs.Count)
+        {
+            return false;
+        }
+
+        MoveTabCore(oldIndex, newIndex);
+        return true;
+    }
+
+    /// <summary>
+    /// Attempts to move a tab page to a new index.
+    /// </summary>
+    /// <param name="page">The tab page to move.</param>
+    /// <param name="newIndex">The destination zero-based tab index.</param>
+    /// <returns><see langword="true"/> when the page belongs to this control and the destination index is valid; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="page"/> is null.</exception>
+    public bool TryMoveTab(TabPage page, int newIndex)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+        var oldIndex = _tabs.IndexOf(page);
+        return oldIndex >= 0 && TryMoveTab(oldIndex, newIndex);
     }
 
     /// <summary>
@@ -636,6 +714,35 @@ public sealed partial class TabControl : Visual
         return true;
     }
 
+    private void MoveTabCore(int oldIndex, int newIndex)
+    {
+        if (oldIndex == newIndex)
+        {
+            return;
+        }
+
+        CaptureSelectedTabForEvent(out var oldSelectedIndex, out var oldSelectedPage);
+
+        var nextSelectedIndex = MoveIndex(SelectedIndex, oldIndex, newIndex);
+        var nextFirstVisibleIndex = MoveIndex(FirstVisibleIndex, oldIndex, newIndex);
+        AdjustInteractionStateAfterMove(oldIndex, newIndex);
+        _tabs.Move(oldIndex, newIndex);
+
+        _suppressSelectionChangedEvents = true;
+        try
+        {
+            SelectedIndex = Math.Clamp(nextSelectedIndex, 0, Math.Max(0, _tabs.Count - 1));
+            FirstVisibleIndex = Math.Clamp(nextFirstVisibleIndex, 0, Math.Max(0, _tabs.Count - 1));
+        }
+        finally
+        {
+            _suppressSelectionChangedEvents = false;
+        }
+
+        SyncFirstVisibleIndexToSelection();
+        RaiseSelectionChangedIfNeeded(oldSelectedIndex, oldSelectedPage);
+    }
+
     private void CaptureSelectedTabForEvent(out int selectedIndex, out TabPage? selectedPage)
     {
         using var _ = global::XenoAtom.Terminal.UI.BindingManager.Current.SuppressReadTracking();
@@ -692,6 +799,12 @@ public sealed partial class TabControl : Visual
         }
     }
 
+    private void AdjustInteractionStateAfterMove(int oldIndex, int newIndex)
+    {
+        AdjustInteractionIndexAfterMove(ref _hoveredIndex, oldIndex, newIndex);
+        AdjustInteractionIndexAfterMove(ref _pressedIndex, oldIndex, newIndex);
+    }
+
     private static void AdjustInteractionIndex(ref int index, ref TabHeaderPart part, int removedIndex)
     {
         if (index < 0)
@@ -710,6 +823,31 @@ public sealed partial class TabControl : Visual
         {
             index--;
         }
+    }
+
+    private static void AdjustInteractionIndexAfterMove(ref int index, int oldIndex, int newIndex)
+    {
+        if (index < 0)
+        {
+            return;
+        }
+
+        index = MoveIndex(index, oldIndex, newIndex);
+    }
+
+    private static int MoveIndex(int index, int oldIndex, int newIndex)
+    {
+        if (index == oldIndex)
+        {
+            return newIndex;
+        }
+
+        if (oldIndex < newIndex)
+        {
+            return index > oldIndex && index <= newIndex ? index - 1 : index;
+        }
+
+        return index >= newIndex && index < oldIndex ? index + 1 : index;
     }
 
     private bool TrySelectRelative(int direction)
@@ -967,21 +1105,17 @@ public sealed partial class TabControl : Visual
             }
         }
 
-        while (start > 0)
-        {
-            var candidateStart = start - 1;
-            var candidateEnd = ComputeVisibleEnd(candidateStart, availableTabsWidth, widths);
-            if (selected >= candidateStart && selected < candidateEnd)
-            {
-                start = candidateStart;
-                end = candidateEnd;
-                continue;
-            }
+        return start;
+    }
 
-            break;
+    private static void ThrowMoveTabIndexOutOfRange(int oldIndex, int newIndex, int count)
+    {
+        if ((uint)oldIndex >= (uint)count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(oldIndex), oldIndex, "The source tab index must refer to an existing tab.");
         }
 
-        return start;
+        throw new ArgumentOutOfRangeException(nameof(newIndex), newIndex, "The destination tab index must refer to an existing tab.");
     }
 
     private int ComputeVisibleEnd(int start, int availableTabsWidth, IReadOnlyList<int> widths)

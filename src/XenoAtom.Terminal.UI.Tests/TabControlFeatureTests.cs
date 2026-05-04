@@ -194,6 +194,58 @@ public sealed class TabControlFeatureTests
     }
 
     [TestMethod]
+    public void TabControl_Selecting_Visible_Overflow_Tab_Preserves_Current_Window()
+    {
+        var tabs = new TabControl();
+        for (var i = 0; i < 20; i++)
+        {
+            tabs.AddTab(new TabPage($"Tab-{i:00}", new TextBlock($"Content {i}")));
+        }
+
+        using var driver = new TerminalAppTestDriver(tabs, TerminalHostKind.Fullscreen, new TerminalSize(32, 8));
+        driver.Tick();
+
+        tabs.FirstVisibleIndex = 10;
+        driver.Tick();
+
+        var headerPoint = GetHeaderPoint(tabs, 11, closeButton: false);
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = headerPoint.X, Y = headerPoint.Y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = headerPoint.X, Y = headerPoint.Y });
+        driver.Tick();
+
+        Assert.AreEqual(11, tabs.SelectedIndex);
+        Assert.AreEqual(10, tabs.FirstVisibleIndex, "Selecting an already visible overflow tab should not scroll the strip back to the left.");
+    }
+
+    [TestMethod]
+    public void TabControl_MoveTab_Reorders_Pages_And_Preserves_Selected_Page()
+    {
+        var first = new TabPage("One", new TextBlock("A"));
+        var second = new TabPage("Two", new TextBlock("B"));
+        var third = new TabPage("Three", new TextBlock("C"));
+        var tabs = new TabControl(first, second, third)
+        {
+            SelectedIndex = 1,
+            FirstVisibleIndex = 1,
+        };
+
+        TabSelectionChangedEventArgs? selectionChanged = null;
+        tabs.SelectionChanged((_, e) => selectionChanged = e);
+
+        tabs.MoveTab(1, 2);
+
+        Assert.AreSame(first, tabs.Tabs[0]);
+        Assert.AreSame(third, tabs.Tabs[1]);
+        Assert.AreSame(second, tabs.Tabs[2]);
+        Assert.AreEqual(2, tabs.SelectedIndex);
+        Assert.IsNotNull(selectionChanged);
+        Assert.AreEqual(1, selectionChanged.OldIndex);
+        Assert.AreEqual(2, selectionChanged.NewIndex);
+        Assert.AreSame(second, selectionChanged.OldPage);
+        Assert.AreSame(second, selectionChanged.NewPage);
+    }
+
+    [TestMethod]
     public void TabControl_Style_Switch_Rebuilds_Chrome_Without_Reparenting_Content()
     {
         var style = new State<TabControlStyle>(TabControlStyle.Default);
