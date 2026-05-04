@@ -434,6 +434,48 @@ public sealed class MarkdownControlTests
     }
 
     [TestMethod]
+    public void MarkdownControl_EmbeddedInDocumentFlow_FollowsOuterTail_WhenMarkdownGrows()
+    {
+        var markdown = new MarkdownControl("Tail");
+        var flow = new DocumentFlow
+        {
+            ItemPadding = Thickness.Zero,
+            ItemSpacing = 0,
+            FollowTail = true,
+        };
+
+        for (var i = 0; i < 20; i++)
+        {
+            flow.Items.Add(new DocumentFlowItem
+            {
+                Content = new FlowDocument().AddParagraph($"History item {i:00}"),
+                Alignment = DocumentFlowAlignment.Left,
+                Padding = Thickness.Zero,
+            });
+        }
+
+        flow.Items.Add(new DocumentFlowItem
+        {
+            Content = new FlowDocument().Add(markdown),
+            Alignment = DocumentFlowAlignment.Left,
+            Padding = Thickness.Zero,
+        });
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(60, 8));
+        driver.Tick();
+
+        var initialMaxOffset = Math.Max(0, flow.Scroll.ExtentHeight - flow.Scroll.ViewportHeight);
+        Assert.AreEqual(initialMaxOffset, flow.Scroll.OffsetY, "Expected the outer flow to start pinned to the tail.");
+
+        markdown.Markdown = string.Join("\n\n", Enumerable.Range(0, 20).Select(static i => $"Tail paragraph {i:00}"));
+        driver.Tick();
+
+        var updatedMaxOffset = Math.Max(0, flow.Scroll.ExtentHeight - flow.Scroll.ViewportHeight);
+        Assert.IsTrue(updatedMaxOffset > initialMaxOffset, "Expected the markdown update to grow the outer flow extent.");
+        Assert.AreEqual(updatedMaxOffset, flow.Scroll.OffsetY, "Expected the outer flow to stay pinned when embedded markdown grows.");
+    }
+
+    [TestMethod]
     public void MarkdownControl_DefaultSpacing_Is_Compact_Around_Headings()
     {
         var control = new MarkdownControl(

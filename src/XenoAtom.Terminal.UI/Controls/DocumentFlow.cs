@@ -86,7 +86,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     public partial int ItemSpacing { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether appended items keep the view pinned to the tail.
+    /// Gets or sets a value indicating whether appended items and tail content growth keep the view pinned to the tail.
     /// Set this to <see langword="false"/> to stop automatic tail following even when the viewport is already at the tail.
     /// </summary>
     [Bindable]
@@ -264,6 +264,11 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     private void OnItemAdded(DocumentFlowItem item)
     {
         _ = item;
+        QueueDeferredFollowTailScroll();
+    }
+
+    private void QueueDeferredFollowTailScroll()
+    {
         if (!FollowTail)
         {
             return;
@@ -294,6 +299,11 @@ public sealed partial class DocumentFlow : Visual, IScrollable
         var viewportWidth = Scroll.ViewportWidth;
         var viewportHeight = Scroll.ViewportHeight;
         if (viewportWidth <= 0 || viewportHeight <= 0)
+        {
+            return false;
+        }
+
+        if (Scroll.ExtentHeight != _content.ExtentHeight)
         {
             return false;
         }
@@ -528,8 +538,10 @@ public sealed partial class DocumentFlow : Visual, IScrollable
         protected override SizeHints MeasureCore(in LayoutConstraints constraints)
         {
             var width = constraints.MaxWidth == LayoutConstants.Infinite ? LayoutConstants.MaxFinite : Math.Max(1, constraints.MaxWidth);
+            var previousExtentHeight = _extentHeight;
             EnsureLayouts(width);
             RefreshLayoutsForRealizedVisualSizeChanges(_owner._items, width, _owner.ItemSpacing, _owner.ItemPadding);
+            QueueFollowTailScrollIfExtentChanged(previousExtentHeight);
 
             var desired = constraints.Clamp(new Size(
                 Math.Max(1, width),
@@ -558,8 +570,10 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             }
 
             var width = Math.Max(1, finalRect.Width);
+            var previousExtentHeight = _extentHeight;
             EnsureLayouts(width);
             RefreshLayoutsForRealizedVisualSizeChanges(_owner._items, width, _owner.ItemSpacing, _owner.ItemPadding);
+            QueueFollowTailScrollIfExtentChanged(previousExtentHeight);
 
             _scroll.SetViewport(finalRect.Width, finalRect.Height);
             _scroll.SetExtent(finalRect.Width, _extentHeight);
@@ -703,6 +717,14 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             }
 
             RecomputeDocumentOffsetsFrom(firstChangedDocumentIndex, itemSpacing);
+        }
+
+        private void QueueFollowTailScrollIfExtentChanged(int previousExtentHeight)
+        {
+            if (_extentHeight != previousExtentHeight)
+            {
+                _owner.QueueDeferredFollowTailScroll();
+            }
         }
 
         private bool HasDocumentVersionChanges(BindableList<DocumentFlowItem> items, int viewportWidth)

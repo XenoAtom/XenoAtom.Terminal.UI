@@ -62,7 +62,7 @@ var document = new FlowDocument()
 
 ## Follow-tail
 
-`DocumentFlow` follows the tail by default for append-heavy feeds.
+`DocumentFlow` follows the tail by default for append-heavy feeds. When pinned, it also stays at the tail if visible tail content grows, such as a streamed `MarkdownControl` hosted inside a flow item.
 
 ```csharp
 flow.FollowTail = false;   // disable auto-follow, even if the viewport is already at the tail
