@@ -15,7 +15,7 @@ Menus are implemented as popups and require a fullscreen `Terminal.Run(...)` app
 
 ## Usage
 
-Use `MenuItem` to build menus and submenus. Menu interaction supports keyboard and mouse.
+Use `MenuItem` to build menus and submenus. Menu interaction supports keyboard and mouse. Hovering a top-level item moves the top-level keyboard selection to that item, and `Escape` closes the innermost open menu level first.
 
 Menu items can be backed by a `Command`:
 

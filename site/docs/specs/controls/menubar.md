@@ -156,6 +156,7 @@ When the menu bar has focus:
 ### MenuBar mouse
 
 - Left click on a top-level item toggles open/close.
+- Hovering a top-level item while the bar has focus moves the top-level keyboard selection to that item.
 - When any menu is open, hovering a different top-level item switches the open menu to that item.
 
 ### Menu list keyboard
@@ -170,7 +171,7 @@ When a menu list has focus:
 - Left:
   - root menu: opens the previous enabled top-level menu
   - submenu: closes the submenu popup and returns focus to the parent list
-- Escape: closes all menus.
+- Escape: closes the current menu list; from the root menu this closes all menus.
 
 ### Menu list mouse
 

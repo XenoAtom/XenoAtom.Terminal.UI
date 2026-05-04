@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Reflection;
 using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Commands;
@@ -89,6 +90,69 @@ public sealed class MenuTests
         screen2.Apply(withoutSubmenu);
         var rendered2 = screen2.GetText();
         Assert.IsFalse(rendered2.Contains("Entry 1", StringComparison.Ordinal), "Closing the submenu should remove its content from the screen.");
+    }
+
+    [TestMethod]
+    public void MenuBar_Escape_FromSubmenu_Closes_Only_That_Submenu()
+    {
+        var file = new MenuItem("File");
+        var recent = new MenuItem("Recent");
+        recent.Items.Add(new MenuItem("Entry 1"));
+        file.Items.Add(recent);
+
+        var bar = new MenuBar();
+        bar.Items.Add(file);
+
+        var root = new VStack { bar };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(60, 14));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right });
+        driver.Tick();
+        Assert.AreEqual(2, driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Count());
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        driver.Tick();
+
+        Assert.AreEqual(1, driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Count(), "Escape from a submenu should close one menu level.");
+
+        var screen = new AnsiTestScreen(60, 14);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText();
+        StringAssert.Contains(rendered, "Recent");
+        Assert.IsFalse(rendered.Contains("Entry 1", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void MenuBar_Hovering_TopLevel_Item_Updates_Keyboard_Selected_Item()
+    {
+        var bar = new MenuBar();
+        bar.Items.Add(new MenuItem("File"));
+        bar.Items.Add(new MenuItem("Edit"));
+
+        var root = new VStack { bar };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right });
+        driver.Tick();
+        Assert.AreEqual(1, GetSelectedIndex(bar));
+
+        var screen = new AnsiTestScreen(40, 6);
+        screen.Apply(driver.Backend.GetOutText());
+        var filePoint = FindFirstTextPosition(screen, "File");
+        Assert.IsNotNull(filePoint);
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Move,
+            X = filePoint.Value.X,
+            Y = filePoint.Value.Y,
+        });
+        driver.Tick();
+
+        Assert.AreEqual(0, GetSelectedIndex(bar), "Hovering another top-level item should move the keyboard selection off the previously focused item.");
     }
 
     [TestMethod]
@@ -860,4 +924,9 @@ public sealed class MenuTests
             .OrderBy(popup => popup.PopupRect.X)
             .ThenBy(popup => popup.PopupRect.Y)
             .ToArray();
+
+    private static int GetSelectedIndex(MenuBar bar)
+        => (int)typeof(MenuBar)
+            .GetProperty("SelectedIndex", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .GetValue(bar)!;
 }

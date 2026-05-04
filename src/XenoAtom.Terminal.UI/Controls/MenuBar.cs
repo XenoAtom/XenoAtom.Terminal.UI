@@ -550,8 +550,19 @@ public sealed partial class MenuBar : Visual
 
         protected override void OnPointerMoved(PointerEventArgs e)
         {
-            if (Parent is not MenuBar bar || bar._openIndex < 0)
+            if (Parent is not MenuBar bar)
             {
+                return;
+            }
+
+            if (bar._openIndex < 0)
+            {
+                if (bar.HasFocus && bar._selectedIndex != _index)
+                {
+                    bar._selectedIndex = _index;
+                    bar.MarkArrangeDirty();
+                }
+
                 return;
             }
 
@@ -848,7 +859,15 @@ public sealed partial class MenuBar : Visual
                     return;
 
                 case TerminalKey.Escape:
-                    _owner.CloseAllMenus();
+                    if (_parent is null)
+                    {
+                        _owner.CloseAllMenus();
+                    }
+                    else
+                    {
+                        CloseSelf();
+                    }
+
                     e.Handled = true;
                     return;
             }
