@@ -218,6 +218,53 @@ public sealed class TabControlFeatureTests
     }
 
     [TestMethod]
+    public void TabControl_Selecting_Partially_Visible_Tab_Scrolls_Tab_Fully_Into_View()
+    {
+        var tabs = new TabControl();
+        for (var i = 0; i < 20; i++)
+        {
+            tabs.AddTab(new TabPage($"Tab-{i:00}", new TextBlock($"Content {i}")));
+        }
+
+        using var driver = new TerminalAppTestDriver(tabs, TerminalHostKind.Fullscreen, new TerminalSize(32, 8));
+        driver.Tick();
+
+        tabs.FirstVisibleIndex = 10;
+        driver.Tick();
+
+        var headerPoint = GetHeaderPoint(tabs, 12, closeButton: false);
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = headerPoint.X, Y = headerPoint.Y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = headerPoint.X, Y = headerPoint.Y });
+        driver.TickUntil(() => tabs.SelectedIndex == 12 && tabs.FirstVisibleIndex == 11);
+
+        Assert.AreEqual(12, tabs.SelectedIndex);
+        Assert.AreEqual(11, tabs.FirstVisibleIndex, "Selecting a clipped overflow tab should scroll enough to show the full tab header.");
+    }
+
+    [TestMethod]
+    public void TabControl_Keyboard_Selecting_Partially_Visible_Tab_Scrolls_Tab_Fully_Into_View()
+    {
+        var tabs = new TabControl();
+        for (var i = 0; i < 20; i++)
+        {
+            tabs.AddTab(new TabPage($"Tab-{i:00}", new TextBlock($"Content {i}")));
+        }
+
+        using var driver = new TerminalAppTestDriver(tabs, TerminalHostKind.Fullscreen, new TerminalSize(32, 8));
+        driver.Tick();
+
+        tabs.SelectedIndex = 11;
+        tabs.FirstVisibleIndex = 10;
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right });
+        driver.TickUntil(() => tabs.SelectedIndex == 12 && tabs.FirstVisibleIndex == 11);
+
+        Assert.AreEqual(12, tabs.SelectedIndex);
+        Assert.AreEqual(11, tabs.FirstVisibleIndex, "Keyboard navigation should scroll enough to show the full selected tab header.");
+    }
+
+    [TestMethod]
     public void TabControl_MoveTab_Reorders_Pages_And_Preserves_Selected_Page()
     {
         var first = new TabPage("One", new TextBlock("A"));

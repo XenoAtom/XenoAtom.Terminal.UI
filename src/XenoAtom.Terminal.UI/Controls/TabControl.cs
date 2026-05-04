@@ -1092,22 +1092,41 @@ public sealed partial class TabControl : Visual
         if (selected < start)
         {
             start = selected;
-            end = ComputeVisibleEnd(start, availableTabsWidth, widths);
         }
-        else if (selected >= end)
+        else if (selected >= end || !IsTabFullyVisible(start, selected, availableTabsWidth, widths))
         {
-            while (start < selected)
+            while (start < selected && !IsTabFullyVisible(start, selected, availableTabsWidth, widths))
             {
                 start++;
-                end = ComputeVisibleEnd(start, availableTabsWidth, widths);
-                if (selected < end)
-                {
-                    break;
-                }
             }
         }
 
         return start;
+    }
+
+    private static bool IsTabFullyVisible(int start, int index, int availableTabsWidth, IReadOnlyList<int> widths)
+    {
+        if (availableTabsWidth <= 0 || (uint)start >= (uint)widths.Count || (uint)index >= (uint)widths.Count || index < start)
+        {
+            return false;
+        }
+
+        var requiredWidth = 0;
+        for (var i = start; i <= index; i++)
+        {
+            if (i > start)
+            {
+                requiredWidth++;
+            }
+
+            requiredWidth += widths[i];
+            if (requiredWidth > availableTabsWidth)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static void ThrowMoveTabIndexOutOfRange(int oldIndex, int newIndex, int count)
