@@ -537,10 +537,12 @@ public sealed partial class TabControl : Visual
         switch (e.Key)
         {
             case TerminalKey.Left:
-                e.Handled = TrySelectRelative(-1);
+                _ = TrySelectRelative(-1);
+                e.Handled = true;
                 return;
             case TerminalKey.Right:
-                e.Handled = TrySelectRelative(1);
+                _ = TrySelectRelative(1);
+                e.Handled = true;
                 return;
         }
     }

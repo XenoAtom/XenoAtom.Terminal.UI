@@ -32,6 +32,32 @@ public sealed class TabControlInteractionTests
     }
 
     [TestMethod]
+    public void TabControl_Consumes_ArrowKeys_At_Selection_Bounds()
+    {
+        var tabs = new TabControl();
+        tabs.AddTab("First", new TextBlock("First"));
+        tabs.AddTab("Second", new TextBlock("Second"));
+
+        var root = new KeyBubbleProbe(tabs);
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 10));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left });
+        driver.Tick();
+        Assert.AreEqual(0, tabs.SelectedIndex);
+        Assert.AreEqual(0, root.BubbledArrowKeyCount, "Left at the first tab should be consumed by TabControl.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right });
+        driver.TickUntil(() => tabs.SelectedIndex == 1);
+        Assert.AreEqual(0, root.BubbledArrowKeyCount, "Right while changing tabs should be consumed by TabControl.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right });
+        driver.Tick();
+        Assert.AreEqual(1, tabs.SelectedIndex);
+        Assert.AreEqual(0, root.BubbledArrowKeyCount, "Right at the last tab should be consumed by TabControl.");
+    }
+
+    [TestMethod]
     public void TabControl_Switches_Content_On_Mouse_Click()
     {
         var tabs = new TabControl(
@@ -85,5 +111,31 @@ public sealed class TabControlInteractionTests
         tabControl.Arrange(new Rectangle(0, 0, 80, 25));
 
         Assert.AreEqual(new Rectangle(0, 0, 80, 25), tabControl.Bounds);
+    }
+
+    private sealed class KeyBubbleProbe : Visual
+    {
+        private readonly Visual _child;
+
+        public KeyBubbleProbe(Visual child)
+        {
+            _child = child;
+            AttachChild(child);
+        }
+
+        public int BubbledArrowKeyCount { get; private set; }
+
+        protected override int ChildrenCount => 1;
+
+        protected override Visual GetChild(int index)
+            => index == 0 ? _child : throw new ArgumentOutOfRangeException(nameof(index));
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            if (e.Key is TerminalKey.Left or TerminalKey.Right)
+            {
+                BubbledArrowKeyCount++;
+            }
+        }
     }
 }
