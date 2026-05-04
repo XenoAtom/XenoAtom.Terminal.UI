@@ -720,7 +720,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             var snapshot = GetSnapshot();
             if (snapshot is not null)
             {
-                _ = TryStartEdit(snapshot);
+                _ = TryStartEdit(snapshot, arrangeImmediately: true);
             }
         }
     }
@@ -1363,7 +1363,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
 
             if (!ReadOnly && (e.ClickCount >= 2 || wasCurrent) && _activeEditor is null)
             {
-                _ = TryStartEdit(snapshot);
+                _ = TryStartEdit(snapshot, CurrentCell, out _, arrangeImmediately: e.ClickCount >= 2);
             }
         }
     }
@@ -1705,7 +1705,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
                 }
                 goto case TerminalKey.F2;
             case TerminalKey.F2:
-                if (!ReadOnly && TryStartEdit(snapshot))
+                if (!ReadOnly && TryStartEdit(snapshot, arrangeImmediately: true))
                 {
                     e.Handled = true;
                 }
@@ -1727,7 +1727,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             return;
         }
 
-        _ = TryStartEdit(snapshot);
+        _ = TryStartEdit(snapshot, arrangeImmediately: true);
     }
 
     /// <summary>
@@ -1819,7 +1819,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             return;
         }
 
-        _ = TryStartEdit(snapshot);
+        _ = TryStartEdit(snapshot, arrangeImmediately: true);
     }
 
     private void NextMatch()
@@ -2515,9 +2515,10 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         }
     }
 
-    private bool TryStartEdit(IDataGridViewSnapshot snapshot) => TryStartEdit(snapshot, CurrentCell, out _);
+    private bool TryStartEdit(IDataGridViewSnapshot snapshot, bool arrangeImmediately = false)
+        => TryStartEdit(snapshot, CurrentCell, out _, arrangeImmediately);
 
-    private bool TryStartEdit(IDataGridViewSnapshot snapshot, DataGridCell cell, out Visual? editor)
+    private bool TryStartEdit(IDataGridViewSnapshot snapshot, DataGridCell cell, out Visual? editor, bool arrangeImmediately = false)
     {
         editor = null;
         if (!TryGetEditableCellContext(snapshot, cell, out var context))
@@ -2536,6 +2537,11 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
 
         PrepareEditorForCell(editor);
         OpenEditor(editor, context.Cell, pooled);
+        if (arrangeImmediately)
+        {
+            ArrangeActiveEditorNow(snapshot);
+        }
+
         return true;
     }
 
@@ -3116,7 +3122,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         var snapshot = GetSnapshot();
         if (snapshot is not null && !ReadOnly)
         {
-            _ = TryStartEdit(snapshot);
+            _ = TryStartEdit(snapshot, arrangeImmediately: true);
         }
     }
 

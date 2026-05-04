@@ -164,6 +164,38 @@ public sealed class DataGridRenderingTests
     }
 
     [TestMethod]
+    public void DataGrid_Editor_Appears_On_Current_Row_When_Edit_Starts()
+    {
+        var nameAccessor = new BindingAccessor<string>("name", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
+
+        var doc = new DataGridListDocument<TextRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("name", "name", typeof(string), ReadOnly: false, nameAccessor),
+        });
+        doc.AddRow(new TextRow { Text = "first" });
+        doc.AddRow(new TextRow { Text = "second" });
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl
+        {
+            View = view,
+            CurrentCell = new DataGridCell(1, 0),
+        };
+        grid.Columns.Add(new DataGridColumn<string> { Key = "name", TypedValueAccessor = nameAccessor, Width = GridLength.Star(1) });
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(24, 6));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F2 });
+        driver.Tick();
+
+        var editor = grid.EnumerateVisualsDepthFirst().OfType<TextBox>().Single();
+        Assert.AreEqual(grid.Bounds.Y + 2, editor.Bounds.Y, "The editor should open on row 1, below the header and first data row.");
+    }
+
+    [TestMethod]
     public void DataGrid_Allows_Tab_To_Move_To_Next_Cell_While_Editing()
     {
         var aAccessor = new BindingAccessor<string>("a", o => ((TwoColumnRow)o).A, (o, v) => ((TwoColumnRow)o).A = v);
