@@ -93,6 +93,8 @@ public sealed record MenuListStyle : IStyle<MenuListStyle>
     /// <param name="hovered">Whether the item is hovered.</param>
     public Style ResolveItemStyle(Theme theme, bool enabled, bool selected, bool hovered)
     {
+        ArgumentNullException.ThrowIfNull(theme);
+
         var baseStyle = theme.ForegroundTextStyle();
 
         if (!enabled)
@@ -107,17 +109,7 @@ public sealed record MenuListStyle : IStyle<MenuListStyle>
 
         if (selected)
         {
-            if (SelectedStyle is { } s)
-            {
-                return s;
-            }
-
-            var style = baseStyle | TextStyle.Bold;
-            if (theme.SurfaceAlt is { } bg)
-            {
-                style = style.WithBackground(bg);
-            }
-            return style;
+            return SelectedStyle ?? ResolveDefaultSelected(theme, baseStyle);
         }
 
         if (hovered)
@@ -126,6 +118,22 @@ public sealed record MenuListStyle : IStyle<MenuListStyle>
         }
 
         return ItemStyle ?? baseStyle;
+    }
+
+    private static Style ResolveDefaultSelected(Theme theme, Style baseStyle)
+    {
+        var style = baseStyle | TextStyle.Bold;
+        if ((theme.FocusBorder ?? theme.Accent ?? theme.Primary) is { } c)
+        {
+            style = style.WithForeground(c);
+        }
+
+        if (theme.SurfaceAlt is { } bg)
+        {
+            style = style.WithBackground(bg);
+        }
+
+        return style;
     }
 
     /// <summary>

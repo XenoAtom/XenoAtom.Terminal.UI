@@ -75,9 +75,23 @@ public sealed record SelectStyle : IStyle<SelectStyle>
     /// <param name="hovered">Whether the control is hovered.</param>
     public Style ResolveStyle(Theme theme, bool enabled, bool focused, bool hovered)
     {
-        if (!enabled && DisabledStyle is { } disabled)
+        ArgumentNullException.ThrowIfNull(theme);
+
+        var normal = NormalStyle ?? theme.ForegroundTextStyle();
+
+        if (!enabled && DisabledStyle is { } disabledStyle)
         {
-            return disabled;
+            return disabledStyle;
+        }
+
+        if (!enabled)
+        {
+            var resolvedDisabled = normal | TextStyle.Dim;
+            if (theme.Disabled is { } c)
+            {
+                resolvedDisabled = resolvedDisabled.WithForeground(c);
+            }
+            return resolvedDisabled;
         }
 
         if (focused && FocusedStyle is { } focus)
@@ -85,31 +99,27 @@ public sealed record SelectStyle : IStyle<SelectStyle>
             return focus;
         }
 
+        if (focused)
+        {
+            return ResolveDefaultFocused(theme, normal);
+        }
+
         if (hovered && HoverStyle is { } hover)
         {
             return hover;
         }
 
-        if (NormalStyle is { } normal)
+        return normal;
+    }
+
+    private static Style ResolveDefaultFocused(Theme theme, Style normal)
+    {
+        var focused = normal | TextStyle.Bold;
+        if ((theme.FocusBorder ?? theme.Accent ?? theme.Primary) is { } c)
         {
-            return normal;
+            focused = focused.WithForeground(c);
         }
 
-        var style = Style.None;
-        if (!enabled)
-        {
-            style |= TextStyle.Dim;
-        }
-        else if (focused)
-        {
-            style |= TextStyle.Bold;
-        }
-
-        if (theme.Foreground is { } fg)
-        {
-            style = style.WithForeground(fg);
-        }
-
-        return style;
+        return focused;
     }
 }

@@ -99,6 +99,8 @@ public sealed record MenuBarStyle : IStyle<MenuBarStyle>
     /// <param name="hovered">Whether the item is hovered.</param>
     public Style ResolveItemStyle(Theme theme, bool enabled, bool open, bool selected, bool hovered)
     {
+        ArgumentNullException.ThrowIfNull(theme);
+
         if (!enabled)
         {
             var disabled = theme.ForegroundTextStyle() | TextStyle.Dim;
@@ -111,19 +113,30 @@ public sealed record MenuBarStyle : IStyle<MenuBarStyle>
 
         if (open)
         {
-            return ItemOpenStyle ?? (theme.BorderStyle(focused: true) | TextStyle.Bold);
+            return ItemOpenStyle ?? ResolveDefaultFocusedItem(theme);
         }
 
         if (selected)
         {
-            return ItemSelectedStyle ?? (theme.BorderStyle(focused: true) | TextStyle.Bold);
+            return ItemSelectedStyle ?? ResolveDefaultFocusedItem(theme);
         }
 
         if (hovered)
         {
-            return ItemHoverStyle ?? (theme.BorderStyle(focused: true) | TextStyle.Bold);
+            return ItemHoverStyle ?? ResolveDefaultFocusedItem(theme);
         }
 
         return ItemStyle ?? theme.ForegroundTextStyle();
+    }
+
+    private static Style ResolveDefaultFocusedItem(Theme theme)
+    {
+        var style = theme.ForegroundTextStyle() | TextStyle.Bold;
+        if ((theme.FocusBorder ?? theme.Accent ?? theme.Primary) is { } c)
+        {
+            style = style.WithForeground(c);
+        }
+
+        return style;
     }
 }
