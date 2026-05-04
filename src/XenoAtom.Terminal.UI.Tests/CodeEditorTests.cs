@@ -963,6 +963,60 @@ public sealed class CodeEditorTests
     }
 
     [TestMethod]
+    public void CodeEditor_Tab_Inserts_Four_Spaces_By_Default()
+    {
+        var editor = new CodeEditor("abQ") { CaretIndex = 2 };
+        using var driver = new TerminalAppTestDriver(new VStack { editor }, TerminalHostKind.Fullscreen, new TerminalSize(24, 6));
+        driver.Tick();
+        driver.App.Focus(editor);
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
+        driver.TickUntil(() => editor.Text == "ab    Q");
+
+        Assert.AreEqual(6, editor.CaretIndex);
+        Assert.AreEqual(CodeEditorIndentationStyle.Spaces, editor.IndentationStyle);
+        Assert.AreEqual(4, editor.IndentationSize);
+    }
+
+    [TestMethod]
+    public void CodeEditor_Tab_Insertion_Can_Use_Custom_Spaces_Or_Tabs()
+    {
+        var spacesEditor = new CodeEditor("abQ")
+        {
+            CaretIndex = 2,
+            IndentationSize = 2,
+        };
+
+        using (var driver = new TerminalAppTestDriver(new VStack { spacesEditor }, TerminalHostKind.Fullscreen, new TerminalSize(24, 6)))
+        {
+            driver.Tick();
+            driver.App.Focus(spacesEditor);
+
+            driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
+            driver.TickUntil(() => spacesEditor.Text == "ab  Q");
+        }
+
+        Assert.AreEqual(4, spacesEditor.CaretIndex);
+
+        var tabsEditor = new CodeEditor("abQ")
+        {
+            CaretIndex = 2,
+            IndentationStyle = CodeEditorIndentationStyle.Tabs,
+        };
+
+        using (var driver = new TerminalAppTestDriver(new VStack { tabsEditor }, TerminalHostKind.Fullscreen, new TerminalSize(24, 6)))
+        {
+            driver.Tick();
+            driver.App.Focus(tabsEditor);
+
+            driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
+            driver.TickUntil(() => tabsEditor.Text == "ab\tQ");
+        }
+
+        Assert.AreEqual(3, tabsEditor.CaretIndex);
+    }
+
+    [TestMethod]
     public void CodeEditor_ClipboardPasteHandler_Captures_Image_And_Replaces_With_Text()
     {
         var imageBytes = new byte[] { 0x89, 0x50, 0x4E, 0x47 };

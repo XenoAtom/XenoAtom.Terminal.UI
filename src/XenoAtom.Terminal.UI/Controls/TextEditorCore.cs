@@ -19,6 +19,7 @@ internal readonly record struct TextEditorOptions(
     bool SingleLine,
     bool AcceptsReturn,
     bool AcceptsTab,
+    string TabText,
     bool WordWrap,
     int TabSize,
     TextAlignment Alignment,
@@ -904,7 +905,7 @@ internal sealed partial class TextEditorCore
             case TerminalKey.Tab:
                 if (options.AcceptsTab)
                 {
-                    InsertText("\t", TextUndoRedoManager.TextUndoKind.Typing, allowCoalesce: true, options);
+                    InsertText(options.TabText.Length == 0 ? "\t" : options.TabText, TextUndoRedoManager.TextUndoKind.Typing, allowCoalesce: true, options);
                     e.Handled = true;
                 }
                 return;

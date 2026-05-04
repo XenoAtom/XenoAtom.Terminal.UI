@@ -46,6 +46,22 @@ new CodeEditor()
 
 This means `CodeEditor` behaves like a specialized `TextArea`, not a separate editing subsystem.
 
+## Indentation
+
+By default, pressing `Tab` inserts four spaces. This avoids real tab characters in indentation-sensitive languages such as YAML and Python.
+
+Use `IndentationStyle` and `IndentationSize` to choose spaces or real tabs:
+
+```csharp
+new CodeEditor(source)
+    .IndentationStyle(CodeEditorIndentationStyle.Spaces)
+    .IndentationSize(2);
+
+new CodeEditor(source)
+    .IndentationStyle(CodeEditorIndentationStyle.Tabs)
+    .IndentationSize(4); // rendered width for tab characters
+```
+
 ## Go To Line / Column / Position
 
 `CodeEditor` exposes programmatic navigation helpers:

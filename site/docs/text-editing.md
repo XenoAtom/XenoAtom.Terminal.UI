@@ -37,6 +37,7 @@ Across the editors above you typically get:
   - Single-line editors provide overflow indicators when content is wider than the viewport.
   - Multi-line editors integrate with `ScrollViewer` via `IScrollable`.
 - **Editor location APIs**: `CodeEditor` exposes Go To Line / Column / Position helpers plus bindable `Line` / `Column` status values.
+- **Code indentation**: `CodeEditor` inserts four spaces on `Tab` by default and can be configured to insert a different number of spaces or real tab characters.
 
 > [!TIP]
 > Most controls expose their shortcuts as commands, so a focused editor can be discoverable via a `CommandBar`.

@@ -36,6 +36,22 @@ public enum CodeEditorMarginSide
 }
 
 /// <summary>
+/// Specifies the text inserted when the Tab key is pressed in a <see cref="CodeEditor"/>.
+/// </summary>
+public enum CodeEditorIndentationStyle
+{
+    /// <summary>
+    /// Insert spaces. The number of spaces is controlled by <see cref="CodeEditor.IndentationSize"/>.
+    /// </summary>
+    Spaces,
+
+    /// <summary>
+    /// Insert a tab character (<c>\t</c>).
+    /// </summary>
+    Tabs,
+}
+
+/// <summary>
 /// Describes a visible row mapped from the wrapped editor layout.
 /// </summary>
 /// <param name="LineIndex">The zero-based logical line index.</param>
@@ -467,6 +483,7 @@ public sealed partial class CodeEditor : TextEditorBase
     private bool _hasArrangedOnce;
     private int _line = 1;
     private int _column = 1;
+    private string _indentationText = "    ";
 
     private sealed record LineHighlightCacheEntry(int LineStart, int LineLength, StyledRun[] Runs);
 
@@ -496,6 +513,7 @@ public sealed partial class CodeEditor : TextEditorBase
         this.ShowLineNumbers(true);
         this.HighlightCurrentLine(true);
         this.MinLineNumberDigits(2);
+        this.IndentationSize(4);
 
         TextDocument = new DynamicTextDocument(
             getter: () => Text ?? string.Empty,
@@ -626,6 +644,26 @@ public sealed partial class CodeEditor : TextEditorBase
     public partial bool HighlightCurrentLine { get; set; }
 
     /// <summary>
+    /// Gets or sets whether pressing Tab inserts spaces or a tab character.
+    /// </summary>
+    /// <remarks>
+    /// The default is <see cref="CodeEditorIndentationStyle.Spaces"/> so Tab inserts spaces instead of a real tab character.
+    /// </remarks>
+    [Bindable]
+    public partial CodeEditorIndentationStyle IndentationStyle { get; set; }
+
+    /// <summary>
+    /// Gets or sets the indentation size, in spaces.
+    /// </summary>
+    /// <remarks>
+    /// When <see cref="IndentationStyle"/> is <see cref="CodeEditorIndentationStyle.Spaces"/>, this controls how many spaces
+    /// Tab inserts. When <see cref="IndentationStyle"/> is <see cref="CodeEditorIndentationStyle.Tabs"/>, this controls the
+    /// rendered width of tab characters. Values less than 1 are treated as 1.
+    /// </remarks>
+    [Bindable]
+    public partial int IndentationSize { get; set; }
+
+    /// <summary>
     /// Gets or sets the optional simple line-based syntax highlighter.
     /// </summary>
     [Bindable]
@@ -675,6 +713,12 @@ public sealed partial class CodeEditor : TextEditorBase
 
     /// <inheritdoc />
     protected override bool AcceptsReturn => true;
+
+    /// <inheritdoc />
+    protected override int TabSize => Math.Max(1, IndentationSize);
+
+    /// <inheritdoc />
+    protected override string TabText => IndentationStyle == CodeEditorIndentationStyle.Tabs ? "\t" : _indentationText;
 
     /// <inheritdoc />
     protected override bool ShowPlaceholderWhenUnfocusedOnly => false;
@@ -1010,6 +1054,16 @@ public sealed partial class CodeEditor : TextEditorBase
     partial void OnHighlightCurrentLineChanged(bool value)
     {
         _ = value;
+    }
+
+    partial void OnIndentationStyleChanged(CodeEditorIndentationStyle value)
+    {
+        _ = value;
+    }
+
+    partial void OnIndentationSizeChanged(int value)
+    {
+        _indentationText = new string(' ', Math.Max(1, value));
     }
 
     partial void OnHighlighterChanged(Delegator<CodeEditorLineHighlighter> value)

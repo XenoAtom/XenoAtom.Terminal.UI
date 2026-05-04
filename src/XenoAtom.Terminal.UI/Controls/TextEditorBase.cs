@@ -344,6 +344,11 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     protected virtual int TabSize => 4;
 
     /// <summary>
+    /// Gets the text inserted when the Tab key is accepted by the editor.
+    /// </summary>
+    protected virtual string TabText => "\t";
+
+    /// <summary>
     /// Gets the text alignment used by the editor.
     /// </summary>
     protected virtual TextAlignment Alignment => TextAlignment.Left;
@@ -418,6 +423,7 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
             SingleLine: IsSingleLine,
             AcceptsReturn: AcceptsReturn,
             AcceptsTab: AcceptTab,
+            TabText: TabText,
             WordWrap: WordWrap,
             TabSize: TabSize,
             Alignment: Alignment,
