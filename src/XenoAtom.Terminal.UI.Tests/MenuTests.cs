@@ -156,6 +156,31 @@ public sealed class MenuTests
     }
 
     [TestMethod]
+    public void MenuBar_Left_Right_Navigation_Rerenders_Selected_TopLevel_Item()
+    {
+        var bar = new MenuBar();
+        bar.Items.Add(new MenuItem("File"));
+        bar.Items.Add(new MenuItem("Help"));
+
+        var root = new VStack { bar };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        var initialOutputLength = driver.Backend.GetOutText().Length;
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right });
+        driver.TickUntil(() => GetSelectedIndex(bar) == 1);
+
+        var afterRightOutputLength = driver.Backend.GetOutText().Length;
+        Assert.IsGreaterThan(initialOutputLength, afterRightOutputLength, "Right-arrow navigation should repaint the selected top-level menu item.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left });
+        driver.TickUntil(() => GetSelectedIndex(bar) == 0);
+
+        Assert.IsGreaterThan(afterRightOutputLength, driver.Backend.GetOutText().Length, "Left-arrow navigation should repaint the selected top-level menu item.");
+    }
+
+    [TestMethod]
     public void MenuBar_Left_FromDeepSubmenu_ClosesOnlyOneLevel()
     {
         var file = new MenuItem("File");

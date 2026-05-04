@@ -26,7 +26,9 @@ public sealed partial class MenuBar : Visual
     private bool _closingAllMenus;
 
     private int _openIndex = -1;
-    private int _selectedIndex;
+
+    [Bindable]
+    internal partial int SelectedIndex { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MenuBar"/> class.
@@ -47,7 +49,7 @@ public sealed partial class MenuBar : Visual
 
     internal int OpenIndex => _openIndex;
 
-    internal int SelectedIndex => _selectedIndex;
+    partial void OnSelectedIndexChanging(ref int value) => value = Math.Clamp(value, 0, Math.Max(0, _items.Count - 1));
 
     /// <inheritdoc />
     protected override int ChildrenCount => _presenters.Count;
@@ -143,19 +145,19 @@ public sealed partial class MenuBar : Visual
         switch (e.Key)
         {
             case TerminalKey.Left:
-                _selectedIndex = FindPreviousEnabledIndex(_selectedIndex - 1, target);
+                SelectedIndex = FindPreviousEnabledIndex(SelectedIndex - 1, target);
                 e.Handled = true;
                 return;
 
             case TerminalKey.Right:
-                _selectedIndex = FindNextEnabledIndex(_selectedIndex + 1, target);
+                SelectedIndex = FindNextEnabledIndex(SelectedIndex + 1, target);
                 e.Handled = true;
                 return;
 
             case TerminalKey.Enter:
             case TerminalKey.Space:
             case TerminalKey.Down:
-                OpenMenu(_selectedIndex);
+                OpenMenu(SelectedIndex);
                 e.Handled = true;
                 return;
         }
@@ -176,7 +178,7 @@ public sealed partial class MenuBar : Visual
             return;
         }
 
-        _selectedIndex = index;
+        SelectedIndex = index;
 
         if (_openIndex == index && _openPopups.Count > 0)
         {
@@ -375,7 +377,7 @@ public sealed partial class MenuBar : Visual
             _presenters.Add(new MenuBarItem(i, item));
         }
 
-        _selectedIndex = Math.Clamp(_selectedIndex, 0, Math.Max(0, count - 1));
+        SelectedIndex = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
     }
 
     internal int FindNextEnabledIndex(int start, Visual target)
@@ -557,10 +559,9 @@ public sealed partial class MenuBar : Visual
 
             if (bar._openIndex < 0)
             {
-                if (bar.HasFocus && bar._selectedIndex != _index)
+                if (bar.HasFocus && bar.SelectedIndex != _index)
                 {
-                    bar._selectedIndex = _index;
-                    bar.MarkArrangeDirty();
+                    bar.SelectedIndex = _index;
                 }
 
                 return;
