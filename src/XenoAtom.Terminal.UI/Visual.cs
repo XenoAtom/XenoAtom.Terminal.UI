@@ -738,8 +738,13 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             _measureDeps = null;
             _arrangeDeps = null;
             _prepareChildrenDeps = null;
+            _dynamicUpdateDeps = null;
             _renderDeps = null;
             _graphicsRenderDeps = null;
+            if (_dynamicUpdates is not null)
+            {
+                _dynamicUpdatesDirty = true;
+            }
 
             OnAttachedToApp(app);
 

@@ -15,6 +15,37 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class TextBlockRenderingTests
 {
     [TestMethod]
+    public void TextBlock_FuncText_Reapplies_On_Bindable_Model_Change()
+    {
+        var viewModel = new TextBlockBindableViewModel("Before");
+        var textBlock = new TextBlock(() => viewModel.Text);
+
+        using var driver = new TerminalAppTestDriver(new VStack(textBlock), TerminalHostKind.Fullscreen, new TerminalSize(20, 2));
+        driver.Tick();
+
+        viewModel.Text = "After";
+        driver.Tick();
+
+        Assert.AreEqual("After", textBlock.Text);
+    }
+
+    [TestMethod]
+    public void TextBlock_FuncText_Reapplies_When_Measured_Before_Attach()
+    {
+        var viewModel = new TextBlockBindableViewModel("Before");
+        var textBlock = new TextBlock(() => viewModel.Text);
+        textBlock.Measure(LayoutConstraints.Unbounded);
+
+        using var driver = new TerminalAppTestDriver(new VStack(textBlock), TerminalHostKind.Fullscreen, new TerminalSize(20, 2));
+        driver.Tick();
+
+        viewModel.Text = "After";
+        driver.Tick();
+
+        Assert.AreEqual("After", textBlock.Text);
+    }
+
+    [TestMethod]
     public void TextBlock_SingleLine_Reports_Horizontal_Shrink_Budget()
     {
         var tb = new TextBlock("HelloWorld")
@@ -163,5 +194,26 @@ public sealed class TextBlockRenderingTests
 
         Assert.IsTrue(buffer.UnsafeCells[4].TryGetBackground(out var bg4));
         Assert.AreEqual(Colors.Blue, bg4);
+    }
+
+    private sealed class TextBlockBindableViewModel
+    {
+        public static readonly BindingAccessor<string> TextAccessor = new(
+            nameof(Text),
+            owner => ((TextBlockBindableViewModel)owner)._text,
+            (owner, value) => ((TextBlockBindableViewModel)owner).Text = value);
+
+        private string _text;
+
+        public TextBlockBindableViewModel(string text)
+        {
+            _text = text;
+        }
+
+        public string Text
+        {
+            get => BindingManager.Current.GetValue(this, ref _text, TextAccessor);
+            set => BindingManager.Current.SetValue(this, ref _text, value, TextAccessor);
+        }
     }
 }
