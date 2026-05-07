@@ -39,6 +39,7 @@ public sealed partial class LogControl : Visual, ISelectionOwner
     private readonly List<LogMatch> _matches;
     private List<LogMatch>?[]? _matchesByEntry;
     private int _activeMatchIndex;
+    private int _interactionVersionCounter;
     private string? _searchError;
     private Regex? _cachedSearchRegex;
     private string? _cachedSearchRegexPattern;
@@ -248,6 +249,12 @@ public sealed partial class LogControl : Visual, ISelectionOwner
     [Bindable]
     internal partial int InteractionVersion { get; set; }
 
+    private void IncrementInteractionVersion()
+    {
+        _interactionVersionCounter++;
+        InteractionVersion = _interactionVersionCounter;
+    }
+
     internal LogEntryLayoutDiagnostics GetEntryLayoutDiagnostics(int entryIndex)
         => _content.GetEntryLayoutDiagnostics(entryIndex);
 
@@ -366,7 +373,7 @@ public sealed partial class LogControl : Visual, ISelectionOwner
 
         _activeMatchIndex = _activeMatchIndex < 0 ? 0 : (_activeMatchIndex + 1) % _matches.Count;
         ScrollToMatch(_activeMatchIndex);
-        InteractionVersion++;
+        IncrementInteractionVersion();
     }
 
     /// <summary>
@@ -394,7 +401,7 @@ public sealed partial class LogControl : Visual, ISelectionOwner
         }
 
         ScrollToMatch(_activeMatchIndex);
-        InteractionVersion++;
+        IncrementInteractionVersion();
     }
 
     /// <summary>
@@ -890,7 +897,7 @@ public sealed partial class LogControl : Visual, ISelectionOwner
             }
         }
 
-        InteractionVersion++;
+        IncrementInteractionVersion();
     }
 
     private void BuildMatches(string query)
@@ -1031,7 +1038,7 @@ public sealed partial class LogControl : Visual, ISelectionOwner
         _resumeFollowTailAtTail = false;
         _clearSelectionOnNextFollowTailAppend = false;
         FollowTail = false;
-        InteractionVersion++;
+        IncrementInteractionVersion();
     }
 
     private void ClearSelection()
@@ -1043,7 +1050,7 @@ public sealed partial class LogControl : Visual, ISelectionOwner
 
         _selectionAnchor = null;
         _selectionActive = null;
-        InteractionVersion++;
+        IncrementInteractionVersion();
     }
 
     private void OnScrollViewerOffsetChanged(object? sender, ScrollValueChangedEventArgs e)
@@ -1400,7 +1407,7 @@ public sealed partial class LogControl : Visual, ISelectionOwner
                 _owner._selectionActive = pos;
             }
 
-            _owner.InteractionVersion++;
+            _owner.IncrementInteractionVersion();
             e.Handled = true;
         }
 
@@ -1418,7 +1425,7 @@ public sealed partial class LogControl : Visual, ISelectionOwner
 
             _owner.FollowTail = false;
             _owner._selectionActive = pos;
-            _owner.InteractionVersion++;
+            _owner.IncrementInteractionVersion();
             e.Handled = true;
         }
 

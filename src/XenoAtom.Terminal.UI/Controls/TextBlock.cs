@@ -20,6 +20,7 @@ public sealed partial class TextBlock : Visual, ISelectionOwner
 
     private int _selectionAnchor = -1;
     private int _selectionActive = -1;
+    private int _interactionVersionCounter;
     private bool _pendingPointerSelection;
     private bool _dragSelecting;
 
@@ -475,7 +476,7 @@ public sealed partial class TextBlock : Visual, ISelectionOwner
 
         _selectionAnchor = normalizedAnchor;
         _selectionActive = normalizedActive;
-        InteractionVersion++;
+        IncrementInteractionVersion();
     }
 
     private void ClearSelection()
@@ -491,7 +492,13 @@ public sealed partial class TextBlock : Visual, ISelectionOwner
         _selectionActive = -1;
         _pendingPointerSelection = false;
         _dragSelecting = false;
-        InteractionVersion++;
+        IncrementInteractionVersion();
+    }
+
+    private void IncrementInteractionVersion()
+    {
+        _interactionVersionCounter++;
+        InteractionVersion = _interactionVersionCounter;
     }
 
     private bool TryGetOrderedSelection(int textLength, out int start, out int end)
