@@ -20,6 +20,8 @@ public sealed partial class MarkdownControl : Visual, IScrollable
     private readonly DocumentFlow _flow;
     private Theme? _lastResolvedTheme;
     private MarkdownStyle? _lastResolvedSourceStyle;
+    private int _lastNaturalContentWidthVersion = -1;
+    private int _lastNaturalContentWidth = -1;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MarkdownControl"/> class.
@@ -125,11 +127,14 @@ public sealed partial class MarkdownControl : Visual, IScrollable
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
+        var naturalContentWidth = GetNaturalContentWidth();
         _flow.Measure(constraints);
         var desired = constraints.Clamp(_flow.DesiredSize);
+        var naturalWidth = Math.Min(desired.Width, naturalContentWidth);
+        var natural = constraints.Clamp(new Size(Math.Max(1, naturalWidth), desired.Height));
         return SizeHints.Flex(
             min: constraints.Clamp(new Size(1, 1)),
-            natural: desired,
+            natural: natural,
             max: new Size(int.MaxValue, int.MaxValue),
             growX: HorizontalAlignment == Align.Stretch ? 1 : 0,
             growY: VerticalAlignment == Align.Stretch ? 1 : 0,
@@ -212,5 +217,45 @@ public sealed partial class MarkdownControl : Visual, IScrollable
 
         _lastResolvedTheme = theme;
         _lastResolvedSourceStyle = sourceStyle;
+        _lastNaturalContentWidthVersion = -1;
+        _lastNaturalContentWidth = -1;
+    }
+
+    private int GetNaturalContentWidth()
+    {
+        if (_flow.Items.Count == 0)
+        {
+            return 1;
+        }
+
+        var item = _flow.Items[0];
+        var content = item.Content;
+        var version = content.Version;
+        if (_lastNaturalContentWidthVersion == version && _lastNaturalContentWidth > 0)
+        {
+            return _lastNaturalContentWidth;
+        }
+
+        var padding = item.Padding ?? _flow.ItemPadding;
+        var paddingHorizontal = Math.Max(0, padding.Horizontal);
+        var width = paddingHorizontal;
+        for (var index = 0; index < content.BlockCount; index++)
+        {
+            var block = content.GetBlock(index);
+            var visual = block.CreateVisual();
+            try
+            {
+                visual.Measure(LayoutConstraints.Unbounded);
+                width = Math.Max(width, visual.MeasureHints.Natural.Width + paddingHorizontal);
+            }
+            finally
+            {
+                block.Release(visual);
+            }
+        }
+
+        _lastNaturalContentWidthVersion = version;
+        _lastNaturalContentWidth = Math.Max(1, LayoutConstants.ClampFinite(width));
+        return _lastNaturalContentWidth;
     }
 }

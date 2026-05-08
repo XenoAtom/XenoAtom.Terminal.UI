@@ -241,6 +241,33 @@ public sealed class MarkdownControlTests
     }
 
     [TestMethod]
+    public void MarkdownControl_Tables_CanFlowHorizontally_InWrapHStack()
+    {
+        const string table = """
+            | Key | Value |
+            | --- | ---: |
+            | A | 1 |
+            | B | 2 |
+            """;
+
+        var first = new MarkdownControl(table);
+        var second = new MarkdownControl(table);
+        var stack = new WrapHStack(first, second)
+        {
+            Spacing = 1,
+            RunSpacing = 1,
+            HorizontalAlignment = Align.Stretch,
+            MeasureMode = WrapMeasureMode.ConstrainToRun,
+        };
+
+        stack.Measure(new Size(60, 20));
+        stack.Arrange(new Rectangle(0, 0, 60, 20));
+
+        Assert.AreEqual(first.Bounds.Y, second.Bounds.Y, "Expected compact markdown tables to remain in the same wrap row.");
+        Assert.IsTrue(second.Bounds.X > first.Bounds.X, "Expected the second markdown table to be arranged to the right of the first.");
+    }
+
+    [TestMethod]
     public void MarkdownControl_Renders_Alert_Extension()
     {
         var markdown = """
