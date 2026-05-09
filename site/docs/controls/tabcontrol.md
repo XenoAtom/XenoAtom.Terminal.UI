@@ -39,6 +39,7 @@ var tabs = new TabControl(
 - Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch`
 - The default style renders attached rounded tabs over a separator line instead of boxing the selected content.
 - Tab headers stay on a single line. When they do not fit, overflow buttons appear at the far left and far right.
+- Drag reordering is enabled by default for visible tab headers and can be disabled with `AllowTabDragReorder`.
 
 ## Tab pages
 
@@ -56,6 +57,17 @@ Close lifecycle:
 - `Closed` is raised after the page has been removed.
 - `TabControl.TryCloseTab(...)` closes a page programmatically and uses the same lifecycle as the close button.
 - `TabControl.MoveTab(...)` / `TryMoveTab(...)` reorders existing pages while keeping the same selected page selected.
+
+## Reordering tabs
+
+Use the programmatic move APIs when you want to wire tab reordering to hotkeys or commands:
+
+```csharp
+tabs.MoveTab(oldIndex: 3, newIndex: 1);
+tabs.TryMoveTab(currentPage, newIndex: 0);
+```
+
+When `AllowTabDragReorder` is `true` (the default), users can also drag a visible tab header horizontally to reorder it with the mouse.
 
 ## Styling
 
@@ -95,6 +107,7 @@ new TabControl(
 ## Interaction
 
 - Mouse click on a tab header activates the tab.
+- Dragging a visible tab header reorders it when `AllowTabDragReorder` is enabled.
 - Clicking a close button requests tab closure and may be cancelled by the page.
 - When tabs overflow, left/right overflow buttons scroll the visible header window.
 - `Left` / `Right` arrow keys switch between enabled tabs when the control is focused.

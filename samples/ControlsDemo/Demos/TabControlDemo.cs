@@ -1,10 +1,11 @@
+using System.Text;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Styling;
 
 namespace XenoAtom.Terminal.UI.ControlsDemo.Demos;
 
-[Demo("TabControl", "Layout", Description = "Attached tabs by default, mutable tab pages, and single-line overflow navigation.")]
+[Demo("TabControl", "Layout", Description = "Attached tabs by default, mutable tab pages, drag reordering, and single-line overflow navigation.")]
 public sealed class TabControlDemo : ControlsDemoBase
 {
     private enum TabStylePreset
@@ -34,7 +35,7 @@ public sealed class TabControlDemo : ControlsDemoBase
         var stylePreset = new State<TabStylePreset>(TabStylePreset.Default);
 
         var statusPage = new TabPage(
-            header: new HStack("Status", new TextBlock(() => $"({(int)(progress.Value * 100)}%)")).Spacing(1),
+            header: new TextBlock(() => $"Status ({(int)(progress.Value * 100)}%)"),
             content: DemoUi.Hint("Loading status..."))
         {
             Data = "primary",
@@ -104,34 +105,43 @@ public sealed class TabControlDemo : ControlsDemoBase
 
         root
             .Cell(
-                DemoUi.Hint("Tab pages are bindable models: mutate Header, Content, Data, IsEnabled, or ShowCloseButton directly. Resize the terminal to exercise overflow, then switch presets to compare the chrome."),
+                DemoUi.Hint("Tab pages are bindable models: mutate Header, Content, Data, IsEnabled, or ShowCloseButton directly. Drag any tab header to reorder it, or use the move buttons below. Resize the terminal to exercise overflow, then switch presets to compare the chrome."),
                 0,
                 0)
             .Cell(
-                new HStack(
-                        new TextBlock("Style"),
-                        new EnumSelect<TabStylePreset>().Value(stylePreset),
-                        new Button("Rename Logs").Click(() =>
-                        {
-                            renameCount.Value++;
-                            logsPage.Header = new TextBlock($"Logs v{renameCount.Value}");
-                        }),
-                        new Button("Add Tab").Click(() =>
-                        {
-                            addedTabCount.Value++;
-                            var tabNumber = addedTabCount.Value;
-                            tabs.AddTab(new TabPage(
-                                $"Tab-{tabNumber:00}",
-                                new VStack(
-                                        DemoUi.Hint("Add enough tabs, scroll the strip, then select a visible tab to verify the strip keeps its current window."),
-                                        new TextBlock($"Dynamic tab #{tabNumber}"))
-                                    .Spacing(1))
-                            {
-                                ShowCloseButton = true,
-                            });
-                        }),
-                        new Button("Toggle Metrics Close").Click(() => metricsPage.ShowCloseButton = !metricsPage.ShowCloseButton),
-                        new Button("Disable Metrics").Click(() => metricsPage.IsEnabled = !metricsPage.IsEnabled))
+                new VStack(
+                        new HStack(
+                                new TextBlock("Style"),
+                                new EnumSelect<TabStylePreset>().Value(stylePreset),
+                                new Button("Rename Logs").Click(() =>
+                                {
+                                    renameCount.Value++;
+                                    logsPage.Header = new TextBlock($"Logs v{renameCount.Value}");
+                                }),
+                                new Button("Add Tab").Click(() =>
+                                {
+                                    addedTabCount.Value++;
+                                    var tabNumber = addedTabCount.Value;
+                                    tabs.AddTab(new TabPage(
+                                        $"Tab-{tabNumber:00}",
+                                        new VStack(
+                                                DemoUi.Hint("Add enough tabs, scroll the strip, then drag or move a visible tab to confirm the order updates in place."),
+                                                new TextBlock($"Dynamic tab #{tabNumber}"))
+                                            .Spacing(1))
+                                    {
+                                        ShowCloseButton = true,
+                                    });
+                                }),
+                                new Button("Toggle Metrics Close").Click(() => metricsPage.ShowCloseButton = !metricsPage.ShowCloseButton))
+                            .Spacing(1),
+                        new HStack(
+                                new Button("Disable Metrics").Click(() => metricsPage.IsEnabled = !metricsPage.IsEnabled),
+                                new Button("Move Selected Left").Click(() => MoveSelectedTab(tabs, -1)),
+                                new Button("Move Selected Right").Click(() => MoveSelectedTab(tabs, 1)))
+                            .Spacing(1),
+                        new TextBlock(() => $"Order: {DescribeTabOrder(tabs)}"),
+                        new TextBlock(() => $"Selected: {DescribeSelectedTab(tabs)}"),
+                        DemoUi.Hint("Mouse drag reordering is enabled by default. Drag visible headers horizontally to reorganize the strip."))
                     .Spacing(1),
                 1,
                 0)
@@ -170,5 +180,55 @@ public sealed class TabControlDemo : ControlsDemoBase
             TabStylePreset.AsciiHeavyBox => TabControlStyle.AsciiHeavy,
             TabStylePreset.DashedBox => TabControlStyle.Dashed,
             _ => TabControlStyle.Default,
+        };
+
+    private static void MoveSelectedTab(TabControl tabs, int delta)
+    {
+        var selectedIndex = tabs.SelectedIndex;
+        var newIndex = selectedIndex + delta;
+        if ((uint)selectedIndex >= (uint)tabs.Tabs.Count || (uint)newIndex >= (uint)tabs.Tabs.Count)
+        {
+            return;
+        }
+
+        tabs.MoveTab(selectedIndex, newIndex);
+    }
+
+    private static string DescribeSelectedTab(TabControl tabs)
+    {
+        if ((uint)tabs.SelectedIndex >= (uint)tabs.Tabs.Count)
+        {
+            return "<none>";
+        }
+
+        return $"#{tabs.SelectedIndex}: {GetTabTitle(tabs.Tabs[tabs.SelectedIndex])}";
+    }
+
+    private static string DescribeTabOrder(TabControl tabs)
+    {
+        if (tabs.Tabs.Count == 0)
+        {
+            return "<empty>";
+        }
+
+        var builder = new StringBuilder();
+        for (var i = 0; i < tabs.Tabs.Count; i++)
+        {
+            if (i > 0)
+            {
+                builder.Append(" → ");
+            }
+
+            builder.Append(GetTabTitle(tabs.Tabs[i]));
+        }
+
+        return builder.ToString();
+    }
+
+    private static string GetTabTitle(TabPage page)
+        => page.Header switch
+        {
+            TextBlock textBlock => textBlock.Text ?? string.Empty,
+            _ => page.Data?.ToString() ?? page.Header.GetType().Name,
         };
 }

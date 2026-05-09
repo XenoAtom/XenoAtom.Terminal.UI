@@ -35,6 +35,7 @@ public sealed partial class TabControl : Visual
     private Func<Visual, ContentVisual?>? _contentTemplateFactory;
     private TabControlLayoutMode _contentLayoutMode;
     private bool _suppressSelectionChangedEvents;
+    private bool _tabWasReorderedByDrag;
 
     private int _oldSelectedIndexForEvent = -1;
     private TabPage? _oldSelectedPageForEvent;
@@ -80,6 +81,7 @@ public sealed partial class TabControl : Visual
         PressedIndex = -1;
         HoveredPart = TabHeaderPart.None;
         PressedPart = TabHeaderPart.None;
+        AllowTabDragReorder = true;
     }
 
     /// <summary>
@@ -107,6 +109,16 @@ public sealed partial class TabControl : Visual
     [Bindable]
     public partial int FirstVisibleIndex { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether tab headers can be reordered by dragging them with the mouse.
+    /// </summary>
+    /// <remarks>
+    /// This setting affects only pointer-based reordering. Programmatic reordering through <see cref="MoveTab(int,int)"/>
+    /// and <see cref="MoveTab(TabPage,int)"/> remains available.
+    /// </remarks>
+    [Bindable]
+    public partial bool AllowTabDragReorder { get; set; }
+
     partial void OnSelectedIndexChanging(ref int value)
     {
         CaptureSelectedTabForEvent(out _oldSelectedIndexForEvent, out _oldSelectedPageForEvent);
@@ -126,6 +138,14 @@ public sealed partial class TabControl : Visual
     }
 
     partial void OnFirstVisibleIndexChanging(ref int value) => value = Math.Max(0, value);
+
+    partial void OnAllowTabDragReorderChanged(bool value)
+    {
+        if (!value)
+        {
+            ResetTabDragReorderState();
+        }
+    }
 
     /// <inheritdoc/>
     protected override void PrepareChildren()
@@ -551,6 +571,7 @@ public sealed partial class TabControl : Visual
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         var localY = e.UiY - Bounds.Y;
+        var localX = e.UiX - Bounds.X;
         if (localY < 0 || localY >= _headerHeight)
         {
             UpdateHoveredTarget(default);
@@ -558,7 +579,12 @@ public sealed partial class TabControl : Visual
             return;
         }
 
-        var target = HitTestHeader(e.UiX - Bounds.X);
+        if (TryHandleTabDragReorder(localX))
+        {
+            e.Handled = true;
+        }
+
+        var target = HitTestHeader(localX);
         UpdateHoveredTarget(target);
         UpdatePressedInside(target == new HitTarget(PressedPart, PressedIndex));
     }
@@ -586,6 +612,7 @@ public sealed partial class TabControl : Visual
         PressedPart = target.Part;
         PressedIndex = target.Index;
         IsPressedInside = true;
+        ResetTabDragReorderState();
         UpdateHoveredTarget(target);
         e.Handled = true;
     }
@@ -603,12 +630,19 @@ public sealed partial class TabControl : Visual
             ? HitTestHeader(e.UiX - Bounds.X)
             : default;
         var pressedTarget = new HitTarget(PressedPart, PressedIndex);
-        var activate = IsPressedInside && currentTarget == pressedTarget;
+        var activate = !_tabWasReorderedByDrag && IsPressedInside && currentTarget == pressedTarget;
 
         PressedPart = TabHeaderPart.None;
         PressedIndex = -1;
         IsPressedInside = false;
         UpdateHoveredTarget(currentTarget);
+
+        if (_tabWasReorderedByDrag)
+        {
+            ResetTabDragReorderState();
+            e.Handled = true;
+            return;
+        }
 
         if (!activate)
         {
@@ -852,6 +886,24 @@ public sealed partial class TabControl : Visual
         return index >= newIndex && index < oldIndex ? index + 1 : index;
     }
 
+    private bool TryHandleTabDragReorder(int localX)
+    {
+        if (!AllowTabDragReorder || PressedPart != TabHeaderPart.Tab || PressedIndex < 0 || _tabs.Count <= 1)
+        {
+            return false;
+        }
+
+        var targetIndex = HitTestTabIndex(localX);
+        if (targetIndex < 0 || targetIndex == PressedIndex)
+        {
+            return false;
+        }
+
+        MoveTabCore(PressedIndex, targetIndex);
+        _tabWasReorderedByDrag = true;
+        return true;
+    }
+
     private bool TrySelectRelative(int direction)
     {
         if (_tabs.Count == 0 || direction == 0)
@@ -962,6 +1014,20 @@ public sealed partial class TabControl : Visual
         return default;
     }
 
+    private int HitTestTabIndex(int localX)
+    {
+        for (var i = 0; i < _headerLayouts.Count; i++)
+        {
+            var layout = _headerLayouts[i];
+            if (localX >= layout.Start && localX < layout.End)
+            {
+                return layout.Index;
+            }
+        }
+
+        return -1;
+    }
+
     private bool IsTargetEnabled(HitTarget target)
     {
         return target.Part switch
@@ -996,6 +1062,8 @@ public sealed partial class TabControl : Visual
 
         IsPressedInside = value;
     }
+
+    private void ResetTabDragReorderState() => _tabWasReorderedByDrag = false;
 
     private void SyncFirstVisibleIndexToSelection()
     {

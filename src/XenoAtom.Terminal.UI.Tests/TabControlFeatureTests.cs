@@ -293,6 +293,62 @@ public sealed class TabControlFeatureTests
     }
 
     [TestMethod]
+    public void TabControl_Dragging_Header_Reorders_Pages_And_Preserves_Selected_Page()
+    {
+        var first = new TabPage("One", new TextBlock("A"));
+        var second = new TabPage("Two", new TextBlock("B"));
+        var third = new TabPage("Three", new TextBlock("C"));
+        var tabs = new TabControl(first, second, third)
+        {
+            SelectedIndex = 2,
+        };
+
+        using var driver = new TerminalAppTestDriver(tabs, TerminalHostKind.Fullscreen, new TerminalSize(40, 8));
+        driver.Tick();
+
+        var dragStart = GetHeaderPoint(tabs, 0, closeButton: false);
+        var dragEnd = GetHeaderPoint(tabs, 2, closeButton: false);
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = dragStart.X, Y = dragStart.Y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Drag, Button = TerminalMouseButton.Left, X = dragEnd.X, Y = dragEnd.Y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = dragEnd.X, Y = dragEnd.Y });
+        driver.TickUntil(() => ReferenceEquals(tabs.Tabs[2], first));
+
+        Assert.AreSame(second, tabs.Tabs[0]);
+        Assert.AreSame(third, tabs.Tabs[1]);
+        Assert.AreSame(first, tabs.Tabs[2]);
+        Assert.AreEqual(1, tabs.SelectedIndex);
+        Assert.AreSame(third, tabs.Tabs[tabs.SelectedIndex]);
+    }
+
+    [TestMethod]
+    public void TabControl_Dragging_Header_Does_Not_Reorder_When_Disabled()
+    {
+        var first = new TabPage("One", new TextBlock("A"));
+        var second = new TabPage("Two", new TextBlock("B"));
+        var third = new TabPage("Three", new TextBlock("C"));
+        var tabs = new TabControl(first, second, third)
+        {
+            AllowTabDragReorder = false,
+        };
+
+        using var driver = new TerminalAppTestDriver(tabs, TerminalHostKind.Fullscreen, new TerminalSize(40, 8));
+        driver.Tick();
+
+        var dragStart = GetHeaderPoint(tabs, 0, closeButton: false);
+        var dragEnd = GetHeaderPoint(tabs, 2, closeButton: false);
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = dragStart.X, Y = dragStart.Y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Drag, Button = TerminalMouseButton.Left, X = dragEnd.X, Y = dragEnd.Y });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = dragEnd.X, Y = dragEnd.Y });
+        driver.Tick();
+
+        Assert.AreSame(first, tabs.Tabs[0]);
+        Assert.AreSame(second, tabs.Tabs[1]);
+        Assert.AreSame(third, tabs.Tabs[2]);
+    }
+
+    [TestMethod]
     public void TabControl_Style_Switch_Rebuilds_Chrome_Without_Reparenting_Content()
     {
         var style = new State<TabControlStyle>(TabControlStyle.Default);
