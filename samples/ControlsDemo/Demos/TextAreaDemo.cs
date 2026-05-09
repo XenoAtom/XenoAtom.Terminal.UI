@@ -15,6 +15,7 @@ public sealed class TextAreaDemo : ControlsDemoBase
         context.AllowPageScrollViewer = false;
 
         var text = new State<string?>("Line 1\nLine 2\nLine 3");
+        var autoExpandText = new State<string?>("Short note");
 
         return new VStack(
                 DemoUi.Hint("TextArea supports multi-line editing, selection, and Find/Replace (Ctrl+F / Ctrl+H)."),
@@ -22,6 +23,15 @@ public sealed class TextAreaDemo : ControlsDemoBase
                     .Text(text)
                     .Placeholder("Type multiple lines.")
                     .MinHeight(6)
+                    .MaxHeight(6).Scrollable(),
+                new Rule(),
+                DemoUi.Title("Auto expand height"),
+                DemoUi.Hint("This TextArea grows with its content until MaxHeight is reached."),
+                new TextArea()
+                    .Text(autoExpandText)
+                    .Placeholder("Add more lines to grow this editor.")
+                    .AutoSizeMode(TextEditorAutoSizeMode.Height)
+                    .MinHeight(2)
                     .MaxHeight(6).Scrollable(),
                 new Rule(),
                 DemoUi.Title("With Border"),

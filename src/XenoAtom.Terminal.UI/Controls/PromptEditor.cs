@@ -1159,10 +1159,41 @@ public partial class PromptEditor : TextEditorBase
         _promptWidthCells = Math.Max(promptWidth, contWidth);
     }
 
+    private int MeasurePromptColumnWidth(Theme theme, PromptEditorStyle style, int availableContentWidth)
+    {
+        _ = theme;
+        var separatorWidth = style.ShowPromptSeparator ? 1 : 0;
+        var maxPromptWidth = Math.Max(0, availableContentWidth - separatorWidth);
+        var promptContentWidthCells = Math.Clamp(_promptWidthCells, 0, maxPromptWidth);
+
+        if (_promptVisual is not null && maxPromptWidth > 0)
+        {
+            _promptVisual.Measure(new LayoutConstraints(0, maxPromptWidth, 0, 1));
+            promptContentWidthCells = Math.Max(promptContentWidthCells, _promptVisual.DesiredSize.Width);
+        }
+
+        return Math.Clamp(promptContentWidthCells + separatorWidth, 0, availableContentWidth);
+    }
+
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var size = new Size(48, IsSingleLine ? 1 : 5);
+        var theme = GetTheme();
+        var style = GetStyle<PromptEditorStyle>();
+        var width = Math.Max(0, Math.Min(constraints.MaxWidth, 48));
+        var height = IsSingleLine ? 1 : 5;
+
+        if (AutoSizeHeight)
+        {
+            EnsurePromptCache(theme);
+
+            var contentWidth = Math.Max(0, width - style.Padding.Horizontal);
+            var promptWidth = MeasurePromptColumnWidth(theme, style, contentWidth);
+            var editorWidth = Math.Max(0, contentWidth - promptWidth);
+            height = Math.Max(1, style.Padding.Vertical + MeasureContentRowsForWidth(editorWidth));
+        }
+
+        var size = new Size(width, height);
         return SizeHints.Fixed(constraints.Clamp(size));
     }
 
@@ -1183,17 +1214,8 @@ public partial class PromptEditor : TextEditorBase
 
         _showPromptSeparator = style.ShowPromptSeparator;
         var separatorWidth = _showPromptSeparator ? 1 : 0;
-        var maxPromptWidth = Math.Max(0, _contentRect.Width - separatorWidth);
-
-        _promptContentWidthCells = Math.Clamp(_promptWidthCells, 0, maxPromptWidth);
-
-        if (_promptVisual is not null && maxPromptWidth > 0)
-        {
-            _promptVisual.Measure(new LayoutConstraints(0, maxPromptWidth, 0, 1));
-            _promptContentWidthCells = Math.Max(_promptContentWidthCells, _promptVisual.DesiredSize.Width);
-        }
-
-        var promptWidth = Math.Clamp(_promptContentWidthCells + separatorWidth, 0, _contentRect.Width);
+        var promptWidth = MeasurePromptColumnWidth(theme, style, _contentRect.Width);
+        _promptContentWidthCells = Math.Max(0, promptWidth - separatorWidth);
         _promptRect = new Rectangle(_contentRect.X, _contentRect.Y, promptWidth, _contentRect.Height);
         _promptContentRect = new Rectangle(_promptRect.X, _promptRect.Y, Math.Max(0, _promptRect.Width - separatorWidth), _promptRect.Height);
         _editorRect = new Rectangle(_contentRect.X + promptWidth, _contentRect.Y, Math.Max(0, _contentRect.Width - promptWidth), _contentRect.Height);

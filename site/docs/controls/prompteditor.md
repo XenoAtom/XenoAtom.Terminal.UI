@@ -86,6 +86,15 @@ In single-line mode, attempted line breaks are discarded:
 
 The `PromptEditor.InsertNewLine` command is hidden when `LineMode` is `SingleLine`.
 
+If you want a multi-line prompt editor to grow with its content until it reaches a layout limit, enable shared editor auto-sizing:
+
+```csharp
+new PromptEditor()
+    .AutoSizeMode(TextEditorAutoSizeMode.Height)
+    .MinHeight(1)
+    .MaxHeight(6);
+```
+
 ## Syntax highlighting
 
 `PromptEditor` supports lightweight, pluggable syntax highlighting via a delegate that produces style runs:

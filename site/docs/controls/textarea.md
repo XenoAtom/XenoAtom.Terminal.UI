@@ -31,6 +31,20 @@ new TextArea().Text(text);
 
 See also [SearchReplacePopup](searchreplacepopup.md).
 
+## Auto-expand height
+
+To let a `TextArea` grow with its content instead of keeping the default fixed height, enable auto-sizing on the shared text-editor base:
+
+```csharp
+new TextArea()
+    .Text(text)
+    .AutoSizeMode(TextEditorAutoSizeMode.Height)
+    .MinHeight(2)
+    .MaxHeight(8);
+```
+
+The control expands vertically until it reaches its normal layout limits (for example `MaxHeight` or a bounded parent slot).
+
 ## Undo / redo
 
 TextArea supports undo/redo:

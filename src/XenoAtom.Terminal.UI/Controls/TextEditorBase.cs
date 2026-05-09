@@ -15,6 +15,22 @@ using XenoAtom.Terminal.UI.Text;
 namespace XenoAtom.Terminal.UI.Controls;
 
 /// <summary>
+/// Controls whether a text editor should grow vertically to fit its content during measure.
+/// </summary>
+public enum TextEditorAutoSizeMode
+{
+    /// <summary>
+    /// Use the control's default measured size.
+    /// </summary>
+    None = 0,
+
+    /// <summary>
+    /// Grow the control height to fit the current document, subject to normal layout constraints.
+    /// </summary>
+    Height = 1,
+}
+
+/// <summary>
 /// Base class for text editor controls (TextBox, TextArea).
 /// </summary>
 /// <remarks>
@@ -283,6 +299,22 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     [Bindable]
     public partial bool IsSelectable { get; set; }
 
+    /// <summary>
+    /// Gets or sets how the editor sizes itself to its current content.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// When set to <see cref="TextEditorAutoSizeMode.Height"/>, multi-line editors grow vertically to fit their current
+    /// document, while still respecting normal layout constraints such as <see cref="Visual.MaxHeight"/>.
+    /// </para>
+    /// <para>
+    /// Single-line editors continue to measure as a single row, so enabling this mode mainly affects controls such as
+    /// <see cref="TextArea"/>, <see cref="CodeEditor"/>, and multi-line <see cref="PromptEditor"/> instances.
+    /// </para>
+    /// </remarks>
+    [Bindable]
+    public partial TextEditorAutoSizeMode AutoSizeMode { get; set; }
+
     // NOTE: Text document replacement is handled by PrepareChildren() to avoid ad-hoc invalidation.
 
     /// <summary>
@@ -357,6 +389,19 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     /// Gets a value indicating whether placeholder text is shown only when the editor is not focused.
     /// </summary>
     protected virtual bool ShowPlaceholderWhenUnfocusedOnly => true;
+
+    /// <summary>
+    /// Gets a value indicating whether the editor should auto-size its height from content.
+    /// </summary>
+    protected bool AutoSizeHeight => AutoSizeMode == TextEditorAutoSizeMode.Height;
+
+    /// <summary>
+    /// Measures the number of visual rows needed to display the current document for the specified content width.
+    /// </summary>
+    /// <param name="contentWidth">The available content width, in cells.</param>
+    /// <returns>The number of required visual rows.</returns>
+    protected int MeasureContentRowsForWidth(int contentWidth)
+        => _core.MeasureContentHeight(Math.Max(0, contentWidth), BuildEditorOptions());
 
     /// <summary>
     /// Writes a segment of text into the buffer.

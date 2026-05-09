@@ -814,8 +814,10 @@ public sealed partial class CodeEditor : TextEditorBase
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var width = 40;
-        var height = 10;
+        var width = Math.Max(0, Math.Min(constraints.MaxWidth, 40));
+        var height = AutoSizeHeight
+            ? MeasureAutoSizeHeight(width)
+            : 10;
         return SizeHints.Fixed(constraints.Clamp(new Size(width, height)));
     }
 
@@ -1166,6 +1168,26 @@ public sealed partial class CodeEditor : TextEditorBase
         }
 
         _lineNumberDigits = digits;
+    }
+
+    private int MeasureAutoSizeHeight(int totalWidth)
+    {
+        var style = GetStyle<CodeEditorStyle>();
+        var contentWidth = Math.Max(0, totalWidth - style.Padding.Horizontal);
+        if (contentWidth <= 0)
+        {
+            return 1;
+        }
+
+        _visibleLines.Clear();
+        _lineNumberDigits = Math.Max(1, Math.Max(MinLineNumberDigits, CountDigits(Math.Max(1, TextDocument.CurrentSnapshot.LineCount))));
+
+        var measureBounds = new Rectangle(0, 0, contentWidth, 1);
+        var leftMarginWidth = MeasureMargins(_leftMargins, style, measureBounds);
+        var rightMarginWidth = MeasureMargins(_rightMargins, style, measureBounds);
+        var editorWidth = Math.Max(0, contentWidth - leftMarginWidth - rightMarginWidth);
+
+        return Math.Max(1, style.Padding.Vertical + MeasureContentRowsForWidth(editorWidth));
     }
 
     private int MeasureMargins(BindableList<CodeEditorMargin> margins, CodeEditorStyle style, Rectangle bounds)

@@ -55,6 +55,19 @@ public sealed class TextAreaTests
     }
 
     [TestMethod]
+    public void TextArea_AutoSizeHeight_Grows_With_Content_Up_To_MaxHeight()
+    {
+        var textArea = new TextArea("Line 1\nLine 2\nLine 3\nLine 4")
+            .AutoSizeMode(TextEditorAutoSizeMode.Height)
+            .MinHeight(2)
+            .MaxHeight(3);
+
+        textArea.Measure(new LayoutConstraints(0, 40, 0, 10));
+
+        Assert.AreEqual(new Size(32, 3), textArea.DesiredSize);
+    }
+
+    [TestMethod]
     public void TextArea_CtrlHomeEnd_Moves_Caret_To_Document_Edges()
     {
         var textArea = new TextArea("Line 1\nLine 2\nLine 3");

@@ -46,6 +46,15 @@ new CodeEditor()
 
 This means `CodeEditor` behaves like a specialized `TextArea`, not a separate editing subsystem.
 
+It also supports shared editor auto-sizing when you want the editor to grow with its content up to a layout limit:
+
+```csharp
+new CodeEditor(source)
+    .AutoSizeMode(TextEditorAutoSizeMode.Height)
+    .MinHeight(4)
+    .MaxHeight(16);
+```
+
 ## Indentation
 
 By default, pressing `Tab` inserts four spaces. This avoids real tab characters in indentation-sensitive languages such as YAML and Python.

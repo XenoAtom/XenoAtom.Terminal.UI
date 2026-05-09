@@ -222,7 +222,9 @@ public partial class TextBox : TextEditorBase
         var availableSize = new Size(constraints.MaxWidth, constraints.MaxHeight);
         var width = Math.Max(10, Math.Min(availableSize.Width, 24));
         var padding = GetTextBoxStyle().Padding;
-        var height = Math.Max(1, 1 + padding.Vertical);
+        var contentWidth = Math.Max(0, width - padding.Horizontal);
+        var rows = AutoSizeHeight ? MeasureContentRowsForWidth(contentWidth) : 1;
+        var height = Math.Max(1, rows + padding.Vertical);
         return SizeHints.Fixed(new Size(width, Math.Min(availableSize.Height, height)));
     }
 

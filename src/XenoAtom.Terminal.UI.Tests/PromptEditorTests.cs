@@ -459,6 +459,19 @@ public sealed class PromptEditorTests
     }
 
     [TestMethod]
+    public void PromptEditor_AutoSizeHeight_Uses_Editor_Column_After_Prompt()
+    {
+        var editor = new PromptEditor("123456789012")
+            .AutoSizeMode(TextEditorAutoSizeMode.Height)
+            .PromptMarkup(">> ")
+            .ContinuationPromptMarkup(".. ");
+
+        editor.Measure(new LayoutConstraints(0, 12, 0, 10));
+
+        Assert.AreEqual(new Size(12, 2), editor.DesiredSize);
+    }
+
+    [TestMethod]
     public void PromptEditor_MouseWheel_Does_Not_Move_Caret_Or_Scroll()
     {
         var editor = new PromptEditor()

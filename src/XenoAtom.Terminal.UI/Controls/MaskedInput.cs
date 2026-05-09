@@ -250,7 +250,9 @@ public sealed partial class MaskedInput : TextEditorBase
         var style = GetStyle<MaskedInputStyle>();
         var padding = style.Padding;
         var width = Math.Max(0, Math.Min(constraints.MaxWidth, _tokens.Length + padding.Horizontal));
-        var height = Math.Max(1, Math.Min(constraints.MaxHeight, 1 + padding.Vertical));
+        var contentWidth = Math.Max(0, width - padding.Horizontal);
+        var rows = AutoSizeHeight ? MeasureContentRowsForWidth(contentWidth) : 1;
+        var height = Math.Max(1, Math.Min(constraints.MaxHeight, rows + padding.Vertical));
         return SizeHints.Fixed(new Size(width, height));
     }
 

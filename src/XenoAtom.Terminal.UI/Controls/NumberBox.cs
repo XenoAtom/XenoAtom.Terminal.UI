@@ -239,7 +239,9 @@ public partial class NumberBox<T> : TextEditorBase where T : struct, INumber<T>
 
         var textBoxStyle = GetTextBoxStyle();
         var padding = textBoxStyle.Padding;
-        var editorHeight = Math.Max(1, 1 + padding.Vertical);
+        var contentWidth = Math.Max(0, width - padding.Horizontal);
+        var editorRows = AutoSizeHeight ? MeasureContentRowsForWidth(contentWidth) : 1;
+        var editorHeight = Math.Max(1, editorRows + padding.Vertical);
 
         var height = editorHeight;
 

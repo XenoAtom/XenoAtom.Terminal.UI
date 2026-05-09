@@ -73,6 +73,17 @@ public sealed class CodeEditorTests
     }
 
     [TestMethod]
+    public void CodeEditor_AutoSizeHeight_Grows_With_Content()
+    {
+        var editor = new CodeEditor("12345678901234")
+            .AutoSizeMode(TextEditorAutoSizeMode.Height);
+
+        editor.Measure(new LayoutConstraints(0, 12, 0, 10));
+
+        Assert.AreEqual(new Size(12, 2), editor.DesiredSize);
+    }
+
+    [TestMethod]
     public void CodeEditor_LineNumberWidth_Adapts_To_Visible_Range()
     {
         var text = string.Join("\n", Enumerable.Range(1, 150).Select(i => $"Line {i:000}"));

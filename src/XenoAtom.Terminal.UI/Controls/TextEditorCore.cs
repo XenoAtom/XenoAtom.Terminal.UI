@@ -297,6 +297,19 @@ internal sealed partial class TextEditorCore
         }
     }
 
+    internal int MeasureContentHeight(int contentWidth, in TextEditorOptions options)
+    {
+        if (options.SingleLine)
+        {
+            return 1;
+        }
+
+        contentWidth = Math.Max(1, contentWidth);
+        var snapshot = _document.CurrentSnapshot;
+        EnsureMultiLineLayoutCache(options, contentWidth);
+        return Math.Max(1, _layoutCache.TotalRows);
+    }
+
     private void UpdateExtent(in TextEditorOptions options)
     {
         if (_contentWidth <= 0 || _contentHeight <= 0)

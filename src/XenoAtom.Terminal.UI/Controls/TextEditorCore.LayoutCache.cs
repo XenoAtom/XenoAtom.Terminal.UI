@@ -51,8 +51,11 @@ internal sealed partial class TextEditorCore
     }
 
     private void EnsureMultiLineLayoutCache(in TextEditorOptions options)
+        => EnsureMultiLineLayoutCache(options, _contentWidth);
+
+    private void EnsureMultiLineLayoutCache(in TextEditorOptions options, int contentWidth)
     {
-        if (options.SingleLine || _contentWidth <= 0)
+        if (options.SingleLine || contentWidth <= 0)
         {
             return;
         }
@@ -67,11 +70,11 @@ internal sealed partial class TextEditorCore
                 && pending.OldVersion == _layoutCache.SnapshotVersion
                 && pending.NewVersion == snapshot.Version)
             {
-                _layoutCache.ApplyChange(snapshot, text, pending, options.WordWrap, _contentWidth, options.TabSize);
+                _layoutCache.ApplyChange(snapshot, text, pending, options.WordWrap, contentWidth, options.TabSize);
             }
             else
             {
-                _layoutCache.Rebuild(snapshot, text, options.WordWrap, _contentWidth, options.TabSize);
+                _layoutCache.Rebuild(snapshot, text, options.WordWrap, contentWidth, options.TabSize);
             }
 
             _pendingLayoutChange = null;
@@ -79,9 +82,9 @@ internal sealed partial class TextEditorCore
             return;
         }
 
-        if (_layoutCache.RequiresLayoutRefresh(options.WordWrap, _contentWidth, options.TabSize))
+        if (_layoutCache.RequiresLayoutRefresh(options.WordWrap, contentWidth, options.TabSize))
         {
-            _layoutCache.RefreshLayout(snapshot, text, options.WordWrap, _contentWidth, options.TabSize);
+            _layoutCache.RefreshLayout(snapshot, text, options.WordWrap, contentWidth, options.TabSize);
         }
     }
 

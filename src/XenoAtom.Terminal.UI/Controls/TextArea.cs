@@ -109,10 +109,14 @@ public sealed partial class TextArea : TextEditorBase
     /// <inheritdoc />
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
-        var width = 32;
-        var height = 10;
+        var padding = GetStyle<TextAreaStyle>().Padding;
+        var width = Math.Max(0, Math.Min(constraints.MaxWidth, 32));
+        var contentWidth = Math.Max(0, width - padding.Horizontal);
+        var height = AutoSizeHeight
+            ? padding.Vertical + MeasureContentRowsForWidth(contentWidth)
+            : 10;
 
-        return SizeHints.Fixed(constraints.Clamp(new Size(width, height)));
+        return SizeHints.Fixed(constraints.Clamp(new Size(width, Math.Max(1, height))));
     }
 
     /// <inheritdoc/>
