@@ -2539,6 +2539,11 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                     continue;
                 }
 
+                if (!cmd.RouteGesture)
+                {
+                    continue;
+                }
+
                 if (!gesture.Matches(keyEvent))
                 {
                     continue;
@@ -2572,6 +2577,11 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             {
                 var cmd = _globalCommands[i];
                 if (cmd.Gesture is not { } gesture)
+                {
+                    continue;
+                }
+
+                if (!cmd.RouteGesture)
                 {
                     continue;
                 }

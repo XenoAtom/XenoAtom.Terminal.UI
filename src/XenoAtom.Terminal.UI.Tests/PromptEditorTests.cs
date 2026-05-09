@@ -240,6 +240,86 @@ public sealed class PromptEditorTests
     }
 
     [TestMethod]
+    public void PromptEditor_Tab_And_ShiftTab_Move_Focus_When_Completion_Is_Not_Handled()
+    {
+        static PromptEditorCompletion Complete(in PromptEditorCompletionRequest request)
+            => new(
+                Handled: false,
+                Candidates: null,
+                ReplaceStart: request.CaretIndex,
+                ReplaceLength: 0);
+
+        var previous = new Button("Previous");
+        var editor = new PromptEditor()
+            .CompletionHandler(Complete)
+            .AutoFocus(true);
+        var next = new Button("Next");
+
+        var root = new VStack(previous, editor, next).Spacing(0);
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        Assert.AreSame(editor, driver.App.FocusedElement);
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
+        driver.TickUntil(() => ReferenceEquals(driver.App.FocusedElement, next));
+
+        driver.App.Focus(editor);
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab, Modifiers = TerminalModifiers.Shift });
+        driver.TickUntil(() => ReferenceEquals(driver.App.FocusedElement, previous));
+    }
+
+    [TestMethod]
+    public void PromptEditor_Completion_Gesture_Can_Be_Rebound_Off_Tab()
+    {
+        static PromptEditorCompletion Complete(in PromptEditorCompletionRequest request)
+        {
+            var replaceStart = Math.Max(0, request.CaretIndex - 1);
+            return new PromptEditorCompletion(
+                Handled: true,
+                Candidates: new[] { "hello" },
+                ReplaceStart: replaceStart,
+                ReplaceLength: request.CaretIndex - replaceStart);
+        }
+
+        var config = PromptEditorConfig.Default with
+        {
+            CompleteCommand = PromptEditorConfig.Default.CompleteCommand with
+            {
+                Gesture = new KeyGesture(TerminalKey.F4),
+            },
+        };
+
+        var editor = new PromptEditor(config)
+            .CompletionPresentation(PromptEditorCompletionPresentation.InlineCycle)
+            .CompletionHandler(Complete)
+            .AutoFocus(true);
+        var next = new Button("Next");
+
+        var root = new VStack(editor, next).Spacing(0);
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        Assert.AreSame(editor, driver.App.FocusedElement);
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "h" });
+        driver.TickUntil(() => editor.Text == "h");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Tab });
+        driver.TickUntil(() => ReferenceEquals(driver.App.FocusedElement, next));
+
+        driver.App.Focus(editor);
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F4 });
+        driver.TickUntil(() => editor.Text == "hello");
+    }
+
+    [TestMethod]
     public void PromptEditor_Escape_Cancels_By_Default()
     {
         var canceled = false;

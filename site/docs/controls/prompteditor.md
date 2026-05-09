@@ -120,7 +120,10 @@ new PromptEditor()
 
 Default behavior:
 
-- `Tab` requests completion (unless `AcceptTab=true`).
+- The `PromptEditor.Complete` command triggers completion. By default its gesture is `Tab`, so `Shift+Tab` keeps working for focus traversal.
+- If no `CompletionHandler` is set, `Tab` falls through to the app's normal focus navigation.
+- If a `CompletionHandler` returns `Handled = false`, the completion gesture also falls through to the app's normal behavior (for example `Tab` focus traversal).
+- Rebind `PromptEditor.Complete` through `PromptEditorConfig` when you want plain `Tab` / `Shift+Tab` focus traversal while still keeping completion on another key.
 - In `PopupList` mode, a single candidate is applied immediately; the popup is only used when there are multiple choices.
 - `Esc` cancels completion (or cancels the prompt if no completion UI is active).
 

@@ -192,6 +192,7 @@ public partial class PromptEditor : TextEditorBase
     private const int PromptTabSize = 4;
 
     private readonly MarkupTextParser _markupParser;
+    private readonly KeyGesture? _completeGesture;
     private Visual? _promptVisual;
 
     private string? _cachedPromptMarkup;
@@ -257,8 +258,10 @@ public partial class PromptEditor : TextEditorBase
     {
         var defaultConfig = PromptEditorConfig.Default;
         var effectiveConfig = config ?? defaultConfig;
+        var completeCommandConfig = effectiveConfig.CompleteCommand ?? defaultConfig.CompleteCommand;
 
         _markupParser = new MarkupTextParser();
+        _completeGesture = completeCommandConfig.Gesture;
 
         Focusable = true;
         this.WordWrap(true);
@@ -282,7 +285,7 @@ public partial class PromptEditor : TextEditorBase
         AddCommand(CreateAcceptCommand(effectiveConfig.AcceptCommand ?? defaultConfig.AcceptCommand));
         AddCommand(CreateCancelCommand(effectiveConfig.CancelCommand ?? defaultConfig.CancelCommand));
         AddCommand(CreateInsertNewLineCommand(effectiveConfig.InsertNewLineCommand ?? defaultConfig.InsertNewLineCommand));
-        AddCommand(CreateCompleteCommand(effectiveConfig.CompleteCommand ?? defaultConfig.CompleteCommand));
+        AddCommand(CreateCompleteCommand(completeCommandConfig));
         AddCommand(CreateHistoryPreviousCommand(effectiveConfig.HistoryPreviousCommand ?? defaultConfig.HistoryPreviousCommand));
         AddCommand(CreateHistoryNextCommand(effectiveConfig.HistoryNextCommand ?? defaultConfig.HistoryNextCommand));
     }
@@ -395,6 +398,8 @@ public partial class PromptEditor : TextEditorBase
             Importance = CommandImportance.Primary,
             Presentation = CommandPresentation.CommandBar,
             IsVisible = static v => ((PromptEditor)v).CompletionHandler.Invoke is not null,
+            ConsumesGestureWhenUnavailable = false,
+            RouteGesture = false,
             Execute = static v => ((PromptEditor)v).RequestCompletion(TerminalModifiers.None),
         };
     }
@@ -652,10 +657,8 @@ public partial class PromptEditor : TextEditorBase
             return;
         }
 
-        if (e.Key == TerminalKey.Tab && !AcceptTab)
+        if (TryHandleCompletionGesture(e))
         {
-            RequestCompletion(e.Modifiers);
-            e.Handled = true;
             return;
         }
 
@@ -743,6 +746,27 @@ public partial class PromptEditor : TextEditorBase
         else
         {
             InsertNewLine();
+        }
+
+        e.Handled = true;
+        return true;
+    }
+
+    private bool TryHandleCompletionGesture(KeyEventArgs e)
+    {
+        if (_completeGesture is not { } completeGesture || !completeGesture.Matches(e.RawEvent))
+        {
+            return false;
+        }
+
+        if (AcceptTab && e.Key == TerminalKey.Tab)
+        {
+            return false;
+        }
+
+        if (!RequestCompletion(e.Modifiers))
+        {
+            return false;
         }
 
         e.Handled = true;
@@ -843,12 +867,12 @@ public partial class PromptEditor : TextEditorBase
         CaretIndex = text.Length;
     }
 
-    private void RequestCompletion(TerminalModifiers modifiers)
+    private bool RequestCompletion(TerminalModifiers modifiers)
     {
         var handler = CompletionHandler.Invoke;
         if (handler is null)
         {
-            return;
+            return false;
         }
 
         var snapshot = TextDocument.CurrentSnapshot;
@@ -864,7 +888,7 @@ public partial class PromptEditor : TextEditorBase
         {
             CancelCompletion();
             SetGhostText(result.Handled ? result.GhostText : null);
-            return;
+            return result.Handled;
         }
 
         _completionCandidates = result.Candidates;
@@ -881,7 +905,7 @@ public partial class PromptEditor : TextEditorBase
             _completionSelectedIndex = nextIndex;
             ApplyCompletionCandidate(result.Candidates[nextIndex]);
             _completionActive = true;
-            return;
+            return true;
         }
 
         if (CompletionPresentation == PromptEditorCompletionPresentation.PopupList)
@@ -891,16 +915,17 @@ public partial class PromptEditor : TextEditorBase
             {
                 ApplyCompletionCandidate(result.Candidates[initialIndex]);
                 CancelCompletion();
-                return;
+                return true;
             }
 
             OpenCompletionPopup(result.Candidates, initialIndex);
             _completionActive = true;
-            return;
+            return true;
         }
 
         _completionSelectedIndex = initialIndex;
         _completionActive = true;
+        return true;
     }
 
     private void ApplyCompletionCandidate(string candidate)

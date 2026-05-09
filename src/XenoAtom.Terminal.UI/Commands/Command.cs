@@ -97,6 +97,15 @@ public sealed class Command
     public bool ConsumesGestureWhenUnavailable { get; init; } = true;
 
     /// <summary>
+    /// Gets a value indicating whether <see cref="Gesture"/> participates in automatic keyboard shortcut routing.
+    /// </summary>
+    /// <remarks>
+    /// Set this to <see langword="false"/> when a control wants to surface a gesture in command UI while handling the raw key
+    /// itself so it can choose whether the key should fall through to focus traversal or other default behavior.
+    /// </remarks>
+    public bool RouteGesture { get; init; } = true;
+
+    /// <summary>
     /// Returns <see langword="true"/> if the command is visible for the specified <paramref name="target"/>.
     /// </summary>
     public bool IsVisibleFor(Visual target) => IsVisible is null || IsVisible(target);
