@@ -48,6 +48,7 @@ viewport clipping/offsetting automatically.
 - Mouse wheel scrolls the closest `ScrollViewer` under the pointer.
 - `Shift + wheel` (when supported by the host) scrolls horizontally.
 - Scrollbars can be clicked to jump to a position or dragged continuously; they can be focused for keyboard interaction.
+- When a `ScrollViewer` is only a wrapper around an interactive child, set `IsTabStop = false` to skip the wrapper during `Tab` / `Shift+Tab` focus traversal while keeping it focusable for mouse or programmatic focus.
 
 ## Layout behavior (viewport vs extent)
 

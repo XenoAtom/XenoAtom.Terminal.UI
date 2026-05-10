@@ -27,7 +27,7 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
   - Brush gradients for controls such as `TextBlock`, `TextBox`, and `TextFiglet`
   - RootLoops-powered color scheme generator (https://rootloops.sh) with many built-in schemes
 - **Input**:
-  - Keyboard, mouse, resize events; focus navigation; routed events where appropriate
+  - Keyboard, mouse, resize events; focus navigation with configurable tab stops; routed events where appropriate
 - **Commands & key hints**:
   - Context-aware commands with optional typed names, single-stroke gestures, and multi-stroke sequences
   - `CommandBar` control for discoverable shortcuts

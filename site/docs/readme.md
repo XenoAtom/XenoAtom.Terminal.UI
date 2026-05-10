@@ -8,7 +8,7 @@ XenoAtom.Terminal.UI is a modern retained-mode terminal UI framework built on to
 It supports both:
 
 - Inline widgets that render as part of normal terminal output (`Terminal.Write`, `Terminal.Live`)
-- Fullscreen applications (alternate screen, focus navigation, routed input, dialogs, etc.)
+- Fullscreen applications (alternate screen, focus navigation with configurable tab stops, routed input, dialogs, etc.)
 
 This guide documents the concepts, features, and controls of the library, including interactive controls such as
 `DataGridControl` with sorting, filtering, search, resizing, inline editing, and direct cell activation for toggle/action cells,

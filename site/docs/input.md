@@ -47,6 +47,7 @@ The input root can be different when a modal overlay is active (for example, a d
 Controls opt in to focus by setting `Focusable = true`.
 
 - Tab navigation moves focus between focusable visuals.
+- Set `IsTabStop = false` to keep a focusable visual reachable by mouse or `TerminalApp.Focus(...)` while skipping it during `Tab` / `Shift+Tab` traversal.
 - Focus affects rendering (focused styles) and keyboard input routing.
 
 ### How focus is assigned

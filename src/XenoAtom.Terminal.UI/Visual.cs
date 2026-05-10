@@ -99,6 +99,16 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     public partial bool Focusable { get; protected set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether this visual participates in Tab focus traversal.
+    /// </summary>
+    /// <remarks>
+    /// Set this property to <see langword="false"/> to keep a focusable visual reachable through mouse or
+    /// programmatic focus while skipping it when the user navigates with Tab or Shift+Tab.
+    /// </remarks>
+    [Bindable]
+    public partial bool IsTabStop { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether this visual should be preferred as the initial focus target.
     /// </summary>
     /// <remarks>
@@ -122,6 +132,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     {
         _isVisible = true;
         _isEnabled = true;
+        _isTabStop = true;
         _maxWidth = int.MaxValue;
         _maxHeight = int.MaxValue;
     }

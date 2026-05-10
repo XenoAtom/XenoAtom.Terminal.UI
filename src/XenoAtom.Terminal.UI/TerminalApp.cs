@@ -2929,14 +2929,12 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
         if (FocusedElement is null || !_focusablesScratch.Contains(FocusedElement))
         {
-            FocusedElement = _focusablesScratch[0];
-            RequestRender();
+            FocusFirstTabStop();
             return;
         }
 
         var index = _focusablesScratch.IndexOf(FocusedElement);
-        FocusedElement = _focusablesScratch[(index + 1) % _focusablesScratch.Count];
-        RequestRender();
+        FocusNextTabStop(index);
     }
 
     private void FocusPrevious()
@@ -2951,14 +2949,66 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
         if (FocusedElement is null || !_focusablesScratch.Contains(FocusedElement))
         {
-            FocusedElement = _focusablesScratch[^1];
-            RequestRender();
+            FocusLastTabStop();
             return;
         }
 
         var index = _focusablesScratch.IndexOf(FocusedElement);
-        FocusedElement = _focusablesScratch[(index - 1 + _focusablesScratch.Count) % _focusablesScratch.Count];
-        RequestRender();
+        FocusPreviousTabStop(index);
+    }
+
+    private void FocusFirstTabStop()
+    {
+        for (var i = 0; i < _focusablesScratch.Count; i++)
+        {
+            if (_focusablesScratch[i].IsTabStop)
+            {
+                FocusedElement = _focusablesScratch[i];
+                RequestRender();
+                return;
+            }
+        }
+    }
+
+    private void FocusLastTabStop()
+    {
+        for (var i = _focusablesScratch.Count - 1; i >= 0; i--)
+        {
+            if (_focusablesScratch[i].IsTabStop)
+            {
+                FocusedElement = _focusablesScratch[i];
+                RequestRender();
+                return;
+            }
+        }
+    }
+
+    private void FocusNextTabStop(int currentIndex)
+    {
+        for (var offset = 1; offset <= _focusablesScratch.Count; offset++)
+        {
+            var candidate = _focusablesScratch[(currentIndex + offset) % _focusablesScratch.Count];
+            if (candidate.IsTabStop)
+            {
+                FocusedElement = candidate;
+                RequestRender();
+                return;
+            }
+        }
+    }
+
+    private void FocusPreviousTabStop(int currentIndex)
+    {
+        for (var offset = 1; offset <= _focusablesScratch.Count; offset++)
+        {
+            var candidate = _focusablesScratch[(currentIndex - offset + _focusablesScratch.Count) % _focusablesScratch.Count];
+            if (candidate.IsTabStop)
+            {
+                FocusedElement = candidate;
+                RequestRender();
+                return;
+            }
+        }
     }
 
     private void HandleTerminalEvent(TerminalEvent ev)
@@ -3513,8 +3563,8 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private static void CollectFocusables(Visual root, List<Visual> focusables)
     {
         // Prefer focusing leaf controls over container controls (e.g. focus a TreeView inside a ScrollViewer rather
-        // than the ScrollViewer itself). Containers remain reachable via Tab because we still yield them after their
-        // descendants.
+        // than the ScrollViewer itself). Containers that are tab stops remain reachable via Tab because we still yield
+        // them after their descendants.
         for (var i = 0; i < root.GetChildrenCount(); i++)
         {
             var child = root.GetChildUnsafe(i);
