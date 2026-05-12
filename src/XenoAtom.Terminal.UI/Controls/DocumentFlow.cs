@@ -658,6 +658,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             _layoutItemsVersion = itemsVersion;
             _layoutItemSpacing = itemSpacing;
             _layoutDefaultPadding = defaultPadding;
+            RecycleActiveBlocksNoLongerMatchingItems(items);
             RebuildLayouts(items, viewportWidth, itemSpacing, defaultPadding);
             _layoutCacheValid = true;
         }
@@ -971,7 +972,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
                         var visual = AcquireRecycledOrCreate(blockLayout.Block, reuseKey);
                         active = new ActiveBlockVisual(visual, blockLayout.Block, reuseKey, blockLayout.Version);
                         _activeBlocks[key] = active;
-                        _activeChildren.Add(visual);
+                        AddActiveChild(key, visual);
                         requiresMeasure = true;
                     }
                     else if (active.BlockVersion != blockLayout.Version)
@@ -984,7 +985,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
                             var visual = AcquireRecycledOrCreate(blockLayout.Block, reuseKey);
                             active = new ActiveBlockVisual(visual, blockLayout.Block, reuseKey, blockLayout.Version);
                             _activeBlocks[key] = active;
-                            _activeChildren.Add(visual);
+                            AddActiveChild(key, visual);
                             requiresMeasure = true;
                         }
                         else
@@ -1005,6 +1006,76 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             }
 
             RecycleStaleActiveBlocks();
+        }
+
+        private void RecycleActiveBlocksNoLongerMatchingItems(BindableList<DocumentFlowItem> items)
+        {
+            if (_activeBlocks.Count == 0)
+            {
+                return;
+            }
+
+            _staleKeys.Clear();
+            foreach (var pair in _activeBlocks)
+            {
+                var documentIndex = (int)(pair.Key >> 32);
+                var blockIndex = (int)(pair.Key & 0xFFFFFFFF);
+                if ((uint)documentIndex >= (uint)items.Count)
+                {
+                    _staleKeys.Add(pair.Key);
+                    continue;
+                }
+
+                var content = items[documentIndex].Content;
+                if (content is null ||
+                    (uint)blockIndex >= (uint)content.BlockCount ||
+                    !ReferenceEquals(content.GetBlock(blockIndex), pair.Value.Block))
+                {
+                    _staleKeys.Add(pair.Key);
+                }
+            }
+
+            for (var i = 0; i < _staleKeys.Count; i++)
+            {
+                var key = _staleKeys[i];
+                if (_activeBlocks.TryGetValue(key, out var active))
+                {
+                    RecycleActiveBlock(key, active);
+                }
+            }
+        }
+
+        private void AddActiveChild(long key, Visual visual)
+        {
+            RecycleStaleActiveBlockOwningVisual(key, visual);
+            _activeChildren.Add(visual);
+        }
+
+        private void RecycleStaleActiveBlockOwningVisual(long key, Visual visual)
+        {
+            if (!ReferenceEquals(visual.Parent, this))
+            {
+                return;
+            }
+
+            long staleKey = 0;
+            ActiveBlockVisual? staleActive = null;
+            foreach (var pair in _activeBlocks)
+            {
+                if (pair.Key != key &&
+                    pair.Value.Generation != _arrangeGeneration &&
+                    ReferenceEquals(pair.Value.Visual, visual))
+                {
+                    staleKey = pair.Key;
+                    staleActive = pair.Value;
+                    break;
+                }
+            }
+
+            if (staleActive is not null)
+            {
+                RecycleActiveBlock(staleKey, staleActive, storeVisual: false);
+            }
         }
 
         private static bool IntersectsVertically(in Rectangle a, in Rectangle b)
@@ -1053,12 +1124,15 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             }
         }
 
-        private void RecycleActiveBlock(long key, ActiveBlockVisual active)
+        private void RecycleActiveBlock(long key, ActiveBlockVisual active, bool storeVisual = true)
         {
             active.Block.Release(active.Visual);
-            StoreRecycledVisual(active.ReuseKey, active.Visual);
             _activeChildren.Remove(active.Visual);
             _activeBlocks.Remove(key);
+            if (storeVisual)
+            {
+                StoreRecycledVisual(active.ReuseKey, active.Visual);
+            }
         }
 
         private Visual AcquireRecycledOrCreate(DocumentFlowBlock block, object reuseKey)

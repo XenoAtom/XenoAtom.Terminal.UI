@@ -646,6 +646,44 @@ public sealed class DocumentFlowTests
     }
 
     [TestMethod]
+    public void DocumentFlow_Reindexes_Visible_FixedVisual_Block_Without_Double_Attaching()
+    {
+        var sharedVisual = new ProbeVisual("Shared");
+        var flow = new DocumentFlow
+        {
+            ItemPadding = Thickness.Zero,
+            ItemSpacing = 0,
+        };
+
+        flow.Items.Add(new DocumentFlowItem
+        {
+            Content = new FlowDocument().Add(new ProbeVisual("Before")),
+            Alignment = DocumentFlowAlignment.Left,
+            MaxWidth = 20,
+            Padding = Thickness.Zero,
+        });
+        flow.Items.Add(new DocumentFlowItem
+        {
+            Content = new FlowDocument().Add(sharedVisual),
+            Alignment = DocumentFlowAlignment.Left,
+            MaxWidth = 20,
+            Padding = Thickness.Zero,
+        });
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(30, 4));
+        driver.Tick();
+
+        Assert.IsNotNull(sharedVisual.Parent);
+        Assert.AreEqual(1, flow.EnumerateVisualsDepthFirst().Count(visual => ReferenceEquals(visual, sharedVisual)));
+
+        flow.Items.RemoveAt(0);
+        driver.Tick();
+
+        Assert.IsNotNull(sharedVisual.Parent);
+        Assert.AreEqual(1, flow.EnumerateVisualsDepthFirst().Count(visual => ReferenceEquals(visual, sharedVisual)));
+    }
+
+    [TestMethod]
     public void DocumentFlow_Selection_IsExclusive_Across_Paragraph_Blocks()
     {
         var flow = new DocumentFlow
