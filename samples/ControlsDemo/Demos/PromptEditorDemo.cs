@@ -39,16 +39,21 @@ public sealed class PromptEditorDemo : ControlsDemoBase
             new("/status", "Show status (demo command)."),
         };
 
-        var help = new Markup("""
-                              [bold green]PromptEditor[/] - prompt-style editor demo
+        var help = new Markup(() =>
+        {
+            _ = context.Runtime.Frame.Value;
+            var newLineShortcut = GetInsertNewLineShortcutLabel();
+            return $$"""
+                    [bold green]PromptEditor[/] - prompt-style editor demo
 
-                              [gray]Try:[/]
-                               • Type [bold red]error[/], [bold yellow]warn[/], [bold green]info[/] to see syntax highlighting.
-                               • The [underline]current word[/] is underlined (caret-aware highlight).
-                               • Type [dim]/[/] then press [cyan]Tab[/] to complete commands like [dim]/help[/], [dim]/clear[/], [dim]/exit[/].
-                               • Press [cyan]Alt+↑[/]/[cyan]Alt+↓[/] to navigate history.
-                               • Press [cyan]Enter[/] to accept; [cyan]Ctrl+N[/] inserts a newline; [cyan]Esc[/] cancels completion/prompt.
-                              """);
+                    [gray]Try:[/]
+                     • Type [bold red]error[/], [bold yellow]warn[/], [bold green]info[/] to see syntax highlighting.
+                     • The [underline]current word[/] is underlined (caret-aware highlight).
+                     • Type [dim]/[/] then press [cyan]Tab[/] to complete commands like [dim]/help[/], [dim]/clear[/], [dim]/exit[/].
+                     • Press [cyan]Alt+↑[/]/[cyan]Alt+↓[/] to navigate history.
+                     • Press [cyan]Enter[/] to accept; [cyan]{{newLineShortcut}}[/] inserts a newline; [cyan]Esc[/] cancels completion/prompt.
+                    """;
+        });
 
         // Build the visual tree.
         var promptMarkup = new TextBox(promptMarkupText);
@@ -69,7 +74,6 @@ public sealed class PromptEditorDemo : ControlsDemoBase
             .Prompt(prompt)
             .ContinuationPromptMarkup(continuationMarkupText)
             .Text(inputText)
-            .Placeholder("Type a command. Tab completes. Ctrl+N inserts a newline.")
             .EnableWordHints(false)
             .CompletionPresentation(PromptEditorCompletionPresentation.PopupList)
             .CompletionHandler(Complete)
@@ -80,6 +84,8 @@ public sealed class PromptEditorDemo : ControlsDemoBase
 
         promptEditor.Update(_ =>
             {
+                promptEditor.Placeholder($"Type a command. Tab completes. {GetInsertNewLineShortcutLabel()} inserts a newline.");
+
                 if (visualGutter.Value)
                 {
                     promptEditor.Style(PromptEditorStyle.Default);
@@ -294,6 +300,20 @@ public sealed class PromptEditorDemo : ControlsDemoBase
             }
 
             return string.Create(snapshot.Length, snapshot, static (span, s) => s.CopyTo(0, span));
+        }
+
+        static string GetInsertNewLineShortcutLabel()
+        {
+            if (Terminal.IsInitialized)
+            {
+                var capabilities = Terminal.Capabilities;
+                if (capabilities.SupportsExtendedKeys && capabilities.ExtendedKeyProtocol != TerminalExtendedKeyProtocol.None)
+                {
+                    return "Shift+Enter";
+                }
+            }
+
+            return "Ctrl+N";
         }
 
         static void Highlight(in PromptEditorHighlightRequest request, List<StyledRun> runs)
