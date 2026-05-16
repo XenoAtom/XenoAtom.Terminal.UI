@@ -2,18 +2,18 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using System.Diagnostics;
 using System.ComponentModel;
+using System.Diagnostics;
+using XenoAtom.Terminal.UI.Animation;
+using XenoAtom.Terminal.UI.Collections;
+using XenoAtom.Terminal.UI.Commands;
+using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Threading;
-using XenoAtom.Terminal.UI.Animation;
-using XenoAtom.Terminal.UI.Controls;
-using XenoAtom.Terminal.UI.Commands;
-using XenoAtom.Terminal.UI.Collections;
 
 namespace XenoAtom.Terminal.UI;
 
@@ -257,11 +257,11 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// Adds a key binding to this visual.
     /// </summary>
     /// <remarks>
-     /// Key bindings are evaluated during key input routing. When the gesture matches, the action is invoked and the event is handled.
+    /// Key bindings are evaluated during key input routing. When the gesture matches, the action is invoked and the event is handled.
     /// </remarks>
     /// <param name="gesture">The key gesture.</param>
     /// <param name="action">The action to invoke when the gesture is triggered.</param>
-    public void AddKeyBinding(Input.KeyGesture gesture, Action action)
+    public Visual AddKeyBinding(Input.KeyGesture gesture, Action action)
     {
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(action);
@@ -277,6 +277,8 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             Importance = CommandImportance.Tertiary,
             Execute = _ => action(),
         });
+
+        return this;
     }
 
     /// <summary>
@@ -304,7 +306,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
     /// <param name="command">The command.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="command"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="command"/> is invalid.</exception>
-    public void AddCommand(Command command)
+    public Visual AddCommand(Command command)
     {
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(command);
@@ -343,11 +345,12 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             if (string.Equals(commands[i].Id, command.Id, StringComparison.Ordinal))
             {
                 commands[i] = command;
-                return;
+                return this;
             }
         }
 
         commands.Add(command);
+        return this;
     }
 
     /// <summary>
@@ -800,7 +803,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             {
                 app.ClearSelectionOwnerIfMatches(this);
             }
-            
+
             for (var i = 0; i < ChildrenCount; i++)
             {
                 var child = GetChild(i);
@@ -981,7 +984,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         {
             metrics.RecordMeasure(Math.Max(0, Stopwatch.GetTimestamp() - startTimestamp));
         }
-         
+
         return measureHints;
     }
 
@@ -1611,13 +1614,13 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         _hasLastArrange = false;
         _arrangeDeps = null;
     }
-    
+
     internal void MarkArrangeDirty()
     {
         MarkArrangeDirtyLocal();
         Parent?.MarkArrangeDirty();
     }
-    
+
     internal void MarkRenderDirty()
     {
         // Rendering is currently full-frame, so we only request a redraw from the app.
