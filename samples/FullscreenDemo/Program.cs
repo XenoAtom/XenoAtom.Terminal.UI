@@ -940,7 +940,7 @@ toastHost.AddCommand(new Command
     Id = "Demo.Dialog",
     LabelMarkup = "Dialog",
     DescriptionMarkup = "Show a modal dialog.",
-    Gesture = new KeyGesture(TerminalChar.CtrlM, TerminalModifiers.Ctrl),
+    Gesture = new KeyGesture(TerminalChar.CtrlN, TerminalModifiers.Ctrl),
     Importance = CommandImportance.Primary,
     Presentation = CommandPresentation.CommandPalette,
     Execute = _ => ShowModalDialog(),

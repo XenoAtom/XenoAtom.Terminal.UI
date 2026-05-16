@@ -120,7 +120,7 @@ public sealed class CommandPaletteDemo : ControlsDemoBase
                 Name = localI % 2 == 0 ? $"inc.{localI}" : null,
                 LabelMarkup = $"[primary]Increment {i}[/]",
                 DescriptionMarkup = $"[dim]Increase the counter by {i}[/]",
-                Gesture = new KeyGesture(TerminalChar.CtrlI, TerminalModifiers.Ctrl),
+                Gesture = new KeyGesture(TerminalChar.CtrlN, TerminalModifiers.Ctrl),
                 Presentation = CommandPresentation.CommandPalette,
                 CanExecute = _ => enabled.Value,
                 Execute = _ => counter.Value += localI,

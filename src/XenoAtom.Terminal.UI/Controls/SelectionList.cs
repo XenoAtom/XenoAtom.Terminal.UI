@@ -345,7 +345,7 @@ public sealed partial class SelectionList<T> : Visual, IScrollable
             return;
         }
 
-        if (ctrl && e.Char is TerminalChar.CtrlI)
+        if (ctrl && e.Char is TerminalChar.CtrlN)
         {
             EnsureCheckedCount();
             for (var i = 0; i < count; i++)
