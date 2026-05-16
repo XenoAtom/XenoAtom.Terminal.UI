@@ -105,16 +105,16 @@ namespace XenoAtom.Terminal.UI.Controls;
 public enum PromptEditorEnterMode
 {
     /// <summary>
-    /// Enter accepts the prompt, and Ctrl+J inserts a newline.
+    /// Enter accepts the prompt, and Ctrl+N inserts a newline.
     /// </summary>
     /// <remarks>
     /// In terminals, Enter is commonly received as <c>TerminalKey.Enter</c> and/or <c>TerminalChar.CtrlM</c> (CR, <c>\r</c>),
-    /// while Ctrl+J is <c>TerminalChar.CtrlJ</c> (LF, <c>\n</c>).
+    /// while Ctrl+N is commonly received as <c>TerminalChar.CtrlN</c> (0x0E).
     /// </remarks>
     EnterAccepts,
 
     /// <summary>
-    /// Enter inserts a newline, and Ctrl+J accepts the prompt.
+    /// Enter inserts a newline, and Ctrl+N accepts the prompt.
     /// </summary>
     EnterInsertsNewLine,
 }
@@ -305,8 +305,8 @@ PromptEditor inherits the editor input model from `TextEditorCore` and adds prom
 ### Accept/cancel
 
 - **Accept** produces an “accepted text” payload and raises `Accepted`.
-  - Default: Enter accepts (CR, `\r`), and Ctrl+J inserts a newline (LF, `\n`).
-  - `EnterMode` allows swapping the meaning of Enter and Ctrl+J.
+  - Default: Enter accepts (CR, `\r`), and Ctrl+N inserts a newline (LF, `\n`).
+  - `EnterMode` allows swapping the meaning of Enter and Ctrl+N.
 - **Cancel** clears any completion session and raises `Canceled`.
   - Default: `Esc` cancels completion if active; otherwise cancels the prompt.
 
@@ -372,7 +372,7 @@ Required commands (v1):
 Default gestures (v1 suggested):
 
 - `PromptEditor.Accept`: `Enter` (CR, `TerminalKey.Enter` and/or `TerminalChar.CtrlM`)
-- `PromptEditor.InsertNewLine`: `Ctrl+J` (LF, `TerminalChar.CtrlJ`)
+- `PromptEditor.InsertNewLine`: `Ctrl+N` (`TerminalChar.CtrlN`; inserts LF)
 - `PromptEditor.InsertNewLine` SHOULD be hidden and unavailable when `LineMode` is `SingleLine`
 
 Users can swap the behavior by either:
@@ -426,7 +426,7 @@ Add tests in `src/XenoAtom.Terminal.UI.Tests` (rendering-focused) to cover:
 - Continuation prompt:
   - multi-line text renders with correct indentation on subsequent lines.
 - Accept mode:
-  - default mapping: Enter accepts, Ctrl+J inserts newline; verify `EnterMode` swap.
+  - default mapping: Enter accepts, Ctrl+N inserts newline; verify `EnterMode` swap.
 - Completion:
   - applying a candidate replaces the expected range and updates ghost text.
 - Highlighting:

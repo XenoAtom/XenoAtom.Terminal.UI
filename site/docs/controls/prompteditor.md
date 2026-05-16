@@ -27,12 +27,12 @@ var editor = new PromptEditor()
     .Placeholder("Type a command… (Tab completes)");
 ```
 
-## Enter vs Ctrl+J (new line)
+## Enter vs Ctrl+N (new line)
 
 By default:
 
 - `Enter` **accepts**
-- `Ctrl+J` inserts a newline (`\n`)
+- `Ctrl+N` inserts a newline (`\n`)
 
 You can swap these behaviors:
 
@@ -50,8 +50,8 @@ var config = PromptEditorConfig.Default with
     AcceptCommand = PromptEditorConfig.Default.AcceptCommand with
     {
         LabelMarkup = "Submit",
-        DescriptionMarkup = "Submit the current prompt text with Ctrl+J.",
-        Gesture = new KeyGesture(TerminalChar.CtrlJ, TerminalModifiers.Ctrl),
+        DescriptionMarkup = "Submit the current prompt text with Ctrl+N.",
+        Gesture = new KeyGesture(TerminalChar.CtrlN, TerminalModifiers.Ctrl),
     },
     InsertNewLineCommand = PromptEditorConfig.Default.InsertNewLineCommand with
     {
@@ -79,7 +79,7 @@ new PromptEditor()
 
 In single-line mode, attempted line breaks are discarded:
 
-- `Enter`/`Ctrl+J` still follow `EnterMode`, but the action that would insert a newline becomes a no-op
+- `Enter`/`Ctrl+N` still follow `EnterMode`, but the action that would insert a newline becomes a no-op
 - pasted line breaks are removed
 - text updates containing `\r` or `\n` are normalized back to a single line
 - the default measured height becomes one row instead of the multi-line default

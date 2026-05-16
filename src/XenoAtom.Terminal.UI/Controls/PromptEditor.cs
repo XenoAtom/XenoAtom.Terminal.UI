@@ -19,17 +19,17 @@ using XenoAtom.Terminal.UI.Templating;
 namespace XenoAtom.Terminal.UI.Controls;
 
 /// <summary>
-/// Specifies how Enter and Ctrl+J are interpreted by <see cref="PromptEditor"/>.
+/// Specifies how Enter and Ctrl+N are interpreted by <see cref="PromptEditor"/>.
 /// </summary>
 public enum PromptEditorEnterMode
 {
     /// <summary>
-    /// Enter accepts the prompt, and Ctrl+J inserts a newline.
+    /// Enter accepts the prompt, and Ctrl+N inserts a newline.
     /// </summary>
     EnterAccepts = 0,
 
     /// <summary>
-    /// Enter inserts a newline, and Ctrl+J accepts the prompt.
+    /// Enter inserts a newline, and Ctrl+N accepts the prompt.
     /// </summary>
     EnterInsertsNewLine = 1,
 }
@@ -477,7 +477,7 @@ public partial class PromptEditor : TextEditorBase
     public partial PromptEditorLineMode LineMode { get; set; }
 
     /// <summary>
-    /// Gets or sets how Enter and Ctrl+J are interpreted.
+    /// Gets or sets how Enter and Ctrl+N are interpreted.
     /// </summary>
     [Bindable]
     public partial PromptEditorEnterMode EnterMode { get; set; }
@@ -723,13 +723,13 @@ public partial class PromptEditor : TextEditorBase
 
     private bool TryHandleAcceptOrNewLine(KeyEventArgs e)
     {
-        // We interpret Enter/Ctrl+J outside TextEditorCore so prompt-like accept behavior does not require
+        // We interpret Enter/Ctrl+N outside TextEditorCore so prompt-like accept behavior does not require
         // setting AcceptsReturn=true.
         var isEnter = e.Key == TerminalKey.Enter || e.Char == TerminalChar.CtrlM;
-        // Some terminal backends may report Ctrl+J as a control character without setting the Ctrl modifier.
-        var isCtrlJ = e.Char == TerminalChar.CtrlJ;
+        // Some terminal backends may report Ctrl+N as a control character without setting the Ctrl modifier.
+        var isCtrlN = e.Char == TerminalChar.CtrlN;
 
-        if (!isEnter && !isCtrlJ)
+        if (!isEnter && !isCtrlN)
         {
             return false;
         }
@@ -737,7 +737,7 @@ public partial class PromptEditor : TextEditorBase
         var enterMode = EnterMode;
         var accept =
             (enterMode == PromptEditorEnterMode.EnterAccepts && isEnter) ||
-            (enterMode == PromptEditorEnterMode.EnterInsertsNewLine && isCtrlJ);
+            (enterMode == PromptEditorEnterMode.EnterInsertsNewLine && isCtrlN);
 
         if (accept)
         {

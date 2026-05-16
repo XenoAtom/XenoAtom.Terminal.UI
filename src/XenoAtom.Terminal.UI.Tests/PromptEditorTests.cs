@@ -56,7 +56,7 @@ public sealed class PromptEditorTests
     }
 
     [TestMethod]
-    public void PromptEditor_EnterAccepts_And_CtrlJ_InsertsNewLine()
+    public void PromptEditor_EnterAccepts_And_CtrlN_InsertsNewLine()
     {
         var accepted = false;
         var acceptedText = string.Empty;
@@ -79,7 +79,7 @@ public sealed class PromptEditorTests
         driver.Backend.PushEvent(new TerminalTextEvent { Text = "Hello" });
         driver.TickUntil(() => editor.Text == "Hello");
 
-        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlJ, Modifiers = TerminalModifiers.Ctrl });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlN, Modifiers = TerminalModifiers.Ctrl });
         driver.TickUntil(() => editor.Text == "Hello\n");
 
         driver.Backend.PushEvent(new TerminalTextEvent { Text = "World" });
@@ -92,7 +92,7 @@ public sealed class PromptEditorTests
     }
 
     [TestMethod]
-    public void PromptEditor_EnterInsertsNewLine_And_CtrlJ_Accepts()
+    public void PromptEditor_EnterInsertsNewLine_And_CtrlN_Accepts()
     {
         var accepted = false;
 
@@ -115,7 +115,7 @@ public sealed class PromptEditorTests
         driver.Backend.PushEvent(new TerminalTextEvent { Text = "B" });
         driver.TickUntil(() => editor.Text == "A\nB");
 
-        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlJ, Modifiers = TerminalModifiers.Ctrl });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlN, Modifiers = TerminalModifiers.Ctrl });
         driver.TickUntil(() => accepted);
     }
 
@@ -137,7 +137,7 @@ public sealed class PromptEditorTests
         driver.Backend.PushEvent(new TerminalTextEvent { Text = "Hello" });
         driver.TickUntil(() => editor.Text == "Hello");
 
-        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlJ, Modifiers = TerminalModifiers.Ctrl });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlN, Modifiers = TerminalModifiers.Ctrl });
         driver.Tick();
 
         Assert.AreEqual("Hello", editor.Text);
@@ -148,7 +148,7 @@ public sealed class PromptEditorTests
     }
 
     [TestMethod]
-    public void PromptEditor_SingleLineMode_With_EnterInsertsNewLine_Discards_Enter_And_Keeps_CtrlJ_As_Accept()
+    public void PromptEditor_SingleLineMode_With_EnterInsertsNewLine_Discards_Enter_And_Keeps_CtrlN_As_Accept()
     {
         var accepted = false;
 
@@ -172,7 +172,7 @@ public sealed class PromptEditorTests
         Assert.AreEqual("A", editor.Text);
         Assert.IsFalse(accepted);
 
-        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlJ, Modifiers = TerminalModifiers.Ctrl });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlN, Modifiers = TerminalModifiers.Ctrl });
         driver.TickUntil(() => accepted);
     }
 

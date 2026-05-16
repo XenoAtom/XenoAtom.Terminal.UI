@@ -47,7 +47,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
                                • The [underline]current word[/] is underlined (caret-aware highlight).
                                • Type [dim]/[/] then press [cyan]Tab[/] to complete commands like [dim]/help[/], [dim]/clear[/], [dim]/exit[/].
                                • Press [cyan]Alt+↑[/]/[cyan]Alt+↓[/] to navigate history.
-                               • Press [cyan]Enter[/] to accept; [cyan]Ctrl+J[/] inserts a newline; [cyan]Esc[/] cancels completion/prompt.
+                               • Press [cyan]Enter[/] to accept; [cyan]Ctrl+N[/] inserts a newline; [cyan]Esc[/] cancels completion/prompt.
                               """);
 
         // Build the visual tree.
@@ -69,7 +69,7 @@ public sealed class PromptEditorDemo : ControlsDemoBase
             .Prompt(prompt)
             .ContinuationPromptMarkup(continuationMarkupText)
             .Text(inputText)
-            .Placeholder("Type a command. Tab completes. Ctrl+J inserts a newline.")
+            .Placeholder("Type a command. Tab completes. Ctrl+N inserts a newline.")
             .EnableWordHints(false)
             .CompletionPresentation(PromptEditorCompletionPresentation.PopupList)
             .CompletionHandler(Complete)

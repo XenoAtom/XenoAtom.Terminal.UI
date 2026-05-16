@@ -39,7 +39,7 @@ public sealed record PromptEditorConfig
     public PromptEditorCommandConfig InsertNewLineCommand { get; init; } = new(
         "New line",
         "Insert a newline in the prompt editor (LF).",
-        new KeyGesture(TerminalChar.CtrlJ, TerminalModifiers.Ctrl));
+        new KeyGesture(TerminalChar.CtrlN, TerminalModifiers.Ctrl));
 
     /// <summary>
     /// Gets the configuration for the <c>PromptEditor.Complete</c> command.
