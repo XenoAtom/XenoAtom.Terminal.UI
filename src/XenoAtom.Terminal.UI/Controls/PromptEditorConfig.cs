@@ -39,7 +39,19 @@ public sealed record PromptEditorConfig
     public PromptEditorCommandConfig InsertNewLineCommand { get; init; } = new(
         "New line",
         "Insert a newline in the prompt editor (LF).",
-        new KeyGesture(TerminalChar.CtrlN, TerminalModifiers.Ctrl));
+        new KeyGesture(TerminalKey.Enter, TerminalModifiers.Shift));
+
+    /// <summary>
+    /// Gets the fallback shortcut gesture used for the <c>PromptEditor.InsertNewLine</c> command when the preferred
+    /// gesture requires extended keyboard input and the current terminal does not support it.
+    /// </summary>
+    /// <remarks>
+    /// The default <see cref="InsertNewLineCommand"/> gesture is Shift+Enter. Terminals that cannot report modifiers on
+    /// Enter use this fallback instead. Set this property to another gesture to customize the fallback shortcut, or
+    /// <see langword="null"/> to keep the preferred gesture even when extended keys are unavailable.
+    /// </remarks>
+    public KeyGesture? InsertNewLineFallbackGesture { get; init; } =
+        new KeyGesture(TerminalChar.CtrlN, TerminalModifiers.Ctrl);
 
     /// <summary>
     /// Gets the configuration for the <c>PromptEditor.Complete</c> command.

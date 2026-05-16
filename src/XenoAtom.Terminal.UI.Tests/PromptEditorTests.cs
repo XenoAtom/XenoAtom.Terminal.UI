@@ -398,13 +398,96 @@ public sealed class PromptEditorTests
     {
         var editor = new PromptEditor((PromptEditorConfig?)null);
         var defaultConfig = PromptEditorConfig.Default;
+        var root = new VStack { editor };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
 
         AssertCommand(editor, "PromptEditor.Accept", defaultConfig.AcceptCommand);
         AssertCommand(editor, "PromptEditor.Cancel", defaultConfig.CancelCommand);
-        AssertCommand(editor, "PromptEditor.InsertNewLine", defaultConfig.InsertNewLineCommand);
+        AssertCommand(editor, "PromptEditor.InsertNewLine", defaultConfig.InsertNewLineCommand with { Gesture = defaultConfig.InsertNewLineFallbackGesture });
         AssertCommand(editor, "PromptEditor.Complete", defaultConfig.CompleteCommand);
         AssertCommand(editor, "PromptEditor.HistoryPrevious", defaultConfig.HistoryPreviousCommand);
         AssertCommand(editor, "PromptEditor.HistoryNext", defaultConfig.HistoryNextCommand);
+    }
+
+    [TestMethod]
+    public void PromptEditor_Default_Config_Prefers_ShiftEnter_With_CtrlN_Fallback()
+    {
+        var defaultConfig = PromptEditorConfig.Default;
+
+        Assert.AreEqual(new KeyGesture(TerminalKey.Enter, TerminalModifiers.Shift), defaultConfig.InsertNewLineCommand.Gesture);
+        Assert.AreEqual(new KeyGesture(TerminalChar.CtrlN, TerminalModifiers.Ctrl), defaultConfig.InsertNewLineFallbackGesture);
+    }
+
+    [TestMethod]
+    public void PromptEditor_Uses_ShiftEnter_For_NewLine_When_Extended_Keys_Are_Supported()
+    {
+        var editor = new PromptEditor()
+            .AutoFocus(true);
+        var root = new VStack { editor };
+
+        using var driver = new TerminalAppTestDriver(
+            root,
+            TerminalHostKind.Fullscreen,
+            new TerminalSize(40, 6),
+            capabilities: CreateTerminalCapabilities(supportsExtendedKeys: true));
+        driver.Tick();
+
+        AssertCommandGesture(editor, "PromptEditor.InsertNewLine", new KeyGesture(TerminalKey.Enter, TerminalModifiers.Shift));
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "Hello" });
+        driver.TickUntil(() => editor.Text == "Hello");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter, Modifiers = TerminalModifiers.Shift });
+        driver.TickUntil(() => editor.Text == "Hello\n");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlN, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+
+        Assert.AreEqual("Hello\n", editor.Text, "Ctrl+N should not remain the default insert-newline shortcut when Shift+Enter is available.");
+    }
+
+    [TestMethod]
+    public void PromptEditor_Uses_CtrlN_Fallback_When_Extended_Keys_Are_Not_Supported()
+    {
+        var editor = new PromptEditor()
+            .AutoFocus(true);
+        var root = new VStack { editor };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        AssertCommandGesture(editor, "PromptEditor.InsertNewLine", new KeyGesture(TerminalChar.CtrlN, TerminalModifiers.Ctrl));
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "Hello" });
+        driver.TickUntil(() => editor.Text == "Hello");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Unknown, Char = TerminalChar.CtrlN, Modifiers = TerminalModifiers.Ctrl });
+        driver.TickUntil(() => editor.Text == "Hello\n");
+    }
+
+    [TestMethod]
+    public void PromptEditor_InsertNewLine_Fallback_Gesture_Is_Configurable()
+    {
+        var config = PromptEditorConfig.Default with
+        {
+            InsertNewLineFallbackGesture = new KeyGesture(TerminalKey.F4),
+        };
+        var editor = new PromptEditor(config)
+            .AutoFocus(true);
+        var root = new VStack { editor };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 6));
+        driver.Tick();
+
+        AssertCommandGesture(editor, "PromptEditor.InsertNewLine", new KeyGesture(TerminalKey.F4));
+
+        driver.Backend.PushEvent(new TerminalTextEvent { Text = "Hello" });
+        driver.TickUntil(() => editor.Text == "Hello");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F4 });
+        driver.TickUntil(() => editor.Text == "Hello\n");
     }
 
     [TestMethod]
@@ -575,6 +658,38 @@ public sealed class PromptEditorTests
         Assert.AreEqual(expected.LabelMarkup, command.LabelMarkup);
         Assert.AreEqual(expected.DescriptionMarkup, command.DescriptionMarkup);
         Assert.AreEqual(expected.Gesture, command.Gesture);
+    }
+
+    private static void AssertCommandGesture(PromptEditor editor, string id, KeyGesture expected)
+    {
+        var command = editor.Commands.FirstOrDefault(x => string.Equals(x.Id, id, StringComparison.Ordinal));
+        Assert.IsNotNull(command, $"Expected command '{id}' to be registered.");
+        Assert.AreEqual(expected, command.Gesture);
+    }
+
+    private static TerminalCapabilities CreateTerminalCapabilities(bool supportsExtendedKeys)
+    {
+        return new TerminalCapabilities
+        {
+            AnsiEnabled = true,
+            ColorLevel = TerminalColorLevel.TrueColor,
+            SupportsAlternateScreen = true,
+            SupportsCursorVisibility = true,
+            SupportsMouse = true,
+            SupportsPrivateModes = true,
+            SupportsRawMode = true,
+            SupportsExtendedKeys = supportsExtendedKeys,
+            ExtendedKeyProtocol = supportsExtendedKeys ? TerminalExtendedKeyProtocol.KittyKeyboard : TerminalExtendedKeyProtocol.None,
+            SupportsCursorPositionGet = true,
+            SupportsCursorPositionSet = true,
+            SupportsTitleSet = true,
+            SupportsWindowSize = true,
+            SupportsBufferSize = true,
+            SupportsBeep = true,
+            IsOutputRedirected = false,
+            IsInputRedirected = false,
+            TerminalName = "Test",
+        };
     }
 
     private static CellBuffer GetRenderBuffer(TerminalApp app)

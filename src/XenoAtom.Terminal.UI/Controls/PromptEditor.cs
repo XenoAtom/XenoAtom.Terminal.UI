@@ -19,17 +19,17 @@ using XenoAtom.Terminal.UI.Templating;
 namespace XenoAtom.Terminal.UI.Controls;
 
 /// <summary>
-/// Specifies how Enter and Ctrl+N are interpreted by <see cref="PromptEditor"/>.
+/// Specifies how Enter and the configured insert-newline shortcut are interpreted by <see cref="PromptEditor"/>.
 /// </summary>
 public enum PromptEditorEnterMode
 {
     /// <summary>
-    /// Enter accepts the prompt, and Ctrl+N inserts a newline.
+    /// Enter accepts the prompt, and the configured insert-newline shortcut inserts a newline.
     /// </summary>
     EnterAccepts = 0,
 
     /// <summary>
-    /// Enter inserts a newline, and Ctrl+N accepts the prompt.
+    /// Enter inserts a newline, and the configured insert-newline shortcut accepts the prompt.
     /// </summary>
     EnterInsertsNewLine = 1,
 }
@@ -190,9 +190,14 @@ public sealed class PromptEditorHistory
 public partial class PromptEditor : TextEditorBase
 {
     private const int PromptTabSize = 4;
+    private const string InsertNewLineCommandId = "PromptEditor.InsertNewLine";
 
     private readonly MarkupTextParser _markupParser;
     private readonly KeyGesture? _completeGesture;
+    private readonly PromptEditorCommandConfig _insertNewLineCommandConfig;
+    private readonly KeyGesture? _insertNewLineFallbackGesture;
+    private Command? _insertNewLineCommand;
+    private KeyGesture? _insertNewLineGesture;
     private Visual? _promptVisual;
 
     private string? _cachedPromptMarkup;
@@ -259,6 +264,10 @@ public partial class PromptEditor : TextEditorBase
         var defaultConfig = PromptEditorConfig.Default;
         var effectiveConfig = config ?? defaultConfig;
         var completeCommandConfig = effectiveConfig.CompleteCommand ?? defaultConfig.CompleteCommand;
+        _insertNewLineCommandConfig = effectiveConfig.InsertNewLineCommand ?? defaultConfig.InsertNewLineCommand;
+        _insertNewLineFallbackGesture = config is null
+            ? defaultConfig.InsertNewLineFallbackGesture
+            : effectiveConfig.InsertNewLineFallbackGesture;
 
         _markupParser = new MarkupTextParser();
         _completeGesture = completeCommandConfig.Gesture;
@@ -284,7 +293,7 @@ public partial class PromptEditor : TextEditorBase
 
         AddCommand(CreateAcceptCommand(effectiveConfig.AcceptCommand ?? defaultConfig.AcceptCommand));
         AddCommand(CreateCancelCommand(effectiveConfig.CancelCommand ?? defaultConfig.CancelCommand));
-        AddCommand(CreateInsertNewLineCommand(effectiveConfig.InsertNewLineCommand ?? defaultConfig.InsertNewLineCommand));
+        ConfigureInsertNewLineCommand(GetCurrentTerminalCapabilities());
         AddCommand(CreateCompleteCommand(completeCommandConfig));
         AddCommand(CreateHistoryPreviousCommand(effectiveConfig.HistoryPreviousCommand ?? defaultConfig.HistoryPreviousCommand));
         AddCommand(CreateHistoryNextCommand(effectiveConfig.HistoryNextCommand ?? defaultConfig.HistoryNextCommand));
@@ -363,7 +372,7 @@ public partial class PromptEditor : TextEditorBase
     {
         return new Command
         {
-            Id = "PromptEditor.InsertNewLine",
+            Id = InsertNewLineCommandId,
             LabelMarkup = config.LabelMarkup,
             DescriptionMarkup = config.DescriptionMarkup,
             Gesture = config.Gesture,
@@ -386,6 +395,57 @@ public partial class PromptEditor : TextEditorBase
             },
         };
     }
+
+    private void ConfigureInsertNewLineCommand(TerminalCapabilities? capabilities)
+    {
+        var config = ResolveInsertNewLineCommandConfig(_insertNewLineCommandConfig, _insertNewLineFallbackGesture, capabilities);
+        if (_insertNewLineCommand is not null && EqualityComparer<KeyGesture?>.Default.Equals(_insertNewLineCommand.Gesture, config.Gesture))
+        {
+            _insertNewLineGesture = config.Gesture;
+            return;
+        }
+
+        var command = CreateInsertNewLineCommand(config);
+        _insertNewLineCommand = command;
+        _insertNewLineGesture = config.Gesture;
+        AddCommand(command);
+    }
+
+    private Command? FindCommand(string id)
+    {
+        var commands = Commands;
+        for (var i = 0; i < commands.Count; i++)
+        {
+            if (string.Equals(commands[i].Id, id, StringComparison.Ordinal))
+            {
+                return commands[i];
+            }
+        }
+
+        return null;
+    }
+
+    private static PromptEditorCommandConfig ResolveInsertNewLineCommandConfig(PromptEditorCommandConfig config, KeyGesture? fallbackGesture, TerminalCapabilities? capabilities)
+    {
+        if (fallbackGesture is not null && ShouldUseInsertNewLineFallback(config.Gesture, capabilities))
+        {
+            return config with { Gesture = fallbackGesture };
+        }
+
+        return config;
+    }
+
+    private static bool ShouldUseInsertNewLineFallback(KeyGesture? gesture, TerminalCapabilities? capabilities)
+        => IsExtendedEnterGesture(gesture) && !SupportsExtendedKeys(capabilities);
+
+    private static bool SupportsExtendedKeys(TerminalCapabilities? capabilities)
+        => capabilities is { SupportsExtendedKeys: true } && capabilities.ExtendedKeyProtocol != TerminalExtendedKeyProtocol.None;
+
+    private static bool IsExtendedEnterGesture(KeyGesture? gesture)
+        => gesture is { Key: TerminalKey.Enter, Modifiers: not TerminalModifiers.None };
+
+    private static TerminalCapabilities? GetCurrentTerminalCapabilities()
+        => global::XenoAtom.Terminal.Terminal.IsInitialized ? global::XenoAtom.Terminal.Terminal.Capabilities : null;
 
     private static Command CreateCompleteCommand(PromptEditorCommandConfig config)
     {
@@ -644,6 +704,19 @@ public partial class PromptEditor : TextEditorBase
     }
 
     /// <inheritdoc />
+    protected override void OnAttachedToApp(TerminalApp app)
+    {
+        base.OnAttachedToApp(app);
+
+        // PromptEditor instances are commonly created before TerminalApp is available. Re-resolve the insert-newline
+        // shortcut against the app terminal so custom TerminalApp instances get the correct extended-key behavior.
+        if (ReferenceEquals(FindCommand(InsertNewLineCommandId), _insertNewLineCommand))
+        {
+            ConfigureInsertNewLineCommand(app.Terminal.Capabilities);
+        }
+    }
+
+    /// <inheritdoc />
     protected override void OnKeyDown(KeyEventArgs e)
     {
         var hadActiveCompletion = HasActiveCompletion;
@@ -723,13 +796,12 @@ public partial class PromptEditor : TextEditorBase
 
     private bool TryHandleAcceptOrNewLine(KeyEventArgs e)
     {
-        // We interpret Enter/Ctrl+N outside TextEditorCore so prompt-like accept behavior does not require
+        // We interpret Enter/insert-newline outside TextEditorCore so prompt-like accept behavior does not require
         // setting AcceptsReturn=true.
-        var isEnter = e.Key == TerminalKey.Enter || e.Char == TerminalChar.CtrlM;
-        // Some terminal backends may report Ctrl+N as a control character without setting the Ctrl modifier.
-        var isCtrlN = e.Char == TerminalChar.CtrlN;
+        var isEnter = IsDefaultEnterGesture(e.RawEvent);
+        var isInsertNewLineGesture = IsInsertNewLineGesture(e.RawEvent);
 
-        if (!isEnter && !isCtrlN)
+        if (!isEnter && !isInsertNewLineGesture)
         {
             return false;
         }
@@ -737,7 +809,7 @@ public partial class PromptEditor : TextEditorBase
         var enterMode = EnterMode;
         var accept =
             (enterMode == PromptEditorEnterMode.EnterAccepts && isEnter) ||
-            (enterMode == PromptEditorEnterMode.EnterInsertsNewLine && isCtrlN);
+            (enterMode == PromptEditorEnterMode.EnterInsertsNewLine && isInsertNewLineGesture);
 
         if (accept)
         {
@@ -750,6 +822,33 @@ public partial class PromptEditor : TextEditorBase
 
         e.Handled = true;
         return true;
+    }
+
+    private bool IsInsertNewLineGesture(TerminalKeyEvent ev)
+    {
+        if (_insertNewLineGesture is not { } gesture)
+        {
+            return false;
+        }
+
+        if (gesture.Matches(ev))
+        {
+            return true;
+        }
+
+        // Some terminal backends report Ctrl+N as a control character without setting the Ctrl modifier.
+        return gesture is { Char: TerminalChar.CtrlN, Modifiers: TerminalModifiers.Ctrl } && ev.Char == TerminalChar.CtrlN;
+    }
+
+    private static bool IsDefaultEnterGesture(TerminalKeyEvent ev)
+    {
+        if (ev.Key == TerminalKey.Enter)
+        {
+            return ev.Modifiers == TerminalModifiers.None;
+        }
+
+        // Some backends report Enter as Ctrl+M rather than TerminalKey.Enter.
+        return ev.Char == TerminalChar.CtrlM && ev.Modifiers is TerminalModifiers.None or TerminalModifiers.Ctrl;
     }
 
     private bool TryHandleCompletionGesture(KeyEventArgs e)

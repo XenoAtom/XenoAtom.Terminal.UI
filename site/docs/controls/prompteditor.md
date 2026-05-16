@@ -27,12 +27,13 @@ var editor = new PromptEditor()
     .Placeholder("Type a command… (Tab completes)");
 ```
 
-## Enter vs Ctrl+N (new line)
+## Enter vs Shift+Enter (new line)
 
 By default:
 
 - `Enter` **accepts**
-- `Ctrl+N` inserts a newline (`\n`)
+- `Shift+Enter` inserts a newline (`\n`) when the terminal reports extended keys
+- `Ctrl+N` is used as the fallback newline shortcut when extended keys are unavailable
 
 You can swap these behaviors:
 
@@ -65,7 +66,8 @@ new PromptEditor(config)
     .EnterMode(PromptEditorEnterMode.EnterInsertsNewLine);
 ```
 
-`PromptEditorConfig.Default` preserves the existing command labels and shortcuts.
+`PromptEditorConfig.InsertNewLineFallbackGesture` controls the fallback shortcut used when the preferred insert-newline
+gesture requires extended keyboard input and the current terminal does not support it.
 
 ## Single-line mode
 
@@ -79,7 +81,7 @@ new PromptEditor()
 
 In single-line mode, attempted line breaks are discarded:
 
-- `Enter`/`Ctrl+N` still follow `EnterMode`, but the action that would insert a newline becomes a no-op
+- `Enter`/the configured insert-newline shortcut still follow `EnterMode`, but the action that would insert a newline becomes a no-op
 - pasted line breaks are removed
 - text updates containing `\r` or `\n` are normalized back to a single line
 - the default measured height becomes one row instead of the multi-line default

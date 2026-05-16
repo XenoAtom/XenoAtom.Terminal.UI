@@ -105,16 +105,16 @@ namespace XenoAtom.Terminal.UI.Controls;
 public enum PromptEditorEnterMode
 {
     /// <summary>
-    /// Enter accepts the prompt, and Ctrl+N inserts a newline.
+    /// Enter accepts the prompt, and the configured insert-newline shortcut inserts a newline.
     /// </summary>
     /// <remarks>
     /// In terminals, Enter is commonly received as <c>TerminalKey.Enter</c> and/or <c>TerminalChar.CtrlM</c> (CR, <c>\r</c>),
-    /// while Ctrl+N is commonly received as <c>TerminalChar.CtrlN</c> (0x0E).
+    /// while Shift+Enter requires extended-key support and Ctrl+N is commonly received as <c>TerminalChar.CtrlN</c> (0x0E).
     /// </remarks>
     EnterAccepts,
 
     /// <summary>
-    /// Enter inserts a newline, and Ctrl+N accepts the prompt.
+    /// Enter inserts a newline, and the configured insert-newline shortcut accepts the prompt.
     /// </summary>
     EnterInsertsNewLine,
 }
@@ -305,8 +305,9 @@ PromptEditor inherits the editor input model from `TextEditorCore` and adds prom
 ### Accept/cancel
 
 - **Accept** produces an “accepted text” payload and raises `Accepted`.
-  - Default: Enter accepts (CR, `\r`), and Ctrl+N inserts a newline (LF, `\n`).
-  - `EnterMode` allows swapping the meaning of Enter and Ctrl+N.
+  - Default: Enter accepts (CR, `\r`), and Shift+Enter inserts a newline (LF, `\n`) when extended keys are supported.
+  - Ctrl+N is the default fallback insert-newline gesture when extended keys are unavailable.
+  - `EnterMode` allows swapping the meaning of Enter and the configured insert-newline shortcut.
 - **Cancel** clears any completion session and raises `Canceled`.
   - Default: `Esc` cancels completion if active; otherwise cancels the prompt.
 
@@ -372,7 +373,7 @@ Required commands (v1):
 Default gestures (v1 suggested):
 
 - `PromptEditor.Accept`: `Enter` (CR, `TerminalKey.Enter` and/or `TerminalChar.CtrlM`)
-- `PromptEditor.InsertNewLine`: `Ctrl+N` (`TerminalChar.CtrlN`; inserts LF)
+- `PromptEditor.InsertNewLine`: `Shift+Enter` when the current terminal supports extended keys; fallback `Ctrl+N` (`TerminalChar.CtrlN`; inserts LF)
 - `PromptEditor.InsertNewLine` SHOULD be hidden and unavailable when `LineMode` is `SingleLine`
 
 Users can swap the behavior by either:
@@ -426,7 +427,7 @@ Add tests in `src/XenoAtom.Terminal.UI.Tests` (rendering-focused) to cover:
 - Continuation prompt:
   - multi-line text renders with correct indentation on subsequent lines.
 - Accept mode:
-  - default mapping: Enter accepts, Ctrl+N inserts newline; verify `EnterMode` swap.
+  - default mapping: Enter accepts, Shift+Enter inserts newline when available, and Ctrl+N is used as fallback; verify `EnterMode` swap.
 - Completion:
   - applying a candidate replaces the expected range and updates ghost text.
 - Highlighting:
