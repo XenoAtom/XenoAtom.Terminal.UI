@@ -31,6 +31,7 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
 - **Commands & key hints**:
   - Context-aware commands with optional typed names, single-stroke gestures, and multi-stroke sequences
   - `CommandBar` control for discoverable shortcuts
+  - App-defined shortcuts can activate controls such as `MenuBar.OpenMenu()` without built-in global menu bindings
 - **Rendering**:
   - Cell-buffer renderer + diffing, efficient batched output, synchronized output (DEC 2026)
   - Alpha-aware colors (`RGBA`) with blending support for modern UI effects

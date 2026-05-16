@@ -35,6 +35,36 @@ public sealed class MenuTests
     }
 
     [TestMethod]
+    public void MenuBar_OpenMenu_Can_Be_Called_From_App_Defined_Shortcut()
+    {
+        var file = new MenuItem("File");
+        file.Items.Add(new MenuItem("Open"));
+
+        var bar = new MenuBar();
+        bar.Items.Add(file);
+
+        var button = new Button("Body");
+        var root = new VStack { bar, button };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(50, 12));
+        driver.App.Focus(button);
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "Test.OpenMenu",
+            LabelMarkup = "Open menu",
+            Gesture = new KeyGesture(TerminalKey.F9),
+            Execute = _ => bar.OpenMenu(),
+        });
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F9 });
+        driver.TickUntil(() => driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Any());
+
+        var screen = new AnsiTestScreen(50, 12);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "Open");
+    }
+
+    [TestMethod]
     public void MenuBar_Right_Opens_Submenu_And_Invokes_Action()
     {
         var invoked = false;

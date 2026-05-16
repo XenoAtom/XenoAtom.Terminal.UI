@@ -47,6 +47,24 @@ When `MenuItem.Command` is set:
 - enabled state is derived from `Command.CanExecuteFor(...)`
 - the shortcut label is derived from `Command.Gesture` / `Command.Sequence` unless `MenuItem.Shortcut` is explicitly set
 
+## Programmatic opening
+
+`MenuBar` does not install a default global activation key. If your application wants a shortcut such as `F9`, add an
+application command and call `OpenMenu()` (or `OpenMenu(index)`) from that command:
+
+```csharp
+app.AddGlobalCommand(new Command
+{
+    Id = "App.OpenMenu",
+    LabelMarkup = "Open menu",
+    Gesture = new KeyGesture(TerminalKey.F9),
+    Execute = _ => menuBar.OpenMenu(),
+});
+```
+
+`OpenMenu()` opens the currently selected top-level menu. `OpenMenu(index)` opens the specified top-level menu and clamps
+the index to the available `Items` range.
+
 ## Popup chrome
 
 Menus are displayed in `Popup` windows. You can customize the chrome around the menu list (e.g. add/remove a border) by

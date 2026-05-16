@@ -49,6 +49,17 @@ public sealed partial class MenuBar : Visual
 
     internal int OpenIndex => _openIndex;
 
+    /// <summary>
+    /// Opens the currently selected top-level menu.
+    /// </summary>
+    /// <remarks>
+    /// This method is intended for application-defined shortcuts, such as a global <c>F9</c> command. The library does
+    /// not install a default global menu activation binding. Menus are hosted by <see cref="Popup"/> windows and require
+    /// a fullscreen <see cref="TerminalApp"/>.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when a popup menu is opened while no terminal app is running.</exception>
+    public void OpenMenu() => OpenMenu(SelectedIndex);
+
     partial void OnSelectedIndexChanging(ref int value) => value = Math.Clamp(value, 0, Math.Max(0, _items.Count - 1));
 
     /// <inheritdoc />
@@ -163,12 +174,24 @@ public sealed partial class MenuBar : Visual
         }
     }
 
-    internal void OpenMenu(int index)
+    /// <summary>
+    /// Opens the top-level menu at the specified index.
+    /// </summary>
+    /// <param name="index">The zero-based top-level menu index. Values outside the item range are clamped.</param>
+    /// <remarks>
+    /// If the selected top-level item has no submenu items, it is invoked immediately using the same behavior as keyboard
+    /// or mouse activation. Disabled top-level items are not opened. Menus are hosted by <see cref="Popup"/> windows and
+    /// require a fullscreen <see cref="TerminalApp"/>.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when a popup menu is opened while no terminal app is running.</exception>
+    public void OpenMenu(int index)
     {
         if (_items.Count == 0)
         {
             return;
         }
+
+        EnsurePresenters();
 
         var target = ResolveCommandTarget();
 

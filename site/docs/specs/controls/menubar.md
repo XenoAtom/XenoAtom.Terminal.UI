@@ -41,6 +41,8 @@ This document captures the design and implementation details of `MenuBar`.
 `MenuBar` is a `Visual` with:
 
 - `Items : BindableList<MenuItem>` (bindable getter) - top-level menu items.
+- `OpenMenu()` - opens the currently selected top-level menu for app-defined activation shortcuts.
+- `OpenMenu(int index)` - opens the top-level menu at the specified index (clamped to the available item range).
 
 Notes:
 
@@ -152,6 +154,9 @@ When the menu bar has focus:
 
 - Left/Right: move the selected top-level item (skips disabled items).
 - Enter/Space/Down: open the selected menu (or invoke directly if the item has no submenu).
+
+No global menu activation key is installed by default. Applications can bind their own command (for example `F9`) and
+call `MenuBar.OpenMenu()` or `MenuBar.OpenMenu(index)`.
 
 ### MenuBar mouse
 
