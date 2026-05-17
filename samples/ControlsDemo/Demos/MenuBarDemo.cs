@@ -59,17 +59,28 @@ public sealed class MenuBarDemo : ControlsDemoBase
 
         menuBar.Items.AddRange(file, help);
 
-        return new VStack(
+        var host = new VStack(
                 DemoUi.Title("MenuBar"),
-                new TextBlock("Use Tab to focus the menu bar, then Enter/Down to open. Navigate nested menus with Right/Left arrows and activate with Enter.")
+                new TextBlock("Use Tab to focus the menu bar, then Enter/Down to open, or press F9 while focus is in this demo. Navigate nested menus with Right/Left arrows and activate with Enter.")
                     .Wrap(true),
                 new CheckBox("Open enabled").IsChecked(openEnabled),
                 menuBar,
                 new TextBlock(() => $"Status: {status.Value}"),
-                new TextArea("This is a focusable control. Try focusing it, then opening the menu.")
+                new TextArea("This is a focusable control. Try focusing it, then opening the menu with F9.")
                     .MinHeight(4)
                     .MaxHeight(4))
             .Spacing(1);
+
+        host.AddCommand(new Command
+        {
+            Id = "Demo.OpenMenuBar",
+            LabelMarkup = "Open menu",
+            Gesture = new KeyGesture(TerminalKey.F9),
+            Presentation = CommandPresentation.CommandBar,
+            Execute = _ => menuBar.OpenMenu(),
+        });
+
+        return host;
     }
 }
 

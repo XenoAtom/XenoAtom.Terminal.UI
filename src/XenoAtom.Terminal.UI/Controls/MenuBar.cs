@@ -240,7 +240,6 @@ public sealed partial class MenuBar : Visual
             UnregisterPopup(popup);
 
             _openIndex = -1;
-            App?.Focus(this);
         });
 
         popup.Show();

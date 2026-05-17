@@ -65,6 +65,37 @@ public sealed class MenuTests
     }
 
     [TestMethod]
+    public void MenuBar_Closing_Menu_Restores_Previous_Focus()
+    {
+        var file = new MenuItem("File");
+        file.Items.Add(new MenuItem("Open"));
+
+        var bar = new MenuBar();
+        bar.Items.Add(file);
+
+        var textBox = new TextBox("Body");
+        var root = new VStack { bar, textBox };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(50, 12));
+        driver.App.Focus(textBox);
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "Test.OpenMenu",
+            LabelMarkup = "Open menu",
+            Gesture = new KeyGesture(TerminalKey.F9),
+            Execute = _ => bar.OpenMenu(),
+        });
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F9 });
+        driver.TickUntil(() => driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Any());
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Escape });
+        driver.TickUntil(() => !driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Any());
+
+        Assert.AreSame(textBox, driver.App.FocusedElement);
+    }
+
+    [TestMethod]
     public void MenuBar_Right_Opens_Submenu_And_Invokes_Action()
     {
         var invoked = false;
