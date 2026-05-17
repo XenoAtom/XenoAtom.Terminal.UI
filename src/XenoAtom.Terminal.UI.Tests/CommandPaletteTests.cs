@@ -707,6 +707,41 @@ public sealed class CommandPaletteTests
     }
 
     [TestMethod]
+    public void CommandPalette_Show_Uses_Current_Theme_For_Internal_Colors()
+    {
+        var theme = Theme.DefaultLight;
+        var root = new VStack().Style(theme);
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(80, 20));
+        driver.Tick();
+
+        var palette = new CommandPalette();
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.open",
+            LabelMarkup = "Open",
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        palette.Show();
+        driver.Tick();
+
+        var searchBox = GetPrivateField<TextBox>(palette, "_searchBox");
+        var searchBoxStyle = searchBox.GetStyle<TextBoxStyle>();
+        Assert.IsNotNull(searchBoxStyle.Background, "Expected the palette search box to use a theme-derived fill.");
+        Assert.IsTrue(searchBoxStyle.Background.Value.GetRelativeLuminance() > 0.5f, "Expected a light-theme palette search box to use a light fill.");
+
+        var results = GetPrivateField<OptionList<ResolvedCommand>>(palette, "_results");
+        var resultsStyle = results.GetStyle<OptionListStyle>();
+        Assert.IsNotNull(resultsStyle.SelectedFocused, "Expected the palette to define a focused selected-row style.");
+        var selectedFocused = resultsStyle.SelectedFocused!.Value;
+        Assert.IsTrue(selectedFocused.TryGetForeground(out var selectedForeground), "Expected the selected result row to define a foreground.");
+        Assert.AreEqual(theme.Foreground, selectedForeground, "Expected the selected result foreground to come from the active light theme.");
+        Assert.IsTrue(selectedFocused.TryGetBackground(out var selectedBackground), "Expected the selected result row to define a background.");
+        Assert.IsTrue(selectedBackground.GetRelativeLuminance() > 0.4f, "Expected a light-theme selected row to use a light selection fill.");
+    }
+
+    [TestMethod]
     public void CommandPalette_Show_Filters_Items_Based_On_Query()
     {
         var root = new VStack();

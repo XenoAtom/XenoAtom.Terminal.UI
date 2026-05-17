@@ -87,6 +87,12 @@ public sealed partial class CommandPalette : Visual
         _searchBox.KeyDown((_, e) => OnPaletteKeyDown(e, fromSearch: true));
         _results.KeyDown((_, e) => OnPaletteKeyDown(e, fromSearch: false));
 
+        RegisterDynamicUpdate(static visual =>
+        {
+            var palette = (CommandPalette)visual;
+            palette.ApplyStyle(palette.GetStyle<CommandPaletteStyle>());
+        });
+
         ApplyStyle(GetStyle<CommandPaletteStyle>());
     }
 
