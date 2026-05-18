@@ -25,6 +25,7 @@
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\..\img\XenoAtom.Terminal.UI.png" Pack="true" PackagePath="/" />
     <None Include="readme.md" Pack="true" PackagePath="/" />
+    <EmbeddedResource Include="Syntaxes\TOML.tmLanguage" />
   </ItemGroup>
 
   <ItemGroup>

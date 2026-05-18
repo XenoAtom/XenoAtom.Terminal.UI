@@ -286,6 +286,39 @@ console.log(renderSummary());
 }
 """),
             new(
+                LanguageId: "toml",
+                DisplayName: "TOML",
+                FindText: "ui.theme",
+                ReplaceText: "code-editor",
+                CaretText: "ui.theme",
+                GoToLine: 7,
+                GoToColumn: 1,
+                ScreenshotScrollOffset: 0,
+                Source:
+"""
+# TOML 1.1 sample for the CodeEditor TextMate grammar.
+title = "Controls Demo"
+launched_at = 2026-05-18 09:30Z
+
+[ui]
+theme = "dark-plus"
+accent = "\e[38;2;76;194;255m"
+features = ["code-editor", "textmate", "toml"]
+
+[ui.shortcuts]
+find = "Ctrl+F"
+replace = "Ctrl+H"
+
+[[ui.samples]]
+language = "toml"
+score = +1_024.5
+metadata = {
+  owner = "XenoAtom",
+  enabled = true,
+  times = [07:32, 1979-05-27T07:32-07:00],
+}
+"""),
+            new(
                 LanguageId: "python",
                 DisplayName: "Python",
                 FindText: "render_summary",

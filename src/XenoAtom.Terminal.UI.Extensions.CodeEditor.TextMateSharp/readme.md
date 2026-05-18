@@ -49,3 +49,5 @@ var markdown = new MarkdownControl(source)
 ```
 
 The renderer automatically chooses a bundled light or dark TextMate theme based on the current terminal UI theme.
+
+The extension also bundles a TOML grammar (`toml` / `.toml`) alongside the grammars provided by `TextMateSharp.Grammars`.

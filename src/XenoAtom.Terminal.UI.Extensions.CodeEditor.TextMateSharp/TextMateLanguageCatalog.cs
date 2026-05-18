@@ -10,30 +10,30 @@ namespace XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp;
 
 internal sealed class TextMateLanguageCatalog
 {
-    private readonly RegistryOptions _discoveryRegistryOptions;
+    private readonly BundledTextMateRegistryOptions _discoveryRegistryOptions;
     private readonly Dictionary<string, string> _scopesByLanguage;
     private readonly Dictionary<string, string> _scopesByExtension;
-    private readonly Dictionary<TextMateThemeName, RegistryOptions> _registryOptionsByTheme;
+    private readonly Dictionary<TextMateThemeName, BundledTextMateRegistryOptions> _registryOptionsByTheme;
     private readonly Dictionary<TextMateThemeName, TextMateThemePalette> _palettes;
 
     public static TextMateLanguageCatalog Default { get; } = new();
 
     private TextMateLanguageCatalog()
     {
-        _discoveryRegistryOptions = new RegistryOptions(TextMateThemeName.DarkPlus);
+        _discoveryRegistryOptions = new BundledTextMateRegistryOptions(TextMateThemeName.DarkPlus);
         _scopesByLanguage = new Dictionary<string, string>(StringComparer.Ordinal);
         _scopesByExtension = new Dictionary<string, string>(StringComparer.Ordinal);
-        _registryOptionsByTheme = new Dictionary<TextMateThemeName, RegistryOptions>();
+        _registryOptionsByTheme = new Dictionary<TextMateThemeName, BundledTextMateRegistryOptions>();
         _palettes = new Dictionary<TextMateThemeName, TextMateThemePalette>();
 
-        foreach (var language in _discoveryRegistryOptions.GetAvailableLanguages())
+        foreach (var language in _discoveryRegistryOptions.RegistryOptions.GetAvailableLanguages())
         {
             if (string.IsNullOrWhiteSpace(language.Id))
             {
                 continue;
             }
 
-            var scopeName = _discoveryRegistryOptions.GetScopeByLanguageId(language.Id);
+            var scopeName = _discoveryRegistryOptions.RegistryOptions.GetScopeByLanguageId(language.Id);
             if (string.IsNullOrWhiteSpace(scopeName))
             {
                 continue;
@@ -56,6 +56,8 @@ internal sealed class TextMateLanguageCatalog
                 }
             }
         }
+
+        AddBundledTomlLanguage();
     }
 
     public TextMateTokenizationSession CreateSession(string scopeName, TextMateThemeName themeName)
@@ -67,7 +69,7 @@ internal sealed class TextMateLanguageCatalog
         {
             if (!_palettes.TryGetValue(themeName, out var palette))
             {
-                palette = new TextMateThemePalette(GetRegistryOptions(themeName), themeName);
+                palette = new TextMateThemePalette(GetRegistryOptions(themeName).RegistryOptions, themeName);
                 _palettes.Add(themeName, palette);
             }
 
@@ -197,17 +199,25 @@ internal sealed class TextMateLanguageCatalog
         return value.ToLowerInvariant();
     }
 
-    private RegistryOptions GetRegistryOptions(TextMateThemeName themeName)
+    private BundledTextMateRegistryOptions GetRegistryOptions(TextMateThemeName themeName)
     {
         lock (_registryOptionsByTheme)
         {
             if (!_registryOptionsByTheme.TryGetValue(themeName, out var registryOptions))
             {
-                registryOptions = new RegistryOptions(themeName);
+                registryOptions = new BundledTextMateRegistryOptions(themeName);
                 _registryOptionsByTheme.Add(themeName, registryOptions);
             }
 
             return registryOptions;
         }
+    }
+
+    private void AddBundledTomlLanguage()
+    {
+        AddLanguageKey(BundledTextMateRegistryOptions.TomlLanguageId, BundledTextMateRegistryOptions.TomlScopeName);
+        AddLanguageKey("tml", BundledTextMateRegistryOptions.TomlScopeName);
+        AddExtensionKey(".toml", BundledTextMateRegistryOptions.TomlScopeName);
+        AddExtensionKey(".tml", BundledTextMateRegistryOptions.TomlScopeName);
     }
 }

@@ -13,7 +13,7 @@ internal sealed class TextMateTokenizationSession
     private readonly IGrammar _grammar;
     private int _tokenizeLineCallCount;
 
-    public TextMateTokenizationSession(string scopeName, RegistryOptions registryOptions)
+    public TextMateTokenizationSession(string scopeName, IRegistryOptions registryOptions)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(scopeName);
         ArgumentNullException.ThrowIfNull(registryOptions);

@@ -57,6 +57,73 @@ public sealed class TextMateSharpIntegrationTests
     }
 
     [TestMethod]
+    public void CodeEditor_TextMateSyntaxHighlighter_Loads_Bundled_Toml_Grammar()
+    {
+        const string source = """
+            title = "Controls Demo"
+            launched_at = 2026-05-18 09:30Z
+
+            [ui."theme.settings"]
+            accent = "\e[38;2;76;194;255m"
+            features = ["code-editor", "textmate", "toml"]
+            metadata = {
+              enabled = true,
+              ratio = +1_024.5,
+              fingerprint = 0xDEAD_BEEF,
+              times = [07:32, 1979-05-27T07:32-07:00],
+            }
+            """;
+
+        var editor = new CodeEditor(source);
+        var snapshot = editor.TextDocument.CurrentSnapshot;
+        var highlighter = new TextMateCodeEditorSyntaxHighlighter(
+            new TextMateCodeEditorOptions
+            {
+                LanguageId = "toml",
+            });
+
+        var state = highlighter.Build(new CodeEditorSyntaxBuildContext(snapshot, Theme.Default, 0, 0, 0));
+        var runs = new List<StyledRun>();
+        var line = snapshot.GetLine(4);
+        highlighter.GetLineRuns(
+            state,
+            new CodeEditorLineSyntaxRequest(snapshot, Theme.Default, 4, line.Start, line.Length, 0, 0, 0),
+            runs);
+
+        Assert.IsTrue(runs.Count > 0, "Expected the bundled TOML grammar to produce syntax runs.");
+
+        var lineText = "accent = \"\\e[38;2;76;194;255m\"";
+        var escapeIndex = lineText.IndexOf("\\e", StringComparison.Ordinal);
+        Assert.IsTrue(escapeIndex >= 0, "Expected the TOML test line to contain a TOML 1.1 escape sequence.");
+        var escapeStyle = FindStyleCovering(runs, escapeIndex, "\\e".Length);
+        Assert.IsTrue(escapeStyle.TryGetForeground(out _), "Expected the TOML 1.1 escape sequence to receive a token foreground.");
+    }
+
+    [TestMethod]
+    public void CodeEditor_TextMateSyntaxHighlighter_Resolves_Toml_By_FileName()
+    {
+        const string source = "name = \"demo\"";
+
+        var editor = new CodeEditor(source);
+        var snapshot = editor.TextDocument.CurrentSnapshot;
+        var line = snapshot.GetLine(0);
+        var highlighter = new TextMateCodeEditorSyntaxHighlighter(
+            new TextMateCodeEditorOptions
+            {
+                FileName = "config.toml",
+            });
+
+        var state = highlighter.Build(new CodeEditorSyntaxBuildContext(snapshot, Theme.Default, 0, 0, 0));
+        var runs = new List<StyledRun>();
+        highlighter.GetLineRuns(
+            state,
+            new CodeEditorLineSyntaxRequest(snapshot, Theme.Default, 0, line.Start, line.Length, 0, 0, 0),
+            runs);
+
+        Assert.IsTrue(runs.Count > 0, "Expected .toml files to resolve to the bundled TOML grammar.");
+    }
+
+    [TestMethod]
     public void CodeEditor_TextMateSyntaxHighlighter_Does_Not_Override_Editor_Default_Colors_For_Punctuation()
     {
         const string source = "using System.Collections.Generic;";
