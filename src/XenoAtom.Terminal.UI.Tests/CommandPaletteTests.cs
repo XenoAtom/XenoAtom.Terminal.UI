@@ -160,6 +160,38 @@ public sealed class CommandPaletteTests
     }
 
     [TestMethod]
+    public void CommandPalette_Keeps_MultiStroke_Shortcut_Visible_When_Description_Is_Long()
+    {
+        var root = new VStack();
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(80, 16));
+        driver.Tick();
+
+        var palette = new CommandPalette().Style(CommandPaletteStyle.Default with
+        {
+            MinWidth = 50,
+            MaxWidth = 50,
+        });
+
+        driver.App.AddGlobalCommand(new Command
+        {
+            Id = "cmd.long-description",
+            LabelMarkup = "Long description command",
+            DescriptionMarkup = "[dim]This description is intentionally long enough to exceed the command palette viewport and must not push the shortcut outside the visible row.[/]",
+            Sequence = new KeySequence(
+                new KeyGesture(TerminalChar.CtrlG, TerminalModifiers.Ctrl),
+                new KeyGesture(TerminalChar.CtrlT, TerminalModifiers.Ctrl)),
+            Presentation = CommandPresentation.CommandPalette,
+            Execute = _ => { },
+        });
+
+        palette.Show();
+        driver.Tick();
+
+        var rendered = GetRenderedText(driver, 80, 16);
+        StringAssert.Contains(rendered, "Ctrl+G Ctrl+T");
+    }
+
+    [TestMethod]
     public void CommandPalette_Invokes_Action_On_Activated_Item()
     {
         var invoked = false;

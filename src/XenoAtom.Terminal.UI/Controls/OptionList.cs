@@ -133,6 +133,8 @@ public sealed partial class OptionList<T> : Visual, IScrollable
     [Bindable]
     private partial int MeasuredItemHeight { get; set; }
 
+    internal bool UseHorizontalScrollExtent { get; set; } = true;
+
     partial void OnSelectedIndexChanging(ref int value)
     {
         _oldSelectedForEvent = _selectedIndex;
@@ -197,6 +199,11 @@ public sealed partial class OptionList<T> : Visual, IScrollable
         MeasuredItemHeight = itemHeight;
 
         var width = prefixWidth + itemWidth;
+        if (!UseHorizontalScrollExtent && constraints.IsWidthBounded)
+        {
+            width = Math.Min(width, constraints.MaxWidth);
+        }
+
         MeasuredContentWidth = Math.Max(0, width);
         var desiredHeight = Math.Max(1, _itemVisuals.Count * itemHeight);
 
@@ -239,7 +246,9 @@ public sealed partial class OptionList<T> : Visual, IScrollable
 
         var count = Items.Count;
         var selected = Math.Clamp(SelectedIndex, 0, Math.Max(0, count - 1));
-        var extentWidth = Math.Max(innerWidth, Math.Max(0, MeasuredContentWidth));
+        var extentWidth = UseHorizontalScrollExtent
+            ? Math.Max(innerWidth, Math.Max(0, MeasuredContentWidth))
+            : innerWidth;
 
         _scroll.SetViewport(innerWidth, viewportHeight);
         _scroll.SetExtent(extentWidth, Math.Max(0, count * itemHeight));
@@ -251,6 +260,12 @@ public sealed partial class OptionList<T> : Visual, IScrollable
         }
 
         var maxOffsetY = Math.Max(0, _scroll.ExtentHeight - _scroll.ViewportHeight);
+        var maxOffsetX = Math.Max(0, _scroll.ExtentWidth - _scroll.ViewportWidth);
+        if (_scroll.OffsetX > maxOffsetX)
+        {
+            _scroll.SetOffset(maxOffsetX, _scroll.OffsetY);
+        }
+
         if (_scroll.OffsetY > maxOffsetY)
         {
             _scroll.SetOffset(_scroll.OffsetX, maxOffsetY);
@@ -264,7 +279,7 @@ public sealed partial class OptionList<T> : Visual, IScrollable
         }
 
         var scrollOffset = itemHeight == 0 ? 0 : (_scroll.OffsetY / itemHeight);
-        var offsetX = _scroll.OffsetX;
+        var offsetX = UseHorizontalScrollExtent ? _scroll.OffsetX : 0;
         var itemLeft = innerLeft + prefixWidth - offsetX;
         var itemWidth = Math.Max(0, extentWidth - prefixWidth);
 

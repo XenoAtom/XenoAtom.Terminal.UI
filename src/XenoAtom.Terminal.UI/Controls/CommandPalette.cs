@@ -64,6 +64,8 @@ public sealed partial class CommandPalette : Visual
         _results = new OptionList<ResolvedCommand>()
             .ActivateOnClick(true)
             .HorizontalAlignment(Align.Stretch);
+        // Long labels/descriptions should clip inside the palette; keep shortcuts aligned to the visible row edge.
+        _results.UseHorizontalScrollExtent = false;
 
         _results.ItemIsEnabled = (Func<ResolvedCommand, bool>)(item => item.IsEnabled);
         _results.ItemSearchText = (Func<ResolvedCommand, string?>)(item => item.Command.Name ?? item.Command.SearchText ?? item.Command.LabelMarkup);

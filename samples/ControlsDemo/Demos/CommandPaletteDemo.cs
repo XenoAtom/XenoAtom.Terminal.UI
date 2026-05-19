@@ -111,6 +111,20 @@ public sealed class CommandPaletteDemo : ControlsDemoBase
             Execute = _ => ShowPalette(),
         });
 
+        host.AddCommand(new Command
+        {
+            Id = "Demo.LongShortcutDescription",
+            Name = "long_shortcut",
+            LabelMarkup = "Long shortcut with long description",
+            DescriptionMarkup = "[dim]This deliberately long command palette description demonstrates that a multi-stroke shortcut remains visible at the right edge instead of being pushed off-screen by the description text.[/]",
+            Sequence = new KeySequence(
+                new KeyGesture(TerminalChar.CtrlG, TerminalModifiers.Ctrl),
+                new KeyGesture(TerminalChar.CtrlT, TerminalModifiers.Ctrl)),
+            Presentation = CommandPresentation.CommandPalette,
+            CanExecute = _ => enabled.Value,
+            Execute = _ => counter.Value += 100,
+        });
+
         for (int i = 0; i < 10; i++)
         {
             int localI = i; // Capture loop variable
