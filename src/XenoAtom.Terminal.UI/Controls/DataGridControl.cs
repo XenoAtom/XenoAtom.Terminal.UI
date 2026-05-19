@@ -892,6 +892,14 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
 
         _ = SourceVersion;
 
+        // Hovered resize/sort handles are tracked from pointer move events. When the pointer leaves the grid,
+        // the grid may not receive another move event, so reset the hover state from the framework-managed flag.
+        if (!IsHovered)
+        {
+            HoveredResizeColumnIndex = -1;
+            HoveredSortColumnIndex = -1;
+        }
+
         EnsureHeaderVisuals();
         EnsureFilterVisuals();
         ApplyFilterToViewIfNeeded();
@@ -986,7 +994,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         var scrollViewportWidth = Math.Max(0, rect.Width - frozenWidth);
         var scrollViewportHeight = Math.Max(0, rect.Height - headerHeight - filterHeight - frozenRows);
 
-        var scrollExtentWidth = Math.Max(0, SumColumnsWidth(frozenColumns, visibleColumns));
+        var scrollExtentWidth = GetScrollableColumnsExtentWidth(frozenColumns, visibleColumns);
         var scrollExtentHeight = Math.Max(0, rowCount - frozenRows);
 
         _scroll.SetViewport(scrollViewportWidth, scrollViewportHeight);
@@ -2003,11 +2011,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             }
         }
 
-        // Reserve a trailing gap for the last-column resize handle.
-        if (cols.Count > 0)
-        {
-            width += Math.Max(1, showVerticalLines ? 1 : spacing);
-        }
+        width += GetTrailingResizeHandleGap(cols.Count);
 
         width = Math.Max(1, width);
 
@@ -2084,8 +2088,10 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             ? 0
             : (columns.Count - 1) * (showVerticalLines ? 1 : spacing);
 
-        // Reserve a trailing gap for the last-column resize handle so it does not overlap the last column content.
-        var trailingGap = columns.Count == 0 ? 0 : Math.Max(1, showVerticalLines ? 1 : spacing);
+        // Reserve a trailing gap for the last-column resize handle so it does not overlap the last column content
+        // when the columns fit in the viewport. Overflowing layouts keep their natural width and expose the gap
+        // through the horizontal scroll extent instead of shrinking the last column out of view.
+        var trailingGap = GetTrailingResizeHandleGap(columns.Count);
         trailingGap = Math.Clamp(trailingGap, 0, Math.Max(0, availableWidth - separators));
 
         var availableForCells = Math.Max(0, availableWidth - separators - trailingGap);
@@ -2122,16 +2128,19 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
                 used += _resolvedColumnWidths[i];
             }
 
-            var targetUsed = Math.Max(0, availableWidth - trailingGap);
-            var overflow = used - targetUsed;
-            if (overflow > 0)
+            if (used <= availableWidth)
             {
-                var last = columns.Count - 1;
-                var shrinkable = Math.Max(0, _resolvedColumnWidths[last] - columns[last].MinWidth);
-                var shrink = Math.Min(overflow, shrinkable);
-                if (shrink > 0)
+                var targetUsed = Math.Max(0, availableWidth - trailingGap);
+                var overflow = used - targetUsed;
+                if (overflow > 0)
                 {
-                    _resolvedColumnWidths[last] -= shrink;
+                    var last = columns.Count - 1;
+                    var shrinkable = Math.Max(0, _resolvedColumnWidths[last] - columns[last].MinWidth);
+                    var shrink = Math.Min(overflow, shrinkable);
+                    if (shrink > 0)
+                    {
+                        _resolvedColumnWidths[last] -= shrink;
+                    }
                 }
             }
         }
@@ -2170,6 +2179,31 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         }
 
         return x;
+    }
+
+    private int GetScrollableColumnsExtentWidth(int frozenColumns, int visibleColumns)
+    {
+        var count = Math.Min(visibleColumns, Math.Min(_resolvedColumnWidths.Length, _resolvedColumnStarts.Length));
+        if (count <= 0 || frozenColumns >= count)
+        {
+            return 0;
+        }
+
+        var frozenWidth = SumColumnsWidth(0, Math.Clamp(frozenColumns, 0, count));
+        var last = count - 1;
+        var totalWidth = _resolvedColumnStarts[last] + _resolvedColumnWidths[last] + GetTrailingResizeHandleGap(count);
+        return Math.Max(0, totalWidth - frozenWidth);
+    }
+
+    private int GetTrailingResizeHandleGap(int columnCount)
+    {
+        if (columnCount <= 0)
+        {
+            return 0;
+        }
+
+        var style = GetStyle<DataGridStyle>();
+        return Math.Max(1, style.ShowVerticalLines ? 1 : Math.Max(0, style.ColumnSpacing));
     }
 
     private int GetHeaderContentWidth(in ResolvedColumn column, int columnWidth)
@@ -3990,8 +4024,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         }
 
         // Trailing handle after the last column: use any extra available space, and fall back to the last visible cell.
-        var style = GetStyle<DataGridStyle>();
-        var preferred = Math.Max(1, style.ShowVerticalLines ? 1 : style.ColumnSpacing);
+        var preferred = GetTrailingResizeHandleGap(visibleColumns);
         var available = rect.Right - boundaryUiX;
         if (available > 0)
         {

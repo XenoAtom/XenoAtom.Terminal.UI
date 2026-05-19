@@ -4,6 +4,7 @@
 
 using System.Data;
 using System.Linq;
+using System.Reflection;
 using XenoAtom.Terminal.UI.Commands;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.DataGrid;
@@ -125,6 +126,52 @@ public sealed class DataGridRenderingTests
 
         StringAssert.Contains(rendered, "Item 1");
         Assert.IsFalse(rendered.Contains("Item 0", StringComparison.Ordinal), "After scrolling down, Item 0 should no longer be visible.");
+    }
+
+    [TestMethod]
+    public void DataGrid_HorizontalScroll_Shows_Last_Schema_Column_In_ScrollViewer()
+    {
+        using var document = new DataGridDataTableDocument(CreateWideTable(30));
+        using var view = new DataGridDocumentView(document);
+
+        var grid = new DataGridControl { View = view, ShowRowAnchor = false };
+        var root = new ScrollViewer(grid)
+        {
+            HorizontalScrollEnabled = true,
+            VerticalScrollEnabled = true,
+            HorizontalAlignment = Align.Stretch,
+            VerticalAlignment = Align.Stretch,
+        };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 4));
+        driver.Tick();
+
+        grid.Scroll.SetOffset(int.MaxValue, 0);
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(40, 4);
+        screen.Apply(driver.Backend.GetOutText());
+        var rendered = screen.GetText();
+
+        StringAssert.Contains(rendered, "Column29", "Expected horizontal scrolling to reach the final schema column.");
+
+        static DataTable CreateWideTable(int columnCount)
+        {
+            var table = new DataTable();
+            for (var i = 0; i < columnCount; i++)
+            {
+                table.Columns.Add($"Column{i}", typeof(string));
+            }
+
+            var row = table.NewRow();
+            for (var i = 0; i < columnCount; i++)
+            {
+                row[i] = $"Value{i}";
+            }
+
+            table.Rows.Add(row);
+            return table;
+        }
     }
 
     [TestMethod]
@@ -506,6 +553,48 @@ public sealed class DataGridRenderingTests
 
         Assert.AreEqual(GridUnitType.Fixed, colA.Width.Type);
         Assert.AreEqual(7, (int)Math.Round(colA.Width.Value));
+    }
+
+    [TestMethod]
+    public void DataGrid_Clears_Resize_Handle_Hover_When_Pointer_Leaves_Vertically()
+    {
+        var aAccessor = new BindingAccessor<string>("a", o => ((TwoColumnRow)o).A, (o, v) => ((TwoColumnRow)o).A = v);
+        var bAccessor = new BindingAccessor<string>("b", o => ((TwoColumnRow)o).B, (o, v) => ((TwoColumnRow)o).B = v);
+
+        var doc = new DataGridListDocument<TwoColumnRow>();
+        doc.SetColumns(new[]
+        {
+            new DataGridColumnInfo("a", "A", typeof(string), ReadOnly: false, aAccessor),
+            new DataGridColumnInfo("b", "B", typeof(string), ReadOnly: false, bAccessor),
+        });
+        doc.AddRow(new TwoColumnRow { A = "a", B = "b" });
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view };
+        grid.Columns.Add(new DataGridColumn<string> { Key = "a", TypedValueAccessor = aAccessor, Width = GridLength.Fixed(4) });
+        grid.Columns.Add(new DataGridColumn<string> { Key = "b", TypedValueAccessor = bAccessor, Width = GridLength.Fixed(4) });
+
+        var root = new VStack
+        {
+            new TextBlock("above"),
+            grid,
+            new TextBlock("below"),
+        };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(20, 8));
+        driver.Tick();
+
+        var separatorX = grid.Bounds.X + grid.RowAnchorWidth + 4;
+        var headerY = grid.Bounds.Y;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, Button = TerminalMouseButton.None, X = separatorX, Y = headerY });
+        driver.TickUntil(() => GetHoveredResizeColumnIndex(grid) == 0);
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, Button = TerminalMouseButton.None, X = separatorX, Y = headerY - 1 });
+        driver.TickUntil(() => !grid.IsHovered);
+
+        Assert.AreEqual(-1, GetHoveredResizeColumnIndex(grid), "Expected the resize handle hover highlight to clear when the pointer leaves above the grid.");
     }
 
     [TestMethod]
@@ -1464,6 +1553,9 @@ public sealed class DataGridRenderingTests
         rendered = screen.GetText();
         StringAssert.Contains(rendered, "1/3");
     }
+
+    private static int GetHoveredResizeColumnIndex(DataGridControl grid)
+        => (int)typeof(DataGridControl).GetProperty("HoveredResizeColumnIndex", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(grid)!;
 
     private sealed class SwimRow
     {
