@@ -53,6 +53,35 @@ public sealed class ScreenshotClipboardCommandTests
     }
 
     [TestMethod]
+    public void Visual_Registered_Screenshot_Command_Works_With_Modal_Dialog_Open()
+    {
+        var root = new Border(new TextBlock("Hello"))
+            .Style(BorderStyle.Single)
+            .Padding(1);
+
+        root.SetStyle(Theme.Default);
+        root.RegisterClipboardScreenshotCommand();
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 10));
+        driver.Tick();
+
+        var dialog = new Dialog
+        {
+            Title = "Modal",
+            IsModal = true,
+            Content = new Button("OK"),
+        };
+
+        dialog.Show();
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F12, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+
+        AssertClipboardContainsPng(driver.Terminal.Clipboard);
+    }
+
+    [TestMethod]
     public void TerminalApp_Registers_Global_Screenshot_Command_With_Custom_Options()
     {
         var root = new Border(new TextBlock("Hello"))
@@ -79,6 +108,35 @@ public sealed class ScreenshotClipboardCommandTests
         Assert.AreEqual("Snap", command.LabelMarkup);
         Assert.AreEqual(new KeyGesture(TerminalKey.F11), command.Gesture);
         Assert.AreEqual(CommandPresentation.None, command.Presentation);
+    }
+
+    [TestMethod]
+    public void TerminalApp_Registered_Screenshot_Command_Works_With_Modal_Dialog_Open()
+    {
+        var root = new Border(new TextBlock("Hello"))
+            .Style(BorderStyle.Single)
+            .Padding(1);
+
+        root.SetStyle(Theme.Default);
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 10));
+        driver.App.RegisterClipboardScreenshotCommand();
+        driver.Tick();
+
+        var dialog = new Dialog
+        {
+            Title = "Modal",
+            IsModal = true,
+            Content = new Button("OK"),
+        };
+
+        dialog.Show();
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.F12, Modifiers = TerminalModifiers.Ctrl });
+        driver.Tick();
+
+        AssertClipboardContainsPng(driver.Terminal.Clipboard);
     }
 
     [TestMethod]

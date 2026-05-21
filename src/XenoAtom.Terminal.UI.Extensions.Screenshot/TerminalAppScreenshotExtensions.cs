@@ -24,14 +24,14 @@ public static class TerminalAppScreenshotExtensions
     }
 
     /// <summary>
-    /// Registers a global command that captures the current frame buffer as a PNG image and copies it to the clipboard.
+    /// Registers an app-wide command that captures the current frame buffer as a PNG image and copies it to the clipboard.
     /// </summary>
     /// <param name="app">The source app.</param>
     /// <param name="options">The command options.</param>
     public static void RegisterClipboardScreenshotCommand(this TerminalApp app, ScreenshotClipboardCommandOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(app);
-        app.AddGlobalCommand(CreateClipboardScreenshotCommand(options ?? ScreenshotClipboardCommandOptions.Default));
+        RegisterAppWideClipboardScreenshotCommand(app, options ?? ScreenshotClipboardCommandOptions.Default);
     }
 
     /// <summary>
@@ -54,12 +54,20 @@ public static class TerminalAppScreenshotExtensions
                 return;
             }
 
-            app.AddGlobalCommand(CreateClipboardScreenshotCommand(effectiveOptions));
+            RegisterAppWideClipboardScreenshotCommand(app, effectiveOptions);
             lastRegisteredApp = app;
         }
 
         TryRegister(visual);
         visual.RegisterDynamicUpdate(TryRegister);
+    }
+
+    private static void RegisterAppWideClipboardScreenshotCommand(TerminalApp app, ScreenshotClipboardCommandOptions options)
+    {
+        // Global commands are intentionally hidden while a modal root is active. Registering the same
+        // command on the actual app root keeps the screenshot gesture in the focused modal's parent chain.
+        app.AddGlobalCommand(CreateClipboardScreenshotCommand(options));
+        app.Root.AddCommand(CreateClipboardScreenshotCommand(options));
     }
 
     /// <summary>
