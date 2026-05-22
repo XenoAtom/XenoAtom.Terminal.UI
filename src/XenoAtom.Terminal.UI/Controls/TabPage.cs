@@ -148,6 +148,11 @@ public enum TabCloseReason
     /// The close request originated from the tab header close button.
     /// </summary>
     CloseButton,
+
+    /// <summary>
+    /// The close request originated from a middle-click on the tab header.
+    /// </summary>
+    MiddleClick,
 }
 
 /// <summary>
