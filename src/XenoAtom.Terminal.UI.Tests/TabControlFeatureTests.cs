@@ -56,6 +56,44 @@ public sealed class TabControlFeatureTests
     }
 
     [TestMethod]
+    public void TabControl_MiddleClick_Removes_Tab()
+    {
+        var closable = new TabPage("One", new TextBlock("A"))
+        {
+            ShowCloseButton = true,
+        };
+
+        var requestClosingCount = 0;
+        var closedCount = 0;
+        closable.RequestClosing += (_, e) =>
+        {
+            requestClosingCount++;
+            Assert.AreEqual(TabCloseReason.MiddleClick, e.Reason);
+            Assert.AreEqual(0, e.Index);
+        };
+        closable.Closed += (_, e) =>
+        {
+            closedCount++;
+            Assert.AreEqual(TabCloseReason.MiddleClick, e.Reason);
+            Assert.AreEqual(0, e.Index);
+        };
+
+        var tabs = new TabControl(
+            closable,
+            new TabPage("Two", new TextBlock("B")));
+
+        using var driver = new TerminalAppTestDriver(tabs, TerminalHostKind.Fullscreen, new TerminalSize(30, 8));
+        driver.Tick();
+
+        var tabPoint = GetHeaderPoint(tabs, 0, closeButton: false);
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Middle, X = tabPoint.X, Y = tabPoint.Y });
+        driver.TickUntil(() => tabs.Tabs.Count == 1);
+
+        Assert.AreEqual(1, requestClosingCount);
+        Assert.AreEqual(1, closedCount);
+    }
+
+    [TestMethod]
     public void TabControl_Cancelled_Close_Request_Leaves_Tab_Open()
     {
         var closable = new TabPage("One", new TextBlock("A"))

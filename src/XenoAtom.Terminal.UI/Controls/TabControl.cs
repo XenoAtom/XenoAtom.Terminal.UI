@@ -592,6 +592,22 @@ public sealed partial class TabControl : Visual
     /// <inheritdoc/>
     protected override void OnPointerPressed(PointerEventArgs e)
     {
+        if (e.Button == TerminalMouseButton.Middle)
+        {
+            var middleLocalY = e.UiY - Bounds.Y;
+            if (middleLocalY >= 0 && middleLocalY < _headerHeight)
+            {
+                var middleTarget = HitTestHeader(e.UiX - Bounds.X);
+                if ((middleTarget.Part == TabHeaderPart.Tab || middleTarget.Part == TabHeaderPart.CloseButton) && IsTargetEnabled(middleTarget))
+                {
+                    TryCloseTab(middleTarget.Index, TabCloseReason.MiddleClick);
+                    e.Handled = true;
+                }
+            }
+
+            return;
+        }
+
         if (e.Button != TerminalMouseButton.Left)
         {
             return;
