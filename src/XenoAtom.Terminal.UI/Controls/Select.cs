@@ -350,8 +350,8 @@ public partial class Select<T> : ContentVisual
         var template = ResolveItemTemplate();
         var list = new ListBox<T>()
             .Items(Items)
-            .ItemTemplate(template);
-        list.SelectedIndex = Math.Clamp(SelectedIndex, 0, Math.Max(0, list.Items.Count - 1));
+            .ItemTemplate(template)
+            .SelectedIndex(this.Bind.SelectedIndex);
 
         var style = GetStyle<SelectStyle>();
         var content = style.PopupTemplateFactory?.Invoke(list) ?? list;
@@ -363,12 +363,11 @@ public partial class Select<T> : ContentVisual
                 return;
             }
 
-            if (!TryFindSelectPopupParent(s as Visual, out var lb, out var owner))
+            if (!TryFindSelectPopupParent(s as Visual, out _, out var owner))
             {
                 return;
             }
 
-            owner.SelectedIndex = lb.SelectedIndex;
             owner.ClosePopup();
         });
 
@@ -379,12 +378,11 @@ public partial class Select<T> : ContentVisual
                 return;
             }
 
-            if (!TryFindSelectPopupParent(s as Visual, out var lb, out var owner))
+            if (!TryFindSelectPopupParent(s as Visual, out _, out var owner))
             {
                 return;
             }
 
-            owner.SelectedIndex = lb.SelectedIndex;
             owner.ClosePopup();
             e.Handled = true;
         });
