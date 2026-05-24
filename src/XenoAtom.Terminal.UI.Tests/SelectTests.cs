@@ -65,6 +65,75 @@ public sealed class SelectTests
     }
 
     [TestMethod]
+    public void Select_Popup_Scrolls_To_CurrentSelection_WhenOpened()
+    {
+        var select = new Select<string>()
+            .Items(Enumerable.Range(0, 30).Select(i => $"Item {i:00}"))
+            .SelectedIndex(20);
+
+        var root = new VStack { select };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        driver.App.Focus(select);
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
+        driver.TickUntil(() => driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Any());
+
+        var popup = driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Single();
+        var list = popup.EnumerateVisualsDepthFirst().OfType<ListBox<string>>().Single();
+
+        Assert.IsGreaterThan(0, popup.ScrollHost.VerticalOffset, "Expected the popup scroll host to scroll to the selected item.");
+        Assert.IsTrue(
+            list.Scroll.OffsetY <= select.SelectedIndex && select.SelectedIndex < list.Scroll.OffsetY + list.Scroll.ViewportHeight,
+            "Expected the selected item to be inside the list viewport after opening the popup.");
+
+        var screen = new AnsiTestScreen(40, 10);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "Item 20", "Expected the selected item text to be visible in the popup.");
+    }
+
+    [TestMethod]
+    public void Select_Popup_Scrolls_WhenKeyboardSelectionMoves()
+    {
+        var select = new Select<string>()
+            .Items(Enumerable.Range(0, 30).Select(i => $"Item {i:00}"));
+
+        var root = new VStack { select };
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        driver.App.Focus(select);
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
+        driver.TickUntil(() => driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Any());
+
+        var popup = driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Single();
+        var list = popup.EnumerateVisualsDepthFirst().OfType<ListBox<string>>().Single();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.End });
+        driver.TickUntil(() => select.SelectedIndex == 29 && popup.ScrollHost.VerticalOffset > 0);
+
+        Assert.IsTrue(
+            list.Scroll.OffsetY <= select.SelectedIndex && select.SelectedIndex < list.Scroll.OffsetY + list.Scroll.ViewportHeight,
+            "Expected End to scroll the selected item into view.");
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Home });
+        driver.TickUntil(() => select.SelectedIndex == 0 && popup.ScrollHost.VerticalOffset == 0);
+
+        for (var i = 0; i < 8; i++)
+        {
+            driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
+        }
+
+        driver.TickUntil(() => select.SelectedIndex == 8 && popup.ScrollHost.VerticalOffset > 0);
+
+        Assert.IsTrue(
+            list.Scroll.OffsetY <= select.SelectedIndex && select.SelectedIndex < list.Scroll.OffsetY + list.Scroll.ViewportHeight,
+            "Expected Down to scroll the selected item into view once it moves past the visible viewport.");
+    }
+
+    [TestMethod]
     public void Select_PopupAboveAnchor_Selects_Clicked_Item()
     {
         var selectedIndex = new State<int>(0);

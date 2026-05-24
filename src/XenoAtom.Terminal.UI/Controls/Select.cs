@@ -10,6 +10,7 @@ using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Input;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
+using XenoAtom.Terminal.UI.Scrolling;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Templating;
 
@@ -355,6 +356,7 @@ public partial class Select<T> : ContentVisual
 
         var style = GetStyle<SelectStyle>();
         var content = style.PopupTemplateFactory?.Invoke(list) ?? list;
+        var scrollableContent = new SelectPopupContentRoot(list, content);
 
         list.PointerPressed((s, e) =>
         {
@@ -391,7 +393,7 @@ public partial class Select<T> : ContentVisual
         var popup = new Popup
         {
             Anchor = this,
-            Content = content,
+            Content = scrollableContent,
             MatchAnchorWidth = true,
             AdditionalWidth = 2,
             Placement = PopupPlacement.Below,
@@ -434,6 +436,19 @@ public partial class Select<T> : ContentVisual
         }
 
         return false;
+    }
+
+    private sealed class SelectPopupContentRoot : ContentVisual, IScrollable
+    {
+        private readonly ListBox<T> _list;
+
+        public SelectPopupContentRoot(ListBox<T> list, Visual content)
+        {
+            _list = list;
+            Content = content;
+        }
+
+        public ScrollModel Scroll => _list.Scroll;
     }
 
     private void EnsureArrowGlyphCache(SelectStyle style)
