@@ -93,6 +93,29 @@ public sealed class ScrollViewerLayoutTests
         Assert.AreEqual(2, scroll.VerticalOffset);
     }
 
+    [TestMethod]
+    public void ScrollViewer_Hides_ContentScrollModel_VerticalBar_When_Content_Fits_Without_The_Bar()
+    {
+        var content = new ScrollableWrapVisual(totalCells: 60);
+        var scroll = new ScrollViewer(content)
+        {
+            HorizontalAlignment = Align.Stretch,
+            VerticalAlignment = Align.Stretch,
+            AvoidSelfInducedContentScrollBars = true,
+        };
+
+        scroll.Measure(new Size(20, 2));
+        scroll.Arrange(new Rectangle(0, 0, 20, 2));
+
+        var verticalBar = scroll.EnumerateVisualsDepthFirst().OfType<ScrollBar>().Single(b => b.Orientation == Orientation.Vertical);
+        Assert.IsTrue(verticalBar.IsVisible, "The first layout should need vertical scrolling.");
+
+        scroll.Measure(new Size(20, 3));
+        scroll.Arrange(new Rectangle(0, 0, 20, 3));
+
+        Assert.IsFalse(verticalBar.IsVisible, "A vertical bar should not stay visible only because the bar narrows wrapping content.");
+    }
+
     private sealed class WrapLikeVisual : Visual
     {
         private readonly int _totalCells;
@@ -133,6 +156,32 @@ public sealed class ScrollViewerLayoutTests
                 growY: 0,
                 shrinkX: 1,
                 shrinkY: 0);
+        }
+    }
+
+    private sealed class ScrollableWrapVisual : Visual, IScrollable
+    {
+        private readonly int _totalCells;
+
+        public ScrollableWrapVisual(int totalCells)
+        {
+            _totalCells = Math.Max(0, totalCells);
+            HorizontalAlignment = Align.Stretch;
+            VerticalAlignment = Align.Stretch;
+            Scroll = new(this);
+        }
+
+        public ScrollModel Scroll { get; }
+
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+            => SizeHints.Fixed(new Size(1, 1));
+
+        protected override void ArrangeCore(in Rectangle finalRect)
+        {
+            var width = Math.Max(1, finalRect.Width);
+            var lines = Math.Max(1, (_totalCells + width - 1) / width);
+            Scroll.SetViewport(finalRect.Width, finalRect.Height);
+            Scroll.SetExtent(finalRect.Width, lines);
         }
     }
 

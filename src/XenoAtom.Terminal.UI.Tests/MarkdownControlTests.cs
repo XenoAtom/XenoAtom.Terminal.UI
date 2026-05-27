@@ -503,6 +503,183 @@ public sealed class MarkdownControlTests
     }
 
     [TestMethod]
+    public void MarkdownControl_EmbeddedInDocumentFlow_KeepsWrappingStable_WhenMarkdownGrows()
+    {
+        var markdown = new MarkdownControl("Starting");
+        var flow = new DocumentFlow
+        {
+            ItemPadding = Thickness.Zero,
+            ItemSpacing = 0,
+            FollowTail = true,
+        };
+
+        flow.Items.Add(new DocumentFlowItem
+        {
+            Content = new FlowDocument().Add(markdown),
+            Alignment = DocumentFlowAlignment.Stretch,
+            Padding = Thickness.Zero,
+        });
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(56, 8));
+        driver.Tick();
+
+        var paragraph = "CodeAlta is a terminal workspace for agentic coding - a .NET 10 CLI tool (alta) written by Alexandre Mutel (xoofx).";
+        for (var i = 1; i <= paragraph.Length; i++)
+        {
+            markdown.Markdown = paragraph[..i];
+            driver.Tick();
+        }
+
+        for (var i = 0; i < 3; i++)
+        {
+            driver.Tick();
+            var screen = new AnsiTestScreen(56, 8);
+            screen.Apply(driver.Backend.GetOutText());
+            var rendered = screen.GetText();
+            StringAssert.Contains(rendered, "Alexandre", "Expected wrapped continuation text to stay visible on every frame.");
+            Assert.IsFalse(
+                markdown.EnumerateVisualsDepthFirst().OfType<ScrollBar>().Any(static bar => bar.Orientation == Orientation.Vertical && bar.IsVisible),
+                "The embedded markdown should not show an internal vertical scrollbar when its wrapped content fits the arranged height.");
+        }
+    }
+
+    [TestMethod]
+    public void MarkdownControl_GroupedInDocumentFlow_DoesNotShowTransientScrollbar_WhenMarkdownGrows()
+    {
+        var flow = new DocumentFlow
+        {
+            HorizontalAlignment = Align.Stretch,
+            VerticalAlignment = Align.Stretch,
+            ItemPadding = new Thickness(1, 0, 0, 0),
+            ItemSpacing = 0,
+            FollowTail = true,
+        };
+
+        flow.Items.Add(CreateStreamingCard("User", "Let me gather some key details about the project."));
+        flow.Items.Add(CreateStreamingCard("Tool Calls", "- `read_file readme.md`\n- `list_dir src`\n- `list_dir CodeAlta`"));
+        flow.Items.Add(CreateStreamingCard("Reasoning", "The user wants details about the project. I have the readme, the AGENTS.md, and the project structure. Let me give a concise summary."));
+
+        var markdown = new MarkdownControl(string.Empty)
+        {
+            HorizontalAlignment = Align.Stretch,
+            VerticalAlignment = Align.Start,
+            Options = MarkdownRenderOptions.Default with
+            {
+                MaxCodeBlockHeight = 8,
+                WrapText = true,
+            },
+        };
+
+        var assistantTimestamp = new Markup(string.Empty);
+        var group = new Group(new Markup("[success]🤖[/] [bold]Assistant[/]"), markdown)
+            .BottomRightText(assistantTimestamp)
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Start);
+
+        flow.Items.Add(new DocumentFlowItem
+        {
+            Content = new FlowDocument().Add(group),
+            Alignment = DocumentFlowAlignment.Stretch,
+        });
+
+        var text = """
+Here's a summary of **CodeAlta**:
+
+## What It Is
+
+CodeAlta is a **terminal workspace for agentic coding** — a .NET 10 CLI tool (`alta`) written by Alexandre Mutel (xoofx). It's pre-release, licensed under BSD-2-Clause.
+
+## Key Capabilities
+
+- **Keyboard-first TUI**: tabs, prompt editor, project sidebar, command discovery, model selectors, and session timeline.
+- **Progressive assistant output**: content arrives in small deltas while the document flow remains pinned to the tail.
+- **Markdown-rich timeline**: headings, lists, inline code, links, and code blocks are rendered inside retained-mode chat cards.
+""";
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(133, 42));
+        driver.Tick();
+
+        for (var i = 1; i <= text.Length; i++)
+        {
+            markdown.Markdown = text[..i];
+            assistantTimestamp.Text = "[dim]21:42:44[/]";
+            driver.Tick();
+
+            Assert.IsFalse(
+                markdown.EnumerateVisualsDepthFirst().OfType<ScrollBar>().Any(static b => b.Orientation == Orientation.Vertical && b.IsVisible),
+                $"The grouped markdown should not render a one-frame internal vertical scrollbar while streaming. index={i}, group={group.Bounds}, markdown={markdown.Bounds}, scroll=({markdown.Scroll.OffsetY}/{markdown.Scroll.ViewportHeight}/{markdown.Scroll.ExtentHeight})");
+        }
+
+        static DocumentFlowItem CreateStreamingCard(string title, string body)
+        {
+            var card = new Group(new Markup($"[primary]{title}[/]"), new MarkdownControl(body)
+            {
+                HorizontalAlignment = Align.Stretch,
+                VerticalAlignment = Align.Start,
+                Options = MarkdownRenderOptions.Default with
+                {
+                    MaxCodeBlockHeight = 6,
+                    WrapText = true,
+                },
+            })
+            .HorizontalAlignment(Align.Stretch)
+            .VerticalAlignment(Align.Start);
+
+            return new DocumentFlowItem
+            {
+                Content = new FlowDocument().Add(card),
+                Alignment = DocumentFlowAlignment.Stretch,
+            };
+        }
+    }
+
+    [TestMethod]
+    public void MarkdownControl_EmbeddedInDocumentFlow_ReflowsBeforeFirstRealization_WhenMarkdownGrowsOffscreen()
+    {
+        var markdown = new MarkdownControl("Tail");
+        var flow = new DocumentFlow
+        {
+            ItemPadding = Thickness.Zero,
+            ItemSpacing = 0,
+            FollowTail = false,
+        };
+
+        for (var i = 0; i < 20; i++)
+        {
+            flow.Items.Add(new DocumentFlowItem
+            {
+                Content = new FlowDocument().AddParagraph($"History item {i:00}"),
+                Alignment = DocumentFlowAlignment.Stretch,
+                Padding = Thickness.Zero,
+            });
+        }
+
+        flow.Items.Add(new DocumentFlowItem
+        {
+            Content = new FlowDocument().Add(markdown),
+            Alignment = DocumentFlowAlignment.Stretch,
+            Padding = Thickness.Zero,
+        });
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(56, 8));
+        driver.Tick();
+        Assert.AreEqual(0, flow.Scroll.OffsetY, "The markdown item should start offscreen so the outer flow caches its old height before realization.");
+
+        markdown.Markdown = "CodeAlta is a terminal workspace for agentic coding - a .NET 10 CLI tool (alta) written by Alexandre Mutel (xoofx).";
+        flow.ScrollToTail();
+        driver.Tick();
+
+        Assert.IsTrue(markdown.Bounds.Height >= 2, $"Expected the hosted markdown block to be arranged with its grown wrapped height. Actual height: {markdown.Bounds.Height}.");
+
+        var screen = new AnsiTestScreen(56, 8);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "Alexandre", "The first frame that realizes the grown markdown should use its wrapped height, not the stale one-line height.");
+        Assert.IsFalse(
+            markdown.EnumerateVisualsDepthFirst().OfType<ScrollBar>().Any(static bar => bar.Orientation == Orientation.Vertical && bar.IsVisible),
+            "The embedded markdown should not show an internal vertical scrollbar when its wrapped content fits the arranged height.");
+    }
+
+    [TestMethod]
     public void MarkdownControl_DefaultSpacing_Is_Compact_Around_Headings()
     {
         var control = new MarkdownControl(

@@ -86,6 +86,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private readonly HashSet<Binding> _pendingBindingWrites = new(BindingReferenceComparer.Instance);
 
     private bool _pendingRenderHasLayoutImpact;
+    private bool _layoutStabilizationRequested;
     private bool _pendingRenderDirtyRectValid;
     private Rectangle _pendingRenderDirtyRect;
     private bool _forceNextFullRepaint;
@@ -1025,6 +1026,13 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         SignalWakeUp(TerminalLoopWakeReason.Render);
     }
 
+    internal void RequestLayoutStabilization()
+    {
+        _layoutStabilizationRequested = true;
+        _pendingRenderHasLayoutImpact = true;
+        RequestRender();
+    }
+
     /// <summary>
     /// Requests a render pass so graphics-only visuals can refresh their display-list commands.
     /// </summary>
@@ -1676,6 +1684,66 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
     }
 
+    private void RunRootLayoutPasses(
+        in LayoutConstraints constraints,
+        int arrangeWidth,
+        int arrangeHeight,
+        bool arrangeHeightFromDesiredSize,
+        DebugOverlayMetrics? metrics,
+        out bool layoutProducedWrites)
+    {
+        const int MaxLayoutPasses = 4;
+
+        layoutProducedWrites = _pendingRenderHasLayoutImpact;
+        var measureTicks = 0L;
+        var arrangeTicks = 0L;
+
+        for (var pass = 0; pass < MaxLayoutPasses; pass++)
+        {
+            // Some virtualized controls can discover during arrange that their measured extent changed (for example
+            // a realized document block whose attached size differs from its cached measured size). Those controls
+            // request a same-frame stabilization pass so rendering does not expose the intermediate layout.
+            _layoutStabilizationRequested = false;
+
+            if (metrics is not null)
+            {
+                var t0 = Stopwatch.GetTimestamp();
+                Root.Measure(constraints);
+                measureTicks += Math.Max(0, Stopwatch.GetTimestamp() - t0);
+
+                t0 = Stopwatch.GetTimestamp();
+                var finalHeight = arrangeHeightFromDesiredSize ? Root.DesiredSize.Height : arrangeHeight;
+                Root.Arrange(new Rectangle(0, 0, arrangeWidth, finalHeight));
+                arrangeTicks += Math.Max(0, Stopwatch.GetTimestamp() - t0);
+            }
+            else
+            {
+                Root.Measure(constraints);
+                var finalHeight = arrangeHeightFromDesiredSize ? Root.DesiredSize.Height : arrangeHeight;
+                Root.Arrange(new Rectangle(0, 0, arrangeWidth, finalHeight));
+            }
+
+            var passProducedWrites = _pendingBindingWrites.Count > 0;
+            layoutProducedWrites |= passProducedWrites;
+            // Ensure any bindings updated during layout are processed before rendering (e.g. Bounds from Arrange).
+            if (passProducedWrites)
+            {
+                ProcessBindingWrites();
+            }
+
+            if (!_layoutStabilizationRequested)
+            {
+                break;
+            }
+        }
+
+        if (metrics is not null)
+        {
+            metrics.RenderMeasureTicks = measureTicks;
+            metrics.RenderArrangeTicks = arrangeTicks;
+        }
+    }
+
     private void Render()
     {
         _isRendering = true;
@@ -1703,26 +1771,13 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             var layoutProducedWrites = false;
             if (layoutRequired)
             {
-                if (metrics is not null)
-                {
-                    var t0 = Stopwatch.GetTimestamp();
-                    Root.Measure(new LayoutConstraints(0, width, 0, height));
-                    metrics.RenderMeasureTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
-
-                    t0 = Stopwatch.GetTimestamp();
-                    Root.Arrange(new Rectangle(0, 0, width, height));
-                    metrics.RenderArrangeTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
-                }
-                else
-                {
-                    Root.Measure(new LayoutConstraints(0, width, 0, height));
-                    Root.Arrange(new Rectangle(0, 0, width, height));
-                }
-
-                layoutProducedWrites = _pendingBindingWrites.Count > 0;
-
-                // Ensure any bindings updated during layout are processed before rendering (e.g. Bounds from Arrange)
-                ProcessBindingWrites();
+                RunRootLayoutPasses(
+                    new LayoutConstraints(0, width, 0, height),
+                    width,
+                    height,
+                    arrangeHeightFromDesiredSize: false,
+                    metrics,
+                    out layoutProducedWrites);
             }
 
             var wantsCursor = TryGetDesiredCursor(out var cursorX, out var cursorY);
@@ -1806,28 +1861,13 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             var layoutProducedWrites = false;
             if (layoutRequired)
             {
-                if (metrics is not null)
-                {
-                    var t0 = Stopwatch.GetTimestamp();
-                    Root.Measure(new LayoutConstraints(0, width, 0, stretchRootToViewport ? viewportHeight : LayoutConstants.Infinite));
-                    metrics.RenderMeasureTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
-
-                    t0 = Stopwatch.GetTimestamp();
-                    var arrangeHeight = stretchRootToViewport ? viewportHeight : Root.DesiredSize.Height;
-                    Root.Arrange(new Rectangle(0, 0, width, arrangeHeight));
-                    metrics.RenderArrangeTicks = Math.Max(0, Stopwatch.GetTimestamp() - t0);
-                }
-                else
-                {
-                    Root.Measure(new LayoutConstraints(0, width, 0, stretchRootToViewport ? viewportHeight : LayoutConstants.Infinite));
-                    var arrangeHeight = stretchRootToViewport ? viewportHeight : Root.DesiredSize.Height;
-                    Root.Arrange(new Rectangle(0, 0, width, arrangeHeight));
-                }
-
-                layoutProducedWrites = _pendingBindingWrites.Count > 0;
-
-                // Ensure any bindings updated during layout are processed before rendering (e.g. Bounds from Arrange)
-                ProcessBindingWrites();
+                RunRootLayoutPasses(
+                    new LayoutConstraints(0, width, 0, stretchRootToViewport ? viewportHeight : LayoutConstants.Infinite),
+                    width,
+                    viewportHeight,
+                    arrangeHeightFromDesiredSize: !stretchRootToViewport,
+                    metrics,
+                    out layoutProducedWrites);
             }
 
             var wantsCursor = TryGetDesiredCursor(out var cursorX, out var cursorY);

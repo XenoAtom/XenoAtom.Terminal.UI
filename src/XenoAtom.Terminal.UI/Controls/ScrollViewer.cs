@@ -40,6 +40,8 @@ public sealed partial class ScrollViewer : Visual
     private int _oldHorizontalOffsetForEvent;
     private int _oldVerticalOffsetForEvent;
 
+    internal bool AvoidSelfInducedContentScrollBars { get; set; }
+
     /// <summary>
     /// Gets the width of the scroll viewer viewport (the visible content area excluding scroll bars).
     /// </summary>
@@ -386,6 +388,14 @@ public sealed partial class ScrollViewer : Visual
             // (it depends on padding/borders and any internal chrome). ScrollViewer must not call
             // ScrollModel.SetViewport(), otherwise it will fight with the content and cause oscillations
             // that can pin the caret and prevent scrolling.
+            if (AvoidSelfInducedContentScrollBars)
+            {
+                // Reflowing content (such as DocumentFlow) should not keep a vertical bar alive only because
+                // the bar reduced width enough to reflow otherwise-fitting content past the viewport height.
+                showV = false;
+                showH = false;
+            }
+
             for (var pass = 0; pass < 3; pass++)
             {
                 contentViewportWidth = Math.Max(1, viewportWidth - (showV ? thickness : 0));

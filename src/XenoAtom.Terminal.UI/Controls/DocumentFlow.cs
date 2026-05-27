@@ -39,7 +39,10 @@ public sealed partial class DocumentFlow : Visual, IScrollable
 
         _items = new BindableList<DocumentFlowItem>(this, "DocumentFlow.Items", onAdding: OnItemAdded);
         _content = new DocumentFlowContentVisual(this);
-        _scrollViewer = new ScrollViewer(_content, focusable: false);
+        _scrollViewer = new ScrollViewer(_content, focusable: false)
+        {
+            AvoidSelfInducedContentScrollBars = true,
+        };
         _scrollViewer.OffsetChangedRouted += OnScrollViewerOffsetChanged;
         _content.Scroll.Changed += OnContentScrollChanged;
 
@@ -574,6 +577,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             EnsureLayouts(width);
             RefreshLayoutsForRealizedVisualSizeChanges(_owner._items, width, _owner.ItemSpacing, _owner.ItemPadding);
             QueueFollowTailScrollIfExtentChanged(previousExtentHeight);
+            RequestLayoutStabilizationIfExtentChanged(previousExtentHeight);
 
             _scroll.SetViewport(finalRect.Width, finalRect.Height);
             _scroll.SetExtent(finalRect.Width, _extentHeight);
@@ -911,6 +915,9 @@ public sealed partial class DocumentFlow : Visual, IScrollable
                 return;
             }
 
+            var layoutRefreshCount = 0;
+
+        RestartRealization:
             _arrangeGeneration++;
 
             var viewportTop = _scroll.OffsetY;
@@ -998,6 +1005,15 @@ public sealed partial class DocumentFlow : Visual, IScrollable
                     if (requiresMeasure)
                     {
                         active.Visual.Measure(new LayoutConstraints(0, blockRect.Width, 0, LayoutConstants.Infinite));
+                        var measuredHeight = Math.Max(1, active.Visual.DesiredSize.Height);
+                        if (measuredHeight != blockLayout.Height && layoutRefreshCount < 4)
+                        {
+                            // Newly realized visuals can measure differently once attached (for example themed or nested
+                            // scrollable content). Refresh the cached document layout before arranging into a stale height.
+                            RefreshLayoutForRealizedVisualSizeChange(docIndex, rect.Width);
+                            layoutRefreshCount++;
+                            goto RestartRealization;
+                        }
                     }
 
                     active.Generation = _arrangeGeneration;
@@ -1006,6 +1022,30 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             }
 
             RecycleStaleActiveBlocks();
+        }
+
+        private void RefreshLayoutForRealizedVisualSizeChange(int documentIndex, int viewportWidth)
+        {
+            if ((uint)documentIndex >= (uint)_documentLayouts.Count || (uint)documentIndex >= (uint)_owner._items.Count)
+            {
+                return;
+            }
+
+            var previousExtentHeight = _extentHeight;
+            _documentLayouts[documentIndex] = BuildDocumentLayout(_owner._items[documentIndex], documentIndex, viewportWidth, _owner.ItemPadding);
+            RecomputeDocumentOffsetsFrom(documentIndex, _owner.ItemSpacing);
+            _scroll.SetExtent(viewportWidth, _extentHeight);
+            QueueFollowTailScrollIfExtentChanged(previousExtentHeight);
+            RequestLayoutStabilizationIfExtentChanged(previousExtentHeight);
+            _owner.TryApplyPendingScrollRequest();
+        }
+
+        private void RequestLayoutStabilizationIfExtentChanged(int previousExtentHeight)
+        {
+            if (_extentHeight != previousExtentHeight)
+            {
+                App?.RequestLayoutStabilization();
+            }
         }
 
         private void RecycleActiveBlocksNoLongerMatchingItems(BindableList<DocumentFlowItem> items)

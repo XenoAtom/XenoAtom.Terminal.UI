@@ -646,6 +646,44 @@ public sealed class DocumentFlowTests
     }
 
     [TestMethod]
+    public void DocumentFlow_Reflows_Before_First_Realization_When_Offscreen_Block_Measures_Differently_After_Attach()
+    {
+        var probe = new AttachmentSensitiveHeightVisual("Growing block", detachedHeight: 1, attachedHeight: 3);
+        var flow = new DocumentFlow
+        {
+            ItemPadding = Thickness.Zero,
+            ItemSpacing = 0,
+            FollowTail = false,
+        };
+
+        for (var i = 0; i < 20; i++)
+        {
+            flow.Items.Add(new DocumentFlowItem
+            {
+                Content = new FlowDocument().AddParagraph($"History item {i:00}"),
+                Alignment = DocumentFlowAlignment.Stretch,
+                Padding = Thickness.Zero,
+            });
+        }
+
+        flow.Items.Add(new DocumentFlowItem
+        {
+            Content = new SingleBlockContent(new ExistingVisualBlock(probe)),
+            Alignment = DocumentFlowAlignment.Stretch,
+            Padding = Thickness.Zero,
+        });
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(40, 8));
+        driver.Tick();
+        Assert.AreEqual(0, flow.Scroll.OffsetY);
+
+        flow.ScrollToTail();
+        driver.Tick();
+
+        Assert.AreEqual(3, probe.Bounds.Height, "Expected the first realized frame to arrange the offscreen block using its attached desired height.");
+    }
+
+    [TestMethod]
     public void DocumentFlow_Reindexes_Visible_FixedVisual_Block_Without_Double_Attaching()
     {
         var sharedVisual = new ProbeVisual("Shared");
@@ -834,6 +872,42 @@ public sealed class DocumentFlowTests
                     continue;
                 }
 
+                buffer.WriteText(rect.X, y, _text.AsSpan(), Style.None);
+            }
+        }
+    }
+
+    private sealed class AttachmentSensitiveHeightVisual : Visual
+    {
+        private readonly string _text;
+        private readonly int _detachedHeight;
+        private readonly int _attachedHeight;
+
+        public AttachmentSensitiveHeightVisual(string text, int detachedHeight, int attachedHeight)
+        {
+            _text = text;
+            _detachedHeight = Math.Max(1, detachedHeight);
+            _attachedHeight = Math.Max(1, attachedHeight);
+            HorizontalAlignment = Align.Stretch;
+        }
+
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+        {
+            var width = Math.Max(1, Math.Min(constraints.MaxWidth, TerminalTextUtility.GetWidth(_text.AsSpan())));
+            var height = Parent is null ? _detachedHeight : _attachedHeight;
+            return SizeHints.Fixed(new Size(width, height));
+        }
+
+        protected override void RenderOverride(CellBuffer buffer)
+        {
+            var rect = Bounds;
+            if (rect.Width <= 0 || rect.Height <= 0)
+            {
+                return;
+            }
+
+            for (var y = rect.Y; y < rect.Bottom; y++)
+            {
                 buffer.WriteText(rect.X, y, _text.AsSpan(), Style.None);
             }
         }
