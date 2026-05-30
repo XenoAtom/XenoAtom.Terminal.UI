@@ -110,6 +110,32 @@ public sealed class TabControlRenderingTests
     }
 
     [TestMethod]
+    public void TabControl_Default_Strip_Preserves_Inherited_Background()
+    {
+        var tabControl = new TabControl(
+            new TabPage("One", new TextBlock("A")),
+            new TabPage("Two", new TextBlock("B")));
+
+        var theme = Theme.FromScheme(ColorScheme.RootLoopsDark);
+        tabControl.Style(theme);
+
+        tabControl.Measure(new Size(24, 8));
+        tabControl.Arrange(new Rectangle(0, 0, 24, 8));
+
+        var inheritedBackground = Color.Rgb(12, 34, 56);
+        var buffer = new CellBuffer(24, 8);
+        buffer.Clear(theme.ForegroundTextStyle().WithBackground(inheritedBackground));
+
+        typeof(Visual).GetMethod("RenderTree", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .Invoke(tabControl, new object[] { buffer });
+
+        var stripCell = buffer.UnsafeCells[23];
+
+        Assert.IsTrue(stripCell.TryGetBackground(out var stripBackground), "Expected the strip cell to keep a background color from its parent surface.");
+        Assert.AreEqual(inheritedBackground, stripBackground, "The default tab strip should inherit parent/dialog backgrounds instead of repainting with the theme background.");
+    }
+
+    [TestMethod]
     public void TabControl_Style_Factory_Switch_Updates_Content_Border_Glyphs()
     {
         var useDouble = new State<bool>(false);

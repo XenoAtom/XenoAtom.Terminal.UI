@@ -242,6 +242,7 @@ Predefined styles:
 
 - `TabControlStyle.Default` / `TabControlStyle.AttachedRounded`
   - attached rounded tabs above a separator line
+  - the strip inherits the parent background unless `StripStyle` provides one
   - no extra content wrapper by default
 - `TabControlStyle.Compact`
   - attached single-line tabs with tighter padding

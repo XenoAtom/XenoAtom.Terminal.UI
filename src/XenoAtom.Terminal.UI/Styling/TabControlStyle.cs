@@ -284,7 +284,7 @@ public sealed record TabControlStyle : IStyle<TabControlStyle>
     /// <summary>
     /// Resolves the strip style for the provided <paramref name="theme"/>.
     /// </summary>
-    public Style ResolveStripStyle(Theme theme) => StripStyle ?? theme.BaseTextStyle();
+    public Style ResolveStripStyle(Theme theme) => StripStyle ?? theme.ForegroundTextStyle();
 
     /// <summary>
     /// Resolves the line glyph set for the provided <paramref name="theme"/>.

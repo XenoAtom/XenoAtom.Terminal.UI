@@ -76,6 +76,7 @@ When `AllowTabDragReorder` is `true` (the default), users can also drag a visibl
 By default:
 
 - selected tabs use accent/focus styling on the attached tab header
+- the tab strip inherits its parent background, so it follows custom dialog/popup surfaces unless `StripStyle` supplies a background
 - close buttons inherit the tab style, then switch to an error-toned hover/pressed state
 - overflow buttons use the tab/button surface styling
 - the selected content is not wrapped in an extra border
