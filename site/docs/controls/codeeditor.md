@@ -10,6 +10,7 @@ It keeps the core text-editing behavior of `TextArea`-selection, clipboard, undo
 
 - adaptive line numbers enabled by default,
 - pluggable left/right margins,
+- retained visuals inserted between logical lines,
 - current-line styling,
 - a simple line-based highlighting delegate,
 - an advanced persistent syntax-highlighting pipeline with optional async computation.
@@ -288,6 +289,28 @@ Margins receive:
 - pointer-routing support.
 
 This allows features such as line numbers, diff markers, diagnostics, breakpoints, or custom annotations without making margins into `Visual`s.
+
+## Line visuals
+
+Use line visuals when an annotation needs its own retained UI below a logical line instead of a gutter marker or text
+decoration. The visual is measured and inserted into the editor's vertical scroll extent without modifying the document:
+
+```csharp
+var editor = new CodeEditor(source);
+
+editor.SetLineVisual(
+    lineIndex: 11,
+    new Border(new Markup("[yellow]💬 Inline review[/] Consider documenting this branch."))
+        .Padding(new Thickness(1, 0, 1, 0)));
+```
+
+Line indices are zero-based and the visual appears after the complete logical line, including any wrapped rows. Use
+`RemoveLineVisual`, `ClearLineVisuals`, or `SetLineVisual(lineIndex, null)` to remove visuals. If external state changes a
+visual's desired height and normal layout invalidation is not enough, call `NotifyLineVisualChanged(lineIndex)` so the
+editor can refresh the cached row count.
+
+The implementation remains sparse: only registered line visuals are measured, and normal text rendering/highlighting
+still asks for visible logical lines only.
 
 ## Styling
 

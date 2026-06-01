@@ -39,6 +39,7 @@ Across the editors above you typically get:
 - **Auto-expanding height**: set `AutoSizeMode = TextEditorAutoSizeMode.Height` to let an editor grow vertically with its content while still respecting layout constraints such as `MaxHeight`.
 - **Editor location APIs**: `CodeEditor` exposes Go To Line / Column / Position helpers plus bindable `Line` / `Column` status values.
 - **Code indentation**: `CodeEditor` inserts four spaces on `Tab` by default and can be configured to insert a different number of spaces or real tab characters.
+- **Line visuals**: `CodeEditor.SetLineVisual` can insert a retained `Visual` below a zero-based logical line for inline reviews, diagnostics, or other rich annotations without modifying the document text.
 
 > [!TIP]
 > Most controls expose their shortcuts as commands, so a focused editor can be discoverable via a `CommandBar`.
@@ -113,7 +114,7 @@ The text editing stack is split into a few focused parts:
 
 - **`TextEditorBase`**: shared control base for editors (focus, commands, cursor integration).
 - **`TextEditorCore`**: editing behavior (navigation, selection, word operations, clipboard, undo/redo, search matches).
-- **`CodeEditor`**: code-oriented chrome built on the same engine, adding margins, line numbers, current-line treatment, and line-relative syntax highlighting.
+- **`CodeEditor`**: code-oriented chrome built on the same engine, adding margins, line numbers, inline line visuals, current-line treatment, and line-relative syntax highlighting.
 - **`ITextDocument`**: document abstraction for storage and edits.
   - `TextDocument`: a simple document implementation.
   - `DynamicTextDocument`: bridges a bindable `Text` property to the editor engine.

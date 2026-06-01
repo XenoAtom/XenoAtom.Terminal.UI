@@ -84,6 +84,113 @@ public sealed class CodeEditorTests
     }
 
     [TestMethod]
+    public void CodeEditor_LineVisual_Renders_Between_Logical_Lines_And_Extends_ScrollExtent()
+    {
+        var editor = new CodeEditor("alpha\nbeta\ngamma")
+        {
+            MinHeight = 3,
+            MaxHeight = 3,
+        };
+        editor.SetLineVisual(0, new TextBlock("💬 add comment").HorizontalAlignment(Align.Stretch));
+
+        var root = new VStack { editor };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(24, 5));
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(24, 5);
+        screen.Apply(driver.Backend.GetOutText());
+        var lines = screen.GetText().Split('\n');
+
+        Assert.IsTrue(lines[0].Contains("alpha", StringComparison.Ordinal), $"Expected the first editor line to render first. Row: `{lines[0]}`");
+        Assert.IsTrue(lines[1].Contains("add comment", StringComparison.Ordinal), $"Expected the inserted visual immediately after the first line. Row: `{lines[1]}`");
+        Assert.IsTrue(lines[2].Contains("beta", StringComparison.Ordinal), $"Expected the next logical line below the visual. Row: `{lines[2]}`");
+        Assert.AreEqual(4, editor.Scroll.ExtentHeight, "The scroll extent should include text rows plus the inserted line visual row.");
+        CollectionAssert.AreEqual(new[] { 0, 1 }, editor.GetVisibleLogicalLineIndicesForTests());
+    }
+
+    [TestMethod]
+    public void CodeEditor_LineVisual_Can_Be_Scrolled_Independently_Of_Text_Rows()
+    {
+        var editor = new CodeEditor("alpha\nbeta\ngamma")
+        {
+            MinHeight = 2,
+            MaxHeight = 2,
+        };
+        editor.SetLineVisual(0, new TextBlock("review note"));
+
+        var root = new VStack { editor };
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(24, 4));
+        driver.Tick();
+
+        driver.App.Post(() => editor.Scroll.SetOffset(0, 1));
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(24, 4);
+        screen.Apply(driver.Backend.GetOutText());
+        var lines = screen.GetText().Split('\n');
+
+        Assert.IsTrue(lines[0].Contains("review note", StringComparison.Ordinal), $"Expected scrolling to land on the inserted visual row. Row: `{lines[0]}`");
+        Assert.IsTrue(lines[1].Contains("beta", StringComparison.Ordinal), $"Expected the text row after the visual to remain aligned. Row: `{lines[1]}`");
+        CollectionAssert.AreEqual(new[] { 1 }, editor.GetVisibleLogicalLineIndicesForTests());
+    }
+
+    [TestMethod]
+    public void CodeEditor_LineVisual_Caret_And_CurrentLine_Skip_Inserted_Rows()
+    {
+        var editor = new CodeEditor("alpha\nbeta\ngamma")
+        {
+            MinHeight = 5,
+            MaxHeight = 5,
+            CaretIndex = 6,
+        }.Style(CodeEditorStyle.Default with
+        {
+            Background = Color.Basic16(0),
+            CurrentLineBackground = Color.Basic16(4),
+        });
+        editor.SetLineVisual(0, new VStack(new TextBlock("review"), new TextBlock("details")));
+
+        var buffer = VisualSnapshotRenderer.Render(editor, width: 28, maxHeight: 5, Theme.Default);
+        AssertCurrentLineBackground(buffer, expectedY: 3, unexpectedY1: 1, unexpectedY2: 2);
+
+        using var driver = new TerminalAppTestDriver(new VStack { editor }, TerminalHostKind.Fullscreen, new TerminalSize(28, 7));
+        driver.Tick();
+
+        Assert.IsTrue(editor.TryGetCursorCell(out _, out var caretY), "Expected the caret to be visible.");
+
+        var screen = new AnsiTestScreen(28, 7);
+        screen.Apply(driver.Backend.GetOutText());
+        var lines = screen.GetText().Split('\n');
+
+        Assert.AreEqual(3, caretY, "The caret row should skip retained visual rows and land on the next text row.");
+        Assert.IsTrue(lines[caretY].Contains("beta", StringComparison.Ordinal), $"Expected the caret row to contain the next real editor line. Row: `{lines[caretY]}`");
+    }
+
+    [TestMethod]
+    public void CodeEditor_LineVisual_Highlights_Text_Rows_After_Inserted_Rows()
+    {
+        var editor = new CodeEditor("alpha\nbeta\ngamma")
+        {
+            MinHeight = 4,
+            MaxHeight = 4,
+        }.Highlighter(static (in CodeEditorLineHighlightRequest request, List<StyledRun> runs) =>
+        {
+            if (request.LineIndex == 1)
+            {
+                runs.Add(new StyledRun(0, request.LineLength, Style.None.WithForeground(Color.Basic16(2))));
+            }
+        });
+        editor.SetLineVisual(0, new TextBlock("review"));
+
+        var buffer = VisualSnapshotRenderer.Render(editor, width: 24, maxHeight: 4, Theme.Default);
+        var betaRow = SnapshotRow(buffer, 2);
+        var betaIndex = betaRow.IndexOf("beta", StringComparison.Ordinal);
+
+        Assert.IsTrue(betaIndex >= 0, $"Expected beta below the inserted visual row. Row: `{betaRow}`");
+        Assert.IsTrue(GetCellStyle(buffer, betaIndex, 2).TryGetForeground(out var foreground), "Expected the highlighter foreground on the text row after the inserted visual.");
+        Assert.AreEqual(Color.Basic16(2), foreground);
+    }
+
+    [TestMethod]
     public void CodeEditor_LineNumberWidth_Adapts_To_Visible_Range()
     {
         var text = string.Join("\n", Enumerable.Range(1, 150).Select(i => $"Line {i:000}"));
@@ -1475,6 +1582,19 @@ public sealed class CodeEditorTests
     {
         var cells = buffer.UnsafeCells;
         return cells[(y * buffer.Width) + x];
+    }
+
+    private static void AssertCurrentLineBackground(CellBuffer buffer, int expectedY, int unexpectedY1, int unexpectedY2)
+    {
+        var sampleX = buffer.Width - 2;
+        Assert.IsTrue(GetCellStyle(buffer, sampleX, expectedY).TryGetBackground(out var currentBackground), "Expected the current line background to be rendered.");
+        Assert.AreEqual(Color.Basic16(4), currentBackground);
+
+        Assert.IsTrue(GetCellStyle(buffer, sampleX, unexpectedY1).TryGetBackground(out var firstUnexpectedBackground), "Expected a background on the visual row.");
+        Assert.AreNotEqual(Color.Basic16(4), firstUnexpectedBackground, "The current line background should not be shifted onto the inserted visual row.");
+
+        Assert.IsTrue(GetCellStyle(buffer, sampleX, unexpectedY2).TryGetBackground(out var secondUnexpectedBackground), "Expected a background on the visual row.");
+        Assert.AreNotEqual(Color.Basic16(4), secondUnexpectedBackground, "The current line background should not be shifted onto the inserted visual row.");
     }
 
     private static string SnapshotRow(CellBuffer buffer, int y)

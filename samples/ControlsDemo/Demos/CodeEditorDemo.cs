@@ -3,6 +3,7 @@ using XenoAtom.Terminal;
 using XenoAtom.Terminal.UI;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Extensions.CodeEditor.TextMateSharp;
+using XenoAtom.Terminal.UI.Geometry;
 using XenoAtom.Terminal.UI.Styling;
 using XenoAtom.Terminal.UI.Text;
 
@@ -69,6 +70,7 @@ public sealed partial class CodeEditorDemo : ControlsDemoBase
             editor.TextDocument = new TextDocument(sample.Source);
             editor.CaretIndex = sample.GetCaretIndex();
             goToPosition.Value = sample.GetCaretIndex();
+            editor.ClearLineVisuals();
             editor.Scroll.SetOffset(0, 0);
         });
 
@@ -139,6 +141,12 @@ public sealed partial class CodeEditorDemo : ControlsDemoBase
                 new CheckBox("Current line").IsChecked(highlightCurrentLine),
                 new CheckBox("Diff margin").IsChecked(showDiffMargin),
                 new CheckBox("TextMate syntax").IsChecked(useSyntaxHighlighter),
+                new Button("Add inline at cursor").Click(() =>
+                {
+                    var lineIndex = Math.Max(0, editor.Line - 1);
+                    editor.SetLineVisual(lineIndex, CreateInlineReviewVisual(lineIndex + 1));
+                }),
+                new Button("Clear inlines").Click(editor.ClearLineVisuals),
                 new Button("Find").Click(() => editor.OpenFind(findText.Value)),
                 new Button("Replace").Click(() => editor.OpenReplace(replaceText.Value)),
                 new Button("Jump deep").Click(() => editor.Scroll.SetOffset(0, Math.Min(20, Math.Max(0, editor.Scroll.ExtentHeight - 1)))),
@@ -163,7 +171,7 @@ public sealed partial class CodeEditorDemo : ControlsDemoBase
             .Spacing(1);
 
         var help = new Markup(
-            "[bold green]CodeEditor[/] shares the text engine with TextArea, then adds [cyan]line numbers[/], [cyan]margins[/], [cyan]search overlays[/], [cyan]syntax highlighting[/], and now programmatic [cyan]Go To Line / Column / Position[/]. [dim]Switch the sample language to preview multiple TextMateSharp grammars, then try Ctrl+F / Ctrl+H, Ctrl+Z / Ctrl+R, or the jump controls below.[/]")
+            "[bold green]CodeEditor[/] shares the text engine with TextArea, then adds [cyan]line numbers[/], [cyan]margins[/], [cyan]line visuals[/], [cyan]search overlays[/], [cyan]syntax highlighting[/], and programmatic [cyan]Go To Line / Column / Position[/]. [dim]Switch the sample language to preview multiple TextMateSharp grammars, then try Ctrl+F / Ctrl+H, Ctrl+Z / Ctrl+R, or the jump controls below.[/]")
             .Wrap(true);
 
         var topPanel = new VStack(help, languageRow, controls, navigationRow, positionRow)
@@ -177,7 +185,7 @@ public sealed partial class CodeEditorDemo : ControlsDemoBase
 
         var bottomPanel = new VStack(
                 locationFooter,
-                DemoUi.Hint("The left diff margin is implemented through the public CodeEditorMargin contract. The language picker swaps both the sample document and the TextMateSharp grammar without cluttering the main demo file."))
+                DemoUi.Hint("Use 'Add inline at cursor' to insert a retained Visual below the current logical line without changing the document text."))
             .Spacing(1)
             .HorizontalAlignment(Align.Stretch);
 
@@ -196,6 +204,14 @@ public sealed partial class CodeEditorDemo : ControlsDemoBase
             editor.OpenFind(defaultSample.FindText);
             editor.Scroll.SetOffset(0, defaultSample.ScreenshotScrollOffset);
         });
+
+        static Visual CreateInlineReviewVisual(int lineNumber)
+            => new Border(
+                    new Markup($"[bold yellow]💬 Inline review[/] [dim]Retained Visual inserted below line {lineNumber} at the cursor position.[/]")
+                    {
+                        Wrap = false,
+                    })
+                .Padding(new Thickness(1, 0, 1, 0));
 
         CodeEditorSyntaxHighlighter GetTextMateHighlighter(string languageId)
         {

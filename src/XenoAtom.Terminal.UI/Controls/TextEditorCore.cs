@@ -23,7 +23,23 @@ internal readonly record struct TextEditorOptions(
     bool WordWrap,
     int TabSize,
     TextAlignment Alignment,
-    bool ShowPlaceholderWhenUnfocusedOnly);
+    bool ShowPlaceholderWhenUnfocusedOnly,
+    ITextEditorLineExtraRowsProvider? LineExtraRowsProvider);
+
+internal interface ITextEditorLineExtraRowsProvider
+{
+    int Version { get; }
+
+    int GetEntryCount(int lineCount);
+
+    int GetLineIndexAt(int entryIndex);
+
+    int GetRowsAfterLineAt(int entryIndex);
+
+    int GetPrefixRowsBeforeEntry(int entryIndex);
+
+    int GetTotalRows(int lineCount);
+}
 
 internal readonly record struct TextEditorRenderContext(
     CellBuffer Buffer,
@@ -307,7 +323,7 @@ internal sealed partial class TextEditorCore
         contentWidth = Math.Max(1, contentWidth);
         var snapshot = _document.CurrentSnapshot;
         EnsureMultiLineLayoutCache(options, contentWidth);
-        return Math.Max(1, _layoutCache.TotalRows);
+        return Math.Max(1, _layoutCache.TotalRows + GetTotalExtraRows(snapshot, options));
     }
 
     private void UpdateExtent(in TextEditorOptions options)
@@ -373,31 +389,50 @@ internal sealed partial class TextEditorCore
         EnsureMultiLineLayoutCache(options);
         var text = GetText();
 
-        var startRow = _scroll.OffsetY;
-        var endRow = startRow + _contentHeight;
-        if (startRow >= endRow)
+        var startCombinedRow = _scroll.OffsetY;
+        var endCombinedRow = startCombinedRow + _contentHeight;
+        if (startCombinedRow >= endCombinedRow)
         {
             return Array.Empty<TextEditorVisibleRowInfo>();
         }
 
         var rows = new List<TextEditorVisibleRowInfo>(Math.Max(4, _contentHeight));
-        var startInfo = _layoutCache.GetLineFromRow(startRow);
+        var extraRows = GetExtraRowsProvider(snapshot, options, out var extraEntryCount);
+        var startTextRow = GetTextRowFromCombinedRow(startCombinedRow, extraRows, extraEntryCount);
+        if (startTextRow >= _layoutCache.TotalRows)
+        {
+            return rows;
+        }
+
+        var startInfo = _layoutCache.GetLineFromRow(startTextRow);
         var lineIndex = startInfo.LineIndex;
         var row = _layoutCache.GetLine(lineIndex).RowOffset + startInfo.RowInLine;
 
-        while (lineIndex < snapshot.LineCount && row < endRow)
+        while (lineIndex < snapshot.LineCount)
         {
             var line = snapshot.GetLine(lineIndex);
+            var lineExtraEntryIndex = GetFirstExtraEntryAtOrAfterLine(extraRows, extraEntryCount, lineIndex);
+            var prefixRowsBeforeLine = extraRows?.GetPrefixRowsBeforeEntry(lineExtraEntryIndex) ?? 0;
             if (!options.WordWrap)
             {
-                rows.Add(new TextEditorVisibleRowInfo(
-                    VisualRow: row,
-                    LineIndex: lineIndex,
-                    LineStart: line.Start,
-                    LineLength: line.Length,
-                    RowInLine: 0,
-                    SegmentStart: 0,
-                    SegmentLength: line.Length));
+                var combinedRow = row + prefixRowsBeforeLine;
+                if (combinedRow >= endCombinedRow)
+                {
+                    break;
+                }
+
+                if (combinedRow >= startCombinedRow)
+                {
+                    rows.Add(new TextEditorVisibleRowInfo(
+                        VisualRow: combinedRow,
+                        LineIndex: lineIndex,
+                        LineStart: line.Start,
+                        LineLength: line.Length,
+                        RowInLine: 0,
+                        SegmentStart: 0,
+                        SegmentLength: line.Length));
+                }
+
                 row++;
                 lineIndex++;
                 continue;
@@ -406,24 +441,34 @@ internal sealed partial class TextEditorCore
             var rowInLine = lineIndex == startInfo.LineIndex ? startInfo.RowInLine : 0;
             var rowCount = Math.Max(1, _layoutCache.GetLine(lineIndex).RowCount);
             var currentRowInLine = rowInLine;
-            while (currentRowInLine < rowCount && row < endRow)
+            while (currentRowInLine < rowCount)
             {
                 var blockStarts = _layoutCache.GetWrapRowBlock(lineIndex, text, _contentWidth, options.TabSize, currentRowInLine, out var blockStartRow, out var blockRowCount);
                 var localRow = currentRowInLine - blockStartRow;
                 var availableRows = Math.Min(rowCount - currentRowInLine, blockRowCount - localRow);
 
-                for (var i = 0; i < availableRows && row < endRow; i++)
+                for (var i = 0; i < availableRows; i++)
                 {
+                    var combinedRow = row + prefixRowsBeforeLine;
+                    if (combinedRow >= endCombinedRow)
+                    {
+                        return rows;
+                    }
+
                     var segmentStart = blockStarts[localRow + i];
                     var segmentLength = blockStarts[localRow + i + 1] - segmentStart;
-                    rows.Add(new TextEditorVisibleRowInfo(
-                        VisualRow: row,
-                        LineIndex: lineIndex,
-                        LineStart: line.Start,
-                        LineLength: line.Length,
-                        RowInLine: currentRowInLine,
-                        SegmentStart: segmentStart,
-                        SegmentLength: segmentLength));
+                    if (combinedRow >= startCombinedRow)
+                    {
+                        rows.Add(new TextEditorVisibleRowInfo(
+                            VisualRow: combinedRow,
+                            LineIndex: lineIndex,
+                            LineStart: line.Start,
+                            LineLength: line.Length,
+                            RowInLine: currentRowInLine,
+                            SegmentStart: segmentStart,
+                            SegmentLength: segmentLength));
+                    }
+
                     row++;
                     currentRowInLine++;
                 }
@@ -529,7 +574,11 @@ internal sealed partial class TextEditorCore
         }
 
         var (row, col) = GetVisualPosition(text.AsSpan(), caret, options);
-        var visibleRow = row - _scroll.OffsetY;
+        var snapshot = _document.CurrentSnapshot;
+        var lineIndex = snapshot.LineCount == 0 ? 0 : snapshot.GetLineIndexFromPosition(caret);
+        var extraRows = GetExtraRowsProvider(snapshot, options, out var extraEntryCount);
+        var combinedRow = row + (extraRows?.GetPrefixRowsBeforeEntry(GetFirstExtraEntryAtOrAfterLine(extraRows, extraEntryCount, lineIndex)) ?? 0);
+        var visibleRow = combinedRow - _scroll.OffsetY;
         var visibleCol = col - (options.WordWrap ? 0 : _scroll.OffsetX);
         if ((uint)visibleRow >= (uint)_contentHeight || (uint)visibleCol >= (uint)_contentWidth)
         {
@@ -1016,8 +1065,8 @@ internal sealed partial class TextEditorCore
         var snapshot = _document.CurrentSnapshot;
         EnsureMultiLineLayoutCache(options);
 
-        var startRow = _scroll.OffsetY;
-        var endRow = startRow + _contentHeight;
+        var startCombinedRow = _scroll.OffsetY;
+        var endCombinedRow = startCombinedRow + _contentHeight;
 
         var selectionStart = 0;
         var selectionEnd = 0;
@@ -1032,25 +1081,44 @@ internal sealed partial class TextEditorCore
             return;
         }
 
-        var startInfo = _layoutCache.GetLineFromRow(startRow);
+        var extraRows = GetExtraRowsProvider(snapshot, options, out var extraEntryCount);
+        var startTextRow = GetTextRowFromCombinedRow(startCombinedRow, extraRows, extraEntryCount);
+        if (startTextRow >= _layoutCache.TotalRows)
+        {
+            return;
+        }
+
+        var startInfo = _layoutCache.GetLineFromRow(startTextRow);
         var lineIndex = startInfo.LineIndex;
         var row = _layoutCache.GetLine(lineIndex).RowOffset + startInfo.RowInLine;
 
-        while (lineIndex < snapshot.LineCount && row < endRow)
+        while (lineIndex < snapshot.LineCount)
         {
             var line = snapshot.GetLine(lineIndex);
             var lineSpan = text.AsSpan(line.Start, line.Length);
+            var lineExtraEntryIndex = GetFirstExtraEntryAtOrAfterLine(extraRows, extraEntryCount, lineIndex);
+            var prefixRowsBeforeLine = extraRows?.GetPrefixRowsBeforeEntry(lineExtraEntryIndex) ?? 0;
 
             if (!options.WordWrap)
             {
-                RenderSingleLineSegment(
-                    context,
-                    options,
-                    lineSpan,
-                    line.Start,
-                    row - startRow,
-                    selectionStart,
-                    selectionEnd);
+                var combinedRow = row + prefixRowsBeforeLine;
+                if (combinedRow >= endCombinedRow)
+                {
+                    break;
+                }
+
+                if (combinedRow >= startCombinedRow)
+                {
+                    RenderSingleLineSegment(
+                        context,
+                        options,
+                        lineSpan,
+                        line.Start,
+                        combinedRow - startCombinedRow,
+                        selectionStart,
+                        selectionEnd);
+                }
+
                 row++;
                 lineIndex++;
                 continue;
@@ -1059,27 +1127,36 @@ internal sealed partial class TextEditorCore
             var rowInLine = lineIndex == startInfo.LineIndex ? startInfo.RowInLine : 0;
             var rowCount = Math.Max(1, _layoutCache.GetLine(lineIndex).RowCount);
             var currentRowInLine = rowInLine;
-            while (currentRowInLine < rowCount && row < endRow)
+            while (currentRowInLine < rowCount)
             {
                 var blockStarts = _layoutCache.GetWrapRowBlock(lineIndex, text, _contentWidth, options.TabSize, currentRowInLine, out var blockStartRow, out var blockRowCount);
                 var localRow = currentRowInLine - blockStartRow;
                 var availableRows = Math.Min(rowCount - currentRowInLine, blockRowCount - localRow);
 
-                for (var i = 0; i < availableRows && row < endRow; i++)
+                for (var i = 0; i < availableRows; i++)
                 {
+                    var combinedRow = row + prefixRowsBeforeLine;
+                    if (combinedRow >= endCombinedRow)
+                    {
+                        return;
+                    }
+
                     var segmentStart = blockStarts[localRow + i];
                     var segmentLength = blockStarts[localRow + i + 1] - segmentStart;
 
-                    RenderWrappedSegment(
-                        context,
-                        options,
-                        lineSpan,
-                        line.Start,
-                        segmentStart,
-                        segmentLength,
-                        row - startRow,
-                        selectionStart,
-                        selectionEnd);
+                    if (combinedRow >= startCombinedRow)
+                    {
+                        RenderWrappedSegment(
+                            context,
+                            options,
+                            lineSpan,
+                            line.Start,
+                            segmentStart,
+                            segmentLength,
+                            combinedRow - startCombinedRow,
+                            selectionStart,
+                            selectionEnd);
+                    }
 
                     row++;
                     currentRowInLine++;
@@ -1218,7 +1295,131 @@ internal sealed partial class TextEditorCore
         _ = snapshot;
         EnsureMultiLineLayoutCache(options);
         extentWidth = options.WordWrap ? Math.Max(0, _contentWidth) : Math.Max(0, _layoutCache.MaxWidth);
-        return _layoutCache.TotalRows;
+        return _layoutCache.TotalRows + GetTotalExtraRows(snapshot, options);
+    }
+
+    internal bool TryGetCombinedRowAfterLine(int lineIndex, in TextEditorOptions options, out int row)
+    {
+        row = 0;
+        if (options.SingleLine || _contentWidth <= 0 || lineIndex < 0)
+        {
+            return false;
+        }
+
+        var snapshot = _document.CurrentSnapshot;
+        if ((uint)lineIndex >= (uint)snapshot.LineCount)
+        {
+            return false;
+        }
+
+        EnsureMultiLineLayoutCache(options);
+        var extraRows = GetExtraRowsProvider(snapshot, options, out var extraEntryCount);
+        var prefixRowsBeforeLine = extraRows?.GetPrefixRowsBeforeEntry(GetFirstExtraEntryAtOrAfterLine(extraRows, extraEntryCount, lineIndex)) ?? 0;
+        var line = _layoutCache.GetLine(lineIndex);
+        row = line.RowOffset + Math.Max(1, line.RowCount) + prefixRowsBeforeLine;
+        return true;
+    }
+
+    private static ITextEditorLineExtraRowsProvider? GetExtraRowsProvider(ITextSnapshot snapshot, in TextEditorOptions options, out int entryCount)
+    {
+        var provider = options.LineExtraRowsProvider;
+        if (provider is null)
+        {
+            entryCount = 0;
+            return null;
+        }
+
+        entryCount = Math.Max(0, provider.GetEntryCount(snapshot.LineCount));
+        return entryCount == 0 ? null : provider;
+    }
+
+    private static int GetTotalExtraRows(ITextSnapshot snapshot, in TextEditorOptions options)
+    {
+        var provider = options.LineExtraRowsProvider;
+        return provider is null ? 0 : Math.Max(0, provider.GetTotalRows(snapshot.LineCount));
+    }
+
+    private int GetTextRowFromCombinedRow(int combinedRow, ITextEditorLineExtraRowsProvider? extraRows, int extraEntryCount)
+    {
+        combinedRow = Math.Max(0, combinedRow);
+        if (extraRows is null || extraEntryCount <= 0)
+        {
+            return combinedRow;
+        }
+
+        var completedEntryIndex = -1;
+        var low = 0;
+        var high = extraEntryCount - 1;
+        while (low <= high)
+        {
+            var mid = low + ((high - low) >> 1);
+            var extraEnd = GetCombinedExtraRowsEnd(extraRows, mid);
+            if (extraEnd <= combinedRow)
+            {
+                completedEntryIndex = mid;
+                low = mid + 1;
+            }
+            else
+            {
+                high = mid - 1;
+            }
+        }
+
+        var prefixRows = completedEntryIndex >= 0
+            ? extraRows.GetPrefixRowsBeforeEntry(completedEntryIndex + 1)
+            : 0;
+        var nextEntryIndex = completedEntryIndex + 1;
+        if (nextEntryIndex < extraEntryCount)
+        {
+            var extraStart = GetCombinedExtraRowsStart(extraRows, nextEntryIndex);
+            if (combinedRow >= extraStart)
+            {
+                return GetTextRowAfterLine(extraRows.GetLineIndexAt(nextEntryIndex));
+            }
+        }
+
+        return combinedRow - prefixRows;
+    }
+
+    private int GetCombinedExtraRowsStart(ITextEditorLineExtraRowsProvider extraRows, int entryIndex)
+    {
+        var lineIndex = extraRows.GetLineIndexAt(entryIndex);
+        var line = _layoutCache.GetLine(lineIndex);
+        return line.RowOffset + Math.Max(1, line.RowCount) + extraRows.GetPrefixRowsBeforeEntry(entryIndex);
+    }
+
+    private int GetCombinedExtraRowsEnd(ITextEditorLineExtraRowsProvider extraRows, int entryIndex)
+        => GetCombinedExtraRowsStart(extraRows, entryIndex) + Math.Max(0, extraRows.GetRowsAfterLineAt(entryIndex));
+
+    private int GetTextRowAfterLine(int lineIndex)
+    {
+        var line = _layoutCache.GetLine(lineIndex);
+        return line.RowOffset + Math.Max(1, line.RowCount);
+    }
+
+    private static int GetFirstExtraEntryAtOrAfterLine(ITextEditorLineExtraRowsProvider? extraRows, int extraEntryCount, int lineIndex)
+    {
+        if (extraRows is null || extraEntryCount <= 0)
+        {
+            return 0;
+        }
+
+        var low = 0;
+        var high = extraEntryCount;
+        while (low < high)
+        {
+            var mid = low + ((high - low) >> 1);
+            if (extraRows.GetLineIndexAt(mid) < lineIndex)
+            {
+                low = mid + 1;
+            }
+            else
+            {
+                high = mid;
+            }
+        }
+
+        return low;
     }
 
     private TextUndoRedoManager.TextEditorStateSnapshot CaptureStateSnapshot()
@@ -1538,16 +1739,20 @@ internal sealed partial class TextEditorCore
 
         EnsureMultiLineLayoutCache(options);
         var (row, col) = GetVisualPosition(text, _caretIndex, options);
+        var snapshot = _document.CurrentSnapshot;
+        var lineIndex = snapshot.LineCount == 0 ? 0 : _layoutCache.GetLineFromRow(row).LineIndex;
+        var extraRows = GetExtraRowsProvider(snapshot, options, out var extraEntryCount);
+        var combinedRow = row + (extraRows?.GetPrefixRowsBeforeEntry(GetFirstExtraEntryAtOrAfterLine(extraRows, extraEntryCount, lineIndex)) ?? 0);
         var offsetX = options.WordWrap ? 0 : _scroll.OffsetX;
         var offsetY = _scroll.OffsetY;
 
-        if (row < offsetY)
+        if (combinedRow < offsetY)
         {
-            offsetY = row;
+            offsetY = combinedRow;
         }
-        else if (row >= offsetY + _contentHeight)
+        else if (combinedRow >= offsetY + _contentHeight)
         {
-            offsetY = Math.Max(0, row - _contentHeight + 1);
+            offsetY = Math.Max(0, combinedRow - _contentHeight + 1);
         }
 
         if (!options.WordWrap)
@@ -1576,13 +1781,15 @@ internal sealed partial class TextEditorCore
             return GetIndexAtCell(text, cell, options.TabSize);
         }
 
-        var row = localY + _scroll.OffsetY;
+        var combinedRow = localY + _scroll.OffsetY;
+        var snapshot = _document.CurrentSnapshot;
+        var extraRows = GetExtraRowsProvider(snapshot, options, out var extraEntryCount);
+        var row = GetTextRowFromCombinedRow(combinedRow, extraRows, extraEntryCount);
         if (options.WordWrap)
         {
             return GetIndexFromVisualPosition(text, row, localX, options);
         }
 
-        var snapshot = _document.CurrentSnapshot;
         var lineIndex = Math.Clamp(row, 0, Math.Max(0, snapshot.LineCount - 1));
         var line = snapshot.GetLine(lineIndex);
         var lineSpan = text.Slice(line.Start, line.Length);

@@ -427,12 +427,15 @@ internal sealed class CodeEditorLineNumberMargin : CodeEditorMargin
 /// <summary>
 /// Represents a code-oriented multi-line text editor with pluggable margins and syntax highlighting.
 /// </summary>
-public sealed partial class CodeEditor : TextEditorBase
+public sealed partial class CodeEditor : TextEditorBase, ITextEditorLineExtraRowsProvider
 {
     private readonly SearchReplacePopup _searchPopup;
     private readonly CodeEditorGoToLinePopup? _goToLinePopup;
+    private readonly LineVisualLayer _lineVisualLayer;
     private readonly BindableList<CodeEditorMargin> _leftMargins;
     private readonly BindableList<CodeEditorMargin> _rightMargins;
+    private readonly SortedList<int, LineVisualEntry> _lineVisuals = new();
+    private readonly List<int> _lineVisualPrefixRows = new();
     private readonly Dictionary<CodeEditorMargin, int> _marginWidths = new();
     private readonly Dictionary<CodeEditorMargin, Rectangle> _marginBounds = new();
     private readonly List<CodeEditorVisibleLine> _visibleLines = new();
@@ -450,6 +453,8 @@ public sealed partial class CodeEditor : TextEditorBase
     private int _leftMarginWidth;
     private int _rightMarginWidth;
     private int _lineNumberDigits;
+    private int _lineVisualRowsVersion;
+    private bool _lineVisualPrefixRowsDirty = true;
     private int _cachedHighlightSnapshotVersion = -1;
     private Theme? _cachedHighlightTheme;
     private CodeEditorLineHighlighter? _cachedHighlighter;
@@ -487,6 +492,20 @@ public sealed partial class CodeEditor : TextEditorBase
 
     private sealed record LineHighlightCacheEntry(int LineStart, int LineLength, StyledRun[] Runs);
 
+    private sealed class LineVisualEntry
+    {
+        public LineVisualEntry(Visual visual)
+        {
+            Visual = visual;
+        }
+
+        public Visual Visual { get; }
+
+        public int MeasuredHeight { get; set; }
+
+        public int LastMeasuredWidth { get; set; } = -1;
+    }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CodeEditor"/> class.
     /// </summary>
@@ -522,6 +541,9 @@ public sealed partial class CodeEditor : TextEditorBase
         _leftMargins = new BindableList<CodeEditorMargin>(this, $"{nameof(CodeEditor)}.{nameof(LeftMargins)}", AttachMargin, DetachMargin);
         _rightMargins = new BindableList<CodeEditorMargin>(this, $"{nameof(CodeEditor)}.{nameof(RightMargins)}", AttachMargin, DetachMargin);
         _leftMargins.Add(CodeEditorLineNumberMargin.Instance);
+
+        _lineVisualLayer = new LineVisualLayer(this);
+        AttachChild(_lineVisualLayer);
 
         _searchPopup = new SearchReplacePopup(CreateSearchReplaceTarget())
         {
@@ -708,6 +730,141 @@ public sealed partial class CodeEditor : TextEditorBase
     /// </summary>
     public BindableList<CodeEditorMargin> RightMargins => _rightMargins;
 
+    /// <summary>
+    /// Inserts or replaces a visual displayed immediately after the specified zero-based logical line.
+    /// </summary>
+    /// <param name="lineIndex">The zero-based logical line index after which the visual is displayed.</param>
+    /// <param name="visual">The visual to display, or <see langword="null"/> to remove the visual for the line.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="lineIndex"/> is less than zero.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="visual"/> already has a parent.</exception>
+    public void SetLineVisual(int lineIndex, Visual? visual)
+    {
+        if (lineIndex < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(lineIndex));
+        }
+
+        if (visual is null)
+        {
+            _ = RemoveLineVisual(lineIndex);
+            return;
+        }
+
+        if (_lineVisuals.TryGetValue(lineIndex, out var existing) && ReferenceEquals(existing.Visual, visual))
+        {
+            NotifyLineVisualChanged(lineIndex);
+            return;
+        }
+
+        if (visual.Parent is not null)
+        {
+            throw new InvalidOperationException("The visual already has a parent.");
+        }
+
+        if (existing is not null)
+        {
+            _lineVisualLayer.DetachLineVisual(existing.Visual);
+            _lineVisuals.Remove(lineIndex);
+        }
+
+        var entry = new LineVisualEntry(visual);
+        _lineVisuals.Add(lineIndex, entry);
+        _lineVisualLayer.AttachLineVisual(visual);
+        InvalidateLineVisualRows();
+    }
+
+    /// <summary>
+    /// Removes the visual displayed after the specified zero-based logical line.
+    /// </summary>
+    /// <param name="lineIndex">The zero-based logical line index.</param>
+    /// <returns><see langword="true"/> if a visual was removed; otherwise <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="lineIndex"/> is less than zero.</exception>
+    public bool RemoveLineVisual(int lineIndex)
+    {
+        if (lineIndex < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(lineIndex));
+        }
+
+        if (!_lineVisuals.TryGetValue(lineIndex, out var entry))
+        {
+            return false;
+        }
+
+        _lineVisualLayer.DetachLineVisual(entry.Visual);
+        _lineVisuals.Remove(lineIndex);
+        InvalidateLineVisualRows();
+        return true;
+    }
+
+    /// <summary>
+    /// Removes all visuals inserted between editor lines.
+    /// </summary>
+    public void ClearLineVisuals()
+    {
+        if (_lineVisuals.Count == 0)
+        {
+            return;
+        }
+
+        for (var i = 0; i < _lineVisuals.Count; i++)
+        {
+            _lineVisualLayer.DetachLineVisual(_lineVisuals.Values[i].Visual);
+        }
+
+        _lineVisuals.Clear();
+        InvalidateLineVisualRows();
+    }
+
+    /// <summary>
+    /// Tries to get the visual displayed after the specified zero-based logical line.
+    /// </summary>
+    /// <param name="lineIndex">The zero-based logical line index.</param>
+    /// <param name="visual">When this method returns, contains the line visual if one exists.</param>
+    /// <returns><see langword="true"/> when a visual is registered for the line; otherwise <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="lineIndex"/> is less than zero.</exception>
+    public bool TryGetLineVisual(int lineIndex, out Visual visual)
+    {
+        if (lineIndex < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(lineIndex));
+        }
+
+        if (_lineVisuals.TryGetValue(lineIndex, out var entry))
+        {
+            visual = entry.Visual;
+            return true;
+        }
+
+        visual = null!;
+        return false;
+    }
+
+    /// <summary>
+    /// Invalidates the cached measurement for a visual displayed after the specified zero-based logical line.
+    /// </summary>
+    /// <remarks>
+    /// Use this when the visual's desired height may have changed due to external state that the visual itself did not
+    /// expose through normal layout invalidation.
+    /// </remarks>
+    /// <param name="lineIndex">The zero-based logical line index.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="lineIndex"/> is less than zero.</exception>
+    public void NotifyLineVisualChanged(int lineIndex)
+    {
+        if (lineIndex < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(lineIndex));
+        }
+
+        if (!_lineVisuals.TryGetValue(lineIndex, out var entry))
+        {
+            return;
+        }
+
+        entry.LastMeasuredWidth = -1;
+        InvalidateLineVisualRows();
+    }
+
     /// <inheritdoc />
     protected override bool IsSingleLine => false;
 
@@ -722,6 +879,9 @@ public sealed partial class CodeEditor : TextEditorBase
 
     /// <inheritdoc />
     protected override bool ShowPlaceholderWhenUnfocusedOnly => false;
+
+    /// <inheritdoc />
+    internal override ITextEditorLineExtraRowsProvider? LineExtraRowsProvider => _lineVisuals.Count == 0 ? null : this;
 
     /// <summary>
     /// Moves the caret to the specified one-based line number.
@@ -798,11 +958,16 @@ public sealed partial class CodeEditor : TextEditorBase
     public bool OpenGoToLine() => _goToLinePopup?.Open() ?? false;
 
     /// <inheritdoc/>
-    protected override int ChildrenCount => 1;
+    protected override int ChildrenCount => 2;
 
     /// <inheritdoc/>
     protected override Visual GetChild(int index)
-        => index == 0 ? _searchPopup : throw new ArgumentOutOfRangeException(nameof(index));
+        => index switch
+        {
+            0 => _lineVisualLayer,
+            1 => _searchPopup,
+            _ => throw new ArgumentOutOfRangeException(nameof(index)),
+        };
 
     /// <inheritdoc />
     protected override void PrepareChildren()
@@ -847,6 +1012,7 @@ public sealed partial class CodeEditor : TextEditorBase
             Math.Max(0, _contentRect.Width - _leftMarginWidth - _rightMarginWidth),
             _contentRect.Height);
 
+        _ = MeasureLineVisualRows(_editorRect.Width);
         UpdateEditorLayoutPreservingScrollOffset(_editorRect, preserveScrollOffset);
         BuildVisibleLines(_editorRect, includeScrollOffset: false);
 
@@ -863,12 +1029,15 @@ public sealed partial class CodeEditor : TextEditorBase
                 _contentRect.Y,
                 Math.Max(0, _contentRect.Width - _leftMarginWidth - _rightMarginWidth),
                 _contentRect.Height);
+            _ = MeasureLineVisualRows(_editorRect.Width);
             UpdateEditorLayoutPreservingScrollOffset(_editorRect, preserveScrollOffset);
             BuildVisibleLines(_editorRect, includeScrollOffset: false);
             _ = MeasureMargins(_leftMargins, style, _contentRect);
             _ = MeasureMargins(_rightMargins, style, _contentRect);
         }
 
+        _lineVisualLayer.Arrange(_editorRect);
+        ArrangeLineVisuals(_lineVisualLayer.Bounds);
         _searchPopup.ArrangeWithin(_editorRect);
         _goToLinePopup?.ArrangeWithin(_editorRect);
         _lastArrangeRect = finalRect;
@@ -1102,6 +1271,158 @@ public sealed partial class CodeEditor : TextEditorBase
         _marginBounds.Remove(margin);
     }
 
+    int ITextEditorLineExtraRowsProvider.Version => _lineVisualRowsVersion;
+
+    int ITextEditorLineExtraRowsProvider.GetEntryCount(int lineCount)
+        => GetLineVisualEntryCount(lineCount);
+
+    int ITextEditorLineExtraRowsProvider.GetLineIndexAt(int entryIndex)
+        => _lineVisuals.Keys[entryIndex];
+
+    int ITextEditorLineExtraRowsProvider.GetRowsAfterLineAt(int entryIndex)
+        => Math.Max(0, _lineVisuals.Values[entryIndex].MeasuredHeight);
+
+    int ITextEditorLineExtraRowsProvider.GetPrefixRowsBeforeEntry(int entryIndex)
+    {
+        EnsureLineVisualPrefixRows();
+        entryIndex = Math.Clamp(entryIndex, 0, _lineVisualPrefixRows.Count - 1);
+        return _lineVisualPrefixRows[entryIndex];
+    }
+
+    int ITextEditorLineExtraRowsProvider.GetTotalRows(int lineCount)
+    {
+        EnsureLineVisualPrefixRows();
+        return _lineVisualPrefixRows[GetLineVisualEntryCount(lineCount)];
+    }
+
+    private int GetLineVisualEntryCount(int lineCount)
+    {
+        if (_lineVisuals.Count == 0 || lineCount <= 0)
+        {
+            return 0;
+        }
+
+        var low = 0;
+        var high = _lineVisuals.Count;
+        while (low < high)
+        {
+            var mid = low + ((high - low) >> 1);
+            if (_lineVisuals.Keys[mid] < lineCount)
+            {
+                low = mid + 1;
+            }
+            else
+            {
+                high = mid;
+            }
+        }
+
+        return low;
+    }
+
+    private void EnsureLineVisualPrefixRows()
+    {
+        if (!_lineVisualPrefixRowsDirty && _lineVisualPrefixRows.Count == _lineVisuals.Count + 1)
+        {
+            return;
+        }
+
+        _lineVisualPrefixRows.Clear();
+        _lineVisualPrefixRows.Capacity = Math.Max(_lineVisualPrefixRows.Capacity, _lineVisuals.Count + 1);
+        var total = 0;
+        _lineVisualPrefixRows.Add(0);
+        for (var i = 0; i < _lineVisuals.Count; i++)
+        {
+            total += Math.Max(0, _lineVisuals.Values[i].MeasuredHeight);
+            _lineVisualPrefixRows.Add(total);
+        }
+
+        _lineVisualPrefixRowsDirty = false;
+    }
+
+    private void InvalidateLineVisualRows()
+    {
+        _lineVisualRowsVersion = unchecked(_lineVisualRowsVersion + 1);
+        _lineVisualPrefixRowsDirty = true;
+        BuildVisibleLines();
+        MarkMeasureDirty();
+    }
+
+    private bool MeasureLineVisualRows(int availableWidth)
+    {
+        if (_lineVisuals.Count == 0)
+        {
+            return false;
+        }
+
+        availableWidth = Math.Max(0, availableWidth);
+        var changed = false;
+        var constraints = new LayoutConstraints(0, availableWidth, 0, LayoutConstants.Infinite);
+        for (var i = 0; i < _lineVisuals.Count; i++)
+        {
+            var entry = _lineVisuals.Values[i];
+            var height = 0;
+            if (availableWidth > 0)
+            {
+                var hints = entry.Visual.Measure(constraints);
+                height = Math.Max(0, hints.Natural.Height);
+            }
+
+            if (entry.MeasuredHeight == height && entry.LastMeasuredWidth == availableWidth)
+            {
+                continue;
+            }
+
+            entry.MeasuredHeight = height;
+            entry.LastMeasuredWidth = availableWidth;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            _lineVisualRowsVersion = unchecked(_lineVisualRowsVersion + 1);
+            _lineVisualPrefixRowsDirty = true;
+        }
+
+        return changed;
+    }
+
+    private void ArrangeLineVisuals(Rectangle layerRect)
+    {
+        if (_lineVisuals.Count == 0)
+        {
+            return;
+        }
+
+        var snapshot = TextDocument.CurrentSnapshot;
+        var visibleTop = Scroll.OffsetY;
+        var visibleBottom = visibleTop + Math.Max(0, layerRect.Height);
+        for (var i = 0; i < _lineVisuals.Count; i++)
+        {
+            var lineIndex = _lineVisuals.Keys[i];
+            var entry = _lineVisuals.Values[i];
+            if (lineIndex >= snapshot.LineCount
+                || entry.MeasuredHeight <= 0
+                || !TryGetCombinedRowAfterLine(lineIndex, out var row))
+            {
+                entry.Visual.Arrange(new Rectangle(layerRect.X, layerRect.Y, 0, 0));
+                continue;
+            }
+
+            if (row >= visibleBottom || row + entry.MeasuredHeight <= visibleTop)
+            {
+                entry.Visual.Arrange(new Rectangle(layerRect.X, layerRect.Y, 0, 0));
+                continue;
+            }
+
+            entry.Visual.Arrange(new Rectangle(
+                layerRect.X,
+                layerRect.Y + row - visibleTop,
+                layerRect.Width,
+                entry.MeasuredHeight));
+        }
+    }
+
     private void BuildVisibleLines()
         => BuildVisibleLines(_editorRect, includeScrollOffset: false);
 
@@ -1140,23 +1461,27 @@ public sealed partial class CodeEditor : TextEditorBase
             viewportHeight = Scroll.ViewportHeight;
         }
 
-        var maxVisibleRows = Math.Min(rows.Count, viewportHeight);
-        var rowOffsetBase = includeScrollOffset ? 0 : Scroll.OffsetY;
         for (var i = 0; i < rows.Count; i++)
         {
-            if (i >= maxVisibleRows)
+            var row = rows[i];
+            var viewportRow = row.VisualRow - Scroll.OffsetY;
+            if (viewportRow < 0)
+            {
+                continue;
+            }
+
+            if (viewportRow >= viewportHeight)
             {
                 break;
             }
 
-            var row = rows[i];
             _visibleLines.Add(new CodeEditorVisibleLine(
                 row.LineIndex,
                 row.LineStart,
                 row.LineLength,
                 row.RowInLine,
-                row.VisualRow - rowOffsetBase,
-                sourceRect.Y + i,
+                viewportRow,
+                sourceRect.Y + viewportRow,
                 row.SegmentStart,
                 row.SegmentLength));
         }
@@ -1187,6 +1512,7 @@ public sealed partial class CodeEditor : TextEditorBase
         var rightMarginWidth = MeasureMargins(_rightMargins, style, measureBounds);
         var editorWidth = Math.Max(0, contentWidth - leftMarginWidth - rightMarginWidth);
 
+        _ = MeasureLineVisualRows(editorWidth);
         return Math.Max(1, style.Padding.Vertical + MeasureContentRowsForWidth(editorWidth));
     }
 
@@ -1381,15 +1707,17 @@ public sealed partial class CodeEditor : TextEditorBase
 
     private bool TryGetVisibleLineForScreenY(int y, out CodeEditorVisibleLine visibleLine)
     {
-        var index = y - _editorRect.Y;
-        if ((uint)index >= (uint)_visibleLines.Count)
+        for (var i = 0; i < _visibleLines.Count; i++)
         {
-            visibleLine = default;
-            return false;
+            if (_visibleLines[i].ScreenY == y)
+            {
+                visibleLine = _visibleLines[i];
+                return true;
+            }
         }
 
-        visibleLine = _visibleLines[index];
-        return true;
+        visibleLine = default;
+        return false;
     }
 
     private void EnsureHighlightRuns(Theme theme)
@@ -2665,6 +2993,33 @@ public sealed partial class CodeEditor : TextEditorBase
         }
 
         return digits;
+    }
+
+    private sealed class LineVisualLayer : Visual
+    {
+        private readonly CodeEditor _owner;
+
+        public LineVisualLayer(CodeEditor owner)
+        {
+            _owner = owner;
+            Focusable = false;
+            HorizontalAlignment = Align.Stretch;
+            VerticalAlignment = Align.Stretch;
+        }
+
+        protected override int ChildrenCount => _owner._lineVisuals.Count;
+
+        protected override Visual GetChild(int index) => _owner._lineVisuals.Values[index].Visual;
+
+        public void AttachLineVisual(Visual visual) => AttachChild(visual);
+
+        public void DetachLineVisual(Visual visual) => DetachChild(visual);
+
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+        {
+            _ = constraints;
+            return SizeHints.Fixed(Size.Zero);
+        }
     }
 
     /// <summary>

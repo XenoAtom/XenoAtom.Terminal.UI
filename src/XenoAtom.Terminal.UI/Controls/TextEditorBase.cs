@@ -391,6 +391,11 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
     protected virtual bool ShowPlaceholderWhenUnfocusedOnly => true;
 
     /// <summary>
+    /// Gets an optional provider for non-text rows inserted after logical lines.
+    /// </summary>
+    internal virtual ITextEditorLineExtraRowsProvider? LineExtraRowsProvider => null;
+
+    /// <summary>
     /// Gets a value indicating whether the editor should auto-size its height from content.
     /// </summary>
     protected bool AutoSizeHeight => AutoSizeMode == TextEditorAutoSizeMode.Height;
@@ -472,13 +477,17 @@ public abstract partial class TextEditorBase : Visual, ICursorProvider, IScrolla
             WordWrap: WordWrap,
             TabSize: TabSize,
             Alignment: Alignment,
-            ShowPlaceholderWhenUnfocusedOnly: ShowPlaceholderWhenUnfocusedOnly);
+            ShowPlaceholderWhenUnfocusedOnly: ShowPlaceholderWhenUnfocusedOnly,
+            LineExtraRowsProvider: LineExtraRowsProvider);
 
     private TextEditorRenderContext BuildRenderContext(CellBuffer buffer, Rectangle contentRect, Style textStyle, Style selectionStyle, Style placeholderStyle)
         => new(buffer, contentRect, textStyle, selectionStyle, placeholderStyle, Placeholder, IsFocused, WriteTextSegment);
 
     internal TextEditorCore.TextEditorLineLayoutDiagnostics GetLineLayoutDiagnostics(int lineIndex)
         => _core.GetLineLayoutDiagnostics(lineIndex, BuildEditorOptions());
+
+    internal bool TryGetCombinedRowAfterLine(int lineIndex, out int row)
+        => _core.TryGetCombinedRowAfterLine(lineIndex, BuildEditorOptions(), out row);
 
     internal IReadOnlyList<TextEditorVisibleRowInfo> VisibleRows => _visibleRows;
 
