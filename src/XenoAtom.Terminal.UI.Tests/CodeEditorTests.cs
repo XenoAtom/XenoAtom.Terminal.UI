@@ -276,6 +276,45 @@ public sealed class CodeEditorTests
     }
 
     [TestMethod]
+    public void CodeEditor_SyntaxHighlighting_Does_Not_Override_Surface_Or_CurrentLine_Backgrounds()
+    {
+        var style = CodeEditorStyle.Default with
+        {
+            Background = Color.Basic16(0),
+            CurrentLineBackground = Color.Basic16(4),
+        };
+
+        var editor = new CodeEditor("alpha\nbeta")
+        {
+            ShowLineNumbers = false,
+            CaretIndex = 6,
+        }.Style(style)
+            .Highlighter(static (in CodeEditorLineHighlightRequest request, List<StyledRun> runs) =>
+            {
+                runs.Add(new StyledRun(
+                    0,
+                    request.LineLength,
+                    Style.None.WithForeground(Color.Basic16(2)).WithBackground(Color.Basic16(1))));
+            });
+
+        var buffer = VisualSnapshotRenderer.Render(editor, width: 20, maxHeight: 2, Theme.Default);
+        var firstRow = SnapshotRow(buffer, 0);
+        var secondRow = SnapshotRow(buffer, 1);
+        var alphaIndex = firstRow.IndexOf("alpha", StringComparison.Ordinal);
+        var betaIndex = secondRow.IndexOf("beta", StringComparison.Ordinal);
+
+        Assert.IsTrue(alphaIndex >= 0, $"Expected first line text to render. Row: `{firstRow}`");
+        Assert.IsTrue(betaIndex >= 0, $"Expected current line text to render. Row: `{secondRow}`");
+
+        AssertHighlightedCellStyle(buffer, alphaIndex, 0, expectedForeground: Color.Basic16(2), expectedBackground: Color.Basic16(0));
+        AssertHighlightedCellStyle(buffer, betaIndex, 1, expectedForeground: Color.Basic16(2), expectedBackground: Color.Basic16(4));
+
+        var activeLineTailStyle = GetCellStyle(buffer, buffer.Width - 2, 1);
+        Assert.IsTrue(activeLineTailStyle.TryGetBackground(out var activeLineTailBackground), "Expected the current-line background to extend past the rendered text.");
+        Assert.AreEqual(Color.Basic16(4), activeLineTailBackground);
+    }
+
+    [TestMethod]
     public void CodeEditor_Advanced_SyntaxHighlighter_Does_Not_Rebuild_On_Scroll()
     {
         var highlighter = new CountingSyntaxHighlighter();
@@ -1582,6 +1621,15 @@ public sealed class CodeEditorTests
     {
         var cells = buffer.UnsafeCells;
         return cells[(y * buffer.Width) + x];
+    }
+
+    private static void AssertHighlightedCellStyle(CellBuffer buffer, int x, int y, Color expectedForeground, Color expectedBackground)
+    {
+        var cellStyle = GetCellStyle(buffer, x, y);
+        Assert.IsTrue(cellStyle.TryGetForeground(out var foreground), "Expected highlighted text to carry a foreground color.");
+        Assert.AreEqual(expectedForeground, foreground);
+        Assert.IsTrue(cellStyle.TryGetBackground(out var background), "Expected highlighted text to keep the editor-provided background.");
+        Assert.AreEqual(expectedBackground, background);
     }
 
     private static void AssertCurrentLineBackground(CellBuffer buffer, int expectedY, int unexpectedY1, int unexpectedY2)

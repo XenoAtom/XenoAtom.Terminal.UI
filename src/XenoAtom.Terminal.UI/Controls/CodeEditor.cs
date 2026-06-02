@@ -95,7 +95,7 @@ public readonly record struct CodeEditorLineHighlightRequest(
 /// Delegate used to compute syntax highlighting runs for a single logical line.
 /// </summary>
 /// <param name="request">The current line highlighting request.</param>
-/// <param name="runs">The destination list that receives UTF-16 runs relative to the line text.</param>
+/// <param name="runs">The destination list that receives UTF-16 runs relative to the line text. Background colors in run styles are ignored.</param>
 public delegate void CodeEditorLineHighlighter(in CodeEditorLineHighlightRequest request, List<StyledRun> runs);
 
 /// <summary>
@@ -223,6 +223,9 @@ public abstract class CodeEditorSyntaxHighlighter
     /// <summary>
     /// Gets syntax runs for a single logical line.
     /// </summary>
+    /// <remarks>
+    /// Background colors in returned run styles are ignored; editor surface and overlay styles own backgrounds.
+    /// </remarks>
     public abstract void GetLineRuns(CodeEditorSyntaxState state, in CodeEditorLineSyntaxRequest request, List<StyledRun> runs);
 }
 
@@ -1073,7 +1076,9 @@ public sealed partial class CodeEditor : TextEditorBase, ITextEditorLineExtraRow
             try
             {
                 EnsureHighlightRuns(theme);
-                RenderEditor(buffer, _editorRect, backgroundStyle, selectionStyle, placeholderStyle);
+                var textRenderStyle = backgroundStyle.ClearBackground();
+                var placeholderRenderStyle = placeholderStyle.ClearBackground();
+                RenderEditor(buffer, _editorRect, textRenderStyle, selectionStyle, placeholderRenderStyle);
             }
             finally
             {
@@ -1849,6 +1854,8 @@ public sealed partial class CodeEditor : TextEditorBase, ITextEditorLineExtraRow
             }
 
             _lastVisibleLineRequestCount++;
+            // Token classifications should not punch holes in the editor/current-line background fill.
+            ClearSyntaxHighlightBackgrounds(workingRuns);
             ComposeSearchHighlightRuns(workingRuns, theme, searchState, visible.LineStart, visible.LineLength);
             NormalizeHighlightRuns(workingRuns, visible.LineLength);
             _lineHighlightCache[lineIndex] = new LineHighlightCacheEntry(visible.LineStart, visible.LineLength, workingRuns.ToArray());
@@ -2801,6 +2808,20 @@ public sealed partial class CodeEditor : TextEditorBase, ITextEditorLineExtraRow
         list = new List<StyledRun>(16);
         _workingHighlightRunsByLine.Add(lineIndex, list);
         return list;
+    }
+
+    private static void ClearSyntaxHighlightBackgrounds(List<StyledRun> workingRuns)
+    {
+        for (var i = 0; i < workingRuns.Count; i++)
+        {
+            var run = workingRuns[i];
+            if (!run.Style.TryGetBackground(out _))
+            {
+                continue;
+            }
+
+            workingRuns[i] = new StyledRun(run.Start, run.Length, run.Style.ClearBackground());
+        }
     }
 
     private void NormalizeHighlightRuns(List<StyledRun> workingRuns, int textLength)

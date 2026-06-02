@@ -188,7 +188,9 @@ new CodeEditor(source)
     });
 ```
 
-Runs are line-relative, not wrap-relative. `CodeEditor` intersects them with only the visible wrapped segments.
+Runs are line-relative, not wrap-relative. `CodeEditor` intersects them with only the visible wrapped segments. Syntax
+highlight runs are foreground/decorations only: any background color in a run is ignored so the editor surface,
+current-line highlight, selection, and search overlays remain responsible for backgrounds.
 
 ## Advanced syntax highlighting
 
