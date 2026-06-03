@@ -172,7 +172,6 @@ public sealed partial class ScrollModel : IVisualElement
 
     private void OnChanged()
     {
-        UpdateVersion();
         if (BindingManager.Current.IsTracking)
         {
             if (_changedQueuedAfterTracking)
@@ -184,11 +183,13 @@ public sealed partial class ScrollModel : IVisualElement
             BindingManager.Current.RunAfterTracking(() =>
             {
                 _changedQueuedAfterTracking = false;
+                UpdateVersion();
                 Changed?.Invoke();
             });
             return;
         }
 
+        UpdateVersion();
         Changed?.Invoke();
     }
 
