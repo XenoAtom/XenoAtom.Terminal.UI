@@ -221,7 +221,7 @@ Selection is linear only.
 ### Navigation
 
 - Arrow keys move by rune (`TerminalTextUtility.GetNextRuneIndex/GetPreviousRuneIndex`).
-- Ctrl+Left / Ctrl+Right move by “word” category (letters/digits/underscore vs whitespace vs other).
+- Ctrl+Left / Ctrl+Right move by “word” category on non-macOS platforms; Alt+Left / Alt+Right do the same on macOS (letters/digits/underscore vs whitespace vs other).
 - Home / End move to line boundary.
 - Ctrl+Home / Ctrl+End move to start/end of document in multi-line.
 - PageUp / PageDown move by viewport height in multi-line.

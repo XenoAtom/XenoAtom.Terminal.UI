@@ -808,11 +808,13 @@ internal sealed partial class TextEditorCore
 
     private void HandleSingleLineKeyDown(KeyEventArgs e, in TextEditorOptions options, ReadOnlySpan<char> text)
     {
+        var wordNavigationModifier = IsWordNavigationModifier(e.Modifiers);
+
         switch (e.Key)
         {
             case TerminalKey.Left:
                 var oldCaretLeft = _caretIndex;
-                _caretIndex = (e.Modifiers & TerminalModifiers.Ctrl) != 0
+                _caretIndex = wordNavigationModifier
                     ? GetPreviousWordIndex(text, _caretIndex)
                     : GetPreviousTextElementIndexFast(text, _caretIndex);
                 UpdateSelectionAfterCaretMove((e.Modifiers & TerminalModifiers.Shift) != 0, oldCaretLeft);
@@ -821,7 +823,7 @@ internal sealed partial class TextEditorCore
                 return;
             case TerminalKey.Right:
                 var oldCaretRight = _caretIndex;
-                _caretIndex = (e.Modifiers & TerminalModifiers.Ctrl) != 0
+                _caretIndex = wordNavigationModifier
                     ? GetNextWordIndex(text, _caretIndex)
                     : GetNextTextElementIndexFast(text, _caretIndex);
                 UpdateSelectionAfterCaretMove((e.Modifiers & TerminalModifiers.Shift) != 0, oldCaretRight);
@@ -886,11 +888,12 @@ internal sealed partial class TextEditorCore
     private void HandleMultiLineKeyDown(KeyEventArgs e, in TextEditorOptions options, ReadOnlySpan<char> text)
     {
         var ctrl = (e.Modifiers & TerminalModifiers.Ctrl) != 0;
+        var wordNavigationModifier = IsWordNavigationModifier(e.Modifiers);
 
         switch (e.Key)
         {
             case TerminalKey.Left:
-                if (ctrl)
+                if (wordNavigationModifier)
                 {
                     MoveCaretTo(GetPreviousWordIndex(text, _caretIndex), (e.Modifiers & TerminalModifiers.Shift) != 0, options);
                 }
@@ -901,7 +904,7 @@ internal sealed partial class TextEditorCore
                 e.Handled = true;
                 return;
             case TerminalKey.Right:
-                if (ctrl)
+                if (wordNavigationModifier)
                 {
                     MoveCaretTo(GetNextWordIndex(text, _caretIndex), (e.Modifiers & TerminalModifiers.Shift) != 0, options);
                 }
@@ -2372,6 +2375,12 @@ internal sealed partial class TextEditorCore
 
         return Math.Max(1, TerminalTextUtility.GetWidth(element));
     }
+
+    private static bool IsWordNavigationModifier(TerminalModifiers modifiers)
+        => IsWordNavigationModifier(modifiers, OperatingSystem.IsMacOS());
+
+    internal static bool IsWordNavigationModifier(TerminalModifiers modifiers, bool isMacOS)
+        => (modifiers & (isMacOS ? TerminalModifiers.Alt : TerminalModifiers.Ctrl)) != 0;
 
     private static int GetPreviousWordIndex(ReadOnlySpan<char> text, int caretIndex)
     {

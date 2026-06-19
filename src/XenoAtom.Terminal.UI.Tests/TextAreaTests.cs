@@ -86,7 +86,7 @@ public sealed class TextAreaTests
     }
 
     [TestMethod]
-    public void TextArea_CtrlLeftRight_Moves_By_Word()
+    public void TextArea_PlatformWordNavigationModifier_Moves_By_Word()
     {
         var textArea = new TextArea("Hello world");
         var root = new VStack { textArea };
@@ -95,22 +95,32 @@ public sealed class TextAreaTests
         driver.Tick();
 
         textArea.CaretIndex = 0;
+        var wordNavigationModifier = OperatingSystem.IsMacOS() ? TerminalModifiers.Alt : TerminalModifiers.Ctrl;
 
-        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right, Modifiers = TerminalModifiers.Ctrl });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right, Modifiers = wordNavigationModifier });
         driver.Tick();
         Assert.AreEqual(5, textArea.CaretIndex);
 
-        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right, Modifiers = TerminalModifiers.Ctrl });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Right, Modifiers = wordNavigationModifier });
         driver.Tick();
         Assert.AreEqual("Hello world".Length, textArea.CaretIndex);
 
-        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left, Modifiers = TerminalModifiers.Ctrl });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left, Modifiers = wordNavigationModifier });
         driver.Tick();
         Assert.AreEqual(6, textArea.CaretIndex);
 
-        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left, Modifiers = TerminalModifiers.Ctrl });
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Left, Modifiers = wordNavigationModifier });
         driver.Tick();
         Assert.AreEqual(0, textArea.CaretIndex);
+    }
+
+    [TestMethod]
+    public void TextArea_WordNavigationModifier_Is_Platform_Dependent()
+    {
+        Assert.IsTrue(TextEditorCore.IsWordNavigationModifier(TerminalModifiers.Alt, isMacOS: true));
+        Assert.IsFalse(TextEditorCore.IsWordNavigationModifier(TerminalModifiers.Ctrl, isMacOS: true));
+        Assert.IsTrue(TextEditorCore.IsWordNavigationModifier(TerminalModifiers.Ctrl, isMacOS: false));
+        Assert.IsFalse(TextEditorCore.IsWordNavigationModifier(TerminalModifiers.Alt, isMacOS: false));
     }
 
     [TestMethod]
