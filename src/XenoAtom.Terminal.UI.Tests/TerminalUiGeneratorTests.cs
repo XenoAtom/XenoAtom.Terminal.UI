@@ -82,6 +82,7 @@ public sealed class TerminalUiGeneratorTests
         Assert.IsTrue(generatedSources.Any(s => s.Contains("public void BindCount(", StringComparison.Ordinal)), "Expected generated Bind* method for bidirectional bindings.");
         Assert.IsTrue(generatedSources.Any(s => s.Contains("RegisterBoundValue(this, __Count__BindingAccessor.Instance, binding", StringComparison.Ordinal)), "Expected generated binding synchronization registration.");
         Assert.IsTrue(generatedSources.Any(s => s.Contains("__ApplyBoundCount(binding.GetValue())", StringComparison.Ordinal)), "Expected generated bind attach to synchronize the local value immediately.");
+        Assert.IsTrue(generatedSources.Any(s => s.Contains("_countBound.SetValue(updated);", StringComparison.Ordinal) && s.Contains("updated = _countBound.GetValue();", StringComparison.Ordinal)), "Expected generated bound setters to reapply the source value through the local setter path after forwarding target writes.");
         Assert.IsTrue(generatedSources.Any(s => s.Contains("__Title__BindingAccessor", StringComparison.Ordinal)), "Expected generated accessor for custom bindable property.");
         Assert.IsFalse(generatedSources.Any(s => s.Contains("private global::System.String _title", StringComparison.Ordinal)), "Did not expect generated backing field for custom bindable property.");
         Assert.IsTrue(generatedSources.Any(s => s.Contains("PointerPressedEvent", StringComparison.Ordinal)), "Expected generated routed event field.");

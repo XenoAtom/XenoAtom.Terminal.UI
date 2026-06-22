@@ -265,6 +265,39 @@ public sealed class SelectTests
     }
 
     [TestMethod]
+    public void Select_Bound_SelectedIndex_Reapplies_Source_After_Items_Expand()
+    {
+        var selectedIndex = new State<int>(0);
+        var select = new Select<string>()
+            .SelectedIndex((Binding<int>)selectedIndex);
+        select.Items.Add("placeholder");
+
+        using var driver = new TerminalAppTestDriver(new VStack { select }, TerminalHostKind.Fullscreen, new TerminalSize(40, 5));
+        driver.Tick();
+
+        selectedIndex.Value = 9;
+
+        Assert.AreEqual(9, selectedIndex.Value);
+        Assert.AreEqual(0, select.SelectedIndex, "The target clamps while only the placeholder item exists.");
+
+        select.Items.Clear();
+        for (var i = 0; i < 18; i++)
+        {
+            select.Items.Add(i == 9 ? "preferred-model" : $"listed-{i}");
+        }
+
+        select.SelectedIndex = selectedIndex.Value;
+        driver.Tick();
+
+        Assert.AreEqual(9, selectedIndex.Value);
+        Assert.AreEqual(9, select.SelectedIndex);
+
+        var screen = new AnsiTestScreen(40, 5);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "preferred-model");
+    }
+
+    [TestMethod]
     public void Select_Inside_Dialog_Opens_Interactable_Popup_And_Closing_Dialog_Removes_It()
     {
         var select = new Select<string>()

@@ -94,6 +94,27 @@ public sealed class BidirectionalBindingTests
     }
 
     [TestMethod]
+    public void Bound_Coerced_Target_Setter_Reapplies_Source_When_Source_NoOps()
+    {
+        var state = new State<int>(0);
+        var scrollBar = new VScrollBar()
+            .Minimum(0)
+            .Maximum(0)
+            .Value((Binding<int>)state);
+
+        state.Value = 7;
+
+        Assert.AreEqual(7, state.Value);
+        Assert.AreEqual(0, scrollBar.Value, "The target clamps the source while its local range is still narrow.");
+
+        scrollBar.Maximum = 10;
+        scrollBar.Value = state.Value;
+
+        Assert.AreEqual(7, state.Value);
+        Assert.AreEqual(7, scrollBar.Value, "Setting a bound target to the source value should refresh a stale coerced local value even when the source no-ops.");
+    }
+
+    [TestMethod]
     public void Rebinding_Detaches_The_Previous_Source()
     {
         var stateA = new State<int>(1);
