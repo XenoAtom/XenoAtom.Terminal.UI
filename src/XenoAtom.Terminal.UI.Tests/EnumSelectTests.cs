@@ -28,6 +28,19 @@ public sealed class EnumSelectTests
     }
 
     [TestMethod]
+    public void EnumSelect_Renders_First_Selected_Value()
+    {
+        var select = new EnumSelect<TestChoice>();
+        using var driver = new TerminalAppTestDriver(select, TerminalHostKind.Fullscreen, new TerminalSize(30, 3));
+
+        driver.Tick();
+
+        var screen = new AnsiTestScreen(30, 3);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), nameof(TestChoice.First));
+    }
+
+    [TestMethod]
     public void EnumSelect_Value_And_SelectedIndex_Stay_In_Sync()
     {
         var select = new EnumSelect<TestChoice>();

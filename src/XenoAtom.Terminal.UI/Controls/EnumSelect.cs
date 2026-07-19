@@ -130,6 +130,7 @@ public sealed partial class EnumSelect<[DynamicallyAccessedMembers(DynamicallyAc
     protected override void PrepareChildren()
     {
         SyncFromValue();
+        base.PrepareChildren();
     }
 
     private void SyncFromValue()
