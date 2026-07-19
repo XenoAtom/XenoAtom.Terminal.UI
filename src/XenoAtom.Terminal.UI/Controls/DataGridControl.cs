@@ -2488,7 +2488,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             var effectiveReadOnly = ReadOnly || cols[c].SchemaReadOnly || (column is not null && column.ReadOnly);
             var hasDisplayVisual = column is not null
                 ? column.HasDisplayTemplate(this, effectiveReadOnly)
-                : HasSchemaDisplayTemplate(schemaValueType);
+                : HasSchemaDisplayTemplate(schemaValueType, schemaAccessor.GetValueAsObject(rowModel));
 
             if (!hasDisplayVisual)
             {
@@ -3377,7 +3377,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             var effectiveReadOnly = ReadOnly || schema.SchemaReadOnly || (column is not null && column.ReadOnly);
             var hasDisplayVisual = column is not null
                 ? column.HasDisplayTemplate(this, effectiveReadOnly)
-                : HasSchemaDisplayTemplate(schema.SchemaValueType);
+                : HasSchemaDisplayTemplate(schema.SchemaValueType, schema.SchemaAccessor.GetValueAsObject(rowModel));
 
             var isSelected = IsSelectedCell(viewRow, c);
             var style = isSelected || isRowSelected ? selectionStyle : cellStyle;
@@ -3417,8 +3417,8 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
            && _activeEditorCell.Row == row
            && _activeEditorCell.Column == visibleColumnIndex;
 
-    private bool HasSchemaDisplayTemplate(Type? schemaValueType)
-        => schemaValueType == typeof(bool) && TryResolveSchemaBoolDisplayTemplate(out _);
+    private bool HasSchemaDisplayTemplate(Type? schemaValueType, object? value)
+        => schemaValueType == typeof(bool) && value is bool && TryResolveSchemaBoolDisplayTemplate(out _);
 
     private bool TryCreateSchemaDisplayVisual(Type? schemaValueType, object rowModel, BindingAccessor accessor, in DataTemplateContext context, Visual? reused, out Visual? visual)
     {

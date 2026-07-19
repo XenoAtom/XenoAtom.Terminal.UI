@@ -93,6 +93,27 @@ public sealed class DataGridRenderingTests
     }
 
     [TestMethod]
+    public void DataGrid_DataTableBoolColumn_RendersDBNullWithoutCheckbox()
+    {
+        var table = new DataTable();
+        table.Columns.Add("Enabled", typeof(bool));
+        table.Rows.Add(DBNull.Value);
+        table.Rows.Add(true);
+
+        using var document = new DataGridDataTableDocument(table);
+        using var view = new DataGridDocumentView(document);
+        var grid = new DataGridControl { View = view, ShowRowAnchor = false };
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(20, 5));
+        driver.Tick();
+
+        Assert.AreEqual(
+            1,
+            grid.EnumerateVisualsDepthFirst().OfType<CheckBox>().Count(),
+            "Only the non-null Boolean value should use the checkbox display template.");
+    }
+
+    [TestMethod]
     public void DataGrid_Scrolls_Vertically_Inside_ScrollViewer()
     {
         var textAccessor = new BindingAccessor<string>("text", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
