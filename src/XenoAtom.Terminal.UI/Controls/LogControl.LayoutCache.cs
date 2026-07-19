@@ -169,7 +169,7 @@ public sealed partial class LogControl
                     }
 
                     activeWrapRowBlockCount++;
-                    maxCachedWrapRowStartCount = Math.Max(maxCachedWrapRowStartCount, block.RowCount + 1);
+                    maxCachedWrapRowStartCount = Math.Max(maxCachedWrapRowStartCount, block.Starts.Length);
                 }
             }
 
@@ -442,6 +442,12 @@ public sealed partial class LogControl
                 return new WrapSegmentInfo(0, 0, 0);
             }
 
+            if (entry.RowCount == 1)
+            {
+                _ = TryGetNextWrapSlice(text, 0, wrapWidth, out var singleRowEnd, out _);
+                return new WrapSegmentInfo(0, 0, singleRowEnd);
+            }
+
             EnsureWrapCheckpointStarts(ref entry, text, wrapWidth);
             rowInEntry = Math.Clamp(rowInEntry, 0, Math.Max(0, entry.RowCount - 1));
             var block = GetWrapRowBlock(entryIndex, text, wrapWidth, rowInEntry, out var blockStartRow, out _);
@@ -459,6 +465,12 @@ public sealed partial class LogControl
             if (text.IsEmpty)
             {
                 return new WrapSegmentInfo(0, 0, 0);
+            }
+
+            if (entry.RowCount == 1)
+            {
+                _ = TryGetNextWrapSlice(text, 0, wrapWidth, out var singleRowEnd, out _);
+                return new WrapSegmentInfo(0, 0, singleRowEnd);
             }
 
             EnsureWrapCheckpointStarts(ref entry, text, wrapWidth);
@@ -566,8 +578,17 @@ public sealed partial class LogControl
 
             var blockSlot = FindWrapRowBlockSlot(blocks);
             ref var block = ref blocks[blockSlot];
-            block.Starts ??= new int[WrapRowBlockSize];
-            block.Ends ??= new int[WrapRowBlockSize];
+            var blockStartRow = blockIndex * WrapRowBlockSize;
+            var requiredRows = Math.Max(1, Math.Min(WrapRowBlockSize, entry.RowCount - blockStartRow));
+            if (block.Starts is null || block.Starts.Length < requiredRows)
+            {
+                block.Starts = new int[requiredRows];
+            }
+
+            if (block.Ends is null || block.Ends.Length < requiredRows)
+            {
+                block.Ends = new int[requiredRows];
+            }
 
             PopulateWrapRowBlock(ref entry, ref block, text, wrapWidth, blockIndex);
             block.AccessStamp = entry.WrapRowBlockAccessStamp;

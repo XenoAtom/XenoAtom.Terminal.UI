@@ -13,6 +13,53 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class LogControlPerformanceTests
 {
     [TestMethod]
+    public void LogControl_SingleWrappedRow_Does_Not_Allocate_WrapRowBlocks()
+    {
+        var log = new LogControl();
+        log.AppendLine("short line");
+
+        using var driver = new TerminalAppTestDriver(log, TerminalHostKind.Fullscreen, new TerminalSize(40, 4));
+        driver.Tick();
+
+        var diagnostics = log.GetEntryLayoutDiagnostics(0);
+        Assert.AreEqual(1, diagnostics.RowCount);
+        Assert.AreEqual(0, diagnostics.ActiveWrapRowBlockCount);
+        Assert.AreEqual(0, diagnostics.MaxCachedWrapRowStartCount);
+    }
+
+    [TestMethod]
+    public void LogControl_ShortWrappedEntry_RightSizes_WrapRowBlocks()
+    {
+        var log = new LogControl();
+        log.AppendLine("alpha beta gamma delta epsilon zeta");
+
+        using var driver = new TerminalAppTestDriver(log, TerminalHostKind.Fullscreen, new TerminalSize(10, 8));
+        driver.Tick();
+
+        var diagnostics = log.GetEntryLayoutDiagnostics(0);
+        Assert.IsGreaterThan(1, diagnostics.RowCount);
+        Assert.AreEqual(1, diagnostics.ActiveWrapRowBlockCount);
+        Assert.AreEqual(diagnostics.RowCount, diagnostics.MaxCachedWrapRowStartCount, "A short entry should allocate offsets only for its actual wrapped rows.");
+        Assert.IsLessThan(256, diagnostics.MaxCachedWrapRowStartCount);
+    }
+
+    [TestMethod]
+    public void LogControl_ShortWrappedEntry_Reflows_Whitespace_And_Wide_Text_On_Resize()
+    {
+        var log = new LogControl();
+        log.AppendLine("alpha  界界 beta gamma");
+
+        _ = Rendering.VisualSnapshotRenderer.Render(log, width: 24, maxHeight: 10, Styling.Theme.Default);
+        var wideDiagnostics = log.GetEntryLayoutDiagnostics(0);
+
+        _ = Rendering.VisualSnapshotRenderer.Render(log, width: 7, maxHeight: 10, Styling.Theme.Default);
+        var narrowDiagnostics = log.GetEntryLayoutDiagnostics(0);
+
+        Assert.IsGreaterThan(wideDiagnostics.RowCount, narrowDiagnostics.RowCount);
+        Assert.IsLessThanOrEqualTo(narrowDiagnostics.RowCount, narrowDiagnostics.MaxCachedWrapRowStartCount);
+    }
+
+    [TestMethod]
     public void LogControl_LongWrappedEntry_Uses_Sparse_Checkpoints()
     {
         var log = new LogControl();
@@ -35,8 +82,8 @@ public sealed class LogControlPerformanceTests
         Assert.AreEqual(initialDiagnostics.WrapRowCheckpointCount, scrolledDiagnostics.WrapRowCheckpointCount, "Deep scrolling should not materialize per-row wrap offsets for the whole entry.");
         Assert.IsLessThanOrEqualTo(initialDiagnostics.MaxWrapRowBlockCacheEntries, initialDiagnostics.ActiveWrapRowBlockCount, "Expected the wrapped-row block cache to stay bounded.");
         Assert.IsLessThanOrEqualTo(scrolledDiagnostics.MaxWrapRowBlockCacheEntries, scrolledDiagnostics.ActiveWrapRowBlockCount, "Expected deep scrolling to keep only a bounded number of cached wrapped-row blocks.");
-        Assert.IsLessThanOrEqualTo(257, initialDiagnostics.MaxCachedWrapRowStartCount, "Expected each cached wrapped-row block to stay bounded.");
-        Assert.IsLessThanOrEqualTo(257, scrolledDiagnostics.MaxCachedWrapRowStartCount, "Expected deep scrolling to keep each cached wrapped-row block bounded.");
+        Assert.IsLessThanOrEqualTo(256, initialDiagnostics.MaxCachedWrapRowStartCount, "Expected each cached wrapped-row block to stay bounded.");
+        Assert.IsLessThanOrEqualTo(256, scrolledDiagnostics.MaxCachedWrapRowStartCount, "Expected deep scrolling to keep each cached wrapped-row block bounded.");
     }
 
     [TestMethod]
@@ -87,7 +134,7 @@ public sealed class LogControlPerformanceTests
 
         var finalDiagnostics = log.GetEntryLayoutDiagnostics(0);
         Assert.IsLessThanOrEqualTo(finalDiagnostics.MaxWrapRowBlockCacheEntries, finalDiagnostics.ActiveWrapRowBlockCount, "Expected repeated deep scrolling to reuse a bounded wrapped-row block cache.");
-        Assert.IsLessThanOrEqualTo(257, finalDiagnostics.MaxCachedWrapRowStartCount, "Expected cached wrapped-row blocks to remain fixed-size after repeated deep scrolling.");
+        Assert.IsLessThanOrEqualTo(256, finalDiagnostics.MaxCachedWrapRowStartCount, "Expected cached wrapped-row blocks to remain bounded after repeated deep scrolling.");
     }
 
     [TestMethod]
