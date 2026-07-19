@@ -445,6 +445,8 @@ public partial class Select<T> : ContentVisual
         public SelectPopupContentRoot(ListBox<T> list, Visual content)
         {
             _list = list;
+            // Accept the popup's anchor-derived viewport width so a stretching template can fill it.
+            HorizontalAlignment = Align.Stretch;
             Content = content;
         }
 

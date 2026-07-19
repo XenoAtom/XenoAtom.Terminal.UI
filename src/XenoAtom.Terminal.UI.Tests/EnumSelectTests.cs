@@ -4,6 +4,7 @@
 
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Hosting;
+using XenoAtom.Terminal.UI.Layout;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -38,6 +39,50 @@ public sealed class EnumSelectTests
         var screen = new AnsiTestScreen(30, 3);
         screen.Apply(driver.Backend.GetOutText());
         StringAssert.Contains(screen.GetText(), nameof(TestChoice.First));
+    }
+
+    [TestMethod]
+    public void EnumSelect_Honors_MinWidth_And_HorizontalStretch()
+    {
+        var minWidthSelect = new EnumSelect<TestChoice>()
+        {
+            HorizontalAlignment = Align.Start,
+            MinWidth = 15,
+        };
+        var stretchSelect = new EnumSelect<TestChoice>
+        {
+            HorizontalAlignment = Align.Stretch,
+        };
+        var root = new VStack(minWidthSelect, stretchSelect);
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(40, 20));
+        driver.Tick();
+
+        Assert.AreEqual(15, minWidthSelect.Bounds.Width);
+        Assert.AreEqual(40, stretchSelect.Bounds.Width);
+
+        AssertPopupMatchesAnchor(minWidthSelect);
+        AssertPopupMatchesAnchor(stretchSelect);
+
+        void AssertPopupMatchesAnchor(EnumSelect<TestChoice> select)
+        {
+            driver.App.Focus(select);
+            driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
+            driver.TickUntil(() => driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Any());
+
+            var popup = driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Single();
+            var border = popup.EnumerateVisualsDepthFirst().OfType<Border>().Single();
+            var list = popup.EnumerateVisualsDepthFirst().OfType<ListBox<TestChoice>>().Single();
+            Assert.AreEqual(
+                popup.PopupRect.Width,
+                border.Bounds.Width,
+                "The popup selection box should fill the width derived from its anchor.");
+            Assert.IsTrue(border.Bounds.Width >= select.Bounds.Width);
+            Assert.AreEqual(border.Bounds.Width - 2, list.Bounds.Width);
+
+            driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Enter });
+            driver.TickUntil(() => !driver.App.Root.EnumerateVisualsDepthFirst().OfType<Popup>().Any());
+        }
     }
 
     [TestMethod]
