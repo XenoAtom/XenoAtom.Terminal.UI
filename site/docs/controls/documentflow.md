@@ -74,6 +74,18 @@ flow.ScrollToTail(false);  // disable follow-tail (keeps current viewport)
 When `FollowTail` is `false`, appending new items keeps the current viewport stable instead of advancing to the new tail.
 Use `ScrollToTail()` when you want to immediately jump to the current tail and keep following afterwards.
 
+## Scrolling
+
+Arrow keys scroll one row by default. Configure keyboard and mouse-wheel increments independently when a feed should move
+more quickly:
+
+```csharp
+flow.VerticalScrollStep = 2;
+flow.WheelScrollStep = 3;
+```
+
+Set `WheelScrollStep` to `0` (the default) to use `VerticalScrollStep` for mouse-wheel input too.
+
 ## Scroll to a specific item
 
 Use item indexes to jump to a specific `DocumentFlowItem`.

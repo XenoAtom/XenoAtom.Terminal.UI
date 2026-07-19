@@ -546,6 +546,56 @@ public sealed class DocumentFlowTests
     }
 
     [TestMethod]
+    public void DocumentFlow_UsesConfiguredKeyboardAndWheelScrollSteps()
+    {
+        var flow = new DocumentFlow
+        {
+            VerticalScrollStep = 3,
+            WheelScrollStep = 5,
+        };
+        for (var i = 0; i < 80; i++)
+        {
+            flow.Items.Add(CreateItem($"Item {i}"));
+        }
+
+        using var driver = new TerminalAppTestDriver(flow, TerminalHostKind.Fullscreen, new TerminalSize(40, 8));
+        driver.Tick();
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Home });
+        driver.Tick();
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Down });
+        driver.Tick();
+        Assert.AreEqual(3, flow.Scroll.OffsetY);
+
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Home });
+        driver.Tick();
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Wheel,
+            Button = TerminalMouseButton.Wheel,
+            WheelDelta = -2,
+            X = 2,
+            Y = 2,
+        });
+        driver.Tick();
+        Assert.AreEqual(10, flow.Scroll.OffsetY);
+
+        flow.WheelScrollStep = 0;
+        driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Home });
+        driver.Tick();
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Wheel,
+            Button = TerminalMouseButton.Wheel,
+            WheelDelta = -1,
+            X = 2,
+            Y = 2,
+        });
+        driver.Tick();
+        Assert.AreEqual(3, flow.Scroll.OffsetY, "A zero wheel step should fall back to the keyboard step.");
+    }
+
+    [TestMethod]
     public void DocumentFlow_Scroll_Updates_Block_Visual_Arrangement()
     {
         var flow = new DocumentFlow

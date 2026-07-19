@@ -50,6 +50,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
         this.ItemSpacing(1);
         this.HorizontalScrollEnabled(true);
         this.VerticalScrollEnabled(true);
+        VerticalScrollStep = 1;
         FollowTail = true;
 
         AttachChild(_scrollViewer);
@@ -111,6 +112,19 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     /// </summary>
     [Bindable]
     public partial bool VerticalScrollEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of rows scrolled by an Up or Down key press. Values less than 1 are treated as 1.
+    /// </summary>
+    [Bindable]
+    public partial int VerticalScrollStep { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of rows scrolled per mouse-wheel tick.
+    /// </summary>
+    /// <remarks>Values less than 1 use <see cref="VerticalScrollStep"/>.</remarks>
+    [Bindable]
+    public partial int WheelScrollStep { get; set; }
 
     /// <summary>
     /// Scrolls to the tail and enables follow-tail mode.
@@ -234,16 +248,17 @@ public sealed partial class DocumentFlow : Visual, IScrollable
         var viewportHeight = Math.Max(1, Scroll.ViewportHeight);
         var maxVerticalOffset = Math.Max(0, Scroll.ExtentHeight - viewportHeight);
         var page = Math.Max(1, viewportHeight - 1);
+        var step = Math.Max(1, VerticalScrollStep);
 
         switch (e.Key)
         {
             case TerminalKey.Up:
-                Scroll.ScrollBy(0, -1);
+                ScrollVerticallyBy(-step, maxVerticalOffset);
                 UpdateFollowTailFromViewportInteraction(maxVerticalOffset);
                 e.Handled = true;
                 return;
             case TerminalKey.Down:
-                Scroll.ScrollBy(0, 1);
+                ScrollVerticallyBy(step, maxVerticalOffset);
                 UpdateFollowTailFromViewportInteraction(maxVerticalOffset);
                 e.Handled = true;
                 return;
@@ -272,7 +287,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     /// <inheritdoc />
     protected override void OnPointerWheel(PointerEventArgs e)
     {
-        if (!VerticalScrollEnabled || e.RoutingPhase != RoutingPhase.Bubble || e.Kind != TerminalMouseKind.Wheel || e.WheelDelta == 0)
+        if (!VerticalScrollEnabled || e.RoutingPhase != RoutingPhase.Preview || e.Kind != TerminalMouseKind.Wheel || e.WheelDelta == 0)
         {
             return;
         }
@@ -284,10 +299,18 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             return;
         }
 
-        var step = Math.Max(1, Math.Abs(e.WheelDelta));
-        Scroll.ScrollBy(0, e.WheelDelta > 0 ? -step : step);
+        var wheelStep = WheelScrollStep > 0 ? WheelScrollStep : Math.Max(1, VerticalScrollStep);
+        var wheelTicks = Math.Abs((long)e.WheelDelta);
+        var step = (int)Math.Min(maxVerticalOffset, wheelTicks * wheelStep);
+        ScrollVerticallyBy(e.WheelDelta > 0 ? -step : step, maxVerticalOffset);
         UpdateFollowTailFromViewportInteraction(maxVerticalOffset);
         e.Handled = true;
+    }
+
+    private void ScrollVerticallyBy(int delta, int maxVerticalOffset)
+    {
+        var offset = Math.Clamp((long)Scroll.OffsetY + delta, 0, maxVerticalOffset);
+        Scroll.SetOffset(Scroll.OffsetX, (int)offset);
     }
 
     private void OnItemAdded(DocumentFlowItem item)
