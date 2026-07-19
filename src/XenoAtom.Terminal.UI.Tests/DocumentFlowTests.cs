@@ -2,6 +2,8 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace XenoAtom.Terminal.UI.Tests;
 
 [TestClass]
@@ -722,6 +724,75 @@ public sealed class DocumentFlowTests
     }
 
     [TestMethod]
+    public void DocumentFlow_Replacing_Unique_Blocks_Releases_Old_Visuals()
+    {
+        var flow = new DocumentFlow
+        {
+            ItemPadding = Thickness.Zero,
+            ItemSpacing = 0,
+            FollowTail = false,
+        };
+
+        var oldVisuals = ReplaceUniqueBlocks(flow, replacementCount: 100);
+        ForceFullCollection();
+
+        Assert.IsFalse(oldVisuals.Any(static weak => weak.TryGetTarget(out _)), "Expected visuals owned only by replaced blocks to become collectible.");
+        var diagnostics = flow.GetRecyclePoolDiagnostics();
+        Assert.AreEqual(0, diagnostics.VisualCount, "The active replacement should not leave stale unique visuals pooled.");
+    }
+
+    [TestMethod]
+    public void DocumentFlow_Clearing_Items_Releases_Active_And_Pooled_Visuals()
+    {
+        var flow = new DocumentFlow
+        {
+            ItemPadding = Thickness.Zero,
+            ItemSpacing = 0,
+            FollowTail = false,
+        };
+
+        var oldVisual = AddThenClearUniqueBlock(flow);
+        ForceFullCollection();
+
+        Assert.IsFalse(oldVisual.TryGetTarget(out _), "Expected clearing all items to release the removed block visual.");
+        var diagnostics = flow.GetRecyclePoolDiagnostics();
+        Assert.AreEqual(0, diagnostics.KeyCount);
+        Assert.AreEqual(0, diagnostics.VisualCount);
+    }
+
+    [TestMethod]
+    public void DocumentFlow_RecyclePool_Is_Bounded_After_A_Large_Realized_Peak()
+    {
+        var reuseKey = new object();
+        var document = new FlowDocument();
+        for (var index = 0; index < 200; index++)
+        {
+            document.Add(new ReusableFixedHeightBlock(reuseKey));
+        }
+
+        var flow = new DocumentFlow
+        {
+            ItemPadding = Thickness.Zero,
+            ItemSpacing = 0,
+            FollowTail = false,
+        };
+        flow.Items.Add(new DocumentFlowItem
+        {
+            Content = document,
+            Alignment = DocumentFlowAlignment.Stretch,
+            Padding = Thickness.Zero,
+        });
+
+        Layout(flow, width: 40, height: 220);
+        Layout(flow, width: 40, height: 4);
+
+        var diagnostics = flow.GetRecyclePoolDiagnostics();
+        Assert.IsGreaterThan(0, diagnostics.VisualCount, "Expected the shrunken viewport to recycle visuals from the previous peak.");
+        Assert.IsLessThanOrEqualTo(diagnostics.PerKeyLimit, diagnostics.MaxVisualsPerKey);
+        Assert.IsLessThanOrEqualTo(diagnostics.GlobalLimit, diagnostics.VisualCount);
+    }
+
+    [TestMethod]
     public void DocumentFlow_Selection_IsExclusive_Across_Paragraph_Blocks()
     {
         var flow = new DocumentFlow
@@ -768,6 +839,74 @@ public sealed class DocumentFlowTests
             Alignment = DocumentFlowAlignment.Left,
             MaxWidth = 34,
         };
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static List<WeakReference<Visual>> ReplaceUniqueBlocks(DocumentFlow flow, int replacementCount)
+    {
+        var weakVisuals = new List<WeakReference<Visual>>(replacementCount);
+        for (var index = 0; index < replacementCount; index++)
+        {
+            var block = new CollectibleBlock($"Unique {index}");
+            var item = new DocumentFlowItem
+            {
+                Content = new SingleBlockContent(block),
+                Alignment = DocumentFlowAlignment.Stretch,
+                Padding = Thickness.Zero,
+            };
+
+            if (flow.Items.Count == 0)
+            {
+                flow.Items.Add(item);
+            }
+            else
+            {
+                flow.Items[0] = item;
+            }
+
+            Layout(flow, width: 30, height: 4);
+            weakVisuals.Add(block.CreatedVisual!);
+        }
+
+        flow.Items[0] = new DocumentFlowItem
+        {
+            Content = new FlowDocument().AddParagraph("Current"),
+            Alignment = DocumentFlowAlignment.Stretch,
+            Padding = Thickness.Zero,
+        };
+        Layout(flow, width: 30, height: 4);
+        return weakVisuals;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference<Visual> AddThenClearUniqueBlock(DocumentFlow flow)
+    {
+        var block = new CollectibleBlock("Removed");
+        flow.Items.Add(new DocumentFlowItem
+        {
+            Content = new SingleBlockContent(block),
+            Alignment = DocumentFlowAlignment.Stretch,
+            Padding = Thickness.Zero,
+        });
+        Layout(flow, width: 30, height: 4);
+        var weakVisual = block.CreatedVisual!;
+
+        flow.Items.Clear();
+        Layout(flow, width: 30, height: 4);
+        return weakVisual;
+    }
+
+    private static void Layout(DocumentFlow flow, int width, int height)
+    {
+        flow.Measure(new LayoutConstraints(0, width, 0, height));
+        flow.Arrange(new Rectangle(0, 0, width, height));
+    }
+
+    private static void ForceFullCollection()
+    {
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+    }
 
     private static Paragraph FindRenderedParagraph(DocumentFlow flow, string text)
     {
@@ -837,6 +976,42 @@ public sealed class DocumentFlowTests
         }
 
         public override Visual CreateVisual() => new ProbeVisual(_text);
+    }
+
+    private sealed class CollectibleBlock : DocumentFlowBlock
+    {
+        private readonly string _text;
+        private Visual? _visual;
+
+        public CollectibleBlock(string text)
+        {
+            _text = text;
+        }
+
+        public WeakReference<Visual>? CreatedVisual { get; private set; }
+
+        public override Visual CreateVisual()
+        {
+            _visual ??= new ProbeVisual(_text);
+            CreatedVisual ??= new WeakReference<Visual>(_visual);
+            return _visual;
+        }
+    }
+
+    private sealed class ReusableFixedHeightBlock : DocumentFlowBlock
+    {
+        private readonly object _reuseKey;
+
+        public ReusableFixedHeightBlock(object reuseKey)
+        {
+            _reuseKey = reuseKey;
+        }
+
+        public override object? ReuseKey => _reuseKey;
+
+        public override Visual CreateVisual() => new ProbeVisual("Reusable");
+
+        public override bool TryUpdate(Visual visual) => visual is ProbeVisual;
     }
 
     private sealed class ProbeVisual : Visual

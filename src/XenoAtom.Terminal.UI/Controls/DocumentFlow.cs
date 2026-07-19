@@ -69,6 +69,9 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     /// <inheritdoc />
     public ScrollModel Scroll => _content.Scroll;
 
+    internal DocumentFlowRecyclePoolDiagnostics GetRecyclePoolDiagnostics()
+        => _content.GetRecyclePoolDiagnostics();
+
     /// <summary>
     /// Gets or sets the maximum number of items retained in <see cref="Items"/>.
     /// </summary>
@@ -447,12 +450,19 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     {
         private static readonly object DefaultReuseKey = new();
 
+        // Realization acquires new visuals before recycling the previous viewport. Keeping up to a typical
+        // screenful per reusable shape avoids churn while preventing a large historical viewport from being retained.
+        private const int MaxRecycledVisualsPerKey = 64;
+        private const int MaxRecycledVisuals = 256;
+
         private readonly DocumentFlow _owner;
         private readonly ScrollModel _scroll;
         private readonly BindableList<Visual> _activeChildren;
         private readonly Dictionary<long, ActiveBlockVisual> _activeBlocks;
         private readonly Dictionary<object, Stack<Visual>> _recyclePool;
         private readonly List<long> _staleKeys;
+        private readonly List<object> _staleReuseKeys;
+        private readonly HashSet<object> _currentReuseKeys;
         private readonly List<DocumentLayout> _documentLayouts;
 
         private int[] _documentOffsets = Array.Empty<int>();
@@ -463,6 +473,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
         private bool _layoutCacheValid;
         private int _arrangeGeneration;
         private int _extentHeight;
+        private int _recycledVisualCount;
 
         public DocumentFlowContentVisual(DocumentFlow owner)
         {
@@ -477,12 +488,30 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             _activeBlocks = new Dictionary<long, ActiveBlockVisual>();
             _recyclePool = new Dictionary<object, Stack<Visual>>();
             _staleKeys = new List<long>();
+            _staleReuseKeys = new List<object>();
+            _currentReuseKeys = new HashSet<object>();
             _documentLayouts = new List<DocumentLayout>();
         }
 
         public ScrollModel Scroll => _scroll;
 
         public int ExtentHeight => _extentHeight;
+
+        public DocumentFlowRecyclePoolDiagnostics GetRecyclePoolDiagnostics()
+        {
+            var maxVisualsPerKey = 0;
+            foreach (var stack in _recyclePool.Values)
+            {
+                maxVisualsPerKey = Math.Max(maxVisualsPerKey, stack.Count);
+            }
+
+            return new DocumentFlowRecyclePoolDiagnostics(
+                _recyclePool.Count,
+                _recycledVisualCount,
+                maxVisualsPerKey,
+                MaxRecycledVisualsPerKey,
+                MaxRecycledVisuals);
+        }
 
         [Bindable]
         private partial int ScrollVersion { get; set; }
@@ -780,8 +809,11 @@ public sealed partial class DocumentFlow : Visual, IScrollable
                 _documentOffsets = Array.Empty<int>();
                 _extentHeight = 0;
                 RecycleAllActiveBlocks();
+                ClearRecyclePool();
                 return;
             }
+
+            _currentReuseKeys.Clear();
 
             if (_documentOffsets.Length != items.Count + 1)
             {
@@ -800,7 +832,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
                     throw new InvalidOperationException("DocumentFlowItem.Content cannot be null.");
                 }
 
-                var layout = BuildDocumentLayout(item, docIndex, viewportWidth, defaultPadding);
+                var layout = BuildDocumentLayout(item, docIndex, viewportWidth, defaultPadding, _currentReuseKeys);
                 _documentLayouts.Add(layout);
 
                 runningOffset += layout.TotalHeight;
@@ -813,6 +845,8 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             }
 
             _extentHeight = Math.Max(0, runningOffset);
+            PruneRecyclePool(_currentReuseKeys);
+            _currentReuseKeys.Clear();
         }
 
         private void RecomputeDocumentOffsetsFrom(int documentIndex, int itemSpacing)
@@ -845,7 +879,12 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             _extentHeight = Math.Max(0, runningOffset);
         }
 
-        private DocumentLayout BuildDocumentLayout(DocumentFlowItem item, int docIndex, int viewportWidth, Thickness defaultPadding)
+        private DocumentLayout BuildDocumentLayout(
+            DocumentFlowItem item,
+            int docIndex,
+            int viewportWidth,
+            Thickness defaultPadding,
+            HashSet<object>? currentReuseKeys = null)
         {
             var content = item.Content;
             var bubbleWidth = ResolveBubbleWidth(item, viewportWidth);
@@ -858,6 +897,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             for (var blockIndex = 0; blockIndex < blockCount; blockIndex++)
             {
                 var block = content.GetBlock(blockIndex);
+                currentReuseKeys?.Add(NormalizeReuseKey(block.ReuseKey));
                 var marginTop = Math.Max(0, block.MarginTop);
                 var marginBottom = Math.Max(0, block.MarginBottom);
                 currentY += marginTop;
@@ -1193,6 +1233,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             if (_recyclePool.TryGetValue(reuseKey, out var stack) && stack.Count > 0)
             {
                 visual = stack.Pop();
+                _recycledVisualCount--;
                 if (stack.Count == 0)
                 {
                     _recyclePool.Remove(reuseKey);
@@ -1207,13 +1248,54 @@ public sealed partial class DocumentFlow : Visual, IScrollable
 
         private void StoreRecycledVisual(object reuseKey, Visual visual)
         {
+            if (_recycledVisualCount >= MaxRecycledVisuals)
+            {
+                return;
+            }
+
             if (!_recyclePool.TryGetValue(reuseKey, out var stack))
             {
                 stack = new Stack<Visual>();
                 _recyclePool.Add(reuseKey, stack);
             }
 
+            if (stack.Count >= MaxRecycledVisualsPerKey)
+            {
+                return;
+            }
+
             stack.Push(visual);
+            _recycledVisualCount++;
+        }
+
+        private void PruneRecyclePool(HashSet<object> currentReuseKeys)
+        {
+            _staleReuseKeys.Clear();
+            foreach (var pair in _recyclePool)
+            {
+                if (!currentReuseKeys.Contains(pair.Key))
+                {
+                    _staleReuseKeys.Add(pair.Key);
+                }
+            }
+
+            for (var index = 0; index < _staleReuseKeys.Count; index++)
+            {
+                if (_recyclePool.Remove(_staleReuseKeys[index], out var stack))
+                {
+                    _recycledVisualCount -= stack.Count;
+                }
+            }
+
+            _staleReuseKeys.Clear();
+        }
+
+        private void ClearRecyclePool()
+        {
+            _recyclePool.Clear();
+            _staleReuseKeys.Clear();
+            _currentReuseKeys.Clear();
+            _recycledVisualCount = 0;
         }
 
         private static object NormalizeReuseKey(object? reuseKey) => reuseKey ?? DefaultReuseKey;
@@ -1482,3 +1564,10 @@ public sealed partial class DocumentFlow : Visual, IScrollable
             int MarginBottom);
     }
 }
+
+internal readonly record struct DocumentFlowRecyclePoolDiagnostics(
+    int KeyCount,
+    int VisualCount,
+    int MaxVisualsPerKey,
+    int PerKeyLimit,
+    int GlobalLimit);
