@@ -8,3 +8,6 @@ user = "XenoAtom"
 repo = "XenoAtom.Terminal.UI"
 [changelog]
 owners = ["xoofx"] # To avoid to be mentioned in the changelog
+[nuget]
+user = "xoofx"
+trusted_publishing = true
