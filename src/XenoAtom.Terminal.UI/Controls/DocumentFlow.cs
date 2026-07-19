@@ -48,6 +48,8 @@ public sealed partial class DocumentFlow : Visual, IScrollable
 
         this.ItemPadding(new Thickness(1));
         this.ItemSpacing(1);
+        this.HorizontalScrollEnabled(true);
+        this.VerticalScrollEnabled(true);
         FollowTail = true;
 
         AttachChild(_scrollViewer);
@@ -97,6 +99,18 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     /// </summary>
     [Bindable]
     public partial bool FollowTail { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether horizontal scrolling is enabled.
+    /// </summary>
+    [Bindable]
+    public partial bool HorizontalScrollEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether vertical scrolling is enabled.
+    /// </summary>
+    [Bindable]
+    public partial bool VerticalScrollEnabled { get; set; }
 
     /// <summary>
     /// Scrolls to the tail and enables follow-tail mode.
@@ -159,6 +173,10 @@ public sealed partial class DocumentFlow : Visual, IScrollable
 
     partial void OnItemSpacingChanging(ref int value) => ArgumentOutOfRangeException.ThrowIfNegative(value);
 
+    partial void OnHorizontalScrollEnabledChanged(bool value) => _scrollViewer.HorizontalScrollEnabled = value;
+
+    partial void OnVerticalScrollEnabledChanged(bool value) => _scrollViewer.VerticalScrollEnabled = value;
+
     partial void OnFollowTailChanged(bool value)
     {
         if (!value)
@@ -208,6 +226,11 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     /// <inheritdoc />
     protected override void OnKeyDown(KeyEventArgs e)
     {
+        if (!VerticalScrollEnabled)
+        {
+            return;
+        }
+
         var viewportHeight = Math.Max(1, Scroll.ViewportHeight);
         var maxVerticalOffset = Math.Max(0, Scroll.ExtentHeight - viewportHeight);
         var page = Math.Max(1, viewportHeight - 1);
@@ -249,7 +272,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     /// <inheritdoc />
     protected override void OnPointerWheel(PointerEventArgs e)
     {
-        if (e.RoutingPhase != RoutingPhase.Bubble || e.Kind != TerminalMouseKind.Wheel || e.WheelDelta == 0)
+        if (!VerticalScrollEnabled || e.RoutingPhase != RoutingPhase.Bubble || e.Kind != TerminalMouseKind.Wheel || e.WheelDelta == 0)
         {
             return;
         }

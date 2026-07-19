@@ -41,6 +41,8 @@ public sealed partial class MarkdownControl : Visual, IScrollable
         };
         AttachChild(_flow);
 
+        this.HorizontalScrollEnabled(true);
+        this.VerticalScrollEnabled(true);
         Options = MarkdownRenderOptions.Default;
         RebuildContent();
     }
@@ -102,6 +104,21 @@ public sealed partial class MarkdownControl : Visual, IScrollable
     /// </summary>
     [Bindable]
     public partial MarkdownStyle? RenderStyle { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether horizontal scrolling is enabled for the rendered document.
+    /// </summary>
+    [Bindable]
+    public partial bool HorizontalScrollEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether vertical scrolling is enabled for the rendered document.
+    /// </summary>
+    /// <remarks>
+    /// Disable vertical scrolling when an ancestor provides scrolling and the markdown should grow to its natural height.
+    /// </remarks>
+    [Bindable]
+    public partial bool VerticalScrollEnabled { get; set; }
 
     /// <inheritdoc />
     public ScrollModel Scroll => _flow.Scroll;
@@ -177,6 +194,10 @@ public sealed partial class MarkdownControl : Visual, IScrollable
         _ = value;
         RebuildContent();
     }
+
+    partial void OnHorizontalScrollEnabledChanged(bool value) => _flow.HorizontalScrollEnabled = value;
+
+    partial void OnVerticalScrollEnabledChanged(bool value) => _flow.VerticalScrollEnabled = value;
 
     private void RebuildContent()
     {

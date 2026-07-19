@@ -530,6 +530,41 @@ public sealed class MarkdownControlTests
     }
 
     [TestMethod]
+    public void MarkdownControl_CanDisableInternalScrolling()
+    {
+        var markdown = string.Join("\n\n", Enumerable.Range(0, 20).Select(static i => $"Paragraph {i:00}"));
+        var control = new MarkdownControl(markdown)
+        {
+            HorizontalScrollEnabled = false,
+            VerticalScrollEnabled = false,
+        };
+
+        var outerScroll = new ScrollViewer(new VStack(control));
+        using var driver = new TerminalAppTestDriver(outerScroll, TerminalHostKind.Fullscreen, new TerminalSize(40, 5));
+        driver.Tick();
+
+        var flow = GetFlow(control);
+        Assert.IsFalse(flow.HorizontalScrollEnabled);
+        Assert.IsFalse(flow.VerticalScrollEnabled);
+        Assert.IsFalse(
+            control.EnumerateVisualsDepthFirst().OfType<ScrollBar>().Any(static bar => bar.IsVisible),
+            "Disabled internal scrolling should not show scroll bars.");
+
+        driver.Backend.PushEvent(new TerminalMouseEvent
+        {
+            Kind = TerminalMouseKind.Wheel,
+            Button = TerminalMouseButton.Wheel,
+            WheelDelta = -1,
+            X = 2,
+            Y = 2,
+        });
+        driver.Tick();
+
+        Assert.IsTrue(outerScroll.VerticalOffset > 0, "Mouse wheel input should bubble to the outer scroll viewer.");
+        Assert.AreEqual(0, flow.Scroll.OffsetY);
+    }
+
+    [TestMethod]
     public void MarkdownControl_EmbeddedInDocumentFlow_FollowsOuterTail_WhenMarkdownGrows()
     {
         var markdown = new MarkdownControl("Tail");

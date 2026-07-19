@@ -31,6 +31,16 @@ var control = new MarkdownControl(markdown);
 
 `MarkdownControl` disables `DocumentFlow` follow-tail by default so documents open from the top.
 
+By default, the control manages its own horizontal and vertical scrolling. When it is hosted inside another scrolling
+container, disable the internal direction so the markdown can grow to its natural size and the ancestor handles scrolling:
+
+```csharp
+var control = new MarkdownControl(markdown)
+{
+    VerticalScrollEnabled = false,
+};
+```
+
 ## Pipeline and rendering options
 
 `MarkdownControl` uses a default pipeline supporting CommonMark plus tables and alert blocks.
