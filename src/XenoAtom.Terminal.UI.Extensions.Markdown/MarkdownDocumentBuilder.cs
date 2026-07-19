@@ -123,11 +123,11 @@ internal sealed class MarkdownDocumentBuilder
                 return;
 
             case FencedCodeBlock fencedCode:
-                AddVisualBlock(CreateCodeVisual(fencedCode), indent, quotePrefix, marginTop: 0, marginBottom: _blockSpacing);
+                AddCodeBlock(fencedCode, indent, quotePrefix, marginTop: 0, marginBottom: _blockSpacing);
                 return;
 
             case CodeBlock codeBlock:
-                AddVisualBlock(CreateCodeVisual(codeBlock), indent, quotePrefix, marginTop: 0, marginBottom: _blockSpacing);
+                AddCodeBlock(codeBlock, indent, quotePrefix, marginTop: 0, marginBottom: _blockSpacing);
                 return;
 
             case ThematicBreakBlock:
@@ -217,6 +217,29 @@ internal sealed class MarkdownDocumentBuilder
                     consumedMarker = true;
                     emittedAny = true;
                     break;
+
+                case CodeBlock codeBlock:
+                {
+                    var visualIndent = indent + bulletWidth;
+                    if (!consumedMarker)
+                    {
+                        // Render marker row once when an item starts with a non-paragraph block.
+                        AddParagraphBlock(
+                            new InlineRenderResult(string.Empty, Array.Empty<StyledRun>(), Array.Empty<HyperlinkRun>()),
+                            indent,
+                            hangingIndent: bulletWidth,
+                            linePrefix: firstParagraphPrefix,
+                            continuationPrefix: continuationPrefix,
+                            prefixStyle: quotePrefix is not null ? _style.QuotePrefixStyle : Style.None,
+                            marginTop: 0,
+                            marginBottom: 0);
+                    }
+
+                    AddCodeBlock(codeBlock, visualIndent, quotePrefix, marginTop: 0, marginBottom: 0);
+                    consumedMarker = true;
+                    emittedAny = true;
+                    break;
+                }
 
                 default:
                 {
@@ -392,14 +415,41 @@ internal sealed class MarkdownDocumentBuilder
         _blocks.Add(new MarkdownVisualBlock(effectiveVisual, marginTop, marginBottom));
     }
 
+    private void AddCodeBlock(CodeBlock block, int indent, string? quotePrefix, int marginTop, int marginBottom)
+    {
+        var code = NormalizeLeafText(block);
+        var fenceInfo = block is FencedCodeBlock fencedBlock ? fencedBlock.Info?.Trim() : null;
+        var language = ParseFenceLanguage(fenceInfo);
+        var renderer = _options.CodeBlockRenderer;
+        if (renderer is not null)
+        {
+            var customVisual = renderer.CreateVisual(new MarkdownCodeBlockRenderContext(code, fenceInfo, language, block is FencedCodeBlock, _theme, _style, _options));
+            if (customVisual is not null)
+            {
+                AddVisualBlock(customVisual, indent, quotePrefix, marginTop, marginBottom);
+                return;
+            }
+        }
+
+        var leftPadding = Math.Max(0, indent + GetTextWidth(quotePrefix));
+        _blocks.Add(new MarkdownCodeBlock(
+            code,
+            language,
+            _options.WrapCodeBlocks,
+            Math.Max(0, _options.MaxCodeBlockHeight),
+            leftPadding,
+            marginTop,
+            marginBottom));
+    }
+
     private Visual? CreateVisualFromBlock(Block block)
     {
         return block switch
         {
             ParagraphBlock paragraph => CreateParagraphVisual(RenderLeafInline(paragraph, _style.ParagraphStyle), indent: 0, hangingIndent: 0, linePrefix: null, continuationPrefix: null, Style.None),
             HeadingBlock heading => CreateParagraphVisual(RenderLeafInline(heading, _style.ResolveHeadingStyle(heading.Level)), indent: 0, hangingIndent: 0, linePrefix: null, continuationPrefix: null, Style.None),
-            FencedCodeBlock fenced => CreateCodeVisual(fenced),
-            CodeBlock code => CreateCodeVisual(code),
+            FencedCodeBlock fenced => CreateDefaultCodeVisual(NormalizeLeafText(fenced), ParseFenceLanguage(fenced.Info?.Trim()), _options.WrapCodeBlocks, Math.Max(0, _options.MaxCodeBlockHeight)),
+            CodeBlock code => CreateDefaultCodeVisual(NormalizeLeafText(code), language: null, _options.WrapCodeBlocks, Math.Max(0, _options.MaxCodeBlockHeight)),
             Markdig.Extensions.Tables.Table table => CreateTableVisual(table),
             ThematicBreakBlock => new Rule(),
             LeafBlock leaf => CreateParagraphVisual(RenderLeafInline(leaf, _style.ParagraphStyle), indent: 0, hangingIndent: 0, linePrefix: null, continuationPrefix: null, Style.None),
@@ -429,28 +479,14 @@ internal sealed class MarkdownDocumentBuilder
         };
     }
 
-    private Visual CreateCodeVisual(CodeBlock block)
+    private static Visual CreateDefaultCodeVisual(string code, string? language, bool wrapCodeBlocks, int maxCodeBlockHeight)
     {
-        var code = NormalizeLeafText(block);
-        var fenceInfo = block is FencedCodeBlock fencedBlock ? fencedBlock.Info?.Trim() : null;
-        var language = ParseFenceLanguage(fenceInfo);
-        var renderer = _options.CodeBlockRenderer;
-        if (renderer is not null)
-        {
-            var customVisual = renderer.CreateVisual(new MarkdownCodeBlockRenderContext(code, fenceInfo, language, block is FencedCodeBlock, _theme, _style, _options));
-            if (customVisual is not null)
-            {
-                return customVisual;
-            }
-        }
-
         var log = new LogControl
         {
-            WrapText = _options.WrapCodeBlocks,
+            WrapText = wrapCodeBlocks,
             HorizontalAlignment = Align.Stretch,
         };
 
-        var maxCodeBlockHeight = Math.Max(0, _options.MaxCodeBlockHeight);
         if (maxCodeBlockHeight > 0)
         {
             log.MaxHeight = maxCodeBlockHeight;
@@ -1167,6 +1203,134 @@ internal sealed class MarkdownDocumentBuilder
             paragraph.LinePrefix = _linePrefix;
             paragraph.ContinuationPrefix = _continuationPrefix;
             paragraph.PrefixStyle = _prefixStyle;
+            return true;
+        }
+    }
+
+    private sealed class MarkdownCodeBlock : DocumentFlowBlock
+    {
+        private static readonly object PlainReuseKey = new();
+        private static readonly object HeaderReuseKey = new();
+        private static readonly object PaddedPlainReuseKey = new();
+        private static readonly object PaddedHeaderReuseKey = new();
+
+        private readonly string _code;
+        private readonly string? _language;
+        private readonly bool _wrap;
+        private readonly int _maxHeight;
+        private readonly int _leftPadding;
+        private readonly int _marginTop;
+        private readonly int _marginBottom;
+
+        public MarkdownCodeBlock(
+            string code,
+            string? language,
+            bool wrap,
+            int maxHeight,
+            int leftPadding,
+            int marginTop,
+            int marginBottom)
+        {
+            _code = code ?? string.Empty;
+            _language = string.IsNullOrWhiteSpace(language) ? null : language;
+            _wrap = wrap;
+            _maxHeight = Math.Max(0, maxHeight);
+            _leftPadding = Math.Max(0, leftPadding);
+            _marginTop = Math.Max(0, marginTop);
+            _marginBottom = Math.Max(0, marginBottom);
+        }
+
+        public override int MarginTop => _marginTop;
+
+        public override int MarginBottom => _marginBottom;
+
+        public override object? ReuseKey => (_leftPadding > 0, _language is not null) switch
+        {
+            (false, false) => PlainReuseKey,
+            (false, true) => HeaderReuseKey,
+            (true, false) => PaddedPlainReuseKey,
+            _ => PaddedHeaderReuseKey,
+        };
+
+        public override Visual CreateVisual()
+        {
+            var visual = CreateDefaultCodeVisual(_code, _language, _wrap, _maxHeight);
+            if (_leftPadding == 0)
+            {
+                return visual;
+            }
+
+            return new Padder(visual)
+            {
+                Padding = new Thickness(_leftPadding, 0, 0, 0),
+                HorizontalAlignment = Align.Stretch,
+            };
+        }
+
+        public override bool TryUpdate(Visual visual)
+        {
+            Visual codeVisual;
+            if (_leftPadding > 0)
+            {
+                if (visual is not Padder padder || padder.Content is null)
+                {
+                    return false;
+                }
+
+                padder.Padding = new Thickness(_leftPadding, 0, 0, 0);
+                padder.HorizontalAlignment = Align.Stretch;
+                codeVisual = padder.Content;
+            }
+            else
+            {
+                if (visual is Padder)
+                {
+                    return false;
+                }
+
+                codeVisual = visual;
+            }
+
+            LogControl log;
+            if (_language is null)
+            {
+                if (codeVisual is not LogControl plainLog)
+                {
+                    return false;
+                }
+
+                log = plainLog;
+            }
+            else
+            {
+                if (codeVisual is not VStack { Children.Count: 2 } stack ||
+                    stack.Children[0] is not TextBlock header ||
+                    stack.Children[1] is not LogControl headerLog)
+                {
+                    return false;
+                }
+
+                header.Text = _language;
+                header.SetStyle(TextBlockStyle.Default with { TextStyle = TextStyle.Bold });
+                stack.Spacing = 0;
+                stack.HorizontalAlignment = Align.Stretch;
+                log = headerLog;
+            }
+
+            log.CloseSearch();
+            log.Clear();
+            log.SearchText = null;
+            log.MaxCapacity = 0;
+            log.IsSelectable = true;
+            log.WrapText = _wrap;
+            log.MaxHeight = _maxHeight > 0 ? _maxHeight : int.MaxValue;
+            log.HorizontalAlignment = Align.Stretch;
+            if (_code.Length > 0)
+            {
+                log.AppendLine(_code);
+            }
+
+            log.ScrollToTail();
             return true;
         }
     }

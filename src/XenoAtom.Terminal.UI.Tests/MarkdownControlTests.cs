@@ -336,6 +336,75 @@ public sealed class MarkdownControlTests
     }
 
     [TestMethod]
+    public void MarkdownControl_Reuses_Default_Code_Visual_Across_Closed_And_Open_Fence_Updates()
+    {
+        AssertDefaultFenceUpdatesReuseOneLogControl(closedFence: true);
+        AssertDefaultFenceUpdatesReuseOneLogControl(closedFence: false);
+    }
+
+    [TestMethod]
+    public void MarkdownControl_Reused_Default_Code_Visual_Updates_Header_And_Options()
+    {
+        var control = new MarkdownControl("```csharp\nConsole.WriteLine(1);\n```");
+        using var driver = new TerminalAppTestDriver(control, TerminalHostKind.Fullscreen, new TerminalSize(60, 10));
+        driver.Tick();
+
+        var initialStack = control.EnumerateVisualsDepthFirst().OfType<VStack>().Single(stack => stack.Children.Count == 2 && stack.Children[1] is LogControl);
+        var initialHeader = (TextBlock)initialStack.Children[0];
+        var initialLog = (LogControl)initialStack.Children[1];
+        Assert.AreEqual("csharp", initialHeader.Text);
+
+        control.Markdown = "```python\nprint('updated')\n```";
+        driver.Tick();
+
+        var updatedStack = control.EnumerateVisualsDepthFirst().OfType<VStack>().Single(stack => stack.Children.Count == 2 && stack.Children[1] is LogControl);
+        Assert.AreSame(initialStack, updatedStack, "Fences with headers should share a compatible reusable visual shape.");
+        Assert.AreSame(initialLog, updatedStack.Children[1]);
+        Assert.AreEqual("python", ((TextBlock)updatedStack.Children[0]).Text);
+
+        control.Options = control.Options with
+        {
+            WrapCodeBlocks = true,
+            MaxCodeBlockHeight = 3,
+        };
+        driver.Tick();
+
+        var optionsUpdatedLog = control.EnumerateVisualsDepthFirst().OfType<LogControl>().Single();
+        Assert.AreSame(initialLog, optionsUpdatedLog);
+        Assert.IsTrue(optionsUpdatedLog.WrapText);
+        Assert.AreEqual(3, optionsUpdatedLog.MaxHeight);
+
+        control.Markdown = "```\nheader removed\n```";
+        driver.Tick();
+
+        var headerlessLog = control.EnumerateVisualsDepthFirst().OfType<LogControl>().Single();
+        Assert.AreNotSame(initialLog, headerlessLog, "Header and headerless code blocks use separate compatible visual shapes.");
+        Assert.IsFalse(control.EnumerateVisualsDepthFirst().OfType<VStack>().Any(stack => stack.Children.Count == 2 && stack.Children[1] is LogControl));
+        Assert.AreEqual(0, GetFlow(control).GetRecyclePoolDiagnostics().VisualCount, "The incompatible old shape should be pruned after the rebuild.");
+    }
+
+    [TestMethod]
+    public void MarkdownControl_Custom_Code_Renderer_Keeps_Unique_Visual_Fallback_Without_Pool_Growth()
+    {
+        var renderer = new ProbeCodeBlockRenderer();
+        var control = new MarkdownControl
+        {
+            Options = MarkdownRenderOptions.Default with { CodeBlockRenderer = renderer },
+        };
+        using var driver = new TerminalAppTestDriver(control, TerminalHostKind.Fullscreen, new TerminalSize(60, 8));
+
+        for (var index = 0; index < 20; index++)
+        {
+            control.Markdown = $"```custom\nvalue {index}\n```";
+            driver.Tick();
+        }
+
+        Assert.AreEqual(20, renderer.CreateCount);
+        Assert.IsTrue(control.EnumerateVisualsDepthFirst().OfType<TextBlock>().Any(text => text.Text?.Contains("value 19", StringComparison.Ordinal) == true));
+        Assert.AreEqual(0, GetFlow(control).GetRecyclePoolDiagnostics().VisualCount, "Unique custom visuals from old documents should not remain in the recycle pool.");
+    }
+
+    [TestMethod]
     public void MarkdownControl_Resolves_Relative_Links_With_BaseUri()
     {
         var control = new MarkdownControl("See [docs](guide/readme.md).")
@@ -980,6 +1049,27 @@ CodeAlta is a **terminal workspace for agentic coding** — a .NET 10 CLI tool (
         return flow;
     }
 
+    private static void AssertDefaultFenceUpdatesReuseOneLogControl(bool closedFence)
+    {
+        var control = new MarkdownControl();
+        using var driver = new TerminalAppTestDriver(control, TerminalHostKind.Fullscreen, new TerminalSize(70, 10));
+        var observedLogs = new HashSet<LogControl>(ReferenceEqualityComparer.Instance);
+        var lines = new List<string>();
+
+        for (var index = 0; index < 100; index++)
+        {
+            lines.Add($"Console.WriteLine({index});");
+            control.Markdown = $"```csharp\n{string.Join('\n', lines)}{(closedFence ? "\n```" : string.Empty)}";
+            driver.Tick();
+            observedLogs.Add(control.EnumerateVisualsDepthFirst().OfType<LogControl>().Single());
+        }
+
+        Assert.AreEqual(1, observedLogs.Count, $"Expected one default LogControl to serve all {(closedFence ? "closed" : "open")} fence updates.");
+        Assert.AreEqual(100, observedLogs.Single().Count, "The reused LogControl should contain the latest cumulative code.");
+        var diagnostics = GetFlow(control).GetRecyclePoolDiagnostics();
+        Assert.AreEqual(0, diagnostics.VisualCount, "Repeated fenced updates should not leave historical code visuals pooled.");
+    }
+
     private static Paragraph GetParagraph(MarkdownControl control, int blockIndex)
     {
         var flow = GetFlow(control);
@@ -1150,5 +1240,16 @@ CodeAlta is a **terminal workspace for agentic coding** — a .NET 10 CLI tool (
     private static string CreateExpectedFileUri(string path)
     {
         return new UriBuilder(Uri.UriSchemeFile, string.Empty, -1, path).Uri.AbsoluteUri;
+    }
+
+    private sealed class ProbeCodeBlockRenderer : IMarkdownCodeBlockRenderer
+    {
+        public int CreateCount { get; private set; }
+
+        public Visual? CreateVisual(in MarkdownCodeBlockRenderContext context)
+        {
+            CreateCount++;
+            return new TextBlock($"custom: {context.Code}");
+        }
     }
 }
