@@ -84,7 +84,9 @@ flow.VerticalScrollStep = 2;
 flow.WheelScrollStep = 3;
 ```
 
-Set `WheelScrollStep` to `0` (the default) to use `VerticalScrollStep` for mouse-wheel input too.
+Set `WheelScrollStep` to `0` (the default) to use `VerticalScrollStep` for mouse-wheel input too. Each non-zero wheel
+event moves by exactly this many rows; the raw wheel delta determines direction only because terminal backends report
+different magnitudes for a single wheel action.
 
 ## Scroll to a specific item
 

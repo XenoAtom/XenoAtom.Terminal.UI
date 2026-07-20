@@ -536,13 +536,13 @@ public sealed class DocumentFlowTests
         {
             Kind = TerminalMouseKind.Wheel,
             Button = TerminalMouseButton.Wheel,
-            WheelDelta = -1,
+            WheelDelta = -120,
             X = 2,
             Y = 2,
         });
         driver.Tick();
 
-        Assert.IsTrue(flow.Scroll.OffsetY > 0, "Mouse wheel on document content should scroll.");
+        Assert.AreEqual(1, flow.Scroll.OffsetY, "A wheel event should scroll by one row by default regardless of the raw delta magnitude.");
     }
 
     [TestMethod]
@@ -573,12 +573,12 @@ public sealed class DocumentFlowTests
         {
             Kind = TerminalMouseKind.Wheel,
             Button = TerminalMouseButton.Wheel,
-            WheelDelta = -2,
+            WheelDelta = -120,
             X = 2,
             Y = 2,
         });
         driver.Tick();
-        Assert.AreEqual(10, flow.Scroll.OffsetY);
+        Assert.AreEqual(5, flow.Scroll.OffsetY, "WheelScrollStep should be measured in rows per wheel event, not multiplied by the backend-specific raw delta.");
 
         flow.WheelScrollStep = 0;
         driver.Backend.PushEvent(new TerminalKeyEvent { Key = TerminalKey.Home });

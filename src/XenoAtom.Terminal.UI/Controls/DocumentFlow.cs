@@ -120,9 +120,12 @@ public sealed partial class DocumentFlow : Visual, IScrollable
     public partial int VerticalScrollStep { get; set; }
 
     /// <summary>
-    /// Gets or sets the number of rows scrolled per mouse-wheel tick.
+    /// Gets or sets the number of rows scrolled per mouse-wheel event.
     /// </summary>
-    /// <remarks>Values less than 1 use <see cref="VerticalScrollStep"/>.</remarks>
+    /// <remarks>
+    /// Values less than 1 use <see cref="VerticalScrollStep"/>. The raw wheel delta determines direction only because
+    /// terminal backends use different magnitudes for one wheel event.
+    /// </remarks>
     [Bindable]
     public partial int WheelScrollStep { get; set; }
 
@@ -300,9 +303,7 @@ public sealed partial class DocumentFlow : Visual, IScrollable
         }
 
         var wheelStep = WheelScrollStep > 0 ? WheelScrollStep : Math.Max(1, VerticalScrollStep);
-        var wheelTicks = Math.Abs((long)e.WheelDelta);
-        var step = (int)Math.Min(maxVerticalOffset, wheelTicks * wheelStep);
-        ScrollVerticallyBy(e.WheelDelta > 0 ? -step : step, maxVerticalOffset);
+        ScrollVerticallyBy(e.WheelDelta > 0 ? -wheelStep : wheelStep, maxVerticalOffset);
         UpdateFollowTailFromViewportInteraction(maxVerticalOffset);
         e.Handled = true;
     }
