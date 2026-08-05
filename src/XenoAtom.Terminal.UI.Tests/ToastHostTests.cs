@@ -113,4 +113,42 @@ public sealed class ToastHostTests
 
         Assert.AreEqual(ToastDismissReason.Timeout, dismissedReason);
     }
+
+    [TestMethod]
+    public void ToastHost_NewToast_After_Idle_Gap_Is_Not_Dismissed_Immediately()
+    {
+        // Regression test for: clicking the same toast-triggering button twice
+        // with a delay between clicks used to surface only the first toast,
+        // because the animation clock kept a stale timestamp from the last
+        // frame and treated the new toast as having been on screen for the
+        // entire idle gap.
+        var host = new ToastHost(new VStack())
+        {
+            DefaultDuration = TimeSpan.FromMilliseconds(30),
+        };
+
+        using var driver = new TerminalAppTestDriver(host, TerminalHostKind.Fullscreen);
+        driver.Tick();
+
+        // First click: show a toast and let it auto-dismiss.
+        driver.App.Post(() => host.Show(new TextBlock("First")));
+        driver.Tick();
+
+        driver.TickUntil(() => host.VisibleToasts.Count == 0, maxTicks: 50);
+        Assert.HasCount(0, host.VisibleToasts);
+
+        // Idle gap: the user waits before clicking again. The ToastHost stays
+        // registered for animations but its NextAnimationTick is long.MaxValue
+        // once the entry list is empty, so AdvanceAnimation isn't called and
+        // its internal clock keeps the stale timestamp from the last frame.
+        driver.Tick(20);
+
+        // Second click on the same button. Without the fix, the stale clock
+        // would be applied as the delta on the next AdvanceAnimation and
+        // dismiss this toast immediately.
+        driver.App.Post(() => host.Show(new TextBlock("Second")));
+        driver.Tick(2);
+
+        Assert.HasCount(1, host.VisibleToasts);
+    }
 }

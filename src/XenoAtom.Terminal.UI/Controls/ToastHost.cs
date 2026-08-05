@@ -364,6 +364,11 @@ public sealed partial class ToastHost : ContentVisual, IAnimatedVisual
         var durationTicks = duration is { } span ? ToStopwatchTicks(span) : 0;
 
         _entries.Insert(0, new ToastEntry(toast, durationTicks));
+        // Reset the animation clock when a toast is added. If the entry list
+        // was empty for a while, _lastAnimationTick holds a stale timestamp,
+        // so the next AdvanceAnimation would treat the new toast as having
+        // been on screen for the whole idle gap and dismiss it instantly.
+        _lastAnimationTick = 0;
         App?.RegisterAnimatedVisual(this);
     }
 
