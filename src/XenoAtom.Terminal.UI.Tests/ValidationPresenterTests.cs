@@ -34,6 +34,18 @@ public sealed class ValidationPresenterTests
     }
 
     [TestMethod]
+    public void Validation_Preserves_Content_Alignment()
+    {
+        var textBox = new TextBox("Type here").HorizontalAlignment(Align.Stretch);
+        var root = new VStack(textBox.Validation((ValidationMessage?)null));
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 10));
+        driver.Tick();
+
+        Assert.AreEqual(30, textBox.Bounds.Width);
+    }
+
+    [TestMethod]
     public void ValidationPresenter_Invokes_Validator_When_Bound_Value_Changes()
     {
         var value = new State<string?>("8080");

@@ -17,6 +17,8 @@ new Button("Delete")
     .Tooltip("Permanently deletes the item");
 ```
 
+The returned `TooltipHost` preserves the wrapped visual's horizontal and vertical alignment.
+
 The tooltip content is a `Visual`, so you can use `Markup` or any other control:
 
 ```csharp

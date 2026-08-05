@@ -19,7 +19,7 @@ public static partial class ValidationExtensions
     /// <param name="message">The message to display, or <see langword="null"/> to hide it.</param>
     /// <returns>The validation presenter.</returns>
     public static ValidationPresenter Validation(this Visual content, ValidationMessage? message)
-        => new ValidationPresenter().Content(content).Message(message);
+        => new ValidationPresenter(content).Message(message);
 
     /// <summary>
     /// Wraps the specified <paramref name="content"/> in a <see cref="ValidationPresenter"/> and binds a message.
@@ -28,7 +28,7 @@ public static partial class ValidationExtensions
     /// <param name="message">A binding to the message.</param>
     /// <returns>The validation presenter.</returns>
     public static ValidationPresenter Validation(this Visual content, Binding<ValidationMessage?> message)
-        => new ValidationPresenter().Content(content).Message(message);
+        => new ValidationPresenter(content).Message(message);
 
     /// <summary>
     /// Wraps the specified <paramref name="content"/> in a <see cref="ValidationPresenter"/> and binds a message.
@@ -37,7 +37,7 @@ public static partial class ValidationExtensions
     /// <param name="message">A state holding the message.</param>
     /// <returns>The validation presenter.</returns>
     public static ValidationPresenter Validation(this Visual content, State<ValidationMessage?> message)
-        => new ValidationPresenter().Content(content).Message(message);
+        => new ValidationPresenter(content).Message(message);
 
     /// <summary>
     /// Wraps the specified <paramref name="content"/> in a <see cref="ValidationPresenter"/> and computes a message
@@ -58,8 +58,7 @@ public static partial class ValidationExtensions
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(validator);
 
-        return new ValidationPresenter()
-            .Content(content)
+        return new ValidationPresenter(content)
             .Placement(placement)
             .Update(presenter => presenter.Message = validator(value.GetValue()));
     }

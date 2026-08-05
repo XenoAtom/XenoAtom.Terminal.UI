@@ -20,6 +20,8 @@ var editor = new TextBox("8080")
     .Validation(new ValidationMessage(ValidationSeverity.Error, "Port is required."));
 ```
 
+The validation wrapper preserves the wrapped visual's horizontal and vertical alignment.
+
 ## Dynamic validation
 
 Use `.Validate(...)` to compute a message from a bound value.

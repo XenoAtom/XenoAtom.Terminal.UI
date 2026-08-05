@@ -12,6 +12,18 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class TooltipTests
 {
     [TestMethod]
+    public void Tooltip_Preserves_Content_Alignment()
+    {
+        var textBox = new TextBox("Type here").HorizontalAlignment(Align.Stretch);
+        var root = new VStack(textBox.Tooltip("Tooltip text"));
+
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(30, 10));
+        driver.Tick();
+
+        Assert.AreEqual(30, textBox.Bounds.Width);
+    }
+
+    [TestMethod]
     public void Tooltip_Shows_After_Delay_And_Hides_On_Leave()
     {
         var button = new Button("OK");

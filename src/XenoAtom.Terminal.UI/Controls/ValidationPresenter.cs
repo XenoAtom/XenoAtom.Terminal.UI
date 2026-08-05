@@ -80,6 +80,8 @@ public sealed partial class ValidationPresenter : ContentVisual
     public ValidationPresenter(Visual content) : this()
     {
         this.Content(content);
+        HorizontalAlignment = content.HorizontalAlignment;
+        VerticalAlignment = content.VerticalAlignment;
     }
 
     /// <summary>

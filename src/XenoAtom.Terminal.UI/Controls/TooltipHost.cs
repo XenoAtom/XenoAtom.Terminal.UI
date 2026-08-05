@@ -47,6 +47,8 @@ public sealed partial class TooltipHost : ContentVisual, IAnimatedVisual
     public TooltipHost(Visual content) : this()
     {
         Content = content;
+        HorizontalAlignment = content.HorizontalAlignment;
+        VerticalAlignment = content.VerticalAlignment;
     }
 
     /// <summary>
