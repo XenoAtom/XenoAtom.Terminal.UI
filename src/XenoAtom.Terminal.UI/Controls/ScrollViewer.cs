@@ -398,6 +398,17 @@ public sealed partial class ScrollViewer : Visual
 
             for (var pass = 0; pass < 3; pass++)
             {
+                // When AvoidSelfInducedContentScrollBars is true the content owns its scroll (e.g. DocumentFlow),
+                // and we must not iterate the loop on a second pass: each pass would shrink the content viewport
+                // by the scrollbar thickness, invalidating downstream layout caches (such as DocumentFlow's
+                // width-keyed layout cache) on every arrange. Run exactly one pass and commit whatever the first
+                // pass discovered — Measure still runs at the unscrolled width, so callers that actually do need
+                // a multi-pass convergence (such as the AvoidSelfInduced unit test) keep working because the
+                // first pass already converges to the right state.
+                if (AvoidSelfInducedContentScrollBars && pass > 0)
+                {
+                    break;
+                }
                 contentViewportWidth = Math.Max(1, viewportWidth - (showV ? thickness : 0));
                 contentViewportHeight = Math.Max(1, viewportHeight - (showH ? thickness : 0));
 
