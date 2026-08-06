@@ -116,6 +116,26 @@ public sealed class ScrollViewerLayoutTests
         Assert.IsFalse(verticalBar.IsVisible, "A vertical bar should not stay visible only because the bar narrows wrapping content.");
     }
 
+    [TestMethod]
+    public void ScrollViewer_ContentViewport_Excludes_Visible_VerticalBar_When_Avoiding_SelfInduced_Bars()
+    {
+        var content = new ScrollableWrapVisual(totalCells: 60);
+        var scroll = new ScrollViewer(content)
+        {
+            HorizontalAlignment = Align.Stretch,
+            VerticalAlignment = Align.Stretch,
+            AvoidSelfInducedContentScrollBars = true,
+        };
+
+        scroll.Measure(new Size(20, 2));
+        scroll.Arrange(new Rectangle(0, 0, 20, 2));
+
+        var verticalBar = scroll.EnumerateVisualsDepthFirst().OfType<ScrollBar>().Single(b => b.Orientation == Orientation.Vertical);
+        Assert.IsTrue(verticalBar.IsVisible);
+        Assert.AreEqual(19, scroll.ViewportWidth, "The content viewport should exclude the visible scroll bar.");
+        Assert.AreEqual(19, content.Bounds.Width, "Content should not be arranged underneath the visible scroll bar.");
+    }
+
     private sealed class WrapLikeVisual : Visual
     {
         private readonly int _totalCells;
