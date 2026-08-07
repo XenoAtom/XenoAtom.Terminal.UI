@@ -116,6 +116,128 @@ public sealed class ScrollViewerLayoutTests
         Assert.IsFalse(verticalBar.IsVisible, "A vertical bar should not stay visible only because the bar narrows wrapping content.");
     }
 
+    [TestMethod]
+    public void ScrollViewer_ContentViewport_Excludes_Visible_VerticalBar_When_Avoiding_SelfInduced_Bars()
+    {
+        var content = new ScrollableWrapVisual(totalCells: 60);
+        var scroll = new ScrollViewer(content)
+        {
+            AvoidSelfInducedContentScrollBars = true,
+        };
+
+        scroll.Measure(new Size(20, 2));
+        scroll.Arrange(new Rectangle(0, 0, 20, 2));
+
+        var verticalBar = scroll.EnumerateVisualsDepthFirst().OfType<ScrollBar>().Single(b => b.Orientation == Orientation.Vertical);
+        Assert.IsTrue(verticalBar.IsVisible);
+        Assert.AreEqual(19, scroll.ViewportWidth, "The content viewport should exclude the visible scroll bar.");
+        Assert.AreEqual(19, content.Bounds.Width, "Content should not be arranged underneath the visible scroll bar.");
+    }
+
+    [TestMethod]
+    public void ScrollViewer_AlwaysVisible_VerticalBar_Uses_Final_Viewport_In_One_Pass()
+    {
+        var content = new ScrollableWrapVisual(totalCells: 60);
+        var scroll = new ScrollViewer(content)
+        {
+            HorizontalScrollEnabled = false,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Always,
+            AvoidSelfInducedContentScrollBars = true,
+        };
+
+        scroll.Measure(new Size(20, 2));
+        scroll.Arrange(new Rectangle(0, 0, 20, 2));
+
+        var verticalBar = scroll.EnumerateVisualsDepthFirst().OfType<ScrollBar>().Single(b => b.Orientation == Orientation.Vertical);
+        Assert.IsTrue(verticalBar.IsVisible);
+        Assert.AreEqual(19, scroll.ViewportWidth);
+        Assert.AreEqual(19, content.Bounds.Width);
+        Assert.AreEqual(1, content.ArrangeCount, "Fixed scroll bar visibility should not require a convergence pass.");
+    }
+
+    [TestMethod]
+    public void ScrollViewer_AlwaysVisible_Bar_Does_Not_Force_Scrolling_When_Content_Fits()
+    {
+        var content = new VStack("Hello").VerticalAlignment(Align.Stretch);
+        var scroll = new ScrollViewer(content)
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Always,
+        };
+
+        scroll.Measure(new Size(10, 5));
+        scroll.Arrange(new Rectangle(0, 0, 10, 5));
+
+        var verticalBar = scroll.EnumerateVisualsDepthFirst().OfType<ScrollBar>().Single(b => b.Orientation == Orientation.Vertical);
+        Assert.IsTrue(verticalBar.IsVisible);
+        Assert.AreEqual(9, content.Bounds.Width);
+        Assert.AreEqual(5, content.Bounds.Height);
+    }
+
+    [TestMethod]
+    public void ScrollViewer_AlwaysVisible_Bars_Reserve_Both_Axes_In_One_Pass()
+    {
+        var content = new ScrollableVisual();
+        var scroll = new ScrollViewer(content)
+        {
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Always,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Always,
+        };
+
+        scroll.Measure(new Size(10, 5));
+        scroll.Arrange(new Rectangle(0, 0, 10, 5));
+
+        var bars = scroll.EnumerateVisualsDepthFirst().OfType<ScrollBar>().ToArray();
+        Assert.IsTrue(bars.Single(b => b.Orientation == Orientation.Vertical).IsVisible);
+        Assert.IsTrue(bars.Single(b => b.Orientation == Orientation.Horizontal).IsVisible);
+        Assert.AreEqual(9, scroll.ViewportWidth);
+        Assert.AreEqual(4, scroll.ViewportHeight);
+        Assert.AreEqual(1, content.ArrangeCount, "Fixed scroll bar visibility should not require a convergence pass.");
+    }
+
+    [TestMethod]
+    public void ScrollViewer_Hidden_Bars_Preserve_ContentModel_Scrolling()
+    {
+        var content = new ScrollableVisual();
+        var scroll = new ScrollViewer(content)
+        {
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
+        };
+
+        scroll.Measure(new Size(10, 5));
+        scroll.Arrange(new Rectangle(0, 0, 10, 5));
+
+        var bars = scroll.EnumerateVisualsDepthFirst().OfType<ScrollBar>().ToArray();
+        Assert.IsFalse(bars.Single(b => b.Orientation == Orientation.Vertical).IsVisible);
+        Assert.IsFalse(bars.Single(b => b.Orientation == Orientation.Horizontal).IsVisible);
+        Assert.AreEqual(10, scroll.ViewportWidth);
+        Assert.AreEqual(5, scroll.ViewportHeight);
+
+        content.Scroll.SetOffset(3, 2);
+        Assert.AreEqual(3, scroll.HorizontalOffset);
+        Assert.AreEqual(2, scroll.VerticalOffset);
+    }
+
+    [TestMethod]
+    public void ScrollViewer_Hidden_Bars_Preserve_NonModel_Content_Extent()
+    {
+        var content = new FixedSizeVisual(30, 20);
+        var scroll = new ScrollViewer(content)
+        {
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
+        };
+
+        scroll.Measure(new Size(10, 5));
+        scroll.Arrange(new Rectangle(0, 0, 10, 5));
+
+        var bars = scroll.EnumerateVisualsDepthFirst().OfType<ScrollBar>().ToArray();
+        Assert.IsFalse(bars.Single(b => b.Orientation == Orientation.Vertical).IsVisible);
+        Assert.IsFalse(bars.Single(b => b.Orientation == Orientation.Horizontal).IsVisible);
+        Assert.AreEqual(30, content.Bounds.Width);
+        Assert.AreEqual(20, content.Bounds.Height);
+    }
+
     private sealed class WrapLikeVisual : Visual
     {
         private readonly int _totalCells;
@@ -173,11 +295,14 @@ public sealed class ScrollViewerLayoutTests
 
         public ScrollModel Scroll { get; }
 
+        public int ArrangeCount { get; private set; }
+
         protected override SizeHints MeasureCore(in LayoutConstraints constraints)
             => SizeHints.Fixed(new Size(1, 1));
 
         protected override void ArrangeCore(in Rectangle finalRect)
         {
+            ArrangeCount++;
             var width = Math.Max(1, finalRect.Width);
             var lines = Math.Max(1, (_totalCells + width - 1) / width);
             Scroll.SetViewport(finalRect.Width, finalRect.Height);
@@ -188,6 +313,8 @@ public sealed class ScrollViewerLayoutTests
     private sealed class ScrollableVisual : Visual, IScrollable
     {
         public ScrollModel Scroll { get; }
+
+        public int ArrangeCount { get; private set; }
 
         public ScrollableVisual()
         {
@@ -201,8 +328,18 @@ public sealed class ScrollViewerLayoutTests
 
         protected override void ArrangeCore(in Rectangle finalRect)
         {
+            ArrangeCount++;
             Scroll.SetViewport(finalRect.Width, finalRect.Height);
             Scroll.SetExtent(30, 20);
+        }
+    }
+
+    private sealed class FixedSizeVisual(int width, int height) : Visual
+    {
+        protected override SizeHints MeasureCore(in LayoutConstraints constraints)
+        {
+            _ = constraints;
+            return SizeHints.Fixed(new Size(width, height));
         }
     }
 }

@@ -43,6 +43,26 @@ viewport clipping/offsetting automatically.
 > - keyboard + wheel scrolling support,
 > - nested scroll composition without guessing content size.
 
+## Scroll bar visibility
+
+`HorizontalScrollBarVisibility` and `VerticalScrollBarVisibility` control when each scroll bar is displayed:
+
+- `ScrollBarVisibility.Auto` displays the bar only when content exceeds the viewport. This is the default.
+- `ScrollBarVisibility.Hidden` hides the bar while preserving keyboard, pointer, and programmatic scrolling.
+- `ScrollBarVisibility.Always` always displays the bar and reserves its space in the content viewport.
+
+For example, use an always-visible vertical bar when content should keep a stable layout width as its extent changes:
+
+```csharp
+new ScrollViewer(content)
+    .VerticalScrollBarVisibility(ScrollBarVisibility.Always);
+```
+
+When a bar is `Always` or `Hidden`, its viewport contribution is known before content layout, so ScrollViewer does not
+need additional passes to determine that bar's visibility. Bars configured as `Auto` still use layout convergence when
+one bar can affect overflow on the other axis. Setting `HorizontalScrollEnabled` or `VerticalScrollEnabled` to `false`
+disables scrolling and hides the corresponding bar regardless of its visibility setting.
+
 ## Interaction
 
 - Mouse wheel scrolls the closest `ScrollViewer` under the pointer.
@@ -70,6 +90,7 @@ When the extent exceeds the viewport, ScrollViewer:
 ## Defaults
 
 - Default alignment: `HorizontalAlignment = Align.Stretch`, `VerticalAlignment = Align.Stretch` 
+- Default scroll bar visibility: `HorizontalScrollBarVisibility = ScrollBarVisibility.Auto`, `VerticalScrollBarVisibility = ScrollBarVisibility.Auto`
 
 ## Styling
 `ScrollViewerStyle` controls scrollbar thickness and color palette.

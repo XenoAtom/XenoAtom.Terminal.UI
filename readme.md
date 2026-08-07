@@ -22,6 +22,7 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
 - **Binding-first UI**:
   - Bindable properties, `State<T>`, automatic dependency tracking, minimal boilerplate
 - **Layout system**: consistent measure/arrange protocol (integer cell UI), panels and containers
+- **Scrolling**: retained `ScrollViewer`/`ScrollModel` integration with automatic, hidden, or always-visible scroll bars
 - **Styling, themes, and color schemes**:
   - Theme + per-control styles, `ColorScheme` palettes (terminal-native and RGB themes)
   - Brush gradients for controls such as `TextBlock`, `TextBox`, and `TextFiglet`

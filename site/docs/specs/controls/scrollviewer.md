@@ -37,6 +37,11 @@ This document captures design and implementation notes for `ScrollViewer`.
   - When `false`, horizontal bar is hidden and `HorizontalOffset` is forced to `0`.
 - `VerticalScrollEnabled : bool`
   - When `false`, vertical bar is hidden and `VerticalOffset` is forced to `0`.
+- `HorizontalScrollBarVisibility : ScrollBarVisibility`, `VerticalScrollBarVisibility : ScrollBarVisibility`
+  - `Auto` (default) displays a bar when the corresponding extent exceeds the viewport.
+  - `Hidden` hides the bar without disabling scrolling.
+  - `Always` displays the bar and reserves its viewport space even when content fits.
+  - A disabled scroll axis hides its bar regardless of this setting.
 - `HorizontalOffset : int`, `VerticalOffset : int`
   - Scroll offsets for content **without** a content-owned `ScrollModel`.
   - When content provides a `ScrollModel`, offsets are kept in sync with it.
@@ -103,6 +108,8 @@ Arrange computes:
 - bar visibility and content viewport size, with multi-pass stabilization:
   - **content scroll model mode** starts from previous `_showVerticalBar/_showHorizontalBar` to avoid oscillation and runs up to 3 passes
   - **no model mode** may re-measure content for the final viewport width when horizontal scrolling is not needed (so width-dependent layouts like wrapping report correct height)
+  - `Always` and `Hidden` bar visibility is resolved before content layout; only `Auto` bars need visibility convergence
+  - bar presentation is independent from overflow, so a hidden bar still permits scrolling and an always-visible bar does not force otherwise-fitting content to scroll
 - offset clamping is applied based on `extent - viewport`
 - bar ranges are updated (`Minimum=0`, `Maximum=maxOffset`, `ViewportSize=viewport`)
 - `ScrollViewerStyle` is bridged to `ScrollBarStyle` for the internal scroll bars (thickness, track style, thumb style)
@@ -155,7 +162,7 @@ The internal scroll bars receive a bridged `ScrollBarStyle` during `Arrange` so 
 
 ## Future / v2 ideas
 
-- Support explicit bar visibility modes (always/auto/hidden) and overlay scroll bars.
+- Support overlay scroll bars.
 - Add optional “scroll by N lines” configuration for wheel scrolling.
 - Add keyboard shortcuts for horizontal page scrolling (when the terminal key encoding supports it).
 

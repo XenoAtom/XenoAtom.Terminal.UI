@@ -204,6 +204,16 @@ public sealed partial class ScrollViewer : Visual
     public partial bool HorizontalScrollEnabled { get; set; }
 
     /// <summary>
+    /// Gets or sets when the horizontal scroll bar is displayed.
+    /// </summary>
+    /// <remarks>
+    /// This property controls scroll bar presentation independently of scrolling. When
+    /// <see cref="HorizontalScrollEnabled"/> is <see langword="false"/>, the horizontal scroll bar is always hidden.
+    /// </remarks>
+    [Bindable]
+    public partial ScrollBarVisibility HorizontalScrollBarVisibility { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether vertical scrolling is enabled.
     /// </summary>
     /// <remarks>
@@ -212,6 +222,15 @@ public sealed partial class ScrollViewer : Visual
     [Bindable]
     public partial bool VerticalScrollEnabled { get; set; }
 
+    /// <summary>
+    /// Gets or sets when the vertical scroll bar is displayed.
+    /// </summary>
+    /// <remarks>
+    /// This property controls scroll bar presentation independently of scrolling. When
+    /// <see cref="VerticalScrollEnabled"/> is <see langword="false"/>, the vertical scroll bar is always hidden.
+    /// </remarks>
+    [Bindable]
+    public partial ScrollBarVisibility VerticalScrollBarVisibility { get; set; }
 
     /// <summary>
     /// Gets or sets the vertical scroll offset.
@@ -346,6 +365,8 @@ public sealed partial class ScrollViewer : Visual
 
         var verticalScrollEnabled = VerticalScrollEnabled;
         var horizontalScrollEnabled = HorizontalScrollEnabled;
+        var verticalScrollBarVisibility = VerticalScrollBarVisibility;
+        var horizontalScrollBarVisibility = HorizontalScrollBarVisibility;
 
         var style = GetStyle<ScrollViewerStyle>();
         var thickness = Math.Max(1, style.ScrollBarThickness);
@@ -360,10 +381,10 @@ public sealed partial class ScrollViewer : Visual
         bool CanShrinkToWidth(int width)
             => !useContentScroll && extentHints.FlexShrinkX > 0 && extentHints.Min.Width <= Math.Max(0, width);
 
-        // Start from the previous visibility state to avoid oscillating between
-        // "no bars" and "bars" on every Arrange() call for content-provided scroll models.
-        var showV = _showVerticalBar;
-        var showH = _showHorizontalBar;
+        // Automatic bars start from their previous visibility state to avoid oscillating between "no bars" and
+        // "bars" on every Arrange() call for content-provided scroll models. Fixed policies resolve immediately.
+        var showV = ResolveScrollBarVisibility(verticalScrollEnabled, verticalScrollBarVisibility, _showVerticalBar);
+        var showH = ResolveScrollBarVisibility(horizontalScrollEnabled, horizontalScrollBarVisibility, _showHorizontalBar);
         var contentViewportWidth = viewportWidth;
         var contentViewportHeight = viewportHeight;
 
@@ -392,8 +413,14 @@ public sealed partial class ScrollViewer : Visual
             {
                 // Reflowing content (such as DocumentFlow) should not keep a vertical bar alive only because
                 // the bar reduced width enough to reflow otherwise-fitting content past the viewport height.
-                showV = false;
-                showH = false;
+                if (verticalScrollBarVisibility == ScrollBarVisibility.Auto)
+                {
+                    showV = false;
+                }
+                if (horizontalScrollBarVisibility == ScrollBarVisibility.Auto)
+                {
+                    showH = false;
+                }
             }
 
             for (var pass = 0; pass < 3; pass++)
@@ -409,8 +436,14 @@ public sealed partial class ScrollViewer : Visual
                 modelViewportWidth = Math.Max(0, scrollModel.ViewportWidth);
                 modelViewportHeight = Math.Max(0, scrollModel.ViewportHeight);
 
-                var nextShowV = verticalScrollEnabled && extentHeight > modelViewportHeight;
-                var nextShowH = horizontalScrollEnabled && extentWidth > modelViewportWidth;
+                var nextShowV = ResolveScrollBarVisibility(
+                    verticalScrollEnabled,
+                    verticalScrollBarVisibility,
+                    extentHeight > modelViewportHeight);
+                var nextShowH = ResolveScrollBarVisibility(
+                    horizontalScrollEnabled,
+                    horizontalScrollBarVisibility,
+                    extentWidth > modelViewportWidth);
                 if (nextShowV == showV && nextShowH == showH)
                 {
                     break;
@@ -459,27 +492,50 @@ public sealed partial class ScrollViewer : Visual
             extentHeight = extentHints.Natural.Height;
 
             var lastMeasuredViewportWidth = -1;
-
-            showV = verticalScrollEnabled && extentHeight > viewportHeight;
-            showH = horizontalScrollEnabled && extentWidth > viewportWidth && !CanShrinkToWidth(viewportWidth);
+            var needsVerticalScroll = false;
+            var needsHorizontalScroll = false;
 
             // Determine which bars to show. If horizontal scrolling isn't needed, re-measure the content
             // using the final viewport width so width-dependent layout (e.g. wrapping) can report a correct height.
             for (var pass = 0; pass < 4; pass++)
             {
-                // account for bars and re-evaluate.
-                for (var i = 0; i < 2; i++)
+                // Account for bars and re-evaluate automatic visibility. Fixed visibility policies converge on the
+                // first iteration because their viewport contribution is known before content layout.
+                for (var i = 0; i < 3; i++)
                 {
-                    var w = viewportWidth - (showV ? thickness : 0);
-                    var hViewport = viewportHeight - (showH ? thickness : 0);
-                    showV = verticalScrollEnabled && extentHeight > Math.Max(1, hViewport);
-                    showH = horizontalScrollEnabled && extentWidth > Math.Max(1, w) && !CanShrinkToWidth(Math.Max(1, w));
+                    contentViewportWidth = Math.Max(1, viewportWidth - (showV ? thickness : 0));
+                    contentViewportHeight = Math.Max(1, viewportHeight - (showH ? thickness : 0));
+
+                    needsVerticalScroll = verticalScrollEnabled && extentHeight > contentViewportHeight;
+                    needsHorizontalScroll = horizontalScrollEnabled &&
+                                            extentWidth > contentViewportWidth &&
+                                            !CanShrinkToWidth(contentViewportWidth);
+
+                    var nextShowV = ResolveScrollBarVisibility(
+                        verticalScrollEnabled,
+                        verticalScrollBarVisibility,
+                        needsVerticalScroll);
+                    var nextShowH = ResolveScrollBarVisibility(
+                        horizontalScrollEnabled,
+                        horizontalScrollBarVisibility,
+                        needsHorizontalScroll);
+                    if (nextShowV == showV && nextShowH == showH)
+                    {
+                        break;
+                    }
+
+                    showV = nextShowV;
+                    showH = nextShowH;
                 }
 
                 contentViewportWidth = Math.Max(1, viewportWidth - (showV ? thickness : 0));
                 contentViewportHeight = Math.Max(1, viewportHeight - (showH ? thickness : 0));
+                needsVerticalScroll = verticalScrollEnabled && extentHeight > contentViewportHeight;
+                needsHorizontalScroll = horizontalScrollEnabled &&
+                                        extentWidth > contentViewportWidth &&
+                                        !CanShrinkToWidth(contentViewportWidth);
 
-                if (showH)
+                if (needsHorizontalScroll)
                 {
                     break;
                 }
@@ -503,10 +559,6 @@ public sealed partial class ScrollViewer : Visual
 
                 _contentWidth = extentWidth;
                 _contentHeight = extentHeight;
-
-                // Continue loop to re-evaluate vertical bar visibility (height may have changed due to wrapping).
-                showV = verticalScrollEnabled && extentHeight > viewportHeight;
-                showH = horizontalScrollEnabled && extentWidth > viewportWidth && !CanShrinkToWidth(viewportWidth);
             }
 
             _showVerticalBar = showV;
@@ -531,8 +583,8 @@ public sealed partial class ScrollViewer : Visual
             SetBarValue(_horizontalBar, hOffset);
             _horizontalBar.IsVisible = _showHorizontalBar;
 
-            var contentArrangeWidth = showH ? extentWidth : contentViewportWidth;
-            var contentArrangeHeight = showV ? extentHeight : contentViewportHeight;
+            var contentArrangeWidth = needsHorizontalScroll ? extentWidth : contentViewportWidth;
+            var contentArrangeHeight = needsVerticalScroll ? extentHeight : contentViewportHeight;
             _contentHost.UpdateLayout(contentArrangeWidth, contentArrangeHeight, hOffset, v);
             _contentHost.Arrange(new Rectangle(finalRect.X, finalRect.Y, contentViewportWidth, contentViewportHeight));
         }
@@ -725,6 +777,18 @@ public sealed partial class ScrollViewer : Visual
 
         e.Handled = true;
     }
+
+    private static bool ResolveScrollBarVisibility(
+        bool scrollEnabled,
+        ScrollBarVisibility visibility,
+        bool automaticVisibility)
+        => scrollEnabled && visibility switch
+        {
+            ScrollBarVisibility.Auto => automaticVisibility,
+            ScrollBarVisibility.Hidden => false,
+            ScrollBarVisibility.Always => true,
+            _ => automaticVisibility,
+        };
 
     private void UpdateContentScrollable(IScrollable? scrollable)
     {

@@ -28,6 +28,13 @@ This is how `TextArea` integrates with `ScrollViewer`.
 
 If the content is not scrollable, the scroll viewer owns its scroll offsets and scrolls by translating the content viewport.
 
+### Scroll bar visibility
+
+Use `HorizontalScrollBarVisibility` and `VerticalScrollBarVisibility` to configure each bar as
+`ScrollBarVisibility.Auto`, `Hidden`, or `Always`. `Hidden` preserves scrolling without displaying a bar, while
+`Always` reserves the bar's space before laying out content. Automatic bars continue to use layout convergence when one
+bar changes the available space on the other axis.
+
 ## IScrollable and ScrollModel
 
 `IScrollable` is a simple contract:
