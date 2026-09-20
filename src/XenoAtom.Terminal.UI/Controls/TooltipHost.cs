@@ -121,6 +121,18 @@ public sealed partial class TooltipHost : ContentVisual, IAnimatedVisual
         base.OnDetachedFromApp(app);
     }
 
+    /// <inheritdoc />
+    protected override void PrepareChildren()
+    {
+        base.PrepareChildren();
+        // Track availability even while the animation scheduler is asleep.
+        if (!IsVisible || !IsEnabled)
+        {
+            CloseTooltip();
+            _scheduledShowTick = long.MaxValue;
+        }
+    }
+
     private bool AdvanceAnimation(long timestamp)
     {
         if (App is null || !IsVisible || !IsEnabled)
@@ -177,7 +189,11 @@ public sealed partial class TooltipHost : ContentVisual, IAnimatedVisual
     {
         if (_isOpen)
         {
-            return 0;
+            // Hover changes wake the scheduler. A static, visible tooltip has no
+            // animation deadline; only schedule work when it needs to close.
+            return App is not null && IsVisible && IsEnabled && IsHovered && !_isPointerInteractionActive && TooltipContent is not null
+                ? long.MaxValue
+                : 0;
         }
 
         if (_scheduledShowTick != long.MaxValue)

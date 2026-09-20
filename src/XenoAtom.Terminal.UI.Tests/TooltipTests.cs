@@ -12,6 +12,62 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class TooltipTests
 {
     [TestMethod]
+    public void Visible_Tooltip_Does_Not_Keep_Animation_Scheduler_Awake()
+    {
+        var button = new Button("OK");
+        var tooltip = button.Tooltip("Tooltip text").ShowDelayMilliseconds(20);
+        using var driver = new TerminalAppTestDriver(new VStack(tooltip), TerminalHostKind.Fullscreen, new TerminalSize(30, 10));
+        driver.Tick();
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, X = button.Bounds.X + 1, Y = button.Bounds.Y });
+        driver.Tick(5);
+
+        var screen = new AnsiTestScreen(30, 10);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "Tooltip text");
+        Assert.AreEqual(long.MaxValue, ((Animation.IAnimatedVisual)tooltip).NextAnimationTick);
+        var nextTick = typeof(TerminalApp).GetField("_nextAnimationTick", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        Assert.AreEqual(long.MaxValue, (long)nextTick.GetValue(driver.App)!, "An idle tooltip must let the app sleep.");
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, X = 29, Y = 9 });
+        driver.Tick(2);
+        screen = new AnsiTestScreen(30, 10);
+        screen.Apply(driver.Backend.GetOutText());
+        Assert.DoesNotContain("Tooltip text", screen.GetText());
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, X = button.Bounds.X + 1, Y = button.Bounds.Y });
+        driver.Tick(5);
+        screen = new AnsiTestScreen(30, 10);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "Tooltip text");
+    }
+
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public void Idle_Tooltip_Closes_When_Host_Becomes_Unavailable(bool hide)
+    {
+        var button = new Button("OK");
+        var tooltip = button.Tooltip("Tooltip text").ShowDelayMilliseconds(0);
+        using var driver = new TerminalAppTestDriver(new VStack(tooltip), TerminalHostKind.Fullscreen, new TerminalSize(30, 10));
+        driver.Tick();
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Move, X = button.Bounds.X + 1, Y = button.Bounds.Y });
+        driver.Tick(3);
+        if (hide)
+        {
+            tooltip.IsVisible = false;
+        }
+        else
+        {
+            tooltip.IsEnabled = false;
+        }
+
+        driver.Tick(3);
+        var screen = new AnsiTestScreen(30, 10);
+        screen.Apply(driver.Backend.GetOutText());
+        Assert.DoesNotContain("Tooltip text", screen.GetText());
+    }
+
+    [TestMethod]
     public void Tooltip_Preserves_Content_Alignment()
     {
         var textBox = new TextBox("Type here").HorizontalAlignment(Align.Stretch);
