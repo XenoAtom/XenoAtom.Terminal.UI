@@ -17,6 +17,24 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class SwitchTests
 {
     [TestMethod]
+    public void Round_Switch_Uses_Compatible_Circle_Glyphs()
+    {
+        var sw = new Switch().Style(SwitchStyle.Round);
+        using var driver = new TerminalAppTestDriver(sw, TerminalHostKind.Fullscreen, new TerminalSize(10, 2));
+        driver.Tick();
+        var screen = new AnsiTestScreen(10, 2);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "○");
+
+        sw.IsOn = true;
+        driver.Tick();
+        screen = new AnsiTestScreen(10, 2);
+        screen.Apply(driver.Backend.GetOutText());
+        StringAssert.Contains(screen.GetText(), "●");
+        Assert.DoesNotContain("○", screen.GetText());
+    }
+
+    [TestMethod]
     public void Toggled_Event_Is_Raised_With_Old_And_New_Values()
     {
         var sw = new Switch();

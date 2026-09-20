@@ -155,6 +155,7 @@ The library ships with a large set of built-in controls. See [Controls Reference
 Highlights:
 
 - Text input: `TextBox`, `TextArea`, `CodeEditor`, `PromptEditor`, `MaskedInput`, `NumberBox`, `ValidationPresenter`
+- Toggles: `CheckBox`, `Switch` (including a round style with console-friendly circle glyphs)
 - Lists: `ListBox`, `OptionList`, `SelectionList`, `Select<T>`, `TreeView` (supports immediate node selection after expansion)
 - Data: `Table`, `DataGridControl` (sorting, filtering, search, resizing, inline editing, direct cell activation)
 - Layout: `VStack`, `HStack`, `Grid`, `DockLayout`, `Splitters`, `Border`, `Group`, `Padder`

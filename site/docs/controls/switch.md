@@ -27,6 +27,9 @@ new Switch("Enabled").IsOn(enabled);
 - thumb glyphs (`ThumbGlyphOn` / `ThumbGlyphOff`)
 - background/foreground for normal/hover/pressed/disabled
 
+Use `.Style(SwitchStyle.Round)` for circle thumbs: `●` (on) and `○` (off). The off glyph uses U+25CB
+instead of U+25EF for better compatibility with Windows console fonts.
+
 ## Interaction
 
 - `Space` / `Enter`: toggle when focused.

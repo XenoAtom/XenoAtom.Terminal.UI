@@ -21,8 +21,8 @@ public sealed record SwitchStyle : IStyle<SwitchStyle>
     /// </summary>
     public static SwitchStyle Round { get; } = new()
     {
-        ThumbGlyphOn = new(0x25cf), // Black large circle
-        ThumbGlyphOff = new Rune(0x25ef), // Large circle
+        ThumbGlyphOn = new(0x25cf), // Black circle
+        ThumbGlyphOff = new Rune(0x25cb), // White circle (compatible with Windows console fonts)
     };
 
     /// <summary>
