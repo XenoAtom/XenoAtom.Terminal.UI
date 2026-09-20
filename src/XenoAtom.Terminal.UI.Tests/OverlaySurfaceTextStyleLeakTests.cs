@@ -6,6 +6,7 @@ using System.Reflection;
 using XenoAtom.Ansi;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Geometry;
+using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
@@ -15,6 +16,48 @@ namespace XenoAtom.Terminal.UI.Tests;
 [TestClass]
 public sealed class OverlaySurfaceTextStyleLeakTests
 {
+    [TestMethod]
+    public void Modal_Dialog_Does_Not_Inherit_Dim_From_Selected_ListBox_Row()
+    {
+        var list = new ListBox<string>().Style(ListBoxStyle.Default with { SelectedUnfocused = Style.None | TextStyle.Dim });
+        for (var i = 0; i < 10; i++)
+        {
+            list.Items.Add($"Row {i}");
+        }
+
+        using var driver = new TerminalAppTestDriver(list, TerminalHostKind.Fullscreen, new TerminalSize(40, 12));
+        driver.Tick();
+        list.SelectedIndex = 3;
+        var text = new TextBlock("Dialog body");
+        var dialog = new Dialog { Left = 10, Top = 2, Width = 24, Height = 7, Content = new VStack(text, new Button("OK")) };
+        dialog.Show();
+        driver.Tick();
+
+        var buffer = (CellBuffer)typeof(TerminalApp).GetField("_renderBuffer", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(driver.App)!;
+        Assert.AreEqual(3, text.Bounds.Y, "The dialog text must overlap the selected list row.");
+        Assert.AreNotEqual((TextStyle)0, buffer.UnsafeCells[3 * buffer.Width].TextStyle & TextStyle.Dim, "The unfocused selected list row must be dimmed.");
+        for (var y = dialog.Bounds.Y; y < dialog.Bounds.Bottom; y++)
+        {
+            for (var x = dialog.Bounds.X; x < dialog.Bounds.Right; x++)
+            {
+                Assert.AreEqual((TextStyle)0, buffer.UnsafeCells[y * buffer.Width + x].TextStyle & TextStyle.Dim, $"Dialog cell ({x}, {y}) should not inherit dim.");
+            }
+        }
+
+        using var parser = new AnsiStyledTextParser();
+        var foundBody = false;
+        foreach (var run in parser.Parse(driver.Backend.GetOutText()))
+        {
+            if (run.Text.Contains("Dialog body", StringComparison.Ordinal))
+            {
+                foundBody = true;
+                Assert.AreEqual(AnsiDecorations.None, run.Style.Decorations & AnsiDecorations.Dim, "The emitted ANSI must also reset the list row's dim style.");
+            }
+        }
+
+        Assert.IsTrue(foundBody);
+    }
+
     [TestMethod]
     public void Dialog_Surface_DoesNotInherit_Underline_From_Underlay()
     {
