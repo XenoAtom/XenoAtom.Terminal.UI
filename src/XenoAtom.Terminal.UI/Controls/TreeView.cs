@@ -133,11 +133,7 @@ public sealed partial class TreeView : Visual, IScrollable
 
         var previouslySelectedNode = _selectedNodeCache;
 
-        _visible.Clear();
-        for (var i = 0; i < _roots.Count; i++)
-        {
-            AddVisible(_roots[i], depth: 0, continuationMask: 0, isLastSibling: i == _roots.Count - 1);
-        }
+        RebuildVisibleRows();
 
         // Toggle header visibility based on the current visible list.
         // This avoids allocating temporary sets and keeps tree nodes attached for fast reuse.
@@ -162,6 +158,15 @@ public sealed partial class TreeView : Visual, IScrollable
         }
 
         SynchronizeSelection(previouslySelectedNode);
+    }
+
+    private void RebuildVisibleRows()
+    {
+        _visible.Clear();
+        for (var i = 0; i < _roots.Count; i++)
+        {
+            AddVisible(_roots[i], depth: 0, continuationMask: 0, isLastSibling: i == _roots.Count - 1);
+        }
     }
 
     /// <summary>
@@ -604,13 +609,18 @@ public sealed partial class TreeView : Visual, IScrollable
     {
         ArgumentNullException.ThrowIfNull(node);
 
-        var visibleIndex = FindVisibleIndex(node);
+        var visibleIndex = IndexOfVisibleNode(node);
         if (visibleIndex < 0)
         {
             return false;
         }
 
+        // Expansion and collection edits can precede the next preparation pass.
+        // Refresh the rows before the setter clamps the index and resolves its node.
+        RebuildVisibleRows();
         SelectedIndex = visibleIndex;
+        UpdateSelectedNodeFromSelectedIndex(visibleIndex);
+        _ensureSelectedVisible = true;
         return true;
     }
 
@@ -623,7 +633,32 @@ public sealed partial class TreeView : Visual, IScrollable
     public int IndexOfVisibleNode(TreeNode node)
     {
         ArgumentNullException.ThrowIfNull(node);
-        return FindVisibleIndex(node);
+        var index = 0;
+        return FindCurrentVisibleIndex(_roots, node, ref index);
+    }
+
+    private static int FindCurrentVisibleIndex(BindableList<TreeNode> nodes, TreeNode target, ref int index)
+    {
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            var node = nodes[i];
+            if (ReferenceEquals(node, target))
+            {
+                return index;
+            }
+
+            index++;
+            if (node.IsExpanded)
+            {
+                var result = FindCurrentVisibleIndex(node.Children, target, ref index);
+                if (result >= 0)
+                {
+                    return result;
+                }
+            }
+        }
+
+        return -1;
     }
 
     /// <summary>

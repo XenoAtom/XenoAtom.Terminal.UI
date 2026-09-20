@@ -28,7 +28,8 @@ new TreeView()
 - The flattened list contains only nodes that are currently visible after applying expansion/collapse state.
 - Because of that, `SelectedIndex` can change meaning when nodes are expanded or collapsed. It is mainly useful for keyboard navigation and scroll positioning.
 - `SelectedNode` exposes the selected `TreeNode` directly, so application code does not need to map the index back to a node.
-- `TrySelectNode(node)` selects a visible node by reference.
+- `TrySelectNode(node)` selects a visible node by reference, including immediately after expanding its ancestors or adding it to the tree; no dispatcher delay or layout pass is needed. Collapsed descendants and nodes outside the tree cannot be selected.
+- `IndexOfVisibleNode(node)` uses the current expansion and collection state, even before the next layout pass.
 
 ## Selection example
 

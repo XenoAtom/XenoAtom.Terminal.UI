@@ -15,6 +15,52 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class TreeViewTests
 {
     [TestMethod]
+    public void TreeView_Can_Select_Immediately_After_Expansion_And_Collection_Changes()
+    {
+        var parent = new TreeNode("Parent");
+        var child = new TreeNode("Child");
+        parent.Children.Add(child);
+        var tree = new TreeView([parent]);
+        using var driver = new TerminalAppTestDriver(tree, TerminalHostKind.Fullscreen, new TerminalSize(40, 10));
+        driver.Tick();
+
+        parent.IsExpanded = true;
+        Assert.AreEqual(1, tree.IndexOfVisibleNode(child));
+        Assert.IsTrue(tree.TrySelectNode(child));
+        Assert.AreSame(child, tree.SelectedNode);
+        driver.Tick();
+        Assert.AreSame(child, tree.SelectedNode);
+
+        parent.IsExpanded = false;
+        Assert.AreEqual(-1, tree.IndexOfVisibleNode(child));
+        Assert.IsFalse(tree.TrySelectNode(child));
+        Assert.IsFalse(tree.TrySelectNode(new TreeNode("Detached")));
+
+        var replacement = new TreeNode("Replacement");
+        tree.Roots.Clear();
+        tree.Roots.Add(new TreeNode("First"));
+        tree.Roots.Add(replacement);
+        Assert.IsTrue(tree.TrySelectNode(replacement));
+        Assert.AreEqual(1, tree.SelectedIndex);
+        Assert.AreSame(replacement, tree.SelectedNode, "The selected index can stay unchanged while its node changes.");
+        driver.Tick();
+        Assert.AreSame(replacement, tree.SelectedNode);
+    }
+
+    [TestMethod]
+    public void TreeView_Can_Select_Before_First_Layout()
+    {
+        var child = new TreeNode("Child");
+        var parent = new TreeNode("Parent") { IsExpanded = true };
+        parent.Children.Add(child);
+        var tree = new TreeView([parent]);
+
+        Assert.IsTrue(tree.TrySelectNode(child));
+        Assert.AreEqual(1, tree.SelectedIndex);
+        Assert.AreSame(child, tree.SelectedNode);
+    }
+
+    [TestMethod]
     public void TreeView_Expands_And_Shows_Children()
     {
         var tree = new TreeView();
