@@ -177,7 +177,30 @@ public sealed record DataTemplates : IStyle<DataTemplates>
             => new(binding.Owner, (BindingAccessor<string?>)(object)binding.Accessor);
 
         static Visual DisplayBool(DataTemplateValue<bool> value, in DataTemplateContext _)
-            => new CheckBox(value.GetBinding()).IsEnabled(false);
+        {
+            var checkBox = new CheckBox();
+            UpdateBool(checkBox, value, _);
+            return checkBox;
+        }
+
+        static bool UpdateBool(Visual visual, DataTemplateValue<bool> value, in DataTemplateContext _)
+        {
+            if (visual is not CheckBox checkBox)
+            {
+                return false;
+            }
+
+            // Rebind recycled cells to their new row, removing the old subscription.
+            // An empty binding also clears a previous source before assigning a literal.
+            checkBox.IsChecked(value.GetBinding());
+            if (!value.IsBinding)
+            {
+                checkBox.IsChecked = value.GetValue();
+            }
+
+            checkBox.IsEnabled = false;
+            return true;
+        }
 
         static Visual EditBindingBool(Binding<bool> binding, in DataTemplateContext _)
             => new CheckBox(binding);
@@ -261,7 +284,7 @@ public sealed record DataTemplates : IStyle<DataTemplates>
         RegisterDisplay(display, DisplayOnly<string>(DisplayString));
         RegisterEditor(editor, EditorOnly<string>(EditBindingString));
 
-        RegisterDisplay(display, DisplayOnly<bool>(DisplayBool));
+        RegisterDisplay(display, new DataTemplate<bool>(DisplayBool, null, TryUpdate: UpdateBool));
         RegisterEditor(editor, EditorOnly<bool>(EditBindingBool));
 
         RegisterDisplay(display, DisplayOnly<char>(DisplayFormattable<char>));

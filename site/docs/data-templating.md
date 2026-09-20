@@ -61,14 +61,14 @@ new VStack(
 
 `DataTemplates.Default` includes built-in templates for common .NET types.
 
-**Display templates** render a value in a `TextBlock` (culture-aware when possible).
+**Display templates** generally render a value in a `TextBlock` (culture-aware when possible); Boolean values use a disabled `CheckBox`.
 
 **Editor templates** render an editor that can update a bindable value (for example, `State<T>` or `Binding<T>`).
 
 The default registry currently includes:
 
 - `string` / `string?` (TextBox editor)
-- `bool` (Switch editor; display is `true`/`false` lowercase)
+- `bool` (`CheckBox` editor; disabled `CheckBox` display with `TryUpdate` support for recycling and rebinding to a different row)
 - `char` (TextBox editor)
 - Numeric primitives: `sbyte`, `byte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`, `float`, `double`, `decimal` (NumberBox editor)
 - `Guid` (TextBox editor, parses standard GUID formats)

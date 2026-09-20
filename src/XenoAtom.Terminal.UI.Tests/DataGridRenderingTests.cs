@@ -19,6 +19,50 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class DataGridRenderingTests
 {
     [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void DataGrid_Reuses_Default_Boolean_Displays_After_Updates_And_Scrolling(bool explicitColumn)
+    {
+        var document = new DataGridListDocument<State<bool>>();
+        var accessor = State<bool>.Accessor.Value;
+        document.AddColumn(new DataGridColumnInfo<bool>("value", "Value", false, accessor));
+        for (var i = 0; i < 30; i++)
+        {
+            document.AddRow(new State<bool>(i % 2 == 0));
+        }
+
+        var grid = new DataGridControl { Document = document, ShowHeader = false, ShowRowAnchor = false };
+        if (explicitColumn)
+        {
+            grid.Columns.Add(new DataGridColumn<bool> { Key = "value", TypedValueAccessor = accessor });
+        }
+
+        using var driver = new TerminalAppTestDriver(new ScrollViewer(grid), TerminalHostKind.Fullscreen, new TerminalSize(20, 5));
+        driver.Tick();
+        var original = grid.EnumerateVisualsDepthFirst().OfType<CheckBox>().ToHashSet();
+        Assert.IsTrue(original.Count > 0);
+
+        for (var pass = 0; pass < 10; pass++)
+        {
+            foreach (var row in document.Rows)
+            {
+                row.Value = !row.Value;
+            }
+
+            grid.Scroll.SetOffset(0, pass + 1);
+            driver.Tick();
+            var boxes = grid.EnumerateVisualsDepthFirst().OfType<CheckBox>().OrderBy(box => box.Bounds.Y).ToArray();
+            Assert.AreEqual(original.Count, boxes.Length);
+            for (var i = 0; i < boxes.Length; i++)
+            {
+                Assert.IsTrue(original.Contains(boxes[i]), "Visible Boolean cells should recycle their checkboxes instead of allocating each layout.");
+                Assert.AreEqual(document.Rows[grid.Scroll.OffsetY + i].Value, boxes[i].IsChecked, "Recycled displays must bind to their new rows.");
+                Assert.IsFalse(boxes[i].IsEnabled);
+            }
+        }
+    }
+
+    [TestMethod]
     [DataRow(DataGridSelectionMode.Row)]
     [DataRow(DataGridSelectionMode.Cell)]
     public void DataGrid_Programmatic_SelectedRow_Updates_Highlight_And_CurrentCell(DataGridSelectionMode mode)

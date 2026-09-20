@@ -7,6 +7,9 @@ title: DataGridControl
 `DataGridControl` is an interactive, virtualized, data-bound table control intended for large datasets and rich interaction:
 scrolling, selection, sorting, searching/filtering, column resizing, and inline editing.
 
+Default Boolean display cells recycle their checkbox visuals during updates and scrolling rather than allocating
+a new checkbox per visible cell on each layout pass. Custom templates can opt into the same reuse through `TryUpdate`.
+
 The lower-level contracts and data model live in [DataGrid Specs](../specs/controls/datagrid.md).
 
 
