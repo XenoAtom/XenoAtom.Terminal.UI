@@ -129,6 +129,10 @@ When the view is a `DataGridDocumentView`, any configured `SortComparer` is forw
 
 ## Selection, copy, and clipboard
 
+Assign `SelectedRow` to select a row programmatically. This also moves `CurrentCell` to that row (preserving
+its column), so row-mode highlighting, keyboard navigation, and scrolling follow the selection. Assigning
+`-1` clears the explicit row selection without moving the current cell.
+
 `DataGridControl` supports:
 
 - cell selection (default) and row selection (via row anchor),

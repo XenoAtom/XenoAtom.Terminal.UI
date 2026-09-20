@@ -19,6 +19,43 @@ namespace XenoAtom.Terminal.UI.Tests;
 public sealed class DataGridRenderingTests
 {
     [TestMethod]
+    [DataRow(DataGridSelectionMode.Row)]
+    [DataRow(DataGridSelectionMode.Cell)]
+    public void DataGrid_Programmatic_SelectedRow_Updates_Highlight_And_CurrentCell(DataGridSelectionMode mode)
+    {
+        var table = new DataTable();
+        table.Columns.Add("Name", typeof(string));
+        table.Rows.Add("Alpha");
+        table.Rows.Add("Beta");
+        using var document = new DataGridDataTableDocument(table);
+        var selectedColor = Color.Rgb(255, 0, 0);
+        var selectionStyle = Style.None.WithBackground(selectedColor);
+        var grid = new DataGridControl { Document = document, SelectionMode = mode, ShowRowAnchor = false }
+            .Style(DataGridStyle.Default with { SelectedFocused = selectionStyle, SelectedUnfocused = selectionStyle });
+        using var driver = new TerminalAppTestDriver(new VStack(new Button("Other"), grid), TerminalHostKind.Fullscreen, new TerminalSize(30, 8));
+        driver.Tick();
+
+        grid.SelectedRow = 0;
+        driver.Tick();
+        grid.SelectedRow = 1;
+        driver.Tick();
+
+        var buffer = (Rendering.CellBuffer)typeof(TerminalApp).GetField("_renderBuffer", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(driver.App)!;
+        var scalars = (int[])typeof(Rendering.CellBuffer).GetField("_scalars", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(buffer)!;
+        var cells = (Style[])typeof(Rendering.CellBuffer).GetField("_cells", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(buffer)!;
+        Assert.IsTrue(cells[Array.IndexOf(scalars, (int)'B')].TryGetBackground(out var selectedBackground));
+        Assert.AreEqual(selectedColor, selectedBackground);
+        cells[Array.IndexOf(scalars, (int)'A')].TryGetBackground(out var oldBackground);
+        Assert.AreNotEqual(selectedColor, oldBackground);
+        Assert.AreEqual(1, grid.CurrentCell.Row);
+
+        grid.SelectedRow = 100;
+        Assert.AreEqual(1, grid.SelectedRow);
+        grid.SelectedRow = -1;
+        Assert.AreEqual(1, grid.CurrentCell.Row, "Clearing explicit row selection should preserve the current cell.");
+    }
+
+    [TestMethod]
     public void DataGrid_Renders_Header_And_Cells()
     {
         var laneAccessor = new BindingAccessor<int>("lane", o => ((SwimRow)o).Lane, (o, v) => ((SwimRow)o).Lane = v);

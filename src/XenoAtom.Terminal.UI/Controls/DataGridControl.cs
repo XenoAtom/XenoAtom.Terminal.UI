@@ -743,6 +743,17 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         value = Math.Clamp(value, 0, snapshot.RowCount - 1);
     }
 
+    partial void OnSelectedRowChanged(int value)
+    {
+        if (value >= 0)
+        {
+            // Match row-anchor selection: row mode highlights CurrentCell's row,
+            // and keyboard navigation/scrolling should follow the selected row.
+            IsTableSelected = false;
+            CurrentCell = new DataGridCell(value, CurrentCell == DataGridCell.None ? 0 : CurrentCell.Column);
+        }
+    }
+
     partial void OnDocumentChanged(IDataGridDocument? value)
     {
         if (_appliedDocument is not null)
