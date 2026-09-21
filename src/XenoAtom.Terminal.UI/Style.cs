@@ -34,6 +34,10 @@ public readonly struct Style : IEquatable<Style>
     private const int TextStyleSpecifiedBit = 25;
     private const ulong TextStyleSpecifiedMask = 1ul << TextStyleSpecifiedBit;
 
+    // Foreground's reserved bit 16 distinguishes an explicit terminal-default
+    // foreground from an unspecified foreground that inherits the underlying cell.
+    private const ulong DefaultForegroundMask = 1ul << 16;
+
     // All bits except the background color payload (kind/index + RGBA bytes).
     private const ulong BackgroundFlagsMask = 0x00000000FFFF0000ul;
 
@@ -69,7 +73,7 @@ public readonly struct Style : IEquatable<Style>
     internal Style WithContinuation()
         => new(_foreground, _backgroundAndFlags | ContinuationMask);
 
-    private bool HasForeground => (byte)_foreground != 0;
+    private bool HasForeground => _foreground != 0;
 
     private bool HasBackground => (byte)(_backgroundAndFlags & 0xFF) != 0;
 
@@ -141,7 +145,7 @@ public readonly struct Style : IEquatable<Style>
     }
 
     /// <summary>
-    /// Returns a copy with the foreground cleared to the terminal default (unspecified).
+    /// Returns a copy with an unspecified foreground, allowing it to inherit from underlying cells.
     /// </summary>
     public Style ClearForeground()
         => new(0, _backgroundAndFlags);
@@ -155,8 +159,12 @@ public readonly struct Style : IEquatable<Style>
     /// <summary>
     /// Returns a copy with the specified foreground color.
     /// </summary>
+    /// <remarks>
+    /// <see cref="Color.Default"/> explicitly resets the terminal foreground instead of inheriting the underlying cell's color.
+    /// Use <see cref="ClearForeground"/> to leave the foreground unspecified.
+    /// </remarks>
     public Style WithForeground(Color color)
-        => new(color.ToRaw(), _backgroundAndFlags);
+        => new(color == Color.Default ? DefaultForegroundMask : color.ToRaw(), _backgroundAndFlags);
 
     /// <summary>
     /// Returns a copy with the specified background color.
@@ -177,7 +185,7 @@ public readonly struct Style : IEquatable<Style>
             return false;
         }
 
-        color = Color.FromRaw(_foreground);
+        color = Color.FromRaw(_foreground & ~DefaultForegroundMask);
         return true;
     }
 
@@ -260,7 +268,7 @@ public readonly struct Style : IEquatable<Style>
         => (AnsiDecorations)(int)TextStyle;
 
     internal Color GetForegroundOrDefault()
-        => HasForeground ? Color.FromRaw(_foreground) : Color.Default;
+        => HasForeground ? Color.FromRaw(_foreground & ~DefaultForegroundMask) : Color.Default;
 
     internal Color GetBackgroundOrDefault()
         => HasBackground ? Color.FromRaw(BackgroundColorRaw) : Color.Default;

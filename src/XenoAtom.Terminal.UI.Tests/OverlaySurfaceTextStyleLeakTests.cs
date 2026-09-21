@@ -10,12 +10,86 @@ using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Layout;
 using XenoAtom.Terminal.UI.Rendering;
 using XenoAtom.Terminal.UI.Styling;
+using XenoAtom.Terminal.UI.Templating;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
 [TestClass]
 public sealed class OverlaySurfaceTextStyleLeakTests
 {
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void Terminal_Theme_Dialog_Does_Not_Inherit_Selected_List_Row_Foreground(bool customSurface)
+    {
+        // Based on wgross/xenoatom-terminal-problem: terminal-default foreground,
+        // a templated list, and a movable modal dialog containing label/editor rows.
+        var list = new ListBox<int>().ItemTemplate(new DataTemplate<int>(
+            Display: static (DataTemplateValue<int> item, in DataTemplateContext _) => new HStack(
+                new TextBlock(item.GetValue().ToString()).MaxWidth(5),
+                new TextBlock($"item text {item.GetValue()}").Stretch()).Stretch(),
+            Editor: null));
+        for (var i = 0; i < 100; i++)
+        {
+            list.Items.Add(i);
+        }
+
+        var root = new DockLayout().Content(list).Bottom(new VStack(new Rule(), new CommandBar())).Style(Theme.Terminal);
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(100, 30));
+        driver.Tick();
+        list.SelectedIndex = 10;
+        var labels = new TextBlock[10];
+        var content = new VStack();
+        for (var i = 0; i < labels.Length; i++)
+        {
+            labels[i] = new TextBlock($"data {i}:").MinWidth(17);
+            content.Children.Add(new HStack(labels[i], new NumberBox<int>(i + 1).TextAlignment(TextAlignment.Right)).Spacing(1));
+        }
+
+        var dialog = new Dialog().Content(content).Width(80).Height(20).Title("Edit Item").IsModal(true);
+        if (customSurface)
+        {
+            dialog.Style(DialogStyle.Default with { SurfaceStyle = Style.None.WithBackground(Color.Basic16(0)) });
+        }
+
+        dialog.Show();
+        driver.Tick();
+
+        for (var top = 5; top <= 7; top++)
+        {
+            dialog.Top = top;
+            driver.Tick();
+            var buffer = (CellBuffer)typeof(TerminalApp).GetField("_renderBuffer", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(driver.App)!;
+            Assert.AreEqual(Theme.Terminal.Border, buffer.UnsafeCells[10 * buffer.Width].GetForegroundOrDefault(), "The unfocused list selection should retain its gray foreground.");
+            var overlappingLabels = 0;
+            foreach (var label in labels)
+            {
+                if (label.Bounds.Y == 10)
+                {
+                    overlappingLabels++;
+                }
+
+                var cell = buffer.UnsafeCells[label.Bounds.Y * buffer.Width + label.Bounds.X];
+                Assert.AreEqual(Color.Default, cell.GetForegroundOrDefault(), $"Dialog label at row {label.Bounds.Y} must use the terminal foreground, not the list selection color.");
+            }
+
+            Assert.AreEqual(1, overlappingLabels);
+        }
+
+        using var parser = new AnsiStyledTextParser();
+        var bodyRuns = 0;
+        foreach (var run in parser.Parse(driver.Backend.GetOutText()))
+        {
+            if (run.Text.Contains("data ", StringComparison.Ordinal))
+            {
+                bodyRuns++;
+                Assert.AreEqual(AnsiColor.Default, run.Style.Foreground, "Emitted ANSI must reset the foreground for dialog labels.");
+            }
+        }
+
+        Assert.IsGreaterThan(0, bodyRuns);
+    }
+
     [TestMethod]
     public void Modal_Dialog_Does_Not_Inherit_Dim_From_Selected_ListBox_Row()
     {

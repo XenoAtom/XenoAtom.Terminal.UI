@@ -159,7 +159,7 @@ Highlights:
 - Lists: `ListBox`, `OptionList`, `SelectionList`, `Select<T>`, `TreeView` (supports immediate node selection after expansion)
 - Data: `Table`, `DataGridControl` (sorting, filtering, search, resizing, inline editing, direct cell activation, programmatic row selection, recycled Boolean cell visuals)
 - Layout: `VStack`, `HStack`, `Grid`, `DockLayout`, `Splitters`, `Border`, `Group`, `Padder`
-- Overlays: `Popup`, resizable `Dialog`, `TooltipHost` (idle tooltips do not poll), `Backdrop`
+- Overlays: `Popup`, resizable `Dialog` (isolates its foreground even with terminal-default colors), `TooltipHost` (idle tooltips do not poll), `Backdrop`
 - Toasts: `Toast`, `ToastHost` (overlay notifications)
 - Visualization: `BarChart`, `LineChart`, `Sparkline`, `Canvas`, `BreakdownChart`, `TextFiglet`, `Placeholder`
 - Progress: `ProgressBar`, `ProgressTaskGroup`, `Spinner`

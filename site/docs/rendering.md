@@ -130,6 +130,8 @@ That means:
 
 - if you write a cell with `Style.None.WithForeground(...)` it keeps the previous background
 - if you write a cell with `Style.None.WithBackground(...)` it keeps the previous foreground (unless you override it)
+- `WithForeground(Color.Default)` explicitly resets to the terminal's default foreground (SGR 39), rather than inheriting an underlying color
+- `ClearForeground()` leaves the foreground unspecified so it can inherit from the underlying cell
 
 This pattern is used heavily across the library (e.g. list rows fill their row background so the item visuals can inherit
 that style).

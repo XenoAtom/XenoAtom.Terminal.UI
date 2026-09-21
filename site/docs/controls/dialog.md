@@ -31,6 +31,8 @@ Dialogs are displayed in fullscreen apps and typically:
 - `DialogStyle` lets you override border glyphs, surface/border styles, label cutout styling, and the hover styling used for resize handles and the move bar.
 - Top and bottom hover affordances respect border-label cutouts so the highlight does not paint over those visuals.
 - Focus restoration is automatic, so showing a dialog does not require manual save/restore focus code in callers.
+- The dialog surface isolates its foreground from controls behind it, including with `Theme.Terminal`.
+  A `DialogStyle.SurfaceStyle` without a foreground uses the theme foreground (or the terminal default), not an underlying selection color.
 
 ```csharp
 var dialog = new Dialog()

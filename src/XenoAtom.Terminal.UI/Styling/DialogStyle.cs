@@ -87,10 +87,15 @@ public sealed record DialogStyle : IStyle<DialogStyle>
     {
         if (SurfaceStyle is { } surface)
         {
+            if (!surface.TryGetForeground(out _))
+            {
+                surface = surface.WithForeground(theme.Foreground ?? Color.Default);
+            }
+
             return surface.WithTextStyle(surface.TextStyle);
         }
 
-        var style = theme.ForegroundTextStyle();
+        var style = theme.ForegroundTextStyle().WithForeground(theme.Foreground ?? Color.Default);
         style = style.WithTextStyle(style.TextStyle);
         if (theme.PopupSurface is { } popup)
         {

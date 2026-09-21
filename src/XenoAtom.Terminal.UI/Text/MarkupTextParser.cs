@@ -139,7 +139,9 @@ public sealed class MarkupTextParser
         private static Style ConvertStyle(AnsiStyle style)
         {
             var cellStyle = Style.None;
-            if (style.Foreground is { } fg)
+            // Unstyled markup inherits the control's foreground; an ANSI default
+            // in the capture state is not an explicit per-cell reset.
+            if (style.Foreground is { Kind: not AnsiColorKind.Default } fg)
             {
                 cellStyle = cellStyle.WithForeground(fg);
             }
