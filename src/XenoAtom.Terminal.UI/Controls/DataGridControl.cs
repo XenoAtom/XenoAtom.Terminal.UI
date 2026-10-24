@@ -136,6 +136,15 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
     private int[] _resolvedColumnStarts = Array.Empty<int>();
     private int[] _visibleColumnToSnapshotColumn = Array.Empty<int>();
 
+    // Rows can be taller than one line when a display template renders multiple lines. The cache stores the
+    // measured height of each view row (0 means "not measured yet" and is treated as a single line).
+    private int[] _rowHeightCache = Array.Empty<int>();
+    private int _rowHeightCacheRowCount;
+    private int _rowHeightCacheVersion = int.MinValue;
+    private int _rowHeightCacheWidthsKey = int.MinValue;
+    private long _rowHeightCacheTotalHeight;
+    private readonly List<PendingCellLayout> _pendingCellLayouts = new(16);
+
     private bool _ensureCurrentCellVisible;
 
     private Visual? _activeEditor;
@@ -825,6 +834,12 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         _resolvedColumnWidths = Array.Empty<int>();
         _resolvedColumnStarts = Array.Empty<int>();
 
+        _rowHeightCache = Array.Empty<int>();
+        _rowHeightCacheRowCount = 0;
+        _rowHeightCacheVersion = int.MinValue;
+        _rowHeightCacheWidthsKey = int.MinValue;
+        _rowHeightCacheTotalHeight = 0;
+
         _matches.Clear();
         _activeMatchIndex = -1;
         _lastMatchesKey = 0;
@@ -942,7 +957,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         var columnsWidth = ComputeNaturalColumnsWidth(snapshot, visibleColumns, constraints);
         var requestedWidth = columnsWidth + anchorWidth;
 
-        var height = headerHeight + filterHeight + Math.Max(0, rowCount);
+        var height = headerHeight + filterHeight + Math.Max(0, GetEstimatedRowsHeight(rowCount));
         height = Math.Max(1, height);
 
         MeasuredContentWidth = Math.Max(0, requestedWidth);
@@ -1000,25 +1015,35 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         var frozenColumns = Math.Clamp(FrozenColumns, 0, visibleColumns);
 
         ResolveColumnLayout(snapshot, visibleColumns, Math.Max(0, rect.Width - anchorWidth));
+        EnsureRowHeightCache(snapshot);
 
         var frozenWidth = anchorWidth + SumColumnsWidth(0, frozenColumns);
         var scrollViewportWidth = Math.Max(0, rect.Width - frozenWidth);
-        var scrollViewportHeight = Math.Max(0, rect.Height - headerHeight - filterHeight - frozenRows);
+        var scrollViewportHeight = Math.Max(0, rect.Height - headerHeight - filterHeight);
 
         var scrollExtentWidth = GetScrollableColumnsExtentWidth(frozenColumns, visibleColumns);
         var scrollExtentHeight = Math.Max(0, rowCount - frozenRows);
 
-        _scroll.SetViewport(scrollViewportWidth, scrollViewportHeight);
+        // Vertical scrolling is expressed in rows (OffsetY is the index of the first visible non-frozen row).
+        // The viewport is therefore expressed in visible rows, which is only equal to the pixel height when all rows are one line high.
+        _scroll.SetViewport(scrollViewportWidth, ComputeRowsViewportHeight(snapshot, scrollViewportHeight, frozenRows));
         _scroll.SetExtent(scrollExtentWidth, scrollExtentHeight);
 
         if (_ensureCurrentCellVisible)
         {
-            EnsureCurrentCellVisible(snapshot, frozenRows, frozenColumns);
+            EnsureCurrentCellVisible(snapshot, frozenRows, frozenColumns, scrollViewportHeight);
             _ensureCurrentCellVisible = false;
         }
 
         ArrangeHeaderAndFilter(rect, headerHeight, filterHeight, frozenColumns);
         EnsureCellVisuals(snapshot, rect, headerHeight, filterHeight, frozenRows, frozenColumns);
+
+        // Row heights are known now: refine the row-based viewport so scroll clamping and paging match the rows that actually fit.
+        var refinedViewportHeight = ComputeRowsViewportHeight(snapshot, scrollViewportHeight, frozenRows);
+        if (refinedViewportHeight != _scroll.ViewportHeight)
+        {
+            _scroll.SetViewport(scrollViewportWidth, refinedViewportHeight);
+        }
 
         if (_activeEditor is not null)
         {
@@ -1153,34 +1178,20 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         var searchText = SearchQuery.Text;
         var hasSearch = !string.IsNullOrEmpty(searchText);
 
-        for (var viewRow = 0; viewRow < frozenRows; viewRow++)
+        var rowY = rect.Y + headerHeight + filterHeight;
+        for (var viewRow = 0; viewRow < frozenRows && rowY < rect.Bottom; viewRow++)
         {
-            var y = rect.Y + headerHeight + filterHeight + viewRow;
-            if ((uint)(y - rect.Y) >= (uint)rect.Height)
-            {
-                break;
-            }
-
-            RenderRow(buffer, snapshot, viewRow, y, rect, visibleColumns, frozenColumns, anchorWidth, cellStyle, selectionStyle, matchStyle, hasSearch ? searchText! : null);
+            var rowHeight = GetRowHeight(viewRow);
+            RenderRow(buffer, snapshot, viewRow, rowY, rowHeight, rect, visibleColumns, frozenColumns, anchorWidth, cellStyle, selectionStyle, matchStyle, hasSearch ? searchText! : null);
+            rowY += rowHeight;
         }
 
-        var scrollRowsViewport = Math.Max(0, rect.Height - headerHeight - filterHeight - frozenRows);
         var scrollOffset = _scroll.OffsetY;
-        for (var r = 0; r < scrollRowsViewport; r++)
+        for (var viewRow = frozenRows + scrollOffset; viewRow < rowCount && rowY < rect.Bottom; viewRow++)
         {
-            var viewRow = frozenRows + scrollOffset + r;
-            if ((uint)viewRow >= (uint)rowCount)
-            {
-                break;
-            }
-
-            var y = rect.Y + headerHeight + filterHeight + frozenRows + r;
-            if ((uint)(y - rect.Y) >= (uint)rect.Height)
-            {
-                break;
-            }
-
-            RenderRow(buffer, snapshot, viewRow, y, rect, visibleColumns, frozenColumns, anchorWidth, cellStyle, selectionStyle, matchStyle, hasSearch ? searchText! : null);
+            var rowHeight = GetRowHeight(viewRow);
+            RenderRow(buffer, snapshot, viewRow, rowY, rowHeight, rect, visibleColumns, frozenColumns, anchorWidth, cellStyle, selectionStyle, matchStyle, hasSearch ? searchText! : null);
+            rowY += rowHeight;
         }
 
         if (!_resizingColumn && hoveredResize >= 0 && TryGetColumnResizeHandleRect(snapshot, rect, visibleColumns, frozenColumns, hoveredResize, out var resizeHandle))
@@ -1334,10 +1345,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             var rowY = e.UiY - rect.Y - headerHeight - filterHeight;
             if (rowY >= 0)
             {
-                var rowCount = snapshot.RowCount;
-                var frozenRows = Math.Clamp(FrozenRows, 0, rowCount);
-                var viewRow = rowY < frozenRows ? rowY : frozenRows + _scroll.OffsetY + (rowY - frozenRows);
-                if ((uint)viewRow < (uint)rowCount)
+                if (TryHitTestRow(snapshot, rowY, out var viewRow))
                 {
                     IsTableSelected = false;
                     SelectedRow = viewRow;
@@ -2441,36 +2449,36 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         var visibleColumns = GetVisibleColumnCount(snapshot);
         var cols = EnsureResolvedColumns(snapshot, visibleColumns);
 
-        var yTop = rect.Y + headerHeight + filterHeight;
-        var height = rect.Height - headerHeight - filterHeight;
-        if (height <= 0)
+        var y = rect.Y + headerHeight + filterHeight;
+        if (y >= rect.Bottom)
         {
             _cellRecyclePool.Clear();
             return;
         }
 
-        var viewportScrollRows = Math.Max(0, height - frozenRows);
-        var frozenRowCount = Math.Min(snapshot.RowCount, frozenRows);
-        var scrollStartRow = Math.Min(snapshot.RowCount, frozenRows + _scroll.OffsetY);
-        var maxRow = Math.Min(snapshot.RowCount, scrollStartRow + viewportScrollRows);
-
         var ctxBase = new DataTemplateContext(this, DataTemplateRole.Display, -1, DataTemplateItemState.None);
 
-        for (var row = 0; row < frozenRowCount; row++)
+        var rowCount = snapshot.RowCount;
+        var frozenRowCount = Math.Min(rowCount, frozenRows);
+
+        for (var row = 0; row < frozenRowCount && y < rect.Bottom; row++)
         {
-            EnsureCellRowVisuals(snapshot, rect, cols, row, yTop + row, ctxBase, frozenColumns);
+            y += EnsureCellRowVisuals(snapshot, rect, cols, row, y, ctxBase, frozenColumns);
         }
 
-        for (var row = scrollStartRow; row < maxRow; row++)
+        var scrollStartRow = Math.Min(rowCount, frozenRows + _scroll.OffsetY);
+        for (var row = scrollStartRow; row < rowCount && y < rect.Bottom; row++)
         {
-            var y = yTop + frozenRows + (row - scrollStartRow);
-            EnsureCellRowVisuals(snapshot, rect, cols, row, y, ctxBase, frozenColumns);
+            y += EnsureCellRowVisuals(snapshot, rect, cols, row, y, ctxBase, frozenColumns);
         }
 
         _cellRecyclePool.Clear();
     }
 
-    private void EnsureCellRowVisuals(
+    /// <summary>
+    /// Measures, creates, and arranges the display visuals of a single row and returns the resulting row height.
+    /// </summary>
+    private int EnsureCellRowVisuals(
         IDataGridViewSnapshot snapshot,
         Rectangle rect,
         IReadOnlyList<ResolvedColumn> cols,
@@ -2481,10 +2489,12 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
     {
         if ((uint)(y - rect.Y) >= (uint)rect.Height)
         {
-            return;
+            return GetRowHeight(row);
         }
 
         var rowModel = snapshot.GetRowModel(row);
+        var rowHeight = 1;
+        var firstPendingCell = _pendingCellLayouts.Count;
 
         for (var c = 0; c < cols.Count; c++)
         {
@@ -2555,9 +2565,168 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             }
 
             _cellVisuals.Add(v);
-            v.Measure(new LayoutConstraints(0, cellRect.Width, 0, cellRect.Height));
-            v.Arrange(cellRect);
+
+            // Measure with the final width but without an artificial one-line height cap so multi-line
+            // templates can report their real height. The tallest cell drives the height of the whole row.
+            v.Measure(new LayoutConstraints(0, w, 0, LayoutConstants.Infinite));
+            rowHeight = Math.Max(rowHeight, v.DesiredSize.Height);
+            _pendingCellLayouts.Add(new PendingCellLayout(v, x, w));
         }
+
+        rowHeight = Math.Max(1, rowHeight);
+        for (var i = firstPendingCell; i < _pendingCellLayouts.Count; i++)
+        {
+            var pending = _pendingCellLayouts[i];
+            pending.Visual.Arrange(new Rectangle(pending.X, y, pending.Width, rowHeight));
+        }
+
+        _pendingCellLayouts.RemoveRange(firstPendingCell, _pendingCellLayouts.Count - firstPendingCell);
+
+        SetRowHeight(row, rowHeight);
+        return rowHeight;
+    }
+
+    /// <summary>
+    /// Ensures the row height cache matches the current snapshot and column widths.
+    /// </summary>
+    private void EnsureRowHeightCache(IDataGridViewSnapshot snapshot)
+    {
+        var rowCount = snapshot.RowCount;
+
+        var widthsKey = 17;
+        for (var i = 0; i < _resolvedColumnWidths.Length; i++)
+        {
+            widthsKey = unchecked((widthsKey * 31) + _resolvedColumnWidths[i]);
+        }
+
+        if (_rowHeightCacheRowCount == rowCount &&
+            _rowHeightCacheVersion == snapshot.Version &&
+            _rowHeightCacheWidthsKey == widthsKey)
+        {
+            return;
+        }
+
+        if (_rowHeightCache.Length != rowCount)
+        {
+            _rowHeightCache = rowCount == 0 ? Array.Empty<int>() : new int[rowCount];
+        }
+        else
+        {
+            Array.Clear(_rowHeightCache);
+        }
+
+        _rowHeightCacheRowCount = rowCount;
+        _rowHeightCacheVersion = snapshot.Version;
+        _rowHeightCacheWidthsKey = widthsKey;
+
+        // Unknown rows are assumed to be one line high until they are measured.
+        _rowHeightCacheTotalHeight = rowCount;
+    }
+
+    private int GetRowHeight(int row)
+        => (uint)row < (uint)_rowHeightCache.Length && _rowHeightCache[row] > 0 ? _rowHeightCache[row] : 1;
+
+    /// <summary>
+    /// Returns the height of a row, falling back to the closest measured row when the row was never laid out.
+    /// </summary>
+    /// <remarks>
+    /// Only the rows that have been visible at least once are measured. Using the closest measured row as an estimate
+    /// keeps scrolling predictable for rows that were never displayed (multi-line rows are usually homogeneous).
+    /// </remarks>
+    private int GetEstimatedRowHeight(int row)
+    {
+        if ((uint)row < (uint)_rowHeightCache.Length && _rowHeightCache[row] > 0)
+        {
+            return _rowHeightCache[row];
+        }
+
+        const int SearchLimit = 64;
+
+        var minRow = Math.Max(0, row - SearchLimit);
+        for (var i = row - 1; i >= minRow; i--)
+        {
+            if (_rowHeightCache[i] > 0)
+            {
+                return _rowHeightCache[i];
+            }
+        }
+
+        var maxRow = Math.Min(_rowHeightCacheRowCount, row + 1 + SearchLimit);
+        for (var i = row + 1; i < maxRow; i++)
+        {
+            if (_rowHeightCache[i] > 0)
+            {
+                return _rowHeightCache[i];
+            }
+        }
+
+        return 1;
+    }
+
+    private void SetRowHeight(int row, int height)
+    {
+        if ((uint)row >= (uint)_rowHeightCache.Length)
+        {
+            return;
+        }
+
+        height = Math.Max(1, height);
+        var previous = Math.Max(1, _rowHeightCache[row]);
+        if (previous == height)
+        {
+            return;
+        }
+
+        _rowHeightCache[row] = height;
+        _rowHeightCacheTotalHeight += height - previous;
+    }
+
+    private int GetEstimatedRowsHeight(int rowCount)
+    {
+        if (rowCount <= 0)
+        {
+            return 0;
+        }
+
+        if (_rowHeightCacheRowCount != rowCount)
+        {
+            return rowCount;
+        }
+
+        return (int)Math.Min(int.MaxValue, Math.Max(0, _rowHeightCacheTotalHeight));
+    }
+
+    /// <summary>
+    /// Computes how many non-frozen rows fit in the available height, according to the (possibly estimated) row heights.
+    /// </summary>
+    private int ComputeRowsViewportHeight(IDataGridViewSnapshot snapshot, int availableHeight, int frozenRows)
+    {
+        var remaining = Math.Max(0, availableHeight);
+        var rowCount = snapshot.RowCount;
+        var frozenRowCount = Math.Min(rowCount, Math.Max(0, frozenRows));
+
+        for (var row = 0; row < frozenRowCount && remaining > 0; row++)
+        {
+            remaining = Math.Max(0, remaining - GetRowHeight(row));
+        }
+
+        var visibleRows = 0;
+        var scrollStartRow = Math.Min(rowCount, frozenRows + _scroll.OffsetY);
+        for (var row = scrollStartRow; row < rowCount && remaining > 0; row++)
+        {
+            var rowHeight = GetEstimatedRowHeight(row);
+            if (rowHeight > remaining)
+            {
+                // A partially visible row is not counted: the offset is expressed in rows, so the last
+                // viewport must still allow scrolling the remaining rows into view.
+                break;
+            }
+
+            remaining -= rowHeight;
+            visibleRows++;
+        }
+
+        return visibleRows > 0 ? visibleRows : (rowCount > 0 ? 1 : 0);
     }
 
     private bool TryStartEdit(IDataGridViewSnapshot snapshot, bool arrangeImmediately = false)
@@ -2857,6 +3026,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         var frozenColumns = Math.Clamp(FrozenColumns, 0, visibleColumns);
 
         ResolveColumnLayout(snapshot, visibleColumns, Math.Max(0, rect.Width - anchorWidth));
+        EnsureRowHeightCache(snapshot);
 
         var editorRect = TryGetCellRect(_activeEditorCell, rect, headerHeight, filterHeight, frozenRows, frozenColumns);
         if (editorRect is not { } r)
@@ -3229,10 +3399,8 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         return SelectedRow >= 0 && SelectedRow == row;
     }
 
-    private void EnsureCurrentCellVisible(IDataGridViewSnapshot snapshot, int frozenRows, int frozenColumns)
+    private void EnsureCurrentCellVisible(IDataGridViewSnapshot snapshot, int frozenRows, int frozenColumns, int viewportHeightLines)
     {
-        _ = snapshot;
-
         var cell = CurrentCell;
         if (cell == DataGridCell.None)
         {
@@ -3241,8 +3409,66 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
 
         if (cell.Row >= frozenRows)
         {
-            var y = cell.Row - frozenRows;
-            _scroll.ScrollToMakeVisible(_scroll.OffsetX, y);
+            // Vertical scrolling is row based: keep the current row inside the window of visible rows,
+            // taking the height of each row into account so that multi-line rows are not left clipped.
+            var rowCount = snapshot.RowCount;
+            var firstVisibleRow = frozenRows + _scroll.OffsetY;
+            var offsetY = _scroll.OffsetY;
+
+            var availableHeight = Math.Max(1, viewportHeightLines);
+            var frozenRowCount = Math.Min(rowCount, Math.Max(0, frozenRows));
+            for (var row = 0; row < frozenRowCount; row++)
+            {
+                availableHeight -= GetRowHeight(row);
+            }
+
+            availableHeight = Math.Max(1, availableHeight);
+
+            if (cell.Row < firstVisibleRow)
+            {
+                offsetY = Math.Max(0, cell.Row - frozenRows);
+            }
+            else
+            {
+                var consumed = 0;
+                for (var row = firstVisibleRow; row < cell.Row && consumed < availableHeight; row++)
+                {
+                    consumed += GetEstimatedRowHeight(row);
+                }
+
+                var rowHeight = GetEstimatedRowHeight(cell.Row);
+                if (consumed + rowHeight > availableHeight)
+                {
+                    if (rowHeight >= availableHeight)
+                    {
+                        offsetY = Math.Max(0, cell.Row - frozenRows);
+                    }
+                    else
+                    {
+                        // Scroll down just enough for the row to fit at the bottom of the viewport.
+                        var startRow = cell.Row;
+                        var budget = availableHeight - rowHeight;
+                        while (startRow > frozenRows)
+                        {
+                            var previousHeight = GetEstimatedRowHeight(startRow - 1);
+                            if (previousHeight > budget)
+                            {
+                                break;
+                            }
+
+                            startRow--;
+                            budget -= previousHeight;
+                        }
+
+                        offsetY = Math.Max(0, startRow - frozenRows);
+                    }
+                }
+            }
+
+            if (offsetY != _scroll.OffsetY)
+            {
+                _scroll.SetOffset(_scroll.OffsetX, offsetY);
+            }
         }
 
         if (cell.Column >= frozenColumns && (uint)cell.Column < (uint)_resolvedColumnStarts.Length)
@@ -3275,13 +3501,11 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             return null;
         }
 
-        var rowCount = snapshot.RowCount;
         var visibleColumns = GetVisibleColumnCount(snapshot);
-        var frozenRows = Math.Clamp(FrozenRows, 0, rowCount);
+        var frozenRows = Math.Clamp(FrozenRows, 0, snapshot.RowCount);
         var frozenColumns = Math.Clamp(FrozenColumns, 0, visibleColumns);
 
-        var viewRow = rowY < frozenRows ? rowY : frozenRows + _scroll.OffsetY + (rowY - frozenRows);
-        if ((uint)viewRow >= (uint)rowCount)
+        if (!TryHitTestRow(snapshot, rowY, out var viewRow))
         {
             return null;
         }
@@ -3307,6 +3531,45 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         return null;
     }
 
+    /// <summary>
+    /// Maps a vertical offset relative to the top of the row area (header and filter excluded) to a view row index.
+    /// </summary>
+    private bool TryHitTestRow(IDataGridViewSnapshot snapshot, int rowY, out int viewRow)
+    {
+        viewRow = -1;
+
+        var rowCount = snapshot.RowCount;
+        var frozenRows = Math.Clamp(FrozenRows, 0, rowCount);
+        var remaining = rowY;
+
+        for (var row = 0; row < frozenRows; row++)
+        {
+            var rowHeight = GetRowHeight(row);
+            if (remaining < rowHeight)
+            {
+                viewRow = row;
+                return true;
+            }
+
+            remaining -= rowHeight;
+        }
+
+        var scrollStartRow = Math.Min(rowCount, frozenRows + _scroll.OffsetY);
+        for (var row = scrollStartRow; row < rowCount; row++)
+        {
+            var rowHeight = GetRowHeight(row);
+            if (remaining < rowHeight)
+            {
+                viewRow = row;
+                return true;
+            }
+
+            remaining -= rowHeight;
+        }
+
+        return false;
+    }
+
     private Rectangle? TryGetCellRect(DataGridCell cell, Rectangle gridRect, int headerHeight, int filterHeight, int frozenRows, int frozenColumns)
     {
         if (cell == DataGridCell.None)
@@ -3321,18 +3584,67 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
             return null;
         }
 
-        var yTop = gridRect.Y + headerHeight + filterHeight;
-        var y = row < frozenRows
-            ? yTop + row
-            : yTop + frozenRows + (row - frozenRows) - _scroll.OffsetY;
-
-        if (y < gridRect.Y || y >= gridRect.Bottom)
+        if (!TryGetRowBounds(row, gridRect, headerHeight, filterHeight, frozenRows, out var y, out var rowHeight))
         {
             return null;
         }
 
         var x = gridRect.X + GetColumnX(col, gridRect, frozenColumns);
-        return new Rectangle(x, y, _resolvedColumnWidths[col], 1);
+        return new Rectangle(x, y, _resolvedColumnWidths[col], rowHeight);
+    }
+
+    /// <summary>
+    /// Resolves the vertical bounds of a view row from the (cached) row heights.
+    /// </summary>
+    private bool TryGetRowBounds(int row, Rectangle gridRect, int headerHeight, int filterHeight, int frozenRows, out int y, out int height)
+    {
+        y = 0;
+        height = 1;
+
+        if (row < 0 || row >= _rowHeightCacheRowCount)
+        {
+            return false;
+        }
+
+        var yTop = gridRect.Y + headerHeight + filterHeight;
+        var startY = yTop;
+
+        if (row < frozenRows)
+        {
+            for (var r = 0; r < row; r++)
+            {
+                startY += GetRowHeight(r);
+            }
+        }
+        else
+        {
+            var scrollStartRow = Math.Min(_rowHeightCacheRowCount, frozenRows + _scroll.OffsetY);
+            if (row < scrollStartRow)
+            {
+                // The row is above the current scroll window and therefore not laid out.
+                return false;
+            }
+
+            var frozenRowCount = Math.Min(_rowHeightCacheRowCount, frozenRows);
+            for (var r = 0; r < frozenRowCount; r++)
+            {
+                startY += GetRowHeight(r);
+            }
+
+            for (var r = scrollStartRow; r < row; r++)
+            {
+                startY += GetRowHeight(r);
+            }
+        }
+
+        if (startY < gridRect.Y || startY >= gridRect.Bottom)
+        {
+            return false;
+        }
+
+        y = startY;
+        height = GetRowHeight(row);
+        return true;
     }
 
     private void RenderRow(
@@ -3340,6 +3652,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         IDataGridViewSnapshot snapshot,
         int viewRow,
         int y,
+        int rowHeight,
         Rectangle rect,
         int visibleColumns,
         int frozenColumns,
@@ -3353,10 +3666,11 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         var rowModel = snapshot.GetRowModel(viewRow);
         var culture = GetCulture();
         var isRowSelected = IsRowSelected(viewRow);
+        rowHeight = Math.Max(1, rowHeight);
 
         if (rowAnchorWidth > 0)
         {
-            var anchorRect = new Rectangle(rect.X, y, Math.Min(rowAnchorWidth, rect.Width), 1);
+            var anchorRect = new Rectangle(rect.X, y, Math.Min(rowAnchorWidth, rect.Width), rowHeight);
             var anchorStyle = isRowSelected ? selectionStyle : cellStyle;
             FillRect(buffer, anchorRect, anchorStyle);
 
@@ -3392,7 +3706,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
 
             var isSelected = IsSelectedCell(viewRow, c);
             var style = isSelected || isRowSelected ? selectionStyle : cellStyle;
-            var cellRect = new Rectangle(x, y, w, 1);
+            var cellRect = new Rectangle(x, y, w, rowHeight);
 
             if (IsEditingCell(viewRow, c))
             {
@@ -4185,6 +4499,8 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         DataGridCell Cell,
         object RowModel,
         ResolvedColumn ResolvedColumn);
+
+    private readonly record struct PendingCellLayout(Visual Visual, int X, int Width);
 
     private sealed class IdentitySnapshot : IDataGridViewSnapshot
     {

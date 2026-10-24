@@ -36,6 +36,7 @@ public sealed class DataGridDemo : ControlsDemoBase
         var ledger = BuildLedgerGrid(showHeader, showRowAnchor, rowAnchorWidth, filterRowVisible, selectionMode, editMode, frozenColumns, frozenRows, readOnly);
         var dataTable = BuildDataTableGrid(showHeader, showRowAnchor, rowAnchorWidth, filterRowVisible, selectionMode, editMode, frozenColumns, frozenRows, readOnly);
         var mixed = BuildMixedTypesGrid(showHeader, showRowAnchor, rowAnchorWidth, filterRowVisible, selectionMode, editMode, frozenColumns, frozenRows, readOnly);
+        var multiLine = BuildMultiLineGrid(showHeader, showRowAnchor, rowAnchorWidth, filterRowVisible, selectionMode, editMode, frozenColumns, frozenRows, readOnly);
         var dialog = BuildDialogGridDemo(showHeader, showRowAnchor, rowAnchorWidth, filterRowVisible, selectionMode, editMode, frozenColumns, frozenRows, readOnly);
 
         var tabs = new TabControl(
@@ -43,6 +44,7 @@ public sealed class DataGridDemo : ControlsDemoBase
                 new TabPage(header: "Ledger", content: ledger),
                 new TabPage(header: "DataTable", content: dataTable),
                 new TabPage(header: "Mixed", content: mixed),
+                new TabPage(header: "Multi-line", content: multiLine),
                 new TabPage(header: "Dialog", content: dialog))
             .HorizontalAlignment(Align.Stretch)
             .VerticalAlignment(Align.Stretch);
@@ -77,6 +79,7 @@ public sealed class DataGridDemo : ControlsDemoBase
                 DemoUi.Hint("Ctrl+F: search (find), F3/Shift+F3: next/previous match"),
                 DemoUi.Hint("F4: toggle filter row, F2: edit current cell"),
                 DemoUi.Hint("Bool cells toggle with Space or a single click. DirectActivate columns can replay button-like actions from the first click."),
+                DemoUi.Hint("The Multi-line tab uses a multi-line cell template: row heights follow the tallest cell and scrolling stays row based."),
                 DemoUi.Hint("The Dialog tab shows Escape bubbling to the wrapping dialog when the grid is not editing a cell."),
                 controls,
                 new Rule(),
@@ -392,6 +395,105 @@ public sealed class DataGridDemo : ControlsDemoBase
         return styled;
     }
 
+    private static Visual BuildMultiLineGrid(
+        State<bool> showHeader,
+        State<bool> showRowAnchor,
+        State<int> rowAnchorWidth,
+        State<bool> filterRowVisible,
+        State<DataGridSelectionMode> selectionMode,
+        State<DataGridEditMode> editMode,
+        State<int> frozenColumns,
+        State<int> frozenRows,
+        State<bool> readOnly)
+    {
+        var idAccessor = IncidentRow.Accessor.Id;
+        var severityAccessor = IncidentRow.Accessor.Severity;
+        var titleAccessor = IncidentRow.Accessor.Title;
+        var acknowledgedAccessor = IncidentRow.Accessor.Acknowledged;
+
+        var doc = new DataGridListDocument<IncidentRow>();
+        using (doc.BeginUpdate())
+        {
+            doc
+                .AddColumn(new DataGridColumnInfo<int>("id", "#", ReadOnly: true, idAccessor))
+                .AddColumn(new DataGridColumnInfo<Severity>("severity", "Severity", ReadOnly: true, severityAccessor))
+                .AddColumn(new DataGridColumnInfo<string>("title", "Incident", ReadOnly: true, titleAccessor))
+                .AddColumn(new DataGridColumnInfo<bool>("ack", "Ack", ReadOnly: false, acknowledgedAccessor));
+        }
+
+        var samples = new (Severity Level, string Title, string Owner, string Details)[]
+        {
+            (Severity.Error, "Telemetry stalled", "oncall", "no samples for 4 minutes"),
+            (Severity.Warning, "Disk above 80%", "storage", "staging node near the alert threshold"),
+            (Severity.Info, "Deploy finished", "release", "rollout done on all 12 replicas"),
+            (Severity.Error, "Checkout latency", "payments", "p99 hit 1.8s during the flash sale"),
+            (Severity.Warning, "Cert expires soon", "security", "gateway certificate expires in 6 days"),
+            (Severity.Info, "New node joined", "cluster", "node-17 is warming its caches"),
+            (Severity.Warning, "Retry queue growing", "messaging", "+12% retries in the last hour"),
+            (Severity.Error, "Replication lag", "database", "replica is 42s behind the primary"),
+        };
+
+        for (var i = 0; i < 48; i++)
+        {
+            var sample = samples[i % samples.Length];
+            doc.AddRow(new IncidentRow
+            {
+                Id = 4100 + i,
+                Severity = sample.Level,
+                Title = sample.Title,
+                Owner = sample.Owner,
+                Details = sample.Details,
+                Acknowledged = i % 4 == 0,
+            });
+        }
+
+        var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view }
+            .ShowHeader(showHeader)
+            .ShowRowAnchor(showRowAnchor)
+            .RowAnchorWidth(rowAnchorWidth)
+            .FilterRowVisible(filterRowVisible)
+            .SelectionMode(selectionMode)
+            .EditMode(editMode)
+            .FrozenColumns(frozenColumns)
+            .FrozenRows(frozenRows)
+            .ReadOnly(readOnly);
+
+        grid.Columns.Add(new DataGridColumn<int> { Key = "id", TypedValueAccessor = idAccessor, Width = GridLength.Auto, CellAlignment = TextAlignment.Right, Sortable = true });
+        grid.Columns.Add(new DataGridColumn<Severity> { Key = "severity", TypedValueAccessor = severityAccessor, Width = GridLength.Auto, Sortable = true });
+        grid.Columns.Add(new DataGridColumn<string>
+        {
+            Key = "title",
+            TypedValueAccessor = titleAccessor,
+            Width = GridLength.Star(1),
+            Sortable = true,
+            CellTemplate = new(IncidentCellDisplay, null),
+        });
+        grid.Columns.Add(new DataGridColumn<bool> { Key = "ack", TypedValueAccessor = acknowledgedAccessor, Width = GridLength.Auto });
+
+        var framed = new Border(new ScrollViewer(grid).MinWidth(76).MinHeight(12).MaxHeight(12))
+            .Style(BorderStyle.Heavy)
+            .Padding(new Thickness(1, 0, 1, 0));
+        return framed;
+    }
+
+    private static Visual IncidentCellDisplay(DataTemplateValue<string> value, in DataTemplateContext context)
+    {
+        _ = context;
+
+        var binding = value.GetBinding();
+        if (binding.Owner is not IncidentRow row)
+        {
+            return new TextBlock(value.GetValue());
+        }
+
+        // A multi-line display template: the grid measures both lines and grows the row accordingly.
+        return new VStack(
+            new TextBlock(() => row.Title).Style(TextBlockStyle.Default with { TextStyle = TextStyle.Bold }),
+            new Markup(() => $"[dim]{row.Owner}[/] • {row.Details}").Wrap(true));
+    }
+
     private static Visual BuildDialogGridDemo(
         State<bool> showHeader,
         State<bool> showRowAnchor,
@@ -529,4 +631,21 @@ public sealed partial class DialogGridRow
 
     [Bindable] public partial string Name { get; set; }
     [Bindable] public partial string Value { get; set; }
+}
+
+public sealed partial class IncidentRow
+{
+    public IncidentRow()
+    {
+        Title = string.Empty;
+        Owner = string.Empty;
+        Details = string.Empty;
+    }
+
+    [Bindable] public partial int Id { get; set; }
+    [Bindable] public partial Severity Severity { get; set; }
+    [Bindable] public partial string Title { get; set; }
+    [Bindable] public partial string Owner { get; set; }
+    [Bindable] public partial string Details { get; set; }
+    [Bindable] public partial bool Acknowledged { get; set; }
 }
