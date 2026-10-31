@@ -143,6 +143,8 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
     private int _rowHeightCacheVersion = int.MinValue;
     private int _rowHeightCacheWidthsKey = int.MinValue;
     private long _rowHeightCacheTotalHeight;
+    private int _measuredRowsHeight = -1;
+    private int _rowHeightsChangeCount;
     private readonly List<PendingCellLayout> _pendingCellLayouts = new(16);
 
     private bool _ensureCurrentCellVisible;
@@ -682,6 +684,12 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
     [Bindable]
     private partial int MeasuredContentWidth { get; set; }
 
+    /// <summary>
+    /// Bumped by arrange when the discovered row heights no longer match the rows height used by the last measure.
+    /// </summary>
+    [Bindable]
+    private partial int RowHeightsVersion { get; set; }
+
     [Bindable]
     private partial bool IsTableSelected { get; set; }
 
@@ -940,6 +948,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
     protected override SizeHints MeasureCore(in LayoutConstraints constraints)
     {
         _ = ColumnWidthVersion;
+        _ = RowHeightsVersion;
 
         var snapshot = GetSnapshot();
         if (snapshot is null)
@@ -957,7 +966,10 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         var columnsWidth = ComputeNaturalColumnsWidth(snapshot, visibleColumns, constraints);
         var requestedWidth = columnsWidth + anchorWidth;
 
-        var height = headerHeight + filterHeight + Math.Max(0, GetEstimatedRowsHeight(rowCount));
+        var rowsHeight = Math.Max(0, GetEstimatedRowsHeight(rowCount));
+        _measuredRowsHeight = rowsHeight;
+
+        var height = headerHeight + filterHeight + rowsHeight;
         height = Math.Max(1, height);
 
         MeasuredContentWidth = Math.Max(0, requestedWidth);
@@ -1043,6 +1055,17 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
         if (refinedViewportHeight != _scroll.ViewportHeight)
         {
             _scroll.SetViewport(scrollViewportWidth, refinedViewportHeight);
+        }
+
+        // Row heights are only discovered while arranging. When they differ from the rows height used by the last measure
+        // (e.g. multi-line rows in an auto-sized grid), invalidate the measure dependency and request a same-frame
+        // layout stabilization pass so the desired height follows the rows.
+        var arrangedRowsHeight = GetEstimatedRowsHeight(rowCount);
+        if (arrangedRowsHeight != _measuredRowsHeight)
+        {
+            _measuredRowsHeight = arrangedRowsHeight;
+            RowHeightsVersion = ++_rowHeightsChangeCount;
+            App?.RequestLayoutStabilization();
         }
 
         if (_activeEditor is not null)
@@ -3631,7 +3654,7 @@ public sealed partial class DataGridControl : Visual, IScrollable, ISelectionOwn
                 startY += GetRowHeight(r);
             }
 
-            for (var r = scrollStartRow; r < row; r++)
+            for (var r = scrollStartRow; r < row && startY < gridRect.Bottom; r++)
             {
                 startY += GetRowHeight(r);
             }

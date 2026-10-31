@@ -1878,6 +1878,43 @@ public sealed class DataGridRenderingTests
         Assert.AreEqual("next", lines[2].TrimEnd(), "A wrapped cell should grow its row and push the next row down.");
     }
 
+    [TestMethod]
+    public void DataGrid_MultiLine_Rows_AutoHeight_Grid_Remeasures_To_Fit_Rows()
+    {
+        var textAccessor = new BindingAccessor<string>("text", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
+
+        var doc = new DataGridListDocument<TextRow>();
+        doc.SetColumns(new[] { new DataGridColumnInfo("text", "Text", typeof(string), ReadOnly: true, textAccessor) });
+        doc.AddRow(new TextRow { Text = "first" });
+        doc.AddRow(new TextRow { Text = "second" });
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false, VerticalAlignment = Align.Start };
+        grid.Columns.Add(new DataGridColumn<string>
+        {
+            Key = "text",
+            TypedValueAccessor = textAccessor,
+            Width = GridLength.Fixed(10),
+            CellTemplate = new DataTemplate<string>(
+                Display: static (DataTemplateValue<string> value, in DataTemplateContext _) => new VStack(
+                    new TextBlock(value.GetValue()),
+                    new TextBlock("-")),
+                Editor: null),
+        });
+
+        var root = new VStack(grid, new TextBlock("END"));
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(12, 8));
+        driver.Tick();
+
+        var lines = RenderLines(driver, 12, 8);
+        Assert.AreEqual("first", lines[0].TrimEnd());
+        Assert.AreEqual("-", lines[1].TrimEnd());
+        Assert.AreEqual("second", lines[2].TrimEnd());
+        Assert.AreEqual("-", lines[3].TrimEnd(), "An auto-sized grid should grow to the measured height of its multi-line rows.");
+        Assert.AreEqual("END", lines[4].TrimEnd());
+    }
+
     private static string[] RenderLines(TerminalAppTestDriver driver, int width, int height)
     {
         var screen = new AnsiTestScreen(width, height);
