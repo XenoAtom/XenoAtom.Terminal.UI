@@ -170,9 +170,38 @@ own `Escape` shortcut without the grid reserving it.
 > If you need a custom cell editor or display, provide a typed `DataGridColumn<T>` and use templates.
 > See [Data Templating](../data-templating.md).
 
+## Multi-line cell templates
+
+Display templates are not limited to a single line. When a template renders several lines (for example a `VStack`
+of `TextBlock`s, or a `TextBlock` with `Wrap = true`), the row grows to the height of its tallest cell. All cells of
+that row share the same height and are aligned to the top.
+
+```csharp
+grid.Columns.Add(new DataGridColumn<string>
+{
+    Key = MyRow.Accessor.Name.Name,
+    TypedValueAccessor = MyRow.Accessor.Name,
+    Width = GridLength.Star(1),
+    CellTemplate = new DataTemplate<string>(
+        Display: static (DataTemplateValue<string> value, in DataTemplateContext _) => new VStack(
+            new TextBlock(value.GetValue()),
+            new TextBlock("(secondary)")),
+        Editor: null),
+});
+```
+
+Row heights are measured only for the rows that are laid out, so multi-line rows remain compatible with
+virtualization. The height of a row that has never been displayed is estimated from the closest measured rows until
+it is laid out. Because heights vary, vertical scrolling stays row based: `Scroll.OffsetY` is the index of the first
+visible non-frozen row, and `Scroll.ViewportHeight` is expressed in visible rows instead of terminal lines.
+
+> [!TIP]
+> A single-line template keeps the previous behavior: one row per terminal line.
+
 ## Notes
 
 - `DataGridControl` exposes a `ScrollModel` (via `IScrollable`) so `ScrollViewer` can render scrollbars and synchronize offsets.
+- Vertical scroll offsets are row indices; horizontal scroll offsets are cell columns.
 - For UI columns, `DataGridColumn.Key` should match `DataGridColumnInfo.Key` from the snapshot.
 
 ## Defaults

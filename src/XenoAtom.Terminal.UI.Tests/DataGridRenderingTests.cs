@@ -1656,6 +1656,272 @@ public sealed class DataGridRenderingTests
         StringAssert.Contains(rendered, "1/3");
     }
 
+    [TestMethod]
+    public void DataGrid_MultiLine_CellTemplate_Grows_Row_Height()
+    {
+        var textAccessor = new BindingAccessor<string>("text", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
+
+        var doc = new DataGridListDocument<TextRow>();
+        doc.SetColumns(new[] { new DataGridColumnInfo("text", "Text", typeof(string), ReadOnly: true, textAccessor) });
+        doc.AddRow(new TextRow { Text = "first" });
+        doc.AddRow(new TextRow { Text = "second" });
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false };
+        grid.Columns.Add(new DataGridColumn<string>
+        {
+            Key = "text",
+            TypedValueAccessor = textAccessor,
+            Width = GridLength.Fixed(10),
+            CellTemplate = new DataTemplate<string>(
+                Display: static (DataTemplateValue<string> value, in DataTemplateContext _) => new VStack(
+                    new TextBlock(value.GetValue()),
+                    new TextBlock("-")),
+                Editor: null),
+        });
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(12, 6));
+        driver.Tick();
+
+        var lines = RenderLines(driver, 12, 6);
+
+        Assert.AreEqual("first", lines[0].TrimEnd());
+        Assert.AreEqual("-", lines[1].TrimEnd());
+        Assert.AreEqual("second", lines[2].TrimEnd(), "A multi-line cell template should push the next row down by its height.");
+        Assert.AreEqual("-", lines[3].TrimEnd());
+        Assert.AreEqual(string.Empty, lines[4].TrimEnd());
+    }
+
+    [TestMethod]
+    public void DataGrid_MultiLine_Rows_HitTest_Every_Line_Of_The_Row()
+    {
+        var textAccessor = new BindingAccessor<string>("text", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
+
+        var doc = new DataGridListDocument<TextRow>();
+        doc.SetColumns(new[] { new DataGridColumnInfo("text", "Text", typeof(string), ReadOnly: true, textAccessor) });
+        doc.AddRow(new TextRow { Text = "first" });
+        doc.AddRow(new TextRow { Text = "second" });
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false };
+        grid.Columns.Add(new DataGridColumn<string>
+        {
+            Key = "text",
+            TypedValueAccessor = textAccessor,
+            Width = GridLength.Fixed(10),
+            CellTemplate = new DataTemplate<string>(
+                Display: static (DataTemplateValue<string> value, in DataTemplateContext _) => new VStack(
+                    new TextBlock(value.GetValue()),
+                    new TextBlock("-")),
+                Editor: null),
+        });
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(12, 6));
+        driver.Tick();
+
+        var x = grid.Bounds.X + 1;
+        var y = grid.Bounds.Y;
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = x, Y = y + 1 });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = x, Y = y + 1 });
+        driver.Tick();
+
+        Assert.AreEqual(new DataGridCell(0, 0), grid.CurrentCell, "The second line of a two-line row should hit that row.");
+
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Down, Button = TerminalMouseButton.Left, X = x, Y = y + 2 });
+        driver.Backend.PushEvent(new TerminalMouseEvent { Kind = TerminalMouseKind.Up, Button = TerminalMouseButton.Left, X = x, Y = y + 2 });
+        driver.Tick();
+
+        Assert.AreEqual(new DataGridCell(1, 0), grid.CurrentCell, "The first line of the second row should hit the second row.");
+    }
+
+    [TestMethod]
+    public void DataGrid_MultiLine_Rows_Scroll_By_Row_And_Keep_Current_Cell_Visible()
+    {
+        var textAccessor = new BindingAccessor<string>("text", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
+
+        var doc = new DataGridListDocument<TextRow>();
+        doc.SetColumns(new[] { new DataGridColumnInfo("text", "Text", typeof(string), ReadOnly: true, textAccessor) });
+        for (var i = 0; i < 10; i++)
+        {
+            doc.AddRow(new TextRow { Text = $"row{i}" });
+        }
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false };
+        grid.Columns.Add(new DataGridColumn<string>
+        {
+            Key = "text",
+            TypedValueAccessor = textAccessor,
+            Width = GridLength.Fixed(10),
+            CellTemplate = new DataTemplate<string>(
+                Display: static (DataTemplateValue<string> value, in DataTemplateContext _) => new VStack(
+                    new TextBlock(value.GetValue()),
+                    new TextBlock("-")),
+                Editor: null),
+        });
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(12, 5));
+        driver.Tick();
+
+        var lines = RenderLines(driver, 12, 5);
+        Assert.AreEqual("row0", lines[0].TrimEnd());
+        Assert.AreEqual("-", lines[1].TrimEnd());
+        Assert.AreEqual("row1", lines[2].TrimEnd());
+        Assert.AreEqual("-", lines[3].TrimEnd());
+        Assert.AreEqual("row2", lines[4].TrimEnd());
+
+        grid.Scroll.SetOffset(0, 3);
+        driver.Tick();
+
+        lines = RenderLines(driver, 12, 5);
+        Assert.AreEqual("row3", lines[0].TrimEnd());
+        Assert.AreEqual("-", lines[1].TrimEnd());
+        Assert.AreEqual("row4", lines[2].TrimEnd());
+        Assert.AreEqual("-", lines[3].TrimEnd());
+        Assert.AreEqual("row5", lines[4].TrimEnd());
+
+        grid.CurrentCell = new DataGridCell(9, 0);
+        driver.Tick();
+
+        Assert.AreEqual(8, grid.Scroll.OffsetY, "Navigating to the last row should scroll it into view while accounting for the row heights.");
+        lines = RenderLines(driver, 12, 5);
+        Assert.AreEqual("row8", lines[0].TrimEnd());
+        Assert.AreEqual("-", lines[1].TrimEnd());
+        Assert.AreEqual("row9", lines[2].TrimEnd());
+        Assert.AreEqual("-", lines[3].TrimEnd());
+        Assert.AreEqual(string.Empty, lines[4].TrimEnd());
+    }
+
+    [TestMethod]
+    public void DataGrid_MultiLine_Rows_With_Frozen_Rows_Reserve_Their_Measured_Height()
+    {
+        var textAccessor = new BindingAccessor<string>("text", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
+
+        var doc = new DataGridListDocument<TextRow>();
+        doc.SetColumns(new[] { new DataGridColumnInfo("text", "Text", typeof(string), ReadOnly: true, textAccessor) });
+        for (var i = 0; i < 4; i++)
+        {
+            doc.AddRow(new TextRow { Text = $"row{i}" });
+        }
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false, FrozenRows = 1 };
+        grid.Columns.Add(new DataGridColumn<string>
+        {
+            Key = "text",
+            TypedValueAccessor = textAccessor,
+            Width = GridLength.Fixed(10),
+            CellTemplate = new DataTemplate<string>(
+                Display: static (DataTemplateValue<string> value, in DataTemplateContext _) => new VStack(
+                    new TextBlock(value.GetValue()),
+                    new TextBlock("-")),
+                Editor: null),
+        });
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(12, 6));
+        driver.Tick();
+
+        var lines = RenderLines(driver, 12, 6);
+        Assert.AreEqual("row0", lines[0].TrimEnd());
+        Assert.AreEqual("-", lines[1].TrimEnd());
+        Assert.AreEqual("row1", lines[2].TrimEnd());
+        Assert.AreEqual("-", lines[3].TrimEnd());
+        Assert.AreEqual("row2", lines[4].TrimEnd());
+        Assert.AreEqual("-", lines[5].TrimEnd());
+
+        grid.Scroll.SetOffset(0, 1);
+        driver.Tick();
+
+        lines = RenderLines(driver, 12, 6);
+        Assert.AreEqual("row0", lines[0].TrimEnd(), "The frozen row must keep its measured height when scrolling.");
+        Assert.AreEqual("-", lines[1].TrimEnd());
+        Assert.AreEqual("row2", lines[2].TrimEnd());
+        Assert.AreEqual("-", lines[3].TrimEnd());
+        Assert.AreEqual("row3", lines[4].TrimEnd());
+        Assert.AreEqual("-", lines[5].TrimEnd());
+    }
+
+    [TestMethod]
+    public void DataGrid_Wrapped_TextBlock_Template_Grows_Row_Height()
+    {
+        var textAccessor = new BindingAccessor<string>("text", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
+
+        var doc = new DataGridListDocument<TextRow>();
+        doc.SetColumns(new[] { new DataGridColumnInfo("text", "Text", typeof(string), ReadOnly: true, textAccessor) });
+        doc.AddRow(new TextRow { Text = "abcdefghij klmno" });
+        doc.AddRow(new TextRow { Text = "next" });
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false };
+        grid.Columns.Add(new DataGridColumn<string>
+        {
+            Key = "text",
+            TypedValueAccessor = textAccessor,
+            Width = GridLength.Fixed(10),
+            CellTemplate = new DataTemplate<string>(
+                Display: static (DataTemplateValue<string> value, in DataTemplateContext _) => new TextBlock(value.GetValue()) { Wrap = true },
+                Editor: null),
+        });
+
+        using var driver = new TerminalAppTestDriver(grid, TerminalHostKind.Fullscreen, new TerminalSize(12, 5));
+        driver.Tick();
+
+        var lines = RenderLines(driver, 12, 5);
+        Assert.AreEqual("abcdefghij", lines[0].TrimEnd());
+        Assert.AreEqual("klmno", lines[1].TrimEnd());
+        Assert.AreEqual("next", lines[2].TrimEnd(), "A wrapped cell should grow its row and push the next row down.");
+    }
+
+    [TestMethod]
+    public void DataGrid_MultiLine_Rows_AutoHeight_Grid_Remeasures_To_Fit_Rows()
+    {
+        var textAccessor = new BindingAccessor<string>("text", o => ((TextRow)o).Text, (o, v) => ((TextRow)o).Text = v);
+
+        var doc = new DataGridListDocument<TextRow>();
+        doc.SetColumns(new[] { new DataGridColumnInfo("text", "Text", typeof(string), ReadOnly: true, textAccessor) });
+        doc.AddRow(new TextRow { Text = "first" });
+        doc.AddRow(new TextRow { Text = "second" });
+
+        using var view = new DataGridDocumentView(doc);
+
+        var grid = new DataGridControl { View = view, ShowHeader = false, ShowRowAnchor = false, VerticalAlignment = Align.Start };
+        grid.Columns.Add(new DataGridColumn<string>
+        {
+            Key = "text",
+            TypedValueAccessor = textAccessor,
+            Width = GridLength.Fixed(10),
+            CellTemplate = new DataTemplate<string>(
+                Display: static (DataTemplateValue<string> value, in DataTemplateContext _) => new VStack(
+                    new TextBlock(value.GetValue()),
+                    new TextBlock("-")),
+                Editor: null),
+        });
+
+        var root = new VStack(grid, new TextBlock("END"));
+        using var driver = new TerminalAppTestDriver(root, TerminalHostKind.Fullscreen, new TerminalSize(12, 8));
+        driver.Tick();
+
+        var lines = RenderLines(driver, 12, 8);
+        Assert.AreEqual("first", lines[0].TrimEnd());
+        Assert.AreEqual("-", lines[1].TrimEnd());
+        Assert.AreEqual("second", lines[2].TrimEnd());
+        Assert.AreEqual("-", lines[3].TrimEnd(), "An auto-sized grid should grow to the measured height of its multi-line rows.");
+        Assert.AreEqual("END", lines[4].TrimEnd());
+    }
+
+    private static string[] RenderLines(TerminalAppTestDriver driver, int width, int height)
+    {
+        var screen = new AnsiTestScreen(width, height);
+        screen.Apply(driver.Backend.GetOutText());
+        return screen.GetText().Split('\n').Select(static line => line.TrimEnd('\r')).ToArray();
+    }
+
     private static int GetHoveredResizeColumnIndex(DataGridControl grid)
         => (int)typeof(DataGridControl).GetProperty("HoveredResizeColumnIndex", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(grid)!;
 
