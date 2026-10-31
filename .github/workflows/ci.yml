@@ -10,11 +10,42 @@ on:
   pull_request:
 
 jobs:
+  # Build and test on macOS and Linux before the release job builds, packs and publishes.
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: src/global.json
+
+      - name: Restore
+        shell: bash
+        run: dotnet restore src/XenoAtom.Terminal.UI.slnx
+
+      - name: Build
+        shell: bash
+        run: dotnet build src/XenoAtom.Terminal.UI.slnx -c Release --no-restore
+
+      - name: Test
+        shell: bash
+        run: dotnet test src/XenoAtom.Terminal.UI.slnx -c Release --no-build
+
   build:
     permissions:
       id-token: write
       actions: write
       contents: write
+    needs: test
     runs-on: 'ubuntu-latest'
     steps:
       - name: "Build, Test, Pack and Publish"
