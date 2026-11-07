@@ -26,9 +26,13 @@ public sealed class Dispatcher
     private TerminalApp? _app;
     private SynchronizationContext? _previousSynchronizationContext;
 
-    private Dispatcher()
+    private Dispatcher() : this(Environment.CurrentManagedThreadId)
     {
-        _threadId = Environment.CurrentManagedThreadId;
+    }
+
+    private Dispatcher(int threadId)
+    {
+        _threadId = threadId;
     }
 
     /// <summary>
@@ -47,6 +51,11 @@ public sealed class Dispatcher
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static Dispatcher CreateForCurrentThread() => _current = new Dispatcher();
+
+    /// <summary>
+    /// Creates a dispatcher that belongs to no thread (managed thread ids are positive) and can never be attached to an app.
+    /// </summary>
+    internal static Dispatcher CreateUnbound() => new(threadId: 0);
 
     internal int ThreadId => _threadId;
 

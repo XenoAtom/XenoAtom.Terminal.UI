@@ -17,7 +17,22 @@ namespace XenoAtom.Terminal.UI.Threading;
 /// </remarks>
 public abstract class DispatcherObject
 {
+    // Owner marker for visual elements that are not visuals (e.g. ProgressTask, BarChartItem): they follow the app of their
+    // owner visual, resolved through IVisualElement.App on the slow path. Its thread id never matches a managed thread.
+    private static readonly Dispatcher VisualElementOwner = Dispatcher.CreateUnbound();
+
     private Dispatcher? _dispatcher;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DispatcherObject"/> class.
+    /// </summary>
+    protected DispatcherObject()
+    {
+        if (this is IVisualElement && this is not Visual && this is not TerminalApp)
+        {
+            _dispatcher = VisualElementOwner;
+        }
+    }
 
     /// <summary>
     /// Gets the dispatcher this object is associated with.
@@ -27,8 +42,23 @@ public abstract class DispatcherObject
     /// When the object has no owner yet (for example a <see cref="TerminalApp"/> before it starts running, or a visual that is not attached),
     /// this returns <see cref="Threading.Dispatcher.Current"/>, the dispatcher of the calling thread.
     /// </remarks>
-    public Dispatcher Dispatcher => _dispatcher ?? GetVisualElementDispatcher() ?? Dispatcher.Current;
+    public Dispatcher Dispatcher
+    {
+        get
+        {
+            var dispatcher = _dispatcher;
+            if (ReferenceEquals(dispatcher, VisualElementOwner))
+            {
+                dispatcher = GetVisualElementDispatcher();
+            }
 
+            return dispatcher ?? Dispatcher.Current;
+        }
+    }
+
+    /// <summary>
+    /// Gets the raw owner of this object (non-null for visual elements that follow the app of their owner visual).
+    /// </summary>
     internal Dispatcher? OwnerDispatcher => _dispatcher;
 
     /// <summary>
@@ -38,12 +68,7 @@ public abstract class DispatcherObject
     public bool CheckAccess()
     {
         var dispatcher = _dispatcher;
-        if (dispatcher is null)
-        {
-            return CheckAccessWithoutOwner();
-        }
-
-        return dispatcher.ThreadId == Environment.CurrentManagedThreadId || CheckAccessFromOtherThread(dispatcher);
+        return dispatcher is null || dispatcher.ThreadId == Environment.CurrentManagedThreadId || CheckAccessFromOtherThread(dispatcher);
     }
 
     /// <summary>
@@ -65,16 +90,14 @@ public abstract class DispatcherObject
     internal void TryAcquireDispatcher(Dispatcher dispatcher) => Interlocked.CompareExchange(ref _dispatcher, dispatcher, null);
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private bool CheckAccessWithoutOwner()
-    {
-        // Visual elements that are not visuals (ProgressTask, BarChartItem, BreakdownSegment) follow the app of their owner visual.
-        var dispatcher = GetVisualElementDispatcher();
-        return dispatcher is null || dispatcher.ThreadId == Environment.CurrentManagedThreadId || !dispatcher.IsRunning;
-    }
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
     private bool CheckAccessFromOtherThread(Dispatcher dispatcher)
     {
+        if (ReferenceEquals(dispatcher, VisualElementOwner))
+        {
+            var owner = GetVisualElementDispatcher();
+            return owner is null || owner.ThreadId == Environment.CurrentManagedThreadId || !owner.IsRunning;
+        }
+
         if (dispatcher.IsRunning)
         {
             return false;
@@ -85,9 +108,6 @@ public abstract class DispatcherObject
         return true;
     }
 
-    private Dispatcher? GetVisualElementDispatcher()
-    {
-        return this is IVisualElement element && element.App is { } app && !ReferenceEquals(app, this) ? app.OwnerDispatcher : null;
-    }
+    private Dispatcher? GetVisualElementDispatcher() => (this as IVisualElement)?.App?.OwnerDispatcher;
 }
 
