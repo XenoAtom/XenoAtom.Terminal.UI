@@ -19,9 +19,9 @@ public abstract class DispatcherObject
 {
     // Owner marker for visual elements that are not visuals (ProgressTask, BarChartItem, BreakdownSegment): they follow the app
     // of their owner visual, resolved through IVisualElement.App on the slow path. Its thread id never matches a managed thread.
-    private static readonly Dispatcher VisualElementOwner = Dispatcher.CreateUnbound();
+    private static readonly Dispatcher.Ownership VisualElementOwner = new(Dispatcher.CreateUnbound());
 
-    private Dispatcher? _dispatcher;
+    private Dispatcher.Ownership? _dispatcher;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DispatcherObject"/> class.
@@ -55,8 +55,8 @@ public abstract class DispatcherObject
     {
         get
         {
-            var dispatcher = _dispatcher;
-            if (ReferenceEquals(dispatcher, VisualElementOwner))
+            var dispatcher = OwnerDispatcher;
+            if (ReferenceEquals(dispatcher, VisualElementOwner.Dispatcher))
             {
                 dispatcher = GetVisualElementDispatcher();
             }
@@ -66,9 +66,27 @@ public abstract class DispatcherObject
     }
 
     /// <summary>
-    /// Gets the raw owner of this object (non-null for visual elements that follow the app of their owner visual).
+    /// Gets the active owner of this object (a marker for visual elements that follow the app of their owner visual).
     /// </summary>
-    internal Dispatcher? OwnerDispatcher => _dispatcher;
+    internal Dispatcher? OwnerDispatcher
+    {
+        get
+        {
+            var ownership = _dispatcher;
+            if (ownership is null)
+            {
+                return null;
+            }
+
+            if (!ReferenceEquals(ownership, VisualElementOwner) && !ownership.IsRunning)
+            {
+                Interlocked.CompareExchange(ref _dispatcher, null, ownership);
+                return null;
+            }
+
+            return ownership.Dispatcher;
+        }
+    }
 
     /// <summary>
     /// Checks whether the current thread has access to this object.
@@ -92,14 +110,20 @@ public abstract class DispatcherObject
         }
     }
 
-    internal void SetDispatcher(Dispatcher? dispatcher) => _dispatcher = dispatcher;
+    internal void SetDispatcher(Dispatcher? dispatcher) => _dispatcher = dispatcher?.CurrentOwnership;
 
     internal void ClearDispatcher() => _dispatcher = null;
 
-    internal void TryAcquireDispatcher(Dispatcher dispatcher) => Interlocked.CompareExchange(ref _dispatcher, dispatcher, null);
+    internal void TryAcquireDispatcher(Dispatcher dispatcher)
+    {
+        var ownership = dispatcher.CurrentOwnership ?? throw new InvalidOperationException(Dispatcher.NotRunningMessage);
+        Interlocked.CompareExchange(ref _dispatcher, ownership, null);
+        // Another running app may have won the first-read race after RegisterRead checked access.
+        VerifyAccess();
+    }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private bool CheckAccessFromOtherThread(Dispatcher dispatcher)
+    private bool CheckAccessFromOtherThread(Dispatcher.Ownership dispatcher)
     {
         if (ReferenceEquals(dispatcher, VisualElementOwner))
         {

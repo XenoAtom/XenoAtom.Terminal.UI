@@ -956,6 +956,12 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
     private void EndRunCore()
     {
+        // Binding can fail before this app acquires anything (for example another app already runs on the thread).
+        if (OwnerDispatcher is null)
+        {
+            return;
+        }
+
         try
         {
             _pendingUpdateTask = null;

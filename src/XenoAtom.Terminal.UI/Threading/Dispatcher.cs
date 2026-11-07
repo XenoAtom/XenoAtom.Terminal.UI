@@ -24,6 +24,7 @@ public sealed class Dispatcher
 
     private readonly int _threadId;
     private TerminalApp? _app;
+    private Ownership? _ownership;
     private SynchronizationContext? _previousSynchronizationContext;
 
     private Dispatcher() : this(Environment.CurrentManagedThreadId)
@@ -63,6 +64,8 @@ public sealed class Dispatcher
 
     internal bool IsRunning => Volatile.Read(ref _app) is not null;
 
+    internal Ownership? CurrentOwnership => Volatile.Read(ref _ownership);
+
     internal void BindToCurrentThread(TerminalApp app)
     {
         ArgumentNullException.ThrowIfNull(app);
@@ -84,6 +87,7 @@ public sealed class Dispatcher
         }
 
         _previousSynchronizationContext = SynchronizationContext.Current;
+        Volatile.Write(ref _ownership, new Ownership(this));
         Volatile.Write(ref _app, app);
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(this));
     }
@@ -102,7 +106,24 @@ public sealed class Dispatcher
 
         SynchronizationContext.SetSynchronizationContext(_previousSynchronizationContext);
         _previousSynchronizationContext = null;
+        Volatile.Write(ref _ownership, null);
         Volatile.Write(ref _app, null);
+    }
+
+    // One token per run, shared by its objects: a subsequent app on the same thread must not revive old ownership.
+    internal sealed class Ownership
+    {
+        internal Ownership(Dispatcher dispatcher)
+        {
+            Dispatcher = dispatcher;
+            ThreadId = dispatcher.ThreadId;
+        }
+
+        internal Dispatcher Dispatcher { get; }
+
+        internal int ThreadId { get; }
+
+        internal bool IsRunning => ReferenceEquals(Dispatcher.CurrentOwnership, this);
     }
 
     /// <summary>

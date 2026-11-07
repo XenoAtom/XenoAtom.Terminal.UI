@@ -81,6 +81,9 @@ Thread affinity follows ownership, not the thread that created the object:
 - a `State<T>` (or your own `DispatcherObject`) belongs to the first running app that reads it while tracking dependencies
   (for example when a bound visual renders it), until that app stops.
 
+State ownership is scoped to that app run: starting another app on the same thread does not retain the old app's ownership.
+A later app acquires the state only if it reads it while tracking dependencies.
+
 An object without a running owner can be used from any thread. This is why you can build a tree on one thread and run it on
 another. Once owned, reading or writing it from another thread throws an `InvalidOperationException`.
 
