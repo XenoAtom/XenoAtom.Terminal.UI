@@ -251,7 +251,8 @@ public sealed class DispatcherThreadingTests
             next.BeginRun();
             try
             {
-                Assert.AreSame(next, dispatcher.AttachedApp);
+                Assert.IsNull(dispatcher.AttachedApp);
+                Assert.AreSame(next, Dispatcher.Current.AttachedApp);
                 Assert.AreSame(nextTerminal, Terminal.Instance);
                 next.Tick();
             }
@@ -306,8 +307,9 @@ public sealed class DispatcherThreadingTests
             try
             {
                 appB.Tick();
-                Assert.AreSame(appB, dispatcher.AttachedApp);
-                Assert.AreSame(dispatcher, appB.Dispatcher);
+                Assert.IsNull(dispatcher.AttachedApp);
+                Assert.AreNotSame(dispatcher, appB.Dispatcher);
+                Assert.AreSame(Dispatcher.Current, appB.Dispatcher);
                 Assert.AreSame(textBoxB, appB.FocusedElement);
                 Assert.IsFalse(textBoxA.HasFocus);
 

@@ -534,8 +534,14 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     /// <summary>
     /// Stops the app and releases resources.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when called on the app's running UI thread. Call <see cref="Stop"/> instead, then dispose after the run returns.</exception>
     public async ValueTask DisposeAsync()
     {
+        if (OwnerDispatcher?.CheckAccess() == true)
+        {
+            throw new InvalidOperationException("Cannot dispose an app from its running UI thread. Call Stop(), then dispose after the run returns.");
+        }
+
         Stop();
         var runTask = Volatile.Read(ref _runTask);
         if (runTask is not null)

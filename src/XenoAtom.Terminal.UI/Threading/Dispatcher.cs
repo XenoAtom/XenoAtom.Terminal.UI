@@ -10,8 +10,9 @@ namespace XenoAtom.Terminal.UI.Threading;
 /// Provides access to the UI thread for terminal UI operations.
 /// </summary>
 /// <remarks>
-/// There is one dispatcher per thread (see <see cref="Current"/>). A <see cref="TerminalApp"/> attaches the dispatcher of the
-/// thread that runs it for the duration of the run, so several apps can run concurrently, each on its own thread.
+/// Each thread has its own current dispatcher (see <see cref="Current"/>). A <see cref="TerminalApp"/> attaches it for the
+/// duration of one run and retires it afterwards, so captured dispatchers never target a subsequent run.
+/// Several apps can run concurrently, each on its own thread.
 /// Use <see cref="TerminalApp"/>.<see cref="DispatcherObject.Dispatcher"/> (or <see cref="TerminalRunningContext.App"/>)
 /// to reach a specific app from another thread.
 /// </remarks>
@@ -41,7 +42,8 @@ public sealed class Dispatcher
     /// Gets the dispatcher of the calling thread, creating it on first access.
     /// </summary>
     /// <remarks>
-    /// Each thread has its own dispatcher. It is attached to a <see cref="TerminalApp"/> only while that app runs on the thread.
+    /// Each thread has its own current dispatcher. It is attached to a <see cref="TerminalApp"/> for one run only;
+    /// after the run, the next access creates a fresh dispatcher.
     /// From a background thread, this returns the background thread's own dispatcher, which is not attached to any app:
     /// use <see cref="TerminalApp"/>.<see cref="DispatcherObject.Dispatcher"/> to marshal work to a running app instead.
     /// </remarks>
@@ -112,6 +114,10 @@ public sealed class Dispatcher
         _previousSynchronizationContext = null;
         Volatile.Write(ref _ownership, null);
         Volatile.Write(ref _app, null);
+        if (ReferenceEquals(_current, this))
+        {
+            _current = null;
+        }
         synchronizationContext?.Detach();
     }
 

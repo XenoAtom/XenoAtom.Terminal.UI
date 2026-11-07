@@ -62,9 +62,9 @@ What pauses is only the next `onUpdate` invocation. That callback behaves like a
 
 ## UI thread rules
 
-The UI thread of an app is the thread that runs it (`Run`, `RunAsync`, `Live`, `LiveAsync`). There is one `Dispatcher` per
-thread (`Dispatcher.Current`) and one `BindingManager` per thread (`BindingManager.Current`): an app attaches the dispatcher
-of its thread when it starts running and detaches it when it stops, restoring the previous `SynchronizationContext`.
+The UI thread of an app is the thread that runs it (`Run`, `RunAsync`, `Live`, `LiveAsync`). Each thread has its own current
+`Dispatcher` (`Dispatcher.Current`) and `BindingManager` (`BindingManager.Current`): an app attaches the dispatcher
+when it starts running and retires it when it stops, restoring the previous `SynchronizationContext`.
 Only one app can run on a thread at a time, but several apps can run concurrently on different threads.
 
 Most UI-facing types in Terminal.UI are dispatcher-bound (`DispatcherObject`):
@@ -115,10 +115,14 @@ Use:
 
 An app that is not running has an unbound `app.Dispatcher`; `Post` and `InvokeAsync` on it throw instead of targeting another
 app on the caller's thread. Use `app.Post(...)` to queue startup work before `Run`.
+A dispatcher captured during a completed run stays detached: it rejects `Post` and `InvokeAsync` even when the same app or
+another app starts on that thread. Obtain the new run's dispatcher when starting new background work.
 
 The captured synchronization context belongs to one run. Once that run ends, late and still-queued `await` continuations
 resume on the thread pool, not inside a subsequent app. Cancel or await background work before stopping, and marshal explicitly
-before accessing state owned by another running app. Awaiting `DisposeAsync()` waits for a blocking `Run()` to finish cleanup.
+before accessing state owned by another running app. From outside the app's running UI thread, awaiting `DisposeAsync()`
+waits for a blocking `Run()` to finish cleanup. On the app's own running UI thread, `DisposeAsync()` throws
+`InvalidOperationException` to prevent a self-wait: call `Stop()` and dispose after the run returns.
 
 The app's ambient terminal scope is removed independently of user-created inner scopes. An inner scope remains active until
 its owner disposes it; afterwards it restores the terminal preceding the app, never the app's disposed terminal.
@@ -127,6 +131,7 @@ Cleanup attempts every resource release; if both the run and cleanup fail, `Run(
 ### Compatibility notes for 3.11
 
 - `Dispatcher.Current` and binding-manager settings/events are per thread, not process-wide.
+- Dispatchers are retired after each run; a captured dispatcher never targets a later run.
 - `Dispatcher.CheckAccess()` tests its owning thread even when no app runs. Unbound `InvokeAsync` throws rather than invoking inline.
 - `ToastService` searches the calling thread's app. From a worker without a host it returns `null`; marshal toast creation through `app.Dispatcher`.
 - Plain bindable owners have no thread-affinity checks; use `DispatcherObject` or `State<T>` for checked ownership.

@@ -293,6 +293,81 @@ public sealed class DispatcherLifecycleTests
         }
     }
 
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void Captured_Dispatcher_Does_Not_Target_A_Subsequent_Run(bool reuseApp)
+    {
+        TestThreads.Run(() =>
+        {
+            using var terminal = CreateTerminal();
+            var first = CreateApp(new TextBlock("First"), terminal);
+            first.BeginRun();
+            var captured = first.Dispatcher;
+            first.EndRun();
+
+            var next = reuseApp ? first : CreateApp(new TextBlock("Next"), terminal);
+            next.BeginRun();
+            try
+            {
+                var invoked = false;
+                Assert.AreNotSame(captured, next.Dispatcher);
+                TestThreads.Run(() =>
+                {
+                    Assert.Throws<InvalidOperationException>(() => captured.Post(() => invoked = true));
+                    Assert.Throws<InvalidOperationException>(() => captured.InvokeAsync(() => invoked = true));
+                });
+                next.Tick();
+                Assert.IsFalse(invoked);
+            }
+            finally
+            {
+                next.EndRun();
+                next.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                if (!reuseApp)
+                {
+                    first.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                }
+            }
+        });
+    }
+
+    [TestMethod]
+    public void DisposeAsync_On_Running_App_Thread_Rejects_Self_Wait()
+    {
+        TestThreads.Run(() =>
+        {
+            using var terminal = CreateTerminal();
+            var app = CreateApp(new TextBlock("Dispose"), terminal);
+            Task? disposal = null;
+            app.Post(() =>
+            {
+                disposal = app.DisposeAsync().AsTask();
+                Assert.IsTrue(disposal.IsCompleted, "Disposing on the app thread must not wait for its own run.");
+                var error = Assert.Throws<InvalidOperationException>(() => disposal.GetAwaiter().GetResult());
+                StringAssert.Contains(error.Message, "Stop()");
+                app.Stop();
+            });
+
+            try
+            {
+                app.Run();
+            }
+            finally
+            {
+                if (disposal is not null && !disposal.IsFaulted)
+                {
+                    // On regression, Run's finally releases the rejected self-wait so cleanup remains bounded.
+                    disposal.WaitAsync(TestThreads.Timeout).GetAwaiter().GetResult();
+                }
+                else
+                {
+                    app.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                }
+            }
+        });
+    }
+
     private static TerminalInstance CreateTerminal() => new(new InMemoryTerminalBackend(new TerminalSize(30, 5)));
 
     private static TerminalApp CreateApp(Visual root, TerminalInstance terminal) => new(root, terminal, new TerminalAppOptions
