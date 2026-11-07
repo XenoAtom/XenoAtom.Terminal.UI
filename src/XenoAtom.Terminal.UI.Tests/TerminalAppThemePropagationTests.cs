@@ -11,6 +11,7 @@ using XenoAtom.Terminal.UI.Styling;
 namespace XenoAtom.Terminal.UI.Tests;
 
 [TestClass]
+[DoNotParallelize] // Uses the process-wide Terminal instance (Terminal.Open).
 public sealed class TerminalAppThemePropagationTests
 {
     [TestMethod]

@@ -12,6 +12,7 @@ using System.Reflection;
 namespace XenoAtom.Terminal.UI.Tests;
 
 [TestClass]
+[DoNotParallelize] // Uses the process-wide Terminal instance (Terminal.Open).
 public sealed class TerminalAppLoopWakeTests
 {
     [TestMethod]
