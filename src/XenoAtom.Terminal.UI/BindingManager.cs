@@ -534,6 +534,10 @@ public sealed class BindingManager
             _writes.Clear();
         }
 
+        // Not inlined on purpose: inlined (with the HashSet lookups) into a caller that already inlined BindingManager.RegisterRead,
+        // the JIT ran out of inlining budget and called the comparer's GetHashCode through a stack copy of the Binding (~2.5x slower
+        // tracked reads). Out of line, it compiles the same way for every caller, with the comparer inlined.
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void RegisterRead(object owner, BindingAccessor accessor)
         {
             var binding = new Binding(owner, accessor);
