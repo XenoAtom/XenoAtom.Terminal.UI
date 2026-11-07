@@ -537,11 +537,12 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     public async ValueTask DisposeAsync()
     {
         Stop();
-        if (_runTask is not null)
+        var runTask = Volatile.Read(ref _runTask);
+        if (runTask is not null)
         {
             try
             {
-                await _runTask.ConfigureAwait(false);
+                await runTask.ConfigureAwait(false);
             }
             catch
             {
@@ -565,7 +566,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     /// <exception cref="InvalidOperationException">Thrown when used outside of inline host mode.</exception>
     public void WriteMarkupLine(string markup)
     {
-        Dispatcher.VerifyAccess();
+        VerifyAccess();
         if (_inlineHost is null)
         {
             throw new InvalidOperationException("Flow output is only supported in inline host mode.");
@@ -583,7 +584,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     public void Append(Visual block)
     {
         ArgumentNullException.ThrowIfNull(block);
-        Dispatcher.VerifyAccess();
+        VerifyAccess();
 
         if (_inlineHost is null)
         {
@@ -654,20 +655,29 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     /// </summary>
     internal void BeginRun()
     {
-        if (_runTask is not null)
+        if (Interlocked.CompareExchange(ref _runTask, Task.CompletedTask, null) is not null)
         {
             throw new InvalidOperationException("The app is already running.");
         }
 
-        _runTask = Task.CompletedTask;
         try
         {
             BeginRunCore(started: null);
         }
-        catch
+        catch (Exception runError)
         {
-            EndRunCore();
-            _runTask = null;
+            try
+            {
+                EndRunCore();
+            }
+            catch (Exception cleanupError)
+            {
+                throw new AggregateException("The app failed to start and cleanup also failed.", runError, cleanupError);
+            }
+            finally
+            {
+                Volatile.Write(ref _runTask, null);
+            }
             throw;
         }
     }
@@ -807,7 +817,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
         finally
         {
-            _runTask = null;
+            Volatile.Write(ref _runTask, null);
         }
     }
 
@@ -816,14 +826,14 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     /// </summary>
     /// <param name="cancellationToken">A cancellation token to stop the run.</param>
     /// <exception cref="InvalidOperationException">Thrown when the terminal input relay terminates unexpectedly while the app is running.</exception>
+    /// <exception cref="AggregateException">Thrown when the run and cleanup both fail, or multiple cleanup steps fail.</exception>
     public void Run(CancellationToken cancellationToken = default)
     {
-        if (_runTask is not null)
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (Interlocked.CompareExchange(ref _runTask, completion.Task, null) is not null)
         {
             throw new InvalidOperationException("The app is already running.");
         }
-
-        _runTask = Task.CompletedTask;
 
         try
         {
@@ -831,7 +841,8 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
         finally
         {
-            _runTask = null;
+            Volatile.Write(ref _runTask, null);
+            completion.SetResult();
         }
     }
 
@@ -839,6 +850,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     {
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
         var token = linkedCts.Token;
+        Exception? runError = null;
 
         try
         {
@@ -888,10 +900,41 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                 }
             }
         }
+        catch (Exception exception)
+        {
+            runError = exception;
+            throw;
+        }
         finally
         {
-            StopInputRelay();
-            EndRunCore();
+            Exception? cleanupError = null;
+            try
+            {
+                StopInputRelay();
+            }
+            catch (Exception exception)
+            {
+                cleanupError = exception;
+            }
+
+            try
+            {
+                EndRunCore();
+            }
+            catch (Exception exception)
+            {
+                cleanupError = cleanupError is null ? exception : new AggregateException(cleanupError, exception);
+            }
+
+            if (cleanupError is not null)
+            {
+                if (runError is not null)
+                {
+                    throw new AggregateException("The app failed and cleanup also failed.", runError, cleanupError);
+                }
+
+                ExceptionDispatchInfo.Capture(cleanupError).Throw();
+            }
         }
     }
 
@@ -903,7 +946,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         SetDispatcher(dispatcher);
 
         // Make the static Terminal facade (Terminal.WriteLine, prompts, ...) target this app's terminal on its thread for the run.
-        _ambientTerminalScope = global::XenoAtom.Terminal.Terminal.UseInstance(_terminal);
+        _ambientTerminalScope = global::XenoAtom.Terminal.Terminal.UseInstance(_terminal, allowOutOfOrderDisposal: true);
         started?.Set();
 
         // Ensure semantic markup tokens (e.g. [primary]) are available for Terminal.WriteMarkupLine during this run.
@@ -962,62 +1005,69 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             return;
         }
 
+        List<Exception>? failures = null;
+        void Cleanup(Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception exception)
+            {
+                (failures ??= []).Add(exception);
+            }
+        }
+
+        _pendingUpdateTask = null;
+        _nextActiveUpdateTick = long.MaxValue;
+        Cleanup(() => _updateOutputBuilder.Clear());
+
         try
         {
-            _pendingUpdateTask = null;
-            _nextActiveUpdateTick = long.MaxValue;
-            _updateOutputBuilder.Clear();
-
-            try
-            {
-                // Could fail if the terminal was disposed
-                _terminal.MarkupStyles = _previousMarkupStyles;
-            }
-            catch
-            {
-                // ignore
-            }
-
-            _previousMarkupStyles = null;
-
-            _options.GraphicsPresenter?.Reset();
-
-            _wideRuneResolverScope?.Dispose();
-            _wideRuneResolverScope = null;
-
-            _pasteScope.Dispose();
-            _mouseScope.Dispose();
-            _cursorScope.Dispose();
-            _echoScope.Dispose();
-            _rawScope.Dispose();
-            _alternateScope.Dispose();
-
-            _pasteScope = default;
-            _mouseScope = default;
-            _cursorScope = default;
-            _echoScope = default;
-            _rawScope = default;
-            _alternateScope = default;
-
-            BindingManager.Current.ValueChanged -= OnValueChanged;
-            Root.DetachFromApp();
+            _terminal.MarkupStyles = _previousMarkupStyles;
         }
-        finally
+        catch
         {
-            try
-            {
-                // Throws if a Terminal.UseInstance scope opened during the run is still active (scopes are disposed in reverse order).
-                var ambientTerminalScope = _ambientTerminalScope;
-                _ambientTerminalScope = default;
-                ambientTerminalScope.Dispose();
-            }
-            finally
-            {
-                // Release the thread even then, so that another app can run on it.
-                var dispatcher = OwnerDispatcher;
-                ClearDispatcher();
-                dispatcher?.DetachFromThread(this);
-            }
+            // The caller may already have disposed the terminal.
+        }
+        _previousMarkupStyles = null;
+
+        // Try every step: an extension/backend failure must not leak thread-local state into the next run.
+        Cleanup(() => _options.GraphicsPresenter?.Reset());
+        Cleanup(() => _wideRuneResolverScope?.Dispose());
+        _wideRuneResolverScope = null;
+        Cleanup(_pasteScope.Dispose);
+        Cleanup(_mouseScope.Dispose);
+        Cleanup(_cursorScope.Dispose);
+        Cleanup(_echoScope.Dispose);
+        Cleanup(_rawScope.Dispose);
+        Cleanup(_alternateScope.Dispose);
+        _pasteScope = default;
+        _mouseScope = default;
+        _cursorScope = default;
+        _echoScope = default;
+        _rawScope = default;
+        _alternateScope = default;
+
+        BindingManager.Current.ValueChanged -= OnValueChanged;
+        Cleanup(Root.DetachFromApp);
+        var ambientTerminalScope = _ambientTerminalScope;
+        _ambientTerminalScope = default;
+        Cleanup(ambientTerminalScope.Dispose);
+        var dispatcher = OwnerDispatcher;
+        ClearDispatcher();
+        if (dispatcher is not null)
+        {
+            Cleanup(() => dispatcher.DetachFromThread(this));
+        }
+
+        if (failures is { Count: 1 })
+        {
+            ExceptionDispatchInfo.Capture(failures[0]).Throw();
+        }
+        if (failures is { Count: > 1 })
+        {
+            throw new AggregateException("App cleanup failed.", failures);
         }
     }
 

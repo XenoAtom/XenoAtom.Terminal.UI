@@ -52,6 +52,7 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
 ## Requirements (.NET 10 / C# 14)
 
 XenoAtom.Terminal.UI targets `net10.0` and requires the .NET 10 SDK (C# 14).
+Version 3.11 uses XenoAtom.Terminal 2.4.0 or later for isolated app hosting and safe ambient-terminal scope cleanup.
 
 Rationale: the library integrates into `XenoAtom.Terminal` using **C# 14 extension members**, so you can write
 `Terminal.Write(...)`, `Terminal.Live(...)`, and `Terminal.Run(...)` even though `Terminal` is defined in the

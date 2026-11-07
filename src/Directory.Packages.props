@@ -20,7 +20,7 @@
     <PackageVersion Include="TextMateSharp.Grammars" Version="2.0.5" />
     <PackageVersion Include="Verify.MSTest" Version="33.3.4" />
     <PackageVersion Include="XenoAtom.Ansi" Version="1.7.1" />
-    <PackageVersion Include="XenoAtom.Terminal" Version="2.3.0" />
-    <PackageVersion Include="XenoAtom.Terminal.Graphics" Version="2.3.0" />
+    <PackageVersion Include="XenoAtom.Terminal" Version="2.4.0" />
+    <PackageVersion Include="XenoAtom.Terminal.Graphics" Version="2.4.0" />
   </ItemGroup>
 </Project>

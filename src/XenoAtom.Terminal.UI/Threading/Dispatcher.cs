@@ -25,6 +25,7 @@ public sealed class Dispatcher
     private readonly int _threadId;
     private TerminalApp? _app;
     private Ownership? _ownership;
+    private DispatcherSynchronizationContext? _synchronizationContext;
     private SynchronizationContext? _previousSynchronizationContext;
 
     private Dispatcher() : this(Environment.CurrentManagedThreadId)
@@ -89,7 +90,8 @@ public sealed class Dispatcher
         _previousSynchronizationContext = SynchronizationContext.Current;
         Volatile.Write(ref _ownership, new Ownership(this));
         Volatile.Write(ref _app, app);
-        SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(this));
+        _synchronizationContext = new DispatcherSynchronizationContext(this);
+        SynchronizationContext.SetSynchronizationContext(_synchronizationContext);
     }
 
     internal void DetachFromThread(TerminalApp app)
@@ -104,10 +106,13 @@ public sealed class Dispatcher
             throw new InvalidOperationException("A dispatcher can only be detached from a TerminalApp on its own thread.");
         }
 
+        var synchronizationContext = _synchronizationContext;
+        _synchronizationContext = null;
         SynchronizationContext.SetSynchronizationContext(_previousSynchronizationContext);
         _previousSynchronizationContext = null;
         Volatile.Write(ref _ownership, null);
         Volatile.Write(ref _app, null);
+        synchronizationContext?.Detach();
     }
 
     // One token per run, shared by its objects: a subsequent app on the same thread must not revive old ownership.

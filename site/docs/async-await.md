@@ -111,6 +111,26 @@ Use:
 - `Dispatcher.InvokeAsync(...)` when background code must await completion of a UI-thread update
   (when called on the UI thread itself, the delegate runs synchronously).
 
+### Startup and shutdown
+
+An app that is not running has an unbound `app.Dispatcher`; `Post` and `InvokeAsync` on it throw instead of targeting another
+app on the caller's thread. Use `app.Post(...)` to queue startup work before `Run`.
+
+The captured synchronization context belongs to one run. Once that run ends, late and still-queued `await` continuations
+resume on the thread pool, not inside a subsequent app. Cancel or await background work before stopping, and marshal explicitly
+before accessing state owned by another running app. Awaiting `DisposeAsync()` waits for a blocking `Run()` to finish cleanup.
+
+The app's ambient terminal scope is removed independently of user-created inner scopes. An inner scope remains active until
+its owner disposes it; afterwards it restores the terminal preceding the app, never the app's disposed terminal.
+Cleanup attempts every resource release; if both the run and cleanup fail, `Run()` reports both errors in an `AggregateException`.
+
+### Compatibility notes for 3.11
+
+- `Dispatcher.Current` and binding-manager settings/events are per thread, not process-wide.
+- `Dispatcher.CheckAccess()` tests its owning thread even when no app runs. Unbound `InvokeAsync` throws rather than invoking inline.
+- `ToastService` searches the calling thread's app. From a worker without a host it returns `null`; marshal toast creation through `app.Dispatcher`.
+- Plain bindable owners have no thread-affinity checks; use `DispatcherObject` or `State<T>` for checked ownership.
+
 ## `ConfigureAwait(false)` guidance
 
 Inside the async update callback, default `await` behavior is usually what you want:

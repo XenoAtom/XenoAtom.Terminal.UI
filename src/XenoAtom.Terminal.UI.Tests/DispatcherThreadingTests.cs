@@ -181,8 +181,9 @@ public sealed class DispatcherThreadingTests
             var app = new TerminalApp(root, terminal, FullscreenOptions());
             var dispatcher = Dispatcher.Current;
 
-            // Before the run, an app has no owner yet: its dispatcher is the one of the calling thread.
-            Assert.AreSame(dispatcher, app.Dispatcher);
+            // Before the run, an app must not accidentally target another app on the calling thread.
+            Assert.AreNotSame(dispatcher, app.Dispatcher);
+            Assert.IsNull(app.Dispatcher.AttachedApp);
             Assert.IsNull(dispatcher.AttachedApp);
 
             app.BeginRun();
@@ -211,13 +212,15 @@ public sealed class DispatcherThreadingTests
     }
 
     [TestMethod]
-    public void EndRun_With_Undisposed_Ambient_Terminal_Scope_Throws_And_Still_Detaches_Dispatcher()
+    public void EndRun_With_Inner_Ambient_Terminal_Scope_Restores_Previous_Without_Leaking()
     {
         TestThreads.Run(() =>
         {
             var previous = new SynchronizationContext();
             SynchronizationContext.SetSynchronizationContext(previous);
 
+            using var previousTerminal = new TerminalInstance(new InMemoryTerminalBackend(new TerminalSize(20, 5)));
+            using var previousScope = Terminal.UseInstance(previousTerminal);
             using var terminal = new TerminalInstance(new InMemoryTerminalBackend(new TerminalSize(20, 5)));
             using var leakedTerminal = new TerminalInstance(new InMemoryTerminalBackend(new TerminalSize(20, 5)));
             var dispatcher = Dispatcher.Current;
@@ -228,9 +231,9 @@ public sealed class DispatcherThreadingTests
             app.Tick();
 
             // User code on the app thread opens an ambient scope and leaves it open past the end of the run:
-            // the app's own scope is no longer the innermost one, so restoring it is out of order and throws.
+            // the app removes only its own scope, leaving the user's inner scope active.
             var leakedScope = Terminal.UseInstance(leakedTerminal);
-            Assert.Throws<InvalidOperationException>(app.EndRun);
+            app.EndRun();
 
             // The run still releases the thread.
             Assert.IsNull(dispatcher.AttachedApp);
@@ -238,7 +241,9 @@ public sealed class DispatcherThreadingTests
             Assert.IsNull(root.OwnerDispatcher);
             Assert.AreSame(previous, SynchronizationContext.Current);
             Assert.AreSame(leakedTerminal, Terminal.Instance);
+            terminal.Dispose();
             leakedScope.Dispose();
+            Assert.AreSame(previousTerminal, Terminal.Instance);
 
             // Another app can run on the same thread.
             using var nextTerminal = new TerminalInstance(new InMemoryTerminalBackend(new TerminalSize(20, 5)));
@@ -256,6 +261,7 @@ public sealed class DispatcherThreadingTests
             }
 
             Assert.IsNull(dispatcher.AttachedApp);
+            Assert.AreSame(previousTerminal, Terminal.Instance);
             next.DisposeAsync().AsTask().GetAwaiter().GetResult();
             app.DisposeAsync().AsTask().GetAwaiter().GetResult();
         });

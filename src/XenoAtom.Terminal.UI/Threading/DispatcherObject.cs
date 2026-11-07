@@ -20,6 +20,7 @@ public abstract class DispatcherObject
     // Owner marker for visual elements that are not visuals (ProgressTask, BarChartItem, BreakdownSegment): they follow the app
     // of their owner visual, resolved through IVisualElement.App on the slow path. Its thread id never matches a managed thread.
     private static readonly Dispatcher.Ownership VisualElementOwner = new(Dispatcher.CreateUnbound());
+    private static readonly Dispatcher InactiveAppDispatcher = Dispatcher.CreateUnbound();
 
     private Dispatcher.Ownership? _dispatcher;
 
@@ -48,8 +49,8 @@ public abstract class DispatcherObject
     /// </summary>
     /// <remarks>
     /// Returns the dispatcher of the owning app (for a <see cref="TerminalApp"/>, its own dispatcher while it runs).
-    /// When the object has no owner yet (for example a <see cref="TerminalApp"/> before it starts running, or a visual that is not attached),
-    /// this returns <see cref="Threading.Dispatcher.Current"/>, the dispatcher of the calling thread.
+    /// A <see cref="TerminalApp"/> that is not running returns an unbound dispatcher, which rejects posted work.
+    /// Other objects without an owner return <see cref="Threading.Dispatcher.Current"/>, the dispatcher of the calling thread.
     /// </remarks>
     public Dispatcher Dispatcher
     {
@@ -61,7 +62,7 @@ public abstract class DispatcherObject
                 dispatcher = GetVisualElementDispatcher();
             }
 
-            return dispatcher ?? Dispatcher.Current;
+            return dispatcher ?? (this is TerminalApp ? InactiveAppDispatcher : Dispatcher.Current);
         }
     }
 
