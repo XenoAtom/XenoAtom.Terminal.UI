@@ -10,6 +10,7 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
 - **Two hosting models**:
   - **Inline** widgets via `Terminal.Write(...)` and `Terminal.Live(...)`
   - **Fullscreen** apps via `Terminal.Run(...)` (alternate screen + input loop)
+  - One dispatcher per thread: several apps can run concurrently, one per thread, each with its own terminal
 - **Modern control library** (60+ built-in controls):
   - Buttons, toggles, lists, tables, closable/scrollable/reorderable tabs, menus, dialogs/popups, **toasts**, charts, progress, spinners, tooltips…
   - Text editing: **TextBox**, **TextArea**, **CodeEditor**, **PromptEditor**, **MaskedInput**, **NumberBox** (undo/redo: `Ctrl+Z` / `Ctrl+R`, clipboard paste interception, auto-expanding editor height via `TextEditorAutoSizeMode.Height`, `CodeEditor` Find/Replace: `Ctrl+F` / `Ctrl+H`, Go To Line: `Ctrl+G`, retained line visuals, configurable spaces/tabs indentation, `PromptEditor` Shift+Enter new-line shortcut with Ctrl+N fallback, and completion gestures that can be rebound to preserve Tab focus traversal)
