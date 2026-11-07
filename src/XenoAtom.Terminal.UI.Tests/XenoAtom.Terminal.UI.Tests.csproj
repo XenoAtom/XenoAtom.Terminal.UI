@@ -9,7 +9,6 @@
   <ItemGroup>
     <PackageReference Include="MSTest" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
-    <PackageReference Include="Verify.DiffPlex" />
     <PackageReference Include="Verify.MSTest" />
     <PackageReference Include="XenoAtom.Ansi" />
     <PackageReference Include="XenoAtom.Terminal" />

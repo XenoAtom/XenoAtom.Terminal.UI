@@ -4,7 +4,6 @@
 
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using VerifyTests.DiffPlex;
 
 namespace XenoAtom.Terminal.UI.Tests;
 
@@ -13,7 +12,7 @@ internal static class VerifyInitializer
     [ModuleInitializer]
     public static void Initialize()
     {
-        VerifyDiffPlex.Initialize(OutputType.Compact);
+        VerifierSettings.UseTextDiffFormat(DiffEngine.TextDiffFormat.Compact);
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         Verifier.UseProjectRelativeDirectory("Verified");
         DiffEngine.DiffRunner.Disabled = true;
