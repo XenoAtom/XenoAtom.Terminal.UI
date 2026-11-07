@@ -4,5 +4,6 @@
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-[assembly: DoNotParallelize]
+// Test classes run in parallel; classes that use process-wide state (the global Terminal instance) opt out with [DoNotParallelize].
+[assembly: Parallelize(Scope = ExecutionScope.ClassLevel, Workers = 0)]
 

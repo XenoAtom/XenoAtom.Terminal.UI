@@ -2,7 +2,6 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using System.Reflection;
 using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Threading;
@@ -10,6 +9,7 @@ using XenoAtom.Terminal.UI.Threading;
 namespace XenoAtom.Terminal.UI.Tests;
 
 [TestClass]
+[DoNotParallelize] // Uses the process-wide Terminal instance (Terminal.Open).
 public sealed class DispatcherTests
 {
     [TestMethod]
@@ -28,16 +28,14 @@ public sealed class DispatcherTests
             var app = new TerminalApp(new VStack(), session.Instance);
 
             var dispatcher = Dispatcher.Current;
-            var bind = typeof(Dispatcher).GetMethod("BindToCurrentThread", BindingFlags.Instance | BindingFlags.NonPublic);
-            var detach = typeof(Dispatcher).GetMethod("DetachFromThread", BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.IsNotNull(bind);
-            Assert.IsNotNull(detach);
 
-            bind.Invoke(dispatcher, [app]);
-            Assert.AreEqual("DispatcherSynchronizationContext", SynchronizationContext.Current?.GetType().Name);
+            dispatcher.BindToCurrentThread(app);
+            Assert.IsInstanceOfType<DispatcherSynchronizationContext>(SynchronizationContext.Current);
+            Assert.AreSame(app, dispatcher.AttachedApp);
 
-            detach.Invoke(dispatcher, [app]);
+            dispatcher.DetachFromThread(app);
             Assert.AreSame(previous, SynchronizationContext.Current);
+            Assert.IsNull(dispatcher.AttachedApp);
         }
         finally
         {

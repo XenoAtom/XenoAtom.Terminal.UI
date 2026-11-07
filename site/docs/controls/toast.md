@@ -24,15 +24,18 @@ Add a `ToastHost` at the root of your fullscreen app and show toasts with `Toast
 var root = new ToastHost(
         new DockLayout()
             .Top(new Header().Left("My App"))
-            .Content(mainContent)
+            .Content(new VStack(
+                mainContent,
+                new Button("Save").Click(() => { ToastService.Success("File saved."); })))
             .Bottom(new Footer()))
     .Position(ToastPosition.TopRight)
     .MaxVisible(3);
 
 Terminal.Run(root);
-
-ToastService.Success("File saved.");
 ```
+
+Call `ToastService` from the running app's UI thread, for example in a click handler. It returns `null` when that thread has
+no `ToastHost`; background work should use `app.Dispatcher.InvokeAsync(...)` to show a toast.
 
 ## Custom toasts
 

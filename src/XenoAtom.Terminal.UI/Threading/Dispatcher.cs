@@ -2,51 +2,98 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace XenoAtom.Terminal.UI.Threading;
 
 /// <summary>
 /// Provides access to the UI thread for terminal UI operations.
 /// </summary>
+/// <remarks>
+/// Each thread has its own current dispatcher (see <see cref="Current"/>). A <see cref="TerminalApp"/> attaches it for the
+/// duration of one run and retires it afterwards, so captured dispatchers never target a subsequent run.
+/// Several apps can run concurrently, each on its own thread.
+/// Use <see cref="TerminalApp"/>.<see cref="DispatcherObject.Dispatcher"/> (or <see cref="TerminalRunningContext.App"/>)
+/// to reach a specific app from another thread.
+/// </remarks>
 public sealed class Dispatcher
 {
-    /// <summary>
-    /// Gets the application-wide dispatcher instance.
-    /// </summary>
-    public static Dispatcher Current { get; } = new();
+    internal const string NotRunningMessage = "Dispatcher is not attached to a running TerminalApp on this thread. Use TerminalApp.Dispatcher (or TerminalRunningContext.App.Dispatcher) to reach a specific app from another thread.";
 
-    private int? _threadId;
+    [ThreadStatic]
+    private static Dispatcher? _current;
+
+    private readonly int _threadId;
     private TerminalApp? _app;
+    private Ownership? _ownership;
+    private DispatcherSynchronizationContext? _synchronizationContext;
     private SynchronizationContext? _previousSynchronizationContext;
 
-    private Dispatcher() { }
+    private Dispatcher() : this(Environment.CurrentManagedThreadId)
+    {
+    }
 
-    internal TerminalApp? AttachedApp => _app;
+    private Dispatcher(int threadId)
+    {
+        _threadId = threadId;
+    }
+
+    /// <summary>
+    /// Gets the dispatcher of the calling thread, creating it on first access.
+    /// </summary>
+    /// <remarks>
+    /// Each thread has its own current dispatcher. It is attached to a <see cref="TerminalApp"/> for one run only;
+    /// after the run, the next access creates a fresh dispatcher.
+    /// From a background thread, this returns the background thread's own dispatcher, which is not attached to any app:
+    /// use <see cref="TerminalApp"/>.<see cref="DispatcherObject.Dispatcher"/> to marshal work to a running app instead.
+    /// </remarks>
+    public static Dispatcher Current
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _current ?? CreateForCurrentThread();
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static Dispatcher CreateForCurrentThread() => _current = new Dispatcher();
+
+    /// <summary>
+    /// Creates a dispatcher that belongs to no thread (managed thread ids are positive) and can never be attached to an app.
+    /// </summary>
+    internal static Dispatcher CreateUnbound() => new(threadId: 0);
+
+    internal int ThreadId => _threadId;
+
+    internal TerminalApp? AttachedApp => Volatile.Read(ref _app);
+
+    internal bool IsRunning => Volatile.Read(ref _app) is not null;
+
+    internal Ownership? CurrentOwnership => Volatile.Read(ref _ownership);
 
     internal void BindToCurrentThread(TerminalApp app)
     {
         ArgumentNullException.ThrowIfNull(app);
 
-        var currentThreadId = Environment.CurrentManagedThreadId;
-        var threadId = _threadId;
-        if (threadId is not null && threadId.Value != currentThreadId)
+        if (Environment.CurrentManagedThreadId != _threadId)
         {
-            throw new InvalidOperationException("The UI dispatcher is already bound to another thread.");
+            throw new InvalidOperationException("A dispatcher can only be attached to a TerminalApp from its own thread.");
         }
 
-        if (_app is not null && !ReferenceEquals(_app, app))
+        var current = _app;
+        if (current is not null)
         {
-            throw new InvalidOperationException("The UI dispatcher is already attached to another TerminalApp.");
+            if (!ReferenceEquals(current, app))
+            {
+                throw new InvalidOperationException("The dispatcher of this thread is already attached to another running TerminalApp. Only one app can run on a thread at a time.");
+            }
+
+            return;
         }
 
-        _threadId = Environment.CurrentManagedThreadId;
-        _app = app;
-
-        if (_previousSynchronizationContext is null)
-        {
-            _previousSynchronizationContext = SynchronizationContext.Current;
-        }
-
-        SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(this));
+        _previousSynchronizationContext = SynchronizationContext.Current;
+        Volatile.Write(ref _ownership, new Ownership(this));
+        Volatile.Write(ref _app, app);
+        _synchronizationContext = new DispatcherSynchronizationContext(this);
+        SynchronizationContext.SetSynchronizationContext(_synchronizationContext);
     }
 
     internal void DetachFromThread(TerminalApp app)
@@ -56,52 +103,90 @@ public sealed class Dispatcher
             return;
         }
 
+        if (Environment.CurrentManagedThreadId != _threadId)
+        {
+            throw new InvalidOperationException("A dispatcher can only be detached from a TerminalApp on its own thread.");
+        }
+
+        var synchronizationContext = _synchronizationContext;
+        _synchronizationContext = null;
         SynchronizationContext.SetSynchronizationContext(_previousSynchronizationContext);
         _previousSynchronizationContext = null;
-        _app = null;
-        _threadId = null;
+        Volatile.Write(ref _ownership, null);
+        Volatile.Write(ref _app, null);
+        if (ReferenceEquals(_current, this))
+        {
+            _current = null;
+        }
+        synchronizationContext?.Detach();
+    }
+
+    // One token per run, shared by its objects: a subsequent app on the same thread must not revive old ownership.
+    internal sealed class Ownership
+    {
+        internal Ownership(Dispatcher dispatcher)
+        {
+            Dispatcher = dispatcher;
+            ThreadId = dispatcher.ThreadId;
+        }
+
+        internal Dispatcher Dispatcher { get; }
+
+        internal int ThreadId { get; }
+
+        internal bool IsRunning => ReferenceEquals(Dispatcher.CurrentOwnership, this);
     }
 
     /// <summary>
-    /// Determines whether the caller is running on the UI thread.
+    /// Determines whether the caller is running on the thread of this dispatcher.
     /// </summary>
     /// <returns><see langword="true"/> if the caller has access; otherwise <see langword="false"/>.</returns>
-    public bool CheckAccess()
-    {
-        var threadId = _threadId;
-        return threadId is null || Environment.CurrentManagedThreadId == threadId.Value;
-    }
+    public bool CheckAccess() => Environment.CurrentManagedThreadId == _threadId;
 
     /// <summary>
-    /// Throws if the caller is not on the UI thread.
+    /// Throws if the caller is not running on the thread of this dispatcher.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the caller is not on the thread of this dispatcher.</exception>
     public void VerifyAccess()
     {
         if (!CheckAccess())
         {
-            throw new InvalidOperationException("Invalid thread access. Use TerminalApp.Dispatcher to marshal to the UI thread.");
+            ThrowInvalidThreadAccess();
         }
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static void ThrowInvalidThreadAccess()
+    {
+        throw new InvalidOperationException("Invalid thread access. Use TerminalApp.Dispatcher to marshal to the UI thread.");
+    }
+
     /// <summary>
-    /// Posts an action to the UI thread.
+    /// Posts an action to the thread of the app running on this dispatcher.
     /// </summary>
     /// <param name="action">The action to execute.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="action"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when no <see cref="TerminalApp"/> is running on this dispatcher.</exception>
     public void Post(Action action)
     {
         ArgumentNullException.ThrowIfNull(action);
-        var app = _app ?? throw new InvalidOperationException("Dispatcher is not attached to a running TerminalApp.");
-        app.Post(action);
+        GetRunningApp().Post(action);
     }
+
+    private TerminalApp GetRunningApp() => Volatile.Read(ref _app) ?? throw new InvalidOperationException(NotRunningMessage);
 
     /// <summary>
     /// Invokes an action on the UI thread.
     /// </summary>
     /// <param name="action">The action to execute.</param>
     /// <returns>A task that completes when the action finishes.</returns>
+    /// <remarks>When called from the thread of this dispatcher, the action runs synchronously.</remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="action"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when no <see cref="TerminalApp"/> is running on this dispatcher.</exception>
     public Task InvokeAsync(Action action)
     {
         ArgumentNullException.ThrowIfNull(action);
+        _ = GetRunningApp();
 
         if (CheckAccess())
         {
@@ -131,9 +216,13 @@ public sealed class Dispatcher
     /// <typeparam name="T">The result type.</typeparam>
     /// <param name="func">The function to execute.</param>
     /// <returns>A task that completes with the function result.</returns>
+    /// <remarks>When called from the thread of this dispatcher, the function runs synchronously.</remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="func"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when no <see cref="TerminalApp"/> is running on this dispatcher.</exception>
     public Task<T> InvokeAsync<T>(Func<T> func)
     {
         ArgumentNullException.ThrowIfNull(func);
+        _ = GetRunningApp();
 
         if (CheckAccess())
         {
@@ -160,9 +249,13 @@ public sealed class Dispatcher
     /// </summary>
     /// <param name="func">The delegate to execute.</param>
     /// <returns>A task that completes when the delegate finishes.</returns>
+    /// <remarks>When called from the thread of this dispatcher, the delegate is started synchronously.</remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="func"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when no <see cref="TerminalApp"/> is running on this dispatcher.</exception>
     public Task InvokeAsync(Func<Task> func)
     {
         ArgumentNullException.ThrowIfNull(func);
+        _ = GetRunningApp();
 
         if (CheckAccess())
         {
@@ -210,9 +303,13 @@ public sealed class Dispatcher
     /// <typeparam name="T">The result type.</typeparam>
     /// <param name="func">The delegate to execute.</param>
     /// <returns>A task that completes with the result.</returns>
+    /// <remarks>When called from the thread of this dispatcher, the delegate is started synchronously.</remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="func"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when no <see cref="TerminalApp"/> is running on this dispatcher.</exception>
     public Task<T> InvokeAsync<T>(Func<Task<T>> func)
     {
         ArgumentNullException.ThrowIfNull(func);
+        _ = GetRunningApp();
 
         if (CheckAccess())
         {

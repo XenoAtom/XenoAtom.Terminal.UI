@@ -10,6 +10,7 @@ using XenoAtom.Terminal.UI.Rendering;
 namespace XenoAtom.Terminal.UI.Tests;
 
 [TestClass]
+[DoNotParallelize] // Uses the process-wide Terminal instance (Terminal.Open).
 public sealed class InlineInteractiveHostTests
 {
     private static CellBuffer CreateBuffer(int width, params string[] lines)

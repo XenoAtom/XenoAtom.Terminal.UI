@@ -12,12 +12,29 @@ namespace XenoAtom.Terminal.UI;
 /// <summary>
 /// Central binding manager used by generated bindable property accessors.
 /// </summary>
+/// <remarks>
+/// There is one binding manager per thread (see <see cref="Current"/>): dependency tracking, deferred actions, read/write suppression
+/// and <see cref="ValueChanged"/> are local to the calling thread, which is the UI thread of the app running on it.
+/// </remarks>
 public sealed class BindingManager
 {
+    [ThreadStatic]
+    private static BindingManager? _current;
+
+    // Two-way binding synchronizations are keyed by source owner, not by thread, so they are shared by all threads.
+    private static readonly ConditionalWeakTable<object, SourceOwnerSubscriptions> _boundSubscriptions = new();
+
     /// <summary>
-    /// Gets the singleton instance of the binding manager.
+    /// Gets the binding manager of the calling thread, creating it on first access.
     /// </summary>
-    public static BindingManager Current { get; } = new();
+    public static BindingManager Current
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _current ?? CreateForCurrentThread();
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static BindingManager CreateForCurrentThread() => _current = new BindingManager();
 
     private BindingManager()
     {
@@ -27,17 +44,18 @@ public sealed class BindingManager
     /// <summary>
     /// Raised when a bindable value has changed and UI invalidation needs to be performed.
     /// </summary>
+    /// <remarks>Only changes made on the thread of this binding manager are raised.</remarks>
     public event Action<Binding>? ValueChanged;
 
 
     /// <summary>
     /// Gets or sets a value indicating whether dependency loop checks are enabled during dependency tracking.
     /// </summary>
+    /// <remarks>This setting applies to the binding manager of the thread it is set on.</remarks>
     public bool EnableDependencyLoopCheck { get; set; }
 
     private TrackingContext? _tracking;
     private TrackingContext? _freeList;
-    private readonly ConditionalWeakTable<object, SourceOwnerSubscriptions> _boundSubscriptions = new();
     private Queue<Action>? _deferredActions;
     private bool _isFlushingDeferredActions;
 
@@ -122,7 +140,7 @@ public sealed class BindingManager
     {
         if (_freeList is null)
         {
-            return new TrackingContext();
+            return new TrackingContext(this);
         }
         var context = _freeList;
         _freeList = _freeList.Next;
@@ -269,10 +287,8 @@ public sealed class BindingManager
     public void RegisterRead(object owner, BindingAccessor accessor)
     {
         ArgumentNullException.ThrowIfNull(accessor);
-        if (owner is Threading.DispatcherObject dispatcherObject)
-        {
-            dispatcherObject.VerifyAccess();
-        }
+        var dispatcherObject = owner as Threading.DispatcherObject;
+        dispatcherObject?.VerifyAccess();
 
         if (Volatile.Read(ref _suppressReadTrackingCount) > 0)
         {
@@ -285,7 +301,38 @@ public sealed class BindingManager
             return;
         }
 
-        _tracking?.RegisterRead(owner, accessor);
+        var tracking = _tracking;
+        if (tracking is null)
+        {
+            return;
+        }
+
+        if (dispatcherObject is not null && dispatcherObject.OwnerDispatcher is null)
+        {
+            AcquireDispatcherOwnership(dispatcherObject);
+        }
+
+        tracking.RegisterRead(owner, accessor);
+    }
+
+    /// <summary>
+    /// Tags a free-standing <see cref="Threading.DispatcherObject"/> (e.g. <see cref="State{T}"/>) with the dispatcher of the app
+    /// that tracks a read of it, so that later accesses from other threads are rejected while that app runs.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void AcquireDispatcherOwnership(Threading.DispatcherObject dispatcherObject)
+    {
+        // Visual elements get their dispatcher from the app they are attached to.
+        if (dispatcherObject is IVisualElement)
+        {
+            return;
+        }
+
+        var dispatcher = Threading.Dispatcher.Current;
+        if (dispatcher.IsRunning)
+        {
+            dispatcherObject.TryAcquireDispatcher(dispatcher);
+        }
     }
 
     /// <summary>
@@ -365,14 +412,9 @@ public sealed class BindingManager
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentNullException.ThrowIfNull(accessor);
 
-        if (owner is Threading.DispatcherObject dispatcherObject)
-        {
-            dispatcherObject.VerifyAccess();
-            return;
-        }
-
-        var dispatcher = Threading.Dispatcher.Current;
-        if (dispatcher.AttachedApp is not null && !dispatcher.CheckAccess())
+        // Only DispatcherObject owners carry a thread affinity (see DispatcherObject). Plain owners cannot be checked:
+        // with one dispatcher per thread there is no way to know which app, if any, observes them.
+        if (owner is Threading.DispatcherObject dispatcherObject && !dispatcherObject.CheckAccess())
         {
             throw new InvalidOperationException(
                 $"Invalid thread access for bindable update `{owner.GetType().Name}.{accessor.Name}`. " +
@@ -460,7 +502,7 @@ public sealed class BindingManager
         /// </summary>
         public void Dispose()
         {
-            Current.ReleaseTrackingContext(_context);
+            _context?.Owner.ReleaseTrackingContext(_context);
         }
     }
 
@@ -469,9 +511,12 @@ public sealed class BindingManager
         private readonly HashSet<Binding> _reads = new(BindingReferenceComparer.Instance);
         private readonly HashSet<Binding> _writes = new(BindingReferenceComparer.Instance);
 
-        public TrackingContext()
+        public TrackingContext(BindingManager owner)
         {
+            Owner = owner;
         }
+
+        public BindingManager Owner { get; }
 
         public TrackingContext? Next { get; set; }
 
@@ -489,6 +534,10 @@ public sealed class BindingManager
             _writes.Clear();
         }
 
+        // Not inlined on purpose: inlined (with the HashSet lookups) into a caller that already inlined BindingManager.RegisterRead,
+        // the JIT ran out of inlining budget and called the comparer's GetHashCode through a stack copy of the Binding (~2.5x slower
+        // tracked reads). Out of line, it compiles the same way for every caller, with the comparer inlined.
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void RegisterRead(object owner, BindingAccessor accessor)
         {
             var binding = new Binding(owner, accessor);
@@ -508,7 +557,7 @@ public sealed class BindingManager
                 throw new InvalidOperationException($"Cannot read and then write `{owner.GetType().Name}.{accessor.Name}` within a same tracking context");
             }
 
-            if (Current.EnableDependencyLoopCheck)
+            if (Owner.EnableDependencyLoopCheck)
             {
                 var next = Next;
                 while (next is not null)
@@ -582,6 +631,8 @@ public sealed class BindingManager
 
     private sealed class SourceOwnerSubscriptions
     {
+        // Shared by all threads (see _boundSubscriptions): guard the dictionary and its lists, but apply values outside the lock.
+        private readonly Lock _lock = new();
         private readonly Dictionary<BindingAccessor, List<BoundValueSubscription>> _subscriptionsByAccessor = new();
 
         public void Add(BindingAccessor accessor, BoundValueSubscription subscription)
@@ -589,13 +640,16 @@ public sealed class BindingManager
             ArgumentNullException.ThrowIfNull(accessor);
             ArgumentNullException.ThrowIfNull(subscription);
 
-            if (!_subscriptionsByAccessor.TryGetValue(accessor, out var subscriptions))
+            lock (_lock)
             {
-                subscriptions = [];
-                _subscriptionsByAccessor.Add(accessor, subscriptions);
-            }
+                if (!_subscriptionsByAccessor.TryGetValue(accessor, out var subscriptions))
+                {
+                    subscriptions = [];
+                    _subscriptionsByAccessor.Add(accessor, subscriptions);
+                }
 
-            subscriptions.Add(subscription);
+                subscriptions.Add(subscription);
+            }
         }
 
         public void Remove(BindingAccessor accessor, object targetOwner, BindingAccessor targetAccessor)
@@ -604,31 +658,39 @@ public sealed class BindingManager
             ArgumentNullException.ThrowIfNull(targetOwner);
             ArgumentNullException.ThrowIfNull(targetAccessor);
 
-            if (!_subscriptionsByAccessor.TryGetValue(accessor, out var subscriptions))
+            lock (_lock)
             {
-                return;
-            }
+                if (!_subscriptionsByAccessor.TryGetValue(accessor, out var subscriptions))
+                {
+                    return;
+                }
 
-            CleanupSubscriptions(subscriptions, static (subscription, state) =>
-            {
-                var (owner, accessor) = ((object Owner, BindingAccessor Accessor))state;
-                return !subscription.IsAlive || subscription.Matches(owner, accessor);
-            }, (targetOwner, targetAccessor));
+                CleanupSubscriptions(subscriptions, static (subscription, state) =>
+                {
+                    var (owner, accessor) = ((object Owner, BindingAccessor Accessor))state;
+                    return !subscription.IsAlive || subscription.Matches(owner, accessor);
+                }, (targetOwner, targetAccessor));
 
-            if (subscriptions.Count == 0)
-            {
-                _subscriptionsByAccessor.Remove(accessor);
+                if (subscriptions.Count == 0)
+                {
+                    _subscriptionsByAccessor.Remove(accessor);
+                }
             }
         }
 
         public void Propagate(Binding binding)
         {
-            if (!_subscriptionsByAccessor.TryGetValue(binding.Accessor, out var subscriptions) || subscriptions.Count == 0)
+            BoundValueSubscription[] snapshot;
+            lock (_lock)
             {
-                return;
+                if (!_subscriptionsByAccessor.TryGetValue(binding.Accessor, out var subscriptions) || subscriptions.Count == 0)
+                {
+                    return;
+                }
+
+                snapshot = subscriptions.ToArray();
             }
 
-            var snapshot = subscriptions.ToArray();
             var requiresCleanup = false;
 
             foreach (var subscription in snapshot)
@@ -636,15 +698,23 @@ public sealed class BindingManager
                 requiresCleanup |= !subscription.TryApply(binding.Owner);
             }
 
-            if (!requiresCleanup || !_subscriptionsByAccessor.TryGetValue(binding.Accessor, out subscriptions))
+            if (!requiresCleanup)
             {
                 return;
             }
 
-            CleanupSubscriptions<object?>(subscriptions, static (subscription, _) => !subscription.IsAlive, null);
-            if (subscriptions.Count == 0)
+            lock (_lock)
             {
-                _subscriptionsByAccessor.Remove(binding.Accessor);
+                if (!_subscriptionsByAccessor.TryGetValue(binding.Accessor, out var subscriptions))
+                {
+                    return;
+                }
+
+                CleanupSubscriptions<object?>(subscriptions, static (subscription, _) => !subscription.IsAlive, null);
+                if (subscriptions.Count == 0)
+                {
+                    _subscriptionsByAccessor.Remove(binding.Accessor);
+                }
             }
         }
 

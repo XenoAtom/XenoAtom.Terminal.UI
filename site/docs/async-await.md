@@ -9,7 +9,7 @@ XenoAtom.Terminal.UI supports `async` / `await`, but only in specific places and
 The short version:
 
 - `Terminal.LiveAsync(...)` and `Terminal.RunAsync(...)` support an asynchronous `onUpdate` callback.
-- The UI is still single-threaded. Terminal.UI does not create a dedicated UI thread.
+- The UI is still single-threaded. Terminal.UI does not create a dedicated UI thread: the thread running the app is its UI thread.
 - Terminal.UI installs a dispatcher-backed `SynchronizationContext` while the app is running.
 - If an awaited operation resumes on the captured context, the continuation runs back on the UI thread.
 - Routed event handlers such as `Click(...)` are synchronous. Treat `async void` handlers as unsupported.
@@ -62,18 +62,36 @@ What pauses is only the next `onUpdate` invocation. That callback behaves like a
 
 ## UI thread rules
 
-Most UI-facing types in Terminal.UI are dispatcher-bound:
+The UI thread of an app is the thread that runs it (`Run`, `RunAsync`, `Live`, `LiveAsync`). Each thread has its own current
+`Dispatcher` (`Dispatcher.Current`) and `BindingManager` (`BindingManager.Current`): an app attaches the dispatcher
+when it starts running and retires it when it stops, restoring the previous `SynchronizationContext`.
+Only one app can run on a thread at a time, but several apps can run concurrently on different threads.
+
+Most UI-facing types in Terminal.UI are dispatcher-bound (`DispatcherObject`):
 
 - `Visual`
 - `State<T>`
 - `TerminalApp`
 - other `DispatcherObject`-derived types
 
-They should be read and written on the UI thread.
+Thread affinity follows ownership, not the thread that created the object:
 
-If you update bound state from the wrong thread, Terminal.UI will reject it. For example, `State<T>.Value` writes are validated through the binding system and are expected to happen on the UI thread.
+- a `Visual` belongs to the app it is attached to (and becomes free again when it is detached);
+- a `TerminalApp` belongs to the thread running it;
+- a `State<T>` (or your own `DispatcherObject`) belongs to the first running app that reads it while tracking dependencies
+  (for example when a bound visual renders it), until that app stops.
 
-Use the dispatcher when background work needs to publish results to the UI:
+State ownership is scoped to that app run: starting another app on the same thread does not retain the old app's ownership.
+A later app acquires the state only if it reads it while tracking dependencies.
+
+An object without a running owner can be used from any thread. This is why you can build a tree on one thread and run it on
+another. Once owned, reading or writing it from another thread throws an `InvalidOperationException`.
+
+> [!NOTE]
+> Bindable properties on plain objects (types that do not derive from `DispatcherObject`) carry no thread affinity and are not checked.
+> Derive your view models from `DispatcherObject`, or use `State<T>`, to get thread checks.
+
+Use the app's dispatcher when background work needs to publish results to the UI:
 
 ```csharp
 await app.Dispatcher.InvokeAsync(() =>
@@ -83,10 +101,40 @@ await app.Dispatcher.InvokeAsync(() =>
 });
 ```
 
+`app.Dispatcher` (or the `Dispatcher` of any visual attached to the app, or `context.App.Dispatcher` in an update callback)
+reaches that app from any thread. `Dispatcher.Current` does not: on a background thread it returns the dispatcher of that
+background thread, which is not attached to any app, so `Post`/`InvokeAsync` on it throw an `InvalidOperationException`.
+
 Use:
 
 - `Dispatcher.Post(...)` for fire-and-forget work queued to the UI thread;
-- `Dispatcher.InvokeAsync(...)` when background code must await completion of a UI-thread update.
+- `Dispatcher.InvokeAsync(...)` when background code must await completion of a UI-thread update
+  (when called on the UI thread itself, the delegate runs synchronously).
+
+### Startup and shutdown
+
+An app that is not running has an unbound `app.Dispatcher`; `Post` and `InvokeAsync` on it throw instead of targeting another
+app on the caller's thread. Use `app.Post(...)` to queue startup work before `Run`.
+A dispatcher captured during a completed run stays detached: it rejects `Post` and `InvokeAsync` even when the same app or
+another app starts on that thread. Obtain the new run's dispatcher when starting new background work.
+
+The captured synchronization context belongs to one run. Once that run ends, late and still-queued `await` continuations
+resume on the thread pool, not inside a subsequent app. Cancel or await background work before stopping, and marshal explicitly
+before accessing state owned by another running app. From outside the app's running UI thread, awaiting `DisposeAsync()`
+waits for a blocking `Run()` to finish cleanup. On the app's own running UI thread, `DisposeAsync()` throws
+`InvalidOperationException` to prevent a self-wait: call `Stop()` and dispose after the run returns.
+
+The app's ambient terminal scope is removed independently of user-created inner scopes. An inner scope remains active until
+its owner disposes it; afterwards it restores the terminal preceding the app, never the app's disposed terminal.
+Cleanup attempts every resource release; if both the run and cleanup fail, `Run()` reports both errors in an `AggregateException`.
+
+### Compatibility notes for 3.11
+
+- `Dispatcher.Current` and binding-manager settings/events are per thread, not process-wide.
+- Dispatchers are retired after each run; a captured dispatcher never targets a later run.
+- `Dispatcher.CheckAccess()` tests its owning thread even when no app runs. Unbound `InvokeAsync` throws rather than invoking inline.
+- `ToastService` searches the calling thread's app. From a worker without a host it returns `null`; marshal toast creation through `app.Dispatcher`.
+- Plain bindable owners have no thread-affinity checks; use `DispatcherObject` or `State<T>` for checked ownership.
 
 ## `ConfigureAwait(false)` guidance
 
@@ -202,12 +250,14 @@ button.Click(() =>
     isLoading.Value = true;
     text.Value = "Loading...";
 
+    // The button is attached to the running app: its dispatcher reaches the UI thread from any thread.
+    var dispatcher = button.Dispatcher;
     _ = Task.Run(async () =>
     {
         try
         {
             var loaded = await LoadTextAsync().ConfigureAwait(false);
-            await Dispatcher.Current.InvokeAsync(() =>
+            await dispatcher.InvokeAsync(() =>
             {
                 text.Value = loaded;
                 isLoading.Value = false;
@@ -215,7 +265,7 @@ button.Click(() =>
         }
         catch (Exception ex)
         {
-            await Dispatcher.Current.InvokeAsync(() =>
+            await dispatcher.InvokeAsync(() =>
             {
                 text.Value = ex.Message;
                 isLoading.Value = false;
@@ -226,6 +276,9 @@ button.Click(() =>
 ```
 
 This pattern is appropriate when a click starts background work that should not occupy the hosted async update callback.
+
+> [!WARNING]
+> Do not call `Dispatcher.Current` from inside `Task.Run(...)`: it returns the dispatcher of the thread-pool thread, not the app's one.
 
 ## Limitations
 
@@ -282,7 +335,7 @@ Keep cancellation explicit in long-running async work and propagate it to the op
 - Use `LiveAsync` / `RunAsync` when the host update itself needs to await.
 - Keep normal `await` behavior inside `onUpdate` unless you intentionally want to leave the UI context.
 - Treat `State<T>` and visuals as UI-thread-bound objects.
-- Use `Dispatcher.InvokeAsync(...)` or `Dispatcher.Post(...)` to publish background results back to the UI.
+- Use `app.Dispatcher.InvokeAsync(...)` or `app.Dispatcher.Post(...)` (or the dispatcher of an attached visual) to publish background results back to the UI.
 - Use synchronous event handlers to express intent, then perform awaited work in `onUpdate` or in background tasks that marshal back to the dispatcher.
 - Do not assume `onUpdate` is re-entrant; one async update callback runs at a time.
 

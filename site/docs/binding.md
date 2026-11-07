@@ -75,6 +75,10 @@ To support this, `BindingManager` exposes two scoped suppression helpers:
 > [!IMPORTANT]
 > Suppression affects **all** bindable reads/writes within the scope. Keep the scope small and always use `using` so tracking is restored.
 
+`BindingManager.Current` is the binding manager of the calling thread: each thread has its own, so tracking scopes,
+suppression scopes, `RunAfterTracking`, `ValueChanged` and `EnableDependencyLoopCheck` only apply to the thread they are used on
+(the UI thread of the app running on it). Use these helpers on the UI thread, and do not await inside their `using` scopes.
+
 ### Example: a `ComputedVisual` with tracked and untracked state
 
 In this example, `mode` is tracked (changes should rebuild), while `telemetry` is read and updated without becoming a dependency:

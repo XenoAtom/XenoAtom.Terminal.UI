@@ -170,6 +170,37 @@ await Terminal.LiveAsync(
 For a detailed explanation of the synchronization context, continuation behavior, thread affinity, limitations, and
 recommended event-handler workarounds, see [Async & Await](async-await.md).
 
+## Several apps on several threads
+
+Each thread has its own dispatcher and binding manager, and a running app makes its terminal the *ambient* terminal of its
+thread (`Terminal.UseInstance`), so `Terminal.WriteLine(...)` and prompts called from the app target the app's terminal.
+This means several apps can run concurrently, **one app per thread**, each with its own `TerminalInstance`:
+
+```csharp
+using XenoAtom.Terminal;
+using XenoAtom.Terminal.Backends;
+using XenoAtom.Terminal.UI;
+using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Hosting;
+
+var thread = new Thread(() =>
+{
+    // A standalone terminal: it does not replace the process-wide Terminal.Instance.
+    using var terminal = new TerminalInstance(new InMemoryTerminalBackend(new TerminalSize(80, 25)));
+    var app = new TerminalApp(new TextBlock("Hello"), terminal, new TerminalAppOptions { HostKind = TerminalHostKind.Fullscreen });
+    app.Run(); // the calling thread is the UI thread of this app
+});
+thread.Start();
+```
+
+Rules:
+
+- Only one app can run on a thread at a time; running another app on the same thread while the first one runs throws.
+  Apps can run one after the other on the same thread.
+- Visuals, `State<T>` and other dispatcher objects belong to the app that uses them while it runs (see [Async & Await](async-await.md#ui-thread-rules)).
+  Do not share them between apps running at the same time.
+- To reach an app from another thread, use its dispatcher: `app.Dispatcher.InvokeAsync(...)` (for example `app.Dispatcher.InvokeAsync(app.Stop)`).
+
 ## Fullscreen: `Terminal.Run`
 
 Fullscreen runs a UI loop on the main thread:

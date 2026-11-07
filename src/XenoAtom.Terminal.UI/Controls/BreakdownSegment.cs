@@ -21,6 +21,7 @@ public sealed partial class BreakdownSegment : DispatcherObject, IVisualElement
     /// Initializes a new instance of the <see cref="BreakdownSegment"/> class.
     /// </summary>
     public BreakdownSegment()
+        : base(followsOwnerVisual: true)
     {
     }
 
@@ -30,6 +31,7 @@ public sealed partial class BreakdownSegment : DispatcherObject, IVisualElement
     /// <param name="value">The segment value.</param>
     /// <param name="label">The segment label visual.</param>
     public BreakdownSegment(double value, Visual? label = null)
+        : base(followsOwnerVisual: true)
     {
         Value = value;
         Label = label;

@@ -41,8 +41,8 @@ See also:
 
 ## Hosting & integration
 
-- [Hosting](hosting.md) (inline vs fullscreen, update loops)
-- [Async & Await](async-await.md) (dispatcher context, async host updates, thread-affinity guidance)
+- [Hosting](hosting.md) (inline vs fullscreen, update loops, several apps on several threads)
+- [Async & Await](async-await.md) (dispatcher context, async host updates, app-run ownership and thread-affinity guidance)
 - [Prompts](prompts.md) (inline prompts built on top of `Terminal.Live`)
 
 ## Core concepts

@@ -24,6 +24,7 @@ public partial class ProgressTask : DispatcherObject, IVisualElement
     /// </summary>
     /// <param name="label">The task label visual.</param>
     public ProgressTask(Visual label)
+        : base(followsOwnerVisual: true)
     {
         ArgumentNullException.ThrowIfNull(label);
         _label = label;
@@ -37,6 +38,7 @@ public partial class ProgressTask : DispatcherObject, IVisualElement
     /// </summary>
     /// <param name="label">The task label visual.</param>
     public ProgressTask(Func<Visual> label)
+        : base(followsOwnerVisual: true)
     {
         ArgumentNullException.ThrowIfNull(label);
         _label = new ComputedVisual(label);
@@ -50,6 +52,7 @@ public partial class ProgressTask : DispatcherObject, IVisualElement
     /// </summary>
     /// <param name="label">A binding that supplies the task label visual.</param>
     public ProgressTask(Binding<Visual> label)
+        : base(followsOwnerVisual: true)
     {
         _label = new ComputedVisual(() => label.GetValue());
         _cellCustomizations = new BindableList<ProgressTaskCellCustomization>(this, $"{nameof(ProgressTask)}.CellCustomizations");

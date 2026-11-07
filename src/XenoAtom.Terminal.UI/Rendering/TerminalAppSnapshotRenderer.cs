@@ -42,9 +42,8 @@ public static class TerminalAppSnapshotRenderer
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
 
-        // Use an in-memory backend to avoid interacting with the real terminal.
-        using var session = Terminal.Open(new InMemoryTerminalBackend(new TerminalSize(width, height)));
-        var terminal = Terminal.Instance;
+        // Use a standalone in-memory terminal to avoid interacting with the real terminal or replacing Terminal.Instance.
+        using var terminal = new TerminalInstance(new InMemoryTerminalBackend(new TerminalSize(width, height)));
 
         var appOptions = new TerminalAppOptions
         {

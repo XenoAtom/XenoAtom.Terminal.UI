@@ -124,8 +124,9 @@ public static class TerminalAppSnapshotImageRenderer
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
 
         using var backend = new InMemoryTerminalBackend(new TerminalSize(width, height));
-        using var session = Terminal.Open(backend);
-        var terminal = Terminal.Instance;
+
+        // Use a standalone terminal to avoid replacing the process-wide Terminal.Instance.
+        using var terminal = new TerminalInstance(backend);
 
         var appOptions = new TerminalAppOptions
         {

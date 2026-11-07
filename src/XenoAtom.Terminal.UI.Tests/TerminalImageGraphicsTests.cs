@@ -10,6 +10,7 @@ using UiImageScaleMode = XenoAtom.Terminal.UI.ImageScaleMode;
 namespace XenoAtom.Terminal.UI.Tests;
 
 [TestClass]
+[DoNotParallelize] // Uses the process-wide Terminal instance (Terminal.Open).
 public sealed class TerminalImageGraphicsTests
 {
     [TestMethod]

@@ -20,6 +20,7 @@ public sealed partial class BarChartItem : DispatcherObject, IVisualElement
     /// Initializes a new instance of the <see cref="BarChartItem"/> class.
     /// </summary>
     public BarChartItem()
+        : base(followsOwnerVisual: true)
     {
     }
 
@@ -29,6 +30,7 @@ public sealed partial class BarChartItem : DispatcherObject, IVisualElement
     /// <param name="label">The item label visual.</param>
     /// <param name="value">The item numeric value.</param>
     public BarChartItem(Visual? label, double value)
+        : base(followsOwnerVisual: true)
     {
         Label = label;
         Value = value;
