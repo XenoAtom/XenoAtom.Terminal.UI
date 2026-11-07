@@ -896,7 +896,10 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
     private void BeginRunCore(ManualResetEventSlim? started)
     {
-        Dispatcher.BindToCurrentThread(this);
+        // The app runs on the calling thread: attach this thread's dispatcher and take ownership of it until EndRunCore.
+        var dispatcher = Dispatcher.Current;
+        dispatcher.BindToCurrentThread(this);
+        SetDispatcher(dispatcher);
         started?.Set();
 
         // Ensure semantic markup tokens (e.g. [primary]) are available for Terminal.WriteMarkupLine during this run.
@@ -991,7 +994,9 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
         finally
         {
-            Dispatcher.DetachFromThread(this);
+            var dispatcher = OwnerDispatcher;
+            ClearDispatcher();
+            dispatcher?.DetachFromThread(this);
         }
     }
 

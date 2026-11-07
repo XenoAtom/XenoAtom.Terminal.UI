@@ -740,6 +740,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
         using (BindingManager.Current.SuppressReadTracking())
         {
             App = app;
+            SetDispatcher(app.OwnerDispatcher);
 
             // A visual may be detached and later re-attached (e.g. popups, dialogs, or moved subtrees).
             // Cached layout/render state must not survive across attachments, otherwise we can skip Arrange/Measure
@@ -838,6 +839,7 @@ public abstract partial class Visual : DispatcherObject, IVisualElement
             app.UnregisterDependencies(this);
 
             App = null;
+            ClearDispatcher();
             OnDetachedFromApp(app);
         }
     }

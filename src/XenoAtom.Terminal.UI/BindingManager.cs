@@ -269,10 +269,8 @@ public sealed class BindingManager
     public void RegisterRead(object owner, BindingAccessor accessor)
     {
         ArgumentNullException.ThrowIfNull(accessor);
-        if (owner is Threading.DispatcherObject dispatcherObject)
-        {
-            dispatcherObject.VerifyAccess();
-        }
+        var dispatcherObject = owner as Threading.DispatcherObject;
+        dispatcherObject?.VerifyAccess();
 
         if (Volatile.Read(ref _suppressReadTrackingCount) > 0)
         {
@@ -285,7 +283,38 @@ public sealed class BindingManager
             return;
         }
 
-        _tracking?.RegisterRead(owner, accessor);
+        var tracking = _tracking;
+        if (tracking is null)
+        {
+            return;
+        }
+
+        if (dispatcherObject is not null && dispatcherObject.OwnerDispatcher is null)
+        {
+            AcquireDispatcherOwnership(dispatcherObject);
+        }
+
+        tracking.RegisterRead(owner, accessor);
+    }
+
+    /// <summary>
+    /// Tags a free-standing <see cref="Threading.DispatcherObject"/> (e.g. <see cref="State{T}"/>) with the dispatcher of the app
+    /// that tracks a read of it, so that later accesses from other threads are rejected while that app runs.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void AcquireDispatcherOwnership(Threading.DispatcherObject dispatcherObject)
+    {
+        // Visual elements get their dispatcher from the app they are attached to.
+        if (dispatcherObject is IVisualElement)
+        {
+            return;
+        }
+
+        var dispatcher = Threading.Dispatcher.Current;
+        if (dispatcher.IsRunning)
+        {
+            dispatcherObject.TryAcquireDispatcher(dispatcher);
+        }
     }
 
     /// <summary>
@@ -365,14 +394,9 @@ public sealed class BindingManager
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentNullException.ThrowIfNull(accessor);
 
-        if (owner is Threading.DispatcherObject dispatcherObject)
-        {
-            dispatcherObject.VerifyAccess();
-            return;
-        }
-
-        var dispatcher = Threading.Dispatcher.Current;
-        if (dispatcher.AttachedApp is not null && !dispatcher.CheckAccess())
+        // Only DispatcherObject owners carry a thread affinity (see DispatcherObject). Plain owners cannot be checked:
+        // with one dispatcher per thread there is no way to know which app, if any, observes them.
+        if (owner is Threading.DispatcherObject dispatcherObject && !dispatcherObject.CheckAccess())
         {
             throw new InvalidOperationException(
                 $"Invalid thread access for bindable update `{owner.GetType().Name}.{accessor.Name}`. " +
