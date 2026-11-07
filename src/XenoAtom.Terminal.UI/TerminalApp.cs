@@ -646,6 +646,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private TerminalScope _mouseScope;
     private TerminalScope _pasteScope;
     private TerminalScope _cursorScope;
+    private TerminalScope _ambientTerminalScope;
 
     /// <summary>
     /// Starts a single-threaded run of this app without blocking the calling thread.
@@ -900,6 +901,9 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         var dispatcher = Dispatcher.Current;
         dispatcher.BindToCurrentThread(this);
         SetDispatcher(dispatcher);
+
+        // Make the static Terminal facade (Terminal.WriteLine, prompts, ...) target this app's terminal on its thread for the run.
+        _ambientTerminalScope = global::XenoAtom.Terminal.Terminal.UseInstance(_terminal);
         started?.Set();
 
         // Ensure semantic markup tokens (e.g. [primary]) are available for Terminal.WriteMarkupLine during this run.
@@ -994,6 +998,9 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
         finally
         {
+            _ambientTerminalScope.Dispose();
+            _ambientTerminalScope = default;
+
             var dispatcher = OwnerDispatcher;
             ClearDispatcher();
             dispatcher?.DetachFromThread(this);

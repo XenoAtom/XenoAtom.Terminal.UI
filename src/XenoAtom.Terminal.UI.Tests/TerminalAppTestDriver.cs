@@ -12,7 +12,7 @@ namespace XenoAtom.Terminal.UI.Tests;
 internal sealed class TerminalAppTestDriver : IDisposable
 {
     private readonly InMemoryTerminalBackend _backend;
-    private readonly TerminalSession _session;
+    private readonly TerminalInstance _terminal;
     private readonly TerminalApp _app;
     private long _timestamp;
     private readonly long _tickStep;
@@ -23,7 +23,8 @@ internal sealed class TerminalAppTestDriver : IDisposable
 
         _backend = new InMemoryTerminalBackend(size ?? new TerminalSize(80, 25));
         ITerminalBackend terminalBackend = capabilities is null ? _backend : new CapabilitiesOverrideTerminalBackend(_backend, capabilities);
-        _session = global::XenoAtom.Terminal.Terminal.Open(terminalBackend, terminalOptions ?? new TerminalOptions { ImplicitStartInput = true }, force: true);
+        // A standalone instance: the driver never touches the process-wide Terminal.Instance.
+        _terminal = new TerminalInstance(terminalBackend, terminalOptions ?? new TerminalOptions { ImplicitStartInput = true });
         var effectiveOptions = new TerminalAppOptions
         {
             HostKind = hostKind,
@@ -41,7 +42,7 @@ internal sealed class TerminalAppTestDriver : IDisposable
             UpdateWaitDuration = appOptions?.UpdateWaitDuration ?? TimeSpan.FromMilliseconds(1),
             WideRuneResolver = appOptions?.WideRuneResolver ?? TerminalWideRuneResolvers.Default,
         };
-        _app = new TerminalApp(root, _session.Instance, effectiveOptions);
+        _app = new TerminalApp(root, _terminal, effectiveOptions);
         _app.BeginRun();
 
         _timestamp = Stopwatch.GetTimestamp();
@@ -52,7 +53,7 @@ internal sealed class TerminalAppTestDriver : IDisposable
 
     public InMemoryTerminalBackend Backend => _backend;
 
-    public TerminalInstance Terminal => _session.Instance;
+    public TerminalInstance Terminal => _terminal;
 
     public void Tick(int count = 1)
     {
@@ -83,7 +84,7 @@ internal sealed class TerminalAppTestDriver : IDisposable
     public void Dispose()
     {
         _app.EndRun();
-        _session.Dispose();
+        _terminal.Dispose();
     }
 
     private sealed class CapabilitiesOverrideTerminalBackend(InMemoryTerminalBackend inner, TerminalCapabilities capabilities) : ITerminalBackend
