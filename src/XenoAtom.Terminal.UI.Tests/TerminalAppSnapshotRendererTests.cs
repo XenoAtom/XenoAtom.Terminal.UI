@@ -4,6 +4,7 @@
 
 using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI.Controls;
+using XenoAtom.Terminal.UI.Extensions.Screenshot;
 using XenoAtom.Terminal.UI.Rendering;
 
 namespace XenoAtom.Terminal.UI.Tests;
@@ -35,6 +36,22 @@ public sealed class TerminalAppSnapshotRendererTests
         var svg = TerminalAppSnapshotRenderer.RenderSvg(new TextBlock("Snapshot"), 20, 3);
 
         StringAssert.Contains(svg, "<svg");
+        Assert.IsTrue(Terminal.IsInitialized);
+        Assert.AreSame(global, Terminal.Instance);
+        Assert.AreEqual(outputBefore, backend.GetOutText());
+    }
+
+    [TestMethod]
+    public void Image_Render_Does_Not_Replace_Or_Write_To_The_Global_Terminal()
+    {
+        var backend = new InMemoryTerminalBackend(new TerminalSize(20, 3));
+        using var session = Terminal.Open(backend, new TerminalOptions { ImplicitStartInput = false }, force: true);
+        var global = Terminal.Instance;
+        var outputBefore = backend.GetOutText();
+
+        var bytes = TerminalAppSnapshotImageRenderer.Render(new TextBlock("Snapshot"), ScreenshotImageFormat.Png, 20, 3);
+
+        Assert.IsNotEmpty(bytes);
         Assert.IsTrue(Terminal.IsInitialized);
         Assert.AreSame(global, Terminal.Instance);
         Assert.AreEqual(outputBefore, backend.GetOutText());
