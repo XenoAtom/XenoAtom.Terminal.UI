@@ -17,8 +17,8 @@ namespace XenoAtom.Terminal.UI.Threading;
 /// </remarks>
 public abstract class DispatcherObject
 {
-    // Owner marker for visual elements that are not visuals (e.g. ProgressTask, BarChartItem): they follow the app of their
-    // owner visual, resolved through IVisualElement.App on the slow path. Its thread id never matches a managed thread.
+    // Owner marker for visual elements that are not visuals (ProgressTask, BarChartItem, BreakdownSegment): they follow the app
+    // of their owner visual, resolved through IVisualElement.App on the slow path. Its thread id never matches a managed thread.
     private static readonly Dispatcher VisualElementOwner = Dispatcher.CreateUnbound();
 
     private Dispatcher? _dispatcher;
@@ -28,7 +28,16 @@ public abstract class DispatcherObject
     /// </summary>
     protected DispatcherObject()
     {
-        if (this is IVisualElement && this is not Visual && this is not TerminalApp)
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DispatcherObject"/> class for a visual element that is not a <see cref="Visual"/>
+    /// (for example <see cref="Controls.ProgressTask"/>) and follows the app of its owner visual through <see cref="IVisualElement.App"/>.
+    /// </summary>
+    /// <param name="followsOwnerVisual">Must be <see langword="true"/>; the object resolves its dispatcher through <see cref="IVisualElement.App"/>.</param>
+    private protected DispatcherObject(bool followsOwnerVisual)
+    {
+        if (followsOwnerVisual)
         {
             _dispatcher = VisualElementOwner;
         }
