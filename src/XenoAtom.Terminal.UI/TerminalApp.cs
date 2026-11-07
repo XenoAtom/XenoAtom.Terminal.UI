@@ -998,12 +998,20 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
         finally
         {
-            _ambientTerminalScope.Dispose();
-            _ambientTerminalScope = default;
-
-            var dispatcher = OwnerDispatcher;
-            ClearDispatcher();
-            dispatcher?.DetachFromThread(this);
+            try
+            {
+                // Throws if a Terminal.UseInstance scope opened during the run is still active (scopes are disposed in reverse order).
+                var ambientTerminalScope = _ambientTerminalScope;
+                _ambientTerminalScope = default;
+                ambientTerminalScope.Dispose();
+            }
+            finally
+            {
+                // Release the thread even then, so that another app can run on it.
+                var dispatcher = OwnerDispatcher;
+                ClearDispatcher();
+                dispatcher?.DetachFromThread(this);
+            }
         }
     }
 

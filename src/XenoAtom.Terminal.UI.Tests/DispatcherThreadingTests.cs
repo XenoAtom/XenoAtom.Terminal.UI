@@ -211,6 +211,57 @@ public sealed class DispatcherThreadingTests
     }
 
     [TestMethod]
+    public void EndRun_With_Undisposed_Ambient_Terminal_Scope_Throws_And_Still_Detaches_Dispatcher()
+    {
+        TestThreads.Run(() =>
+        {
+            var previous = new SynchronizationContext();
+            SynchronizationContext.SetSynchronizationContext(previous);
+
+            using var terminal = new TerminalInstance(new InMemoryTerminalBackend(new TerminalSize(20, 5)));
+            using var leakedTerminal = new TerminalInstance(new InMemoryTerminalBackend(new TerminalSize(20, 5)));
+            var dispatcher = Dispatcher.Current;
+            var root = new TextBlock("Leak");
+            var app = new TerminalApp(root, terminal, FullscreenOptions());
+
+            app.BeginRun();
+            app.Tick();
+
+            // User code on the app thread opens an ambient scope and leaves it open past the end of the run:
+            // the app's own scope is no longer the innermost one, so restoring it is out of order and throws.
+            var leakedScope = Terminal.UseInstance(leakedTerminal);
+            Assert.Throws<InvalidOperationException>(app.EndRun);
+
+            // The run still releases the thread.
+            Assert.IsNull(dispatcher.AttachedApp);
+            Assert.IsNull(app.OwnerDispatcher);
+            Assert.IsNull(root.OwnerDispatcher);
+            Assert.AreSame(previous, SynchronizationContext.Current);
+            Assert.AreSame(leakedTerminal, Terminal.Instance);
+            leakedScope.Dispose();
+
+            // Another app can run on the same thread.
+            using var nextTerminal = new TerminalInstance(new InMemoryTerminalBackend(new TerminalSize(20, 5)));
+            var next = new TerminalApp(new TextBlock("Next"), nextTerminal, FullscreenOptions());
+            next.BeginRun();
+            try
+            {
+                Assert.AreSame(next, dispatcher.AttachedApp);
+                Assert.AreSame(nextTerminal, Terminal.Instance);
+                next.Tick();
+            }
+            finally
+            {
+                next.EndRun();
+            }
+
+            Assert.IsNull(dispatcher.AttachedApp);
+            next.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            app.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        });
+    }
+
+    [TestMethod]
     public void Sequential_Apps_On_Same_Thread_Do_Not_Leak()
     {
         TestThreads.Run(() =>
