@@ -249,7 +249,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
         }
     }
 
-    private static long ToStopwatchTicks(TimeSpan interval)
+    private long ToStopwatchTicks(TimeSpan interval)
     {
         if (interval <= TimeSpan.Zero)
         {
@@ -257,7 +257,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
         }
 
         var seconds = interval.TotalSeconds;
-        var ticks = seconds * Stopwatch.Frequency;
+        var ticks = seconds * (App?.TimestampFrequency ?? Stopwatch.Frequency);
         if (ticks < 1)
         {
             return 1;

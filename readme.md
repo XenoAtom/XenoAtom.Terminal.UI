@@ -41,6 +41,8 @@ It provides a rich set of controls (TextBox, TextArea, lists, tables, dialogs…
   - `NerdFont` exposes the official Nerd Fonts catalog as `Rune` properties, plus lookup by original glyph name, for easy use in `TextBlock`, `Markup`, and string interpolation
 - **Debug overlay**:
   - Built-in performance overlay (toggle with `F12`) to inspect frame timings, invalidation, diff output, and graphics/image presentation metrics
+- **Testable**:
+  - `TerminalAppDriver` runs an app frame by frame over an in-memory terminal, injects keys, text, mouse and resizes through the real input path, controls time through `TimeProvider`, and reads the rendered screen cell by cell
 - **Cross-platform + AOT-friendly**: `net10.0` and NativeAOT-oriented design (built on XenoAtom.Terminal)
 
 ![XenoAtom.Terminal.UI Fullscreen Demo](https://raw.githubusercontent.com/XenoAtom/XenoAtom.Terminal.UI/main/site/img/theming.png)

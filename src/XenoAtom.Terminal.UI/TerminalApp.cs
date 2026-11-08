@@ -144,6 +144,32 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     public Func<Rune, bool> WideRuneResolver => _wideRuneResolver;
 
     /// <summary>
+    /// Gets the time provider this app reads time from (see <see cref="TerminalAppOptions.TimeProvider"/>).
+    /// </summary>
+    public TimeProvider TimeProvider => _options.TimeProvider;
+
+    /// <summary>
+    /// Gets the number of timestamp ticks per second of this app's clock. Time-based controls convert intervals with it
+    /// so that an injected <see cref="TimeProvider"/> drives them.
+    /// </summary>
+    internal long TimestampFrequency => _loopClock.Frequency;
+
+    /// <summary>
+    /// Gets the buffer holding the last rendered frame, or <see langword="null"/> before the first frame.
+    /// </summary>
+    internal CellBuffer? LastRenderBuffer => _renderBuffer;
+
+    /// <summary>
+    /// Invoked on the UI thread after each frame of <see cref="Run(CancellationToken)"/>. Used by <see cref="Testing.TerminalAppDriver"/>.
+    /// </summary>
+    internal Action? FrameCompleted { get; set; }
+
+    private static ITerminalLoopClock CreateLoopClock(TimeProvider timeProvider)
+        => ReferenceEquals(timeProvider, TimeProvider.System)
+            ? StopwatchTerminalLoopClock.Instance
+            : new TimeProviderTerminalLoopClock(timeProvider);
+
+    /// <summary>
     /// Gets the command id used by the built-in application quit command.
     /// </summary>
     /// <remarks>
@@ -250,7 +276,12 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         _terminal = terminal ?? global::XenoAtom.Terminal.Terminal.Instance;
         _options = options ?? new TerminalAppOptions();
         _wideRuneResolver = _options.WideRuneResolver ?? TerminalWideRuneResolvers.Default;
-        _loopClock = loopClock ?? StopwatchTerminalLoopClock.Instance;
+        if (_options.TimeProvider is null)
+        {
+            throw new ArgumentException("The time provider cannot be null.", nameof(options));
+        }
+
+        _loopClock = loopClock ?? CreateLoopClock(_options.TimeProvider);
         _loopWaitBackend = loopWaitBackend ?? TerminalLoopWaitBackendFactory.CreateDefault(_loopClock);
         _graphicsRenderContext = new GraphicsRenderContext(_graphicsCommands);
         if (_options.UpdateWaitDuration < TimeSpan.Zero)
@@ -866,6 +897,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             while (!token.IsCancellationRequested)
             {
                 Tick();
+                FrameCompleted?.Invoke();
                 if (token.IsCancellationRequested)
                 {
                     break;
@@ -1284,7 +1316,8 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             }
 
             var activeDeadline = long.MaxValue;
-            if (_onUpdate is not null && _pendingUpdateTask is null)
+            // A test driver's frame callback needs frames even when the app is idle, so it paces the loop like an update callback.
+            if ((_onUpdate is not null && _pendingUpdateTask is null) || FrameCompleted is not null)
             {
                 var activeFrameTicks = TerminalLoopScheduler.ToStopwatchTicks(DefaultActiveFrameInterval, _loopClock.Frequency);
                 activeDeadline = TerminalLoopScheduler.ComputeNextActiveDeadline(_lastTickTimestamp, now, _nextActiveUpdateTick, activeFrameTicks);
@@ -1580,7 +1613,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             return;
         }
 
-        var now = timestamp ?? Stopwatch.GetTimestamp();
+        var now = timestamp ?? _loopClock.GetTimestamp();
         if (_nextAnimationTick != 0 && now < _nextAnimationTick)
         {
             return;
@@ -3027,8 +3060,9 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             return;
         }
 
-        // Default timeout for v1: 1.5 seconds.
-        if (Stopwatch.GetElapsedTime(_pendingSequenceTimestamp, now) > TimeSpan.FromMilliseconds(1500))
+        // Default timeout for v1: 1.5 seconds, in the app clock's ticks so an injected TimeProvider drives it.
+        var timeoutTicks = (long)(1.5 * _loopClock.Frequency);
+        if (now - _pendingSequenceTimestamp > timeoutTicks)
         {
             CancelPendingSequence();
         }
