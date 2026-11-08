@@ -403,6 +403,27 @@ public sealed class TerminalAppDriver : IDisposable
     }
 
     /// <summary>
+    /// Sends raw terminal input (characters and escape sequences) through the same VT input decoder the real backends use, so the
+    /// events the app receives are the ones a terminal sending these bytes would produce.
+    /// </summary>
+    /// <param name="input">The raw input, for example <c>"\x1b[A"</c> for the Up arrow or an SGR mouse report.</param>
+    /// <remarks>
+    /// The input is treated as complete: a pending partial sequence is flushed afterwards, as the real backends do when the input
+    /// goes idle, so a lone <c>ESC</c> is an Escape key. To feed a sequence in several chunks, call
+    /// <see cref="VirtualTerminalBackend.FeedInput(ReadOnlySpan{char}, bool)"/> on <see cref="Backend"/> directly. Use this method
+    /// for input the typed methods cannot express (keyboard protocol sequences, mouse reports with modifiers); use
+    /// <see cref="SendKey(TerminalKey)"/>, <see cref="SendText"/> and the mouse methods for everyday input.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">The driver is neither started nor running, or the call is not on the app's UI thread.</exception>
+    /// <exception cref="ObjectDisposedException">The driver is disposed.</exception>
+    public void SendRaw(ReadOnlySpan<char> input)
+    {
+        VerifyCanSendInput();
+        _backend.FeedInput(input);
+        TickAfterInput();
+    }
+
+    /// <summary>
     /// Moves the mouse to a cell with no button pressed (hover).
     /// </summary>
     /// <param name="x">The column, from 0.</param>

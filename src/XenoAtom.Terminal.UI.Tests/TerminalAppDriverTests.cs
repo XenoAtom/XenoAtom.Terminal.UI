@@ -300,6 +300,100 @@ public sealed class TerminalAppDriverTests
     }
 
     [TestMethod]
+    public void SendRaw_TypedCharacters_AreDecodedIntoKeyAndTextEvents()
+    {
+        var text = new State<string?>(string.Empty);
+        using var terminal = CreateTerminal(20, 5);
+        var app = CreateApp(new TextBox().Text(text), terminal);
+        using var driver = new TerminalAppDriver(app);
+        driver.Start();
+        driver.Tick();
+
+        driver.SendRaw("abc");
+
+        Assert.AreEqual("abc", text.Value);
+        StringAssert.Contains(driver.Screen.GetText(), "abc");
+    }
+
+    [TestMethod]
+    public void SendRaw_EscapeSequence_IsDecodedIntoTheKey()
+    {
+        var list = new ListBox<string>(["a", "b", "c"], selectedIndex: 0);
+        using var terminal = CreateTerminal(20, 5);
+        var app = CreateApp(list, terminal);
+        using var driver = new TerminalAppDriver(app);
+        driver.Start();
+        driver.Tick();
+
+        driver.SendRaw("\x1b[B"); // Down arrow
+        Assert.AreEqual(1, list.SelectedIndex);
+
+        driver.SendRaw("\x1b[A"); // Up arrow
+        Assert.AreEqual(0, list.SelectedIndex);
+    }
+
+    [TestMethod]
+    public void SendRaw_BracketedPaste_IsDecodedIntoAPasteEvent()
+    {
+        var text = new State<string?>(string.Empty);
+        using var terminal = CreateTerminal(20, 5);
+        var app = CreateApp(new TextBox().Text(text), terminal);
+        using var driver = new TerminalAppDriver(app);
+        driver.Start();
+        driver.Tick();
+
+        driver.SendRaw("\x1b[200~pasted\x1b[201~");
+
+        Assert.AreEqual("pasted", text.Value);
+    }
+
+    [TestMethod]
+    public void SendRaw_LoneEscape_IsFlushedAsTheEscapeKey()
+    {
+        var probe = new InputProbe();
+        using var terminal = CreateTerminal(20, 5);
+        var app = CreateApp(probe, terminal);
+        using var driver = new TerminalAppDriver(app);
+        driver.Start();
+        driver.Tick();
+
+        driver.SendRaw("\x1b");
+
+        Assert.HasCount(1, probe.Events);
+        Assert.StartsWith($"key:{TerminalKey.Escape}:", probe.Events[0]);
+    }
+
+    [TestMethod]
+    public void SendRaw_SgrMouseClick_ActivatesTheButtonUnderTheMouse()
+    {
+        var clicks = 0;
+        var button = new Button("OK").Click(() => clicks++);
+        using var terminal = CreateTerminal(20, 5);
+        var app = CreateApp(new VStack(new TextBlock("Title"), button), terminal);
+        using var driver = new TerminalAppDriver(app);
+        driver.Start();
+        driver.Tick();
+
+        // SGR mouse reports are 1-based.
+        var bounds = button.GetAbsoluteBounds();
+        var x = bounds.X + 1;
+        var y = bounds.Y + 1;
+        driver.SendRaw($"\x1b[<0;{x};{y}M\x1b[<0;{x};{y}m");
+
+        Assert.AreEqual(1, clicks);
+    }
+
+    [TestMethod]
+    public void SendRaw_OutsideOfAStartOrRun_Throws()
+    {
+        using var terminal = CreateTerminal(20, 5);
+        var app = CreateApp(new TextBlock("Hello"), terminal);
+        using var driver = new TerminalAppDriver(app);
+
+        Assert.ThrowsExactly<InvalidOperationException>(() => driver.SendRaw("a"));
+    }
+
+    [TestMethod]
     public void Click_ActivatesTheButtonUnderTheMouse()
     {
         var clicks = 0;

@@ -65,6 +65,7 @@ Input methods push events into the terminal backend, and the app reads them thro
 | `SendKey(char[, modifiers])` | A character key; with `Ctrl` and a letter, the control character (`Ctrl+Q` is `TerminalChar.CtrlQ`); a text event follows when the character is printable and only `Shift` is held |
 | `SendText(string)` | Typed text: one key event per character and one text event per run of printable characters; `'\r'`/`'\n'`, `'\t'`, `'\b'` and `ESC` are sent as `Enter`, `Tab`, `Backspace` and `Escape` |
 | `SendPaste(string)` | A bracketed paste |
+| `SendRaw(string)` | Raw terminal input (characters and escape sequences), decoded by the same VT input decoder as the real backends |
 | `MoveMouse(x, y)` | A mouse move (hover) |
 | `Click(x, y[, button])`, `DoubleClick(x, y)` | Button down and up at a cell; `DoubleClick` sends two clicks, which the terminal turns into a double click |
 | `Wheel(x, y, delta)` | A wheel event; a positive delta scrolls up, a negative one down |
@@ -75,6 +76,13 @@ Cells are zero-based; `visual.GetAbsoluteBounds()` gives a visual's position aft
 ```csharp
 var bounds = okButton.GetAbsoluteBounds();
 driver.Click(bounds.X, bounds.Y);
+```
+
+`SendRaw` is for input the typed methods cannot express, such as a keyboard protocol sequence or a mouse report with modifiers; it feeds the text to `VirtualTerminalBackend.FeedInput`, so the app receives exactly the events a terminal sending those bytes would produce. The input is treated as complete (a lone `ESC` is an Escape key); to feed a sequence in several chunks, call `driver.Backend.FeedInput(chunk, isFinalChunk: false)` directly.
+
+```csharp
+driver.SendRaw("\x1b[97;5u");               // Ctrl+A in the Kitty keyboard protocol
+driver.SendRaw("\x1b[<0;5;3M\x1b[<0;5;3m"); // SGR left click at column 5, row 3 (1-based)
 ```
 
 Double clicks are detected by the terminal, as with a real one: two button-down events of the same button within 500 ms (real time) and within one cell of each other (adjacent cells included) become a double click. Two quick `Click` calls at the same or adjacent cells therefore produce one; use `DoubleClick` when that is what you want, and cells at least two apart otherwise.
