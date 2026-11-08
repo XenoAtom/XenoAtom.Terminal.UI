@@ -129,7 +129,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
         {
             _cachedStyle = style;
             _frameIndex = 0;
-            _intervalTicks = ToStopwatchTicks(style.Interval);
+            _intervalTicks = ToTimestampTicks(style.Interval);
             _nextTick = timestamp + _intervalTicks;
             return true;
         }
@@ -249,7 +249,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
         }
     }
 
-    private static long ToStopwatchTicks(TimeSpan interval)
+    private long ToTimestampTicks(TimeSpan interval)
     {
         if (interval <= TimeSpan.Zero)
         {
@@ -257,7 +257,7 @@ public sealed partial class Spinner : Visual, IAnimatedVisual
         }
 
         var seconds = interval.TotalSeconds;
-        var ticks = seconds * Stopwatch.Frequency;
+        var ticks = seconds * (App?.TimestampFrequency ?? Stopwatch.Frequency);
         if (ticks < 1)
         {
             return 1;

@@ -25,3 +25,18 @@ internal sealed class StopwatchTerminalLoopClock : ITerminalLoopClock
 
     public long GetTimestamp() => Stopwatch.GetTimestamp();
 }
+
+internal sealed class TimeProviderTerminalLoopClock : ITerminalLoopClock
+{
+    private readonly TimeProvider _timeProvider;
+
+    public TimeProviderTerminalLoopClock(TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        _timeProvider = timeProvider;
+    }
+
+    public long Frequency => _timeProvider.TimestampFrequency;
+
+    public long GetTimestamp() => _timeProvider.GetTimestamp();
+}

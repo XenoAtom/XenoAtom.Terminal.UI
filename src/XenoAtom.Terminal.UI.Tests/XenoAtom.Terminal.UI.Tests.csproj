@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="MSTest" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <PackageReference Include="Verify.MSTest" />
     <PackageReference Include="XenoAtom.Ansi" />
     <PackageReference Include="XenoAtom.Terminal" />

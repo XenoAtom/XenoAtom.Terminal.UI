@@ -44,6 +44,7 @@ See also:
 - [Hosting](hosting.md) (inline vs fullscreen, update loops, several apps on several threads)
 - [Async & Await](async-await.md) (dispatcher context, async host updates, app-run ownership and thread-affinity guidance)
 - [Prompts](prompts.md) (inline prompts built on top of `Terminal.Live`)
+- [Testing](testing.md) (`TerminalAppDriver`: frame-by-frame runs, input injection, `TimeProvider`, reading the rendered screen)
 
 ## Core concepts
 

@@ -20,6 +20,7 @@ public sealed partial class ToastHost : ContentVisual, IAnimatedVisual
     private readonly ToastLayer _layer;
     private readonly List<ToastEntry> _entries;
     private long _lastAnimationTick;
+    private bool _hasAnimationTick;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ToastHost"/> class.
@@ -360,15 +361,14 @@ public sealed partial class ToastHost : ContentVisual, IAnimatedVisual
 
         _layer.Toasts.Insert(0, toast);
 
-        var duration = toast.Duration;
-        var durationTicks = duration is { } span ? ToStopwatchTicks(span) : 0;
-
-        _entries.Insert(0, new ToastEntry(toast, durationTicks));
+        // The duration is converted to timestamp ticks on the first animation frame: the toast can be shown before the host is
+        // attached to an app, and only the app knows its clock frequency.
+        _entries.Insert(0, new ToastEntry(toast, toast.Duration));
         // Reset the animation clock when a toast is added. If the entry list
         // was empty for a while, _lastAnimationTick holds a stale timestamp,
         // so the next AdvanceAnimation would treat the new toast as having
         // been on screen for the whole idle gap and dismiss it instantly.
-        _lastAnimationTick = 0;
+        _hasAnimationTick = false;
         App?.RegisterAnimatedVisual(this);
     }
 
@@ -400,12 +400,18 @@ public sealed partial class ToastHost : ContentVisual, IAnimatedVisual
     private bool AdvanceAnimation(long timestamp)
     {
         var changed = false;
-        var delta = _lastAnimationTick == 0 ? 0 : Math.Max(0, timestamp - _lastAnimationTick);
+        var delta = _hasAnimationTick ? Math.Max(0, timestamp - _lastAnimationTick) : 0;
         _lastAnimationTick = timestamp;
+        _hasAnimationTick = true;
 
         for (var i = _entries.Count - 1; i >= 0; i--)
         {
             var entry = _entries[i];
+            if (!entry.IsDurationResolved)
+            {
+                entry.ResolveDuration(entry.Duration is { } span ? ToTimestampTicks(span) : 0);
+            }
+
             if (PauseOnHover)
             {
                 entry.HoverPaused = entry.Toast.IsHovered;
@@ -437,14 +443,14 @@ public sealed partial class ToastHost : ContentVisual, IAnimatedVisual
         return changed;
     }
 
-    private static long ToStopwatchTicks(TimeSpan interval)
+    private long ToTimestampTicks(TimeSpan interval)
     {
         if (interval <= TimeSpan.Zero)
         {
             return 1;
         }
 
-        var ticks = interval.TotalSeconds * Stopwatch.Frequency;
+        var ticks = interval.TotalSeconds * (App?.TimestampFrequency ?? Stopwatch.Frequency);
         if (ticks < 1)
         {
             return 1;
@@ -455,16 +461,20 @@ public sealed partial class ToastHost : ContentVisual, IAnimatedVisual
 
     private sealed class ToastEntry
     {
-        public ToastEntry(Toast toast, long durationTicks)
+        public ToastEntry(Toast toast, TimeSpan? duration)
         {
             Toast = toast;
-            DurationTicks = durationTicks;
-            RemainingTicks = durationTicks;
+            Duration = duration;
         }
 
         public Toast Toast { get; }
 
-        public long DurationTicks { get; }
+        public TimeSpan? Duration { get; }
+
+        public bool IsDurationResolved { get; private set; }
+
+        // 0 (or less) means no timeout; also 0 until the duration is resolved.
+        public long DurationTicks { get; private set; }
 
         public long RemainingTicks { get; set; }
 
@@ -473,6 +483,13 @@ public sealed partial class ToastHost : ContentVisual, IAnimatedVisual
         public bool HoverPaused { get; set; }
 
         public bool IsPaused => ManualPaused || HoverPaused;
+
+        public void ResolveDuration(long durationTicks)
+        {
+            DurationTicks = durationTicks;
+            RemainingTicks = durationTicks;
+            IsDurationResolved = true;
+        }
     }
 
     private sealed partial class ToastLayer : Visual

@@ -171,7 +171,7 @@ public sealed partial class TooltipHost : ContentVisual, IAnimatedVisual
         if (_scheduledShowTick == long.MaxValue)
         {
             var delayMs = Math.Max(0, ShowDelayMilliseconds);
-            _scheduledShowTick = timestamp + ToStopwatchTicks(TimeSpan.FromMilliseconds(delayMs));
+            _scheduledShowTick = timestamp + ToTimestampTicks(TimeSpan.FromMilliseconds(delayMs));
             return false;
         }
 
@@ -283,14 +283,14 @@ public sealed partial class TooltipHost : ContentVisual, IAnimatedVisual
         _scheduledShowTick = long.MaxValue;
     }
 
-    private static long ToStopwatchTicks(TimeSpan interval)
+    private long ToTimestampTicks(TimeSpan interval)
     {
         if (interval <= TimeSpan.Zero)
         {
             return 1;
         }
 
-        var ticks = interval.TotalSeconds * Stopwatch.Frequency;
+        var ticks = interval.TotalSeconds * (App?.TimestampFrequency ?? Stopwatch.Frequency);
         if (ticks < 1)
         {
             return 1;

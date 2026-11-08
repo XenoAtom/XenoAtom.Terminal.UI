@@ -23,6 +23,7 @@ doc:
   - {path: culture.md, title: "<i class='bi bi-globe2' aria-hidden='true'></i> Culture"}
   - {path: debugging.md, title: "<i class='bi bi-bug' aria-hidden='true'></i> Debugging"}
   - {path: hosting.md, title: "<i class='bi bi-plug' aria-hidden='true'></i> Hosting"}
+  - {path: testing.md, title: "<i class='bi bi-check2-square' aria-hidden='true'></i> Testing"}
   - {path: prompts.md, title: "<i class='bi bi-chat-left-text' aria-hidden='true'></i> Prompts"}
   - {path: control-development.md, title: "<i class='bi bi-tools' aria-hidden='true'></i> Control Development"}
   #- {path: controls/readme.md, title: "<i class='bi bi-ui-checks-grid' aria-hidden='true'></i> Controls Reference"}

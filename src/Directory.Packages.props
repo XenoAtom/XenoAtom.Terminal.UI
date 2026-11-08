@@ -11,6 +11,7 @@
     <!-- Keep the source generator compatible with the .NET 10.0.100 / Roslyn 5.0 baseline. -->
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.0.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.11.0" />
     <PackageVersion Include="MSTest" Version="4.5.2" />
     <PackageVersion Include="SkiaSharp" Version="3.119.4" />
     <PackageVersion Include="SkiaSharp.HarfBuzz" Version="3.119.4" />
@@ -20,7 +21,7 @@
     <PackageVersion Include="TextMateSharp.Grammars" Version="2.0.5" />
     <PackageVersion Include="Verify.MSTest" Version="33.3.4" />
     <PackageVersion Include="XenoAtom.Ansi" Version="1.7.1" />
-    <PackageVersion Include="XenoAtom.Terminal" Version="2.4.0" />
+    <PackageVersion Include="XenoAtom.Terminal" Version="2.5.0" />
     <PackageVersion Include="XenoAtom.Terminal.Graphics" Version="2.4.0" />
   </ItemGroup>
 </Project>
