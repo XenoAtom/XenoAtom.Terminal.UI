@@ -43,7 +43,8 @@ public sealed class TerminalRunningContext
     public TerminalApp App { get; }
 
     /// <summary>
-    /// Gets the current frame timestamp (Stopwatch ticks).
+    /// Gets the current frame timestamp, in ticks of the app's time provider (<see cref="TerminalApp.TimeProvider"/>; Stopwatch
+    /// ticks with the default provider), including time moved by a test driver.
     /// </summary>
     public long Timestamp { get; internal set; }
 }

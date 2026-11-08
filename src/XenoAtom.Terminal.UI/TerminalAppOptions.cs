@@ -121,7 +121,9 @@ public sealed class TerminalAppOptions
     /// The default is <see cref="TimeProvider.System"/>. Only timestamps are used (<see cref="TimeProvider.GetTimestamp"/>
     /// and <see cref="TimeProvider.TimestampFrequency"/>), never wall-clock time. Tests can supply a controllable provider
     /// (for example <c>FakeTimeProvider</c> from the <c>Microsoft.Extensions.TimeProvider.Testing</c> package) and advance
-    /// it explicitly; see <see cref="Testing.TerminalAppDriver"/>.
+    /// it explicitly; see <see cref="Testing.TerminalAppDriver"/>. The loop still waits between frames in real time, so a
+    /// provider that never moves on its own does not stall a running app. The value cannot be <see langword="null"/>: the
+    /// <see cref="TerminalApp"/> constructor throws an <see cref="ArgumentException"/>.
     /// </remarks>
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 }

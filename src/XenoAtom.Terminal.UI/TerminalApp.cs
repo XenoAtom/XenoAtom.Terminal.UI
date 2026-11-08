@@ -43,7 +43,14 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     private readonly AutoResetEvent _wakeSignal = new(false);
     private readonly CancellationTokenSource _cts = new();
     private readonly ITerminalLoopClock _loopClock;
+    private readonly ITerminalLoopClock _waitClock;
+    private readonly bool _waitClockIsLoopClock;
     private readonly ITerminalLoopWaitBackend _loopWaitBackend;
+    private Action? _frameCompleted;
+
+    // Time moved forward by a test driver (AdvanceTime), added to every frame timestamp. Only read and written on the UI thread.
+    private TimeSpan _timeOffset;
+    private long _timeOffsetTicks;
 
     private bool _renderRequested = true;
     private Visual? _pointerCapture;
@@ -160,9 +167,35 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     internal CellBuffer? LastRenderBuffer => _renderBuffer;
 
     /// <summary>
-    /// Invoked on the UI thread after each frame of <see cref="Run(CancellationToken)"/>. Used by <see cref="Testing.TerminalAppDriver"/>.
+    /// Gets a value indicating whether the app was asked to stop (<see cref="Stop"/>, the exit gesture or a loop result).
     /// </summary>
-    internal Action? FrameCompleted { get; set; }
+    internal bool IsStopRequested => _cts.IsCancellationRequested;
+
+    /// <summary>
+    /// Gets the app's current time, in ticks of <see cref="TimestampFrequency"/>: the clock's timestamp plus the time moved by
+    /// <see cref="AdvanceTime"/>. Every frame timestamp comes from here.
+    /// </summary>
+    internal long GetTimestamp() => _loopClock.GetTimestamp() + _timeOffsetTicks;
+
+    /// <summary>
+    /// Moves the app's time forward. Used by <see cref="Testing.TerminalAppDriver"/>; must be called on the UI thread.
+    /// </summary>
+    /// <param name="advance">The time to add.</param>
+    internal void AdvanceTime(TimeSpan advance)
+    {
+        VerifyAccess();
+        ArgumentOutOfRangeException.ThrowIfLessThan(advance, TimeSpan.Zero);
+        _timeOffset += advance;
+        // Recomputed from the accumulated TimeSpan so that repeated small advances do not accumulate truncation errors.
+        _timeOffsetTicks = ScaleTicks(_timeOffset.Ticks, _loopClock.Frequency, TimeSpan.TicksPerSecond);
+    }
+
+    // value * numerator / denominator without intermediate overflow, saturated to the long range.
+    private static long ScaleTicks(long value, long numerator, long denominator)
+    {
+        var scaled = (Int128)value * numerator / denominator;
+        return scaled > long.MaxValue ? long.MaxValue : scaled < long.MinValue ? long.MinValue : (long)scaled;
+    }
 
     private static ITerminalLoopClock CreateLoopClock(TimeProvider timeProvider)
         => ReferenceEquals(timeProvider, TimeProvider.System)
@@ -265,6 +298,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     /// <param name="root">The root visual.</param>
     /// <param name="terminal">The terminal instance to use. When <see langword="null"/>, uses <see cref="Terminal.Instance"/>.</param>
     /// <param name="options">Optional host configuration.</param>
+    /// <exception cref="ArgumentException"><see cref="TerminalAppOptions.TimeProvider"/> is <see langword="null"/>.</exception>
     public TerminalApp(Visual root, TerminalInstance? terminal = null, TerminalAppOptions? options = null)
         : this(root, terminal, options, loopClock: null, loopWaitBackend: null)
     {
@@ -282,7 +316,20 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
 
         _loopClock = loopClock ?? CreateLoopClock(_options.TimeProvider);
-        _loopWaitBackend = loopWaitBackend ?? TerminalLoopWaitBackendFactory.CreateDefault(_loopClock);
+        if (loopWaitBackend is not null)
+        {
+            // An injected wait backend works in the loop clock's units (tests assert deadlines in those units).
+            _waitClock = _loopClock;
+            _loopWaitBackend = loopWaitBackend;
+        }
+        else
+        {
+            // The loop always waits in real time, even when the app's clock is a test clock that never moves on its own.
+            _waitClock = StopwatchTerminalLoopClock.Instance;
+            _loopWaitBackend = TerminalLoopWaitBackendFactory.CreateDefault(_waitClock);
+        }
+
+        _waitClockIsLoopClock = ReferenceEquals(_waitClock, _loopClock);
         _graphicsRenderContext = new GraphicsRenderContext(_graphicsCommands);
         if (_options.UpdateWaitDuration < TimeSpan.Zero)
         {
@@ -728,7 +775,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         Interlocked.Exchange(ref _wakeRequested, 0);
         ThrowIfInputRelayFailed();
 
-        _lastTickTimestamp = timestamp ?? _loopClock.GetTimestamp();
+        _lastTickTimestamp = timestamp ?? GetTimestamp();
         var metrics = _debugOverlayMetrics;
         metrics?.BeginTick(_lastTickTimestamp);
         var wakeReasons = (TerminalLoopWakeReason)Interlocked.Exchange(ref _pendingWakeReasons, 0);
@@ -769,7 +816,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             if (_pendingUpdateTask is null)
             {
                 var updateStart = metrics is null ? 0 : _loopClock.GetTimestamp();
-                _updateContext!.Timestamp = timestamp ?? _loopClock.GetTimestamp();
+                _updateContext!.Timestamp = timestamp ?? GetTimestamp();
 
                 var previousDepth = UpdateCallbackDepth.Value;
                 UpdateCallbackDepth.Value = previousDepth + 1;
@@ -864,7 +911,15 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
     /// <param name="cancellationToken">A cancellation token to stop the run.</param>
     /// <exception cref="InvalidOperationException">Thrown when the terminal input relay terminates unexpectedly while the app is running.</exception>
     /// <exception cref="AggregateException">Thrown when the run and cleanup both fail, or multiple cleanup steps fail.</exception>
-    public void Run(CancellationToken cancellationToken = default)
+    public void Run(CancellationToken cancellationToken = default) => Run(cancellationToken, frameCompleted: null);
+
+    /// <summary>
+    /// Runs the terminal app synchronously on the current thread, invoking <paramref name="frameCompleted"/> on that thread after
+    /// each frame. Used by <see cref="Testing.TerminalAppDriver"/>.
+    /// </summary>
+    /// <param name="cancellationToken">A cancellation token to stop the run.</param>
+    /// <param name="frameCompleted">Invoked after each frame, or <see langword="null"/>.</param>
+    internal void Run(CancellationToken cancellationToken, Action? frameCompleted)
     {
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         if (Interlocked.CompareExchange(ref _runTask, completion.Task, null) is not null)
@@ -874,10 +929,13 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
 
         try
         {
+            // Installed only once the run is acquired, so a concurrent Run that fails cannot replace the running one's hook.
+            _frameCompleted = frameCompleted;
             RunCore(cancellationToken);
         }
         finally
         {
+            _frameCompleted = null;
             Volatile.Write(ref _runTask, null);
             completion.SetResult();
         }
@@ -897,13 +955,13 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             while (!token.IsCancellationRequested)
             {
                 Tick();
-                FrameCompleted?.Invoke();
+                _frameCompleted?.Invoke();
                 if (token.IsCancellationRequested)
                 {
                     break;
                 }
 
-                var now = _loopClock.GetTimestamp();
+                var now = GetTimestamp();
                 var deadline = ComputeNextRunDeadline(now);
                 if (deadline <= now)
                 {
@@ -926,7 +984,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
                     continue;
                 }
 
-                var waitResult = _loopWaitBackend.WaitUntil(deadline, _wakeSignal, token);
+                var waitResult = _loopWaitBackend.WaitUntil(ToWaitDeadline(deadline, now), _wakeSignal, token);
                 if (waitResult == TerminalLoopWaitResult.Canceled)
                 {
                     break;
@@ -1306,6 +1364,40 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
         }
     }
 
+    /// <summary>
+    /// Converts a deadline in app time (<see cref="GetTimestamp"/>) to a deadline of the wait backend's clock.
+    /// </summary>
+    /// <remarks>
+    /// The loop waits in real time whatever the app's <see cref="TimeProvider"/>: a test clock such as a frozen
+    /// <c>FakeTimeProvider</c> never reaches an app-time deadline on its own, so the remaining app time is waited on the wait
+    /// clock instead. With the default provider both clocks are the Stopwatch and, without a test time offset, this is the identity.
+    /// </remarks>
+    private long ToWaitDeadline(long deadline, long now)
+    {
+        if (deadline == long.MaxValue)
+        {
+            return long.MaxValue;
+        }
+
+        if (_waitClockIsLoopClock)
+        {
+            return deadline - _timeOffsetTicks;
+        }
+
+        var remaining = Math.Max(0, deadline - now);
+        var waitFrequency = _waitClock.Frequency;
+        var loopFrequency = _loopClock.Frequency;
+        var remainingWait = waitFrequency == loopFrequency ? remaining : ScaleTicks(remaining, waitFrequency, loopFrequency);
+        if (remaining > 0 && remainingWait == 0)
+        {
+            remainingWait = 1;
+        }
+
+        var waitNow = _waitClock.GetTimestamp();
+        // long.MaxValue means "no deadline" to the wait backend: saturate below it.
+        return remainingWait >= long.MaxValue - 1 - waitNow ? long.MaxValue - 1 : waitNow + remainingWait;
+    }
+
     private long ComputeNextRunDeadline(long now)
     {
         if (_options.LoopMode == TerminalLoopMode.Auto)
@@ -1316,8 +1408,9 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             }
 
             var activeDeadline = long.MaxValue;
-            // A test driver's frame callback needs frames even when the app is idle, so it paces the loop like an update callback.
-            if ((_onUpdate is not null && _pendingUpdateTask is null) || FrameCompleted is not null)
+            // A test driver's frame callback (non-null only during a driver Run) needs frames even when the app is idle, so it
+            // paces the loop like an update callback.
+            if ((_onUpdate is not null && _pendingUpdateTask is null) || _frameCompleted is not null)
             {
                 var activeFrameTicks = TerminalLoopScheduler.ToStopwatchTicks(DefaultActiveFrameInterval, _loopClock.Frequency);
                 activeDeadline = TerminalLoopScheduler.ComputeNextActiveDeadline(_lastTickTimestamp, now, _nextActiveUpdateTick, activeFrameTicks);
@@ -1613,7 +1706,7 @@ public sealed partial class TerminalApp : DispatcherObject, IAsyncDisposable, IV
             return;
         }
 
-        var now = timestamp ?? _loopClock.GetTimestamp();
+        var now = timestamp ?? GetTimestamp();
         if (_nextAnimationTick != 0 && now < _nextAnimationTick)
         {
             return;

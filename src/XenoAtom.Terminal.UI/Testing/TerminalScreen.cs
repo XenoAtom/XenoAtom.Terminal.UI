@@ -12,9 +12,17 @@ namespace XenoAtom.Terminal.UI.Testing;
 /// rather than re-parsed from its ANSI output.
 /// </summary>
 /// <remarks>
+/// <para>
 /// The view always reflects the latest frame: read it after a <see cref="TerminalAppDriver.Tick()"/> or
 /// <see cref="TerminalAppDriver.Render"/>. Coordinates are zero-based cells; <c>x</c> is the column and <c>y</c> the row.
 /// Members must be called on the app's UI thread.
+/// </para>
+/// <para>
+/// It exposes the text and style of each cell only: hyperlinks are not exposed, and the terminal cursor and the debug overlay
+/// (composited into the terminal output, not into the frame) are not part of it. With
+/// <see cref="Hosting.TerminalHostKind.Inline"/> it covers the app's live region only, not the flow output written above it or
+/// the rest of the terminal.
+/// </para>
 /// </remarks>
 public sealed class TerminalScreen
 {
@@ -70,8 +78,9 @@ public sealed class TerminalScreen
     /// </summary>
     /// <param name="y">The row, from 0.</param>
     /// <remarks>
-    /// A glyph two cells wide contributes its text once, so the string can be shorter than <see cref="Width"/> when the row
-    /// contains wide glyphs; use the indexer for cell-exact positions.
+    /// The string's length is not the number of cells: a glyph two cells wide contributes its text once, and a grapheme (an
+    /// emoji sequence, a flag, a character outside the Basic Multilingual Plane) can be several UTF-16 characters. Use the
+    /// indexer for cell-exact positions.
     /// </remarks>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="y"/> is outside the frame.</exception>
     /// <exception cref="InvalidOperationException">No frame has been rendered yet.</exception>
@@ -107,8 +116,20 @@ public sealed class TerminalScreen
         return builder.ToString();
     }
 
-    /// <inheritdoc />
-    public override string ToString() => _app.LastRenderBuffer is null ? "<no frame rendered>" : GetText();
+    /// <summary>
+    /// Returns the text of the last frame (see <see cref="GetText"/>), or a placeholder when no frame was rendered yet or when
+    /// called outside of the app's UI thread (for example by a debugger). Never throws.
+    /// </summary>
+    /// <returns>The text of the last frame, or a placeholder.</returns>
+    public override string ToString()
+    {
+        if (!_app.CheckAccess())
+        {
+            return "<TerminalScreen: read it on the app's UI thread>";
+        }
+
+        return _app.LastRenderBuffer is null ? "<no frame rendered>" : GetText();
+    }
 
     private static void AppendLine(CellBuffer buffer, int y, StringBuilder builder)
     {
