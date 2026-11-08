@@ -16,6 +16,7 @@ Build the app as usual, over a standalone `TerminalInstance` with an `InMemoryTe
 using XenoAtom.Terminal;
 using XenoAtom.Terminal.Backends;
 using XenoAtom.Terminal.UI;
+using XenoAtom.Terminal.UI.Controls;
 using XenoAtom.Terminal.UI.Hosting;
 using XenoAtom.Terminal.UI.Testing;
 
