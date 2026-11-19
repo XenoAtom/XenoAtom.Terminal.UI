@@ -561,7 +561,7 @@ public sealed class GraphicsImageDemo : ControlsDemoBase
 
         private static void DrawTriangle(SKCanvas canvas, SKPoint center, float radius, float degrees, SKColor color)
         {
-            using var path = new SKPath();
+            using var builder = new SKPathBuilder();
             var radians = degrees * MathF.PI / 180f;
             for (var i = 0; i < 3; i++)
             {
@@ -569,14 +569,15 @@ public sealed class GraphicsImageDemo : ControlsDemoBase
                 var point = new SKPoint(center.X + MathF.Cos(a) * radius, center.Y + MathF.Sin(a) * radius);
                 if (i == 0)
                 {
-                    path.MoveTo(point);
+                    builder.MoveTo(point);
                 }
                 else
                 {
-                    path.LineTo(point);
+                    builder.LineTo(point);
                 }
             }
-            path.Close();
+            builder.Close();
+            using var path = builder.Detach();
 
             using var fill = new SKPaint { IsAntialias = true, Color = color.WithAlpha(70), Style = SKPaintStyle.Fill };
             canvas.DrawPath(path, fill);
